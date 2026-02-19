@@ -205,7 +205,7 @@ CREATE TABLE "guild_roles" (
 	"icon_animated" boolean DEFAULT false NOT NULL,
 	"unicode_emoji" varchar(32),
 	"position" integer DEFAULT 0 NOT NULL,
-	"permissions" bigint DEFAULT 0 NOT NULL,
+	"permissions" bigint DEFAULT '0' NOT NULL,
 	"managed" boolean DEFAULT false NOT NULL,
 	"mentionable" boolean DEFAULT false NOT NULL
 );
@@ -286,8 +286,8 @@ CREATE TABLE "channel_permissions" (
 	"channel_id" bigint NOT NULL,
 	"target_id" bigint NOT NULL,
 	"target_type" varchar(10) NOT NULL,
-	"allow" bigint DEFAULT 0 NOT NULL,
-	"deny" bigint DEFAULT 0 NOT NULL
+	"allow" bigint DEFAULT '0' NOT NULL,
+	"deny" bigint DEFAULT '0' NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "channel_read_state" (

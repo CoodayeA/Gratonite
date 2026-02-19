@@ -164,23 +164,23 @@ export function createAuthService(ctx: AppContext) {
       userId,
     });
 
-    logger.info({ userId: userId.toString(), username: input.username }, 'User registered');
+    logger.info({ userId, username: input.username }, 'User registered');
 
     // Generate tokens
     const accessToken = await generateAccessToken({
-      userId: userId.toString(),
+      userId,
       username: input.username,
       tier: 'free',
     });
 
     const refreshToken = generateRefreshToken();
-    await storeRefreshToken(userId.toString(), refreshToken, {});
+    await storeRefreshToken(userId, refreshToken, {});
 
     return {
       accessToken,
       refreshToken,
       user: {
-        id: userId.toString(),
+        id: userId,
         username: input.username,
         email: input.email,
         displayName: input.displayName,
@@ -256,21 +256,21 @@ export function createAuthService(ctx: AppContext) {
 
     // Generate tokens
     const accessToken = await generateAccessToken({
-      userId: user.id.toString(),
+      userId: user.id,
       username: user.username,
       tier: profile?.tier ?? 'free',
     });
 
     const refreshToken = generateRefreshToken();
-    await storeRefreshToken(user.id.toString(), refreshToken, meta);
+    await storeRefreshToken(user.id, refreshToken, meta);
 
-    logger.info({ userId: user.id.toString(), username: user.username }, 'User logged in');
+    logger.info({ userId: user.id, username: user.username }, 'User logged in');
 
     return {
       accessToken,
       refreshToken,
       user: {
-        id: user.id.toString(),
+        id: user.id,
         username: user.username,
         email: user.email,
         displayName: profile?.displayName ?? user.username,
@@ -295,7 +295,7 @@ export function createAuthService(ctx: AppContext) {
     const [user] = await ctx.db
       .select()
       .from(users)
-      .where(eq(users.id, BigInt(result.userId)))
+      .where(eq(users.id, result.userId))
       .limit(1);
 
     if (!user) {
@@ -309,7 +309,7 @@ export function createAuthService(ctx: AppContext) {
       .limit(1);
 
     const accessToken = await generateAccessToken({
-      userId: user.id.toString(),
+      userId: user.id,
       username: user.username,
       tier: profile?.tier ?? 'free',
     });

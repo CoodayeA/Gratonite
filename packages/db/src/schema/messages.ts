@@ -1,6 +1,5 @@
 import {
   pgTable,
-  bigint,
   varchar,
   text,
   boolean,
@@ -9,6 +8,7 @@ import {
   jsonb,
   index,
 } from 'drizzle-orm/pg-core';
+import { bigintString } from './helpers';
 import { users } from './users';
 import { channels } from './channels';
 
@@ -19,10 +19,10 @@ import { channels } from './channels';
 export const messages = pgTable(
   'messages',
   {
-    id: bigint('id', { mode: 'number' }).primaryKey(),
-    channelId: bigint('channel_id', { mode: 'number' }).notNull(),
-    guildId: bigint('guild_id', { mode: 'number' }),
-    authorId: bigint('author_id', { mode: 'number' })
+    id: bigintString('id').primaryKey(),
+    channelId: bigintString('channel_id').notNull(),
+    guildId: bigintString('guild_id'),
+    authorId: bigintString('author_id')
       .notNull()
       .references(() => users.id),
     content: text('content').notNull().default(''),
@@ -35,7 +35,7 @@ export const messages = pgTable(
     mentionRoles: jsonb('mention_roles').notNull().default([]),
     mentionEveryone: boolean('mention_everyone').notNull().default(false),
     stickerIds: jsonb('sticker_ids').notNull().default([]),
-    pollId: bigint('poll_id', { mode: 'number' }),
+    pollId: bigintString('poll_id'),
     nonce: varchar('nonce', { length: 64 }),
     pinned: boolean('pinned').notNull().default(false),
     tts: boolean('tts').notNull().default(false),
@@ -54,8 +54,8 @@ export const messages = pgTable(
 // ============================================================================
 
 export const messageAttachments = pgTable('message_attachments', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
-  messageId: bigint('message_id', { mode: 'number' }).notNull(),
+  id: bigintString('id').primaryKey(),
+  messageId: bigintString('message_id').notNull(),
   filename: varchar('filename', { length: 255 }).notNull(),
   description: varchar('description', { length: 1024 }), // alt text
   contentType: varchar('content_type', { length: 128 }).notNull(),
@@ -74,18 +74,18 @@ export const messageAttachments = pgTable('message_attachments', {
 // ============================================================================
 
 export const messageReactions = pgTable('message_reactions', {
-  messageId: bigint('message_id', { mode: 'number' }).notNull(),
-  emojiId: bigint('emoji_id', { mode: 'number' }),
+  messageId: bigintString('message_id').notNull(),
+  emojiId: bigintString('emoji_id'),
   emojiName: varchar('emoji_name', { length: 64 }).notNull(),
   count: integer('count').notNull().default(0),
   burstCount: integer('burst_count').notNull().default(0),
 });
 
 export const messageReactionUsers = pgTable('message_reaction_users', {
-  messageId: bigint('message_id', { mode: 'number' }).notNull(),
-  emojiId: bigint('emoji_id', { mode: 'number' }),
+  messageId: bigintString('message_id').notNull(),
+  emojiId: bigintString('emoji_id'),
   emojiName: varchar('emoji_name', { length: 64 }).notNull(),
-  userId: bigint('user_id', { mode: 'number' })
+  userId: bigintString('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   burst: boolean('burst').notNull().default(false),
@@ -97,8 +97,8 @@ export const messageReactionUsers = pgTable('message_reaction_users', {
 // ============================================================================
 
 export const messageEditHistory = pgTable('message_edit_history', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
-  messageId: bigint('message_id', { mode: 'number' }).notNull(),
+  id: bigintString('id').primaryKey(),
+  messageId: bigintString('message_id').notNull(),
   content: text('content').notNull(),
   embeds: jsonb('embeds'),
   editedAt: timestamp('edited_at', { withTimezone: true }).notNull().defaultNow(),
@@ -109,9 +109,9 @@ export const messageEditHistory = pgTable('message_edit_history', {
 // ============================================================================
 
 export const channelPins = pgTable('channel_pins', {
-  channelId: bigint('channel_id', { mode: 'number' }).notNull(),
-  messageId: bigint('message_id', { mode: 'number' }).notNull(),
-  pinnedBy: bigint('pinned_by', { mode: 'number' })
+  channelId: bigintString('channel_id').notNull(),
+  messageId: bigintString('message_id').notNull(),
+  pinnedBy: bigintString('pinned_by')
     .notNull()
     .references(() => users.id),
   pinnedAt: timestamp('pinned_at', { withTimezone: true }).notNull().defaultNow(),
@@ -122,7 +122,7 @@ export const channelPins = pgTable('channel_pins', {
 // ============================================================================
 
 export const polls = pgTable('polls', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
+  id: bigintString('id').primaryKey(),
   questionText: varchar('question_text', { length: 300 }).notNull(),
   allowMultiselect: boolean('allow_multiselect').notNull().default(false),
   expiry: timestamp('expiry', { withTimezone: true }),
@@ -130,24 +130,24 @@ export const polls = pgTable('polls', {
 });
 
 export const pollAnswers = pgTable('poll_answers', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
-  pollId: bigint('poll_id', { mode: 'number' })
+  id: bigintString('id').primaryKey(),
+  pollId: bigintString('poll_id')
     .notNull()
     .references(() => polls.id, { onDelete: 'cascade' }),
   text: varchar('text', { length: 255 }).notNull(),
-  emojiId: bigint('emoji_id', { mode: 'number' }),
+  emojiId: bigintString('emoji_id'),
   emojiName: varchar('emoji_name', { length: 64 }),
   voteCount: integer('vote_count').notNull().default(0),
 });
 
 export const pollVotes = pgTable('poll_votes', {
-  pollId: bigint('poll_id', { mode: 'number' })
+  pollId: bigintString('poll_id')
     .notNull()
     .references(() => polls.id, { onDelete: 'cascade' }),
-  answerId: bigint('answer_id', { mode: 'number' })
+  answerId: bigintString('answer_id')
     .notNull()
     .references(() => pollAnswers.id, { onDelete: 'cascade' }),
-  userId: bigint('user_id', { mode: 'number' })
+  userId: bigintString('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
 });
@@ -157,9 +157,9 @@ export const pollVotes = pgTable('poll_votes', {
 // ============================================================================
 
 export const scheduledMessages = pgTable('scheduled_messages', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
-  channelId: bigint('channel_id', { mode: 'number' }).notNull(),
-  authorId: bigint('author_id', { mode: 'number' })
+  id: bigintString('id').primaryKey(),
+  channelId: bigintString('channel_id').notNull(),
+  authorId: bigintString('author_id')
     .notNull()
     .references(() => users.id),
   content: text('content').notNull(),

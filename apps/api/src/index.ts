@@ -10,6 +10,12 @@ import { securityHeaders } from './middleware/security-headers.js';
 import { globalRateLimiter } from './middleware/rate-limiter.js';
 import { authRouter } from './modules/auth/auth.router.js';
 import { usersRouter } from './modules/users/users.router.js';
+import { guildsRouter } from './modules/guilds/guilds.router.js';
+import { channelsRouter } from './modules/channels/channels.router.js';
+import { messagesRouter } from './modules/messages/messages.router.js';
+import { invitesRouter } from './modules/invites/invites.router.js';
+import { relationshipsRouter } from './modules/relationships/relationships.router.js';
+import { setupGateway } from './modules/gateway/gateway.js';
 
 // ============================================================================
 // Server bootstrap
@@ -70,6 +76,11 @@ async function main() {
   // ── API routes ─────────────────────────────────────────────────────────
   app.use('/api/v1/auth', authRouter(ctx));
   app.use('/api/v1/users', usersRouter(ctx));
+  app.use('/api/v1/guilds', guildsRouter(ctx));
+  app.use('/api/v1', channelsRouter(ctx));   // handles /guilds/:id/channels and /channels/:id
+  app.use('/api/v1', messagesRouter(ctx));   // handles /channels/:id/messages
+  app.use('/api/v1/invites', invitesRouter(ctx));
+  app.use('/api/v1/relationships', relationshipsRouter(ctx));
 
   // ── 404 handler ────────────────────────────────────────────────────────
   app.use((_req, res) => {
@@ -98,14 +109,8 @@ async function main() {
     },
   );
 
-  // ── Socket.IO connection handling ──────────────────────────────────────
-  io.on('connection', (socket) => {
-    logger.debug({ socketId: socket.id }, 'Socket connected');
-
-    socket.on('disconnect', (reason) => {
-      logger.debug({ socketId: socket.id, reason }, 'Socket disconnected');
-    });
-  });
+  // ── Socket.IO gateway (auth, presence, real-time events) ─────────────
+  setupGateway(ctx);
 
   // ── Start server ───────────────────────────────────────────────────────
   httpServer.listen(env.PORT, () => {

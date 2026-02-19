@@ -1,6 +1,5 @@
 import {
   pgTable,
-  bigint,
   varchar,
   text,
   boolean,
@@ -10,6 +9,7 @@ import {
   jsonb,
   real,
 } from 'drizzle-orm/pg-core';
+import { bigintString } from './helpers';
 import { users } from './users';
 
 // ============================================================================
@@ -66,9 +66,9 @@ export const messageLayoutDefaultEnum = pgEnum('message_layout_default', [
 // ============================================================================
 
 export const guilds = pgTable('guilds', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
+  id: bigintString('id').primaryKey(),
   name: varchar('name', { length: 100 }).notNull(),
-  ownerId: bigint('owner_id', { mode: 'number' })
+  ownerId: bigintString('owner_id')
     .notNull()
     .references(() => users.id),
   iconHash: varchar('icon_hash', { length: 64 }),
@@ -100,10 +100,10 @@ export const guilds = pgTable('guilds', {
 // ============================================================================
 
 export const guildMembers = pgTable('guild_members', {
-  userId: bigint('user_id', { mode: 'number' })
+  userId: bigintString('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  guildId: bigint('guild_id', { mode: 'number' })
+  guildId: bigintString('guild_id')
     .notNull()
     .references(() => guilds.id, { onDelete: 'cascade' }),
   nickname: varchar('nickname', { length: 32 }),
@@ -119,10 +119,10 @@ export const guildMembers = pgTable('guild_members', {
 // ============================================================================
 
 export const memberProfiles = pgTable('member_profiles', {
-  userId: bigint('user_id', { mode: 'number' })
+  userId: bigintString('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  guildId: bigint('guild_id', { mode: 'number' })
+  guildId: bigintString('guild_id')
     .notNull()
     .references(() => guilds.id, { onDelete: 'cascade' }),
   nickname: varchar('nickname', { length: 32 }),
@@ -138,8 +138,8 @@ export const memberProfiles = pgTable('member_profiles', {
 // ============================================================================
 
 export const guildRoles = pgTable('guild_roles', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
-  guildId: bigint('guild_id', { mode: 'number' })
+  id: bigintString('id').primaryKey(),
+  guildId: bigintString('guild_id')
     .notNull()
     .references(() => guilds.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 100 }).notNull(),
@@ -149,19 +149,19 @@ export const guildRoles = pgTable('guild_roles', {
   iconAnimated: boolean('icon_animated').notNull().default(false),
   unicodeEmoji: varchar('unicode_emoji', { length: 32 }),
   position: integer('position').notNull().default(0),
-  permissions: bigint('permissions', { mode: 'number' }).notNull().default(0),
+  permissions: bigintString('permissions').notNull().default('0'),
   managed: boolean('managed').notNull().default(false),
   mentionable: boolean('mentionable').notNull().default(false),
 });
 
 export const userRoles = pgTable('user_roles', {
-  userId: bigint('user_id', { mode: 'number' })
+  userId: bigintString('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  roleId: bigint('role_id', { mode: 'number' })
+  roleId: bigintString('role_id')
     .notNull()
     .references(() => guildRoles.id, { onDelete: 'cascade' }),
-  guildId: bigint('guild_id', { mode: 'number' })
+  guildId: bigintString('guild_id')
     .notNull()
     .references(() => guilds.id, { onDelete: 'cascade' }),
 });
@@ -171,7 +171,7 @@ export const userRoles = pgTable('user_roles', {
 // ============================================================================
 
 export const guildBrand = pgTable('guild_brand', {
-  guildId: bigint('guild_id', { mode: 'number' })
+  guildId: bigintString('guild_id')
     .primaryKey()
     .references(() => guilds.id, { onDelete: 'cascade' }),
   colorPrimary: varchar('color_primary', { length: 7 }),
@@ -196,11 +196,11 @@ export const guildBrand = pgTable('guild_brand', {
 
 export const invites = pgTable('invites', {
   code: varchar('code', { length: 32 }).primaryKey(),
-  guildId: bigint('guild_id', { mode: 'number' })
+  guildId: bigintString('guild_id')
     .notNull()
     .references(() => guilds.id, { onDelete: 'cascade' }),
-  channelId: bigint('channel_id', { mode: 'number' }).notNull(),
-  inviterId: bigint('inviter_id', { mode: 'number' })
+  channelId: bigintString('channel_id').notNull(),
+  inviterId: bigintString('inviter_id')
     .notNull()
     .references(() => users.id),
   maxUses: integer('max_uses'),
@@ -216,13 +216,13 @@ export const invites = pgTable('invites', {
 // ============================================================================
 
 export const bans = pgTable('bans', {
-  guildId: bigint('guild_id', { mode: 'number' })
+  guildId: bigintString('guild_id')
     .notNull()
     .references(() => guilds.id, { onDelete: 'cascade' }),
-  userId: bigint('user_id', { mode: 'number' })
+  userId: bigintString('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  moderatorId: bigint('moderator_id', { mode: 'number' })
+  moderatorId: bigintString('moderator_id')
     .notNull()
     .references(() => users.id),
   reason: varchar('reason', { length: 512 }),
@@ -235,7 +235,7 @@ export const bans = pgTable('bans', {
 // ============================================================================
 
 export const welcomeScreens = pgTable('welcome_screens', {
-  guildId: bigint('guild_id', { mode: 'number' })
+  guildId: bigintString('guild_id')
     .primaryKey()
     .references(() => guilds.id, { onDelete: 'cascade' }),
   description: varchar('description', { length: 140 }),
@@ -243,13 +243,13 @@ export const welcomeScreens = pgTable('welcome_screens', {
 });
 
 export const welcomeScreenChannels = pgTable('welcome_screen_channels', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
-  guildId: bigint('guild_id', { mode: 'number' })
+  id: bigintString('id').primaryKey(),
+  guildId: bigintString('guild_id')
     .notNull()
     .references(() => guilds.id, { onDelete: 'cascade' }),
-  channelId: bigint('channel_id', { mode: 'number' }).notNull(),
+  channelId: bigintString('channel_id').notNull(),
   description: varchar('description', { length: 50 }).notNull(),
-  emojiId: bigint('emoji_id', { mode: 'number' }),
+  emojiId: bigintString('emoji_id'),
   emojiName: varchar('emoji_name', { length: 64 }),
   sortOrder: integer('sort_order').notNull().default(0),
 });
@@ -259,14 +259,14 @@ export const welcomeScreenChannels = pgTable('welcome_screen_channels', {
 // ============================================================================
 
 export const auditLogEntries = pgTable('audit_log_entries', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
-  guildId: bigint('guild_id', { mode: 'number' })
+  id: bigintString('id').primaryKey(),
+  guildId: bigintString('guild_id')
     .notNull()
     .references(() => guilds.id, { onDelete: 'cascade' }),
-  userId: bigint('user_id', { mode: 'number' })
+  userId: bigintString('user_id')
     .notNull()
     .references(() => users.id),
-  targetId: bigint('target_id', { mode: 'number' }),
+  targetId: bigintString('target_id'),
   actionType: integer('action_type').notNull(),
   changes: jsonb('changes'),
   reason: varchar('reason', { length: 512 }),

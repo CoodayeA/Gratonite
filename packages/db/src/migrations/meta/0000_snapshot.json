@@ -1,5 +1,5 @@
 {
-  "id": "31d08ab3-856c-4b47-8424-cfd13bf4721e",
+  "id": "11975ff9-3109-4d7a-b79c-61f8d92a2715",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1391,7 +1391,7 @@
           "type": "bigint",
           "primaryKey": false,
           "notNull": true,
-          "default": 0
+          "default": "'0'"
         },
         "managed": {
           "name": "managed",
@@ -2020,14 +2020,14 @@
           "type": "bigint",
           "primaryKey": false,
           "notNull": true,
-          "default": 0
+          "default": "'0'"
         },
         "deny": {
           "name": "deny",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true,
-          "default": 0
+          "default": "'0'"
         }
       },
       "indexes": {},

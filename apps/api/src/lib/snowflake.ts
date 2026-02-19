@@ -2,6 +2,7 @@ import { GRATONITE_EPOCH } from '@gratonite/types';
 
 /**
  * Server-side snowflake generator.
+ * Returns string to avoid JS Number precision loss on 64-bit IDs.
  * Thread-safe via closure (single worker assumption for now).
  * When scaling to multiple workers, pass unique workerId/processId.
  */
@@ -12,7 +13,8 @@ let lastTimestamp = -1n;
 const WORKER_ID = BigInt(process.env['WORKER_ID'] ?? 1) & 0x1fn;
 const PROCESS_ID = BigInt(process.env['PROCESS_ID'] ?? 1) & 0x1fn;
 
-export function generateId(): bigint {
+/** Generate a snowflake ID as a string (safe for JSON + DB with bigint mode:'string') */
+export function generateId(): string {
   let timestamp = BigInt(Date.now()) - GRATONITE_EPOCH;
 
   if (timestamp === lastTimestamp) {
@@ -29,15 +31,11 @@ export function generateId(): bigint {
 
   lastTimestamp = timestamp;
 
-  return (
+  const snowflake =
     (timestamp << 22n) |
     (WORKER_ID << 17n) |
     (PROCESS_ID << 12n) |
-    BigInt(sequence)
-  );
-}
+    BigInt(sequence);
 
-/** Generate a snowflake ID as a string (for JSON serialization) */
-export function generateIdString(): string {
-  return generateId().toString();
+  return snowflake.toString();
 }

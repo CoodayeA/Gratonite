@@ -1,6 +1,5 @@
 import {
   pgTable,
-  bigint,
   varchar,
   text,
   boolean,
@@ -9,6 +8,7 @@ import {
   integer,
   pgEnum,
 } from 'drizzle-orm/pg-core';
+import { bigintString } from './helpers';
 
 // ============================================================================
 // Enums
@@ -74,7 +74,7 @@ export const relationshipTypeEnum = pgEnum('relationship_type', [
 // ============================================================================
 
 export const users = pgTable('users', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
+  id: bigintString('id').primaryKey(),
   username: varchar('username', { length: 32 }).notNull().unique(),
   email: varchar('email', { length: 255 }).notNull().unique(),
   emailVerified: boolean('email_verified').notNull().default(false),
@@ -93,7 +93,7 @@ export const users = pgTable('users', {
 // ============================================================================
 
 export const userProfiles = pgTable('user_profiles', {
-  userId: bigint('user_id', { mode: 'number' })
+  userId: bigintString('user_id')
     .primaryKey()
     .references(() => users.id, { onDelete: 'cascade' }),
   displayName: varchar('display_name', { length: 32 }).notNull(),
@@ -104,8 +104,8 @@ export const userProfiles = pgTable('user_profiles', {
   accentColor: integer('accent_color'), // 24-bit RGB
   bio: varchar('bio', { length: 190 }),
   pronouns: varchar('pronouns', { length: 40 }),
-  avatarDecorationId: bigint('avatar_decoration_id', { mode: 'number' }),
-  profileEffectId: bigint('profile_effect_id', { mode: 'number' }),
+  avatarDecorationId: bigintString('avatar_decoration_id'),
+  profileEffectId: bigintString('profile_effect_id'),
   themePreference: themePreferenceEnum('theme_preference').notNull().default('dark'),
   tier: userTierEnum('tier').notNull().default('free'),
 });
@@ -115,7 +115,7 @@ export const userProfiles = pgTable('user_profiles', {
 // ============================================================================
 
 export const userSettings = pgTable('user_settings', {
-  userId: bigint('user_id', { mode: 'number' })
+  userId: bigintString('user_id')
     .primaryKey()
     .references(() => users.id, { onDelete: 'cascade' }),
   locale: varchar('locale', { length: 10 }).notNull().default('en-US'),
@@ -142,11 +142,11 @@ export const userSettings = pgTable('user_settings', {
 // ============================================================================
 
 export const userCustomStatus = pgTable('user_custom_status', {
-  userId: bigint('user_id', { mode: 'number' })
+  userId: bigintString('user_id')
     .primaryKey()
     .references(() => users.id, { onDelete: 'cascade' }),
   text: varchar('text', { length: 128 }),
-  emojiId: bigint('emoji_id', { mode: 'number' }),
+  emojiId: bigintString('emoji_id'),
   emojiName: varchar('emoji_name', { length: 64 }),
   expiresAt: timestamp('expires_at', { withTimezone: true }),
 });
@@ -156,8 +156,8 @@ export const userCustomStatus = pgTable('user_custom_status', {
 // ============================================================================
 
 export const connectedAccounts = pgTable('connected_accounts', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
-  userId: bigint('user_id', { mode: 'number' })
+  id: bigintString('id').primaryKey(),
+  userId: bigintString('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   provider: connectedAccountProviderEnum('provider').notNull(),
@@ -174,10 +174,10 @@ export const connectedAccounts = pgTable('connected_accounts', {
 // ============================================================================
 
 export const relationships = pgTable('relationships', {
-  userId: bigint('user_id', { mode: 'number' })
+  userId: bigintString('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  targetId: bigint('target_id', { mode: 'number' })
+  targetId: bigintString('target_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   type: relationshipTypeEnum('type').notNull(),
@@ -190,8 +190,8 @@ export const relationships = pgTable('relationships', {
 // ============================================================================
 
 export const sessions = pgTable('sessions', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
-  userId: bigint('user_id', { mode: 'number' })
+  id: bigintString('id').primaryKey(),
+  userId: bigintString('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   refreshTokenHash: varchar('refresh_token_hash', { length: 128 }).notNull(),
@@ -210,10 +210,10 @@ export const sessions = pgTable('sessions', {
 // ============================================================================
 
 export const userNotes = pgTable('user_notes', {
-  authorId: bigint('author_id', { mode: 'number' })
+  authorId: bigintString('author_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  targetId: bigint('target_id', { mode: 'number' })
+  targetId: bigintString('target_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   content: varchar('content', { length: 256 }).notNull(),
@@ -225,7 +225,7 @@ export const userNotes = pgTable('user_notes', {
 // ============================================================================
 
 export const badges = pgTable('badges', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
+  id: bigintString('id').primaryKey(),
   name: varchar('name', { length: 64 }).notNull(),
   description: varchar('description', { length: 255 }).notNull(),
   iconHash: varchar('icon_hash', { length: 64 }).notNull(),
@@ -235,10 +235,10 @@ export const badges = pgTable('badges', {
 });
 
 export const userBadges = pgTable('user_badges', {
-  userId: bigint('user_id', { mode: 'number' })
+  userId: bigintString('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  badgeId: bigint('badge_id', { mode: 'number' })
+  badgeId: bigintString('badge_id')
     .notNull()
     .references(() => badges.id, { onDelete: 'cascade' }),
   grantedAt: timestamp('granted_at', { withTimezone: true }).notNull().defaultNow(),
@@ -249,7 +249,7 @@ export const userBadges = pgTable('user_badges', {
 // ============================================================================
 
 export const accountDeletionRequests = pgTable('account_deletion_requests', {
-  userId: bigint('user_id', { mode: 'number' })
+  userId: bigintString('user_id')
     .primaryKey()
     .references(() => users.id, { onDelete: 'cascade' }),
   requestedAt: timestamp('requested_at', { withTimezone: true }).notNull().defaultNow(),

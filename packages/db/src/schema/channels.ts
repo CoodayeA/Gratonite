@@ -1,6 +1,5 @@
 import {
   pgTable,
-  bigint,
   varchar,
   text,
   boolean,
@@ -9,6 +8,7 @@ import {
   pgEnum,
   jsonb,
 } from 'drizzle-orm/pg-core';
+import { bigintString } from './helpers';
 import { guilds } from './guilds';
 import { users } from './users';
 
@@ -44,17 +44,17 @@ export const forumLayoutEnum = pgEnum('forum_layout', ['list', 'gallery']);
 // ============================================================================
 
 export const channels = pgTable('channels', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
-  guildId: bigint('guild_id', { mode: 'number' }).references(() => guilds.id, {
+  id: bigintString('id').primaryKey(),
+  guildId: bigintString('guild_id').references(() => guilds.id, {
     onDelete: 'cascade',
   }),
   type: channelTypeEnum('type').notNull(),
   name: varchar('name', { length: 100 }),
   topic: varchar('topic', { length: 1024 }),
   position: integer('position').notNull().default(0),
-  parentId: bigint('parent_id', { mode: 'number' }), // category
+  parentId: bigintString('parent_id'), // category
   nsfw: boolean('nsfw').notNull().default(false),
-  lastMessageId: bigint('last_message_id', { mode: 'number' }),
+  lastMessageId: bigintString('last_message_id'),
   rateLimitPerUser: integer('rate_limit_per_user').notNull().default(0),
   // Forum-specific
   defaultAutoArchiveDuration: integer('default_auto_archive_duration'),
@@ -71,14 +71,14 @@ export const channels = pgTable('channels', {
 // ============================================================================
 
 export const channelPermissions = pgTable('channel_permissions', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
-  channelId: bigint('channel_id', { mode: 'number' })
+  id: bigintString('id').primaryKey(),
+  channelId: bigintString('channel_id')
     .notNull()
     .references(() => channels.id, { onDelete: 'cascade' }),
-  targetId: bigint('target_id', { mode: 'number' }).notNull(), // role or user ID
+  targetId: bigintString('target_id').notNull(), // role or user ID
   targetType: varchar('target_type', { length: 10 }).notNull(), // 'role' or 'user'
-  allow: bigint('allow', { mode: 'number' }).notNull().default(0),
-  deny: bigint('deny', { mode: 'number' }).notNull().default(0),
+  allow: bigintString('allow').notNull().default('0'),
+  deny: bigintString('deny').notNull().default('0'),
 });
 
 // ============================================================================
@@ -86,14 +86,14 @@ export const channelPermissions = pgTable('channel_permissions', {
 // ============================================================================
 
 export const threads = pgTable('threads', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
-  parentId: bigint('parent_id', { mode: 'number' })
+  id: bigintString('id').primaryKey(),
+  parentId: bigintString('parent_id')
     .notNull()
     .references(() => channels.id, { onDelete: 'cascade' }),
-  guildId: bigint('guild_id', { mode: 'number' })
+  guildId: bigintString('guild_id')
     .notNull()
     .references(() => guilds.id, { onDelete: 'cascade' }),
-  ownerId: bigint('owner_id', { mode: 'number' })
+  ownerId: bigintString('owner_id')
     .notNull()
     .references(() => users.id),
   name: varchar('name', { length: 100 }).notNull(),
@@ -110,10 +110,10 @@ export const threads = pgTable('threads', {
 });
 
 export const threadMembers = pgTable('thread_members', {
-  threadId: bigint('thread_id', { mode: 'number' })
+  threadId: bigintString('thread_id')
     .notNull()
     .references(() => threads.id, { onDelete: 'cascade' }),
-  userId: bigint('user_id', { mode: 'number' })
+  userId: bigintString('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   joinTimestamp: timestamp('join_timestamp', { withTimezone: true }).notNull().defaultNow(),
@@ -124,20 +124,20 @@ export const threadMembers = pgTable('thread_members', {
 // ============================================================================
 
 export const dmChannels = pgTable('dm_channels', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
+  id: bigintString('id').primaryKey(),
   type: varchar('type', { length: 10 }).notNull(), // 'dm' or 'group_dm'
-  ownerId: bigint('owner_id', { mode: 'number' }).references(() => users.id),
+  ownerId: bigintString('owner_id').references(() => users.id),
   name: varchar('name', { length: 100 }),
   iconHash: varchar('icon_hash', { length: 64 }),
-  lastMessageId: bigint('last_message_id', { mode: 'number' }),
+  lastMessageId: bigintString('last_message_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const dmRecipients = pgTable('dm_recipients', {
-  channelId: bigint('channel_id', { mode: 'number' })
+  channelId: bigintString('channel_id')
     .notNull()
     .references(() => dmChannels.id, { onDelete: 'cascade' }),
-  userId: bigint('user_id', { mode: 'number' })
+  userId: bigintString('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
 });
@@ -147,10 +147,10 @@ export const dmRecipients = pgTable('dm_recipients', {
 // ============================================================================
 
 export const channelReadState = pgTable('channel_read_state', {
-  userId: bigint('user_id', { mode: 'number' })
+  userId: bigintString('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  channelId: bigint('channel_id', { mode: 'number' }).notNull(),
-  lastReadMessageId: bigint('last_read_message_id', { mode: 'number' }),
+  channelId: bigintString('channel_id').notNull(),
+  lastReadMessageId: bigintString('last_read_message_id'),
   mentionCount: integer('mention_count').notNull().default(0),
 });
