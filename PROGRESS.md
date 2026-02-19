@@ -362,18 +362,116 @@ All 4 schema files (`users.ts`, `guilds.ts`, `channels.ts`, `messages.ts`) were 
 
 ---
 
-## What's NOT Done Yet
+## Phase 4 Part 1: Implementation Plan (IN PROGRESS)
 
-### Phase 4: Rich Features (Next)
-- Threads + forum channels
-- Wiki channels + Q&A channels
-- Polls, scheduled messages, voice messages
-- Link preview pipeline
-- Custom emoji + stickers
-- Soundboard
-- Auto-moderation + raid protection
-- File upload pipeline (MinIO + sharp)
-- Full-text search
+> **Status:** Plan approved, implementation NOT started yet. Pick up from Step 1.
+> **Plan file:** `.claude/plans/fluttering-roaming-planet.md` has the full detailed plan.
+> **Scope:** Threads + Forums, Polls, File Uploads (MinIO), Emoji/Stickers
+
+### What already exists (DB tables from Phase 1 migration):
+- `threads`, `threadMembers` — Thread CRUD + member tracking
+- `polls`, `pollAnswers`, `pollVotes` — Poll system
+- `scheduledMessages` — Scheduled message system
+- `messageAttachments` — File attachment metadata (with waveform, duration for voice)
+- `channels` table already has forum columns: `availableTags`, `defaultSortOrder`, `defaultForumLayout`, `defaultAutoArchiveDuration`, `defaultThreadRateLimitPerUser`, `defaultReactionEmoji`
+- Channel types already include: `GUILD_FORUM`, `GUILD_WIKI`, `GUILD_QA`, `GUILD_MEDIA`
+- Types already exist: `Thread`, `ForumTag`, `ThreadType`, `Poll`, `PollAnswer`, `ScheduledMessage` in `packages/types/`
+
+### What needs to be BUILT (8 steps):
+
+#### Step 1: Dependencies + MinIO Infrastructure
+- Add to `apps/api/package.json`: `minio`, `multer`, `sharp`, `file-type`, `@types/multer`
+- **New file:** `apps/api/src/lib/minio.ts` — MinIO client + `ensureBuckets()` for: uploads, emojis, stickers, avatars, banners, server-icons
+- **Modify:** `apps/api/src/lib/context.ts` — Add `minio: Client` (from minio package) to AppContext
+- **Modify:** `apps/api/src/index.ts` — Init MinIO client, call `ensureBuckets()`, add to ctx
+- MinIO is already in Docker (port 9000), env vars (`MINIO_*`) already in `env.ts`
+
+#### Step 2: File Upload Module
+- **New:** `apps/api/src/modules/files/files.schemas.ts` — Upload validation (purpose enum, contextId, description, spoiler)
+- **New:** `apps/api/src/modules/files/files.service.ts` — `uploadFile()` (validate magic bytes via file-type, enforce size limits per purpose, sharp pipeline: strip EXIF → resize → WebP → extract dimensions, upload to MinIO), `getFileUrl()`, `deleteFile()`, `processImage()`
+- **New:** `apps/api/src/modules/files/files.router.ts` — `POST /files/upload` (multipart via multer memory storage), returns temp metadata in Redis (`pending_upload:{tempId}`, 15min TTL)
+- **Modify:** `apps/api/src/middleware/rate-limiter.ts` — Add `uploadRateLimiter` (10/min/user)
+- **Modify:** `apps/api/src/index.ts` — Register files router
+- **Design:** Two-step upload — upload first to get temp ID, then reference when creating message
+
+#### Step 3: Emoji + Stickers (DB + Types + Service)
+- **Modify:** `packages/db/src/schema/guilds.ts` — Add `guildEmojis` table (id, guildId, name varchar(32), hash varchar(64), animated boolean, creatorId, available boolean, createdAt) and `guildStickers` table (id, guildId, name varchar(30), description varchar(100), hash varchar(64), formatType varchar(10), tags varchar(200), available boolean, creatorId, createdAt)
+- Run `npx drizzle-kit generate && npx drizzle-kit migrate`
+- **Modify:** `packages/types/src/guild.ts` — Add `GuildEmoji`, `GuildSticker` interfaces
+- **Modify:** `packages/types/src/events.ts` — Add `GUILD_EMOJI_CREATE/UPDATE/DELETE`, `GUILD_STICKER_CREATE/UPDATE/DELETE`
+- **New:** `apps/api/src/modules/guilds/emojis.schemas.ts` — Zod schemas
+- **Modify:** `apps/api/src/modules/guilds/guilds.service.ts` — Add createEmoji, getGuildEmojis, deleteEmoji, createSticker, getGuildStickers, updateSticker, deleteSticker
+- **Modify:** `apps/api/src/modules/guilds/guilds.router.ts` — Add 7 emoji/sticker routes with multer
+- Emoji: max 256KB, 128x128, stored in MinIO `emojis` bucket
+- Sticker: max 500KB, 320x320, stored in MinIO `stickers` bucket
+
+#### Step 4: Threads + Forums
+- **New:** `apps/api/src/modules/threads/threads.schemas.ts` — createThread (name, type, autoArchiveDuration, appliedTags, message for forum starter), updateThread, getThreads
+- **New:** `apps/api/src/modules/threads/threads.service.ts` — createThread (validates parent channel type, forum tag validation, creates thread + starter message for forum, auto-adds creator), getThread, getActiveThreads, getArchivedThreads, updateThread, deleteThread, joinThread, leaveThread, getThreadMembers, archiveStaleThreads
+- **New:** `apps/api/src/modules/threads/threads.router.ts` — 9 endpoints: POST/GET `/channels/:channelId/threads`, GET `.../archived`, GET/PATCH/DELETE `/threads/:threadId`, PUT/DELETE `/threads/:threadId/members/@me`, GET `.../members`
+- **Modify:** `packages/types/src/events.ts` — Add `THREAD_MEMBER_ADD`, `THREAD_MEMBER_REMOVE`
+- **Modify:** `apps/api/src/modules/messages/messages.router.ts` — Update channel access check to also look up threads (thread.id = channelId for messages)
+- **Modify:** `apps/api/src/modules/messages/messages.service.ts` — Increment `threads.messageCount` when message created in thread
+- **Modify:** `apps/api/src/index.ts` — Register threads router + start auto-archive setInterval (every 5 min)
+- **Key design:** Thread messages use `thread.id` as `channelId` in messages table — existing messages service works for threads with minimal changes
+
+#### Step 5: Polls
+- **Modify:** `apps/api/src/modules/messages/messages.schemas.ts` — Add `pollInputSchema` (questionText, answers min 2 max 10, allowMultiselect, expiry), add `poll` + `attachmentIds` to createMessageSchema, make `content` optional (refine: at least one of content/attachments/stickers/poll)
+- **Modify:** `apps/api/src/modules/messages/messages.service.ts` — Add createPoll, votePoll (single/multi-select, prevent double-vote), removeVote, getVotes, finalizePoll, hydratePollData (batch-fetch poll+answers for messages). Modify createMessage to handle poll type. Modify getMessages/getMessage to hydrate poll data.
+- **Modify:** `packages/types/src/events.ts` — Add `POLL_VOTE_ADD`, `POLL_VOTE_REMOVE`, `POLL_FINALIZE`
+- **Modify:** `apps/api/src/modules/messages/messages.router.ts` — Add 4 poll routes: PUT/DELETE `/channels/:channelId/polls/:pollId/votes/:answerId`, GET `.../votes`, POST `.../finalize`
+- **Modify:** `apps/api/src/middleware/rate-limiter.ts` — Add `pollVoteRateLimiter` (10/5s/user)
+
+#### Step 6: Integration — Message Attachments
+- **Modify:** `apps/api/src/modules/messages/messages.service.ts` — In createMessage, when `attachmentIds` provided: fetch pending uploads from Redis, create `messageAttachments` rows linking to message, clean up Redis temp keys
+
+#### Step 7: Test All Endpoints E2E
+Test sequence: upload file → message with attachment → upload emoji → list emojis → upload sticker → create thread in text channel → send messages in thread → create forum channel with tags → create thread with appliedTags → archive/unarchive → join/leave thread → create poll message → vote → finalize → delete resources
+
+#### Step 8: Update PROGRESS.md and commit
+
+### Key Files to Read Before Starting Implementation:
+| File | Why |
+|------|-----|
+| `apps/api/src/modules/messages/messages.service.ts` | Core file to extend with polls + attachments |
+| `apps/api/src/modules/messages/messages.router.ts` | Add poll routes + thread channel access check |
+| `apps/api/src/modules/messages/messages.schemas.ts` | Extend with poll input |
+| `apps/api/src/modules/guilds/guilds.service.ts` | Add emoji/sticker methods |
+| `apps/api/src/modules/guilds/guilds.router.ts` | Add emoji/sticker routes |
+| `apps/api/src/modules/channels/channels.service.ts` | Understand channel patterns for threads |
+| `packages/db/src/schema/guilds.ts` | Add guildEmojis + guildStickers tables |
+| `packages/db/src/schema/channels.ts` | Existing threads + threadMembers tables |
+| `packages/db/src/schema/messages.ts` | Existing polls + messageAttachments tables |
+| `packages/types/src/guild.ts` | Add GuildEmoji/GuildSticker types |
+| `packages/types/src/events.ts` | Add all new event types |
+| `apps/api/src/env.ts` | MinIO env vars already defined |
+| `apps/api/src/index.ts` | Register new routers + MinIO init |
+| `apps/api/src/lib/context.ts` | Add minio to AppContext |
+
+### Important Notes for Implementor:
+1. **Port 5432 is SSH tunnel** — PostgreSQL is on port **5433** via Docker
+2. **Use `docker-compose` (with hyphen)** — not `docker compose`
+3. **macOS has no `timeout` command** — use `background process + sleep + kill` pattern
+4. **Rate limiter keys use IPv6** — key format is `ratelimit:{prefix}:::1` for localhost
+5. **Clear rate limits via Node.js**: `cd apps/api && npx tsx -e "import Redis from 'ioredis'; const r = new Redis('redis://localhost:6379'); r.keys('*ratelimit*').then(keys => { if(keys.length) Promise.all(keys.map(k=>r.del(k))).then(()=>r.disconnect()); else r.disconnect(); })"` — cannot use top-level await (CJS), use `.then()` chains
+6. **Redis is via SSH tunnel on 6379** — NOT the Docker Redis container. Docker Redis has no port mapping.
+7. **Existing message `type` field** is integer (0=DEFAULT, 19=REPLY). Need to define POLL=22 (or similar).
+8. **Forum threads require starter message** — enforced at service layer based on parent channel type.
+
+---
+
+## What's NOT Done Yet (Beyond Phase 4 Part 1)
+
+### Phase 4 Part 2: Rich Features (Remaining)
+- Wiki channels + Q&A channels (types exist, need service/router)
+- Scheduled messages (table exists, need Bull queue or setInterval)
+- Voice messages (attachment flags exist, need recording endpoint)
+- Link preview pipeline (embed extraction + image proxy)
+- Auto-moderation + raid protection (need new tables)
+- Full-text search (need GIN index on messages)
+- Event scheduling system (need new tables)
+- Server admin dashboard + analytics
+- Moderation dashboard
 
 ### Phases 5–9
 See `ARCHITECTURE.md` Section 23 for full phase breakdown.
