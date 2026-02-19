@@ -2,6 +2,8 @@ import type { Server as SocketIOServer, Socket } from 'socket.io';
 import type { AppContext } from '../../lib/context.js';
 import { createAuthService } from '../auth/auth.service.js';
 import { createGuildsService } from '../guilds/guilds.service.js';
+import { createVoiceService } from '../voice/voice.service.js';
+import { createChannelsService } from '../channels/channels.service.js';
 import { logger } from '../../lib/logger.js';
 
 interface AuthenticatedSocket extends Socket {
@@ -13,6 +15,8 @@ interface AuthenticatedSocket extends Socket {
 export function setupGateway(ctx: AppContext) {
   const authService = createAuthService(ctx);
   const guildsService = createGuildsService(ctx);
+  const voiceService = createVoiceService(ctx);
+  const channelsService = createChannelsService(ctx);
 
   ctx.io.on('connection', (rawSocket: Socket) => {
     const socket = rawSocket as AuthenticatedSocket;
@@ -125,10 +129,102 @@ export function setupGateway(ctx: AppContext) {
       }
     });
 
+    // ── VOICE_STATE_UPDATE — join/leave/mute voice channels ─────────────────
+
+    socket.on('VOICE_STATE_UPDATE', async (data: {
+      guildId?: string;
+      channelId: string | null;
+      selfMute?: boolean;
+      selfDeaf?: boolean;
+    }) => {
+      if (!socket.userId || !socket.username) return;
+
+      try {
+        // channelId === null → leave voice
+        if (data.channelId === null) {
+          const disconnectedState = await voiceService.leaveChannel(socket.userId);
+          if (disconnectedState?.guildId) {
+            ctx.io.to(`guild:${disconnectedState.guildId}`).emit('VOICE_STATE_UPDATE', disconnectedState as any);
+          }
+          return;
+        }
+
+        // Verify channel exists and is a voice channel
+        const channel = await channelsService.getChannel(data.channelId);
+        if (!channel) return;
+        if (channel.type !== 'GUILD_VOICE' && channel.type !== 'GUILD_STAGE_VOICE') return;
+
+        // Must be a guild member
+        if (channel.guildId) {
+          const isMember = await guildsService.isMember(channel.guildId, socket.userId);
+          if (!isMember) return;
+        }
+
+        // Join voice channel
+        const { token, voiceState } = await voiceService.joinChannel(
+          socket.userId,
+          socket.username,
+          data.channelId,
+          channel.guildId,
+          `session_${socket.userId}`,
+          { channelId: data.channelId, selfMute: data.selfMute ?? false, selfDeaf: data.selfDeaf ?? false },
+        );
+
+        // Broadcast voice state to guild
+        if (channel.guildId) {
+          ctx.io.to(`guild:${channel.guildId}`).emit('VOICE_STATE_UPDATE', voiceState as any);
+        }
+
+        // Send token + endpoint privately to the requesting socket
+        socket.emit('VOICE_SERVER_UPDATE', {
+          token,
+          guildId: channel.guildId,
+          channelId: data.channelId,
+          endpoint: ctx.env.LIVEKIT_URL,
+        });
+      } catch (err) {
+        logger.error({ err, userId: socket.userId }, 'VOICE_STATE_UPDATE failed');
+      }
+    });
+
+    // ── SOUNDBOARD_PLAY — play sound in voice channel ─────────────────────
+
+    socket.on('SOUNDBOARD_PLAY', async (data: { guildId: string; soundId: string }) => {
+      if (!socket.userId) return;
+
+      try {
+        const state = await voiceService.getVoiceState(socket.userId);
+        if (!state || state.guildId !== data.guildId) return;
+
+        const sound = await voiceService.getSound(data.soundId);
+        if (!sound || sound.guildId !== data.guildId || !sound.available) return;
+
+        ctx.io.to(`guild:${data.guildId}`).emit('SOUNDBOARD_PLAY', {
+          guildId: data.guildId,
+          channelId: state.channelId,
+          soundId: data.soundId,
+          userId: socket.userId,
+          volume: sound.volume,
+        } as any);
+      } catch (err) {
+        logger.error({ err, userId: socket.userId }, 'SOUNDBOARD_PLAY failed');
+      }
+    });
+
     // ── Disconnect ─────────────────────────────────────────────────────────
 
     socket.on('disconnect', async (reason) => {
       if (socket.userId) {
+        // Clean up voice state if user was in a voice channel
+        try {
+          const disconnectedState = await voiceService.leaveChannel(socket.userId);
+          if (disconnectedState?.guildId) {
+            ctx.io.to(`guild:${disconnectedState.guildId}`).emit('VOICE_STATE_UPDATE', disconnectedState as any);
+          }
+        } catch (err) {
+          logger.error({ err, userId: socket.userId }, 'Voice cleanup on disconnect failed');
+        }
+
         // Remove from online users
         await ctx.redis.srem('online_users', socket.userId);
         await ctx.redis.del(`user_socket:${socket.userId}`);

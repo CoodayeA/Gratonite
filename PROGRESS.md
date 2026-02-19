@@ -1,8 +1,8 @@
 # Gratonite — Development Progress
 
 > **Last updated:** 2026-02-19
-> **Current Phase:** Phase 2 — Core Communication (Complete)
-> **Status:** All Phase 2 modules built, tested end-to-end, and working
+> **Current Phase:** Phase 3 — Voice & Video (Complete)
+> **Status:** All Phase 3 modules built, tested end-to-end, and working
 
 ---
 
@@ -13,11 +13,12 @@ If you're a new AI model continuing this work, here's what you need to know:
 1. **Architecture plan** is at `ARCHITECTURE.md` (2,516 lines, 31 sections) — the authoritative reference for all design decisions
 2. **Project root** is at `/Users/ferdinand/Projects/untitled folder/`
 3. **Stack:** TypeScript monorepo — Turborepo + pnpm workspaces
-4. **Backend:** Node.js, Express 5, Socket.IO, Drizzle ORM, PostgreSQL 16, Redis 7, MinIO
+4. **Backend:** Node.js, Express 5, Socket.IO, Drizzle ORM, PostgreSQL 16, Redis 7, MinIO, LiveKit (voice)
 5. **Auth:** JWT (jose, HS256) + Argon2id password hashing + refresh token rotation in Redis
 6. **IDs:** Snowflake IDs (Twitter-style 64-bit, epoch Jan 1 2025) — stored as **strings** throughout (see BigInt fix below)
 7. **Code style:** `.prettierrc` — semi, single quotes, trailing commas, 100 printWidth
 8. **Database:** PostgreSQL on port **5433** (not 5432), Redis on port 6379
+9. **Voice:** LiveKit SFU (port 7880) + Coturn TURN/STUN (port 3478). Backend manages state + generates join tokens; clients connect to LiveKit directly
 
 ### Critical: BigInt / Snowflake ID Handling
 
@@ -26,13 +27,13 @@ Drizzle ORM 0.45.1's `bigint({ mode: 'string' })` does NOT return strings at run
 ### Running the Server
 
 ```bash
-# Start Docker services (PostgreSQL + MinIO — Redis may need SSH tunnel)
+# Start Docker services (PostgreSQL + MinIO + LiveKit + Coturn — Redis may need SSH tunnel)
 docker-compose up -d
 
 # Install dependencies
 pnpm install
 
-# Generate + run migrations (39 tables)
+# Generate + run migrations (42 tables)
 cd packages/db && npx drizzle-kit generate && npx drizzle-kit migrate
 
 # Start API server (port 4000)
@@ -53,7 +54,7 @@ cd apps/api && node_modules/.bin/tsx src/index.ts
 - `.gitignore`, `.prettierrc`
 
 #### Docker Compose ✅
-- `docker-compose.yml` — PostgreSQL 16-alpine (5433), Redis 7-alpine (6379), MinIO (9000/9001)
+- `docker-compose.yml` — PostgreSQL 16-alpine (5433), Redis 7-alpine (6379), MinIO (9000/9001), LiveKit (7880), Coturn (3478)
 - All services have health checks, persistent volumes, and auto-restart
 
 #### @gratonite/types Package ✅
@@ -65,15 +66,15 @@ cd apps/api && node_modules/.bin/tsx src/index.ts
 
 #### @gratonite/db Package ✅
 - `packages/db/` — Drizzle ORM schema + database connection
-- **Schema files:** `helpers.ts` (bigintString custom type), `users.ts`, `guilds.ts`, `channels.ts`, `messages.ts`
-- **Tables (39):** users, userProfiles, userSettings, userCustomStatus, connectedAccounts, relationships, sessions, userNotes, badges, userBadges, accountDeletionRequests, guilds, guildMembers, memberProfiles, guildRoles, userRoles, guildBrand, invites, bans, welcomeScreens, welcomeScreenChannels, auditLogEntries, channels, channelPermissions, threads, threadMembers, dmChannels, dmRecipients, channelReadState, messages, messageAttachments, messageReactions, messageReactionUsers, messageEditHistory, channelPins, polls, pollAnswers, pollVotes, scheduledMessages
+- **Schema files:** `helpers.ts` (bigintString custom type), `users.ts`, `guilds.ts`, `channels.ts`, `messages.ts`, `voice.ts`
+- **Tables (42):** users, userProfiles, userSettings, userCustomStatus, connectedAccounts, relationships, sessions, userNotes, badges, userBadges, accountDeletionRequests, guilds, guildMembers, memberProfiles, guildRoles, userRoles, guildBrand, invites, bans, welcomeScreens, welcomeScreenChannels, auditLogEntries, channels, channelPermissions, threads, threadMembers, dmChannels, dmRecipients, channelReadState, messages, messageAttachments, messageReactions, messageReactionUsers, messageEditHistory, channelPins, polls, pollAnswers, pollVotes, scheduledMessages, voiceStates, stageInstances, soundboardSounds
 - **Connection:** `createDb()` factory using postgres.js driver with connection pooling (max 20)
 
 #### API Server Foundation ✅
 - `apps/api/` — Express 5 + Socket.IO server
 
 **Libraries (`src/lib/`):**
-- `context.ts` — AppContext type: `{ db, redis, io, env }`
+- `context.ts` — AppContext type: `{ db, redis, io, env, livekit }`
 - `logger.ts` — pino structured logger (pretty in dev, JSON in prod)
 - `snowflake.ts` — Server-side snowflake ID generator with sequence tracking
 - `redis.ts` — Redis client with retry strategy + separate pub/sub subscriber client
@@ -195,6 +196,96 @@ cd apps/api && node_modules/.bin/tsx src/index.ts
 
 ---
 
+### Phase 3: Voice & Video ✅
+
+#### Infrastructure ✅
+- `docker-compose.yml` — Added LiveKit SFU (ports 7880/7881/7882) and Coturn TURN/STUN (ports 3478/5349)
+- `apps/api/src/env.ts` — Added `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_URL`, `LIVEKIT_HTTP_URL`, `TURN_URL`, `TURN_USERNAME`, `TURN_PASSWORD`
+- `apps/api/src/lib/context.ts` — Added `livekit: RoomServiceClient` to AppContext
+- `apps/api/package.json` — Added `livekit-server-sdk: ^2.9.0`
+- `apps/api/src/index.ts` — Instantiates `RoomServiceClient`, registers voice router
+
+#### Database Schema (3 new tables, 42 total) ✅
+- `packages/db/src/schema/voice.ts` — 3 new tables:
+  - `voiceStates` — PK: userId (one channel at a time). Columns: channelId, guildId, sessionId, deaf, mute, selfDeaf, selfMute, selfStream, selfVideo, suppress, requestToSpeakTimestamp, joinedAt. Indexes on channelId and guildId.
+  - `stageInstances` — Snowflake PK. Columns: guildId, channelId, topic (120 chars), privacyLevel (enum: public/guild_only), scheduledEventId, createdAt
+  - `soundboardSounds` — Snowflake PK. Columns: guildId, name (32 chars), soundHash, volume (real 0-1), emojiId, emojiName, uploaderId, available, createdAt
+- Migration: `0001_first_spot.sql`
+
+#### Event Types ✅
+- `packages/types/src/events.ts` — Added:
+  - ServerToClient: `STAGE_INSTANCE_CREATE`, `STAGE_INSTANCE_UPDATE`, `STAGE_INSTANCE_DELETE`, `SOUNDBOARD_PLAY`, `SCREEN_SHARE_START`, `SCREEN_SHARE_STOP`
+  - ClientToServer: `SOUNDBOARD_PLAY`
+
+#### Voice Module (`src/modules/voice/`) ✅
+- `voice.schemas.ts` — Zod schemas for all voice operations (joinVoice, updateVoiceState, modifyMemberVoiceState, createStageInstance, updateStageInstance, createSoundboardSound, updateSoundboardSound, startScreenShare)
+- `voice.service.ts` — Full voice service (`createVoiceService(ctx)` factory):
+  - **LiveKit:** `generateJoinToken()` (AccessToken with room grants), `ensureRoomExists()`, `deleteRoomIfEmpty()`
+  - **Voice State:** `joinChannel()` (auto-leaves if in different channel, detects stage channels for suppress, upserts DB + Redis, returns LiveKit token), `leaveChannel()` (idempotent, cleans up DB + Redis + room), `updateVoiceState()`, `modifyMemberVoiceState()` (server mute/deaf/disconnect/move), `getVoiceState()`, `getChannelVoiceStates()`, `getGuildVoiceStates()`
+  - **Screen Share:** `startScreenShare()`, `stopScreenShare()` (Redis hash tracking)
+  - **Stage:** `createStageInstance()`, `getStageInstance()`, `getStageInstanceById()`, `getGuildStageInstances()`, `updateStageInstance()`, `deleteStageInstance()`, `requestToSpeak()`, `approveSpeaker()`, `revokeSpeaker()`
+  - **Soundboard:** `createSound()`, `getGuildSounds()`, `getSound()`, `updateSound()`, `deleteSound()`
+- `voice.router.ts` — 20 REST endpoints:
+  - **Voice:** POST `/voice/join` (get LiveKit token), POST `/voice/leave`, PATCH `/voice/state`, GET `/guilds/:guildId/voice-states`, GET `/channels/:channelId/voice-states`, PATCH `/guilds/:guildId/voice-states/:userId` (mod action)
+  - **Screen Share:** POST `/voice/screen-share/start`, POST `/voice/screen-share/stop`
+  - **Stage:** POST/GET `/guilds/:guildId/stage-instances`, PATCH/DELETE `/stage-instances/:stageId`, PUT `/stage-instances/:stageId/request-to-speak`, PUT/DELETE `/stage-instances/:stageId/speakers/:userId`
+  - **Soundboard:** GET/POST `/guilds/:guildId/soundboard`, PATCH/DELETE `/guilds/:guildId/soundboard/:soundId`, POST `/guilds/:guildId/soundboard/:soundId/play`
+  - All mutations broadcast Socket.IO events to guild rooms
+
+#### Gateway Extensions ✅
+- `gateway.ts` — Added:
+  - `VOICE_STATE_UPDATE` handler — Join/leave voice via Socket.IO. `channelId === null` → leave; `channelId !== null` → verify channel + membership, call `joinChannel()`, broadcast state to guild, send `VOICE_SERVER_UPDATE` (token + endpoint) privately to requesting socket
+  - `SOUNDBOARD_PLAY` handler — Verify user in voice channel in guild, broadcast play event
+  - Voice cleanup on `disconnect` — Automatically calls `leaveChannel()` and broadcasts disconnected state when socket disconnects
+
+#### Redis Key Design
+| Key | Type | TTL | Purpose |
+|-----|------|-----|---------|
+| `voice:channel:{channelId}` | SET | None | Users in this voice channel |
+| `voice:user:{userId}` | HASH | 3600s | Where this user is (channelId, guildId, sessionId) |
+| `voice:guild:{guildId}:channels` | SET | None | Active voice channels in guild |
+| `voice:room:{channelId}` | STRING | None | LiveKit room name mapping |
+| `voice:screenshare:{channelId}:{userId}` | HASH | 3600s | Active screen share session |
+
+#### Key Design Decisions
+- **userId as PK on voice_states:** A user can only be in one voice channel at a time. Joining a new channel upserts the row.
+- **Dual storage (DB + Redis):** PostgreSQL is authoritative; Redis provides fast presence lookups. On restart, Redis can be rebuilt from DB.
+- **selfDeaf implies selfMute:** Following Discord behavior — deafening automatically mutes.
+- **Stage channels:** Audience joins suppressed (suppress=true); speakers need explicit approval from guild owner.
+- **Idempotent leaveChannel:** Returns early if user not in any channel — safe to call from both explicit leave and disconnect cleanup.
+- **Soundboard uploads deferred:** Accepting soundHash as string. File upload pipeline (MinIO integration) is Phase 4.
+
+---
+
+## Phase 3 E2E Test Results (All Passing)
+
+| Test | Result | Notes |
+|---|---|---|
+| Join voice channel | ✅ | Returns LiveKit token + voiceState + endpoint |
+| Get guild voice states | ✅ | Lists all connected users |
+| Get channel voice states | ✅ | Lists users in specific channel |
+| Update own voice state (selfMute) | ✅ | selfMute toggled |
+| Leave voice channel | ✅ | 204, voice states cleared |
+| Create stage instance | ✅ | Topic + privacy level |
+| List stage instances | ✅ | Returns active stages |
+| Update stage instance | ✅ | Topic updated |
+| Join stage channel (suppressed) | ✅ | suppress: true on join |
+| Request to speak | ✅ | requestToSpeakTimestamp set |
+| Approve speaker | ✅ | suppress: false |
+| Revoke speaker | ✅ | suppress: true |
+| Delete stage instance | ✅ | 204 |
+| Create soundboard sound | ✅ | With name, hash, volume, emoji |
+| List soundboard sounds | ✅ | Filters by available=true |
+| Update soundboard sound | ✅ | Name + volume updated |
+| Play soundboard sound | ✅ | 204, broadcasts to guild |
+| Delete soundboard sound | ✅ | 204 |
+| Start screen share | ✅ | Returns session, selfStream=true |
+| Stop screen share | ✅ | 204, selfStream=false |
+| Server mute (mod action) | ✅ | mute: true in voice state |
+| Disconnect user (mod action) | ✅ | channelId: null, voice state removed |
+
+---
+
 ## Critical Bug Fixes Applied
 
 ### BigInt Serialization Fix (CRITICAL)
@@ -273,16 +364,7 @@ All 4 schema files (`users.ts`, `guilds.ts`, `channels.ts`, `messages.ts`) were 
 
 ## What's NOT Done Yet
 
-### Phase 3: Voice & Video (Next)
-- LiveKit integration (voice channels)
-- Screen share (entire screen, app window, browser tab)
-- Go Live / game streaming with viewer count
-- Video calls (camera, background blur, virtual backgrounds)
-- 1:1 and group DM calls with ring UI
-- Voice presence system
-- Push-to-talk (desktop)
-
-### Phase 4: Rich Features
+### Phase 4: Rich Features (Next)
 - Threads + forum channels
 - Wiki channels + Q&A channels
 - Polls, scheduled messages, voice messages
@@ -311,13 +393,15 @@ See `ARCHITECTURE.md` Section 23 for full phase breakdown.
 | ID system | Snowflake (64-bit) as strings | Sortable, distributed, contains timestamp |
 | Bigint handling | Custom `bigintString` column type | Drizzle's built-in bigint mode:'string' doesn't work at runtime |
 | Real-time | Socket.IO + Redis pub/sub | Fallback support, rooms, cross-server fanout |
+| Voice/Video SFU | LiveKit | Open-source, WebRTC, self-hosted, excellent SDK |
+| NAT traversal | Coturn | TURN/STUN for WebRTC connectivity through NATs |
 | File storage | MinIO (S3-compatible) | Self-hosted, same API as AWS S3 |
 | Logging | pino | Fastest Node.js structured logger |
 | Validation | Zod | Runtime + TypeScript type inference |
 
 ---
 
-## File Tree (as of Phase 2)
+## File Tree (as of Phase 3)
 
 ```
 gratonite/
@@ -328,7 +412,7 @@ gratonite/
 ├── turbo.json                # Turborepo task config
 ├── tsconfig.base.json        # Shared TypeScript config
 ├── .gitignore, .prettierrc
-├── docker-compose.yml        # PostgreSQL + Redis + MinIO
+├── docker-compose.yml        # PostgreSQL + Redis + MinIO + LiveKit + Coturn
 │
 ├── packages/
 │   ├── types/                # @gratonite/types
@@ -348,17 +432,19 @@ gratonite/
 │           │   ├── users.ts  # 11 tables + 8 enums
 │           │   ├── guilds.ts # 11 tables + 2 enums
 │           │   ├── channels.ts # 7 tables + 4 enums
-│           │   └── messages.ts # 10 tables + 1 enum
+│           │   ├── messages.ts # 10 tables + 1 enum
+│           │   └── voice.ts  # 3 tables + 1 enum (NEW Phase 3)
 │           └── migrations/
 │               ├── 0000_mean_master_chief.sql  # 39 tables
+│               ├── 0001_first_spot.sql         # +3 voice tables
 │               └── meta/
 │
 └── apps/
     └── api/                  # @gratonite/api
         ├── package.json, tsconfig.json, .env.example
         └── src/
-            ├── index.ts      # Express + Socket.IO server
-            ├── env.ts        # Zod env validation
+            ├── index.ts      # Express + Socket.IO + LiveKit server
+            ├── env.ts        # Zod env validation (incl. LiveKit + TURN vars)
             ├── lib/
             │   ├── context.ts, logger.ts, snowflake.ts, redis.ts
             ├── middleware/
@@ -368,18 +454,20 @@ gratonite/
                 │   ├── auth.schemas.ts, auth.service.ts, auth.router.ts
                 ├── users/
                 │   └── users.router.ts
-                ├── guilds/          # NEW (Phase 2)
+                ├── guilds/
                 │   ├── guilds.schemas.ts, guilds.service.ts, guilds.router.ts
-                ├── channels/        # NEW (Phase 2)
+                ├── channels/
                 │   ├── channels.schemas.ts, channels.service.ts, channels.router.ts
-                ├── messages/        # NEW (Phase 2)
+                ├── messages/
                 │   ├── messages.schemas.ts, messages.service.ts, messages.router.ts
-                ├── invites/         # NEW (Phase 2)
+                ├── invites/
                 │   ├── invites.service.ts, invites.router.ts
-                ├── relationships/   # NEW (Phase 2)
+                ├── relationships/
                 │   ├── relationships.service.ts, relationships.router.ts
-                └── gateway/         # NEW (Phase 2)
-                    └── gateway.ts   # Socket.IO auth + rooms + events
+                ├── voice/           # NEW (Phase 3)
+                │   ├── voice.schemas.ts, voice.service.ts, voice.router.ts
+                └── gateway/
+                    └── gateway.ts   # Socket.IO auth + rooms + voice events
 ```
 
 ---
@@ -389,7 +477,7 @@ gratonite/
 - **Node.js:** v22.22.0
 - **pnpm:** v10.30.0
 - **OS:** macOS
-- **Docker:** Required for PostgreSQL (port 5433) and MinIO (9000/9001)
+- **Docker:** Required for PostgreSQL (port 5433), MinIO (9000/9001), LiveKit (7880), Coturn (3478)
 - **Redis:** Port 6379 (may need SSH tunnel if Docker Redis conflicts)
 
 ### Commands

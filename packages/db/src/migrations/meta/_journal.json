@@ -8,6 +8,13 @@
       "when": 1771541595513,
       "tag": "0000_mean_master_chief",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771542858313,
+      "tag": "0001_first_spot",
+      "breakpoints": true
     }
   ]
 }

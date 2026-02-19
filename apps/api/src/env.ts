@@ -47,6 +47,17 @@ const envSchema = z.object({
 
   // CDN
   CDN_BASE_URL: z.string().default('http://localhost:9000'),
+
+  // LiveKit
+  LIVEKIT_API_KEY: z.string().default('devkey'),
+  LIVEKIT_API_SECRET: z.string().default('secret'),
+  LIVEKIT_URL: z.string().default('ws://localhost:7880'),
+  LIVEKIT_HTTP_URL: z.string().default('http://localhost:7880'),
+
+  // TURN/STUN (Coturn)
+  TURN_URL: z.string().default('turn:localhost:3478'),
+  TURN_USERNAME: z.string().default('gratonite'),
+  TURN_PASSWORD: z.string().default('gratonite123'),
 });
 
 const parsed = envSchema.safeParse(process.env);

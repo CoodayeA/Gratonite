@@ -15,7 +15,9 @@ import { channelsRouter } from './modules/channels/channels.router.js';
 import { messagesRouter } from './modules/messages/messages.router.js';
 import { invitesRouter } from './modules/invites/invites.router.js';
 import { relationshipsRouter } from './modules/relationships/relationships.router.js';
+import { voiceRouter } from './modules/voice/voice.router.js';
 import { setupGateway } from './modules/gateway/gateway.js';
+import { RoomServiceClient } from 'livekit-server-sdk';
 
 // ============================================================================
 // Server bootstrap
@@ -60,8 +62,15 @@ async function main() {
     pingTimeout: 10000,
   });
 
+  // ── LiveKit client ────────────────────────────────────────────────────
+  const livekitClient = new RoomServiceClient(
+    env.LIVEKIT_HTTP_URL,
+    env.LIVEKIT_API_KEY,
+    env.LIVEKIT_API_SECRET,
+  );
+
   // ── Shared context for route handlers ──────────────────────────────────
-  const ctx = { db, redis, io, env };
+  const ctx = { db, redis, io, env, livekit: livekitClient };
 
   // ── Health check ───────────────────────────────────────────────────────
   app.get('/health', (_req, res) => {
@@ -81,6 +90,7 @@ async function main() {
   app.use('/api/v1', messagesRouter(ctx));   // handles /channels/:id/messages
   app.use('/api/v1/invites', invitesRouter(ctx));
   app.use('/api/v1/relationships', relationshipsRouter(ctx));
+  app.use('/api/v1', voiceRouter(ctx));
 
   // ── 404 handler ────────────────────────────────────────────────────────
   app.use((_req, res) => {

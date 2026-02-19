@@ -57,6 +57,39 @@ services:
       timeout: 5s
       retries: 5
 
+  # ──────────────────────────────────────────────────────────────────────────
+  # LiveKit — WebRTC SFU for voice & video
+  # ──────────────────────────────────────────────────────────────────────────
+  livekit:
+    image: livekit/livekit-server:latest
+    restart: unless-stopped
+    ports:
+      - "7880:7880"       # HTTP + WebSocket API
+      - "7881:7881"       # RTC over TCP
+      - "7882:7882/udp"   # RTC over UDP
+    environment:
+      LIVEKIT_KEYS: "devkey: secret"
+    command: --dev --bind 0.0.0.0
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Coturn — TURN/STUN server for NAT traversal
+  # ──────────────────────────────────────────────────────────────────────────
+  coturn:
+    image: coturn/coturn:latest
+    restart: unless-stopped
+    ports:
+      - "3478:3478"       # STUN/TURN TCP
+      - "3478:3478/udp"   # STUN/TURN UDP
+      - "5349:5349"       # STUN/TURN TLS
+    command: >
+      -n
+      --log-file=stdout
+      --min-port=49152
+      --max-port=49200
+      --realm=gratonite.local
+      --user=gratonite:gratonite123
+      --lt-cred-mech
+
 volumes:
   postgres_data:
   redis_data:

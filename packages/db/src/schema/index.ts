@@ -7,3 +7,4 @@ export * from './users';
 export * from './guilds';
 export * from './channels';
 export * from './messages';
+export * from './voice';

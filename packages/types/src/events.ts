@@ -3,7 +3,7 @@ import type { Message, MessageReaction } from './message';
 import type { GuildMember, Guild } from './guild';
 import type { Channel, Thread } from './channel';
 import type { Presence, CustomStatus } from './user';
-import type { VoiceState } from './voice';
+import type { VoiceState, ScreenShareSession, StageInstance } from './voice';
 
 // ============================================================================
 // Socket.IO event types — Server → Client and Client → Server
@@ -79,6 +79,24 @@ export interface ServerToClientEvents {
     endpoint: string;
   }) => void;
 
+  // Stage
+  STAGE_INSTANCE_CREATE: (data: StageInstance) => void;
+  STAGE_INSTANCE_UPDATE: (data: Partial<StageInstance> & { id: Snowflake }) => void;
+  STAGE_INSTANCE_DELETE: (data: { id: Snowflake; guildId: Snowflake; channelId: Snowflake }) => void;
+
+  // Soundboard
+  SOUNDBOARD_PLAY: (data: {
+    guildId: Snowflake;
+    channelId: Snowflake;
+    soundId: Snowflake;
+    userId: Snowflake;
+    volume: number;
+  }) => void;
+
+  // Screen share
+  SCREEN_SHARE_START: (data: ScreenShareSession) => void;
+  SCREEN_SHARE_STOP: (data: { userId: Snowflake; channelId: Snowflake }) => void;
+
   // User
   USER_UPDATE: (data: { userId: Snowflake; [key: string]: unknown }) => void;
   CUSTOM_STATUS_UPDATE: (data: { userId: Snowflake; status: CustomStatus }) => void;
@@ -115,6 +133,9 @@ export interface ClientToServerEvents {
 
   // Presence
   PRESENCE_UPDATE: (data: { status: string; activities?: unknown[] }) => void;
+
+  // Soundboard
+  SOUNDBOARD_PLAY: (data: { guildId: Snowflake; soundId: Snowflake }) => void;
 
   // Subscribe/unsubscribe to guild events
   GUILD_SUBSCRIBE: (data: { guildId: Snowflake }) => void;
