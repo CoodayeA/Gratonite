@@ -1,0 +1,32 @@
+{
+  "name": "gratonite",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The ultimate open-source Discord replacement",
+  "license": "AGPL-3.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@10.30.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "argon2",
+      "esbuild"
+    ]
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "clean": "turbo clean && rm -rf node_modules",
+    "db:generate": "pnpm --filter @gratonite/db generate",
+    "db:migrate": "pnpm --filter @gratonite/db migrate",
+    "db:studio": "pnpm --filter @gratonite/db studio",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:reset": "docker-compose down -v && docker-compose up -d"
+  }
+}
