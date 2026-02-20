@@ -175,3 +175,24 @@ export type GradientType = 'linear' | 'radial' | 'mesh' | 'none';
 export type IconPack = 'outlined' | 'filled' | 'duotone' | 'playful' | 'custom';
 export type CornerStyle = 'rounded' | 'sharp' | 'pill';
 export type MessageLayoutDefault = 'cozy' | 'compact' | 'bubbles' | 'cards';
+
+// ============================================================================
+// Scheduled Events
+// ============================================================================
+
+export interface GuildScheduledEvent {
+  id: Snowflake;
+  guildId: Snowflake;
+  channelId: Snowflake | null;
+  creatorId: Snowflake;
+  name: string;
+  description: string | null;
+  scheduledStartTime: string;
+  scheduledEndTime: string | null;
+  entityType: 'stage_instance' | 'voice' | 'external';
+  entityMetadata: { location?: string } | null;
+  status: 'scheduled' | 'active' | 'completed' | 'cancelled';
+  imageHash: string | null;
+  interestedCount: number;
+  createdAt: string;
+}

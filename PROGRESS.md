@@ -1,8 +1,8 @@
 # Gratonite — Development Progress
 
-> **Last updated:** 2026-02-19
-> **Current Phase:** Phase 4 Part 2 — Scheduled Messages + Link Previews + Voice Messages (Complete)
-> **Status:** All Phase 4 features implemented and E2E tested
+> **Last updated:** 2026-02-20
+> **Current Phase:** Phase 4 Part 3A — Full-Text Search + Wiki + Q&A + Events (Complete)
+> **Status:** All Phase 4 Part 3A features implemented and E2E tested (47/47 tests pass)
 
 ---
 
@@ -545,15 +545,81 @@ Test sequence: upload file → message with attachment → upload emoji → list
 
 ---
 
+### Phase 4 Part 3A: Search + Wiki + Q&A + Events ✅
+
+#### Full-Text Search ✅
+- PostgreSQL `tsvector` column + GIN index on `messages` table
+- Trigger auto-populates `search_vector` on INSERT/UPDATE of content
+- `apps/api/src/modules/search/` — schemas, service, router
+- `GET /search/messages` — query, guildId, channelId, authorId, before/after filters
+- Uses `plainto_tsquery`, `ts_rank()` for relevance, `ts_headline()` for highlights
+- Rate limited: 10 searches per 10s per user
+
+#### Wiki Channels ✅
+- DB tables: `wiki_pages`, `wiki_page_revisions` (migration `0003_silent_strong_guy.sql`)
+- `apps/api/src/modules/wiki/` — schemas, service, router
+- 7 endpoints: create/list/get/update/delete pages + list revisions + revert
+- Hierarchical pages via `parentPageId`, slug auto-generated from title
+- Revision history: every edit saves previous state before updating
+- Revert: restores old revision content, creates new revision entry
+
+#### Q&A Channels ✅
+- DB tables: `qa_questions` (thread metadata), `qa_votes`, `qa_answer_meta`
+- `apps/api/src/modules/qa/` — schemas, service, router
+- Q&A questions are threads in `GUILD_QA` channels — reuses existing thread + message infrastructure
+- 8 endpoints: create/list/get questions, vote question/answer, accept/unaccept answer
+- Vote system: +1/-1 per user, upserts on re-vote, atomic count updates
+- `qaAnswerMeta` rows created lazily on first vote (no coupling to messages module)
+
+#### Event Scheduling ✅
+- DB tables: `guild_scheduled_events`, `guild_scheduled_event_users` + 2 enums
+- `apps/api/src/modules/events/` — schemas, service, router
+- 8 endpoints: CRUD events + RSVP interested/uninterested + list interested users
+- Entity types: `voice`, `stage_instance`, `external` (with location metadata)
+- Background job: auto-start events when `scheduledStartTime <= now` (every 60s)
+- RSVP: atomic `interestedCount` increment/decrement
+
+#### Phase 4 Part 3A E2E Test Results (All Passing)
+
+| Test | Result | Notes |
+|---|---|---|
+| Send 3 messages with keywords | ✅ | quantum, JavaScript, weather |
+| Search "quantum" | ✅ | 1 result with `<mark>` highlights |
+| Search "JavaScript" | ✅ | 1 result |
+| Search with guildId filter | ✅ | Results filtered correctly |
+| Search nonexistent term | ✅ | 0 results |
+| Create GUILD_WIKI channel | ✅ | Channel type accepted |
+| Create wiki page | ✅ | Title, slug, content, position |
+| List wiki pages | ✅ | Page in list |
+| Update wiki page | ✅ | New content, revision created |
+| List revisions | ✅ | 1 revision from edit |
+| Revert to revision | ✅ | Content restored |
+| Delete wiki page | ✅ | 204 |
+| Create GUILD_QA channel | ✅ | Channel type accepted |
+| Create Q&A question | ✅ | Thread + starter message created |
+| List questions | ✅ | Question in list |
+| Vote on question (+1) | ✅ | voteCount=1 |
+| Send answer in thread | ✅ | Message posted |
+| Vote on answer (+1) | ✅ | Answer meta created |
+| Accept answer | ✅ | resolved=true |
+| Unaccept answer | ✅ | resolved=false |
+| Create voice event | ✅ | With channelId |
+| Create external event | ✅ | With location metadata |
+| List events | ✅ | Both events present |
+| RSVP interested | ✅ | 204 |
+| Get event (interestedCount) | ✅ | interestedCount=1 |
+| List interested users | ✅ | User in list |
+| Update event | ✅ | Name changed |
+| Delete event | ✅ | 204 |
+
+---
+
 ## What's NOT Done Yet
 
-### Phase 4 Part 3: Rich Features (Remaining)
-- Wiki channels + Q&A channels (types exist, need service/router)
+### Phase 4 Part 3B: Rich Features (Remaining)
 - Auto-moderation + raid protection (need new tables)
-- Full-text search (need GIN index on messages)
-- Event scheduling system (need new tables)
-- Server admin dashboard + analytics
-- Moderation dashboard
+- Moderation dashboard (reports + quick actions)
+- Server admin dashboard + analytics (need analytics tables)
 
 ### Phases 5–9
 See `ARCHITECTURE.md` Section 23 for full phase breakdown.

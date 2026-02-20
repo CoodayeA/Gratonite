@@ -154,3 +154,87 @@ export const channelReadState = pgTable('channel_read_state', {
   lastReadMessageId: bigintString('last_read_message_id'),
   mentionCount: integer('mention_count').notNull().default(0),
 });
+
+// ============================================================================
+// Wiki pages (for GUILD_WIKI channels)
+// ============================================================================
+
+export const wikiPages = pgTable('wiki_pages', {
+  id: bigintString('id').primaryKey(),
+  channelId: bigintString('channel_id')
+    .notNull()
+    .references(() => channels.id, { onDelete: 'cascade' }),
+  guildId: bigintString('guild_id')
+    .notNull()
+    .references(() => guilds.id, { onDelete: 'cascade' }),
+  title: varchar('title', { length: 200 }).notNull(),
+  slug: varchar('slug', { length: 200 }).notNull(),
+  content: text('content').notNull().default(''),
+  authorId: bigintString('author_id')
+    .notNull()
+    .references(() => users.id),
+  lastEditorId: bigintString('last_editor_id').references(() => users.id),
+  pinned: boolean('pinned').notNull().default(false),
+  archived: boolean('archived').notNull().default(false),
+  parentPageId: bigintString('parent_page_id'),
+  position: integer('position').notNull().default(0),
+  editedAt: timestamp('edited_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const wikiPageRevisions = pgTable('wiki_page_revisions', {
+  id: bigintString('id').primaryKey(),
+  pageId: bigintString('page_id')
+    .notNull()
+    .references(() => wikiPages.id, { onDelete: 'cascade' }),
+  content: text('content').notNull(),
+  title: varchar('title', { length: 200 }).notNull(),
+  editorId: bigintString('editor_id')
+    .notNull()
+    .references(() => users.id),
+  editMessage: varchar('edit_message', { length: 300 }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ============================================================================
+// Q&A (for GUILD_QA channels)
+// ============================================================================
+
+export const qaQuestions = pgTable('qa_questions', {
+  threadId: bigintString('thread_id')
+    .primaryKey()
+    .references(() => threads.id, { onDelete: 'cascade' }),
+  guildId: bigintString('guild_id')
+    .notNull()
+    .references(() => guilds.id, { onDelete: 'cascade' }),
+  channelId: bigintString('channel_id')
+    .notNull()
+    .references(() => channels.id, { onDelete: 'cascade' }),
+  authorId: bigintString('author_id')
+    .notNull()
+    .references(() => users.id),
+  acceptedAnswerId: bigintString('accepted_answer_id'),
+  resolved: boolean('resolved').notNull().default(false),
+  voteCount: integer('vote_count').notNull().default(0),
+  answerCount: integer('answer_count').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const qaVotes = pgTable('qa_votes', {
+  targetId: bigintString('target_id').notNull(),
+  targetType: varchar('target_type', { length: 10 }).notNull(), // 'question' | 'answer'
+  userId: bigintString('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  value: integer('value').notNull(), // +1 or -1
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const qaAnswerMeta = pgTable('qa_answer_meta', {
+  messageId: bigintString('message_id').primaryKey(),
+  threadId: bigintString('thread_id')
+    .notNull()
+    .references(() => threads.id, { onDelete: 'cascade' }),
+  voteCount: integer('vote_count').notNull().default(0),
+  isAccepted: boolean('is_accepted').notNull().default(false),
+});

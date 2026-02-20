@@ -1,7 +1,7 @@
 import type { Snowflake } from './snowflake';
 import type { Message, MessageReaction } from './message';
-import type { GuildMember, Guild, GuildEmoji, GuildSticker } from './guild';
-import type { Channel, Thread } from './channel';
+import type { GuildMember, Guild, GuildEmoji, GuildSticker, GuildScheduledEvent } from './guild';
+import type { Channel, Thread, WikiPage, QaQuestion } from './channel';
 import type { Presence, CustomStatus } from './user';
 import type { VoiceState, ScreenShareSession, StageInstance } from './voice';
 
@@ -117,6 +117,50 @@ export interface ServerToClientEvents {
   // User
   USER_UPDATE: (data: { userId: Snowflake; [key: string]: unknown }) => void;
   CUSTOM_STATUS_UPDATE: (data: { userId: Snowflake; status: CustomStatus }) => void;
+
+  // Wiki
+  WIKI_PAGE_CREATE: (data: { guildId: Snowflake; channelId: Snowflake; page: WikiPage }) => void;
+  WIKI_PAGE_UPDATE: (data: { guildId: Snowflake; channelId: Snowflake; page: WikiPage }) => void;
+  WIKI_PAGE_DELETE: (data: {
+    guildId: Snowflake;
+    channelId: Snowflake;
+    pageId: Snowflake;
+  }) => void;
+
+  // Q&A
+  QA_QUESTION_UPDATE: (data: {
+    guildId: Snowflake;
+    threadId: Snowflake;
+    question: QaQuestion;
+  }) => void;
+  QA_VOTE_UPDATE: (data: {
+    guildId: Snowflake;
+    targetId: Snowflake;
+    targetType: 'question' | 'answer';
+    voteCount: number;
+  }) => void;
+  QA_ANSWER_ACCEPTED: (data: {
+    guildId: Snowflake;
+    threadId: Snowflake;
+    messageId: Snowflake;
+  }) => void;
+
+  // Scheduled Events
+  GUILD_SCHEDULED_EVENT_CREATE: (data: GuildScheduledEvent) => void;
+  GUILD_SCHEDULED_EVENT_UPDATE: (
+    data: Partial<GuildScheduledEvent> & { id: Snowflake; guildId: Snowflake },
+  ) => void;
+  GUILD_SCHEDULED_EVENT_DELETE: (data: { id: Snowflake; guildId: Snowflake }) => void;
+  GUILD_SCHEDULED_EVENT_USER_ADD: (data: {
+    eventId: Snowflake;
+    userId: Snowflake;
+    guildId: Snowflake;
+  }) => void;
+  GUILD_SCHEDULED_EVENT_USER_REMOVE: (data: {
+    eventId: Snowflake;
+    userId: Snowflake;
+    guildId: Snowflake;
+  }) => void;
 }
 
 /**

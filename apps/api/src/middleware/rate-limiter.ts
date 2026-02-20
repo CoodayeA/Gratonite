@@ -116,3 +116,11 @@ export const pollVoteRateLimiter = rateLimiter({
   keyPrefix: 'poll_vote',
   keyExtractor: (req) => (req as any).user?.userId ?? req.ip ?? 'unknown',
 });
+
+/** Search rate limiter: 10 per 10 seconds per user */
+export const searchRateLimiter = rateLimiter({
+  windowSeconds: 10,
+  maxRequests: 10,
+  keyPrefix: 'search',
+  keyExtractor: (req) => (req as any).user?.userId ?? req.ip ?? 'unknown',
+});

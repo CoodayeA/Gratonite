@@ -94,3 +94,57 @@ export type ThreadType = 'public' | 'private' | 'announcement';
 
 export type ForumSortOrder = 'latest_activity' | 'creation_date';
 export type ForumLayout = 'list' | 'gallery';
+
+// ============================================================================
+// Wiki types
+// ============================================================================
+
+export interface WikiPage {
+  id: Snowflake;
+  channelId: Snowflake;
+  guildId: Snowflake;
+  title: string;
+  slug: string;
+  content: string;
+  authorId: Snowflake;
+  lastEditorId: Snowflake | null;
+  pinned: boolean;
+  archived: boolean;
+  parentPageId: Snowflake | null;
+  position: number;
+  editedAt: string | null;
+  createdAt: string;
+}
+
+export interface WikiPageRevision {
+  id: Snowflake;
+  pageId: Snowflake;
+  content: string;
+  title: string;
+  editorId: Snowflake;
+  editMessage: string | null;
+  createdAt: string;
+}
+
+// ============================================================================
+// Q&A types
+// ============================================================================
+
+export interface QaQuestion {
+  threadId: Snowflake;
+  guildId: Snowflake;
+  channelId: Snowflake;
+  authorId: Snowflake;
+  acceptedAnswerId: Snowflake | null;
+  resolved: boolean;
+  voteCount: number;
+  answerCount: number;
+  createdAt: string;
+}
+
+export interface QaAnswerMeta {
+  messageId: Snowflake;
+  threadId: Snowflake;
+  voteCount: number;
+  isAccepted: boolean;
+}

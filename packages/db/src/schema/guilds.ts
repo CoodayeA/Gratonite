@@ -313,3 +313,51 @@ export const guildStickers = pgTable('guild_stickers', {
     .references(() => users.id),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ============================================================================
+// Scheduled Events
+// ============================================================================
+
+export const guildScheduledEventStatusEnum = pgEnum('guild_scheduled_event_status', [
+  'scheduled',
+  'active',
+  'completed',
+  'cancelled',
+]);
+
+export const guildScheduledEventEntityTypeEnum = pgEnum('guild_scheduled_event_entity_type', [
+  'stage_instance',
+  'voice',
+  'external',
+]);
+
+export const guildScheduledEvents = pgTable('guild_scheduled_events', {
+  id: bigintString('id').primaryKey(),
+  guildId: bigintString('guild_id')
+    .notNull()
+    .references(() => guilds.id, { onDelete: 'cascade' }),
+  channelId: bigintString('channel_id'),
+  creatorId: bigintString('creator_id')
+    .notNull()
+    .references(() => users.id),
+  name: varchar('name', { length: 100 }).notNull(),
+  description: varchar('description', { length: 1000 }),
+  scheduledStartTime: timestamp('scheduled_start_time', { withTimezone: true }).notNull(),
+  scheduledEndTime: timestamp('scheduled_end_time', { withTimezone: true }),
+  entityType: guildScheduledEventEntityTypeEnum('entity_type').notNull(),
+  entityMetadata: jsonb('entity_metadata'),
+  status: guildScheduledEventStatusEnum('status').notNull().default('scheduled'),
+  imageHash: varchar('image_hash', { length: 64 }),
+  interestedCount: integer('interested_count').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const guildScheduledEventUsers = pgTable('guild_scheduled_event_users', {
+  eventId: bigintString('event_id')
+    .notNull()
+    .references(() => guildScheduledEvents.id, { onDelete: 'cascade' }),
+  userId: bigintString('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  interestedAt: timestamp('interested_at', { withTimezone: true }).notNull().defaultNow(),
+});

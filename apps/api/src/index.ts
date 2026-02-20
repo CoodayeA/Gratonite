@@ -18,8 +18,13 @@ import { relationshipsRouter } from './modules/relationships/relationships.route
 import { voiceRouter } from './modules/voice/voice.router.js';
 import { filesRouter } from './modules/files/files.router.js';
 import { threadsRouter } from './modules/threads/threads.router.js';
+import { searchRouter } from './modules/search/search.router.js';
+import { wikiRouter } from './modules/wiki/wiki.router.js';
+import { qaRouter } from './modules/qa/qa.router.js';
+import { eventsRouter } from './modules/events/events.router.js';
 import { createThreadsService } from './modules/threads/threads.service.js';
 import { createMessagesService } from './modules/messages/messages.service.js';
+import { createEventsService } from './modules/events/events.service.js';
 import { setupGateway } from './modules/gateway/gateway.js';
 import { RoomServiceClient } from 'livekit-server-sdk';
 import { minioClient, ensureBuckets } from './lib/minio.js';
@@ -102,6 +107,10 @@ async function main() {
   app.use('/api/v1', voiceRouter(ctx));
   app.use('/api/v1', filesRouter(ctx));
   app.use('/api/v1', threadsRouter(ctx));
+  app.use('/api/v1', searchRouter(ctx));
+  app.use('/api/v1', wikiRouter(ctx));
+  app.use('/api/v1', qaRouter(ctx));
+  app.use('/api/v1', eventsRouter(ctx));
 
   // ── 404 handler ────────────────────────────────────────────────────────
   app.use((_req, res) => {
@@ -145,6 +154,14 @@ async function main() {
       logger.warn({ err }, 'Failed to process scheduled messages');
     });
   }, 30 * 1000);
+
+  // ── Event auto-start (every 60s) ────────────────────────────────────
+  const eventsService = createEventsService(ctx);
+  setInterval(() => {
+    eventsService.autoStartEvents().catch((err) => {
+      logger.warn({ err }, 'Failed to auto-start scheduled events');
+    });
+  }, 60 * 1000);
 
   // ── Socket.IO gateway (auth, presence, real-time events) ─────────────
   setupGateway(ctx);
