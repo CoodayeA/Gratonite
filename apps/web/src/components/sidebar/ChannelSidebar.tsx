@@ -1,7 +1,10 @@
+import { useState, useRef, useEffect } from 'react';
 import { NavLink, useParams } from 'react-router-dom';
 import { useChannelsStore } from '@/stores/channels.store';
 import { useGuildsStore } from '@/stores/guilds.store';
+import { useUiStore } from '@/stores/ui.store';
 import { useGuildChannels } from '@/hooks/useGuildChannels';
+import { UserBar } from './UserBar';
 import type { Channel } from '@gratonite/types';
 
 // Channel type constants (API returns string enums)
@@ -20,6 +23,28 @@ export function ChannelSidebar() {
   const channelIds = useChannelsStore((s) =>
     guildId ? s.channelsByGuild.get(guildId) ?? [] : [],
   );
+  const openModal = useUiStore((s) => s.openModal);
+
+  // Guild header dropdown
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [dropdownOpen]);
+
+  // Close dropdown when navigating away from guild
+  useEffect(() => {
+    setDropdownOpen(false);
+  }, [guildId]);
 
   // Fetch channels for this guild
   useGuildChannels(guildId);
@@ -37,8 +62,32 @@ export function ChannelSidebar() {
 
   return (
     <aside className="channel-sidebar">
-      <div className="channel-sidebar-header">
-        <h2 className="channel-sidebar-guild-name">{guild?.name ?? 'Loading...'}</h2>
+      <div className="channel-sidebar-header" ref={dropdownRef}>
+        <button
+          className="channel-sidebar-guild-btn"
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+        >
+          <h2 className="channel-sidebar-guild-name">{guild?.name ?? 'Gratonite'}</h2>
+          <span className="channel-sidebar-chevron">{dropdownOpen ? '\u25B2' : '\u25BC'}</span>
+        </button>
+
+        {dropdownOpen && (
+          <div className="channel-sidebar-dropdown">
+            <button
+              className="dropdown-item"
+              onClick={() => { openModal('invite'); setDropdownOpen(false); }}
+            >
+              Invite People
+            </button>
+            <div className="dropdown-divider" />
+            <button
+              className="dropdown-item dropdown-danger"
+              onClick={() => { openModal('leave-guild'); setDropdownOpen(false); }}
+            >
+              Leave Server
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="channel-sidebar-list">
@@ -80,6 +129,8 @@ export function ChannelSidebar() {
           );
         })}
       </div>
+
+      <UserBar />
     </aside>
   );
 }

@@ -85,3 +85,39 @@ export function shouldGroupMessages(
 export function generateNonce(): string {
   return crypto.randomUUID();
 }
+
+/**
+ * Extract a user-friendly error message from any caught error.
+ * Handles ApiRequestError, RateLimitError, network errors, and unknowns.
+ */
+export function getErrorMessage(err: unknown): string {
+  if (!err) return 'An unexpected error occurred.';
+
+  // API errors (4xx/5xx with structured body)
+  if (err instanceof Error && err.name === 'ApiRequestError') {
+    return (err as Error & { code: string }).message;
+  }
+
+  // Rate limit errors (429)
+  if (err instanceof Error && err.name === 'RateLimitError') {
+    const retryAfter = (err as Error & { retryAfter: number }).retryAfter;
+    const seconds = Math.ceil(retryAfter / 1000);
+    if (seconds > 60) {
+      const minutes = Math.ceil(seconds / 60);
+      return `Too many attempts. Please wait ${minutes} minute${minutes !== 1 ? 's' : ''} and try again.`;
+    }
+    return `Too many attempts. Please wait ${seconds} second${seconds !== 1 ? 's' : ''} and try again.`;
+  }
+
+  // Network errors
+  if (err instanceof TypeError && err.message === 'Failed to fetch') {
+    return 'Unable to connect to the server. Check your internet connection.';
+  }
+
+  // Generic errors
+  if (err instanceof Error) {
+    return err.message;
+  }
+
+  return 'An unexpected error occurred. Please try again.';
+}

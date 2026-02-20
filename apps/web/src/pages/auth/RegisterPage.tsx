@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api, setAccessToken, ApiRequestError } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
+import { getErrorMessage } from '@/lib/utils';
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -105,12 +106,10 @@ export function RegisterPage() {
 
       navigate('/', { replace: true });
     } catch (err) {
-      if (err instanceof ApiRequestError) {
-        setError(err.message);
-        if (err.details) setFieldErrors(err.details);
-      } else {
-        setError('An unexpected error occurred. Please try again.');
+      if (err instanceof ApiRequestError && err.details) {
+        setFieldErrors(err.details);
       }
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

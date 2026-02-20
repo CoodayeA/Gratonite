@@ -9,6 +9,8 @@ import {
   auditLogEntries,
   guildEmojis,
   guildStickers,
+  users,
+  userProfiles,
 } from '@gratonite/db';
 import { channels } from '@gratonite/db';
 import type { AppContext } from '../../lib/context.js';
@@ -149,21 +151,30 @@ export function createGuildsService(ctx: AppContext) {
   }
 
   async function getMembers(guildId: string, limit = 100, after?: string) {
-    let query = ctx.db
-      .select()
+    const condition = after
+      ? and(eq(guildMembers.guildId, guildId), sql`${guildMembers.userId} > ${after}`)
+      : eq(guildMembers.guildId, guildId);
+
+    const rows = await ctx.db
+      .select({
+        userId: guildMembers.userId,
+        guildId: guildMembers.guildId,
+        nickname: guildMembers.nickname,
+        joinedAt: guildMembers.joinedAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          displayName: userProfiles.displayName,
+          avatarHash: userProfiles.avatarHash,
+        },
+      })
       .from(guildMembers)
-      .where(eq(guildMembers.guildId, guildId))
+      .innerJoin(users, eq(users.id, guildMembers.userId))
+      .innerJoin(userProfiles, eq(userProfiles.userId, guildMembers.userId))
+      .where(condition)
       .limit(limit);
 
-    if (after) {
-      query = ctx.db
-        .select()
-        .from(guildMembers)
-        .where(and(eq(guildMembers.guildId, guildId), sql`${guildMembers.userId} > ${after}`))
-        .limit(limit);
-    }
-
-    return query;
+    return rows;
   }
 
   async function getMember(guildId: string, userId: string) {

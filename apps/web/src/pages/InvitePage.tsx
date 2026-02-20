@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { api, ApiRequestError } from '@/lib/api';
+import { api } from '@/lib/api';
+import { getErrorMessage } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import { useGuildsStore } from '@/stores/guilds.store';
 import { GuildIcon } from '@/components/ui/GuildIcon';
@@ -38,11 +39,7 @@ export function InvitePage() {
       .get(code)
       .then((data) => setInvite(data))
       .catch((err) => {
-        if (err instanceof ApiRequestError) {
-          setError(err.message);
-        } else {
-          setError('Failed to load invite. It may be invalid or expired.');
-        }
+        setError(getErrorMessage(err));
       })
       .finally(() => setLoading(false));
   }, [code]);
@@ -57,11 +54,7 @@ export function InvitePage() {
       addGuild(guild);
       navigate(`/guild/${guild.id}`, { replace: true });
     } catch (err) {
-      if (err instanceof ApiRequestError) {
-        setError(err.message);
-      } else {
-        setError('Failed to accept invite.');
-      }
+      setError(getErrorMessage(err));
     } finally {
       setAccepting(false);
     }

@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { useGuildsStore } from '@/stores/guilds.store';
 import { useGuilds } from '@/hooks/useGuilds';
+import { useUiStore } from '@/stores/ui.store';
 import { GuildIcon } from '@/components/ui/GuildIcon';
 
 export function GuildRail() {
@@ -9,6 +10,7 @@ export function GuildRail() {
 
   const guilds = useGuildsStore((s) => s.guilds);
   const guildOrder = useGuildsStore((s) => s.guildOrder);
+  const openModal = useUiStore((s) => s.openModal);
 
   return (
     <nav className="guild-rail">
@@ -48,9 +50,7 @@ export function GuildRail() {
       {/* Add server button */}
       <button
         className="guild-rail-item guild-rail-add"
-        onClick={() => {
-          // TODO: Open create guild modal
-        }}
+        onClick={() => openModal('create-guild')}
       >
         <div className="guild-rail-icon guild-rail-add-icon">+</div>
       </button>

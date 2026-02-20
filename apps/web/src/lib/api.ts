@@ -237,11 +237,17 @@ export const api = {
     getMembers: (guildId: string, limit = 100) =>
       apiFetch<GuildMember[]>(`/guilds/${guildId}/members?limit=${limit}`),
 
-    create: (data: { name: string }) =>
+    create: (data: { name: string; description?: string }) =>
       apiFetch<Guild>('/guilds', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+
+    leave: (guildId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/members/@me`, { method: 'DELETE' }),
+
+    delete: (guildId: string) =>
+      apiFetch<void>(`/guilds/${guildId}`, { method: 'DELETE' }),
   },
 
   channels: {
@@ -281,5 +287,11 @@ export const api = {
 
     accept: (code: string) =>
       apiFetch<Guild>(`/invites/${code}`, { method: 'POST' }),
+
+    create: (guildId: string, data: { channelId: string; maxUses?: number; maxAgeSeconds?: number }) =>
+      apiFetch<{ code: string; expiresAt: string | null }>(`/invites/guilds/${guildId}/invites`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 };
