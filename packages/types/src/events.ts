@@ -1,6 +1,6 @@
 import type { Snowflake } from './snowflake';
 import type { Message, MessageReaction } from './message';
-import type { GuildMember, Guild, GuildEmoji, GuildSticker, GuildScheduledEvent } from './guild';
+import type { GuildMember, Guild, GuildEmoji, GuildSticker, GuildScheduledEvent, AutoModRule } from './guild';
 import type { Channel, Thread, WikiPage, QaQuestion } from './channel';
 import type { Presence, CustomStatus } from './user';
 import type { VoiceState, ScreenShareSession, StageInstance } from './voice';
@@ -161,6 +161,33 @@ export interface ServerToClientEvents {
     userId: Snowflake;
     guildId: Snowflake;
   }) => void;
+
+  // Auto-Moderation
+  AUTO_MODERATION_RULE_CREATE: (data: { guildId: Snowflake; rule: AutoModRule }) => void;
+  AUTO_MODERATION_RULE_UPDATE: (data: { guildId: Snowflake; rule: AutoModRule }) => void;
+  AUTO_MODERATION_RULE_DELETE: (data: { guildId: Snowflake; ruleId: Snowflake }) => void;
+  AUTO_MODERATION_ACTION_EXECUTION: (data: {
+    guildId: Snowflake;
+    ruleId: Snowflake;
+    ruleName: string;
+    userId: Snowflake;
+    channelId?: Snowflake;
+    actionType: string;
+    matchedKeyword?: string;
+  }) => void;
+
+  // Raid Protection
+  RAID_DETECTED: (data: {
+    guildId: Snowflake;
+    joinCount: number;
+    windowSeconds: number;
+    action: string;
+  }) => void;
+  RAID_RESOLVED: (data: { guildId: Snowflake }) => void;
+
+  // Reports
+  REPORT_CREATE: (data: { guildId: Snowflake; reportId: Snowflake }) => void;
+  REPORT_UPDATE: (data: { guildId: Snowflake; reportId: Snowflake; status: string }) => void;
 }
 
 /**

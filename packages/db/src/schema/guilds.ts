@@ -361,3 +361,156 @@ export const guildScheduledEventUsers = pgTable('guild_scheduled_event_users', {
     .references(() => users.id, { onDelete: 'cascade' }),
   interestedAt: timestamp('interested_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ============================================================================
+// Auto-Moderation
+// ============================================================================
+
+export const autoModEventTypeEnum = pgEnum('auto_mod_event_type', [
+  'message_send',
+  'member_update',
+]);
+
+export const autoModTriggerTypeEnum = pgEnum('auto_mod_trigger_type', [
+  'keyword',
+  'spam',
+  'keyword_preset',
+  'mention_spam',
+]);
+
+export const autoModActionTypeEnum = pgEnum('auto_mod_action_type', [
+  'block_message',
+  'send_alert_message',
+  'timeout',
+]);
+
+export const autoModRules = pgTable('auto_mod_rules', {
+  id: bigintString('id').primaryKey(),
+  guildId: bigintString('guild_id')
+    .notNull()
+    .references(() => guilds.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 100 }).notNull(),
+  creatorId: bigintString('creator_id')
+    .notNull()
+    .references(() => users.id),
+  eventType: autoModEventTypeEnum('event_type').notNull(),
+  triggerType: autoModTriggerTypeEnum('trigger_type').notNull(),
+  triggerMetadata: jsonb('trigger_metadata').notNull().default({}),
+  actions: jsonb('actions').notNull().default([]),
+  enabled: boolean('enabled').notNull().default(true),
+  exemptRoles: jsonb('exempt_roles').notNull().default([]),
+  exemptChannels: jsonb('exempt_channels').notNull().default([]),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const autoModActionLogs = pgTable('auto_mod_action_logs', {
+  id: bigintString('id').primaryKey(),
+  guildId: bigintString('guild_id')
+    .notNull()
+    .references(() => guilds.id, { onDelete: 'cascade' }),
+  ruleId: bigintString('rule_id')
+    .notNull()
+    .references(() => autoModRules.id, { onDelete: 'cascade' }),
+  userId: bigintString('user_id')
+    .notNull()
+    .references(() => users.id),
+  channelId: bigintString('channel_id'),
+  messageContent: text('message_content'),
+  matchedKeyword: varchar('matched_keyword', { length: 200 }),
+  actionType: autoModActionTypeEnum('action_type').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ============================================================================
+// Raid Protection
+// ============================================================================
+
+export const raidActionEnum = pgEnum('raid_action', [
+  'kick',
+  'ban',
+  'enable_verification',
+  'lock_channels',
+  'alert_only',
+]);
+
+export const raidConfig = pgTable('raid_config', {
+  guildId: bigintString('guild_id')
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: 'cascade' }),
+  enabled: boolean('enabled').notNull().default(false),
+  joinThreshold: integer('join_threshold').notNull().default(10),
+  joinWindowSeconds: integer('join_window_seconds').notNull().default(60),
+  action: raidActionEnum('action').notNull().default('alert_only'),
+  autoResolveMinutes: integer('auto_resolve_minutes').notNull().default(30),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ============================================================================
+// Reports
+// ============================================================================
+
+export const reportReasonEnum = pgEnum('report_reason', [
+  'spam',
+  'harassment',
+  'hate_speech',
+  'nsfw',
+  'self_harm',
+  'other',
+]);
+
+export const reportStatusEnum = pgEnum('report_status', [
+  'pending',
+  'reviewing',
+  'resolved',
+  'dismissed',
+]);
+
+export const reports = pgTable('reports', {
+  id: bigintString('id').primaryKey(),
+  reporterId: bigintString('reporter_id')
+    .notNull()
+    .references(() => users.id),
+  reportedUserId: bigintString('reported_user_id')
+    .notNull()
+    .references(() => users.id),
+  guildId: bigintString('guild_id')
+    .notNull()
+    .references(() => guilds.id, { onDelete: 'cascade' }),
+  messageId: bigintString('message_id'),
+  reason: reportReasonEnum('reason').notNull(),
+  description: varchar('description', { length: 1000 }),
+  status: reportStatusEnum('status').notNull().default('pending'),
+  reviewerId: bigintString('reviewer_id').references(() => users.id),
+  resolutionNote: text('resolution_note'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+});
+
+// ============================================================================
+// Server Analytics
+// ============================================================================
+
+export const serverAnalyticsDaily = pgTable('server_analytics_daily', {
+  guildId: bigintString('guild_id')
+    .notNull()
+    .references(() => guilds.id, { onDelete: 'cascade' }),
+  date: timestamp('date', { withTimezone: true }).notNull(),
+  totalMembers: integer('total_members').notNull().default(0),
+  newMembers: integer('new_members').notNull().default(0),
+  leftMembers: integer('left_members').notNull().default(0),
+  messagesSent: integer('messages_sent').notNull().default(0),
+  activeMembers: integer('active_members').notNull().default(0),
+  voiceMinutes: integer('voice_minutes').notNull().default(0),
+  reactionsAdded: integer('reactions_added').notNull().default(0),
+  topChannels: jsonb('top_channels').notNull().default([]),
+});
+
+export const serverAnalyticsHourly = pgTable('server_analytics_hourly', {
+  guildId: bigintString('guild_id')
+    .notNull()
+    .references(() => guilds.id, { onDelete: 'cascade' }),
+  hour: timestamp('hour', { withTimezone: true }).notNull(),
+  messages: integer('messages').notNull().default(0),
+  activeUsers: integer('active_users').notNull().default(0),
+  voiceUsers: integer('voice_users').notNull().default(0),
+});

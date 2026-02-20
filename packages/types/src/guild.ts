@@ -196,3 +196,98 @@ export interface GuildScheduledEvent {
   interestedCount: number;
   createdAt: string;
 }
+
+// ============================================================================
+// Auto-Moderation
+// ============================================================================
+
+export type AutoModEventType = 'message_send' | 'member_update';
+export type AutoModTriggerType = 'keyword' | 'spam' | 'keyword_preset' | 'mention_spam';
+export type AutoModActionType = 'block_message' | 'send_alert_message' | 'timeout';
+
+export interface AutoModTriggerMetadata {
+  keywordFilter?: string[];
+  regexPatterns?: string[];
+  allowList?: string[];
+  mentionTotalLimit?: number;
+  presets?: string[];
+}
+
+export interface AutoModAction {
+  type: AutoModActionType;
+  metadata?: {
+    channelId?: Snowflake;
+    customMessage?: string;
+    durationSeconds?: number;
+  };
+}
+
+export interface AutoModRule {
+  id: Snowflake;
+  guildId: Snowflake;
+  name: string;
+  creatorId: Snowflake;
+  eventType: AutoModEventType;
+  triggerType: AutoModTriggerType;
+  triggerMetadata: AutoModTriggerMetadata;
+  actions: AutoModAction[];
+  enabled: boolean;
+  exemptRoles: Snowflake[];
+  exemptChannels: Snowflake[];
+  createdAt: string;
+}
+
+// ============================================================================
+// Raid Protection
+// ============================================================================
+
+export type RaidAction = 'kick' | 'ban' | 'enable_verification' | 'lock_channels' | 'alert_only';
+
+export interface RaidConfig {
+  guildId: Snowflake;
+  enabled: boolean;
+  joinThreshold: number;
+  joinWindowSeconds: number;
+  action: RaidAction;
+  autoResolveMinutes: number;
+  updatedAt: string;
+}
+
+// ============================================================================
+// Reports
+// ============================================================================
+
+export type ReportReason = 'spam' | 'harassment' | 'hate_speech' | 'nsfw' | 'self_harm' | 'other';
+export type ReportStatus = 'pending' | 'reviewing' | 'resolved' | 'dismissed';
+
+export interface Report {
+  id: Snowflake;
+  reporterId: Snowflake;
+  reportedUserId: Snowflake;
+  guildId: Snowflake;
+  messageId: Snowflake | null;
+  reason: ReportReason;
+  description: string | null;
+  status: ReportStatus;
+  reviewerId: Snowflake | null;
+  resolutionNote: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+// ============================================================================
+// Server Analytics
+// ============================================================================
+
+export interface ServerAnalyticsDaily {
+  guildId: Snowflake;
+  date: string;
+  totalMembers: number;
+  newMembers: number;
+  leftMembers: number;
+  messagesSent: number;
+  activeMembers: number;
+  voiceMinutes: number;
+  reactionsAdded: number;
+  topChannels: Array<{ channelId: Snowflake; messageCount: number }>;
+}

@@ -15,6 +15,8 @@ import {
 import { messages } from '@gratonite/db';
 import { and, eq } from 'drizzle-orm';
 import { createLinkPreviewService } from './link-preview.service.js';
+import { createAutoModService } from '../automod/automod.service.js';
+import { createAnalyticsService } from '../analytics/analytics.service.js';
 
 export function messagesRouter(ctx: AppContext): Router {
   const router = Router();
@@ -23,6 +25,8 @@ export function messagesRouter(ctx: AppContext): Router {
   const guildsService = createGuildsService(ctx);
   const threadsService = createThreadsService(ctx);
   const linkPreviewService = createLinkPreviewService(ctx);
+  const autoModService = createAutoModService(ctx);
+  const analyticsService = createAnalyticsService(ctx);
   const auth = requireAuth(ctx);
 
   // Helper: check the caller has access to the channel
@@ -106,6 +110,25 @@ export function messagesRouter(ctx: AppContext): Router {
       return res.status(400).json({ code: 'VALIDATION_ERROR', errors: parsed.error.flatten().fieldErrors });
     }
 
+    // Auto-moderation check (guild messages only)
+    if (channel.guildId && parsed.data.content) {
+      const mentionCount = (parsed.data.content.match(/<@!?\d+>/g) ?? []).length;
+      const autoModResult = await autoModService.checkMessage(
+        channel.guildId,
+        channelId,
+        req.user!.userId,
+        [], // role IDs — simplified for now
+        parsed.data.content,
+        mentionCount,
+      );
+      if (autoModResult.blocked) {
+        return res.status(403).json({
+          code: 'AUTO_MODERATION_BLOCKED',
+          matchedRule: autoModResult.rule?.name,
+        });
+      }
+    }
+
     const message = await messagesService.createMessage(
       channelId,
       req.user!.userId,
@@ -132,6 +155,11 @@ export function messagesRouter(ctx: AppContext): Router {
     );
 
     res.status(201).json(message);
+
+    // Fire-and-forget: analytics tracking
+    if (channel.guildId) {
+      analyticsService.trackMessage(channel.guildId, channelId, req.user!.userId).catch(() => {});
+    }
 
     // Fire-and-forget: process link previews asynchronously
     const content = (message as any).content;

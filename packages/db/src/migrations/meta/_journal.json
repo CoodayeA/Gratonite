@@ -29,6 +29,13 @@
       "when": 1771594733609,
       "tag": "0003_silent_strong_guy",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1771596605747,
+      "tag": "0004_striped_blue_shield",
+      "breakpoints": true
     }
   ]
 }

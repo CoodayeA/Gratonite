@@ -1,8 +1,8 @@
 # Gratonite — Development Progress
 
 > **Last updated:** 2026-02-20
-> **Current Phase:** Phase 4 Part 3A — Full-Text Search + Wiki + Q&A + Events (Complete)
-> **Status:** All Phase 4 Part 3A features implemented and E2E tested (47/47 tests pass)
+> **Current Phase:** Phase 4 Part 3B — Auto-Moderation + Raid Protection + Moderation Dashboard + Analytics (Complete)
+> **Status:** All Phase 4 Part 3B features implemented and E2E tested (29/29 tests pass)
 
 ---
 
@@ -33,7 +33,7 @@ docker-compose up -d
 # Install dependencies
 pnpm install
 
-# Generate + run migrations (42 tables)
+# Generate + run migrations (57 tables)
 cd packages/db && npx drizzle-kit generate && npx drizzle-kit migrate
 
 # Start API server (port 4000)
@@ -612,14 +612,94 @@ Test sequence: upload file → message with attachment → upload emoji → list
 | Update event | ✅ | Name changed |
 | Delete event | ✅ | 204 |
 
+### Phase 4 Part 3B: Auto-Moderation + Raid Protection + Moderation Dashboard + Analytics ✅
+
+#### Auto-Moderation ✅
+- **Tables:** `auto_mod_rules` (12 cols), `auto_mod_action_logs` (9 cols)
+- **Enums:** `auto_mod_event_type`, `auto_mod_trigger_type`, `auto_mod_action_type`
+- **Files:**
+  - `apps/api/src/modules/automod/automod.schemas.ts` — createAutoModRule, updateAutoModRule, getAutoModLogs
+  - `apps/api/src/modules/automod/automod.service.ts` — CRUD + `checkMessage()` (inline in request path, Redis-cached rules)
+  - `apps/api/src/modules/automod/automod.router.ts` — 6 endpoints for rule management + action logs
+- **Trigger types:** keyword (case-insensitive + regex + allowList), keyword_preset (profanity/sexual_content/slurs), mention_spam, spam (duplicate detection via Redis sorted set)
+- **Actions:** block_message (403 before persistence), send_alert_message (Socket.IO event), timeout (updates guildMembers.communicationDisabledUntil)
+- **Performance:** Rules cached in Redis (`automod_rules:{guildId}`, 60s TTL), cache invalidated on CRUD
+- **Endpoints:** POST/GET/GET/:id/PATCH/DELETE `/guilds/:guildId/auto-moderation/rules`, GET `/guilds/:guildId/auto-moderation/logs`
+- **Integration:** `checkMessage()` called in messages router BEFORE `createMessage()` — blocked messages never persist
+
+#### Raid Protection ✅
+- **Table:** `raid_config` (PK: guildId, FK cascade)
+- **Enum:** `raid_action` (kick/ban/enable_verification/lock_channels/alert_only)
+- **Redis sliding window:** `raid_monitor:{guildId}` sorted set with join timestamps
+  - ZADD on member join → ZREMRANGEBYSCORE to trim → ZCARD to count → trigger if >= threshold
+  - Auto-resolve via Redis TTL on `raid_active:{guildId}` key
+- **Endpoints:** GET/PATCH `/guilds/:guildId/raid-config`, POST `/guilds/:guildId/raid-resolve`
+- **Events:** `RAID_DETECTED`, `RAID_RESOLVED`
+
+#### User Reports ✅
+- **Table:** `reports` (12 cols, indexed on guild_id+status)
+- **Enums:** `report_reason` (spam/harassment/hate_speech/nsfw/self_harm/other), `report_status` (pending/reviewing/resolved/dismissed)
+- **Endpoints:** POST (any member), GET/GET/:id/PATCH (owner only) `/guilds/:guildId/reports`
+- **Events:** `REPORT_CREATE`, `REPORT_UPDATE`
+
+#### Moderation Dashboard API ✅
+- **Dashboard stats:** pending reports count, active automod rules, recent automod actions, recent bans, raid status
+- **Recent mod actions:** merged timeline from audit_log_entries + auto_mod_action_logs, sorted by createdAt desc
+- **Endpoints:** GET `/guilds/:guildId/moderation/dashboard`, GET `/guilds/:guildId/moderation/actions`
+
+#### Server Analytics ✅
+- **Tables:** `server_analytics_daily` (composite unique: guild_id+date), `server_analytics_hourly` (composite unique: guild_id+hour)
+- **Design:** Redis incremental counters + periodic DB flush (NOT real-time aggregation)
+  - `trackMessage()` — HINCRBY daily/hourly hashes + PFADD HyperLogLog for unique active users
+  - `trackMemberJoin/Leave()`, `trackReaction()` — daily counter increments
+  - `flushAnalytics()` — every 5 min: scan Redis keys, upsert to DB via `INSERT ... ON CONFLICT DO UPDATE`
+  - `cleanupOldHourlyData()` — daily: delete hourly rows older than 90 days
+- **Endpoints:** GET `/guilds/:guildId/analytics` (7d/14d/30d/90d), GET `/guilds/:guildId/analytics/heatmap`
+- **Integration:** `analyticsService.trackMessage()` called fire-and-forget after message creation in messages router
+
+#### Migration 0004 ✅
+- 6 new tables, 6 new enums
+- Unique constraints for analytics composite keys (for ON CONFLICT upserts)
+- Indexes on `auto_mod_action_logs(guild_id, created_at)` and `reports(guild_id, status)`
+- Total tables: **57**
+
+#### E2E Test Results (29/29 pass) ✅
+
+| Test | Description | Result |
+|------|-------------|--------|
+| 1a | Create keyword automod rule | ✅ |
+| 1b | List automod rules | ✅ |
+| 1c | Get single automod rule | ✅ |
+| 2a | Block message containing keyword (403) | ✅ |
+| 2b | AUTO_MODERATION_BLOCKED response code | ✅ |
+| 2c | Allow normal message (201) | ✅ |
+| 3a | Automod action logs recorded | ✅ |
+| 3b | Log contains matched keyword | ✅ |
+| 4a | Disable automod rule | ✅ |
+| 4b | Previously blocked word allowed after disable | ✅ |
+| 4c | Delete automod rule (204) | ✅ |
+| 5a | Default raid config (disabled) | ✅ |
+| 5b | Update raid config | ✅ |
+| 5c | Resolve raid | ✅ |
+| 6a | Create user report (pending) | ✅ |
+| 6b | List pending reports | ✅ |
+| 6c | Get single report | ✅ |
+| 6d | Resolve report with note | ✅ |
+| 7a | Dashboard stats | ✅ |
+| 7b | Recent mod actions | ✅ |
+| 8a | Daily analytics returns array | ✅ |
+| 8b | Hourly heatmap returns array | ✅ |
+| 8c | Non-owner analytics forbidden (403) | ✅ |
+| 9a | Create profanity preset rule | ✅ |
+| 9b | Block profanity preset match (403) | ✅ |
+| 9c | Allow clean message through preset (201) | ✅ |
+| 10a | Create mention spam rule | ✅ |
+| 10b | Block 3+ mentions (403) | ✅ |
+| 10c | Allow fewer mentions (201) | ✅ |
+
 ---
 
 ## What's NOT Done Yet
-
-### Phase 4 Part 3B: Rich Features (Remaining)
-- Auto-moderation + raid protection (need new tables)
-- Moderation dashboard (reports + quick actions)
-- Server admin dashboard + analytics (need analytics tables)
 
 ### Phases 5–9
 See `ARCHITECTURE.md` Section 23 for full phase breakdown.
@@ -647,7 +727,7 @@ See `ARCHITECTURE.md` Section 23 for full phase breakdown.
 
 ---
 
-## File Tree (as of Phase 4 Part 2)
+## File Tree (as of Phase 4 Part 3B)
 
 ```
 gratonite/
@@ -676,13 +756,15 @@ gratonite/
 │           │   ├── index.ts  # Barrel export (includes helpers)
 │           │   ├── helpers.ts # bigintString custom column type
 │           │   ├── users.ts  # 11 tables + 8 enums
-│           │   ├── guilds.ts # 11 tables + 2 enums
-│           │   ├── channels.ts # 7 tables + 4 enums
+│           │   ├── guilds.ts # 17 tables + 8 enums
+│           │   ├── channels.ts # 12 tables + 4 enums
 │           │   ├── messages.ts # 10 tables + 1 enum
 │           │   └── voice.ts  # 3 tables + 1 enum (NEW Phase 3)
 │           └── migrations/
 │               ├── 0000_mean_master_chief.sql  # 39 tables
 │               ├── 0001_first_spot.sql         # +3 voice tables
+│               ├── 0003_silent_strong_guy.sql  # +7 tables (wiki/QA/events/FTS)
+│               ├── 0004_striped_blue_shield.sql # +6 tables (automod/raid/reports/analytics)
 │               └── meta/
 │
 └── apps/
@@ -716,6 +798,20 @@ gratonite/
                 │   ├── invites.service.ts, invites.router.ts
                 ├── relationships/
                 │   ├── relationships.service.ts, relationships.router.ts
+                ├── search/          # NEW (Phase 4 Part 3A)
+                │   ├── search.schemas.ts, search.service.ts, search.router.ts
+                ├── wiki/            # NEW (Phase 4 Part 3A)
+                │   ├── wiki.schemas.ts, wiki.service.ts, wiki.router.ts
+                ├── qa/              # NEW (Phase 4 Part 3A)
+                │   ├── qa.schemas.ts, qa.service.ts, qa.router.ts
+                ├── events/          # NEW (Phase 4 Part 3A)
+                │   ├── events.schemas.ts, events.service.ts, events.router.ts
+                ├── automod/         # NEW (Phase 4 Part 3B)
+                │   ├── automod.schemas.ts, automod.service.ts, automod.router.ts
+                ├── moderation/      # NEW (Phase 4 Part 3B)
+                │   ├── moderation.schemas.ts, moderation.service.ts, moderation.router.ts
+                ├── analytics/       # NEW (Phase 4 Part 3B)
+                │   ├── analytics.schemas.ts, analytics.service.ts, analytics.router.ts
                 ├── voice/           # NEW (Phase 3)
                 │   ├── voice.schemas.ts, voice.service.ts, voice.router.ts
                 └── gateway/

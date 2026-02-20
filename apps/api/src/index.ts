@@ -22,9 +22,13 @@ import { searchRouter } from './modules/search/search.router.js';
 import { wikiRouter } from './modules/wiki/wiki.router.js';
 import { qaRouter } from './modules/qa/qa.router.js';
 import { eventsRouter } from './modules/events/events.router.js';
+import { autoModRouter } from './modules/automod/automod.router.js';
+import { moderationRouter } from './modules/moderation/moderation.router.js';
+import { analyticsRouter } from './modules/analytics/analytics.router.js';
 import { createThreadsService } from './modules/threads/threads.service.js';
 import { createMessagesService } from './modules/messages/messages.service.js';
 import { createEventsService } from './modules/events/events.service.js';
+import { createAnalyticsService } from './modules/analytics/analytics.service.js';
 import { setupGateway } from './modules/gateway/gateway.js';
 import { RoomServiceClient } from 'livekit-server-sdk';
 import { minioClient, ensureBuckets } from './lib/minio.js';
@@ -111,6 +115,9 @@ async function main() {
   app.use('/api/v1', wikiRouter(ctx));
   app.use('/api/v1', qaRouter(ctx));
   app.use('/api/v1', eventsRouter(ctx));
+  app.use('/api/v1', autoModRouter(ctx));
+  app.use('/api/v1', moderationRouter(ctx));
+  app.use('/api/v1', analyticsRouter(ctx));
 
   // ── 404 handler ────────────────────────────────────────────────────────
   app.use((_req, res) => {
@@ -162,6 +169,21 @@ async function main() {
       logger.warn({ err }, 'Failed to auto-start scheduled events');
     });
   }, 60 * 1000);
+
+  // ── Analytics flush (every 5 min) ──────────────────────────────────
+  const analyticsService = createAnalyticsService(ctx);
+  setInterval(() => {
+    analyticsService.flushAnalytics().catch((err) => {
+      logger.warn({ err }, 'Failed to flush analytics');
+    });
+  }, 5 * 60 * 1000);
+
+  // ── Hourly analytics cleanup (daily) ──────────────────────────────
+  setInterval(() => {
+    analyticsService.cleanupOldHourlyData().catch((err) => {
+      logger.warn({ err }, 'Failed to cleanup old hourly analytics');
+    });
+  }, 24 * 60 * 60 * 1000);
 
   // ── Socket.IO gateway (auth, presence, real-time events) ─────────────
   setupGateway(ctx);
