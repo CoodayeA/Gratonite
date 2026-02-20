@@ -868,6 +868,17 @@ Test sequence: upload file → message with attachment → upload emoji → list
 #### Tunnel/Staging (plan)
 - `docs/tunnel-setup.md`
 
+#### Repository Split (Org)
+- Org: `gratonitechat`
+- Backend: `gratonitechat/gratonite`
+- Web: `gratonitechat/for-web`
+- Desktop: `gratonitechat/for-desktop`
+- iOS: `gratonitechat/for-ios`
+- Android: `gratonitechat/for-android`
+- Marketing: `gratonitechat/gratonite.chat`
+- Self-hosted: `gratonitechat/self-hosted`
+- Community list: `gratonitechat/rockhard-gratonite`
+
 #### Phase 6 E2E Test Results (Initial)
 
 | Test | Result | Notes |
