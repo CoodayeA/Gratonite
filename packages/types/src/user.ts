@@ -180,3 +180,31 @@ export type ClientStatus = {
   mobile?: PresenceStatus;
   web?: PresenceStatus;
 };
+
+// ============================================================================
+// Avatar Decorations & Profile Effects
+// ============================================================================
+
+export interface AvatarDecoration {
+  id: Snowflake;
+  name: string;
+  description: string | null;
+  assetHash: string;
+  animated: boolean;
+  category: string | null;
+  sortOrder: number;
+  available: boolean;
+  createdAt: string;
+}
+
+export interface ProfileEffect {
+  id: Snowflake;
+  name: string;
+  description: string | null;
+  assetHash: string;
+  animated: boolean;
+  category: string | null;
+  sortOrder: number;
+  available: boolean;
+  createdAt: string;
+}

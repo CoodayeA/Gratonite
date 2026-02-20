@@ -36,6 +36,13 @@
       "when": 1771596605747,
       "tag": "0004_striped_blue_shield",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1771599331640,
+      "tag": "0005_opposite_gamora",
+      "breakpoints": true
     }
   ]
 }

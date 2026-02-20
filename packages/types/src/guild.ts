@@ -291,3 +291,46 @@ export interface ServerAnalyticsDaily {
   reactionsAdded: number;
   topChannels: Array<{ channelId: Snowflake; messageCount: number }>;
 }
+
+// ============================================================================
+// Guild Custom CSS
+// ============================================================================
+
+export interface GuildCustomCss {
+  guildId: Snowflake;
+  css: string;
+  updatedAt: string;
+  updatedBy: Snowflake | null;
+}
+
+// ============================================================================
+// Theme Presets & Marketplace
+// ============================================================================
+
+export type ThemeVisibility = 'private' | 'unlisted' | 'public';
+
+export interface ThemePreset {
+  id: Snowflake;
+  name: string;
+  slug: string;
+  description: string | null;
+  authorId: Snowflake | null;
+  tokens: Record<string, string>;
+  builtIn: boolean;
+  visibility: ThemeVisibility;
+  tags: string[];
+  previewColors: string[];
+  installCount: number;
+  ratingSum: number;
+  ratingCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ThemeInstall {
+  userId: Snowflake;
+  themeId: Snowflake;
+  scope: 'personal' | 'guild';
+  scopeId: string | null;
+  installedAt: string;
+}

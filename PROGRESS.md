@@ -1,8 +1,8 @@
 # Gratonite — Development Progress
 
 > **Last updated:** 2026-02-20
-> **Current Phase:** Phase 4 Part 3B — Auto-Moderation + Raid Protection + Moderation Dashboard + Analytics (Complete)
-> **Status:** All Phase 4 Part 3B features implemented and E2E tested (29/29 tests pass)
+> **Current Phase:** Phase 5 — Customization & Theming (Complete)
+> **Status:** All Phase 5 features implemented and E2E tested (23/23 tests pass)
 
 ---
 
@@ -33,7 +33,7 @@ docker-compose up -d
 # Install dependencies
 pnpm install
 
-# Generate + run migrations (57 tables)
+# Generate + run migrations (62 tables)
 cd packages/db && npx drizzle-kit generate && npx drizzle-kit migrate
 
 # Start API server (port 4000)
@@ -699,9 +699,75 @@ Test sequence: upload file → message with attachment → upload emoji → list
 
 ---
 
+### Phase 5: Customization & Theming ✅
+
+#### Theme Presets & Marketplace ✅
+- **Tables:** `theme_presets` (17 cols, JSONB tokens), `theme_installs` (composite PK: userId+themeId)
+- **Enum:** `theme_visibility` (private/unlisted/public)
+- **Files:**
+  - `apps/api/src/modules/themes/themes.schemas.ts` — createTheme, updateTheme, browseThemes, installTheme, rateTheme
+  - `apps/api/src/modules/themes/themes.service.ts` — Full theme service with 8 built-in themes seeded on startup
+  - `apps/api/src/modules/themes/themes.router.ts` — 10 endpoints
+- **Built-in themes:** Obsidian (default), Moonstone, Ember, Arctic, Void, Terracotta, Sakura, Neon — each with ~24 color tokens
+- **Marketplace features:** Browse public themes (sort by popular/newest/top_rated), install/uninstall, rate (Redis double-vote prevention)
+- **Endpoints:** GET/POST/PATCH/DELETE `/themes`, POST `.../publish`, POST/DELETE `.../install`, POST `.../rate`, GET `/users/@me/themes`
+
+#### Guild Brand + Custom CSS ✅
+- **Tables:** `guild_custom_css` (PK: guildId, FK cascade, text CSS + updatedBy)
+- **Files:**
+  - `apps/api/src/modules/brand/brand.schemas.ts` — updateBrand (all guildBrand fields), updateCss (50KB max)
+  - `apps/api/src/modules/brand/brand.service.ts` — CRUD with Redis cache (120s TTL), CSS upsert via Drizzle `onConflictDoUpdate`
+  - `apps/api/src/modules/brand/brand.router.ts` — 5 endpoints with background image upload (sharp → 1920x1080 WebP)
+- **Endpoints:** GET/PATCH `/guilds/:guildId/brand`, POST `.../brand/background`, GET/PATCH `/guilds/:guildId/css`
+- **Real-time:** `GUILD_BRAND_UPDATE`, `GUILD_CSS_UPDATE` events via Socket.IO
+
+#### Member Profiles + Customization ✅
+- **Tables:** `avatar_decorations` (catalog), `profile_effects` (catalog) — both with category, sortOrder, animated, available
+- **Files:**
+  - `apps/api/src/modules/profiles/profiles.schemas.ts` — updateMemberProfile, equipCustomization
+  - `apps/api/src/modules/profiles/profiles.service.ts` — Per-server profiles (upsert), avatar/banner upload, decoration/effect equip
+  - `apps/api/src/modules/profiles/profiles.router.ts` — 9 endpoints
+- **Endpoints:** GET/PATCH member profiles, POST/DELETE avatar/banner uploads, GET `/avatar-decorations`, GET `/profile-effects`, PATCH `/users/@me/customization`
+- **Real-time:** `MEMBER_PROFILE_UPDATE`, `USER_PROFILE_UPDATE` events
+
+#### Migration 0005 ✅
+- 5 new tables, 1 new enum
+- Indexes: `theme_presets(visibility, install_count DESC)`, `theme_presets(author_id)`, `theme_installs(theme_id)`
+- Total tables: **62**
+
+#### E2E Test Results (23/23 pass) ✅
+
+| Test | Description | Result |
+|------|-------------|--------|
+| 1 | Get guild brand (defaults) | ✅ |
+| 2 | Update guild brand (colors, gradient, fonts) | ✅ |
+| 3 | Get updated brand | ✅ |
+| 4 | Get guild CSS (empty) | ✅ |
+| 5 | Update guild CSS (upsert) | ✅ |
+| 6 | Get updated CSS | ✅ |
+| 7 | Get member profile (empty) | ✅ |
+| 8 | Update member profile (nickname, bio) | ✅ |
+| 9 | List avatar decorations (catalog) | ✅ |
+| 10 | List profile effects (catalog) | ✅ |
+| 11 | Equip avatar decoration | ✅ |
+| 12 | List built-in themes (8) | ✅ |
+| 13 | Get single theme (Obsidian, tokens) | ✅ |
+| 14 | Create custom theme | ✅ |
+| 15 | Update custom theme | ✅ |
+| 16 | Publish custom theme | ✅ |
+| 17 | Browse public themes | ✅ |
+| 18 | Install theme | ✅ |
+| 19 | Rate theme | ✅ |
+| 20 | Get user themes (installed + created) | ✅ |
+| 21 | Uninstall theme | ✅ |
+| 22 | Delete custom theme | ✅ |
+| 23 | CSS upsert (re-update) | ✅ |
+
+---
+
 ## What's NOT Done Yet
 
-### Phases 5–9
+### Phases 6–9
 See `ARCHITECTURE.md` Section 23 for full phase breakdown.
 
 ---
@@ -727,7 +793,7 @@ See `ARCHITECTURE.md` Section 23 for full phase breakdown.
 
 ---
 
-## File Tree (as of Phase 4 Part 3B)
+## File Tree (as of Phase 5)
 
 ```
 gratonite/
@@ -747,6 +813,7 @@ gratonite/
 │   │       ├── index.ts, snowflake.ts, user.ts, permissions.ts
 │   │       ├── guild.ts, channel.ts, message.ts, voice.ts
 │   │       ├── events.ts, api.ts
+│   │       (AvatarDecoration, ProfileEffect, GuildCustomCss, ThemePreset, ThemeInstall types added)
 │   │
 │   └── db/                   # @gratonite/db
 │       ├── package.json, tsconfig.json, drizzle.config.ts
@@ -755,8 +822,8 @@ gratonite/
 │           ├── schema/
 │           │   ├── index.ts  # Barrel export (includes helpers)
 │           │   ├── helpers.ts # bigintString custom column type
-│           │   ├── users.ts  # 11 tables + 8 enums
-│           │   ├── guilds.ts # 17 tables + 8 enums
+│           │   ├── users.ts  # 13 tables + 8 enums (+avatarDecorations, profileEffects)
+│           │   ├── guilds.ts # 20 tables + 9 enums (+guildCustomCss, themePresets, themeInstalls, themeVisibilityEnum)
 │           │   ├── channels.ts # 12 tables + 4 enums
 │           │   ├── messages.ts # 10 tables + 1 enum
 │           │   └── voice.ts  # 3 tables + 1 enum (NEW Phase 3)
@@ -765,6 +832,7 @@ gratonite/
 │               ├── 0001_first_spot.sql         # +3 voice tables
 │               ├── 0003_silent_strong_guy.sql  # +7 tables (wiki/QA/events/FTS)
 │               ├── 0004_striped_blue_shield.sql # +6 tables (automod/raid/reports/analytics)
+│               ├── 0005_opposite_gamora.sql    # +5 tables (themes/brand/decorations)
 │               └── meta/
 │
 └── apps/
@@ -812,6 +880,12 @@ gratonite/
                 │   ├── moderation.schemas.ts, moderation.service.ts, moderation.router.ts
                 ├── analytics/       # NEW (Phase 4 Part 3B)
                 │   ├── analytics.schemas.ts, analytics.service.ts, analytics.router.ts
+                ├── themes/          # NEW (Phase 5)
+                │   ├── themes.schemas.ts, themes.service.ts, themes.router.ts
+                ├── brand/           # NEW (Phase 5)
+                │   ├── brand.schemas.ts, brand.service.ts, brand.router.ts
+                ├── profiles/        # NEW (Phase 5)
+                │   ├── profiles.schemas.ts, profiles.service.ts, profiles.router.ts
                 ├── voice/           # NEW (Phase 3)
                 │   ├── voice.schemas.ts, voice.service.ts, voice.router.ts
                 └── gateway/

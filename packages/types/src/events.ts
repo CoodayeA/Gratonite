@@ -1,8 +1,17 @@
 import type { Snowflake } from './snowflake';
 import type { Message, MessageReaction } from './message';
-import type { GuildMember, Guild, GuildEmoji, GuildSticker, GuildScheduledEvent, AutoModRule } from './guild';
+import type {
+  GuildMember,
+  Guild,
+  GuildEmoji,
+  GuildSticker,
+  GuildScheduledEvent,
+  AutoModRule,
+  GuildBrand,
+  GuildCustomCss,
+} from './guild';
 import type { Channel, Thread, WikiPage, QaQuestion } from './channel';
-import type { Presence, CustomStatus } from './user';
+import type { Presence, CustomStatus, MemberProfile } from './user';
 import type { VoiceState, ScreenShareSession, StageInstance } from './voice';
 
 // ============================================================================
@@ -188,6 +197,24 @@ export interface ServerToClientEvents {
   // Reports
   REPORT_CREATE: (data: { guildId: Snowflake; reportId: Snowflake }) => void;
   REPORT_UPDATE: (data: { guildId: Snowflake; reportId: Snowflake; status: string }) => void;
+
+  // Guild Brand & CSS
+  GUILD_BRAND_UPDATE: (data: { guildId: Snowflake; brand: GuildBrand }) => void;
+  GUILD_CSS_UPDATE: (data: { guildId: Snowflake; css: GuildCustomCss }) => void;
+
+  // Member Profiles
+  MEMBER_PROFILE_UPDATE: (data: {
+    guildId: Snowflake;
+    userId: Snowflake;
+    profile: MemberProfile;
+  }) => void;
+
+  // User Customization
+  USER_PROFILE_UPDATE: (data: {
+    userId: Snowflake;
+    avatarDecorationId: Snowflake | null;
+    profileEffectId: Snowflake | null;
+  }) => void;
 }
 
 /**

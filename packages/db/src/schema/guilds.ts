@@ -514,3 +514,60 @@ export const serverAnalyticsHourly = pgTable('server_analytics_hourly', {
   activeUsers: integer('active_users').notNull().default(0),
   voiceUsers: integer('voice_users').notNull().default(0),
 });
+
+// ============================================================================
+// Guild Custom CSS
+// ============================================================================
+
+export const guildCustomCss = pgTable('guild_custom_css', {
+  guildId: bigintString('guild_id')
+    .primaryKey()
+    .references(() => guilds.id, { onDelete: 'cascade' }),
+  css: text('css').notNull().default(''),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedBy: bigintString('updated_by').references(() => users.id),
+});
+
+// ============================================================================
+// Theme Presets (built-in + community marketplace)
+// ============================================================================
+
+export const themeVisibilityEnum = pgEnum('theme_visibility', [
+  'private',
+  'unlisted',
+  'public',
+]);
+
+export const themePresets = pgTable('theme_presets', {
+  id: bigintString('id').primaryKey(),
+  name: varchar('name', { length: 64 }).notNull(),
+  slug: varchar('slug', { length: 64 }).notNull().unique(),
+  description: varchar('description', { length: 500 }),
+  authorId: bigintString('author_id').references(() => users.id),
+  tokens: jsonb('tokens').notNull().default({}),
+  builtIn: boolean('built_in').notNull().default(false),
+  visibility: themeVisibilityEnum('visibility').notNull().default('private'),
+  tags: jsonb('tags').notNull().default([]),
+  previewColors: jsonb('preview_colors').notNull().default([]),
+  installCount: integer('install_count').notNull().default(0),
+  ratingSum: integer('rating_sum').notNull().default(0),
+  ratingCount: integer('rating_count').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ============================================================================
+// Theme Installs (user → theme relationship)
+// ============================================================================
+
+export const themeInstalls = pgTable('theme_installs', {
+  userId: bigintString('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  themeId: bigintString('theme_id')
+    .notNull()
+    .references(() => themePresets.id, { onDelete: 'cascade' }),
+  scope: varchar('scope', { length: 20 }).notNull().default('personal'),
+  scopeId: varchar('scope_id', { length: 64 }),
+  installedAt: timestamp('installed_at', { withTimezone: true }).notNull().defaultNow(),
+});

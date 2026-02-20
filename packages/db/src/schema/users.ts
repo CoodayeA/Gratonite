@@ -258,3 +258,35 @@ export const accountDeletionRequests = pgTable('account_deletion_requests', {
   status: varchar('status', { length: 20 }).notNull().default('pending'),
   executedAt: timestamp('executed_at', { withTimezone: true }),
 });
+
+// ============================================================================
+// Avatar decorations (catalog)
+// ============================================================================
+
+export const avatarDecorations = pgTable('avatar_decorations', {
+  id: bigintString('id').primaryKey(),
+  name: varchar('name', { length: 64 }).notNull(),
+  description: varchar('description', { length: 255 }),
+  assetHash: varchar('asset_hash', { length: 64 }).notNull(),
+  animated: boolean('animated').notNull().default(false),
+  category: varchar('category', { length: 32 }),
+  sortOrder: integer('sort_order').notNull().default(0),
+  available: boolean('available').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ============================================================================
+// Profile effects (catalog)
+// ============================================================================
+
+export const profileEffects = pgTable('profile_effects', {
+  id: bigintString('id').primaryKey(),
+  name: varchar('name', { length: 64 }).notNull(),
+  description: varchar('description', { length: 255 }),
+  assetHash: varchar('asset_hash', { length: 64 }).notNull(),
+  animated: boolean('animated').notNull().default(false),
+  category: varchar('category', { length: 32 }),
+  sortOrder: integer('sort_order').notNull().default(0),
+  available: boolean('available').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});

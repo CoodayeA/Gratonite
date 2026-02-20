@@ -25,6 +25,10 @@ import { eventsRouter } from './modules/events/events.router.js';
 import { autoModRouter } from './modules/automod/automod.router.js';
 import { moderationRouter } from './modules/moderation/moderation.router.js';
 import { analyticsRouter } from './modules/analytics/analytics.router.js';
+import { themesRouter } from './modules/themes/themes.router.js';
+import { brandRouter } from './modules/brand/brand.router.js';
+import { profilesRouter } from './modules/profiles/profiles.router.js';
+import { createThemesService } from './modules/themes/themes.service.js';
 import { createThreadsService } from './modules/threads/threads.service.js';
 import { createMessagesService } from './modules/messages/messages.service.js';
 import { createEventsService } from './modules/events/events.service.js';
@@ -118,6 +122,9 @@ async function main() {
   app.use('/api/v1', autoModRouter(ctx));
   app.use('/api/v1', moderationRouter(ctx));
   app.use('/api/v1', analyticsRouter(ctx));
+  app.use('/api/v1', themesRouter(ctx));
+  app.use('/api/v1', brandRouter(ctx));
+  app.use('/api/v1', profilesRouter(ctx));
 
   // ── 404 handler ────────────────────────────────────────────────────────
   app.use((_req, res) => {
@@ -145,6 +152,11 @@ async function main() {
       });
     },
   );
+
+  // ── Seed built-in themes ─────────────────────────────────────────────
+  const themesService = createThemesService(ctx);
+  await themesService.seedBuiltInThemes();
+  logger.info('Built-in themes seeded');
 
   // ── Thread auto-archive ──────────────────────────────────────────────
   const threadsService = createThreadsService(ctx);
