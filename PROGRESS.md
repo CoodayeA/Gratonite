@@ -1,8 +1,8 @@
 # Gratonite — Development Progress
 
 > **Last updated:** 2026-02-20
-> **Current Phase:** Phase 7 — Cross-Platform Apps (Planning)
-> **Status:** Phase 7 planning started (desktop + mobile + push + deep link + offline)
+> **Current Phase:** Phase 7A — Web App MVP (Complete)
+> **Status:** Functional web client with auth, guilds, channels, real-time messaging
 
 ---
 
@@ -840,9 +840,12 @@ Test sequence: upload file → message with attachment → upload emoji → list
 - Expo app shell with expressive UI, gradient glows, and gesture-first layout
 - Files: `apps/mobile/package.json`, `apps/mobile/app.json`, `apps/mobile/App.tsx`, `apps/mobile/tsconfig.json`
 
-#### Web (Vite) ✅ (scaffold)
-- Web UI shell with three-column layout and staging status
-- Files: `apps/web/package.json`, `apps/web/vite.config.ts`, `apps/web/index.html`, `apps/web/src/main.tsx`, `apps/web/src/styles.css`
+#### Web (Vite) ✅ (full auth + messaging MVP)
+- Functional web client: register, login, guild list, channel view, real-time messaging
+- Full tech stack: React 18 + React Router v6 + Zustand + TanStack Query + Socket.IO client
+- Build output: 14KB CSS + 31KB app + 41KB state + 41KB socket + 164KB vendor (gzipped: ~93KB total)
+- Brand assets integrated: app icon + mascot in loading screen, home page, auth pages
+- See Phase 7A section below for full details
 
 #### Deep Links (web)
 - Route parser stub + redirect entrypoint for `/invite`/`/guild`/`/dm`
@@ -867,6 +870,9 @@ Test sequence: upload file → message with attachment → upload emoji → list
 
 #### Tunnel/Staging (plan)
 - `docs/tunnel-setup.md`
+
+#### Phase 7 Summary
+- `docs/phase7-summary.md`
 
 #### Repository Split (Org)
 - Org: `gratonitechat`
@@ -893,10 +899,142 @@ Test sequence: upload file → message with attachment → upload emoji → list
 
 ---
 
+### Phase 7A: Web App — Auth + Messaging MVP ✅
+
+#### Overview
+Complete functional web client built on the Phase 7 Vite scaffold. Users can register, login, browse guilds, view channels, and send/receive messages in real-time via Socket.IO.
+
+#### Stack
+- **React 18** + **React Router v6** (client-side routing)
+- **Zustand** (local/real-time state) + **TanStack Query** (server data cache)
+- **Socket.IO client** (real-time events)
+- **Vite** dev proxy: `/api` → localhost:4000, `/socket.io` → localhost:4000 (ws)
+- Dark-first design: Space Grotesk font, glassmorphism auth card, CSS custom properties
+
+#### Architecture Decisions
+- **Access token in module closure** (not reactive state) — prevents unnecessary re-renders on token changes
+- **Dual store pattern**: TanStack Query for server data (guilds, channels, messages), Zustand for local/real-time state (current selections, typing indicators, UI toggles)
+- **Optimistic messages**: nonce-based dedup — client inserts immediately, gateway event replaces optimistic copy
+- **Auto-refresh**: Silent `POST /auth/refresh` on app mount using HttpOnly cookie
+- **Vite proxy eliminates CORS** — all API calls go to same origin in dev
+
+#### New Files (32 files)
+
+**Core infrastructure:**
+- `src/lib/api.ts` — Fetch wrapper with Bearer auth, 401 auto-refresh, 429 rate limit handling
+- `src/lib/socket.ts` — Singleton Socket.IO connection, IDENTIFY/READY/HEARTBEAT protocol
+- `src/lib/utils.ts` — formatTimestamp, formatTypingText, getInitials, shouldGroupMessages, generateNonce
+- `src/lib/queryClient.ts` — TanStack QueryClient (30s stale, 5min GC)
+- `src/vite-env.d.ts` — Vite client types + ImportMetaEnv
+
+**State stores (5):**
+- `src/stores/auth.store.ts` — user, isAuthenticated, isLoading, login/logout/updateUser
+- `src/stores/guilds.store.ts` — Map<guildId, Guild> + guildOrder + currentGuildId
+- `src/stores/channels.store.ts` — Map<channelId, Channel> + channelsByGuild + currentChannelId
+- `src/stores/messages.store.ts` — messagesByChannel, hasMore, typingByChannel, nonce dedup
+- `src/stores/ui.store.ts` — sidebarCollapsed, memberPanelOpen, activeModal
+
+**Providers:**
+- `src/providers/SocketProvider.tsx` — Connects on auth, registers all gateway event handlers
+
+**Hooks (3):**
+- `src/hooks/useGuilds.ts` — TanStack Query → Zustand sync
+- `src/hooks/useGuildChannels.ts` — Per-guild channel fetch
+- `src/hooks/useMessages.ts` — useInfiniteQuery with cursor pagination
+
+**UI components (6):**
+- `src/components/ui/Button.tsx` — primary/ghost/danger variants, sm/md/lg sizes, loading spinner
+- `src/components/ui/Input.tsx` — label, error, hint, password toggle, forwardRef
+- `src/components/ui/Avatar.tsx` — Image or initials fallback
+- `src/components/ui/GuildIcon.tsx` — Guild icon or initials, rounded square
+- `src/components/ui/LoadingSpinner.tsx` — SVG animated spinner
+- `src/components/ui/LoadingScreen.tsx` — Full-screen with Gratonite logo + pulse
+
+**Guards (2):**
+- `src/components/guards/RequireAuth.tsx` — Redirects to /login if not authenticated
+- `src/components/guards/RequireGuest.tsx` — Redirects to / if already authenticated
+
+**Sidebar (2):**
+- `src/components/sidebar/GuildRail.tsx` — 72px rail with guild icons, home button, add button, active pill indicator
+- `src/components/sidebar/ChannelSidebar.tsx` — 240px panel with guild name, categorized channels
+
+**Messages (4):**
+- `src/components/messages/MessageList.tsx` — Scroll-to-bottom, infinite scroll pagination, message grouping
+- `src/components/messages/MessageItem.tsx` — Avatar + author + timestamp + content, grouped mode
+- `src/components/messages/MessageComposer.tsx` — Auto-growing textarea, Enter to send, throttled typing indicator
+- `src/components/messages/TypingIndicator.tsx` — Animated 3-dot bounce, auto-expire stale entries
+
+**Layout (2):**
+- `src/components/layout/TopBar.tsx` — Channel name + topic + member panel toggle
+- `src/components/ErrorBoundary.tsx` — React error boundary with reload button
+
+**Layouts (2):**
+- `src/layouts/AuthLayout.tsx` — Centered glassmorphism card with logo
+- `src/layouts/AppLayout.tsx` — 3-column grid: GuildRail | ChannelSidebar | Main
+
+**Pages (6):**
+- `src/pages/auth/LoginPage.tsx` — Email/username + password, auto-fetch profile on success
+- `src/pages/auth/RegisterPage.tsx` — Email, display name, username (live availability), password, DOB (16+ validation)
+- `src/pages/HomePage.tsx` — Welcome screen with mascot
+- `src/pages/GuildPage.tsx` — Fetch channels, auto-redirect to first text channel, GUILD_SUBSCRIBE
+- `src/pages/ChannelPage.tsx` — TopBar + MessageList + TypingIndicator + MessageComposer
+- `src/pages/InvitePage.tsx` — Preview invite, accept, navigate to guild
+
+**App entry:**
+- `src/App.tsx` — Silent refresh on mount, React Router routes with guards
+- `src/main.tsx` — React.StrictMode + ErrorBoundary + QueryClientProvider + BrowserRouter + SocketProvider
+
+#### Modified Files
+- `apps/web/package.json` — Added react-router-dom, zustand, @tanstack/react-query, socket.io-client, @gratonite/types
+- `apps/web/vite.config.ts` — Added React plugin, path alias, proxy config, manual chunks
+- `apps/web/tsconfig.json` — Added path aliases (@/*), DOM libs
+- `apps/web/index.html` — Fixed script src (main.ts → main.tsx)
+- `apps/web/src/styles.css` — Complete rewrite: design tokens, all component styles, responsive layout
+
+#### Brand Assets
+- `apps/web/public/gratonite-icon.png` — App icon (930KB) — used in auth pages, loading screen, guild rail home
+- `apps/web/public/gratonite-mascot.png` — Mascot (1.15MB) — used in home page empty state
+
+#### Build Output
+```
+dist/assets/main.css        14.28 KB │ gzip:  3.53 KB
+dist/assets/main.js         30.99 KB │ gzip: 10.00 KB
+dist/assets/state.js        40.84 KB │ gzip: 12.56 KB
+dist/assets/socket.js       41.25 KB │ gzip: 12.89 KB
+dist/assets/vendor.js      164.14 KB │ gzip: 53.58 KB
+```
+
+#### Route Structure
+| Route | Component | Auth | Description |
+|-------|-----------|------|-------------|
+| `/login` | LoginPage | Guest only | Login form |
+| `/register` | RegisterPage | Guest only | Registration form |
+| `/invite/:code` | InvitePage | Optional | Invite preview + accept |
+| `/` | HomePage | Required | Welcome / guild list |
+| `/guild/:guildId` | GuildPage | Required | Guild view, auto-redirects to first channel |
+| `/guild/:guildId/channel/:channelId` | ChannelPage | Required | Message view + composer |
+
+#### Socket.IO Event Handlers
+| Event | Handler |
+|-------|---------|
+| MESSAGE_CREATE | addMessage (nonce dedup) |
+| MESSAGE_UPDATE | updateMessage |
+| MESSAGE_DELETE | removeMessage |
+| TYPING_START | setTyping |
+| CHANNEL_CREATE/UPDATE/DELETE | channels store |
+| GUILD_CREATE/UPDATE/DELETE | guilds store |
+| GUILD_MEMBER_ADD/REMOVE | logged (member list refresh planned) |
+
+---
+
 ## What's NOT Done Yet
 
-### Phases 6–9
-Phase 6 is in progress; see details below. Phases 7–9 remain pending.
+### Remaining Work
+- **Phase 7B:** Desktop app (Electron) — functional screens, native menus, tray, auto-update
+- **Phase 7C:** Mobile app (Expo) — navigation, screens, push notifications, deep links
+- **Phase 7D:** Offline-first (WatermelonDB), tunnel/staging config
+- **Phase 8:** Performance & Scale — CDN, horizontal scaling, message partitioning
+- **Phase 9:** Polish & Launch — error tracking, analytics, marketing site integration
 
 ---
 
