@@ -14,6 +14,7 @@ import {
 } from './messages.schemas.js';
 import { messages } from '@gratonite/db';
 import { and, eq } from 'drizzle-orm';
+import { createLinkPreviewService } from './link-preview.service.js';
 
 export function messagesRouter(ctx: AppContext): Router {
   const router = Router();
@@ -21,6 +22,7 @@ export function messagesRouter(ctx: AppContext): Router {
   const channelsService = createChannelsService(ctx);
   const guildsService = createGuildsService(ctx);
   const threadsService = createThreadsService(ctx);
+  const linkPreviewService = createLinkPreviewService(ctx);
   const auth = requireAuth(ctx);
 
   // Helper: check the caller has access to the channel
@@ -130,6 +132,12 @@ export function messagesRouter(ctx: AppContext): Router {
     );
 
     res.status(201).json(message);
+
+    // Fire-and-forget: process link previews asynchronously
+    const content = (message as any).content;
+    if (content && typeof content === 'string' && content.includes('http')) {
+      linkPreviewService.processMessageLinks(String((message as any).id), content).catch(() => {});
+    }
   });
 
   // ── Polls ───────────────────────────────────────────────────────────────

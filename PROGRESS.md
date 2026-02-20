@@ -1,8 +1,8 @@
 # Gratonite — Development Progress
 
 > **Last updated:** 2026-02-19
-> **Current Phase:** Phase 4 Part 2 — Scheduled Messages + Link Previews (In Progress)
-> **Status:** Kickoff started; scheduled message backend in progress
+> **Current Phase:** Phase 4 Part 2 — Scheduled Messages + Link Previews + Voice Messages (Complete)
+> **Status:** All Phase 4 features implemented and E2E tested
 
 ---
 
@@ -297,27 +297,47 @@ cd apps/api && node_modules/.bin/tsx src/index.ts
 
 ---
 
-### Phase 4 Part 2: Scheduled Messages + Link Previews (IN PROGRESS)
+### Phase 4 Part 2: Scheduled Messages + Link Previews + Voice Messages ✅
 
-#### Planned Scope
-- Scheduled messages API + processor (polling every 30s)
-- Link preview pipeline (OpenGraph fetch + MinIO rehost + embed update)
-- Voice message attachment support (flags + waveform/duration passthrough)
+#### Scheduled Messages ✅
+- `POST /channels/:channelId/scheduled-messages` — Create
+- `GET /channels/:channelId/scheduled-messages` — List (filtered by author unless admin)
+- `DELETE /channels/:channelId/scheduled-messages/:scheduledMessageId` — Cancel
+- Background processor: polls every 30s, atomic claim via `status: 'pending' → 'sending'`, broadcasts MESSAGE_CREATE on success
 
-#### Work in Progress
-- Scheduled messages routes + service + processor wired
-  - `POST /channels/:channelId/scheduled-messages`
-  - `GET /channels/:channelId/scheduled-messages`
-  - `DELETE /channels/:channelId/scheduled-messages/:scheduledMessageId`
-  - Processor runs every 30s via `apps/api/src/index.ts`
+#### Link Preview Pipeline ✅
+- `apps/api/src/modules/messages/link-preview.service.ts` — OpenGraph scraper + Redis cache
+- URL extraction via regex from message content (max 5 URLs per message)
+- Fire-and-forget after message creation: fetches OG metadata, updates message embeds, emits MESSAGE_UPDATE
+- Redis caching: 24hr for successful fetches, 5min for errors (negative cache)
+- Uses `open-graph-scraper` package with 8s timeout + custom User-Agent
 
-#### Implementation Notes / Weird Things
+#### Voice Message Support ✅
+- Upload via `POST /files/upload` with `isVoiceMessage=true`, `durationSecs`, `waveform` (base64) fields
+- `UploadResult` extended with voice fields; stored in Redis pending upload
+- Message attachment creation passes through `durationSecs`, `waveform`, and sets `flags` bit 1 (IS_VOICE_MESSAGE)
+- Message-level `flags` field set to `1 << 13` (IS_VOICE_MESSAGE) when any attachment is voice
+- Empty `content` allowed when attachmentIds, stickerIds, or poll present (validation fix)
+
+#### Implementation Notes
 - Scheduled message processor uses polling interval instead of Bull queue (matches current infra)
-
-#### Implementation Notes / Weird Things
-- Thread auto-archive now runs a single SQL update with correlated MAX(created_at) subquery
+- Thread auto-archive runs a single SQL update with correlated MAX(created_at) subquery
 - Message type int `22` is used for polls (keep in sync with client enums)
-- Poll/message/attachment creation now runs in a DB transaction; Redis pending upload cleanup is post-commit
+- Poll/message/attachment creation runs in a DB transaction; Redis pending upload cleanup is post-commit
+- Link preview processing is async: clients receive MESSAGE_CREATE immediately, then MESSAGE_UPDATE with embeds
+
+#### Phase 4 Part 2 E2E Test Results (All Passing)
+
+| Test | Result | Notes |
+|---|---|---|
+| Send message with URL | ✅ | Embeds populate asynchronously via MESSAGE_UPDATE |
+| Get message with link preview | ✅ | OG title, description, image, footer from GitHub |
+| Upload voice message file | ✅ | isVoiceMessage=true, durationSecs=5, waveform stored |
+| Send voice message | ✅ | Message flags=8192 (IS_VOICE_MESSAGE) |
+| Get voice message | ✅ | attachments[0].durationSecs=5, waveform present, flags=2 |
+| Create scheduled message | ✅ | status=pending, future scheduledFor |
+| List scheduled messages | ✅ | Returns pending messages |
+| Cancel scheduled message | ✅ | HTTP 204, message cancelled |
 
 ---
 
@@ -423,7 +443,7 @@ All 4 schema files (`users.ts`, `guilds.ts`, `channels.ts`, `messages.ts`) were 
 | `messages.router.ts` | Check MANAGE_MESSAGES permission on pin/unpin | LOW |
 | `db/schema/messages.ts` | Message table partitioning by channel_id hash | LOW |
 | `index.ts` | Add cookie-parser middleware for refresh token cookies | HIGH |
-| `messages.service.ts` | Link preview pipeline (OpenGraph fetch + MinIO proxy) | MEDIUM |
+| `messages.service.ts` | ~~Link preview pipeline~~ **DONE** — see `link-preview.service.ts` | ~~MEDIUM~~ |
 
 ---
 
@@ -525,13 +545,10 @@ Test sequence: upload file → message with attachment → upload emoji → list
 
 ---
 
-## What's NOT Done Yet (Beyond Phase 4 Part 1)
+## What's NOT Done Yet
 
-### Phase 4 Part 2: Rich Features (Remaining)
+### Phase 4 Part 3: Rich Features (Remaining)
 - Wiki channels + Q&A channels (types exist, need service/router)
-- Scheduled messages (table exists, need Bull queue or setInterval)
-- Voice messages (attachment flags exist, need recording endpoint)
-- Link preview pipeline (embed extraction + image proxy)
 - Auto-moderation + raid protection (need new tables)
 - Full-text search (need GIN index on messages)
 - Event scheduling system (need new tables)
@@ -564,7 +581,7 @@ See `ARCHITECTURE.md` Section 23 for full phase breakdown.
 
 ---
 
-## File Tree (as of Phase 3)
+## File Tree (as of Phase 4 Part 2)
 
 ```
 gratonite/
@@ -609,7 +626,7 @@ gratonite/
             ├── index.ts      # Express + Socket.IO + LiveKit server
             ├── env.ts        # Zod env validation (incl. LiveKit + TURN vars)
             ├── lib/
-            │   ├── context.ts, logger.ts, snowflake.ts, redis.ts
+            │   ├── context.ts, logger.ts, snowflake.ts, redis.ts, minio.ts
             ├── middleware/
             │   ├── auth.ts, rate-limiter.ts, security-headers.ts
             └── modules/
@@ -618,11 +635,17 @@ gratonite/
                 ├── users/
                 │   └── users.router.ts
                 ├── guilds/
-                │   ├── guilds.schemas.ts, guilds.service.ts, guilds.router.ts
+                │   ├── guilds.schemas.ts, emojis.schemas.ts
+                │   ├── guilds.service.ts, guilds.router.ts
                 ├── channels/
                 │   ├── channels.schemas.ts, channels.service.ts, channels.router.ts
                 ├── messages/
                 │   ├── messages.schemas.ts, messages.service.ts, messages.router.ts
+                │   ├── link-preview.service.ts  # NEW (Phase 4 Part 2)
+                ├── files/           # NEW (Phase 4 Part 1)
+                │   ├── files.schemas.ts, files.service.ts, files.router.ts
+                ├── threads/         # NEW (Phase 4 Part 1)
+                │   ├── threads.schemas.ts, threads.service.ts, threads.router.ts
                 ├── invites/
                 │   ├── invites.service.ts, invites.router.ts
                 ├── relationships/

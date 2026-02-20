@@ -11,6 +11,14 @@ export const uploadFileSchema = z.object({
     .transform((v) => v === 'true')
     .or(z.boolean())
     .default(false),
+  // Voice message fields (only for purpose='upload' with audio content)
+  isVoiceMessage: z
+    .string()
+    .transform((v) => v === 'true')
+    .or(z.boolean())
+    .default(false),
+  durationSecs: z.coerce.number().int().min(0).max(600).optional(), // max 10 minutes
+  waveform: z.string().max(4096).optional(), // base64 encoded waveform data
 });
 
 export type UploadFileInput = z.infer<typeof uploadFileSchema>;

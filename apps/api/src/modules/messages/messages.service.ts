@@ -74,6 +74,10 @@ export function createMessagesService(ctx: AppContext) {
       }
     }
 
+    // Check if any upload is a voice message
+    const hasVoiceMessage = pendingUploads.some((u) => u?.isVoiceMessage);
+    const messageFlags = hasVoiceMessage ? (1 << 13) : 0; // IS_VOICE_MESSAGE
+
     const message = await ctx.db.transaction(async (tx) => {
       let pollId: string | null = null;
       if (input.poll) {
@@ -89,6 +93,7 @@ export function createMessagesService(ctx: AppContext) {
           authorId,
           content,
           type: input.poll ? MESSAGE_TYPE_POLL : input.messageReference ? 19 : 0, // 19 = REPLY, 0 = DEFAULT
+          flags: messageFlags,
           nonce: input.nonce ?? null,
           tts: input.tts ?? false,
           mentions: mentionIds,
@@ -123,6 +128,11 @@ export function createMessagesService(ctx: AppContext) {
       if (pendingUploads.length > 0) {
         for (const upload of pendingUploads) {
           if (!upload) continue;
+          // Compute flags: bit 0 = spoiler, bit 1 = voice message
+          let flags = 0;
+          if (upload.spoiler) flags |= 1;
+          if (upload.isVoiceMessage) flags |= 2;
+
           await tx.insert(messageAttachments).values({
             id: upload.id,
             messageId,
@@ -134,7 +144,9 @@ export function createMessagesService(ctx: AppContext) {
             proxyUrl: upload.url,
             height: upload.height,
             width: upload.width,
-            flags: upload.spoiler ? 1 : 0,
+            durationSecs: upload.durationSecs ?? null,
+            waveform: upload.waveform ?? null,
+            flags,
           });
           uploadedIds.push(upload.id);
         }

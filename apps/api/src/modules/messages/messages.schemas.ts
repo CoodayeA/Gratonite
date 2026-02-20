@@ -15,7 +15,7 @@ export const pollInputSchema = z.object({
 
 export const createMessageSchema = z
   .object({
-    content: z.string().min(1).max(4000).optional(),
+    content: z.string().max(4000).optional(),
     nonce: z.string().max(64).optional(),
     tts: z.boolean().optional(),
     messageReference: z

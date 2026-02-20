@@ -47,6 +47,9 @@ export interface UploadResult {
   height: number | null;
   description: string | null;
   spoiler: boolean;
+  isVoiceMessage: boolean;
+  durationSecs: number | null;
+  waveform: string | null;
 }
 
 export function createFilesService(ctx: AppContext) {
@@ -125,6 +128,8 @@ export function createFilesService(ctx: AppContext) {
     const fileId = generateId();
     const url = `${ctx.env.CDN_BASE_URL}/${bucket.name}/${key}`;
 
+    const isVoice = Boolean(input.isVoiceMessage) && mimeType.startsWith('audio/');
+
     const result: UploadResult = {
       id: fileId,
       bucket: bucket.name,
@@ -137,6 +142,9 @@ export function createFilesService(ctx: AppContext) {
       height,
       description: input.description ?? null,
       spoiler: Boolean(input.spoiler),
+      isVoiceMessage: isVoice,
+      durationSecs: isVoice && input.durationSecs ? input.durationSecs : null,
+      waveform: isVoice && input.waveform ? input.waveform : null,
     };
 
     // 7. Store as pending upload in Redis (15 min TTL) for message attachment linking
