@@ -1025,6 +1025,16 @@ dist/assets/vendor.js      164.14 KB │ gzip: 53.58 KB
 | GUILD_CREATE/UPDATE/DELETE | guilds store |
 | GUILD_MEMBER_ADD/REMOVE | logged (member list refresh planned) |
 
+#### Integration Fixes (post-commit)
+After live testing against real API, 7 bugs found and fixed:
+1. **Messages missing author info** — API returned `authorId` only; added `users + userProfiles` join in `hydrateMessage()` and `hydrateMessages()` with batch author fetch for list endpoint
+2. **`editedAt` → `editedTimestamp`** — MessageItem and Composer referenced wrong field name; fixed to match `@gratonite/types` Message type
+3. **Channel type enums** — GuildPage and ChannelSidebar compared `type === 0` but API returns `'GUILD_TEXT'` string enum; fixed all channel type constants
+4. **Message ordering** — API returns newest-first (DESC), but store expects oldest-first; added `.reverse()` in `useMessages` query
+5. **Guild addGuild dedup** — `guilds.has(guild.id)` checked new map (always true after set); fixed to check `state.guilds` (old state)
+6. **Optimistic message author** — Composer's optimistic insert lacked `author` object; added from auth store user data
+7. **Phase 6 DB migration partial failure** — `bot` column + 5 bot platform tables missing; manually applied via ALTER TABLE + CREATE TABLE
+
 ---
 
 ## What's NOT Done Yet
