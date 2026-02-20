@@ -273,3 +273,43 @@ export const auditLogEntries = pgTable('audit_log_entries', {
   options: jsonb('options'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ============================================================================
+// Custom Emojis
+// ============================================================================
+
+export const guildEmojis = pgTable('guild_emojis', {
+  id: bigintString('id').primaryKey(),
+  guildId: bigintString('guild_id')
+    .notNull()
+    .references(() => guilds.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 32 }).notNull(),
+  hash: varchar('hash', { length: 64 }).notNull(),
+  animated: boolean('animated').notNull().default(false),
+  creatorId: bigintString('creator_id')
+    .notNull()
+    .references(() => users.id),
+  available: boolean('available').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ============================================================================
+// Stickers
+// ============================================================================
+
+export const guildStickers = pgTable('guild_stickers', {
+  id: bigintString('id').primaryKey(),
+  guildId: bigintString('guild_id')
+    .notNull()
+    .references(() => guilds.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 30 }).notNull(),
+  description: varchar('description', { length: 100 }),
+  hash: varchar('hash', { length: 64 }).notNull(),
+  formatType: varchar('format_type', { length: 10 }).notNull(), // 'png' | 'apng' | 'lottie' | 'webp'
+  tags: varchar('tags', { length: 200 }),
+  available: boolean('available').notNull().default(true),
+  creatorId: bigintString('creator_id')
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});

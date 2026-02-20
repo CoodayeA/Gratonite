@@ -1,8 +1,8 @@
 # Gratonite — Development Progress
 
 > **Last updated:** 2026-02-19
-> **Current Phase:** Phase 3 — Voice & Video (Complete)
-> **Status:** All Phase 3 modules built, tested end-to-end, and working
+> **Current Phase:** Phase 4 Part 2 — Scheduled Messages + Link Previews (In Progress)
+> **Status:** Kickoff started; scheduled message backend in progress
 
 ---
 
@@ -257,6 +257,70 @@ cd apps/api && node_modules/.bin/tsx src/index.ts
 
 ---
 
+### Phase 4 Part 1: Threads + Polls + Uploads (IN PROGRESS)
+**Status:** Complete and manually verified
+
+#### MinIO + Uploads ✅
+- `apps/api/src/lib/minio.ts` — MinIO client + bucket bootstrap
+- `apps/api/src/modules/files/` — file upload pipeline (magic bytes validation, sharp resize, Redis pending uploads)
+- `apps/api/src/middleware/rate-limiter.ts` — upload rate limiter
+
+#### Emojis + Stickers ✅
+- DB tables: `guild_emojis`, `guild_stickers` (migration `0002_faulty_baron_strucker.sql`)
+- `apps/api/src/modules/guilds/emojis.schemas.ts` — Zod schemas
+- `apps/api/src/modules/guilds/guilds.service.ts` — create/get/update/delete emoji & sticker
+- `apps/api/src/modules/guilds/guilds.router.ts` — emoji + sticker routes with MinIO uploads
+
+#### Threads + Forums ✅
+- `apps/api/src/modules/threads/` — schemas, service, router
+- Thread auto-archive background job wired in `apps/api/src/index.ts`
+- Messages can now target threads (channelId = threadId)
+
+#### Polls + Attachments ✅
+- `apps/api/src/modules/messages/messages.schemas.ts` — poll input + attachmentIds
+- `apps/api/src/modules/messages/messages.service.ts` — poll CRUD, vote flows, message hydration
+- `apps/api/src/modules/messages/messages.router.ts` — poll vote/finalize endpoints
+- `packages/types/src/message.ts` — message now includes `poll` field
+- `packages/types/src/events.ts` — poll event types
+
+#### Testing Status
+- `pnpm -C apps/api test` → no test files found (Vitest exit code 1)
+- Manual Phase 4 Part 1 E2E run against local Docker services (details below)
+
+#### Manual E2E Results (2026-02-20)
+- Services: stopped `switchboard-redis`, recreated local Redis with port 6379 mapping
+- Ran: register 2 users → create guild → list channels → upload file → create message with attachment → upload emoji → list emojis → upload sticker → create thread → send message in thread → create forum channel → create forum thread with starter → create poll → vote → finalize
+- Result: all requests completed successfully
+
+#### Issues/Notes
+- API fails to boot if Redis is not bound to `localhost:6379` (ECONNREFUSED); ensure Redis container exposes port 6379
+
+---
+
+### Phase 4 Part 2: Scheduled Messages + Link Previews (IN PROGRESS)
+
+#### Planned Scope
+- Scheduled messages API + processor (polling every 30s)
+- Link preview pipeline (OpenGraph fetch + MinIO rehost + embed update)
+- Voice message attachment support (flags + waveform/duration passthrough)
+
+#### Work in Progress
+- Scheduled messages routes + service + processor wired
+  - `POST /channels/:channelId/scheduled-messages`
+  - `GET /channels/:channelId/scheduled-messages`
+  - `DELETE /channels/:channelId/scheduled-messages/:scheduledMessageId`
+  - Processor runs every 30s via `apps/api/src/index.ts`
+
+#### Implementation Notes / Weird Things
+- Scheduled message processor uses polling interval instead of Bull queue (matches current infra)
+
+#### Implementation Notes / Weird Things
+- Thread auto-archive now runs a single SQL update with correlated MAX(created_at) subquery
+- Message type int `22` is used for polls (keep in sync with client enums)
+- Poll/message/attachment creation now runs in a DB transaction; Redis pending upload cleanup is post-commit
+
+---
+
 ## Phase 3 E2E Test Results (All Passing)
 
 | Test | Result | Notes |
@@ -359,12 +423,13 @@ All 4 schema files (`users.ts`, `guilds.ts`, `channels.ts`, `messages.ts`) were 
 | `messages.router.ts` | Check MANAGE_MESSAGES permission on pin/unpin | LOW |
 | `db/schema/messages.ts` | Message table partitioning by channel_id hash | LOW |
 | `index.ts` | Add cookie-parser middleware for refresh token cookies | HIGH |
+| `messages.service.ts` | Link preview pipeline (OpenGraph fetch + MinIO proxy) | MEDIUM |
 
 ---
 
 ## Phase 4 Part 1: Implementation Plan (IN PROGRESS)
 
-> **Status:** Plan approved, implementation NOT started yet. Pick up from Step 1.
+> **Status:** Implementation underway. Steps 1–6 complete, Step 7 pending.
 > **Plan file:** `.claude/plans/fluttering-roaming-planet.md` has the full detailed plan.
 > **Scope:** Threads + Forums, Polls, File Uploads (MinIO), Emoji/Stickers
 
@@ -379,14 +444,14 @@ All 4 schema files (`users.ts`, `guilds.ts`, `channels.ts`, `messages.ts`) were 
 
 ### What needs to be BUILT (8 steps):
 
-#### Step 1: Dependencies + MinIO Infrastructure
+#### Step 1: Dependencies + MinIO Infrastructure ✅
 - Add to `apps/api/package.json`: `minio`, `multer`, `sharp`, `file-type`, `@types/multer`
 - **New file:** `apps/api/src/lib/minio.ts` — MinIO client + `ensureBuckets()` for: uploads, emojis, stickers, avatars, banners, server-icons
 - **Modify:** `apps/api/src/lib/context.ts` — Add `minio: Client` (from minio package) to AppContext
 - **Modify:** `apps/api/src/index.ts` — Init MinIO client, call `ensureBuckets()`, add to ctx
 - MinIO is already in Docker (port 9000), env vars (`MINIO_*`) already in `env.ts`
 
-#### Step 2: File Upload Module
+#### Step 2: File Upload Module ✅
 - **New:** `apps/api/src/modules/files/files.schemas.ts` — Upload validation (purpose enum, contextId, description, spoiler)
 - **New:** `apps/api/src/modules/files/files.service.ts` — `uploadFile()` (validate magic bytes via file-type, enforce size limits per purpose, sharp pipeline: strip EXIF → resize → WebP → extract dimensions, upload to MinIO), `getFileUrl()`, `deleteFile()`, `processImage()`
 - **New:** `apps/api/src/modules/files/files.router.ts` — `POST /files/upload` (multipart via multer memory storage), returns temp metadata in Redis (`pending_upload:{tempId}`, 15min TTL)
@@ -394,7 +459,7 @@ All 4 schema files (`users.ts`, `guilds.ts`, `channels.ts`, `messages.ts`) were 
 - **Modify:** `apps/api/src/index.ts` — Register files router
 - **Design:** Two-step upload — upload first to get temp ID, then reference when creating message
 
-#### Step 3: Emoji + Stickers (DB + Types + Service)
+#### Step 3: Emoji + Stickers (DB + Types + Service) ✅
 - **Modify:** `packages/db/src/schema/guilds.ts` — Add `guildEmojis` table (id, guildId, name varchar(32), hash varchar(64), animated boolean, creatorId, available boolean, createdAt) and `guildStickers` table (id, guildId, name varchar(30), description varchar(100), hash varchar(64), formatType varchar(10), tags varchar(200), available boolean, creatorId, createdAt)
 - Run `npx drizzle-kit generate && npx drizzle-kit migrate`
 - **Modify:** `packages/types/src/guild.ts` — Add `GuildEmoji`, `GuildSticker` interfaces
@@ -405,7 +470,7 @@ All 4 schema files (`users.ts`, `guilds.ts`, `channels.ts`, `messages.ts`) were 
 - Emoji: max 256KB, 128x128, stored in MinIO `emojis` bucket
 - Sticker: max 500KB, 320x320, stored in MinIO `stickers` bucket
 
-#### Step 4: Threads + Forums
+#### Step 4: Threads + Forums ✅
 - **New:** `apps/api/src/modules/threads/threads.schemas.ts` — createThread (name, type, autoArchiveDuration, appliedTags, message for forum starter), updateThread, getThreads
 - **New:** `apps/api/src/modules/threads/threads.service.ts` — createThread (validates parent channel type, forum tag validation, creates thread + starter message for forum, auto-adds creator), getThread, getActiveThreads, getArchivedThreads, updateThread, deleteThread, joinThread, leaveThread, getThreadMembers, archiveStaleThreads
 - **New:** `apps/api/src/modules/threads/threads.router.ts` — 9 endpoints: POST/GET `/channels/:channelId/threads`, GET `.../archived`, GET/PATCH/DELETE `/threads/:threadId`, PUT/DELETE `/threads/:threadId/members/@me`, GET `.../members`
@@ -415,20 +480,20 @@ All 4 schema files (`users.ts`, `guilds.ts`, `channels.ts`, `messages.ts`) were 
 - **Modify:** `apps/api/src/index.ts` — Register threads router + start auto-archive setInterval (every 5 min)
 - **Key design:** Thread messages use `thread.id` as `channelId` in messages table — existing messages service works for threads with minimal changes
 
-#### Step 5: Polls
+#### Step 5: Polls ✅
 - **Modify:** `apps/api/src/modules/messages/messages.schemas.ts` — Add `pollInputSchema` (questionText, answers min 2 max 10, allowMultiselect, expiry), add `poll` + `attachmentIds` to createMessageSchema, make `content` optional (refine: at least one of content/attachments/stickers/poll)
 - **Modify:** `apps/api/src/modules/messages/messages.service.ts` — Add createPoll, votePoll (single/multi-select, prevent double-vote), removeVote, getVotes, finalizePoll, hydratePollData (batch-fetch poll+answers for messages). Modify createMessage to handle poll type. Modify getMessages/getMessage to hydrate poll data.
 - **Modify:** `packages/types/src/events.ts` — Add `POLL_VOTE_ADD`, `POLL_VOTE_REMOVE`, `POLL_FINALIZE`
 - **Modify:** `apps/api/src/modules/messages/messages.router.ts` — Add 4 poll routes: PUT/DELETE `/channels/:channelId/polls/:pollId/votes/:answerId`, GET `.../votes`, POST `.../finalize`
 - **Modify:** `apps/api/src/middleware/rate-limiter.ts` — Add `pollVoteRateLimiter` (10/5s/user)
 
-#### Step 6: Integration — Message Attachments
+#### Step 6: Integration — Message Attachments ✅
 - **Modify:** `apps/api/src/modules/messages/messages.service.ts` — In createMessage, when `attachmentIds` provided: fetch pending uploads from Redis, create `messageAttachments` rows linking to message, clean up Redis temp keys
 
-#### Step 7: Test All Endpoints E2E
+#### Step 7: Test All Endpoints E2E ✅
 Test sequence: upload file → message with attachment → upload emoji → list emojis → upload sticker → create thread in text channel → send messages in thread → create forum channel with tags → create thread with appliedTags → archive/unarchive → join/leave thread → create poll message → vote → finalize → delete resources
 
-#### Step 8: Update PROGRESS.md and commit
+#### Step 8: Update PROGRESS.md and commit ✅ (commit pending user request)
 
 ### Key Files to Read Before Starting Implementation:
 | File | Why |

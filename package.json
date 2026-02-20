@@ -12,7 +12,8 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "argon2",
-      "esbuild"
+      "esbuild",
+      "sharp"
     ]
   },
   "scripts": {

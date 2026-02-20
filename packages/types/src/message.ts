@@ -22,6 +22,7 @@ export interface Message {
   mentionEveryone: boolean;
   stickerIds: Snowflake[];
   pollId: Snowflake | null;
+  poll: Poll | null;
   reactions: MessageReaction[];
   nonce: string | null; // client dedup
   pinned: boolean;
@@ -105,6 +106,7 @@ export interface ScheduledMessage {
   authorId: Snowflake;
   content: string;
   embeds: MessageEmbed[];
+  attachments: MessageAttachment[];
   scheduledFor: string; // ISO datetime
   status: ScheduledMessageStatus;
   createdAt: string;

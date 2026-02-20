@@ -100,3 +100,19 @@ export const messageRateLimiter = rateLimiter({
   maxRequests: 5,
   keyPrefix: 'message',
 });
+
+/** File upload rate limiter: 10 per minute per user */
+export const uploadRateLimiter = rateLimiter({
+  windowSeconds: 60,
+  maxRequests: 10,
+  keyPrefix: 'upload',
+  keyExtractor: (req) => (req as any).user?.userId ?? req.ip ?? 'unknown',
+});
+
+/** Poll vote rate limiter: 10 per 5 seconds per user */
+export const pollVoteRateLimiter = rateLimiter({
+  windowSeconds: 5,
+  maxRequests: 10,
+  keyPrefix: 'poll_vote',
+  keyExtractor: (req) => (req as any).user?.userId ?? req.ip ?? 'unknown',
+});

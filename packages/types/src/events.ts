@@ -1,6 +1,6 @@
 import type { Snowflake } from './snowflake';
 import type { Message, MessageReaction } from './message';
-import type { GuildMember, Guild } from './guild';
+import type { GuildMember, Guild, GuildEmoji, GuildSticker } from './guild';
 import type { Channel, Thread } from './channel';
 import type { Presence, CustomStatus } from './user';
 import type { VoiceState, ScreenShareSession, StageInstance } from './voice';
@@ -36,6 +36,11 @@ export interface ServerToClientEvents {
     emoji: { id: Snowflake | null; name: string };
   }) => void;
 
+  // Polls
+  POLL_VOTE_ADD: (data: { pollId: Snowflake; answerId: Snowflake; userId: Snowflake }) => void;
+  POLL_VOTE_REMOVE: (data: { pollId: Snowflake; answerId: Snowflake; userId: Snowflake }) => void;
+  POLL_FINALIZE: (data: { pollId: Snowflake }) => void;
+
   // Typing
   TYPING_START: (data: {
     channelId: Snowflake;
@@ -54,6 +59,8 @@ export interface ServerToClientEvents {
   THREAD_CREATE: (thread: Thread) => void;
   THREAD_UPDATE: (thread: Thread) => void;
   THREAD_DELETE: (data: { id: Snowflake; parentId: Snowflake; guildId: Snowflake }) => void;
+  THREAD_MEMBER_ADD: (data: { threadId: Snowflake; userId: Snowflake }) => void;
+  THREAD_MEMBER_REMOVE: (data: { threadId: Snowflake; userId: Snowflake }) => void;
 
   // Guilds
   GUILD_CREATE: (guild: Guild) => void;
@@ -67,6 +74,16 @@ export interface ServerToClientEvents {
   GUILD_ROLE_DELETE: (data: { guildId: Snowflake; roleId: Snowflake }) => void;
   GUILD_BAN_ADD: (data: { guildId: Snowflake; userId: Snowflake }) => void;
   GUILD_BAN_REMOVE: (data: { guildId: Snowflake; userId: Snowflake }) => void;
+
+  // Emojis
+  GUILD_EMOJI_CREATE: (data: { guildId: Snowflake; emoji: GuildEmoji }) => void;
+  GUILD_EMOJI_UPDATE: (data: { guildId: Snowflake; emoji: GuildEmoji }) => void;
+  GUILD_EMOJI_DELETE: (data: { guildId: Snowflake; emojiId: Snowflake }) => void;
+
+  // Stickers
+  GUILD_STICKER_CREATE: (data: { guildId: Snowflake; sticker: GuildSticker }) => void;
+  GUILD_STICKER_UPDATE: (data: { guildId: Snowflake; sticker: GuildSticker }) => void;
+  GUILD_STICKER_DELETE: (data: { guildId: Snowflake; stickerId: Snowflake }) => void;
 
   // Presence
   PRESENCE_UPDATE: (presence: Presence) => void;

@@ -1,4 +1,4 @@
-import { eq, and, sql, lt, gt, desc, inArray, isNull } from 'drizzle-orm';
+import { eq, and, sql, lt, gt, desc, inArray, isNull, lte } from 'drizzle-orm';
 import {
   messages,
   messageAttachments,
@@ -7,13 +7,27 @@ import {
   messageEditHistory,
   channelPins,
   channels,
+  polls,
+  pollAnswers,
+  pollVotes,
+  threads,
+  scheduledMessages,
 } from '@gratonite/db';
 import type { AppContext } from '../../lib/context.js';
 import { generateId } from '../../lib/snowflake.js';
-import { logger } from '../../lib/logger.js';
-import type { CreateMessageInput, UpdateMessageInput } from './messages.schemas.js';
+import type {
+  CreateMessageInput,
+  UpdateMessageInput,
+  CreateScheduledMessageInput,
+} from './messages.schemas.js';
+import { createFilesService } from '../files/files.service.js';
+
+const MESSAGE_TYPE_POLL = 22;
 
 export function createMessagesService(ctx: AppContext) {
+  const filesService = createFilesService(ctx);
+  type DbLike = typeof ctx.db;
+
   async function createMessage(
     channelId: string,
     authorId: string,
@@ -21,12 +35,25 @@ export function createMessagesService(ctx: AppContext) {
     input: CreateMessageInput,
   ) {
     const messageId = generateId();
+    const content = input.content ?? '';
+    const uploadedIds: string[] = [];
+
+    let pendingUploads: Array<Awaited<ReturnType<typeof filesService.getPendingUpload>> | null> = [];
+    if (input.attachmentIds && input.attachmentIds.length > 0) {
+      pendingUploads = await Promise.all(
+        input.attachmentIds.map((id) => filesService.getPendingUpload(id)),
+      );
+
+      if (pendingUploads.some((u) => !u)) {
+        return { error: 'ATTACHMENT_NOT_FOUND' as const };
+      }
+    }
 
     // Parse mentions from content
-    const mentionMatches = input.content.match(/<@!?(\d+)>/g) ?? [];
+    const mentionMatches = content.match(/<@!?(\d+)>/g) ?? [];
     const mentionIds = mentionMatches.map((m) => m.replace(/<@!?/, '').replace(/>/, ''));
-    const mentionEveryone = input.content.includes('@everyone') || input.content.includes('@here');
-    const roleMentionMatches = input.content.match(/<@&(\d+)>/g) ?? [];
+    const mentionEveryone = content.includes('@everyone') || content.includes('@here');
+    const roleMentionMatches = content.match(/<@&(\d+)>/g) ?? [];
     const roleMentionIds = roleMentionMatches.map((m) => m.replace(/<@&/, '').replace(/>/, ''));
 
     // Build message reference snapshot if replying
@@ -47,35 +74,80 @@ export function createMessagesService(ctx: AppContext) {
       }
     }
 
-    const [message] = await ctx.db
-      .insert(messages)
-      .values({
-        id: messageId,
-        channelId,
-        guildId,
-        authorId,
-        content: input.content,
-        type: input.messageReference ? 19 : 0, // 19 = REPLY, 0 = DEFAULT
-        nonce: input.nonce ?? null,
-        tts: input.tts ?? false,
-        mentions: mentionIds,
-        mentionRoles: roleMentionIds,
-        mentionEveryone,
-        stickerIds: input.stickerIds ?? [],
-        messageReference: input.messageReference
-          ? { messageId: input.messageReference.messageId, channelId: String(channelId) }
-          : null,
-        referencedMessage,
-      })
-      .returning();
+    const message = await ctx.db.transaction(async (tx) => {
+      let pollId: string | null = null;
+      if (input.poll) {
+        pollId = await createPollWithDb(tx, input.poll);
+      }
 
-    // Update channel's last message ID
-    await ctx.db
-      .update(channels)
-      .set({ lastMessageId: messageId })
-      .where(eq(channels.id, channelId));
+      const [created] = await tx
+        .insert(messages)
+        .values({
+          id: messageId,
+          channelId,
+          guildId,
+          authorId,
+          content,
+          type: input.poll ? MESSAGE_TYPE_POLL : input.messageReference ? 19 : 0, // 19 = REPLY, 0 = DEFAULT
+          nonce: input.nonce ?? null,
+          tts: input.tts ?? false,
+          mentions: mentionIds,
+          mentionRoles: roleMentionIds,
+          mentionEveryone,
+          stickerIds: input.stickerIds ?? [],
+          pollId,
+          messageReference: input.messageReference
+            ? { messageId: input.messageReference.messageId, channelId: String(channelId) }
+            : null,
+          referencedMessage,
+        })
+        .returning();
 
-    return message;
+      // Update channel's last message ID
+      await tx.update(channels).set({ lastMessageId: messageId }).where(eq(channels.id, channelId));
+
+      // If this is a thread, increment message count
+      const [thread] = await tx
+        .select({ id: threads.id })
+        .from(threads)
+        .where(eq(threads.id, channelId))
+        .limit(1);
+      if (thread) {
+        await tx
+          .update(threads)
+          .set({ messageCount: sql`${threads.messageCount} + 1` })
+          .where(eq(threads.id, channelId));
+      }
+
+      // Attach pending uploads
+      if (pendingUploads.length > 0) {
+        for (const upload of pendingUploads) {
+          if (!upload) continue;
+          await tx.insert(messageAttachments).values({
+            id: upload.id,
+            messageId,
+            filename: upload.filename,
+            description: upload.description ?? null,
+            contentType: upload.contentType,
+            size: upload.size,
+            url: upload.url,
+            proxyUrl: upload.url,
+            height: upload.height,
+            width: upload.width,
+            flags: upload.spoiler ? 1 : 0,
+          });
+          uploadedIds.push(upload.id);
+        }
+      }
+
+      return created;
+    });
+
+    if (uploadedIds.length > 0) {
+      await Promise.all(uploadedIds.map((id) => filesService.clearPendingUpload(id)));
+    }
+
+    return hydrateMessage(message);
   }
 
   async function getMessage(messageId: string) {
@@ -84,7 +156,8 @@ export function createMessagesService(ctx: AppContext) {
       .from(messages)
       .where(and(eq(messages.id, messageId), sql`${messages.deletedAt} IS NULL`))
       .limit(1);
-    return message ?? null;
+    if (!message) return null;
+    return hydrateMessage(message);
   }
 
   async function getMessages(
@@ -130,11 +203,11 @@ export function createMessagesService(ctx: AppContext) {
         .limit(1);
 
       const result = [...beforeMessages.reverse(), ...(center ? [center] : []), ...afterMessages];
-      return result;
+      return hydrateMessages(result);
     }
 
     if (options.before) {
-      return ctx.db
+      const result = await ctx.db
         .select()
         .from(messages)
         .where(
@@ -146,6 +219,7 @@ export function createMessagesService(ctx: AppContext) {
         )
         .orderBy(desc(messages.id))
         .limit(limit);
+      return hydrateMessages(result);
     }
 
     if (options.after) {
@@ -161,11 +235,11 @@ export function createMessagesService(ctx: AppContext) {
         )
         .orderBy(messages.id)
         .limit(limit);
-      return results;
+      return hydrateMessages(results);
     }
 
     // Default: most recent messages
-    return ctx.db
+    const results = await ctx.db
       .select()
       .from(messages)
       .where(
@@ -173,6 +247,7 @@ export function createMessagesService(ctx: AppContext) {
       )
       .orderBy(desc(messages.id))
       .limit(limit);
+    return hydrateMessages(results);
   }
 
   async function updateMessage(messageId: string, authorId: string, input: UpdateMessageInput) {
@@ -368,10 +443,376 @@ export function createMessagesService(ctx: AppContext) {
     if (pins.length === 0) return [];
 
     const messageIds = pins.map((p) => p.messageId);
-    return ctx.db
+    const results = await ctx.db
       .select()
       .from(messages)
       .where(and(inArray(messages.id, messageIds), isNull(messages.deletedAt)));
+    return hydrateMessages(results);
+  }
+
+  // ── Polls ───────────────────────────────────────────────────────────────
+
+  async function createPollWithDb(db: DbLike, input: NonNullable<CreateMessageInput['poll']>) {
+    const pollId = generateId();
+    await db.insert(polls).values({
+      id: pollId,
+      questionText: input.questionText,
+      allowMultiselect: input.allowMultiselect ?? false,
+      expiry: input.expiry ? new Date(input.expiry) : null,
+    });
+
+    for (const answer of input.answers) {
+      await db.insert(pollAnswers).values({
+        id: generateId(),
+        pollId,
+        text: answer.text,
+        emojiId: answer.emojiId ?? null,
+        emojiName: answer.emojiName ?? null,
+      });
+    }
+
+    return pollId;
+  }
+
+  async function getPoll(pollId: string) {
+    const [poll] = await ctx.db.select().from(polls).where(eq(polls.id, pollId)).limit(1);
+    if (!poll) return null;
+    const answers = await ctx.db
+      .select()
+      .from(pollAnswers)
+      .where(eq(pollAnswers.pollId, pollId));
+    return { ...poll, answers };
+  }
+
+  async function addPollVote(pollId: string, answerId: string, userId: string) {
+    const [poll] = await ctx.db.select().from(polls).where(eq(polls.id, pollId)).limit(1);
+    if (!poll) return { error: 'POLL_NOT_FOUND' as const };
+    if (poll.finalized) return { error: 'POLL_FINALIZED' as const };
+    if (poll.expiry && poll.expiry.getTime() < Date.now()) return { error: 'POLL_EXPIRED' as const };
+
+    const [answer] = await ctx.db
+      .select()
+      .from(pollAnswers)
+      .where(and(eq(pollAnswers.id, answerId), eq(pollAnswers.pollId, pollId)))
+      .limit(1);
+    if (!answer) return { error: 'ANSWER_NOT_FOUND' as const };
+
+    const existing = await ctx.db
+      .select()
+      .from(pollVotes)
+      .where(and(eq(pollVotes.pollId, pollId), eq(pollVotes.userId, userId)));
+
+    if (!poll.allowMultiselect && existing.length > 0) {
+      return { error: 'ALREADY_VOTED' as const };
+    }
+
+    const alreadyVotedThis = existing.some((v) => v.answerId === answerId);
+    if (alreadyVotedThis) return { error: 'ALREADY_VOTED' as const };
+
+    await ctx.db.insert(pollVotes).values({ pollId, answerId, userId });
+    await ctx.db
+      .update(pollAnswers)
+      .set({ voteCount: sql`${pollAnswers.voteCount} + 1` })
+      .where(eq(pollAnswers.id, answerId));
+
+    return { pollId, answerId };
+  }
+
+  async function removePollVote(pollId: string, answerId: string, userId: string) {
+    await ctx.db
+      .delete(pollVotes)
+      .where(and(eq(pollVotes.pollId, pollId), eq(pollVotes.answerId, answerId), eq(pollVotes.userId, userId)));
+    await ctx.db
+      .update(pollAnswers)
+      .set({ voteCount: sql`GREATEST(${pollAnswers.voteCount} - 1, 0)` })
+      .where(eq(pollAnswers.id, answerId));
+  }
+
+  async function getPollVotes(pollId: string) {
+    return ctx.db.select().from(pollVotes).where(eq(pollVotes.pollId, pollId));
+  }
+
+  async function finalizePoll(pollId: string) {
+    const [updated] = await ctx.db
+      .update(polls)
+      .set({ finalized: true })
+      .where(eq(polls.id, pollId))
+      .returning();
+    return updated ?? null;
+  }
+
+  // ── Scheduled messages ─────────────────────────────────────────────────-
+
+  async function createScheduledMessage(
+    channelId: string,
+    authorId: string,
+    input: CreateScheduledMessageInput,
+  ) {
+    const scheduledFor = new Date(input.scheduledFor);
+    if (Number.isNaN(scheduledFor.getTime())) {
+      return { error: 'INVALID_SCHEDULE_TIME' as const };
+    }
+    if (scheduledFor.getTime() <= Date.now()) {
+      return { error: 'SCHEDULE_IN_PAST' as const };
+    }
+
+    const attachments = await buildScheduledAttachments(input.attachmentIds ?? []);
+    if (attachments && 'error' in attachments) return attachments;
+
+    const [scheduled] = await ctx.db
+      .insert(scheduledMessages)
+      .values({
+        id: generateId(),
+        channelId,
+        authorId,
+        content: input.content ?? '',
+        embeds: input.embeds ?? [],
+        attachments: attachments ?? [],
+        scheduledFor,
+        status: 'pending',
+      })
+      .returning();
+
+    if (attachments && Array.isArray(attachments)) {
+      await Promise.all(attachments.map((attachment) => filesService.clearPendingUpload(attachment.id)));
+    }
+
+    return scheduled;
+  }
+
+  async function getScheduledMessages(channelId: string, authorId: string, isAdmin: boolean) {
+    const query = ctx.db
+      .select()
+      .from(scheduledMessages)
+      .where(eq(scheduledMessages.channelId, channelId));
+
+    if (isAdmin) {
+      return query.orderBy(sql`${scheduledMessages.scheduledFor} ASC`);
+    }
+
+    return ctx.db
+      .select()
+      .from(scheduledMessages)
+      .where(and(eq(scheduledMessages.channelId, channelId), eq(scheduledMessages.authorId, authorId)))
+      .orderBy(sql`${scheduledMessages.scheduledFor} ASC`);
+  }
+
+  async function cancelScheduledMessage(messageId: string, authorId: string, isAdmin: boolean) {
+    if (isAdmin) {
+      const [updated] = await ctx.db
+        .update(scheduledMessages)
+        .set({ status: 'cancelled' })
+        .where(eq(scheduledMessages.id, messageId))
+        .returning();
+      return updated ?? null;
+    }
+
+    const [updated] = await ctx.db
+      .update(scheduledMessages)
+      .set({ status: 'cancelled' })
+      .where(and(eq(scheduledMessages.id, messageId), eq(scheduledMessages.authorId, authorId)))
+      .returning();
+    return updated ?? null;
+  }
+
+  async function processScheduledMessages() {
+    const due = await ctx.db
+      .select({ id: scheduledMessages.id })
+      .from(scheduledMessages)
+      .where(and(eq(scheduledMessages.status, 'pending'), lte(scheduledMessages.scheduledFor, new Date())))
+      .limit(50);
+
+    for (const item of due) {
+      const [claimed] = await ctx.db
+        .update(scheduledMessages)
+        .set({ status: 'sending' })
+        .where(and(eq(scheduledMessages.id, item.id), eq(scheduledMessages.status, 'pending')))
+        .returning();
+      if (!claimed) continue;
+
+      try {
+        const result = await sendScheduledMessage(claimed);
+        await ctx.db
+          .update(scheduledMessages)
+          .set({ status: 'sent' })
+          .where(eq(scheduledMessages.id, claimed.id));
+
+        if (result?.guildId) {
+          ctx.io.to(`guild:${result.guildId}`).emit('MESSAGE_CREATE', result.message as any);
+        } else {
+          ctx.io.to(`channel:${claimed.channelId}`).emit('MESSAGE_CREATE', result?.message as any);
+        }
+
+        await ctx.redis.publish(
+          `channel:${claimed.channelId}:messages`,
+          JSON.stringify({ type: 'MESSAGE_CREATE', data: result?.message }),
+        );
+      } catch (err) {
+        await ctx.db
+          .update(scheduledMessages)
+          .set({ status: 'failed' })
+          .where(eq(scheduledMessages.id, claimed.id));
+      }
+    }
+  }
+
+  async function buildScheduledAttachments(attachmentIds: string[]) {
+    if (attachmentIds.length === 0) return [];
+    const pending = await Promise.all(attachmentIds.map((id) => filesService.getPendingUpload(id)));
+    if (pending.some((item) => !item)) {
+      return { error: 'ATTACHMENT_NOT_FOUND' as const };
+    }
+
+    return pending.filter(Boolean).map((upload) => ({
+      id: upload!.id,
+      filename: upload!.filename,
+      description: upload!.description ?? null,
+      contentType: upload!.contentType,
+      size: upload!.size,
+      url: upload!.url,
+      proxyUrl: upload!.url,
+      height: upload!.height,
+      width: upload!.width,
+      flags: upload!.spoiler ? 1 : 0,
+    }));
+  }
+
+  async function sendScheduledMessage(entry: typeof scheduledMessages.$inferSelect) {
+    return ctx.db.transaction(async (tx) => {
+      const channel = await getChannelContext(tx, entry.channelId);
+      const messageId = generateId();
+      const [created] = await tx
+        .insert(messages)
+        .values({
+          id: messageId,
+          channelId: entry.channelId,
+          guildId: channel?.guildId ?? null,
+          authorId: entry.authorId,
+          content: entry.content ?? '',
+          type: 0,
+          embeds: entry.embeds ?? [],
+          mentions: [],
+          mentionRoles: [],
+          mentionEveryone: false,
+          stickerIds: [],
+        })
+        .returning();
+
+      await tx
+        .update(channels)
+        .set({ lastMessageId: messageId })
+        .where(eq(channels.id, entry.channelId));
+
+      const [thread] = await tx
+        .select({ id: threads.id })
+        .from(threads)
+        .where(eq(threads.id, entry.channelId))
+        .limit(1);
+      if (thread) {
+        await tx
+          .update(threads)
+          .set({ messageCount: sql`${threads.messageCount} + 1` })
+          .where(eq(threads.id, entry.channelId));
+      }
+
+      const attachments = Array.isArray(entry.attachments) ? entry.attachments : [];
+      for (const attachment of attachments) {
+        const attachmentId = attachment.id ?? generateId();
+        await tx.insert(messageAttachments).values({
+          id: attachmentId,
+          messageId,
+          filename: attachment.filename,
+          description: attachment.description ?? null,
+          contentType: attachment.contentType,
+          size: attachment.size,
+          url: attachment.url,
+          proxyUrl: attachment.proxyUrl ?? attachment.url,
+          height: attachment.height ?? null,
+          width: attachment.width ?? null,
+          durationSecs: attachment.durationSecs ?? null,
+          waveform: attachment.waveform ?? null,
+          flags: attachment.flags ?? 0,
+        });
+      }
+
+      return { message: await hydrateMessage(created), guildId: channel?.guildId ?? null };
+    });
+  }
+
+  async function getChannelContext(db: DbLike, channelId: string) {
+    const [channel] = await db
+      .select({ guildId: channels.guildId })
+      .from(channels)
+      .where(eq(channels.id, channelId))
+      .limit(1);
+    if (channel) return channel;
+
+    const [thread] = await db
+      .select({ guildId: threads.guildId })
+      .from(threads)
+      .where(eq(threads.id, channelId))
+      .limit(1);
+    return thread ?? null;
+  }
+
+  // ── Hydration helpers ───────────────────────────────────────────────────
+
+  async function hydrateMessage(message: typeof messages.$inferSelect) {
+    const attachments = await ctx.db
+      .select()
+      .from(messageAttachments)
+      .where(eq(messageAttachments.messageId, message.id));
+
+    const poll = message.pollId ? await getPoll(message.pollId) : null;
+
+    return {
+      ...message,
+      attachments,
+      poll,
+    };
+  }
+
+  async function hydrateMessages(list: Array<typeof messages.$inferSelect>) {
+    if (list.length === 0) return [];
+
+    const messageIds = list.map((m) => m.id);
+    const pollIds = list.map((m) => m.pollId).filter((id): id is string => Boolean(id));
+
+    const attachments = await ctx.db
+      .select()
+      .from(messageAttachments)
+      .where(inArray(messageAttachments.messageId, messageIds));
+
+    const attachmentsByMessage = new Map<string, typeof attachments>();
+    for (const attachment of attachments) {
+      const existing = attachmentsByMessage.get(attachment.messageId) ?? [];
+      existing.push(attachment);
+      attachmentsByMessage.set(attachment.messageId, existing);
+    }
+
+    let pollsById = new Map<string, any>();
+    if (pollIds.length > 0) {
+      const pollsList = await ctx.db.select().from(polls).where(inArray(polls.id, pollIds));
+      const answers = await ctx.db
+        .select()
+        .from(pollAnswers)
+        .where(inArray(pollAnswers.pollId, pollIds));
+      const answersByPoll = new Map<string, typeof answers>();
+      for (const answer of answers) {
+        const existing = answersByPoll.get(answer.pollId) ?? [];
+        existing.push(answer);
+        answersByPoll.set(answer.pollId, existing);
+      }
+      pollsById = new Map(
+        pollsList.map((poll) => [poll.id, { ...poll, answers: answersByPoll.get(poll.id) ?? [] }]),
+      );
+    }
+
+    return list.map((message) => ({
+      ...message,
+      attachments: attachmentsByMessage.get(message.id) ?? [],
+      poll: message.pollId ? pollsById.get(message.pollId) ?? null : null,
+    }));
   }
 
   return {
@@ -386,6 +827,15 @@ export function createMessagesService(ctx: AppContext) {
     pinMessage,
     unpinMessage,
     getPins,
+    getPoll,
+    addPollVote,
+    removePollVote,
+    getPollVotes,
+    finalizePoll,
+    createScheduledMessage,
+    getScheduledMessages,
+    cancelScheduledMessage,
+    processScheduledMessages,
   };
 }
 

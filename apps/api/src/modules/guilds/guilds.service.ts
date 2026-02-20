@@ -7,12 +7,16 @@ import {
   guildBrand,
   bans,
   auditLogEntries,
+  guildEmojis,
+  guildStickers,
 } from '@gratonite/db';
 import { channels } from '@gratonite/db';
 import type { AppContext } from '../../lib/context.js';
 import { generateId } from '../../lib/snowflake.js';
 import { logger } from '../../lib/logger.js';
+import { BUCKETS } from '../../lib/minio.js';
 import type { CreateGuildInput, UpdateGuildInput, CreateRoleInput, UpdateRoleInput } from './guilds.schemas.js';
+import type { CreateEmojiInput, UpdateEmojiInput, CreateStickerInput, UpdateStickerInput } from './emojis.schemas.js';
 
 // Default permissions for @everyone role
 const DEFAULT_PERMISSIONS =
@@ -340,6 +344,190 @@ export function createGuildsService(ctx: AppContext) {
     });
   }
 
+  // ── Emojis ───────────────────────────────────────────────────────────────
+
+  async function createEmoji(
+    guildId: string,
+    creatorId: string,
+    input: CreateEmojiInput,
+    hash: string,
+    animated: boolean,
+  ) {
+    const emojiId = generateId();
+
+    const [emoji] = await ctx.db
+      .insert(guildEmojis)
+      .values({
+        id: emojiId,
+        guildId,
+        name: input.name,
+        hash,
+        animated,
+        creatorId,
+      })
+      .returning();
+
+    logger.info({ emojiId, guildId, name: input.name }, 'Emoji created');
+    return {
+      ...emoji,
+      url: `${ctx.env.CDN_BASE_URL}/${BUCKETS.emojis.name}/${guildId}/${hash}`,
+    };
+  }
+
+  async function getGuildEmojis(guildId: string) {
+    const emojis = await ctx.db
+      .select()
+      .from(guildEmojis)
+      .where(eq(guildEmojis.guildId, guildId));
+
+    return emojis.map((e) => ({
+      ...e,
+      url: `${ctx.env.CDN_BASE_URL}/${BUCKETS.emojis.name}/${guildId}/${e.hash}`,
+    }));
+  }
+
+  async function getEmoji(emojiId: string) {
+    const [emoji] = await ctx.db
+      .select()
+      .from(guildEmojis)
+      .where(eq(guildEmojis.id, emojiId))
+      .limit(1);
+    if (!emoji) return null;
+    return {
+      ...emoji,
+      url: `${ctx.env.CDN_BASE_URL}/${BUCKETS.emojis.name}/${emoji.guildId}/${emoji.hash}`,
+    };
+  }
+
+  async function updateEmoji(emojiId: string, input: UpdateEmojiInput) {
+    const updates: Record<string, unknown> = {};
+    if (input.name !== undefined) updates.name = input.name;
+
+    if (Object.keys(updates).length === 0) return null;
+
+    const [updated] = await ctx.db
+      .update(guildEmojis)
+      .set(updates)
+      .where(eq(guildEmojis.id, emojiId))
+      .returning();
+
+    if (!updated) return null;
+    return {
+      ...updated,
+      url: `${ctx.env.CDN_BASE_URL}/${BUCKETS.emojis.name}/${updated.guildId}/${updated.hash}`,
+    };
+  }
+
+  async function deleteEmoji(emojiId: string) {
+    const [emoji] = await ctx.db
+      .delete(guildEmojis)
+      .where(eq(guildEmojis.id, emojiId))
+      .returning();
+    if (emoji) {
+      // Delete from MinIO
+      try {
+        await ctx.minio.removeObject(BUCKETS.emojis.name, `${emoji.guildId}/${emoji.hash}`);
+      } catch (err) {
+        logger.warn({ err, emojiId }, 'Failed to delete emoji from storage');
+      }
+    }
+    return emoji ?? null;
+  }
+
+  // ── Stickers ────────────────────────────────────────────────────────────
+
+  async function createSticker(
+    guildId: string,
+    creatorId: string,
+    input: CreateStickerInput,
+    hash: string,
+    formatType: string,
+  ) {
+    const stickerId = generateId();
+
+    const [sticker] = await ctx.db
+      .insert(guildStickers)
+      .values({
+        id: stickerId,
+        guildId,
+        name: input.name,
+        description: input.description ?? null,
+        hash,
+        formatType,
+        tags: input.tags ?? null,
+        creatorId,
+      })
+      .returning();
+
+    logger.info({ stickerId, guildId, name: input.name }, 'Sticker created');
+    return {
+      ...sticker,
+      url: `${ctx.env.CDN_BASE_URL}/${BUCKETS.stickers.name}/${guildId}/${hash}`,
+    };
+  }
+
+  async function getGuildStickers(guildId: string) {
+    const stickers = await ctx.db
+      .select()
+      .from(guildStickers)
+      .where(eq(guildStickers.guildId, guildId));
+
+    return stickers.map((s) => ({
+      ...s,
+      url: `${ctx.env.CDN_BASE_URL}/${BUCKETS.stickers.name}/${guildId}/${s.hash}`,
+    }));
+  }
+
+  async function getSticker(stickerId: string) {
+    const [sticker] = await ctx.db
+      .select()
+      .from(guildStickers)
+      .where(eq(guildStickers.id, stickerId))
+      .limit(1);
+    if (!sticker) return null;
+    return {
+      ...sticker,
+      url: `${ctx.env.CDN_BASE_URL}/${BUCKETS.stickers.name}/${sticker.guildId}/${sticker.hash}`,
+    };
+  }
+
+  async function updateSticker(stickerId: string, input: UpdateStickerInput) {
+    const updates: Record<string, unknown> = {};
+    if (input.name !== undefined) updates.name = input.name;
+    if (input.description !== undefined) updates.description = input.description;
+    if (input.tags !== undefined) updates.tags = input.tags;
+
+    if (Object.keys(updates).length === 0) return null;
+
+    const [updated] = await ctx.db
+      .update(guildStickers)
+      .set(updates)
+      .where(eq(guildStickers.id, stickerId))
+      .returning();
+
+    if (!updated) return null;
+    return {
+      ...updated,
+      url: `${ctx.env.CDN_BASE_URL}/${BUCKETS.stickers.name}/${updated.guildId}/${updated.hash}`,
+    };
+  }
+
+  async function deleteSticker(stickerId: string) {
+    const [sticker] = await ctx.db
+      .delete(guildStickers)
+      .where(eq(guildStickers.id, stickerId))
+      .returning();
+    if (sticker) {
+      // Delete from MinIO
+      try {
+        await ctx.minio.removeObject(BUCKETS.stickers.name, `${sticker.guildId}/${sticker.hash}`);
+      } catch (err) {
+        logger.warn({ err, stickerId }, 'Failed to delete sticker from storage');
+      }
+    }
+    return sticker ?? null;
+  }
+
   return {
     createGuild,
     getGuild,
@@ -363,6 +551,18 @@ export function createGuildsService(ctx: AppContext) {
     isBanned,
     getBans,
     createAuditLogEntry,
+    // Emojis
+    createEmoji,
+    getGuildEmojis,
+    getEmoji,
+    updateEmoji,
+    deleteEmoji,
+    // Stickers
+    createSticker,
+    getGuildStickers,
+    getSticker,
+    updateSticker,
+    deleteSticker,
   };
 }
 

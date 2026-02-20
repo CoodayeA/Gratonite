@@ -16,8 +16,13 @@ import { messagesRouter } from './modules/messages/messages.router.js';
 import { invitesRouter } from './modules/invites/invites.router.js';
 import { relationshipsRouter } from './modules/relationships/relationships.router.js';
 import { voiceRouter } from './modules/voice/voice.router.js';
+import { filesRouter } from './modules/files/files.router.js';
+import { threadsRouter } from './modules/threads/threads.router.js';
+import { createThreadsService } from './modules/threads/threads.service.js';
+import { createMessagesService } from './modules/messages/messages.service.js';
 import { setupGateway } from './modules/gateway/gateway.js';
 import { RoomServiceClient } from 'livekit-server-sdk';
+import { minioClient, ensureBuckets } from './lib/minio.js';
 
 // ============================================================================
 // Server bootstrap
@@ -32,6 +37,10 @@ async function main() {
 
   // ── Redis connection ───────────────────────────────────────────────────
   await redis.connect();
+
+  // ── MinIO object storage ─────────────────────────────────────────────
+  await ensureBuckets();
+  logger.info('MinIO connected');
 
   // ── Express app ────────────────────────────────────────────────────────
   const app = express();
@@ -70,7 +79,7 @@ async function main() {
   );
 
   // ── Shared context for route handlers ──────────────────────────────────
-  const ctx = { db, redis, io, env, livekit: livekitClient };
+  const ctx = { db, redis, io, env, livekit: livekitClient, minio: minioClient };
 
   // ── Health check ───────────────────────────────────────────────────────
   app.get('/health', (_req, res) => {
@@ -91,6 +100,8 @@ async function main() {
   app.use('/api/v1/invites', invitesRouter(ctx));
   app.use('/api/v1/relationships', relationshipsRouter(ctx));
   app.use('/api/v1', voiceRouter(ctx));
+  app.use('/api/v1', filesRouter(ctx));
+  app.use('/api/v1', threadsRouter(ctx));
 
   // ── 404 handler ────────────────────────────────────────────────────────
   app.use((_req, res) => {
@@ -118,6 +129,22 @@ async function main() {
       });
     },
   );
+
+  // ── Thread auto-archive ──────────────────────────────────────────────
+  const threadsService = createThreadsService(ctx);
+  setInterval(() => {
+    threadsService.archiveStaleThreads().catch((err) => {
+      logger.warn({ err }, 'Failed to auto-archive threads');
+    });
+  }, 5 * 60 * 1000);
+
+  // ── Scheduled messages processor ─────────────────────────────────────
+  const messagesService = createMessagesService(ctx);
+  setInterval(() => {
+    messagesService.processScheduledMessages().catch((err) => {
+      logger.warn({ err }, 'Failed to process scheduled messages');
+    });
+  }, 30 * 1000);
 
   // ── Socket.IO gateway (auth, presence, real-time events) ─────────────
   setupGateway(ctx);

@@ -117,6 +117,36 @@ export interface WelcomeScreenChannel {
   emojiName: string | null;
 }
 
+/** Guild custom emoji */
+export interface GuildEmoji {
+  id: Snowflake;
+  guildId: Snowflake;
+  name: string; // 2–32 chars
+  hash: string;
+  animated: boolean;
+  creatorId: Snowflake;
+  available: boolean;
+  url: string; // CDN URL
+  createdAt: string;
+}
+
+/** Guild sticker */
+export interface GuildSticker {
+  id: Snowflake;
+  guildId: Snowflake;
+  name: string; // 2–30 chars
+  description: string | null; // max 100 chars
+  hash: string;
+  formatType: StickerFormatType;
+  tags: string | null; // comma-separated
+  available: boolean;
+  creatorId: Snowflake;
+  url: string; // CDN URL
+  createdAt: string;
+}
+
+export type StickerFormatType = 'png' | 'apng' | 'lottie' | 'webp';
+
 // ============================================================================
 // Enums
 // ============================================================================

@@ -15,6 +15,13 @@
       "when": 1771542858313,
       "tag": "0001_first_spot",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771545375383,
+      "tag": "0002_faulty_baron_strucker",
+      "breakpoints": true
     }
   ]
 }
