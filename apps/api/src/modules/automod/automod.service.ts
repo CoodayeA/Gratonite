@@ -4,6 +4,7 @@ import type { AppContext } from '../../lib/context.js';
 import { generateId } from '../../lib/snowflake.js';
 import { logger } from '../../lib/logger.js';
 import type { CreateAutoModRuleInput, UpdateAutoModRuleInput } from './automod.schemas.js';
+import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
 
 // Built-in keyword presets (small lists for baseline filtering)
 const PRESETS: Record<string, string[]> = {
@@ -58,7 +59,13 @@ export function createAutoModService(ctx: AppContext) {
       .returning();
 
     await invalidateRulesCache(guildId);
-    ctx.io.to(`guild:${guildId}`).emit('AUTO_MODERATION_RULE_CREATE', { guildId, rule } as any);
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILDS,
+      'AUTO_MODERATION_RULE_CREATE',
+      { guildId, rule } as any,
+    );
 
     return rule;
   }
@@ -80,9 +87,13 @@ export function createAutoModService(ctx: AppContext) {
 
     if (updated) {
       await invalidateRulesCache(guildId);
-      ctx.io
-        .to(`guild:${guildId}`)
-        .emit('AUTO_MODERATION_RULE_UPDATE', { guildId, rule: updated } as any);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${guildId}`,
+        GatewayIntents.GUILDS,
+        'AUTO_MODERATION_RULE_UPDATE',
+        { guildId, rule: updated } as any,
+      );
     }
 
     return updated ?? null;
@@ -96,9 +107,13 @@ export function createAutoModService(ctx: AppContext) {
 
     if (deleted) {
       await invalidateRulesCache(guildId);
-      ctx.io
-        .to(`guild:${guildId}`)
-        .emit('AUTO_MODERATION_RULE_DELETE', { guildId, ruleId });
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${guildId}`,
+        GatewayIntents.GUILDS,
+        'AUTO_MODERATION_RULE_DELETE',
+        { guildId, ruleId },
+      );
     }
 
     return !!deleted;
@@ -261,15 +276,21 @@ export function createAutoModService(ctx: AppContext) {
 
             case 'send_alert_message':
               if (action.metadata?.channelId) {
-                ctx.io.to(`guild:${guildId}`).emit('AUTO_MODERATION_ACTION_EXECUTION', {
-                  guildId,
-                  ruleId: rule.id,
-                  ruleName: rule.name,
-                  userId,
-                  channelId,
-                  actionType: 'send_alert_message',
-                  matchedKeyword,
-                });
+                await emitRoomWithIntent(
+                  ctx.io,
+                  `guild:${guildId}`,
+                  GatewayIntents.GUILDS,
+                  'AUTO_MODERATION_ACTION_EXECUTION',
+                  {
+                    guildId,
+                    ruleId: rule.id,
+                    ruleName: rule.name,
+                    userId,
+                    channelId,
+                    actionType: 'send_alert_message',
+                    matchedKeyword,
+                  },
+                );
               }
               break;
 

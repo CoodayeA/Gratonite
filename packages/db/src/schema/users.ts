@@ -84,6 +84,7 @@ export const users = pgTable('users', {
   mfaSecret: text('mfa_secret'), // encrypted
   mfaBackupCodes: text('mfa_backup_codes'), // JSON array, hashed with Argon2
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  bot: boolean('bot').notNull().default(false),
   disabled: boolean('disabled').notNull().default(false),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });

@@ -17,6 +17,7 @@ import { and, eq } from 'drizzle-orm';
 import { createLinkPreviewService } from './link-preview.service.js';
 import { createAutoModService } from '../automod/automod.service.js';
 import { createAnalyticsService } from '../analytics/analytics.service.js';
+import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
 
 export function messagesRouter(ctx: AppContext): Router {
   const router = Router();
@@ -142,10 +143,21 @@ export function messagesRouter(ctx: AppContext): Router {
 
     // Broadcast via Socket.IO
     if (channel.guildId) {
-      ctx.io.to(`guild:${channel.guildId}`).emit('MESSAGE_CREATE', message as any);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${channel.guildId}`,
+        GatewayIntents.GUILD_MESSAGES,
+        'MESSAGE_CREATE',
+        message as any,
+      );
     } else {
-      // DM channel — emit to each participant
-      ctx.io.to(`channel:${channelId}`).emit('MESSAGE_CREATE', message as any);
+      await emitRoomWithIntent(
+        ctx.io,
+        `channel:${channelId}`,
+        GatewayIntents.DIRECT_MESSAGES,
+        'MESSAGE_CREATE',
+        message as any,
+      );
     }
 
     // Publish to Redis for cross-server fanout
@@ -193,11 +205,17 @@ export function messagesRouter(ctx: AppContext): Router {
       }
 
       if (channel.guildId) {
-        ctx.io.to(`guild:${channel.guildId}`).emit('POLL_VOTE_ADD', {
-          pollId: req.params.pollId,
-          answerId: req.params.answerId,
-          userId: req.user!.userId,
-        });
+        await emitRoomWithIntent(
+          ctx.io,
+          `guild:${channel.guildId}`,
+          GatewayIntents.GUILD_MESSAGES,
+          'POLL_VOTE_ADD',
+          {
+            pollId: req.params.pollId,
+            answerId: req.params.answerId,
+            userId: req.user!.userId,
+          },
+        );
       }
 
       res.status(204).send();
@@ -223,11 +241,17 @@ export function messagesRouter(ctx: AppContext): Router {
       );
 
       if (channel.guildId) {
-        ctx.io.to(`guild:${channel.guildId}`).emit('POLL_VOTE_REMOVE', {
-          pollId: req.params.pollId,
-          answerId: req.params.answerId,
-          userId: req.user!.userId,
-        });
+        await emitRoomWithIntent(
+          ctx.io,
+          `guild:${channel.guildId}`,
+          GatewayIntents.GUILD_MESSAGES,
+          'POLL_VOTE_REMOVE',
+          {
+            pollId: req.params.pollId,
+            answerId: req.params.answerId,
+            userId: req.user!.userId,
+          },
+        );
       }
 
       res.status(204).send();
@@ -268,9 +292,15 @@ export function messagesRouter(ctx: AppContext): Router {
     if (!updated) return res.status(404).json({ code: 'NOT_FOUND' });
 
     if (channel.guildId) {
-      ctx.io.to(`guild:${channel.guildId}`).emit('POLL_FINALIZE', {
-        pollId: req.params.pollId,
-      });
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${channel.guildId}`,
+        GatewayIntents.GUILD_MESSAGES,
+        'POLL_FINALIZE',
+        {
+          pollId: req.params.pollId,
+        },
+      );
     }
 
     res.json(updated);
@@ -350,9 +380,21 @@ export function messagesRouter(ctx: AppContext): Router {
     if ('error' in result) return res.status(403).json({ code: result.error });
 
     if (channel.guildId) {
-      ctx.io.to(`guild:${channel.guildId}`).emit('MESSAGE_UPDATE', result as any);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${channel.guildId}`,
+        GatewayIntents.GUILD_MESSAGES,
+        'MESSAGE_UPDATE',
+        result as any,
+      );
     } else {
-      ctx.io.to(`channel:${channelId}`).emit('MESSAGE_UPDATE', result as any);
+      await emitRoomWithIntent(
+        ctx.io,
+        `channel:${channelId}`,
+        GatewayIntents.DIRECT_MESSAGES,
+        'MESSAGE_UPDATE',
+        result as any,
+      );
     }
 
     res.json(result);
@@ -388,9 +430,21 @@ export function messagesRouter(ctx: AppContext): Router {
     };
 
     if (channel.guildId) {
-      ctx.io.to(`guild:${channel.guildId}`).emit('MESSAGE_DELETE', deleteEvent);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${channel.guildId}`,
+        GatewayIntents.GUILD_MESSAGES,
+        'MESSAGE_DELETE',
+        deleteEvent,
+      );
     } else {
-      ctx.io.to(`channel:${channelId}`).emit('MESSAGE_DELETE', deleteEvent);
+      await emitRoomWithIntent(
+        ctx.io,
+        `channel:${channelId}`,
+        GatewayIntents.DIRECT_MESSAGES,
+        'MESSAGE_DELETE',
+        deleteEvent,
+      );
     }
 
     res.status(204).send();
@@ -412,13 +466,19 @@ export function messagesRouter(ctx: AppContext): Router {
     );
 
     if (added && channel.guildId) {
-      ctx.io.to(`guild:${channel.guildId}`).emit('MESSAGE_REACTION_ADD', {
-        messageId: req.params.messageId,
-        channelId,
-        userId: req.user!.userId,
-        emoji: { id: null, name: emojiName },
-        burst: false,
-      });
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${channel.guildId}`,
+        GatewayIntents.GUILD_MESSAGES,
+        'MESSAGE_REACTION_ADD',
+        {
+          messageId: req.params.messageId,
+          channelId,
+          userId: req.user!.userId,
+          emoji: { id: null, name: emojiName },
+          burst: false,
+        },
+      );
     }
 
     res.status(204).send();
@@ -438,12 +498,18 @@ export function messagesRouter(ctx: AppContext): Router {
     );
 
     if (channel.guildId) {
-      ctx.io.to(`guild:${channel.guildId}`).emit('MESSAGE_REACTION_REMOVE', {
-        messageId: req.params.messageId,
-        channelId,
-        userId: req.user!.userId,
-        emoji: { id: null, name: emojiName },
-      });
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${channel.guildId}`,
+        GatewayIntents.GUILD_MESSAGES,
+        'MESSAGE_REACTION_REMOVE',
+        {
+          messageId: req.params.messageId,
+          channelId,
+          userId: req.user!.userId,
+          emoji: { id: null, name: emojiName },
+        },
+      );
     }
 
     res.status(204).send();
@@ -485,10 +551,16 @@ export function messagesRouter(ctx: AppContext): Router {
     }
 
     if (channel.guildId) {
-      ctx.io.to(`guild:${channel.guildId}`).emit('CHANNEL_PINS_UPDATE', {
-        channelId,
-        lastPinTimestamp: new Date().toISOString(),
-      });
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${channel.guildId}`,
+        GatewayIntents.GUILD_MESSAGES,
+        'CHANNEL_PINS_UPDATE',
+        {
+          channelId,
+          lastPinTimestamp: new Date().toISOString(),
+        },
+      );
     }
 
     res.status(204).send();
@@ -503,10 +575,16 @@ export function messagesRouter(ctx: AppContext): Router {
     await messagesService.unpinMessage(channelId, req.params.messageId);
 
     if (channel.guildId) {
-      ctx.io.to(`guild:${channel.guildId}`).emit('CHANNEL_PINS_UPDATE', {
-        channelId,
-        lastPinTimestamp: new Date().toISOString(),
-      });
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${channel.guildId}`,
+        GatewayIntents.GUILD_MESSAGES,
+        'CHANNEL_PINS_UPDATE',
+        {
+          channelId,
+          lastPinTimestamp: new Date().toISOString(),
+        },
+      );
     }
 
     res.status(204).send();

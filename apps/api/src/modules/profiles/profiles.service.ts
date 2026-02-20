@@ -2,6 +2,7 @@ import { and, eq, asc, sql } from 'drizzle-orm';
 import { memberProfiles, avatarDecorations, profileEffects, userProfiles } from '@gratonite/db';
 import type { AppContext } from '../../lib/context.js';
 import type { UpdateMemberProfileInput, EquipCustomizationInput } from './profiles.schemas.js';
+import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
 
 export function createProfilesService(ctx: AppContext) {
   // ── Member profiles (per-server) ───────────────────────────────────────
@@ -37,11 +38,17 @@ export function createProfilesService(ctx: AppContext) {
         .returning();
 
       if (updated) {
-        ctx.io.to(`guild:${guildId}`).emit('MEMBER_PROFILE_UPDATE', {
-          guildId,
-          userId,
-          profile: updated,
-        });
+        await emitRoomWithIntent(
+          ctx.io,
+          `guild:${guildId}`,
+          GatewayIntents.GUILD_MEMBERS,
+          'MEMBER_PROFILE_UPDATE',
+          {
+            guildId,
+            userId,
+            profile: updated,
+          },
+        );
       }
 
       return updated;
@@ -56,11 +63,17 @@ export function createProfilesService(ctx: AppContext) {
         })
         .returning();
 
-      ctx.io.to(`guild:${guildId}`).emit('MEMBER_PROFILE_UPDATE', {
-        guildId,
-        userId,
-        profile: created,
-      });
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${guildId}`,
+        GatewayIntents.GUILD_MEMBERS,
+        'MEMBER_PROFILE_UPDATE',
+        {
+          guildId,
+          userId,
+          profile: created,
+        },
+      );
 
       return created;
     }
@@ -85,11 +98,17 @@ export function createProfilesService(ctx: AppContext) {
         .returning();
 
       if (updated) {
-        ctx.io.to(`guild:${guildId}`).emit('MEMBER_PROFILE_UPDATE', {
-          guildId,
-          userId,
-          profile: updated,
-        });
+        await emitRoomWithIntent(
+          ctx.io,
+          `guild:${guildId}`,
+          GatewayIntents.GUILD_MEMBERS,
+          'MEMBER_PROFILE_UPDATE',
+          {
+            guildId,
+            userId,
+            profile: updated,
+          },
+        );
       }
 
       return updated;
@@ -99,11 +118,17 @@ export function createProfilesService(ctx: AppContext) {
         .values({ userId, guildId, avatarHash: hash, avatarAnimated: animated })
         .returning();
 
-      ctx.io.to(`guild:${guildId}`).emit('MEMBER_PROFILE_UPDATE', {
-        guildId,
-        userId,
-        profile: created,
-      });
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${guildId}`,
+        GatewayIntents.GUILD_MEMBERS,
+        'MEMBER_PROFILE_UPDATE',
+        {
+          guildId,
+          userId,
+          profile: created,
+        },
+      );
 
       return created;
     }
@@ -127,11 +152,17 @@ export function createProfilesService(ctx: AppContext) {
         .returning();
 
       if (updated) {
-        ctx.io.to(`guild:${guildId}`).emit('MEMBER_PROFILE_UPDATE', {
-          guildId,
-          userId,
-          profile: updated,
-        });
+        await emitRoomWithIntent(
+          ctx.io,
+          `guild:${guildId}`,
+          GatewayIntents.GUILD_MEMBERS,
+          'MEMBER_PROFILE_UPDATE',
+          {
+            guildId,
+            userId,
+            profile: updated,
+          },
+        );
       }
 
       return updated;
@@ -141,11 +172,17 @@ export function createProfilesService(ctx: AppContext) {
         .values({ userId, guildId, bannerHash: hash, bannerAnimated: animated })
         .returning();
 
-      ctx.io.to(`guild:${guildId}`).emit('MEMBER_PROFILE_UPDATE', {
-        guildId,
-        userId,
-        profile: created,
-      });
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${guildId}`,
+        GatewayIntents.GUILD_MEMBERS,
+        'MEMBER_PROFILE_UPDATE',
+        {
+          guildId,
+          userId,
+          profile: created,
+        },
+      );
 
       return created;
     }

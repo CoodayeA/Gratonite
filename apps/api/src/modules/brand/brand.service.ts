@@ -3,6 +3,7 @@ import { guildBrand, guildCustomCss } from '@gratonite/db';
 import type { AppContext } from '../../lib/context.js';
 import { logger } from '../../lib/logger.js';
 import type { UpdateBrandInput } from './brand.schemas.js';
+import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
 
 const BRAND_CACHE_TTL = 120; // seconds
 
@@ -58,10 +59,16 @@ export function createBrandService(ctx: AppContext) {
       await ctx.redis.del(`guild_brand:${guildId}`);
 
       // Emit real-time event
-      ctx.io.to(`guild:${guildId}`).emit('GUILD_BRAND_UPDATE', {
-        guildId,
-        brand: updated,
-      });
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${guildId}`,
+        GatewayIntents.GUILDS,
+        'GUILD_BRAND_UPDATE',
+        {
+          guildId,
+          brand: updated,
+        },
+      );
     }
 
     return updated || null;
@@ -76,10 +83,16 @@ export function createBrandService(ctx: AppContext) {
 
     if (updated) {
       await ctx.redis.del(`guild_brand:${guildId}`);
-      ctx.io.to(`guild:${guildId}`).emit('GUILD_BRAND_UPDATE', {
-        guildId,
-        brand: updated,
-      });
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${guildId}`,
+        GatewayIntents.GUILDS,
+        'GUILD_BRAND_UPDATE',
+        {
+          guildId,
+          brand: updated,
+        },
+      );
     }
 
     return updated || null;
@@ -119,10 +132,16 @@ export function createBrandService(ctx: AppContext) {
     const row = await getCustomCss(guildId);
 
     if (row) {
-      ctx.io.to(`guild:${guildId}`).emit('GUILD_CSS_UPDATE', {
-        guildId,
-        css: row,
-      });
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${guildId}`,
+        GatewayIntents.GUILDS,
+        'GUILD_CSS_UPDATE',
+        {
+          guildId,
+          css: row,
+        },
+      );
     }
 
     return row;

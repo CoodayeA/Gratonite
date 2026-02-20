@@ -4,6 +4,7 @@ import { requireAuth } from '../../middleware/auth.js';
 import { createChannelsService } from './channels.service.js';
 import { createGuildsService } from '../guilds/guilds.service.js';
 import { createChannelSchema, updateChannelSchema, reorderChannelsSchema } from './channels.schemas.js';
+import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
 
 export function channelsRouter(ctx: AppContext): Router {
   const router = Router();
@@ -41,7 +42,13 @@ export function channelsRouter(ctx: AppContext): Router {
     }
 
     const channel = await channelsService.createChannel(guildId, parsed.data);
-    ctx.io.to(`guild:${guildId}`).emit('CHANNEL_CREATE', channel as any);
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILDS,
+      'CHANNEL_CREATE',
+      channel as any,
+    );
 
     res.status(201).json(channel);
   });
@@ -100,7 +107,13 @@ export function channelsRouter(ctx: AppContext): Router {
 
     const updated = await channelsService.updateChannel(req.params.channelId, parsed.data);
     if (updated && channel.guildId) {
-      ctx.io.to(`guild:${channel.guildId}`).emit('CHANNEL_UPDATE', updated as any);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${channel.guildId}`,
+        GatewayIntents.GUILDS,
+        'CHANNEL_UPDATE',
+        updated as any,
+      );
     }
 
     res.json(updated);
@@ -121,10 +134,16 @@ export function channelsRouter(ctx: AppContext): Router {
     await channelsService.deleteChannel(req.params.channelId);
 
     if (channel.guildId) {
-      ctx.io.to(`guild:${channel.guildId}`).emit('CHANNEL_DELETE', {
-        id: req.params.channelId,
-        guildId: String(channel.guildId),
-      });
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${channel.guildId}`,
+        GatewayIntents.GUILDS,
+        'CHANNEL_DELETE',
+        {
+          id: req.params.channelId,
+          guildId: String(channel.guildId),
+        },
+      );
     }
 
     res.status(204).send();

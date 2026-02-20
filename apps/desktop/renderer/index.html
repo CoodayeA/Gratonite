@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gratonite Desktop</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="rail">
+        <div class="logo">G</div>
+        <button class="rail-item active">Home</button>
+        <button class="rail-item">DMs</button>
+        <button class="rail-item">Spaces</button>
+        <button class="rail-item">Events</button>
+        <button class="rail-item">Settings</button>
+        <div class="rail-divider"></div>
+        <button class="rail-pill">+</button>
+      </aside>
+      <div class="shell">
+        <header class="topbar">
+          <div class="workspace">
+            <span class="workspace-label">Gratonite Desktop</span>
+            <span class="workspace-sub">Cross-platform client</span>
+          </div>
+          <div class="actions">
+            <button class="ghost">Search</button>
+            <button class="ghost">New</button>
+            <button class="primary">Connect</button>
+          </div>
+        </header>
+        <main class="content">
+          <section class="column card">
+            <div class="column-header">
+              <div>
+                <h2>Spaces</h2>
+                <p>Jump back into your most active rooms.</p>
+              </div>
+              <button class="ghost">Browse</button>
+            </div>
+            <div class="list">
+              <div class="list-item active">
+                <div class="avatar">AI</div>
+                <div>
+                  <strong>Arclight Guild</strong>
+                  <span>7 new messages • #lab</span>
+                </div>
+              </div>
+              <div class="list-item">
+                <div class="avatar">FX</div>
+                <div>
+                  <strong>Flux Studio</strong>
+                  <span>Voice active • #render</span>
+                </div>
+              </div>
+              <div class="list-item">
+                <div class="avatar">NX</div>
+                <div>
+                  <strong>Nightshift</strong>
+                  <span>2 scheduled events</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="column card primary-card">
+            <div class="column-header">
+              <div>
+                <h2>#general</h2>
+                <p>Arc light guild • 142 online</p>
+              </div>
+              <div class="status">
+                <span class="dot"></span>
+                Live
+              </div>
+            </div>
+            <div class="chat">
+              <div class="message">
+                <div class="avatar">AV</div>
+                <div>
+                  <strong>Avery</strong>
+                  <p>Shipping the new voice stack today. Make sure mobile QoS stays high.</p>
+                </div>
+              </div>
+              <div class="message">
+                <div class="avatar">LM</div>
+                <div>
+                  <strong>Leona</strong>
+                  <p>Threaded design feedback is in. The glass layer is feeling crisp.</p>
+                </div>
+              </div>
+              <div class="message">
+                <div class="avatar">UI</div>
+                <div>
+                  <strong>Ux Team</strong>
+                  <p>New gradient maps live in the theme editor.</p>
+                </div>
+              </div>
+            </div>
+            <div class="composer">
+              <input placeholder="Message #general" />
+              <button class="primary">Send</button>
+            </div>
+          </section>
+
+          <section class="column card">
+            <div class="column-header">
+              <div>
+                <h2>Now Playing</h2>
+                <p>Voice + events overview.</p>
+              </div>
+            </div>
+            <div class="stat-block">
+              <span class="stat-title">Status</span>
+              <span class="stat-value">Ready for UI mount</span>
+            </div>
+            <div class="stat-block">
+              <span class="stat-title">Platform</span>
+              <span class="stat-value" id="platform">Detecting…</span>
+            </div>
+            <div class="stat-block">
+              <span class="stat-title">Notifications</span>
+              <span class="stat-value">Grouped + routed</span>
+            </div>
+            <div class="stat-block">
+              <span class="stat-title">Upcoming</span>
+              <span class="stat-value">Design review • 4:00 PM</span>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+    <script>
+      const platform = document.getElementById('platform');
+      if (platform && window.gratonite) {
+        platform.textContent = window.gratonite.platform;
+      }
+    </script>
+  </body>
+</html>

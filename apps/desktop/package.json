@@ -1,0 +1,36 @@
+{
+  "name": "@gratonite/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gratonite desktop app (Electron)",
+  "main": "src/main.js",
+  "scripts": {
+    "dev": "electron .",
+    "build": "echo 'TODO: add bundler'",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "typescript": "^5.7.3"
+  },
+  "build": {
+    "appId": "com.gratonite.desktop",
+    "productName": "Gratonite",
+    "files": [
+      "src/**/*",
+      "renderer/**/*"
+    ],
+    "mac": {
+      "target": ["dmg", "zip"]
+    },
+    "win": {
+      "target": ["nsis", "zip"]
+    },
+    "linux": {
+      "target": ["AppImage", "deb", "rpm"],
+      "category": "Network"
+    }
+  }
+}

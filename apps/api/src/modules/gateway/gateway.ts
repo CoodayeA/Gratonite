@@ -1,19 +1,33 @@
 import type { Server as SocketIOServer, Socket } from 'socket.io';
 import type { AppContext } from '../../lib/context.js';
 import { createAuthService } from '../auth/auth.service.js';
+import { createBotsService } from '../bots/bots.service.js';
+import { users } from '@gratonite/db';
+import { eq } from 'drizzle-orm';
 import { createGuildsService } from '../guilds/guilds.service.js';
 import { createVoiceService } from '../voice/voice.service.js';
 import { createChannelsService } from '../channels/channels.service.js';
 import { logger } from '../../lib/logger.js';
+import {
+  GatewayIntents,
+  DEFAULT_INTENTS,
+  emitRoomWithIntent,
+  intentForGuildEvent,
+} from '../../lib/gateway-intents.js';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
   username?: string;
   sessionId?: string;
+  applicationId?: string;
+  isBot?: boolean;
+  intents?: number;
 }
+
 
 export function setupGateway(ctx: AppContext) {
   const authService = createAuthService(ctx);
+  const botsService = createBotsService(ctx);
   const guildsService = createGuildsService(ctx);
   const voiceService = createVoiceService(ctx);
   const channelsService = createChannelsService(ctx);
@@ -24,38 +38,66 @@ export function setupGateway(ctx: AppContext) {
 
     // ── IDENTIFY — authenticate the socket connection ────────────────────
 
-    socket.on('IDENTIFY', async (data: { token: string }) => {
+    socket.on('IDENTIFY', async (data: { token: string; intents?: number }) => {
       try {
+        let userId: string | undefined;
+        let username: string | undefined;
+
         const payload = await authService.verifyAccessToken(data.token);
-        if (!payload) {
+        if (payload) {
+          userId = payload.userId;
+          username = payload.username;
+        } else {
+          const botToken = data.token.startsWith('Bot ') ? data.token.slice(4) : data.token;
+          const botRecord = await botsService.verifyBotToken(botToken);
+          if (!botRecord) {
+            socket.emit('error', { code: 'INVALID_TOKEN', message: 'Authentication failed' });
+            socket.disconnect();
+            return;
+          }
+
+          const [botUser] = await ctx.db
+            .select({ id: users.id, username: users.username })
+            .from(users)
+            .where(eq(users.id, botRecord.userId!))
+            .limit(1);
+
+          userId = botUser?.id;
+          username = botUser?.username;
+          socket.applicationId = botRecord.applicationId;
+          socket.isBot = true;
+        }
+
+        if (!userId || !username) {
           socket.emit('error', { code: 'INVALID_TOKEN', message: 'Authentication failed' });
           socket.disconnect();
           return;
         }
 
-        socket.userId = payload.userId;
-        socket.username = payload.username;
+        socket.userId = userId;
+        socket.username = username;
         socket.sessionId = socket.id;
+        socket.intents = data.intents ?? DEFAULT_INTENTS;
 
         // Join personal room for DM notifications and cross-device sync
-        socket.join(`user:${payload.userId}`);
+        socket.join(`user:${userId}`);
 
         // Join all guild rooms the user is a member of
-        const userGuilds = await guildsService.getUserGuilds(payload.userId);
+        const userGuilds = await guildsService.getUserGuilds(userId);
         for (const guild of userGuilds) {
           socket.join(`guild:${guild.id}`);
         }
 
         // Track online status in Redis
-        await ctx.redis.sadd(`online_users`, payload.userId);
-        await ctx.redis.set(`user_socket:${payload.userId}`, socket.id, 'EX', 3600);
+        await ctx.redis.sadd(`online_users`, userId);
+        await ctx.redis.set(`user_socket:${userId}`, socket.id, 'EX', 3600);
 
         socket.emit('READY', {
-          userId: payload.userId,
+          userId,
           sessionId: socket.id,
         });
 
-        logger.info({ userId: payload.userId, socketId: socket.id }, 'Socket authenticated');
+        logger.info({ userId, socketId: socket.id, isBot: socket.isBot, intents: socket.intents }, 'Socket authenticated');
       } catch (err) {
         logger.error({ err }, 'IDENTIFY failed');
         socket.disconnect();
@@ -75,15 +117,20 @@ export function setupGateway(ctx: AppContext) {
 
     // ── TYPING_START — typing indicator ────────────────────────────────────
 
-    socket.on('TYPING_START', (data: { channelId: string }) => {
+    socket.on('TYPING_START', async (data: { channelId: string }) => {
       if (!socket.userId) return;
 
       // Broadcast to the guild or DM channel
-      socket.broadcast.to(`guild:*`).emit('TYPING_START', {
+      const payload = {
         channelId: data.channelId,
         userId: socket.userId,
         timestamp: Date.now(),
-      });
+      };
+
+      const rooms = Array.from(socket.rooms).filter((r) => r.startsWith('guild:'));
+      for (const room of rooms) {
+        await emitRoomWithIntent(ctx.io, room, GatewayIntents.GUILD_MESSAGE_TYPING, 'TYPING_START', payload);
+      }
 
       // Also publish to Redis for multi-server
       ctx.redis.publish(
@@ -122,10 +169,16 @@ export function setupGateway(ctx: AppContext) {
       // Broadcast to all guilds the user is in
       const rooms = Array.from(socket.rooms).filter((r) => r.startsWith('guild:'));
       for (const room of rooms) {
-        socket.broadcast.to(room).emit('PRESENCE_UPDATE', {
-          userId: socket.userId,
-          status: data.status,
-        } as any);
+        emitRoomWithIntent(
+          ctx.io,
+          room,
+          GatewayIntents.GUILD_PRESENCES,
+          'PRESENCE_UPDATE',
+          {
+            userId: socket.userId,
+            status: data.status,
+          },
+        );
       }
     });
 
@@ -144,7 +197,13 @@ export function setupGateway(ctx: AppContext) {
         if (data.channelId === null) {
           const disconnectedState = await voiceService.leaveChannel(socket.userId);
           if (disconnectedState?.guildId) {
-            ctx.io.to(`guild:${disconnectedState.guildId}`).emit('VOICE_STATE_UPDATE', disconnectedState as any);
+            await emitRoomWithIntent(
+              ctx.io,
+              `guild:${disconnectedState.guildId}`,
+              GatewayIntents.GUILD_VOICE_STATES,
+              'VOICE_STATE_UPDATE',
+              disconnectedState as any,
+            );
           }
           return;
         }
@@ -172,7 +231,13 @@ export function setupGateway(ctx: AppContext) {
 
         // Broadcast voice state to guild
         if (channel.guildId) {
-          ctx.io.to(`guild:${channel.guildId}`).emit('VOICE_STATE_UPDATE', voiceState as any);
+          await emitRoomWithIntent(
+            ctx.io,
+            `guild:${channel.guildId}`,
+            GatewayIntents.GUILD_VOICE_STATES,
+            'VOICE_STATE_UPDATE',
+            voiceState as any,
+          );
         }
 
         // Send token + endpoint privately to the requesting socket
@@ -199,13 +264,19 @@ export function setupGateway(ctx: AppContext) {
         const sound = await voiceService.getSound(data.soundId);
         if (!sound || sound.guildId !== data.guildId || !sound.available) return;
 
-        ctx.io.to(`guild:${data.guildId}`).emit('SOUNDBOARD_PLAY', {
-          guildId: data.guildId,
-          channelId: state.channelId,
-          soundId: data.soundId,
-          userId: socket.userId,
-          volume: sound.volume,
-        } as any);
+        await emitRoomWithIntent(
+          ctx.io,
+          `guild:${data.guildId}`,
+          GatewayIntents.GUILD_VOICE_STATES,
+          'SOUNDBOARD_PLAY',
+          {
+            guildId: data.guildId,
+            channelId: state.channelId,
+            soundId: data.soundId,
+            userId: socket.userId,
+            volume: sound.volume,
+          } as any,
+        );
       } catch (err) {
         logger.error({ err, userId: socket.userId }, 'SOUNDBOARD_PLAY failed');
       }
@@ -219,7 +290,13 @@ export function setupGateway(ctx: AppContext) {
         try {
           const disconnectedState = await voiceService.leaveChannel(socket.userId);
           if (disconnectedState?.guildId) {
-            ctx.io.to(`guild:${disconnectedState.guildId}`).emit('VOICE_STATE_UPDATE', disconnectedState as any);
+            await emitRoomWithIntent(
+              ctx.io,
+              `guild:${disconnectedState.guildId}`,
+              GatewayIntents.GUILD_VOICE_STATES,
+              'VOICE_STATE_UPDATE',
+              disconnectedState as any,
+            );
           }
         } catch (err) {
           logger.error({ err, userId: socket.userId }, 'Voice cleanup on disconnect failed');
@@ -238,10 +315,16 @@ export function setupGateway(ctx: AppContext) {
         // Broadcast offline presence
         const rooms = Array.from(socket.rooms).filter((r) => r.startsWith('guild:'));
         for (const room of rooms) {
-          socket.broadcast.to(room).emit('PRESENCE_UPDATE', {
-            userId: socket.userId,
-            status: 'offline',
-          } as any);
+          await emitRoomWithIntent(
+            ctx.io,
+            room,
+            GatewayIntents.GUILD_PRESENCES,
+            'PRESENCE_UPDATE',
+            {
+              userId: socket.userId,
+              status: 'offline',
+            } as any,
+          );
         }
 
         logger.info({ userId: socket.userId, reason }, 'Socket disconnected');
@@ -275,7 +358,8 @@ async function setupRedisPubSub(ctx: AppContext) {
         ctx.io.to(`channel:${channelId}`).emit(data.type, data.data);
       } else if (pattern === 'guild:*:events') {
         const guildId = channel.split(':')[1];
-        ctx.io.to(`guild:${guildId}`).emit(data.type, data.data);
+        const intent = intentForGuildEvent(String(data.type));
+        emitRoomWithIntent(ctx.io, `guild:${guildId}`, intent, data.type, data.data);
       } else if (pattern === 'user:*:sync') {
         const userId = channel.split(':')[1];
         ctx.io.to(`user:${userId}`).emit(data.type, data.data);

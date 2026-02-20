@@ -14,6 +14,7 @@ import {
   updateSoundboardSoundSchema,
   startScreenShareSchema,
 } from './voice.schemas.js';
+import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
 
 export function voiceRouter(ctx: AppContext): Router {
   const router = Router();
@@ -55,7 +56,13 @@ export function voiceRouter(ctx: AppContext): Router {
 
     // Broadcast voice state to guild
     if (channel.guildId) {
-      ctx.io.to(`guild:${channel.guildId}`).emit('VOICE_STATE_UPDATE', voiceState as any);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${channel.guildId}`,
+        GatewayIntents.GUILD_VOICE_STATES,
+        'VOICE_STATE_UPDATE',
+        voiceState as any,
+      );
     }
 
     res.json({
@@ -76,7 +83,13 @@ export function voiceRouter(ctx: AppContext): Router {
     }
 
     if (disconnectedState.guildId) {
-      ctx.io.to(`guild:${disconnectedState.guildId}`).emit('VOICE_STATE_UPDATE', disconnectedState as any);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${disconnectedState.guildId}`,
+        GatewayIntents.GUILD_VOICE_STATES,
+        'VOICE_STATE_UPDATE',
+        disconnectedState as any,
+      );
     }
 
     res.status(204).send();
@@ -94,7 +107,13 @@ export function voiceRouter(ctx: AppContext): Router {
     if (!updated) return res.status(404).json({ code: 'NOT_IN_VOICE', message: 'Not in a voice channel' });
 
     if (updated.guildId) {
-      ctx.io.to(`guild:${updated.guildId}`).emit('VOICE_STATE_UPDATE', updated as any);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${updated.guildId}`,
+        GatewayIntents.GUILD_VOICE_STATES,
+        'VOICE_STATE_UPDATE',
+        updated as any,
+      );
     }
 
     res.json(updated);
@@ -145,7 +164,13 @@ export function voiceRouter(ctx: AppContext): Router {
     const result = await voiceService.modifyMemberVoiceState(targetUserId, parsed.data);
     if (!result) return res.status(404).json({ code: 'NOT_IN_VOICE' });
 
-    ctx.io.to(`guild:${guildId}`).emit('VOICE_STATE_UPDATE', result as any);
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILD_VOICE_STATES,
+      'VOICE_STATE_UPDATE',
+      result as any,
+    );
 
     res.json(result);
   });
@@ -168,11 +193,23 @@ export function voiceRouter(ctx: AppContext): Router {
     );
 
     if (state.guildId) {
-      ctx.io.to(`guild:${state.guildId}`).emit('SCREEN_SHARE_START', session as any);
-      ctx.io.to(`guild:${state.guildId}`).emit('VOICE_STATE_UPDATE', {
-        ...state,
-        selfStream: true,
-      } as any);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${state.guildId}`,
+        GatewayIntents.GUILD_VOICE_STATES,
+        'SCREEN_SHARE_START',
+        session as any,
+      );
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${state.guildId}`,
+        GatewayIntents.GUILD_VOICE_STATES,
+        'VOICE_STATE_UPDATE',
+        {
+          ...state,
+          selfStream: true,
+        } as any,
+      );
     }
 
     res.json(session);
@@ -185,14 +222,26 @@ export function voiceRouter(ctx: AppContext): Router {
     await voiceService.stopScreenShare(req.user!.userId, state.channelId);
 
     if (state.guildId) {
-      ctx.io.to(`guild:${state.guildId}`).emit('SCREEN_SHARE_STOP', {
-        userId: req.user!.userId,
-        channelId: state.channelId,
-      } as any);
-      ctx.io.to(`guild:${state.guildId}`).emit('VOICE_STATE_UPDATE', {
-        ...state,
-        selfStream: false,
-      } as any);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${state.guildId}`,
+        GatewayIntents.GUILD_VOICE_STATES,
+        'SCREEN_SHARE_STOP',
+        {
+          userId: req.user!.userId,
+          channelId: state.channelId,
+        } as any,
+      );
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${state.guildId}`,
+        GatewayIntents.GUILD_VOICE_STATES,
+        'VOICE_STATE_UPDATE',
+        {
+          ...state,
+          selfStream: false,
+        } as any,
+      );
     }
 
     res.status(204).send();
@@ -214,7 +263,13 @@ export function voiceRouter(ctx: AppContext): Router {
 
     const stage = await voiceService.createStageInstance(guildId, parsed.data);
 
-    ctx.io.to(`guild:${guildId}`).emit('STAGE_INSTANCE_CREATE', stage as any);
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILD_VOICE_STATES,
+      'STAGE_INSTANCE_CREATE',
+      stage as any,
+    );
 
     res.status(201).json(stage);
   });
@@ -237,7 +292,13 @@ export function voiceRouter(ctx: AppContext): Router {
     const updated = await voiceService.updateStageInstance(req.params.stageId, parsed.data);
     if (!updated) return res.status(404).json({ code: 'NOT_FOUND' });
 
-    ctx.io.to(`guild:${updated.guildId}`).emit('STAGE_INSTANCE_UPDATE', updated as any);
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${updated.guildId}`,
+      GatewayIntents.GUILD_VOICE_STATES,
+      'STAGE_INSTANCE_UPDATE',
+      updated as any,
+    );
 
     res.json(updated);
   });
@@ -253,11 +314,17 @@ export function voiceRouter(ctx: AppContext): Router {
 
     await voiceService.deleteStageInstance(req.params.stageId);
 
-    ctx.io.to(`guild:${stage.guildId}`).emit('STAGE_INSTANCE_DELETE', {
-      id: stage.id,
-      guildId: stage.guildId,
-      channelId: stage.channelId,
-    } as any);
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${stage.guildId}`,
+      GatewayIntents.GUILD_VOICE_STATES,
+      'STAGE_INSTANCE_DELETE',
+      {
+        id: stage.id,
+        guildId: stage.guildId,
+        channelId: stage.channelId,
+      } as any,
+    );
 
     res.status(204).send();
   });
@@ -268,7 +335,13 @@ export function voiceRouter(ctx: AppContext): Router {
     if (!updated) return res.status(404).json({ code: 'NOT_IN_VOICE' });
 
     if (updated.guildId) {
-      ctx.io.to(`guild:${updated.guildId}`).emit('VOICE_STATE_UPDATE', updated as any);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${updated.guildId}`,
+        GatewayIntents.GUILD_VOICE_STATES,
+        'VOICE_STATE_UPDATE',
+        updated as any,
+      );
     }
 
     res.status(204).send();
@@ -288,7 +361,13 @@ export function voiceRouter(ctx: AppContext): Router {
     const updated = await voiceService.approveSpeaker(req.params.userId);
     if (!updated) return res.status(404).json({ code: 'NOT_IN_VOICE' });
 
-    ctx.io.to(`guild:${state.guildId}`).emit('VOICE_STATE_UPDATE', updated as any);
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${state.guildId}`,
+      GatewayIntents.GUILD_VOICE_STATES,
+      'VOICE_STATE_UPDATE',
+      updated as any,
+    );
 
     res.status(204).send();
   });
@@ -306,7 +385,13 @@ export function voiceRouter(ctx: AppContext): Router {
     const updated = await voiceService.revokeSpeaker(req.params.userId);
     if (!updated) return res.status(404).json({ code: 'NOT_IN_VOICE' });
 
-    ctx.io.to(`guild:${state.guildId}`).emit('VOICE_STATE_UPDATE', updated as any);
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${state.guildId}`,
+      GatewayIntents.GUILD_VOICE_STATES,
+      'VOICE_STATE_UPDATE',
+      updated as any,
+    );
 
     res.status(204).send();
   });
@@ -388,13 +473,19 @@ export function voiceRouter(ctx: AppContext): Router {
       return res.status(404).json({ code: 'NOT_FOUND' });
     }
 
-    ctx.io.to(`guild:${guildId}`).emit('SOUNDBOARD_PLAY', {
-      guildId,
-      channelId: state.channelId,
-      soundId,
-      userId,
-      volume: sound.volume,
-    } as any);
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILD_VOICE_STATES,
+      'SOUNDBOARD_PLAY',
+      {
+        guildId,
+        channelId: state.channelId,
+        soundId,
+        userId,
+        volume: sound.volume,
+      } as any,
+    );
 
     res.status(204).send();
   });

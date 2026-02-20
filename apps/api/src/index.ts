@@ -28,6 +28,7 @@ import { analyticsRouter } from './modules/analytics/analytics.router.js';
 import { themesRouter } from './modules/themes/themes.router.js';
 import { brandRouter } from './modules/brand/brand.router.js';
 import { profilesRouter } from './modules/profiles/profiles.router.js';
+import { botsRouter } from './modules/bots/bots.router.js';
 import { createThemesService } from './modules/themes/themes.service.js';
 import { createThreadsService } from './modules/threads/threads.service.js';
 import { createMessagesService } from './modules/messages/messages.service.js';
@@ -115,6 +116,7 @@ async function main() {
   app.use('/api/v1', voiceRouter(ctx));
   app.use('/api/v1', filesRouter(ctx));
   app.use('/api/v1', threadsRouter(ctx));
+  app.use('/api/v1', botsRouter(ctx));
   app.use('/api/v1', searchRouter(ctx));
   app.use('/api/v1', wikiRouter(ctx));
   app.use('/api/v1', qaRouter(ctx));

@@ -1,0 +1,12 @@
+{
+  "downloads": {
+    "macSilicon": "https://example.com/gratonite-mac-arm64.dmg",
+    "macIntel": "https://example.com/gratonite-mac-x64.dmg",
+    "winX64": "https://example.com/gratonite-win-x64.exe",
+    "linuxAppImage": "https://example.com/gratonite-linux.AppImage",
+    "linuxDeb": "https://example.com/gratonite-linux.deb",
+    "linuxRpm": "https://example.com/gratonite-linux.rpm"
+  },
+  "version": "0.1.0-alpha.1",
+  "updatedAt": "2026-02-20T00:00:00Z"
+}

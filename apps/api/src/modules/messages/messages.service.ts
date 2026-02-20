@@ -21,6 +21,7 @@ import type {
   CreateScheduledMessageInput,
 } from './messages.schemas.js';
 import { createFilesService } from '../files/files.service.js';
+import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
 
 const MESSAGE_TYPE_POLL = 22;
 
@@ -650,9 +651,21 @@ export function createMessagesService(ctx: AppContext) {
           .where(eq(scheduledMessages.id, claimed.id));
 
         if (result?.guildId) {
-          ctx.io.to(`guild:${result.guildId}`).emit('MESSAGE_CREATE', result.message as any);
+          await emitRoomWithIntent(
+            ctx.io,
+            `guild:${result.guildId}`,
+            GatewayIntents.GUILD_MESSAGES,
+            'MESSAGE_CREATE',
+            result.message as any,
+          );
         } else {
-          ctx.io.to(`channel:${claimed.channelId}`).emit('MESSAGE_CREATE', result?.message as any);
+          await emitRoomWithIntent(
+            ctx.io,
+            `channel:${claimed.channelId}`,
+            GatewayIntents.DIRECT_MESSAGES,
+            'MESSAGE_CREATE',
+            result?.message as any,
+          );
         }
 
         await ctx.redis.publish(

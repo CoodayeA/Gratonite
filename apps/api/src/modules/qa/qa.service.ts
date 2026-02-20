@@ -4,6 +4,7 @@ import type { AppContext } from '../../lib/context.js';
 import { generateId } from '../../lib/snowflake.js';
 import { createThreadsService } from '../threads/threads.service.js';
 import type { CreateQuestionInput, VoteInput } from './qa.schemas.js';
+import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
 
 export function createQaService(ctx: AppContext) {
   const threadsService = createThreadsService(ctx);
@@ -49,11 +50,17 @@ export function createQaService(ctx: AppContext) {
       })
       .returning();
 
-    ctx.io.to(`guild:${guildId}`).emit('QA_QUESTION_UPDATE', {
-      guildId,
-      threadId: question.threadId,
-      question,
-    });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILD_MESSAGES,
+      'QA_QUESTION_UPDATE',
+      {
+        guildId,
+        threadId: question.threadId,
+        question,
+      },
+    );
 
     return { thread, question };
   }
@@ -157,12 +164,18 @@ export function createQaService(ctx: AppContext) {
       .from(qaQuestions)
       .where(eq(qaQuestions.threadId, threadId));
 
-    ctx.io.to(`guild:${question.guildId}`).emit('QA_VOTE_UPDATE', {
-      guildId: question.guildId,
-      targetId: threadId,
-      targetType: 'question',
-      voteCount: updated.voteCount,
-    });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${question.guildId}`,
+      GatewayIntents.GUILD_MESSAGES,
+      'QA_VOTE_UPDATE',
+      {
+        guildId: question.guildId,
+        targetId: threadId,
+        targetType: 'question',
+        voteCount: updated.voteCount,
+      },
+    );
 
     return updated;
   }
@@ -275,12 +288,18 @@ export function createQaService(ctx: AppContext) {
 
     const question = await getQuestion(threadId);
     if (question) {
-      ctx.io.to(`guild:${question.guildId}`).emit('QA_VOTE_UPDATE', {
-        guildId: question.guildId,
-        targetId: messageId,
-        targetType: 'answer',
-        voteCount: updated.voteCount,
-      });
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${question.guildId}`,
+        GatewayIntents.GUILD_MESSAGES,
+        'QA_VOTE_UPDATE',
+        {
+          guildId: question.guildId,
+          targetId: messageId,
+          targetType: 'answer',
+          voteCount: updated.voteCount,
+        },
+      );
     }
 
     return updated;
@@ -337,11 +356,17 @@ export function createQaService(ctx: AppContext) {
       .where(eq(qaQuestions.threadId, threadId))
       .returning();
 
-    ctx.io.to(`guild:${question.guildId}`).emit('QA_ANSWER_ACCEPTED', {
-      guildId: question.guildId,
-      threadId,
-      messageId,
-    });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${question.guildId}`,
+      GatewayIntents.GUILD_MESSAGES,
+      'QA_ANSWER_ACCEPTED',
+      {
+        guildId: question.guildId,
+        threadId,
+        messageId,
+      },
+    );
 
     return updated;
   }

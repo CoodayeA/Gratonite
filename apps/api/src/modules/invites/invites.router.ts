@@ -4,6 +4,7 @@ import type { AppContext } from '../../lib/context.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { createInvitesService } from './invites.service.js';
 import { createGuildsService } from '../guilds/guilds.service.js';
+import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
 
 const createInviteSchema = z.object({
   channelId: z.string(),
@@ -67,10 +68,16 @@ export function invitesRouter(ctx: AppContext): Router {
 
     const guild = await guildsService.getGuild(invite.guildId);
 
-    ctx.io.to(`guild:${invite.guildId}`).emit('GUILD_MEMBER_ADD', {
-      userId: userId,
-      guildId: invite.guildId,
-    } as any);
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${invite.guildId}`,
+      GatewayIntents.GUILD_MEMBERS,
+      'GUILD_MEMBER_ADD',
+      {
+        userId: userId,
+        guildId: invite.guildId,
+      } as any,
+    );
 
     res.json(guild);
   });

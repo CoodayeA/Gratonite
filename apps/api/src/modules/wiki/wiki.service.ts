@@ -3,6 +3,7 @@ import { wikiPages, wikiPageRevisions, channels } from '@gratonite/db';
 import type { AppContext } from '../../lib/context.js';
 import { generateId } from '../../lib/snowflake.js';
 import type { CreateWikiPageInput, UpdateWikiPageInput } from './wiki.schemas.js';
+import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
 
 function slugify(title: string): string {
   return title
@@ -59,7 +60,13 @@ export function createWikiService(ctx: AppContext) {
       })
       .returning();
 
-    ctx.io.to(`guild:${guildId}`).emit('WIKI_PAGE_CREATE', { guildId, channelId, page });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILD_MESSAGES,
+      'WIKI_PAGE_CREATE',
+      { guildId, channelId, page },
+    );
 
     return page;
   }
@@ -133,13 +140,17 @@ export function createWikiService(ctx: AppContext) {
       .where(eq(wikiPages.id, pageId))
       .returning();
 
-    ctx.io
-      .to(`guild:${updated.guildId}`)
-      .emit('WIKI_PAGE_UPDATE', {
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${updated.guildId}`,
+      GatewayIntents.GUILD_MESSAGES,
+      'WIKI_PAGE_UPDATE',
+      {
         guildId: updated.guildId,
         channelId: updated.channelId,
         page: updated,
-      });
+      },
+    );
 
     return updated;
   }
@@ -150,13 +161,17 @@ export function createWikiService(ctx: AppContext) {
 
     await ctx.db.delete(wikiPages).where(eq(wikiPages.id, pageId));
 
-    ctx.io
-      .to(`guild:${page.guildId}`)
-      .emit('WIKI_PAGE_DELETE', {
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${page.guildId}`,
+      GatewayIntents.GUILD_MESSAGES,
+      'WIKI_PAGE_DELETE',
+      {
         guildId: page.guildId,
         channelId: page.channelId,
         pageId,
-      });
+      },
+    );
 
     return { success: true };
   }

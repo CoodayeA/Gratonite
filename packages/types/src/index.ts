@@ -8,6 +8,8 @@ export * from './guild.js';
 export * from './channel.js';
 export * from './message.js';
 export * from './voice.js';
+export * from './bot.js';
 export * from './permissions.js';
 export * from './events.js';
 export * from './api.js';
+export * from './intents.js';

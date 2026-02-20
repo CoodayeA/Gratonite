@@ -14,6 +14,7 @@ export interface User {
   googleId: string | null;
   mfaEnabled: boolean;
   createdAt: string; // ISO datetime
+  bot: boolean;
   disabled: boolean;
   deletedAt: string | null;
 }
@@ -32,6 +33,7 @@ export interface PublicUser {
   pronouns: string | null;
   badges: UserBadge[];
   tier: UserTier;
+  bot: boolean;
   createdAt: string;
 }
 

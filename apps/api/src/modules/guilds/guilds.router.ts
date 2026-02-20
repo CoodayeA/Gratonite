@@ -14,6 +14,7 @@ import {
   createStickerSchema,
   updateStickerSchema,
 } from './emojis.schemas.js';
+import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
 
 const emojiUpload = multer({
   storage: multer.memoryStorage(),
@@ -84,7 +85,13 @@ export function guildsRouter(ctx: AppContext): Router {
 
     const updated = await guildsService.updateGuild(guildId, parsed.data);
     if (updated) {
-      ctx.io.to(`guild:${guildId}`).emit('GUILD_UPDATE', updated as any);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${guildId}`,
+        GatewayIntents.GUILDS,
+        'GUILD_UPDATE',
+        updated as any,
+      );
     }
 
     res.json(updated);
@@ -101,7 +108,13 @@ export function guildsRouter(ctx: AppContext): Router {
     }
 
     await guildsService.deleteGuild(guildId);
-    ctx.io.to(`guild:${guildId}`).emit('GUILD_DELETE', { id: String(guildId) });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILDS,
+      'GUILD_DELETE',
+      { id: String(guildId) },
+    );
 
     res.status(204).send();
   });
@@ -146,7 +159,13 @@ export function guildsRouter(ctx: AppContext): Router {
     }
 
     await guildsService.removeMember(guildId, userId);
-    ctx.io.to(`guild:${guildId}`).emit('GUILD_MEMBER_REMOVE', { userId: String(userId), guildId: String(guildId) });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILD_MEMBERS,
+      'GUILD_MEMBER_REMOVE',
+      { userId: String(userId), guildId: String(guildId) },
+    );
 
     res.status(204).send();
   });
@@ -168,7 +187,13 @@ export function guildsRouter(ctx: AppContext): Router {
     }
 
     await guildsService.removeMember(guildId, targetId);
-    ctx.io.to(`guild:${guildId}`).emit('GUILD_MEMBER_REMOVE', { userId: String(targetId), guildId: String(guildId) });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILD_MEMBERS,
+      'GUILD_MEMBER_REMOVE',
+      { userId: String(targetId), guildId: String(guildId) },
+    );
 
     res.status(204).send();
   });
@@ -203,7 +228,13 @@ export function guildsRouter(ctx: AppContext): Router {
     }
 
     const role = await guildsService.createRole(guildId, parsed.data);
-    ctx.io.to(`guild:${guildId}`).emit('GUILD_ROLE_CREATE', { guildId: String(guildId), role });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILDS,
+      'GUILD_ROLE_CREATE',
+      { guildId: String(guildId), role },
+    );
 
     res.status(201).json(role);
   });
@@ -226,7 +257,13 @@ export function guildsRouter(ctx: AppContext): Router {
     const role = await guildsService.updateRole(req.params.roleId, parsed.data);
     if (!role) return res.status(404).json({ code: 'NOT_FOUND' });
 
-    ctx.io.to(`guild:${guildId}`).emit('GUILD_ROLE_UPDATE', { guildId: String(guildId), role });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILDS,
+      'GUILD_ROLE_UPDATE',
+      { guildId: String(guildId), role },
+    );
 
     res.json(role);
   });
@@ -242,7 +279,13 @@ export function guildsRouter(ctx: AppContext): Router {
     }
 
     await guildsService.deleteRole(req.params.roleId);
-    ctx.io.to(`guild:${guildId}`).emit('GUILD_ROLE_DELETE', { guildId: String(guildId), roleId: req.params.roleId });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILDS,
+      'GUILD_ROLE_DELETE',
+      { guildId: String(guildId), roleId: req.params.roleId },
+    );
 
     res.status(204).send();
   });
@@ -307,7 +350,13 @@ export function guildsRouter(ctx: AppContext): Router {
     }
 
     await guildsService.banMember(guildId, targetId, req.user!.userId, req.body?.reason);
-    ctx.io.to(`guild:${guildId}`).emit('GUILD_BAN_ADD', { guildId: String(guildId), userId: String(targetId) });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILD_MEMBERS,
+      'GUILD_BAN_ADD',
+      { guildId: String(guildId), userId: String(targetId) },
+    );
 
     res.status(204).send();
   });
@@ -323,7 +372,13 @@ export function guildsRouter(ctx: AppContext): Router {
     }
 
     await guildsService.unbanMember(guildId, req.params.userId);
-    ctx.io.to(`guild:${guildId}`).emit('GUILD_BAN_REMOVE', { guildId: String(guildId), userId: req.params.userId });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILD_MEMBERS,
+      'GUILD_BAN_REMOVE',
+      { guildId: String(guildId), userId: req.params.userId },
+    );
 
     res.status(204).send();
   });
@@ -392,7 +447,13 @@ export function guildsRouter(ctx: AppContext): Router {
     });
 
     const emoji = await guildsService.createEmoji(guildId, req.user!.userId, parsed.data, `${hash}.${ext}`, animated);
-    ctx.io.to(`guild:${guildId}`).emit('GUILD_EMOJI_CREATE', { guildId: String(guildId), emoji } as any);
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILDS,
+      'GUILD_EMOJI_CREATE',
+      { guildId: String(guildId), emoji } as any,
+    );
 
     res.status(201).json(emoji);
   });
@@ -422,7 +483,13 @@ export function guildsRouter(ctx: AppContext): Router {
 
     const updated = await guildsService.updateEmoji(req.params.emojiId, parsed.data);
     if (updated) {
-      ctx.io.to(`guild:${guildId}`).emit('GUILD_EMOJI_UPDATE', { guildId: String(guildId), emoji: updated } as any);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${guildId}`,
+        GatewayIntents.GUILDS,
+        'GUILD_EMOJI_UPDATE',
+        { guildId: String(guildId), emoji: updated } as any,
+      );
     }
 
     res.json(updated);
@@ -443,7 +510,13 @@ export function guildsRouter(ctx: AppContext): Router {
     }
 
     await guildsService.deleteEmoji(req.params.emojiId);
-    ctx.io.to(`guild:${guildId}`).emit('GUILD_EMOJI_DELETE', { guildId: String(guildId), emojiId: req.params.emojiId });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILDS,
+      'GUILD_EMOJI_DELETE',
+      { guildId: String(guildId), emojiId: req.params.emojiId },
+    );
 
     res.status(204).send();
   });
@@ -519,7 +592,13 @@ export function guildsRouter(ctx: AppContext): Router {
     });
 
     const sticker = await guildsService.createSticker(guildId, req.user!.userId, parsed.data, `${hash}.${ext}`, formatType);
-    ctx.io.to(`guild:${guildId}`).emit('GUILD_STICKER_CREATE', { guildId: String(guildId), sticker } as any);
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILDS,
+      'GUILD_STICKER_CREATE',
+      { guildId: String(guildId), sticker } as any,
+    );
 
     res.status(201).json(sticker);
   });
@@ -549,7 +628,13 @@ export function guildsRouter(ctx: AppContext): Router {
 
     const updated = await guildsService.updateSticker(req.params.stickerId, parsed.data);
     if (updated) {
-      ctx.io.to(`guild:${guildId}`).emit('GUILD_STICKER_UPDATE', { guildId: String(guildId), sticker: updated } as any);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${guildId}`,
+        GatewayIntents.GUILDS,
+        'GUILD_STICKER_UPDATE',
+        { guildId: String(guildId), sticker: updated } as any,
+      );
     }
 
     res.json(updated);
@@ -570,7 +655,13 @@ export function guildsRouter(ctx: AppContext): Router {
     }
 
     await guildsService.deleteSticker(req.params.stickerId);
-    ctx.io.to(`guild:${guildId}`).emit('GUILD_STICKER_DELETE', { guildId: String(guildId), stickerId: req.params.stickerId });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILDS,
+      'GUILD_STICKER_DELETE',
+      { guildId: String(guildId), stickerId: req.params.stickerId },
+    );
 
     res.status(204).send();
   });

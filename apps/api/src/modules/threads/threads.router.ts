@@ -7,6 +7,7 @@ import { createThreadsService } from './threads.service.js';
 import { createThreadSchema, updateThreadSchema } from './threads.schemas.js';
 import { messages } from '@gratonite/db';
 import { desc, eq } from 'drizzle-orm';
+import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
 
 export function threadsRouter(ctx: AppContext): Router {
   const router = Router();
@@ -63,7 +64,13 @@ export function threadsRouter(ctx: AppContext): Router {
     }
 
     const thread = result as any;
-    ctx.io.to(`guild:${channel.guildId}`).emit('THREAD_CREATE', thread);
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${channel.guildId}`,
+      GatewayIntents.GUILD_MESSAGES,
+      'THREAD_CREATE',
+      thread,
+    );
 
     if (parsed.data.message) {
       const [starter] = await ctx.db
@@ -73,7 +80,13 @@ export function threadsRouter(ctx: AppContext): Router {
         .orderBy(desc(messages.createdAt))
         .limit(1);
       if (starter) {
-        ctx.io.to(`guild:${channel.guildId}`).emit('MESSAGE_CREATE', starter as any);
+        await emitRoomWithIntent(
+          ctx.io,
+          `guild:${channel.guildId}`,
+          GatewayIntents.GUILD_MESSAGES,
+          'MESSAGE_CREATE',
+          starter as any,
+        );
       }
     }
 
@@ -126,7 +139,13 @@ export function threadsRouter(ctx: AppContext): Router {
     const updated = await threadsService.updateThread(req.params.threadId, parsed.data);
     if (!updated) return res.status(404).json({ code: 'NOT_FOUND' });
 
-    ctx.io.to(`guild:${thread.guildId}`).emit('THREAD_UPDATE', updated as any);
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${thread.guildId}`,
+      GatewayIntents.GUILD_MESSAGES,
+      'THREAD_UPDATE',
+      updated as any,
+    );
     res.json(updated);
   });
 
@@ -141,11 +160,17 @@ export function threadsRouter(ctx: AppContext): Router {
     }
 
     await threadsService.deleteThread(req.params.threadId);
-    ctx.io.to(`guild:${thread.guildId}`).emit('THREAD_DELETE', {
-      id: String(thread.id),
-      parentId: String(thread.parentId),
-      guildId: String(thread.guildId),
-    });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${thread.guildId}`,
+      GatewayIntents.GUILD_MESSAGES,
+      'THREAD_DELETE',
+      {
+        id: String(thread.id),
+        parentId: String(thread.parentId),
+        guildId: String(thread.guildId),
+      },
+    );
 
     res.status(204).send();
   });
@@ -169,10 +194,16 @@ export function threadsRouter(ctx: AppContext): Router {
     }
 
     await threadsService.joinThread(req.params.threadId, req.user!.userId);
-    ctx.io.to(`guild:${thread.guildId}`).emit('THREAD_MEMBER_ADD', {
-      threadId: String(thread.id),
-      userId: String(req.user!.userId),
-    });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${thread.guildId}`,
+      GatewayIntents.GUILD_MESSAGES,
+      'THREAD_MEMBER_ADD',
+      {
+        threadId: String(thread.id),
+        userId: String(req.user!.userId),
+      },
+    );
 
     res.status(204).send();
   });
@@ -182,10 +213,16 @@ export function threadsRouter(ctx: AppContext): Router {
     if (!thread) return res.status(403).json({ code: 'FORBIDDEN' });
 
     await threadsService.leaveThread(req.params.threadId, req.user!.userId);
-    ctx.io.to(`guild:${thread.guildId}`).emit('THREAD_MEMBER_REMOVE', {
-      threadId: String(thread.id),
-      userId: String(req.user!.userId),
-    });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${thread.guildId}`,
+      GatewayIntents.GUILD_MESSAGES,
+      'THREAD_MEMBER_REMOVE',
+      {
+        threadId: String(thread.id),
+        userId: String(req.user!.userId),
+      },
+    );
 
     res.status(204).send();
   });

@@ -1,8 +1,8 @@
 # Gratonite — Development Progress
 
 > **Last updated:** 2026-02-20
-> **Current Phase:** Phase 5 — Customization & Theming (Complete)
-> **Status:** All Phase 5 features implemented and E2E tested (23/23 tests pass)
+> **Current Phase:** Phase 7 — Cross-Platform Apps (Planning)
+> **Status:** Phase 7 planning started (desktop + mobile + push + deep link + offline)
 
 ---
 
@@ -33,7 +33,7 @@ docker-compose up -d
 # Install dependencies
 pnpm install
 
-# Generate + run migrations (62 tables)
+# Generate + run migrations (67 tables)
 cd packages/db && npx drizzle-kit generate && npx drizzle-kit migrate
 
 # Start API server (port 4000)
@@ -765,10 +765,127 @@ Test sequence: upload file → message with attachment → upload emoji → list
 
 ---
 
+### Phase 6: Bot & Plugin Platform ✅
+
+#### OAuth2 Apps + Bots + Slash Commands ✅ (backend scaffolding)
+- DB tables + enum: `oauth2_apps`, `oauth2_codes`, `oauth2_tokens`, `bots`, `slash_commands`, `oauth_token_type`
+- New schema file: `packages/db/src/schema/bots.ts`
+- Migration: `0006_bot_platform.sql` (also adds `users.bot` boolean)
+- API module: `apps/api/src/modules/bots/` (schemas, service, router)
+- Total tables: **67**
+- OAuth app endpoints (REST):
+  - `POST /oauth/apps` (create app, returns clientSecret)
+  - `GET /oauth/apps` (list owned apps)
+  - `GET /oauth/apps/:appId`
+  - `PATCH /oauth/apps/:appId`
+  - `DELETE /oauth/apps/:appId`
+  - `POST /oauth/apps/:appId/reset-secret`
+- OAuth code/token endpoints:
+  - `POST /oauth/authorize`
+  - `POST /oauth/token`
+- Bot lifecycle endpoints:
+  - `POST /oauth/apps/:appId/bot` (create bot user + token)
+  - `POST /oauth/apps/:appId/bot/reset-token`
+  - `POST /oauth/apps/:appId/bot/authorize` (add bot to guild)
+- Slash command endpoints:
+  - `GET /oauth/apps/:appId/commands`
+  - `POST /oauth/apps/:appId/commands`
+  - `PATCH /oauth/apps/:appId/commands/:commandId`
+  - `DELETE /oauth/apps/:appId/commands/:commandId`
+- Bot auth middleware stub: `apps/api/src/middleware/bot-auth.ts`
+
+#### Gateway intents ✅
+- Socket gateway accepts bot tokens in IDENTIFY; bots join guild rooms and receive events like regular clients
+- `intents` bitfield filters TYPING_START, PRESENCE_UPDATE, VOICE_STATE_UPDATE
+- Guild/message events now use `emitRoomWithIntent` in routers/services (messages, threads, channels, guilds, invites, voice, automod, moderation, events, wiki, brand, profiles)
+- DM events now use DIRECT_MESSAGES intent
+- Guild pub/sub events map to intents by event type
+
+#### Plugin Sandbox Spec ✅
+- Documented iframe sandbox contract and permission model (`docs/plugin-sandbox.md`)
+- Shared intent constants added at `packages/types/src/intents.ts`
+
+#### Developer Docs ✅
+- `docs/developer-portal.md`
+- `docs/plugin-sandbox.md`
+- `docs/bot-platform.md`
+
+---
+
+### Phase 7: Cross-Platform Apps (PLANNING)
+
+#### Planning Focus
+- Desktop app UX: navigation, tray behavior, notifications, and window state
+- Mobile app UX: gesture-first interactions, bottom sheets, haptics, and quick reply
+- Push notification + deep link routing plan
+- Offline-first data layer (WatermelonDB) scope and sync boundaries
+
+#### Remaining Phase 7 Build Tasks
+- Tunnel/staging config wiring and scripts
+- Desktop build pipeline (bundler + artifacts)
+- Web app routing/auth/API integration
+- Deep link handling end-to-end (desktop + mobile + backend)
+- Offline-first implementation (WatermelonDB setup + sync)
+- Mobile navigation + functional screens
+- Distribution workflow for desktop builds
+
+#### Desktop (Electron) ✅ (scaffold)
+- Added cross-platform build targets: macOS, Windows, Linux
+- Basic window state persistence + tray flow + hotkey stub
+- UX placeholder shell with typography + gradient atmosphere
+- Files: `apps/desktop/package.json`, `apps/desktop/src/main.ts`, `apps/desktop/src/preload.ts`, `apps/desktop/renderer/index.html`, `apps/desktop/renderer/styles.css`
+- Desktop supports `--force-server <url>` and `GRATONITE_DESKTOP_URL` for staging/tunnel
+
+#### Mobile (Expo) ✅ (scaffold)
+- Expo app shell with expressive UI, gradient glows, and gesture-first layout
+- Files: `apps/mobile/package.json`, `apps/mobile/app.json`, `apps/mobile/App.tsx`, `apps/mobile/tsconfig.json`
+
+#### Web (Vite) ✅ (scaffold)
+- Web UI shell with three-column layout and staging status
+- Files: `apps/web/package.json`, `apps/web/vite.config.ts`, `apps/web/index.html`, `apps/web/src/main.tsx`, `apps/web/src/styles.css`
+
+#### Deep Links (web)
+- Route parser stub + redirect entrypoint for `/invite`/`/guild`/`/dm`
+- Files: `apps/web/src/route.ts`, `apps/web/public/redirect.html`
+
+#### Downloads Hub (web)
+- `/app/download` view stub with buttons for desktop builds
+- Download URLs now read from `apps/web/.env` (VITE_DOWNLOAD_*)
+- Tunnel status banner reads from `VITE_TUNNEL_STATUS`
+- Releases JSON feed: `apps/web/public/releases.json`
+
+#### Marketing Site (website) ✅
+- Added marketing landing + Discover + Downloads pages
+- Discover includes left menu with Servers/Bots/Themes sections
+- Files: `apps/website/index.html`, `apps/website/discover.html`, `apps/website/download.html`, `apps/website/styles.css`
+
+#### Push + Deep Links (plan)
+- `docs/push-and-deeplinks.md`
+
+#### Offline-First (plan)
+- `docs/offline-first.md`
+
+#### Tunnel/Staging (plan)
+- `docs/tunnel-setup.md`
+
+#### Phase 6 E2E Test Results (Initial)
+
+| Test | Result | Notes |
+|---|---|---|
+| Create OAuth app | ✅ | Returns clientSecret + app id |
+| Create bot | ✅ | Returns bot token |
+| Authorize bot to guild | ✅ | Adds bot user to guild |
+| Create slash command | ✅ | `ping` command created |
+| List slash commands | ✅ | Returns created command |
+| OAuth authorize (code) | ✅ | Returns auth code |
+| OAuth token exchange | ✅ | Returns access + refresh tokens |
+
+---
+
 ## What's NOT Done Yet
 
 ### Phases 6–9
-See `ARCHITECTURE.md` Section 23 for full phase breakdown.
+Phase 6 is in progress; see details below. Phases 7–9 remain pending.
 
 ---
 

@@ -10,6 +10,7 @@ import {
 import type { AppContext } from '../../lib/context.js';
 import { generateId } from '../../lib/snowflake.js';
 import { logger } from '../../lib/logger.js';
+import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
 import type {
   UpdateRaidConfigInput,
   CreateReportInput,
@@ -71,7 +72,13 @@ export function createModerationService(ctx: AppContext) {
       [result] = await ctx.db.insert(raidConfig).values(values as any).returning();
     }
 
-    ctx.io.to(`guild:${guildId}`).emit('GUILD_UPDATE', { id: guildId } as any);
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILDS,
+      'GUILD_UPDATE',
+      { id: guildId } as any,
+    );
     return result;
   }
 
@@ -119,12 +126,18 @@ export function createModerationService(ctx: AppContext) {
           await ctx.redis.set(`raid_lockdown:${guildId}`, '1', 'EX', ttl);
         }
 
-        ctx.io.to(`guild:${guildId}`).emit('RAID_DETECTED', {
-          guildId,
-          joinCount,
-          windowSeconds: config.joinWindowSeconds,
-          action: config.action,
-        });
+        await emitRoomWithIntent(
+          ctx.io,
+          `guild:${guildId}`,
+          GatewayIntents.GUILDS,
+          'RAID_DETECTED',
+          {
+            guildId,
+            joinCount,
+            windowSeconds: config.joinWindowSeconds,
+            action: config.action,
+          },
+        );
 
         logger.warn(
           { guildId, joinCount, action: config.action },
@@ -144,7 +157,13 @@ export function createModerationService(ctx: AppContext) {
     await ctx.redis.del(`raid_lockdown:${guildId}`);
     await ctx.redis.del(`raid_monitor:${guildId}`);
 
-    ctx.io.to(`guild:${guildId}`).emit('RAID_RESOLVED', { guildId });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILDS,
+      'RAID_RESOLVED',
+      { guildId },
+    );
     logger.info({ guildId }, 'Raid manually resolved');
   }
 
@@ -166,7 +185,13 @@ export function createModerationService(ctx: AppContext) {
       })
       .returning();
 
-    ctx.io.to(`guild:${guildId}`).emit('REPORT_CREATE', { guildId, reportId: id });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILDS,
+      'REPORT_CREATE',
+      { guildId, reportId: id },
+    );
 
     return report;
   }
@@ -218,11 +243,17 @@ export function createModerationService(ctx: AppContext) {
       .returning();
 
     if (updated) {
-      ctx.io.to(`guild:${updated.guildId}`).emit('REPORT_UPDATE', {
-        guildId: updated.guildId,
-        reportId,
-        status: input.status,
-      });
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${updated.guildId}`,
+        GatewayIntents.GUILDS,
+        'REPORT_UPDATE',
+        {
+          guildId: updated.guildId,
+          reportId,
+          status: input.status,
+        },
+      );
     }
 
     return updated ?? null;

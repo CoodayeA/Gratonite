@@ -4,6 +4,7 @@ import type { AppContext } from '../../lib/context.js';
 import { generateId } from '../../lib/snowflake.js';
 import { logger } from '../../lib/logger.js';
 import type { CreateEventInput, UpdateEventInput } from './events.schemas.js';
+import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
 
 export function createEventsService(ctx: AppContext) {
   async function createEvent(guildId: string, creatorId: string, input: CreateEventInput) {
@@ -25,7 +26,13 @@ export function createEventsService(ctx: AppContext) {
       })
       .returning();
 
-    ctx.io.to(`guild:${guildId}`).emit('GUILD_SCHEDULED_EVENT_CREATE', event as any);
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILDS,
+      'GUILD_SCHEDULED_EVENT_CREATE',
+      event as any,
+    );
 
     return event;
   }
@@ -81,7 +88,13 @@ export function createEventsService(ctx: AppContext) {
       .returning();
 
     if (updated) {
-      ctx.io.to(`guild:${updated.guildId}`).emit('GUILD_SCHEDULED_EVENT_UPDATE', updated as any);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${updated.guildId}`,
+        GatewayIntents.GUILDS,
+        'GUILD_SCHEDULED_EVENT_UPDATE',
+        updated as any,
+      );
     }
 
     return updated ?? null;
@@ -93,10 +106,16 @@ export function createEventsService(ctx: AppContext) {
 
     await ctx.db.delete(guildScheduledEvents).where(eq(guildScheduledEvents.id, eventId));
 
-    ctx.io.to(`guild:${event.guildId}`).emit('GUILD_SCHEDULED_EVENT_DELETE', {
-      id: eventId,
-      guildId: event.guildId,
-    });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${event.guildId}`,
+      GatewayIntents.GUILDS,
+      'GUILD_SCHEDULED_EVENT_DELETE',
+      {
+        id: eventId,
+        guildId: event.guildId,
+      },
+    );
 
     return { success: true };
   }
@@ -122,11 +141,17 @@ export function createEventsService(ctx: AppContext) {
       .set({ interestedCount: sql`${guildScheduledEvents.interestedCount} + 1` })
       .where(eq(guildScheduledEvents.id, eventId));
 
-    ctx.io.to(`guild:${guildId}`).emit('GUILD_SCHEDULED_EVENT_USER_ADD', {
-      eventId,
-      userId,
-      guildId,
-    });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILDS,
+      'GUILD_SCHEDULED_EVENT_USER_ADD',
+      {
+        eventId,
+        userId,
+        guildId,
+      },
+    );
 
     return { success: true };
   }
@@ -160,11 +185,17 @@ export function createEventsService(ctx: AppContext) {
       })
       .where(eq(guildScheduledEvents.id, eventId));
 
-    ctx.io.to(`guild:${guildId}`).emit('GUILD_SCHEDULED_EVENT_USER_REMOVE', {
-      eventId,
-      userId,
-      guildId,
-    });
+    await emitRoomWithIntent(
+      ctx.io,
+      `guild:${guildId}`,
+      GatewayIntents.GUILDS,
+      'GUILD_SCHEDULED_EVENT_USER_REMOVE',
+      {
+        eventId,
+        userId,
+        guildId,
+      },
+    );
 
     return { success: true };
   }
@@ -192,7 +223,13 @@ export function createEventsService(ctx: AppContext) {
       .returning();
 
     for (const event of events) {
-      ctx.io.to(`guild:${event.guildId}`).emit('GUILD_SCHEDULED_EVENT_UPDATE', event as any);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${event.guildId}`,
+        GatewayIntents.GUILDS,
+        'GUILD_SCHEDULED_EVENT_UPDATE',
+        event as any,
+      );
       logger.info({ eventId: event.id, guildId: event.guildId }, 'Auto-started scheduled event');
     }
 

@@ -8,3 +8,4 @@ export * from './guilds';
 export * from './channels';
 export * from './messages';
 export * from './voice';
+export * from './bots';

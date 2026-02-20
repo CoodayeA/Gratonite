@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { messages } from '@gratonite/db';
 import type { AppContext } from '../../lib/context.js';
 import { logger } from '../../lib/logger.js';
+import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
 
 const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
 const CACHE_TTL = 60 * 60 * 24; // 24 hours
@@ -154,9 +155,21 @@ export function createLinkPreviewService(ctx: AppContext) {
       };
 
       if (updated.guildId) {
-        ctx.io.to(`guild:${updated.guildId}`).emit('MESSAGE_UPDATE', updatePayload as any);
+        await emitRoomWithIntent(
+          ctx.io,
+          `guild:${updated.guildId}`,
+          GatewayIntents.GUILD_MESSAGES,
+          'MESSAGE_UPDATE',
+          updatePayload as any,
+        );
       } else {
-        ctx.io.to(`channel:${updated.channelId}`).emit('MESSAGE_UPDATE', updatePayload as any);
+        await emitRoomWithIntent(
+          ctx.io,
+          `channel:${updated.channelId}`,
+          GatewayIntents.DIRECT_MESSAGES,
+          'MESSAGE_UPDATE',
+          updatePayload as any,
+        );
       }
     }
 
