@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { NavLink, useParams } from 'react-router-dom';
 import { useChannelsStore } from '@/stores/channels.store';
 import { useGuildsStore } from '@/stores/guilds.store';
@@ -11,6 +11,9 @@ import type { Channel } from '@gratonite/types';
 const GUILD_VOICE = 'GUILD_VOICE';
 const GUILD_CATEGORY = 'GUILD_CATEGORY';
 
+// Stable empty array to avoid creating new references on every selector call
+const EMPTY_IDS: string[] = [];
+
 function ChannelIcon({ type }: { type: string | number }) {
   if (type === GUILD_VOICE) return <span className="channel-icon">🔊</span>;
   return <span className="channel-icon">#</span>;
@@ -21,7 +24,7 @@ export function ChannelSidebar() {
   const guild = useGuildsStore((s) => (guildId ? s.guilds.get(guildId) : undefined));
   const channels = useChannelsStore((s) => s.channels);
   const channelIds = useChannelsStore((s) =>
-    guildId ? s.channelsByGuild.get(guildId) ?? [] : [],
+    guildId ? s.channelsByGuild.get(guildId) ?? EMPTY_IDS : EMPTY_IDS,
   );
   const openModal = useUiStore((s) => s.openModal);
 

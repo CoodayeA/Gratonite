@@ -16,6 +16,19 @@ export function UserBar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Close menu on outside click — must be BEFORE the early return to maintain
+  // consistent hook count across renders (React rules of hooks)
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [menuOpen]);
+
   if (!user) return null;
 
   async function handleLogout() {
@@ -32,19 +45,6 @@ export function UserBar() {
     queryClient.clear();
     navigate('/login', { replace: true });
   }
-
-  // Close menu on outside click
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  useEffect(() => {
-    if (!menuOpen) return;
-    function handleClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [menuOpen]);
 
   return (
     <div className="user-bar" ref={menuRef}>
