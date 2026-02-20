@@ -1,8 +1,8 @@
 # Gratonite — Development Progress
 
 > **Last updated:** 2026-02-20
-> **Current Phase:** Phase 7A — Web App MVP (Complete)
-> **Status:** Functional web client with auth, guilds, channels, real-time messaging
+> **Current Phase:** Phase 7A+ — Web App Polish (Complete)
+> **Status:** Fully interactive web client with auth, guilds, channels, messaging, modals, invites, member list
 
 ---
 
@@ -1034,6 +1034,33 @@ After live testing against real API, 7 bugs found and fixed:
 5. **Guild addGuild dedup** — `guilds.has(guild.id)` checked new map (always true after set); fixed to check `state.guilds` (old state)
 6. **Optimistic message author** — Composer's optimistic insert lacked `author` object; added from auth store user data
 7. **Phase 6 DB migration partial failure** — `bot` column + 5 bot platform tables missing; manually applied via ALTER TABLE + CREATE TABLE
+
+---
+
+### Phase 7A+ Polish: Usability & Core Interactions ✅
+
+**Commit:** `4ce7f3a` — 18 files changed, 1066 insertions
+
+Made the MVP actually usable and demonstrable by adding all critical UI interactions:
+
+**New components (7 files):**
+- `Modal.tsx` — Reusable modal dialog (ESC, backdrop dismiss, focus trap, body scroll lock, ARIA)
+- `CreateGuildModal.tsx` — Server creation form (name + description), wired to "+" button in GuildRail
+- `InviteModal.tsx` — Auto-generates invite link on open, copy-to-clipboard with "Copied!" feedback
+- `LeaveGuildModal.tsx` — Confirmation dialog with owner check (shows "transfer ownership" if owner)
+- `UserBar.tsx` — User info bar at bottom of ChannelSidebar (avatar, names, gear → logout menu)
+- `MemberList.tsx` — Togglable member list panel (4th grid column, shows avatars + display names)
+- `useGuildMembers.ts` — TanStack Query hook for fetching guild members
+
+**Modified files (11):**
+- Auth pages (Login, Register, Invite) — shared `getErrorMessage()` helper handles `RateLimitError` (retry seconds), network errors, and generic `ApiRequestError`
+- `api.ts` — Added `guilds.leave`, `guilds.delete`, `invites.create` client methods
+- `GuildRail.tsx` — "+" button opens create-guild modal
+- `ChannelSidebar.tsx` — Guild header dropdown (Invite People / Leave Server), UserBar at bottom
+- `TopBar.tsx` — Invite link button + member list toggle button (SVG icons)
+- `AppLayout.tsx` — Renders all 3 modals + conditional MemberList panel, dynamic grid layout
+- `styles.css` — +415 lines: modal overlay/content/animations, user bar, dropdown menus, invite link, member list panel, 4-column grid
+- `guilds.service.ts` (backend) — `getMembers()` now joins `users + userProfiles` for display data
 
 ---
 
