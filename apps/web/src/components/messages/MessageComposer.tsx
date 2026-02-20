@@ -52,17 +52,23 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
     const nonce = generateNonce();
 
     // Optimistic insert
-    const optimistic: Message & { nonce: string } = {
+    const optimistic: Message & { nonce: string; author?: { id: string; username: string; displayName: string; avatarHash: string | null } } = {
       id: nonce, // temp ID
       channelId,
       authorId: user.id,
       content: trimmed,
       type: 0,
       createdAt: new Date().toISOString(),
-      editedAt: null,
+      editedTimestamp: null,
       pinned: false,
       nonce,
-    } as Message & { nonce: string };
+      author: {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatarHash: user.avatarHash ?? null,
+      },
+    } as any;
 
     addMessage(optimistic);
     setContent('');

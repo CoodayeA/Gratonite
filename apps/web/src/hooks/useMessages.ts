@@ -17,12 +17,13 @@ export function useMessages(channelId: string | undefined) {
         before: pageParam as string | undefined,
         limit: PAGE_SIZE,
       });
-      return messages;
+      // API returns newest-first (DESC) — reverse to oldest-first for display
+      return messages.reverse();
     },
     getNextPageParam: (lastPage: Message[]) => {
       // If we got less than PAGE_SIZE messages, there are no more
       if (lastPage.length < PAGE_SIZE) return undefined;
-      // Use the oldest message ID as cursor
+      // After reversal, oldest message is first — use its ID as cursor for "before"
       return lastPage[0]?.id;
     },
     initialPageParam: undefined as string | undefined,

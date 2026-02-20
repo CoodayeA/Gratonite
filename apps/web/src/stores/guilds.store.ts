@@ -32,8 +32,9 @@ export const useGuildsStore = create<GuildsState>((set) => ({
   addGuild: (guild) =>
     set((state) => {
       const guilds = new Map(state.guilds);
+      const isNew = !state.guilds.has(guild.id);
       guilds.set(guild.id, guild);
-      const guildOrder = guilds.has(guild.id) ? state.guildOrder : [...state.guildOrder, guild.id];
+      const guildOrder = isNew ? [...state.guildOrder, guild.id] : state.guildOrder;
       return { guilds, guildOrder };
     }),
 

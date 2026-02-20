@@ -12,6 +12,8 @@ import {
   pollVotes,
   threads,
   scheduledMessages,
+  users,
+  userProfiles,
 } from '@gratonite/db';
 import type { AppContext } from '../../lib/context.js';
 import { generateId } from '../../lib/snowflake.js';
@@ -790,10 +792,24 @@ export function createMessagesService(ctx: AppContext) {
 
     const poll = message.pollId ? await getPoll(message.pollId) : null;
 
+    // Fetch author info
+    const [authorRow] = await ctx.db
+      .select({
+        id: users.id,
+        username: users.username,
+        displayName: userProfiles.displayName,
+        avatarHash: userProfiles.avatarHash,
+      })
+      .from(users)
+      .innerJoin(userProfiles, eq(users.id, userProfiles.userId))
+      .where(eq(users.id, message.authorId))
+      .limit(1);
+
     return {
       ...message,
       attachments,
       poll,
+      author: authorRow ?? { id: message.authorId, username: 'Deleted User', displayName: 'Deleted User', avatarHash: null },
     };
   }
 
@@ -803,6 +819,7 @@ export function createMessagesService(ctx: AppContext) {
     const messageIds = list.map((m) => m.id);
     const pollIds = list.map((m) => m.pollId).filter((id): id is string => Boolean(id));
 
+    // Fetch attachments
     const attachments = await ctx.db
       .select()
       .from(messageAttachments)
@@ -815,6 +832,24 @@ export function createMessagesService(ctx: AppContext) {
       attachmentsByMessage.set(attachment.messageId, existing);
     }
 
+    // Fetch authors
+    const authorIds = [...new Set(list.map((m) => m.authorId))];
+    const authorRows = authorIds.length > 0
+      ? await ctx.db
+          .select({
+            id: users.id,
+            username: users.username,
+            displayName: userProfiles.displayName,
+            avatarHash: userProfiles.avatarHash,
+          })
+          .from(users)
+          .innerJoin(userProfiles, eq(users.id, userProfiles.userId))
+          .where(inArray(users.id, authorIds))
+      : [];
+    const authorsById = new Map(authorRows.map((a) => [a.id, a]));
+    const deletedAuthor = { id: '0', username: 'Deleted User', displayName: 'Deleted User', avatarHash: null };
+
+    // Fetch polls
     let pollsById = new Map<string, any>();
     if (pollIds.length > 0) {
       const pollsList = await ctx.db.select().from(polls).where(inArray(polls.id, pollIds));
@@ -837,6 +872,7 @@ export function createMessagesService(ctx: AppContext) {
       ...message,
       attachments: attachmentsByMessage.get(message.id) ?? [],
       poll: message.pollId ? pollsById.get(message.pollId) ?? null : null,
+      author: authorsById.get(message.authorId) ?? { ...deletedAuthor, id: message.authorId },
     }));
   }
 

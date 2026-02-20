@@ -4,12 +4,11 @@ import { useGuildsStore } from '@/stores/guilds.store';
 import { useGuildChannels } from '@/hooks/useGuildChannels';
 import type { Channel } from '@gratonite/types';
 
-// Channel type constants
-const GUILD_TEXT = 0;
-const GUILD_VOICE = 2;
-const GUILD_CATEGORY = 4;
+// Channel type constants (API returns string enums)
+const GUILD_VOICE = 'GUILD_VOICE';
+const GUILD_CATEGORY = 'GUILD_CATEGORY';
 
-function ChannelIcon({ type }: { type: number }) {
+function ChannelIcon({ type }: { type: string | number }) {
   if (type === GUILD_VOICE) return <span className="channel-icon">🔊</span>;
   return <span className="channel-icon">#</span>;
 }

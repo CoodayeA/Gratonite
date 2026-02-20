@@ -34,7 +34,7 @@ export function MessageItem({ message, isGrouped }: MessageItemProps) {
         <div className="message-header">
           <span className="message-author">{displayName}</span>
           <span className="message-timestamp">{formatTimestamp(message.createdAt)}</span>
-          {message.editedAt && <span className="message-edited">(edited)</span>}
+          {message.editedTimestamp && <span className="message-edited">(edited)</span>}
         </div>
         <div className="message-content">{message.content}</div>
       </div>

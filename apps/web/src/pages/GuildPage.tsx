@@ -6,8 +6,8 @@ import { useGuildChannels } from '@/hooks/useGuildChannels';
 import { getSocket } from '@/lib/socket';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
-// Channel type constants
-const GUILD_TEXT = 0;
+// Channel type constants (API returns string enums)
+const GUILD_TEXT = 'GUILD_TEXT';
 
 export function GuildPage() {
   const { guildId, channelId } = useParams<{ guildId: string; channelId?: string }>();
