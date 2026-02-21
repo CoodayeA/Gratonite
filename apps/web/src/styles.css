@@ -1230,6 +1230,12 @@ button {
   flex-shrink: 0;
 }
 
+.message-composer-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
 .message-composer-input {
   width: 100%;
   padding: 12px 16px;
