@@ -126,7 +126,7 @@ export function RegisterPage() {
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        error={fieldErrors.email?.[0]}
+        error={fieldErrors['email']?.[0]}
         required
         autoComplete="email"
         autoFocus
@@ -138,7 +138,7 @@ export function RegisterPage() {
         value={displayName}
         onChange={(e) => setDisplayName(e.target.value)}
         hint="This is how others see you. You can always change it later."
-        error={fieldErrors.displayName?.[0]}
+        error={fieldErrors['displayName']?.[0]}
       />
 
       <Input
@@ -150,7 +150,7 @@ export function RegisterPage() {
         error={
           usernameAvailable === false
             ? 'Username is already taken'
-            : fieldErrors.username?.[0]
+            : fieldErrors['username']?.[0]
         }
         required
         autoComplete="username"
@@ -162,7 +162,7 @@ export function RegisterPage() {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         hint={password.length > 0 && password.length < 8 ? 'Must be at least 8 characters' : ''}
-        error={fieldErrors.password?.[0]}
+        error={fieldErrors['password']?.[0]}
         required
         autoComplete="new-password"
         minLength={8}
@@ -173,7 +173,7 @@ export function RegisterPage() {
         type="date"
         value={dateOfBirth}
         onChange={(e) => setDateOfBirth(e.target.value)}
-        error={fieldErrors.dateOfBirth?.[0]}
+        error={fieldErrors['dateOfBirth']?.[0]}
         required
       />
 

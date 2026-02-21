@@ -7,7 +7,7 @@ interface TypingIndicatorProps {
   channelId: string;
 }
 
-const TYPING_TIMEOUT = 10_000; // 10s — entries older than this are stale
+const TYPING_TIMEOUT = 6_000; // 6s — entries older than this are stale
 
 export function TypingIndicator({ channelId }: TypingIndicatorProps) {
   const currentUserId = useAuthStore((s) => s.user?.id);
@@ -27,7 +27,7 @@ export function TypingIndicator({ channelId }: TypingIndicatorProps) {
         }
       });
       setTick((t) => t + 1);
-    }, 2000);
+    }, 1000);
 
     return () => clearInterval(interval);
   }, [channelId, typingMap, clearTyping]);

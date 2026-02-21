@@ -89,6 +89,15 @@ export function setupGateway(ctx: AppContext) {
           socket.join(`guild:${guild.id}`);
         }
 
+        // Join all DM channel rooms the user is a recipient of
+        const dmRooms = await ctx.db
+          .select({ channelId: dmRecipients.channelId })
+          .from(dmRecipients)
+          .where(eq(dmRecipients.userId, userId));
+        for (const dm of dmRooms) {
+          socket.join(`channel:${dm.channelId}`);
+        }
+
         // Track online status in Redis
         await ctx.redis.sadd(`online_users`, userId);
         await ctx.redis.set(`user_socket:${userId}`, socket.id, 'EX', 3600);
@@ -154,6 +163,28 @@ export function setupGateway(ctx: AppContext) {
 
     socket.on('GUILD_UNSUBSCRIBE', (data: { guildId: string }) => {
       socket.leave(`guild:${data.guildId}`);
+    });
+
+    // ── CHANNEL_SUBSCRIBE / UNSUBSCRIBE (DM channels) ─────────────────────
+
+    socket.on('CHANNEL_SUBSCRIBE', async (data: { channelId: string }) => {
+      if (!socket.userId) return;
+      const channel = await channelsService.getChannel(data.channelId);
+      if (!channel || (channel.type !== 'DM' && channel.type !== 'GROUP_DM')) return;
+
+      const [recipient] = await ctx.db
+        .select({ userId: dmRecipients.userId })
+        .from(dmRecipients)
+        .where(and(eq(dmRecipients.channelId, data.channelId), eq(dmRecipients.userId, socket.userId)))
+        .limit(1);
+
+      if (recipient) {
+        socket.join(`channel:${data.channelId}`);
+      }
+    });
+
+    socket.on('CHANNEL_UNSUBSCRIBE', (data: { channelId: string }) => {
+      socket.leave(`channel:${data.channelId}`);
     });
 
     // ── PRESENCE_UPDATE ────────────────────────────────────────────────────

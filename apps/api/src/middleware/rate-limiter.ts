@@ -87,10 +87,10 @@ export const authRateLimiter = rateLimiter({
   keyPrefix: 'auth',
 });
 
-/** Registration rate limiter: 3 per hour per IP */
+/** Registration rate limiter: 20 per minute per IP (dev-friendly) */
 export const registerRateLimiter = rateLimiter({
-  windowSeconds: 3600,
-  maxRequests: 3,
+  windowSeconds: 60,
+  maxRequests: 20,
   keyPrefix: 'register',
 });
 

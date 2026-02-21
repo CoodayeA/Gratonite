@@ -8,7 +8,11 @@ import { MessageList } from '@/components/messages/MessageList';
 import { MessageComposer } from '@/components/messages/MessageComposer';
 import { TypingIndicator } from '@/components/messages/TypingIndicator';
 import { EmojiPicker } from '@/components/ui/EmojiPicker';
+import { PinnedMessagesPanel } from '@/components/messages/PinnedMessagesPanel';
+import { SearchPanel } from '@/components/search/SearchPanel';
+import { ThreadPanel } from '@/components/threads/ThreadPanel';
 import { api } from '@/lib/api';
+import { useUiStore } from '@/stores/ui.store';
 import type { Message } from '@gratonite/types';
 
 export function ChannelPage() {
@@ -17,6 +21,9 @@ export function ChannelPage() {
   const markRead = useUnreadStore((s) => s.markRead);
   const channel = useChannelsStore((s) => channelId ? s.channels.get(channelId) : undefined);
   const isDm = channel?.type === 'DM' || channel?.type === 'GROUP_DM';
+  const pinnedPanelOpen = useUiStore((s) => s.pinnedPanelOpen);
+  const searchPanelOpen = useUiStore((s) => s.searchPanelOpen);
+  const threadPanelOpen = useUiStore((s) => s.threadPanelOpen);
 
   // Reply handling
   const setReplyingTo = useMessagesStore((s) => s.setReplyingTo);
@@ -25,9 +32,9 @@ export function ChannelPage() {
   }, [channelId, setReplyingTo]);
 
   // Emoji picker for reactions
-  const [emojiTarget, setEmojiTarget] = useState<{ messageId: string } | null>(null);
-  const handleOpenEmojiPicker = useCallback((messageId: string) => {
-    setEmojiTarget({ messageId });
+  const [emojiTarget, setEmojiTarget] = useState<{ messageId: string; x?: number; y?: number } | null>(null);
+  const handleOpenEmojiPicker = useCallback((messageId: string, coords?: { x: number; y: number }) => {
+    setEmojiTarget({ messageId, x: coords?.x, y: coords?.y });
   }, []);
 
   useEffect(() => {
@@ -76,6 +83,15 @@ export function ChannelPage() {
           ? (isDm ? `Message @${channel.name ?? 'direct message'}` : `Message #${channel.name}`)
           : 'Message #channel'}
       />
+      {pinnedPanelOpen && !isDm && (
+        <PinnedMessagesPanel channelId={channelId} />
+      )}
+      {searchPanelOpen && (
+        <SearchPanel channelId={channelId} />
+      )}
+      {threadPanelOpen && !isDm && (
+        <ThreadPanel channelId={channelId} />
+      )}
       {emojiTarget && (
         <EmojiPicker
           onSelect={(emoji) => {
@@ -83,6 +99,8 @@ export function ChannelPage() {
             setEmojiTarget(null);
           }}
           onClose={() => setEmojiTarget(null)}
+          x={emojiTarget.x}
+          y={emojiTarget.y}
         />
       )}
     </div>

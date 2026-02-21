@@ -6,16 +6,20 @@ import { useUiStore } from '@/stores/ui.store';
 import { useGuildChannels } from '@/hooks/useGuildChannels';
 import { UserBar } from './UserBar';
 import type { Channel } from '@gratonite/types';
+import { useUnreadStore } from '@/stores/unread.store';
 
 // Channel type constants (API returns string enums)
 const GUILD_VOICE = 'GUILD_VOICE';
 const GUILD_CATEGORY = 'GUILD_CATEGORY';
+const DM = 'DM';
+const GROUP_DM = 'GROUP_DM';
 
 // Stable empty array to avoid creating new references on every selector call
 const EMPTY_IDS: string[] = [];
 
 function ChannelIcon({ type }: { type: string | number }) {
   if (type === GUILD_VOICE) return <span className="channel-icon">🔊</span>;
+  if (type === DM || type === GROUP_DM) return <span className="channel-icon">@</span>;
   return <span className="channel-icon">#</span>;
 }
 
@@ -27,6 +31,13 @@ export function ChannelSidebar() {
     guildId ? s.channelsByGuild.get(guildId) ?? EMPTY_IDS : EMPTY_IDS,
   );
   const openModal = useUiStore((s) => s.openModal);
+  const unreadByChannel = useUnreadStore((s) => s.unreadByChannel);
+
+  const dmChannels = useMemo(() => {
+    return Array.from(channels.values())
+      .filter((ch) => ch.type === DM || ch.type === GROUP_DM)
+      .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+  }, [channels]);
 
   // Guild header dropdown
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -66,21 +77,33 @@ export function ChannelSidebar() {
   return (
     <aside className="channel-sidebar">
       <div className="channel-sidebar-header" ref={dropdownRef}>
-        <button
-          className="channel-sidebar-guild-btn"
-          onClick={() => setDropdownOpen(!dropdownOpen)}
-        >
-          <h2 className="channel-sidebar-guild-name">{guild?.name ?? 'Gratonite'}</h2>
-          <span className="channel-sidebar-chevron">{dropdownOpen ? '\u25B2' : '\u25BC'}</span>
-        </button>
+        {guildId ? (
+          <button
+            className="channel-sidebar-guild-btn"
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+          >
+            <h2 className="channel-sidebar-guild-name">{guild?.name ?? 'Gratonite'}</h2>
+            <span className="channel-sidebar-chevron">{dropdownOpen ? '\u25B2' : '\u25BC'}</span>
+          </button>
+        ) : (
+          <div className="channel-sidebar-guild-btn is-static">
+            <h2 className="channel-sidebar-guild-name">Direct Messages</h2>
+          </div>
+        )}
 
-        {dropdownOpen && (
+        {dropdownOpen && guildId && (
           <div className="channel-sidebar-dropdown">
             <button
               className="dropdown-item"
               onClick={() => { openModal('invite'); setDropdownOpen(false); }}
             >
               Invite People
+            </button>
+            <button
+              className="dropdown-item"
+              onClick={() => { openModal('edit-server-profile', { guildId }); setDropdownOpen(false); }}
+            >
+              Server Profile
             </button>
             <div className="dropdown-divider" />
             <button
@@ -94,6 +117,44 @@ export function ChannelSidebar() {
       </div>
 
       <div className="channel-sidebar-list">
+        {!guildId && (
+          <>
+            <div className="channel-sidebar-section">
+              <span className="channel-sidebar-section-title">DMs</span>
+            </div>
+            {dmChannels.length === 0 && (
+              <div className="channel-empty">No direct messages yet.</div>
+            )}
+            {dmChannels.map((ch) => (
+              <NavLink
+                key={ch.id}
+                to={`/dm/${ch.id}`}
+                className={({ isActive }) =>
+                  `channel-item ${isActive ? 'channel-item-active' : ''}`
+                }
+              >
+                <ChannelIcon type={ch.type} />
+                <span className="channel-name">{ch.name ?? 'Direct Message'}</span>
+                {unreadByChannel.has(ch.id) && <span className="channel-unread-dot" />}
+              </NavLink>
+            ))}
+          </>
+        )}
+
+        {guildId && (
+          <>
+        <div className="channel-sidebar-section">
+          <span className="channel-sidebar-section-title">Channels</span>
+          {guildId && (
+            <button
+              className="channel-sidebar-add"
+              onClick={() => openModal('create-channel', { guildId })}
+              title="Create channel"
+            >
+              +
+            </button>
+          )}
+        </div>
         {/* Uncategorized channels */}
         {uncategorized.map((ch) => (
           <NavLink
@@ -105,6 +166,7 @@ export function ChannelSidebar() {
           >
             <ChannelIcon type={ch.type} />
             <span className="channel-name">{ch.name}</span>
+            {unreadByChannel.has(ch.id) && <span className="channel-unread-dot" />}
           </NavLink>
         ))}
 
@@ -115,6 +177,15 @@ export function ChannelSidebar() {
             <div key={cat.id} className="channel-category">
               <div className="channel-category-header">
                 <span className="channel-category-name">{cat.name}</span>
+                {guildId && (
+                  <button
+                    className="channel-category-add"
+                    onClick={() => openModal('create-channel', { guildId, parentId: cat.id })}
+                    title={`Add channel to ${cat.name}`}
+                  >
+                    +
+                  </button>
+                )}
               </div>
               {children.map((ch) => (
                 <NavLink
@@ -126,11 +197,14 @@ export function ChannelSidebar() {
                 >
                   <ChannelIcon type={ch.type} />
                   <span className="channel-name">{ch.name}</span>
+                  {unreadByChannel.has(ch.id) && <span className="channel-unread-dot" />}
                 </NavLink>
               ))}
             </div>
           );
         })}
+          </>
+        )}
       </div>
 
       <UserBar />

@@ -8,6 +8,10 @@ interface MessagesState {
   hasMoreByChannel: Map<string, boolean>;
   /** channelId → Map<userId, lastTypingTimestamp> */
   typingByChannel: Map<string, Map<string, number>>;
+  /** Currently-editing message ID (or null) */
+  editingMessageId: string | null;
+  /** channelId → message being replied to */
+  replyingTo: Map<string, Message | null>;
 
   /** Add a new message (from send or gateway). Deduplicates by nonce. */
   addMessage: (message: Message) => void;
@@ -23,6 +27,14 @@ interface MessagesState {
   setTyping: (channelId: string, userId: string, timestamp: number) => void;
   /** Clear a typing indicator. */
   clearTyping: (channelId: string, userId: string) => void;
+  /** Set the message being edited. */
+  setEditingMessage: (id: string | null) => void;
+  /** Set the message being replied to for a channel. */
+  setReplyingTo: (channelId: string, message: Message | null) => void;
+  /** Add a reaction to a message locally. */
+  addReaction: (channelId: string, messageId: string, emoji: string, userId: string) => void;
+  /** Remove a reaction from a message locally. */
+  removeReaction: (channelId: string, messageId: string, emoji: string, userId: string) => void;
   /** Clear all data (on logout). */
   clear: () => void;
 }
@@ -31,6 +43,8 @@ export const useMessagesStore = create<MessagesState>((set) => ({
   messagesByChannel: new Map(),
   hasMoreByChannel: new Map(),
   typingByChannel: new Map(),
+  editingMessageId: null,
+  replyingTo: new Map(),
 
   addMessage: (message) =>
     set((state) => {
@@ -136,10 +150,80 @@ export const useMessagesStore = create<MessagesState>((set) => ({
       return { typingByChannel: map };
     }),
 
+  setEditingMessage: (id) =>
+    set({ editingMessageId: id }),
+
+  setReplyingTo: (channelId, message) =>
+    set((state) => {
+      const map = new Map(state.replyingTo);
+      if (message) {
+        map.set(channelId, message);
+      } else {
+        map.delete(channelId);
+      }
+      return { replyingTo: map };
+    }),
+
+  addReaction: (channelId, messageId, emoji, userId) =>
+    set((state) => {
+      const existing = state.messagesByChannel.get(channelId);
+      if (!existing) return state;
+      const idx = existing.findIndex((m) => m.id === messageId);
+      if (idx < 0) return state;
+
+      const msg = existing[idx]!;
+      const reactions = [...((msg as any).reactions ?? [])];
+      const reactionIdx = reactions.findIndex((r: any) => r.emoji === emoji);
+      if (reactionIdx >= 0) {
+        const r = { ...reactions[reactionIdx]! };
+        r.count = (r.count ?? 0) + 1;
+        r.userIds = [...(r.userIds ?? []), userId];
+        reactions[reactionIdx] = r;
+      } else {
+        reactions.push({ emoji, count: 1, userIds: [userId] });
+      }
+
+      const updated = [...existing];
+      updated[idx] = { ...msg, reactions } as any;
+      const map = new Map(state.messagesByChannel);
+      map.set(channelId, updated);
+      return { messagesByChannel: map };
+    }),
+
+  removeReaction: (channelId, messageId, emoji, userId) =>
+    set((state) => {
+      const existing = state.messagesByChannel.get(channelId);
+      if (!existing) return state;
+      const idx = existing.findIndex((m) => m.id === messageId);
+      if (idx < 0) return state;
+
+      const msg = existing[idx]!;
+      let reactions = [...((msg as any).reactions ?? [])];
+      const reactionIdx = reactions.findIndex((r: any) => r.emoji === emoji);
+      if (reactionIdx < 0) return state;
+
+      const r = { ...reactions[reactionIdx]! };
+      r.count = Math.max(0, (r.count ?? 1) - 1);
+      r.userIds = (r.userIds ?? []).filter((id: string) => id !== userId);
+      if (r.count <= 0) {
+        reactions.splice(reactionIdx, 1);
+      } else {
+        reactions[reactionIdx] = r;
+      }
+
+      const updated = [...existing];
+      updated[idx] = { ...msg, reactions } as any;
+      const map = new Map(state.messagesByChannel);
+      map.set(channelId, updated);
+      return { messagesByChannel: map };
+    }),
+
   clear: () =>
     set({
       messagesByChannel: new Map(),
       hasMoreByChannel: new Map(),
       typingByChannel: new Map(),
+      editingMessageId: null,
+      replyingTo: new Map(),
     }),
 }));

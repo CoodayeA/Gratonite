@@ -182,7 +182,11 @@ export async function endDmCall() {
 export async function toggleMute() {
   const { muted } = useCallStore.getState();
   if (!localAudioTrack) return;
-  localAudioTrack.setEnabled(muted);
+  if (muted) {
+    await localAudioTrack.unmute();
+  } else {
+    await localAudioTrack.mute();
+  }
   useCallStore.getState().setState({ muted: !muted });
 }
 
@@ -220,6 +224,7 @@ export async function toggleScreenShare(): Promise<void> {
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
       const track = stream.getVideoTracks()[0];
+      if (!track) return;
       const lvt = new LocalVideoTrack(track, undefined, false);
       await r.localParticipant.publishTrack(lvt, { source: Track.Source.ScreenShare });
       localScreenTrack = lvt;

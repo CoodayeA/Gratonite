@@ -9,6 +9,7 @@ import { LeaveGuildModal } from '@/components/modals/LeaveGuildModal';
 import { DeleteMessageModal } from '@/components/modals/DeleteMessageModal';
 import { EditProfileModal } from '@/components/modals/EditProfileModal';
 import { EditServerProfileModal } from '@/components/modals/EditServerProfileModal';
+import { CreateThreadModal } from '@/components/modals/CreateThreadModal';
 import { DmCallOverlay } from '@/components/call/DmCallOverlay';
 import { DmIncomingCallModal } from '@/components/call/DmIncomingCallModal';
 import { DmInfoPanel } from '@/components/messages/DmInfoPanel';
@@ -18,6 +19,7 @@ export function AppLayout() {
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
   const memberPanelOpen = useUiStore((s) => s.memberPanelOpen);
   const dmInfoPanelOpen = useUiStore((s) => s.dmInfoPanelOpen);
+  const activeModal = useUiStore((s) => s.activeModal);
 
   const layoutClass = [
     'app-layout',
@@ -39,13 +41,14 @@ export function AppLayout() {
       <DmInfoPanel recipient={null} />
 
       {/* Modals */}
-      <CreateGuildModal />
-      <CreateChannelModal />
-      <InviteModal />
-      <LeaveGuildModal />
-      <DeleteMessageModal />
-      <EditProfileModal />
-      <EditServerProfileModal />
+      {activeModal === 'create-guild' && <CreateGuildModal />}
+      {activeModal === 'create-channel' && <CreateChannelModal />}
+      {activeModal === 'invite' && <InviteModal />}
+      {activeModal === 'leave-guild' && <LeaveGuildModal />}
+      {activeModal === 'delete-message' && <DeleteMessageModal />}
+      {activeModal === 'edit-profile' && <EditProfileModal />}
+      {activeModal === 'edit-server-profile' && <EditServerProfileModal />}
+      {activeModal === 'create-thread' && <CreateThreadModal />}
       <DmCallOverlay />
       <DmIncomingCallModal />
     </div>

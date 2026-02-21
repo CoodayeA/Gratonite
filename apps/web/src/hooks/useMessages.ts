@@ -1,7 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useMessagesStore } from '@/stores/messages.store';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { Message } from '@gratonite/types';
 
 const PAGE_SIZE = 50;
@@ -9,6 +9,7 @@ const PAGE_SIZE = 50;
 export function useMessages(channelId: string | undefined) {
   const setMessages = useMessagesStore((s) => s.setMessages);
   const prependMessages = useMessagesStore((s) => s.prependMessages);
+  const lastUpdatedRef = useRef(0);
 
   const query = useInfiniteQuery({
     queryKey: ['messages', channelId],
@@ -32,6 +33,9 @@ export function useMessages(channelId: string | undefined) {
 
   // Sync first page into store
   useEffect(() => {
+    if (!query.data || !channelId) return;
+    if (query.dataUpdatedAt === lastUpdatedRef.current) return;
+    lastUpdatedRef.current = query.dataUpdatedAt;
     if (query.data && channelId) {
       const allPages = query.data.pages;
       if (allPages.length === 1) {
@@ -44,7 +48,7 @@ export function useMessages(channelId: string | undefined) {
         prependMessages(channelId, oldestPage, oldestPage.length >= PAGE_SIZE);
       }
     }
-  }, [query.data, channelId, setMessages, prependMessages]);
+  }, [query.data, query.dataUpdatedAt, channelId, setMessages, prependMessages]);
 
   return query;
 }

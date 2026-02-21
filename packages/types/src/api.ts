@@ -89,16 +89,3 @@ export interface UploadResponse {
   size: number;
   contentType: string;
 }
-
-/** Server analytics (daily aggregate) */
-export interface ServerAnalyticsDaily {
-  guildId: Snowflake;
-  date: string; // YYYY-MM-DD
-  totalMembers: number;
-  newMembers: number;
-  leftMembers: number;
-  messagesSent: number;
-  activeMembers: number;
-  voiceMinutes: number;
-  reactionsAdded: number;
-}

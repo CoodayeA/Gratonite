@@ -8,6 +8,7 @@ import type {
   Channel,
   Message,
   GuildMember,
+  Thread,
 } from '@gratonite/types';
 
 // ---------------------------------------------------------------------------
@@ -17,8 +18,19 @@ import type {
 let accessToken: string | null = null;
 let refreshPromise: Promise<string | null> | null = null;
 
+if (typeof window !== 'undefined') {
+  accessToken = window.localStorage.getItem('gratonite_access_token');
+}
+
 export function setAccessToken(token: string | null) {
   accessToken = token;
+  if (typeof window !== 'undefined') {
+    if (token) {
+      window.localStorage.setItem('gratonite_access_token', token);
+    } else {
+      window.localStorage.removeItem('gratonite_access_token');
+    }
+  }
 }
 export function getAccessToken(): string | null {
   return accessToken;
@@ -28,7 +40,10 @@ export function getAccessToken(): string | null {
 // Base URL
 // ---------------------------------------------------------------------------
 
-const API_BASE = import.meta.env.VITE_API_URL ?? '/api/v1';
+const rawApiBase = import.meta.env.VITE_API_URL ?? '/api/v1';
+const API_BASE = rawApiBase.endsWith('/api/v1')
+  ? rawApiBase
+  : `${rawApiBase.replace(/\/$/, '')}/api/v1`;
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -186,6 +201,23 @@ interface InviteInfo {
   maxUses: number | null;
 }
 
+interface SearchMessagesResponse {
+  results: Array<{
+    id: string;
+    channelId: string;
+    guildId: string | null;
+    authorId: string;
+    content: string;
+    type: number;
+    createdAt: string;
+    highlight: string;
+    rank: number;
+  }>;
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export const api = {
   auth: {
     register: (data: RegisterRequest) =>
@@ -327,7 +359,7 @@ export const api = {
   },
 
   guilds: {
-    getMine: () => apiFetch<Guild[]>('/users/@me/guilds'),
+    getMine: () => apiFetch<Guild[]>('/guilds/@me'),
 
     get: (guildId: string) => apiFetch<Guild>(`/guilds/${guildId}`),
 
@@ -453,6 +485,41 @@ export const api = {
 
     unpin: (channelId: string, messageId: string) =>
       apiFetch<void>(`/channels/${channelId}/pins/${messageId}`, { method: 'DELETE' }),
+  },
+
+  search: {
+    messages: (params: { query: string; guildId?: string; channelId?: string; authorId?: string; before?: string; after?: string; limit?: number; offset?: number }) => {
+      const query = new URLSearchParams();
+      query.set('query', params.query);
+      if (params.guildId) query.set('guildId', params.guildId);
+      if (params.channelId) query.set('channelId', params.channelId);
+      if (params.authorId) query.set('authorId', params.authorId);
+      if (params.before) query.set('before', params.before);
+      if (params.after) query.set('after', params.after);
+      if (params.limit) query.set('limit', String(params.limit));
+      if (params.offset) query.set('offset', String(params.offset));
+      return apiFetch<SearchMessagesResponse>(`/search/messages?${query.toString()}`);
+    },
+  },
+
+  threads: {
+    create: (channelId: string, data: { name: string; type?: string; autoArchiveDuration?: number; message?: string }) =>
+      apiFetch<Thread>(`/channels/${channelId}/threads`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    list: (channelId: string) =>
+      apiFetch<Thread[]>(`/channels/${channelId}/threads`),
+
+    get: (threadId: string) =>
+      apiFetch<Thread>(`/threads/${threadId}`),
+
+    join: (threadId: string) =>
+      apiFetch<void>(`/threads/${threadId}/members/@me`, { method: 'PUT' }),
+
+    leave: (threadId: string) =>
+      apiFetch<void>(`/threads/${threadId}/members/@me`, { method: 'DELETE' }),
   },
 
   invites: {

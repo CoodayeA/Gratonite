@@ -65,14 +65,20 @@ export function getInitials(name: string, maxLength = 2): string {
  * Determine if two consecutive messages should be grouped
  * (same author, within 7 minutes, no special type).
  */
+function isDefaultMessageType(type?: string | number) {
+  if (type === undefined) return true;
+  if (type === 0) return true;
+  return type === 'DEFAULT';
+}
+
 export function shouldGroupMessages(
-  prev: { authorId: string; createdAt: string; type?: number } | undefined,
-  curr: { authorId: string; createdAt: string; type?: number },
+  prev: { authorId: string; createdAt: string; type?: string | number } | undefined,
+  curr: { authorId: string; createdAt: string; type?: string | number },
 ): boolean {
   if (!prev) return false;
   if (prev.authorId !== curr.authorId) return false;
-  if (prev.type !== undefined && prev.type !== 0) return false;
-  if (curr.type !== undefined && curr.type !== 0) return false;
+  if (!isDefaultMessageType(prev.type)) return false;
+  if (!isDefaultMessageType(curr.type)) return false;
 
   const prevTime = new Date(prev.createdAt).getTime();
   const currTime = new Date(curr.createdAt).getTime();
