@@ -6,6 +6,7 @@ import {
   timestamp,
   date,
   integer,
+  jsonb,
   pgEnum,
 } from 'drizzle-orm/pg-core';
 import { bigintString } from './helpers';
@@ -136,6 +137,25 @@ export const userSettings = pgTable('user_settings', {
   allowFriendRequestsFrom: privacyLevelEnum('allow_friend_requests_from')
     .notNull()
     .default('everyone'),
+  // Call settings
+  ringtone: varchar('ringtone', { length: 255 }),
+  callRingDuration: integer('call_ring_duration').notNull().default(30),
+});
+
+// ============================================================================
+// DND schedule (timezone-aware, day-of-week bitmask)
+// ============================================================================
+
+export const userDndSchedule = pgTable('user_dnd_schedule', {
+  userId: bigintString('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  enabled: boolean('enabled').notNull().default(false),
+  startTime: varchar('start_time', { length: 5 }).notNull().default('22:00'),
+  endTime: varchar('end_time', { length: 5 }).notNull().default('08:00'),
+  timezone: varchar('timezone', { length: 64 }).notNull().default('UTC'),
+  daysOfWeek: integer('days_of_week').notNull().default(127),
+  allowExceptions: jsonb('allow_exceptions').$type<string[]>().default([]),
 });
 
 // ============================================================================
