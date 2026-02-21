@@ -1,8 +1,40 @@
 # Gratonite — Development Progress
 
 > **Last updated:** 2026-02-20
-> **Current Phase:** Phase 7A+ — Web App Polish (Complete)
-> **Status:** Fully interactive web client with auth, guilds, channels, messaging, modals, invites, member list
+> **Current Phase:** Phase 7B — Desktop + DM Calls (COMPLETE)
+> **Status:** All 8 Phase 7B tasks implemented: call audio, screen share, DND, desktop polish, permission refactor
+
+### Completed This Session (Phase 7B)
+- AudioManager singleton + 7 placeholder sound assets (ringtone, outgoing-ring, call-connect, call-end, message, mention, dm)
+- DB schema: added `ringtone`, `callRingDuration` to userSettings + new `userDndSchedule` table (migration 0006)
+- Call audio cues: ringtone on incoming, outgoing-ring on dialing, call-connect/end sounds on state transitions
+- Call timeout: 30s auto-decline for incoming calls, 60s auto-cancel for outgoing calls
+- Camera/mic permission error handling with user-friendly messages (NotAllowedError, NotFoundError)
+- Screen share in DM calls via LiveKit (getDisplayMedia + Track.Source.ScreenShare), browser "Stop sharing" sync
+- Connection quality indicators (green/yellow/red dots via ConnectionQualityChanged event)
+- Participant nameplates on remote video tiles (identity + quality dot)
+- DM info panel (slide-out right panel with recipient avatar, display name, bio)
+- Picture-in-Picture support via native browser API on remote video
+- Do Not Disturb system: timezone-aware schedule, day-of-week bitmask, exception users, gateway enforcement (auto-decline when DND active)
+- DND quick-toggle in UserBar menu with optimistic update
+- Desktop notification sounds (message/mention/DM tiers) in SocketProvider
+- Desktop click-to-navigate: notification click routes to the correct channel/DM
+- GitHub Releases publish config for electron-builder distribution
+- Backend permission refactor: `getMemberPermissions()` helper replaces 5 owner-only voice mod checks with proper MUTE_MEMBERS/DEAFEN_MEMBERS/MOVE_MEMBERS/MANAGE_CHANNELS permission resolution
+
+### Previous Session
+- Phase 7A+++ web readiness: profile resolver, per-server overrides, unread dots, profile popovers
+- Desktop build pipeline + icon integration; auto-update plumbing + IPC bridge
+- Deep links: desktop protocol handling + web routing integration
+- DM layout polish (sidebar DM list, intro header, top bar call controls)
+- DM voice/video calls: LiveKit join, overlay controls, incoming call modal, remote tiles
+- DM call signaling: invite/accept/decline/cancel via gateway socket events
+
+### Planned Next (Shortlist)
+- Desktop: macOS code signing + distribution artifacts
+- Mobile (Phase 7C): Expo navigation + functional screens, push notifications, deep links
+- Offline-first (Phase 7D): WatermelonDB setup + sync
+- Web polish: thread UI, search UI, settings pages, reaction display
 
 ---
 
@@ -27,7 +59,7 @@ Drizzle ORM 0.45.1's `bigint({ mode: 'string' })` does NOT return strings at run
 ### Running the Server
 
 ```bash
-# Start Docker services (PostgreSQL + MinIO + LiveKit + Coturn — Redis may need SSH tunnel)
+# Start Docker services (PostgreSQL + MinIO + LiveKit + Coturn + Redis)
 docker-compose up -d
 
 # Install dependencies
@@ -812,24 +844,91 @@ Test sequence: upload file → message with attachment → upload emoji → list
 
 ---
 
-### Phase 7: Cross-Platform Apps (PLANNING)
+### Phase 7A+ : Web App Polish ✅
+
+#### Shipped
+- Auth (register/login/logout) with error handling
+- Guild creation/join via invite/leave
+- Channel navigation + realtime messaging
+- Invite link generation + copy
+- Member list panel + guild dropdown menu
+
+#### Next options
+- 7A++ Web polish: channel creation UI, message edit/delete, profile editing, unread dots, DM/friend UI
+- 7B Desktop app: Electron wrapper with native menus, tray, auto-update, notifications
+- 7C Mobile app: Expo screens, push, deep links
+
+#### Phase 7A++ Web interactions (COMPLETE)
+- Added channel creation UI (modal + sidebar add buttons) and wired to API/store
+- Added message context menu + ensured delete modal is mounted
+- Added profile edit modal with default avatar/banner uploads and display name/bio/pronouns
+- Added per-server profile modal (nickname, avatar, banner, bio overrides)
+- Added Friends & DMs home view with relationship actions + DM list + /dm route
+
+#### Phase 7A+++ Web readiness (COMPLETE)
+- Added shared profile resolver and applied it to member list, message author display, and user bar
+- Added per-server avatar/banner/nickname resolution across guild UI
+- Added unread indicators for channels + DMs
+- Added profile popovers (banner/avatar/username/bio)
+
+---
+
+### Phase 7: Cross-Platform Apps (IN PROGRESS)
 
 #### Planning Focus
 - Desktop app UX: navigation, tray behavior, notifications, and window state
 - Mobile app UX: gesture-first interactions, bottom sheets, haptics, and quick reply
 - Push notification + deep link routing plan
-- Offline-first data layer (WatermelonDB) scope and sync boundaries
+
+#### Phase 7B Desktop + DM Calls ✅
+
+**Prior sessions (foundation):**
+- Desktop build pipeline (electron-builder for macOS/Windows/Linux)
+- Auto-update plumbing (electron-updater, env-driven feed URL)
+- Desktop pack smoke run (mac arm64, unsigned, custom icon set)
+- IPC bridge (notifications, app badge, external links, manual update checks)
+- Deep-link handling (gratonite://) with single-instance lock + renderer routing
+- DM voice/video call flow (LiveKit join, overlay controls, incoming call modal, remote tracks)
+- DM call signaling (invite/accept/decline/cancel via gateway socket events)
+- DM layout polish (sidebar DM list, intro header, call controls in top bar)
+
+**This session (8 tasks, 8 commits):**
+
+| Commit | Task | Files |
+|--------|------|-------|
+| `f085b7f` | AudioManager singleton + 7 placeholder WAV sounds | `audio.ts`, `public/sounds/*` |
+| `9727f1c` | DB: `ringtone` + `callRingDuration` cols, `userDndSchedule` table | `users.ts`, migration 0006 |
+| `d43cf24` | Call audio cues + 30s/60s timeout + permission error handling | `dmCall.ts`, `SocketProvider.tsx`, `call.store.ts` |
+| `68af32f` | Screen share + connection quality dots + participant nameplates | `DmCallOverlay.tsx`, `dmCall.ts`, `call.store.ts`, `styles.css` |
+| `f867513` | DM info panel + Picture-in-Picture | `DmInfoPanel.tsx`, `ui.store.ts`, `TopBar.tsx`, `AppLayout.tsx` |
+| `02befa5` | DND system (backend schedule + gateway enforcement + UserBar toggle) | `dnd.service.ts`, `users.router.ts`, `gateway.ts`, `UserBar.tsx`, `api.ts` |
+| `d572c99` | Desktop notification sounds + click-to-navigate + GitHub Releases config | `SocketProvider.tsx`, `main.js`, `preload.js`, `App.tsx`, `desktop.ts` |
+| `c51f764` | Permission refactor: `getMemberPermissions()` replaces 5 owner-only checks | `guilds.service.ts`, `voice.router.ts` |
+
+**New files created:**
+- `apps/web/src/lib/audio.ts` — AudioManager (playSound/stopSound/stopAllSounds)
+- `apps/web/public/sounds/` — 7 WAV files (ringtone, outgoing-ring, call-connect, call-end, message, mention, dm)
+- `apps/api/src/modules/users/dnd.service.ts` — DND schedule service (getSchedule, updateSchedule, isDndActive)
+- `apps/web/src/components/messages/DmInfoPanel.tsx` — Recipient info slide-out panel
+- `docs/plans/2026-02-20-phase-7b-desktop-calls.md` — Implementation plan
+
+**Key features delivered:**
+- Call sounds: ringtone loops on incoming, outgoing-ring loops while dialing, connect/end chimes on transitions
+- Auto-timeout: incoming calls auto-decline after 30s, outgoing calls auto-cancel after 60s
+- Permission errors: friendly messages for denied/missing camera/mic
+- Screen share: getDisplayMedia + LiveKit ScreenShare source, auto-stop when browser stops sharing
+- Connection quality: green/yellow/red dots via LiveKit ConnectionQualityChanged event
+- DND: timezone-aware schedule with day-of-week bitmask, exception user list, gateway auto-decline
+- Desktop: notification click navigates to channel, message/mention/DM sound tiers
+- Permissions: getMemberPermissions resolves @everyone + assigned roles, replaces owner-only voice mod checks
 
 #### Remaining Phase 7 Build Tasks
-- Tunnel/staging config wiring and scripts
-- Desktop build pipeline (bundler + artifacts)
-- Web app routing/auth/API integration
-- Deep link handling end-to-end (desktop + mobile + backend)
+- Desktop: macOS code signing + distribution artifacts
 - Offline-first implementation (WatermelonDB setup + sync)
-- Mobile navigation + functional screens
-- Distribution workflow for desktop builds
+- Mobile navigation + functional screens (Phase 7C)
+- GitHub Releases distribution: add `"publish": { "provider": "github" }` to desktop package.json
 
-#### Desktop (Electron) ✅ (scaffold)
+#### Desktop (Electron) ✅
 - Added cross-platform build targets: macOS, Windows, Linux
 - Basic window state persistence + tray flow + hotkey stub
 - UX placeholder shell with typography + gradient atmosphere
