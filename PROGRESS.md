@@ -1,8 +1,8 @@
 # Gratonite — Development Progress
 
 > **Last updated:** 2026-02-20
-> **Current Phase:** Phase 8 — Web App Polish (IN PROGRESS — 2/9 tasks complete)
-> **Status:** CSS foundation + message prop wiring done. Next: emoji picker fix, reactions, search, threads, settings.
+> **Current Phase:** Phase 8 — Web App Polish (COMPLETE — 9/9 tasks complete)
+> **Status:** Phase 8 complete: emoji picker fix, reactions sync, pinned/search/thread panels, settings page, integration pass.
 
 ### Completed This Session (Phase 8: Web App Polish)
 
@@ -20,17 +20,38 @@
 - `MessageComposer` integrates `FileUploadButton` + `AttachmentPreview` for file uploads
 - Reply reference (`messageReference`) included in send API call
 
-### Remaining Phase 8 Tasks (7 of 9)
+**Task 3: Emoji Picker Fix** (COMPLETE)
+- Added emoji name map + search filtering
+- Added x/y positioning and viewport clamping; wired click coordinates from message actions
 
-| # | Task | Status | Description |
-|---|------|--------|-------------|
-| 3 | Emoji Picker Fix | PENDING | Fix broken search (always returns all), add x/y positioning with viewport clamping |
-| 4 | Reaction Gateway | PENDING | Add MESSAGE_REACTION_ADD/REMOVE handlers to SocketProvider for real-time sync |
-| 5 | Pinned Panel Wiring | PENDING | Add pin button to TopBar, render PinnedMessagesPanel in ChannelPage |
-| 6 | Search UI | PENDING | Search store + SearchPanel + API client + TopBar button (backend exists) |
-| 7 | Thread UI | PENDING | ThreadPanel + useThreads hook + API client + Create Thread context menu (backend exists) |
-| 8 | Settings Page | PENDING | Full-viewport settings: account, appearance, notifications/DND, /settings route |
-| 9 | Integration + Docs | PENDING | Final pass, responsive rules, PROGRESS.md update |
+**Task 4: Reaction Gateway** (COMPLETE)
+- Added MESSAGE_REACTION_ADD/REMOVE handlers in SocketProvider for real-time reaction sync
+
+**Task 5: Pinned Panel Wiring** (COMPLETE)
+- Added pin button in TopBar for guild channels
+- Rendered PinnedMessagesPanel in ChannelPage
+
+**Task 6: Search UI** (COMPLETE)
+- Added search API client, store, and SearchPanel
+- Added TopBar search toggle + ChannelPage wiring
+- Added search panel styling + responsive hide on mobile
+
+**Task 7: Thread UI** (COMPLETE)
+- Added threads API client + useThreads hook
+- Added ThreadPanel with list + thread view and create thread modal
+- Wired thread panel open state + socket invalidation
+
+**Task 8: Settings Page** (COMPLETE)
+- Added full-screen SettingsPage and /settings route
+- Added user bar settings shortcut + appearance + DND schedule UI
+
+**Task 9: Integration + Docs** (COMPLETE)
+- Panel auto-close logic and responsive rules for search/thread panels
+- PROGRESS.md updated for Phase 8 completion
+
+### Remaining Phase 8 Tasks
+
+None — Phase 8 is complete.
 
 ### Previous Sessions
 - **Phase 7B** (COMPLETE): Call audio, screen share, DND, desktop polish, permission refactor

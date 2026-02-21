@@ -7,6 +7,7 @@ import { useGuildsStore } from '@/stores/guilds.store';
 import { GuildIcon } from '@/components/ui/GuildIcon';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { getSocket } from '@/lib/socket';
 
 interface InvitePreview {
   code: string;
@@ -52,6 +53,7 @@ export function InvitePage() {
     try {
       const guild = await api.invites.accept(code);
       addGuild(guild);
+      getSocket()?.emit('GUILD_SUBSCRIBE', { guildId: guild.id });
       navigate(`/guild/${guild.id}`, { replace: true });
     } catch (err) {
       setError(getErrorMessage(err));

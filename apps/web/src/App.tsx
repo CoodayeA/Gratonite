@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth.store';
-import { api, setAccessToken } from '@/lib/api';
+import { api, getAccessToken, setAccessToken } from '@/lib/api';
 import { useGuildsStore } from '@/stores/guilds.store';
 import { useChannelsStore } from '@/stores/channels.store';
 import { useMessagesStore } from '@/stores/messages.store';
@@ -23,6 +23,7 @@ import { HomePage } from '@/pages/HomePage';
 import { GuildPage } from '@/pages/GuildPage';
 import { ChannelPage } from '@/pages/ChannelPage';
 import { InvitePage } from '@/pages/InvitePage';
+import { SettingsPage } from '@/pages/SettingsPage';
 
 // Loading
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
@@ -38,14 +39,10 @@ export function App() {
 
     async function tryRefresh() {
       try {
-        const token = await api.auth.refresh();
-        if (cancelled) return;
-
-        if (token) {
-          setAccessToken(token);
+        const existingToken = getAccessToken();
+        if (existingToken) {
           const me = await api.users.getMe();
           if (cancelled) return;
-
           login({
             id: me.id,
             username: me.username,
@@ -54,9 +51,28 @@ export function App() {
             avatarHash: me.profile.avatarHash,
             tier: me.profile.tier,
           });
-        } else {
-          setLoading(false);
+          return;
         }
+
+        const token = await api.auth.refresh();
+        if (cancelled) return;
+
+        if (token) {
+          setAccessToken(token);
+          const me = await api.users.getMe();
+          if (cancelled) return;
+          login({
+            id: me.id,
+            username: me.username,
+            email: me.email,
+            displayName: me.profile.displayName,
+            avatarHash: me.profile.avatarHash,
+            tier: me.profile.tier,
+          });
+          return;
+        }
+
+        setLoading(false);
       } catch {
         if (!cancelled) {
           setLoading(false);
@@ -126,6 +142,7 @@ export function App() {
           <Route path="channel/:channelId" element={<ChannelPage />} />
         </Route>
         <Route path="/dm/:channelId" element={<ChannelPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Route>
     </Routes>
   );

@@ -9,8 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@gratonite/profile-resolver": "workspace:*",
     "@gratonite/types": "workspace:*",
     "@tanstack/react-query": "^5.60.0",
+    "livekit-client": "^2.4.3",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-router-dom": "^6.28.0",

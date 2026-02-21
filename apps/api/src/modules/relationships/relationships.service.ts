@@ -1,10 +1,20 @@
-import { eq, and, or, inArray } from 'drizzle-orm';
-import { relationships, dmChannels, dmRecipients, users, userProfiles } from '@gratonite/db';
+import { eq, and, or, inArray, sql } from 'drizzle-orm';
+import { relationships, dmChannels, dmRecipients, users, userProfiles, channels } from '@gratonite/db';
 import type { AppContext } from '../../lib/context.js';
 import { generateId } from '../../lib/snowflake.js';
 import { logger } from '../../lib/logger.js';
 
 export function createRelationshipsService(ctx: AppContext) {
+  async function ensureDmChannelRow(channel: { id: string; type: string; name?: string | null }) {
+    await ctx.db
+      .insert(channels)
+      .values({
+        id: channel.id,
+        type: channel.type === 'group_dm' ? 'GROUP_DM' : 'DM',
+        name: channel.name ?? null,
+      })
+      .onConflictDoNothing();
+  }
   // ── Friends ──────────────────────────────────────────────────────────────
 
   async function sendFriendRequest(fromUserId: string, toUserId: string) {
@@ -215,7 +225,10 @@ export function createRelationshipsService(ctx: AppContext) {
           .where(and(eq(dmChannels.id, dm.channelId), eq(dmChannels.type, 'dm')))
           .limit(1);
 
-        if (channel) return channel;
+        if (channel) {
+          await ensureDmChannelRow(channel as any);
+          return channel;
+        }
       }
     }
 
@@ -232,6 +245,8 @@ export function createRelationshipsService(ctx: AppContext) {
       { channelId, userId: targetId },
     ]);
 
+    await ensureDmChannelRow(channel as any);
+
     return channel;
   }
 
@@ -244,10 +259,16 @@ export function createRelationshipsService(ctx: AppContext) {
     if (recipientEntries.length === 0) return [];
 
     const channelIds = recipientEntries.map((r) => r.channelId);
-    return ctx.db
+    const channelsList = await ctx.db
       .select()
       .from(dmChannels)
       .where(inArray(dmChannels.id, channelIds));
+
+    for (const dmChannel of channelsList) {
+      await ensureDmChannelRow(dmChannel as any);
+    }
+
+    return channelsList;
   }
 
   async function createGroupDm(ownerId: string, recipientIds: string[], name?: string) {
@@ -269,6 +290,8 @@ export function createRelationshipsService(ctx: AppContext) {
     await ctx.db.insert(dmRecipients).values(
       allRecipients.map((userId) => ({ channelId, userId })),
     );
+
+    await ensureDmChannelRow(channel as any);
 
     return channel;
   }

@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import type { AppContext } from '../../lib/context.js';
+import { eq } from 'drizzle-orm';
+import { users } from '@gratonite/db';
 import { requireAuth } from '../../middleware/auth.js';
 import { createRelationshipsService } from './relationships.service.js';
 
@@ -18,6 +20,17 @@ export function relationshipsRouter(ctx: AppContext): Router {
   const relService = createRelationshipsService(ctx);
   const auth = requireAuth(ctx);
 
+  async function resolveUserId(input: string): Promise<string | null> {
+    if (/^\d+$/.test(input)) return input;
+    const username = input.trim().toLowerCase();
+    const [user] = await ctx.db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.username, username))
+      .limit(1);
+    return user ? user.id.toString() : null;
+  }
+
   // ── Relationships ────────────────────────────────────────────────────────
 
   // Get all relationships (friends, pending, blocked)
@@ -33,9 +46,14 @@ export function relationshipsRouter(ctx: AppContext): Router {
       return res.status(400).json({ code: 'VALIDATION_ERROR', errors: parsed.error.flatten().fieldErrors });
     }
 
+    const targetId = await resolveUserId(parsed.data.userId);
+    if (!targetId) {
+      return res.status(404).json({ code: 'USER_NOT_FOUND' });
+    }
+
     const result = await relService.sendFriendRequest(
       req.user!.userId,
-      parsed.data.userId,
+      targetId,
     );
 
     if ('error' in result) {
@@ -51,8 +69,8 @@ export function relationshipsRouter(ctx: AppContext): Router {
 
     if ('accepted' in result) {
       // Notify both users of new friendship
-      ctx.io.to(`user:${req.user!.userId}`).emit('USER_UPDATE', { userId: req.user!.userId, friendAdded: parsed.data.userId } as any);
-      ctx.io.to(`user:${parsed.data.userId}`).emit('USER_UPDATE', { userId: parsed.data.userId, friendAdded: req.user!.userId } as any);
+      ctx.io.to(`user:${req.user!.userId}`).emit('USER_UPDATE', { userId: req.user!.userId, friendAdded: targetId } as any);
+      ctx.io.to(`user:${targetId}`).emit('USER_UPDATE', { userId: targetId, friendAdded: req.user!.userId } as any);
     }
 
     res.status(201).json(result);
@@ -105,7 +123,10 @@ export function relationshipsRouter(ctx: AppContext): Router {
       return res.status(400).json({ code: 'VALIDATION_ERROR', errors: parsed.error.flatten().fieldErrors });
     }
 
-    const targetId = parsed.data.userId;
+    const targetId = await resolveUserId(parsed.data.userId);
+    if (!targetId) {
+      return res.status(404).json({ code: 'USER_NOT_FOUND' });
+    }
 
     // Check if blocked
     if (await relService.isBlocked(req.user!.userId, targetId)) {

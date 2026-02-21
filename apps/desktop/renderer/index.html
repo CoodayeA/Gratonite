@@ -120,6 +120,10 @@
               <span class="stat-value" id="platform">Detecting…</span>
             </div>
             <div class="stat-block">
+              <span class="stat-title">Updates</span>
+              <span class="stat-value" id="updates">No feed configured</span>
+            </div>
+            <div class="stat-block">
               <span class="stat-title">Notifications</span>
               <span class="stat-value">Grouped + routed</span>
             </div>
@@ -133,8 +137,14 @@
     </div>
     <script>
       const platform = document.getElementById('platform');
+      const updates = document.getElementById('updates');
       if (platform && window.gratonite) {
         platform.textContent = window.gratonite.platform;
+      }
+      if (updates && window.gratonite) {
+        updates.textContent = window.gratonite.updateUrl
+          ? 'Update feed connected'
+          : 'No update feed';
       }
     </script>
   </body>

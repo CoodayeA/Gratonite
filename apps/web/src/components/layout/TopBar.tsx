@@ -11,11 +11,11 @@ interface TopBarProps {
 export function TopBar({ channelId }: TopBarProps) {
   const channel = useChannelsStore((s) => channelId ? s.channels.get(channelId) : undefined);
   const toggleMemberPanel = useUiStore((s) => s.toggleMemberPanel);
+  const togglePinnedPanel = useUiStore((s) => s.togglePinnedPanel);
+  const toggleSearchPanel = useUiStore((s) => s.toggleSearchPanel);
   const openModal = useUiStore((s) => s.openModal);
   const isDm = channel?.type === 'DM' || channel?.type === 'GROUP_DM';
-  const channelLabel = channel
-    ? (isDm ? (channel.name ?? 'Direct Message') : channel.name)
-    : '';
+  const channelLabel = channel?.name ?? (isDm ? 'Direct Message' : 'channel');
   const canInvite = Boolean(channel?.guildId);
   const showMembersToggle = Boolean(channel?.guildId);
   const toggleDmInfo = useUiStore((s) => s.toggleDmInfoPanel);
@@ -91,10 +91,24 @@ export function TopBar({ channelId }: TopBarProps) {
             </svg>
           </button>
         )}
+        <button className="topbar-btn" onClick={toggleSearchPanel} title="Search messages">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        </button>
         {showMembersToggle && (
           <button className="topbar-btn" onClick={toggleMemberPanel} title="Toggle member list">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+            </svg>
+          </button>
+        )}
+        {!isDm && (
+          <button className="topbar-btn" onClick={togglePinnedPanel} title="Pinned messages">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="17" x2="12" y2="22" />
+              <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
             </svg>
           </button>
         )}

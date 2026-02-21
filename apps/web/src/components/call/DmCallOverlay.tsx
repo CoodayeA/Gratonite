@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { RoomEvent, Track, type RemoteTrack, ConnectionQuality, type RemoteParticipant } from 'livekit-client';
+import { RoomEvent, Track, type RemoteTrack, ConnectionQuality, type RemoteParticipant, type Participant } from 'livekit-client';
 import { useCallStore } from '@/stores/call.store';
 import { endDmCall, toggleMute, toggleVideo, toggleScreenShare } from '@/lib/dmCall';
 
@@ -12,20 +12,25 @@ export function DmCallOverlay() {
     const el = videoRef.current;
     if (!el || !localVideoTrack) return;
     localVideoTrack.attach(el);
-    return () => localVideoTrack.detach(el);
+    return () => {
+      localVideoTrack.detach(el);
+    };
   }, [localVideoTrack]);
 
   useEffect(() => {
     if (!room) return;
     function handleSubscribed(track: RemoteTrack, _pub: any, participant: RemoteParticipant) {
+      if (!track.sid) return;
+      const trackId = track.sid;
       const kind = track.kind === Track.Kind.Video ? 'video' : 'audio';
       setRemoteTracks((prev) => {
-        if (prev.some((item) => item.id === track.sid)) return prev;
-        return [...prev, { id: track.sid, track, kind, identity: participant.identity }];
+        if (prev.some((item) => item.id === trackId)) return prev;
+        return [...prev, { id: trackId, track, kind, identity: participant.identity }];
       });
     }
 
     function handleUnsubscribed(track: RemoteTrack) {
+      if (!track.sid) return;
       setRemoteTracks((prev) => prev.filter((item) => item.id !== track.sid));
     }
 
@@ -44,7 +49,7 @@ export function DmCallOverlay() {
 
   useEffect(() => {
     if (!room) return;
-    const onQuality = (quality: ConnectionQuality, participant: RemoteParticipant) => {
+    const onQuality = (quality: ConnectionQuality, participant: Participant) => {
       const label =
         quality === ConnectionQuality.Excellent ? 'excellent'
         : quality === ConnectionQuality.Good ? 'good'
@@ -136,7 +141,9 @@ function RemoteVideoTile({ track, identity, quality }: { track: RemoteTrack; ide
     const el = ref.current;
     if (!el) return;
     track.attach(el);
-    return () => track.detach(el);
+    return () => {
+      track.detach(el);
+    };
   }, [track]);
 
   const qualityColor =
@@ -165,7 +172,9 @@ function RemoteAudioTile({ track }: { track: RemoteTrack }) {
     const el = ref.current;
     if (!el) return;
     track.attach(el);
-    return () => track.detach(el);
+    return () => {
+      track.detach(el);
+    };
   }, [track]);
 
   return <audio ref={ref} autoPlay />;

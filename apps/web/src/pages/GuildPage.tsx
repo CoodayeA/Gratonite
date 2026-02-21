@@ -3,6 +3,7 @@ import { useParams, useNavigate, Outlet } from 'react-router-dom';
 import { useGuildsStore } from '@/stores/guilds.store';
 import { useChannelsStore } from '@/stores/channels.store';
 import { useGuildChannels } from '@/hooks/useGuildChannels';
+import { useGuildMembers } from '@/hooks/useGuildMembers';
 import { getSocket } from '@/lib/socket';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
@@ -19,6 +20,7 @@ export function GuildPage() {
 
   // Fetch channels for this guild
   const { isLoading } = useGuildChannels(guildId);
+  useGuildMembers(guildId);
 
   // Set current guild in store
   useEffect(() => {

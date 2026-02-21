@@ -12,19 +12,22 @@ interface MessageListProps {
   emptySubtitle?: string;
   intro?: React.ReactNode;
   onReply: (message: Message) => void;
-  onOpenEmojiPicker: (messageId: string) => void;
+  onOpenEmojiPicker: (messageId: string, coords?: { x: number; y: number }) => void;
 }
+
+const EMPTY_MESSAGES: Message[] = [];
 
 export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onReply, onOpenEmojiPicker }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const wasAtBottomRef = useRef(true);
+  const hasLoadedRef = useRef(false);
 
   const messages = useMessagesStore(
-    (s) => s.messagesByChannel.get(channelId) ?? [],
+    (s) => s.messagesByChannel.get(channelId) ?? EMPTY_MESSAGES,
   );
   const hasMore = useMessagesStore(
-    (s) => s.hasMoreByChannel.get(channelId) ?? true,
+    (s) => s.hasMoreByChannel.get(channelId) ?? false,
   );
 
   const { fetchNextPage, isFetchingNextPage, isLoading } = useMessages(channelId);
@@ -39,20 +42,29 @@ export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onRep
   // Auto-scroll to bottom on new messages (if already at bottom)
   useEffect(() => {
     if (wasAtBottomRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      bottomRef.current?.scrollIntoView({ behavior: 'auto' });
     }
   }, [messages.length]);
 
   // Initial scroll to bottom
   useEffect(() => {
+    hasLoadedRef.current = false;
     bottomRef.current?.scrollIntoView();
   }, [channelId]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      hasLoadedRef.current = true;
+    }
+  }, [isLoading]);
 
   // Scroll-to-top pagination
   const handleScroll = useCallback(() => {
     checkAtBottom();
     const el = containerRef.current;
     if (!el) return;
+    if (!hasLoadedRef.current) return;
+    if (messages.length === 0) return;
     if (el.scrollTop < 100 && hasMore && !isFetchingNextPage) {
       const prevHeight = el.scrollHeight;
       fetchNextPage().then(() => {
@@ -64,7 +76,7 @@ export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onRep
         });
       });
     }
-  }, [checkAtBottom, hasMore, isFetchingNextPage, fetchNextPage]);
+  }, [checkAtBottom, hasMore, isFetchingNextPage, fetchNextPage, messages.length]);
 
   if (isLoading) {
     return (

@@ -9,6 +9,7 @@ import { playSound, stopSound } from '../lib/audio';
 import { clearRingTimeout } from '../lib/dmCall';
 import { useCallStore } from '@/stores/call.store';
 import { useAuthStore } from '@/stores/auth.store';
+import { queryClient } from '@/lib/queryClient';
 import type { Message, Channel, Guild } from '@gratonite/types';
 
 /**
@@ -72,6 +73,34 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       useMessagesStore.getState().removeMessage(data.channelId, data.id);
     });
 
+    socket.on('MESSAGE_REACTION_ADD', (data: { channelId: string; messageId: string; emoji: { name: string } | string; userId: string }) => {
+      const emojiName = typeof data.emoji === 'string' ? data.emoji : data.emoji.name;
+      useMessagesStore.getState().addReaction(data.channelId, data.messageId, emojiName, data.userId);
+    });
+
+    socket.on('MESSAGE_REACTION_REMOVE', (data: { channelId: string; messageId: string; emoji: { name: string } | string; userId: string }) => {
+      const emojiName = typeof data.emoji === 'string' ? data.emoji : data.emoji.name;
+      useMessagesStore.getState().removeReaction(data.channelId, data.messageId, emojiName, data.userId);
+    });
+
+    socket.on('THREAD_CREATE', (data: { parentId?: string }) => {
+      if (data.parentId) {
+        queryClient.invalidateQueries({ queryKey: ['threads', data.parentId] });
+      }
+    });
+
+    socket.on('THREAD_UPDATE', (data: { parentId?: string }) => {
+      if (data.parentId) {
+        queryClient.invalidateQueries({ queryKey: ['threads', data.parentId] });
+      }
+    });
+
+    socket.on('THREAD_DELETE', (data: { parentId?: string }) => {
+      if (data.parentId) {
+        queryClient.invalidateQueries({ queryKey: ['threads', data.parentId] });
+      }
+    });
+
     // ---- Typing events ----
     socket.on('TYPING_START', (data: { channelId: string; userId: string }) => {
       useMessagesStore.getState().setTyping(data.channelId, data.userId, Date.now());
@@ -94,6 +123,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     // ---- Guild events ----
     socket.on('GUILD_CREATE', (data: Guild) => {
       useGuildsStore.getState().addGuild(data);
+      socket.emit('GUILD_SUBSCRIBE', { guildId: data.id });
     });
 
     socket.on('GUILD_UPDATE', (data: Guild) => {
@@ -104,13 +134,22 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       useGuildsStore.getState().removeGuild(data.id);
     });
 
-    socket.on('GUILD_MEMBER_ADD', (data: { guildId: string }) => {
-      // Could refresh member list — for MVP just note the event
-      console.log('[Gateway] Member added to guild', data.guildId);
+    socket.on('GUILD_MEMBER_ADD', (data: { guildId: string; userId?: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['members', data.guildId] });
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser?.id && data.userId === currentUser.id) {
+        socket.emit('GUILD_SUBSCRIBE', { guildId: data.guildId });
+        queryClient.invalidateQueries({ queryKey: ['guilds', '@me'] });
+      }
     });
 
     socket.on('GUILD_MEMBER_REMOVE', (data: { guildId: string; userId: string }) => {
-      console.log('[Gateway] Member removed from guild', data.guildId);
+      queryClient.invalidateQueries({ queryKey: ['members', data.guildId] });
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser?.id && data.userId === currentUser.id) {
+        socket.emit('GUILD_UNSUBSCRIBE', { guildId: data.guildId });
+        queryClient.invalidateQueries({ queryKey: ['guilds', '@me'] });
+      }
     });
 
     // ---- DM Call events ----
