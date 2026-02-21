@@ -2175,6 +2175,63 @@ button {
 }
 
 /* ==========================================================================
+   DM Info Panel
+   ========================================================================== */
+
+.app-layout.dm-info-panel-open {
+  grid-template-columns: var(--guild-rail-width) var(--channel-sidebar-width) 1fr 340px;
+}
+
+.app-layout.sidebar-collapsed.dm-info-panel-open {
+  grid-template-columns: var(--guild-rail-width) 0 1fr 340px;
+}
+
+.dm-info-panel {
+  width: 340px;
+  background: rgba(11, 17, 28, 0.95);
+  border-left: 1px solid var(--stroke);
+  padding: 24px 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dm-info-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--stroke);
+}
+
+.dm-info-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.dm-info-username {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.dm-info-section h4 {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 0 0 8px;
+}
+
+.dm-info-section p {
+  font-size: 14px;
+  margin: 0;
+  color: var(--text);
+}
+
+/* ==========================================================================
    Responsive
    ========================================================================== */
 
@@ -2185,7 +2242,8 @@ button {
 
   .guild-rail,
   .channel-sidebar,
-  .member-list {
+  .member-list,
+  .dm-info-panel {
     display: none;
   }
 }

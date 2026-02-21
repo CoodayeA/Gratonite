@@ -58,6 +58,20 @@ export function DmCallOverlay() {
     };
   }, [room]);
 
+  const handlePiP = async () => {
+    const videoEl = document.querySelector('.dm-call-video.is-live video') as HTMLVideoElement | null;
+    if (!videoEl) return;
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else {
+        await videoEl.requestPictureInPicture();
+      }
+    } catch {
+      // PiP not supported or denied
+    }
+  };
+
   if (status === 'idle' || !channelId) return null;
 
   return (
@@ -105,6 +119,9 @@ export function DmCallOverlay() {
           </button>
           <button className={`dm-call-btn ${screenShareEnabled ? 'is-active' : ''}`} onClick={toggleScreenShare}>
             {screenShareEnabled ? 'Stop Share' : 'Share Screen'}
+          </button>
+          <button className="dm-call-btn" onClick={handlePiP} title="Picture-in-Picture">
+            PiP
           </button>
         </div>
       </div>
