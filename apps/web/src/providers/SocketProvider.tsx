@@ -42,7 +42,23 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         const author = (data as Message & { author?: { displayName?: string } }).author;
         const title = author?.displayName ?? 'New message';
         const body = data.content ?? 'You received a new message.';
-        notifyDesktop({ title, body });
+
+        // Build a route for click-to-navigate on desktop notifications
+        const route = data.guildId
+          ? `/guild/${data.guildId}/channel/${data.channelId}`
+          : `/dm/${data.channelId}`;
+        notifyDesktop({ title, body, route });
+
+        // Play notification sound based on context
+        const isDm = !data.guildId;
+        const isMention = data.mentions?.includes(currentUser.id);
+        if (isMention) {
+          playSound('mention');
+        } else if (isDm) {
+          playSound('dm');
+        } else {
+          playSound('message');
+        }
       } else {
         useUnreadStore.getState().markRead(data.channelId);
       }

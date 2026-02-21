@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth.store';
 import { api, setAccessToken } from '@/lib/api';
 import { useGuildsStore } from '@/stores/guilds.store';
 import { useChannelsStore } from '@/stores/channels.store';
 import { useMessagesStore } from '@/stores/messages.store';
+import { onDeepLink, onNavigate } from '@/lib/desktop';
+import { useUnreadBadge } from '@/hooks/useUnreadBadge';
 
 // Layouts
 import { AuthLayout } from '@/layouts/AuthLayout';
@@ -27,6 +29,8 @@ import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 export function App() {
   const { isLoading, login, logout, setLoading } = useAuthStore();
+  const navigate = useNavigate();
+  useUnreadBadge();
 
   // Silent token refresh on app mount
   useEffect(() => {
@@ -66,6 +70,28 @@ export function App() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Listen for desktop notification click-to-navigate events
+  useEffect(() => {
+    return onNavigate((route: string) => {
+      navigate(route);
+    });
+  }, [navigate]);
+
+  useEffect(() => {
+    return onDeepLink((url) => {
+      if (!url.startsWith('gratonite://')) return;
+      const path = url.replace('gratonite://', '').replace(/^\//, '');
+      const [route, ...rest] = path.split('/');
+      if (route === 'invite' && rest[0]) {
+        navigate(`/invite/${rest[0]}`);
+      } else if (route === 'dm' && rest[0]) {
+        navigate(`/dm/${rest[0]}`);
+      } else if (route === 'guild' && rest[0] && rest[1] === 'channel' && rest[2]) {
+        navigate(`/guild/${rest[0]}/channel/${rest[2]}`);
+      }
+    });
+  }, [navigate]);
+
   if (isLoading) {
     return <LoadingScreen />;
   }
@@ -99,6 +125,7 @@ export function App() {
         <Route path="/guild/:guildId" element={<GuildPage />}>
           <Route path="channel/:channelId" element={<ChannelPage />} />
         </Route>
+        <Route path="/dm/:channelId" element={<ChannelPage />} />
       </Route>
     </Routes>
   );

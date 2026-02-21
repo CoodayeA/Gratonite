@@ -2,13 +2,18 @@
   "name": "@gratonite/desktop",
   "version": "0.1.0",
   "private": true,
+  "author": "Gratonite",
   "description": "Gratonite desktop app (Electron)",
   "main": "src/main.js",
   "scripts": {
     "dev": "electron .",
-    "build": "echo 'TODO: add bundler'",
+    "build": "electron-builder --publish never",
     "pack": "electron-builder --dir",
     "dist": "electron-builder"
+  },
+  "dependencies": {
+    "electron-log": "^5.3.0",
+    "electron-updater": "^6.3.0"
   },
   "devDependencies": {
     "electron": "^31.0.0",
@@ -18,19 +23,32 @@
   "build": {
     "appId": "com.gratonite.desktop",
     "productName": "Gratonite",
+    "asar": true,
     "files": [
       "src/**/*",
       "renderer/**/*"
     ],
+    "directories": {
+      "output": "dist"
+    },
+    "icon": "assets/icon.png",
     "mac": {
-      "target": ["dmg", "zip"]
+      "target": ["dmg", "zip"],
+      "icon": "assets/icon.png"
     },
     "win": {
-      "target": ["nsis", "zip"]
+      "target": ["nsis", "zip"],
+      "icon": "assets/icon.png"
     },
     "linux": {
       "target": ["AppImage", "deb", "rpm"],
-      "category": "Network"
+      "category": "Network",
+      "icon": "assets/icon.png"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "gratonitechat",
+      "repo": "for-desktop"
     }
   }
 }
