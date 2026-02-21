@@ -4,6 +4,8 @@ import { requireAuth } from '../../middleware/auth.js';
 import { createVoiceService } from './voice.service.js';
 import { createGuildsService } from '../guilds/guilds.service.js';
 import { createChannelsService } from '../channels/channels.service.js';
+import { dmRecipients, dmChannels, channels } from '@gratonite/db';
+import { and, eq } from 'drizzle-orm';
 import {
   joinVoiceSchema,
   updateVoiceStateSchema,
@@ -15,6 +17,7 @@ import {
   startScreenShareSchema,
 } from './voice.schemas.js';
 import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
+import { hasPermission, PermissionFlags } from '@gratonite/types';
 
 export function voiceRouter(ctx: AppContext): Router {
   const router = Router();
@@ -32,17 +35,48 @@ export function voiceRouter(ctx: AppContext): Router {
     }
 
     const userId = req.user!.userId;
-    const channel = await channelsService.getChannel(parsed.data.channelId);
+    let channel = await channelsService.getChannel(parsed.data.channelId);
+    if (!channel) {
+      const [dmChannel] = await ctx.db
+        .select()
+        .from(dmChannels)
+        .where(eq(dmChannels.id, parsed.data.channelId))
+        .limit(1);
+      if (dmChannel) {
+        await ctx.db
+          .insert(channels)
+          .values({
+            id: dmChannel.id,
+            type: dmChannel.type === 'group_dm' ? 'GROUP_DM' : 'DM',
+            name: dmChannel.name ?? null,
+          })
+          .onConflictDoNothing();
+        channel = await channelsService.getChannel(parsed.data.channelId);
+      }
+    }
     if (!channel) return res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found' });
 
-    if (channel.type !== 'GUILD_VOICE' && channel.type !== 'GUILD_STAGE_VOICE') {
+    const isGuildVoice = channel.type === 'GUILD_VOICE' || channel.type === 'GUILD_STAGE_VOICE';
+    const isDmVoice = channel.type === 'DM' || channel.type === 'GROUP_DM';
+    if (!isGuildVoice && !isDmVoice) {
       return res.status(400).json({ code: 'INVALID_CHANNEL_TYPE', message: 'Not a voice channel' });
     }
 
-    // Must be a guild member
+    // Must be a guild member for guild voice
     if (channel.guildId) {
       const isMember = await guildsService.isMember(channel.guildId, userId);
       if (!isMember) return res.status(403).json({ code: 'FORBIDDEN' });
+    }
+
+    // Must be a DM recipient for DM calls
+    if (!channel.guildId && isDmVoice) {
+      const [recipient] = await ctx.db
+        .select({ userId: dmRecipients.userId })
+        .from(dmRecipients)
+        .innerJoin(dmChannels, eq(dmChannels.id, dmRecipients.channelId))
+        .where(and(eq(dmRecipients.channelId, channel.id), eq(dmRecipients.userId, userId)))
+        .limit(1);
+      if (!recipient) return res.status(403).json({ code: 'FORBIDDEN' });
     }
 
     const { token, voiceState } = await voiceService.joinChannel(
@@ -150,10 +184,11 @@ export function voiceRouter(ctx: AppContext): Router {
   router.patch('/guilds/:guildId/voice-states/:userId', auth, async (req, res) => {
     const { guildId, userId: targetUserId } = req.params;
 
-    // Only guild owner can modify others' voice state (TODO: permission check)
-    const guild = await guildsService.getGuild(guildId);
-    if (!guild || guild.ownerId !== req.user!.userId) {
-      return res.status(403).json({ code: 'FORBIDDEN' });
+    const perms = await guildsService.getMemberPermissions(guildId, req.user!.userId);
+    if (!hasPermission(perms, PermissionFlags.MUTE_MEMBERS) &&
+        !hasPermission(perms, PermissionFlags.DEAFEN_MEMBERS) &&
+        !hasPermission(perms, PermissionFlags.MOVE_MEMBERS)) {
+      return res.status(403).json({ code: 'MISSING_PERMISSIONS' });
     }
 
     const parsed = modifyMemberVoiceStateSchema.safeParse(req.body);
@@ -251,9 +286,9 @@ export function voiceRouter(ctx: AppContext): Router {
 
   router.post('/guilds/:guildId/stage-instances', auth, async (req, res) => {
     const { guildId } = req.params;
-    const guild = await guildsService.getGuild(guildId);
-    if (!guild || guild.ownerId !== req.user!.userId) {
-      return res.status(403).json({ code: 'FORBIDDEN' });
+    const perms = await guildsService.getMemberPermissions(guildId, req.user!.userId);
+    if (!hasPermission(perms, PermissionFlags.MANAGE_CHANNELS)) {
+      return res.status(403).json({ code: 'MISSING_PERMISSIONS' });
     }
 
     const parsed = createStageInstanceSchema.safeParse(req.body);
@@ -307,9 +342,9 @@ export function voiceRouter(ctx: AppContext): Router {
     const stage = await voiceService.getStageInstanceById(req.params.stageId);
     if (!stage) return res.status(404).json({ code: 'NOT_FOUND' });
 
-    const guild = await guildsService.getGuild(stage.guildId);
-    if (!guild || guild.ownerId !== req.user!.userId) {
-      return res.status(403).json({ code: 'FORBIDDEN' });
+    const perms = await guildsService.getMemberPermissions(stage.guildId, req.user!.userId);
+    if (!hasPermission(perms, PermissionFlags.MANAGE_CHANNELS)) {
+      return res.status(403).json({ code: 'MISSING_PERMISSIONS' });
     }
 
     await voiceService.deleteStageInstance(req.params.stageId);
@@ -349,13 +384,12 @@ export function voiceRouter(ctx: AppContext): Router {
 
   // Approve speaker
   router.put('/stage-instances/:stageId/speakers/:userId', auth, async (req, res) => {
-    // TODO: check MUTE_MEMBERS permission instead of owner-only
     const state = await voiceService.getVoiceState(req.params.userId);
     if (!state || !state.guildId) return res.status(404).json({ code: 'NOT_FOUND' });
 
-    const guild = await guildsService.getGuild(state.guildId);
-    if (!guild || guild.ownerId !== req.user!.userId) {
-      return res.status(403).json({ code: 'FORBIDDEN' });
+    const perms = await guildsService.getMemberPermissions(state.guildId, req.user!.userId);
+    if (!hasPermission(perms, PermissionFlags.MUTE_MEMBERS)) {
+      return res.status(403).json({ code: 'MISSING_PERMISSIONS' });
     }
 
     const updated = await voiceService.approveSpeaker(req.params.userId);
@@ -377,9 +411,9 @@ export function voiceRouter(ctx: AppContext): Router {
     const state = await voiceService.getVoiceState(req.params.userId);
     if (!state || !state.guildId) return res.status(404).json({ code: 'NOT_FOUND' });
 
-    const guild = await guildsService.getGuild(state.guildId);
-    if (!guild || guild.ownerId !== req.user!.userId) {
-      return res.status(403).json({ code: 'FORBIDDEN' });
+    const perms = await guildsService.getMemberPermissions(state.guildId, req.user!.userId);
+    if (!hasPermission(perms, PermissionFlags.MUTE_MEMBERS)) {
+      return res.status(403).json({ code: 'MISSING_PERMISSIONS' });
     }
 
     const updated = await voiceService.revokeSpeaker(req.params.userId);

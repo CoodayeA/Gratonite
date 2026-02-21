@@ -11,6 +11,7 @@ import {
   guildStickers,
   users,
   userProfiles,
+  memberProfiles,
 } from '@gratonite/db';
 import { channels } from '@gratonite/db';
 import type { AppContext } from '../../lib/context.js';
@@ -159,7 +160,7 @@ export function createGuildsService(ctx: AppContext) {
       .select({
         userId: guildMembers.userId,
         guildId: guildMembers.guildId,
-        nickname: guildMembers.nickname,
+        nickname: sql<string | null>`coalesce(${memberProfiles.nickname}, ${guildMembers.nickname})`,
         joinedAt: guildMembers.joinedAt,
         user: {
           id: users.id,
@@ -167,10 +168,20 @@ export function createGuildsService(ctx: AppContext) {
           displayName: userProfiles.displayName,
           avatarHash: userProfiles.avatarHash,
         },
+        profile: {
+          nickname: memberProfiles.nickname,
+          avatarHash: memberProfiles.avatarHash,
+          bannerHash: memberProfiles.bannerHash,
+          bio: memberProfiles.bio,
+        },
       })
       .from(guildMembers)
       .innerJoin(users, eq(users.id, guildMembers.userId))
       .innerJoin(userProfiles, eq(userProfiles.userId, guildMembers.userId))
+      .leftJoin(
+        memberProfiles,
+        and(eq(memberProfiles.userId, guildMembers.userId), eq(memberProfiles.guildId, guildMembers.guildId)),
+      )
       .where(condition)
       .limit(limit);
 
@@ -297,6 +308,29 @@ export function createGuildsService(ctx: AppContext) {
       .select()
       .from(guildRoles)
       .where(inArray(guildRoles.id, roleIds));
+  }
+
+  async function getMemberPermissions(guildId: string, userId: string): Promise<bigint> {
+    // Owner has all permissions
+    const guild = await getGuild(guildId);
+    if (!guild) return 0n;
+    if (guild.ownerId === userId) return ~0n; // all bits set
+
+    // Get @everyone role permissions (base)
+    const [everyoneRole] = await ctx.db
+      .select()
+      .from(guildRoles)
+      .where(and(eq(guildRoles.guildId, guildId), eq(guildRoles.name, '@everyone')))
+      .limit(1);
+
+    let perms = everyoneRole ? BigInt(everyoneRole.permissions) : 0n;
+
+    // Combine with all assigned role permissions
+    const memberRoles = await getMemberRoles(guildId, userId);
+    for (const role of memberRoles) {
+      perms |= BigInt(role.permissions);
+    }
+    return perms;
   }
 
   // ── Bans ─────────────────────────────────────────────────────────────────
@@ -557,6 +591,7 @@ export function createGuildsService(ctx: AppContext) {
     assignRole,
     removeRole,
     getMemberRoles,
+    getMemberPermissions,
     banMember,
     unbanMember,
     isBanned,
