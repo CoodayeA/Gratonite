@@ -29,6 +29,9 @@ interface CallState {
   localVideoTrack: LocalVideoTrack | null;
   incomingCall: IncomingCall | null;
   outgoingCall: OutgoingCall | null;
+  screenShareEnabled: boolean;
+  localScreenTrack: LocalVideoTrack | null;
+  connectionQualities: Record<string, string>; // participantId → 'excellent' | 'good' | 'poor' | 'unknown'
   setState: (partial: Partial<CallState>) => void;
   reset: () => void;
 }
@@ -44,6 +47,9 @@ const initialState: Omit<CallState, 'setState' | 'reset'> = {
   localVideoTrack: null,
   incomingCall: null,
   outgoingCall: null,
+  screenShareEnabled: false,
+  localScreenTrack: null,
+  connectionQualities: {},
 };
 
 export const useCallStore = create<CallState>((set) => ({

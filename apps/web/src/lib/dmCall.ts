@@ -1,10 +1,11 @@
 import {
   Room,
   RoomEvent,
+  Track,
+  LocalVideoTrack,
   createLocalAudioTrack,
   createLocalVideoTrack,
   type LocalAudioTrack,
-  type LocalVideoTrack,
 } from 'livekit-client';
 import { api } from '@/lib/api';
 import { useCallStore } from '@/stores/call.store';
@@ -14,6 +15,7 @@ import { playSound, stopSound, stopAllSounds } from './audio';
 let room: Room | null = null;
 let localAudioTrack: LocalAudioTrack | null = null;
 let localVideoTrack: LocalVideoTrack | null = null;
+let localScreenTrack: LocalVideoTrack | null = null;
 let ringTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export function clearRingTimeout() {
@@ -203,6 +205,36 @@ export async function toggleVideo() {
   useCallStore.getState().setState({ videoEnabled: false, localVideoTrack: null });
 }
 
+export async function toggleScreenShare(): Promise<void> {
+  const { room: r, screenShareEnabled } = useCallStore.getState();
+  if (!r) return;
+
+  if (screenShareEnabled) {
+    if (localScreenTrack) {
+      await r.localParticipant.unpublishTrack(localScreenTrack);
+      localScreenTrack.stop();
+      localScreenTrack = null;
+    }
+    useCallStore.getState().setState({ screenShareEnabled: false, localScreenTrack: null });
+  } else {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      const track = stream.getVideoTracks()[0];
+      const lvt = new LocalVideoTrack(track, undefined, false);
+      await r.localParticipant.publishTrack(lvt, { source: Track.Source.ScreenShare });
+      localScreenTrack = lvt;
+      useCallStore.getState().setState({ screenShareEnabled: true, localScreenTrack: lvt });
+
+      // Handle user stopping share via browser's "Stop sharing" button
+      track.onended = () => {
+        toggleScreenShare();
+      };
+    } catch {
+      // User cancelled the screen share picker — do nothing
+    }
+  }
+}
+
 function cleanup() {
   stopAllSounds();
   clearRingTimeout();
@@ -217,6 +249,10 @@ function cleanup() {
   if (localVideoTrack) {
     localVideoTrack.stop();
     localVideoTrack = null;
+  }
+  if (localScreenTrack) {
+    localScreenTrack.stop();
+    localScreenTrack = null;
   }
   useCallStore.getState().reset();
 }
