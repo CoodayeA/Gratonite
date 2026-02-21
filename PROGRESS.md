@@ -1,40 +1,47 @@
 # Gratonite — Development Progress
 
 > **Last updated:** 2026-02-20
-> **Current Phase:** Phase 7B — Desktop + DM Calls (COMPLETE)
-> **Status:** All 8 Phase 7B tasks implemented: call audio, screen share, DND, desktop polish, permission refactor
+> **Current Phase:** Phase 8 — Web App Polish (IN PROGRESS — 2/9 tasks complete)
+> **Status:** CSS foundation + message prop wiring done. Next: emoji picker fix, reactions, search, threads, settings.
 
-### Completed This Session (Phase 7B)
-- AudioManager singleton + 7 placeholder sound assets (ringtone, outgoing-ring, call-connect, call-end, message, mention, dm)
-- DB schema: added `ringtone`, `callRingDuration` to userSettings + new `userDndSchedule` table (migration 0006)
-- Call audio cues: ringtone on incoming, outgoing-ring on dialing, call-connect/end sounds on state transitions
-- Call timeout: 30s auto-decline for incoming calls, 60s auto-cancel for outgoing calls
-- Camera/mic permission error handling with user-friendly messages (NotAllowedError, NotFoundError)
-- Screen share in DM calls via LiveKit (getDisplayMedia + Track.Source.ScreenShare), browser "Stop sharing" sync
-- Connection quality indicators (green/yellow/red dots via ConnectionQualityChanged event)
-- Participant nameplates on remote video tiles (identity + quality dot)
-- DM info panel (slide-out right panel with recipient avatar, display name, bio)
-- Picture-in-Picture support via native browser API on remote video
-- Do Not Disturb system: timezone-aware schedule, day-of-week bitmask, exception users, gateway enforcement (auto-decline when DND active)
-- DND quick-toggle in UserBar menu with optimistic update
-- Desktop notification sounds (message/mention/DM tiers) in SocketProvider
-- Desktop click-to-navigate: notification click routes to the correct channel/DM
-- GitHub Releases publish config for electron-builder distribution
-- Backend permission refactor: `getMemberPermissions()` helper replaces 5 owner-only voice mod checks with proper MUTE_MEMBERS/DEAFEN_MEMBERS/MOVE_MEMBERS/MANAGE_CHANNELS permission resolution
+### Completed This Session (Phase 8: Web App Polish)
 
-### Previous Session
-- Phase 7A+++ web readiness: profile resolver, per-server overrides, unread dots, profile popovers
-- Desktop build pipeline + icon integration; auto-update plumbing + IPC bridge
-- Deep links: desktop protocol handling + web routing integration
-- DM layout polish (sidebar DM list, intro header, top bar call controls)
-- DM voice/video calls: LiveKit join, overlay controls, incoming call modal, remote tiles
-- DM call signaling: invite/accept/decline/cancel via gateway socket events
+**Task 1: CSS Foundation** (COMPLETE)
+- Added ~652 lines of CSS to `styles.css` for ALL unstyled Phase 7A components
+- Styled: MessageActionBar, ReactionBar, EmojiPicker, PinnedMessagesPanel, AttachmentDisplay, AttachmentPreview, FileUploadButton, ReplyPreview, message reply header, message edit inline, delete modal preview
+- Added `position: relative` to `.message-item` for action bar positioning
+- Updated responsive media query to hide `.pinned-panel` on mobile
 
-### Planned Next (Shortlist)
+**Task 2: MessageList Prop Wiring + Composer Integration** (COMPLETE)
+- Fixed critical bug: `MessageList` now passes `onReply` and `onOpenEmojiPicker` to every `MessageItem`
+- `ChannelPage` wires reply state + emoji picker state with callbacks
+- `EmojiPicker` renders on reaction button click, calls `api.messages.addReaction()` on select
+- `MessageComposer` now shows `ReplyPreview` above textarea when replying
+- `MessageComposer` integrates `FileUploadButton` + `AttachmentPreview` for file uploads
+- Reply reference (`messageReference`) included in send API call
+
+### Remaining Phase 8 Tasks (7 of 9)
+
+| # | Task | Status | Description |
+|---|------|--------|-------------|
+| 3 | Emoji Picker Fix | PENDING | Fix broken search (always returns all), add x/y positioning with viewport clamping |
+| 4 | Reaction Gateway | PENDING | Add MESSAGE_REACTION_ADD/REMOVE handlers to SocketProvider for real-time sync |
+| 5 | Pinned Panel Wiring | PENDING | Add pin button to TopBar, render PinnedMessagesPanel in ChannelPage |
+| 6 | Search UI | PENDING | Search store + SearchPanel + API client + TopBar button (backend exists) |
+| 7 | Thread UI | PENDING | ThreadPanel + useThreads hook + API client + Create Thread context menu (backend exists) |
+| 8 | Settings Page | PENDING | Full-viewport settings: account, appearance, notifications/DND, /settings route |
+| 9 | Integration + Docs | PENDING | Final pass, responsive rules, PROGRESS.md update |
+
+### Previous Sessions
+- **Phase 7B** (COMPLETE): Call audio, screen share, DND, desktop polish, permission refactor
+- **Phase 7A+++**: Profile resolver, per-server overrides, unread dots, profile popovers
+- **Phase 7A+**: Desktop build pipeline, deep links, DM calls with LiveKit, call signaling
+
+### Planned Next (After Phase 8)
 - Desktop: macOS code signing + distribution artifacts
 - Mobile (Phase 7C): Expo navigation + functional screens, push notifications, deep links
 - Offline-first (Phase 7D): WatermelonDB setup + sync
-- Web polish: thread UI, search UI, settings pages, reaction display
+- Phase 9: Performance & Scale — CDN, horizontal scaling, message partitioning
 
 ---
 
@@ -928,6 +935,49 @@ Test sequence: upload file → message with attachment → upload emoji → list
 - Mobile navigation + functional screens (Phase 7C)
 - GitHub Releases distribution: add `"publish": { "provider": "github" }` to desktop package.json
 
+---
+
+### Phase 8: Web App Polish (IN PROGRESS)
+
+#### Overview
+Make the web client feature-complete by fixing all broken/unstyled Phase 7A components and adding search, threads, settings, and full composer integration. All backend APIs already exist — this is purely frontend work.
+
+#### Plan
+Full implementation plan at `.claude/plans/soft-exploring-piglet.md` — 9 tasks covering CSS fixes, prop wiring, emoji picker, reactions, pinned messages, search UI, thread UI, settings page.
+
+#### Commits (Phase 8)
+
+| Commit | Description | Key Files |
+|--------|-------------|-----------|
+| `e91e131` | CSS for all Phase 7A unstyled components (~652 lines) | `styles.css` |
+| `58e42c2` | Fix MessageList prop wiring, integrate reply/upload in composer | `MessageList.tsx`, `ChannelPage.tsx`, `MessageComposer.tsx` |
+
+#### Key Changes So Far
+
+**Task 1 — CSS Foundation:**
+- 10+ component groups styled: MessageActionBar (floating hover toolbar), ReactionBar (emoji pills), EmojiPicker (popup grid), PinnedMessagesPanel (side panel), AttachmentDisplay (images/files), AttachmentPreview (pending uploads), FileUploadButton, ReplyPreview (above composer), message reply header (inline), message edit (inline textarea), delete modal preview
+- All use existing design tokens (CSS custom properties)
+- Responsive rule updated to hide pinned panel on mobile
+
+**Task 2 — Prop Wiring + Composer:**
+- `MessageList` now accepts and passes `onReply` + `onOpenEmojiPicker` to every `MessageItem` — fixes silent failure of hover bar Reply/React buttons and context menu
+- `ChannelPage` manages reply state (via `useMessagesStore.setReplyingTo`) and emoji picker target state
+- `EmojiPicker` renders on reaction click, calls `api.messages.addReaction()` on selection
+- `MessageComposer` shows `ReplyPreview` when replying, includes `messageReference` in send body
+- `MessageComposer` integrates `FileUploadButton` + `AttachmentPreview` for file uploads with FormData
+
+#### Remaining Tasks
+
+| Task | What It Does |
+|------|-------------|
+| 3. Emoji Picker Fix | Fix broken search filter, add x/y positioning with viewport clamping |
+| 4. Reaction Gateway | Handle MESSAGE_REACTION_ADD/REMOVE in SocketProvider for real-time sync |
+| 5. Pinned Panel | Wire existing PinnedMessagesPanel into TopBar + ChannelPage |
+| 6. Search UI | SearchPanel + search store + API client (backend `GET /search/messages` exists) |
+| 7. Thread UI | ThreadPanel reusing MessageList/Composer + API client (full thread backend exists) |
+| 8. Settings Page | Full-viewport `/settings` route with account, appearance, notifications/DND sections |
+| 9. Integration | Final pass, fix conflicts between panels, responsive rules, update PROGRESS.md |
+
 #### Desktop (Electron) ✅
 - Added cross-platform build targets: macOS, Windows, Linux
 - Basic window state persistence + tray flow + hotkey stub
@@ -1112,6 +1162,8 @@ dist/assets/vendor.js      164.14 KB │ gzip: 53.58 KB
 | `/` | HomePage | Required | Welcome / guild list |
 | `/guild/:guildId` | GuildPage | Required | Guild view, auto-redirects to first channel |
 | `/guild/:guildId/channel/:channelId` | ChannelPage | Required | Message view + composer |
+| `/dm/:channelId` | ChannelPage | Required | DM message view + composer |
+| `/settings` | SettingsPage | Required | **(Phase 8 Task 8 — planned)** |
 
 #### Socket.IO Event Handlers
 | Event | Handler |
@@ -1165,12 +1217,28 @@ Made the MVP actually usable and demonstrable by adding all critical UI interact
 
 ## What's NOT Done Yet
 
-### Remaining Work
-- **Phase 7B:** Desktop app (Electron) — functional screens, native menus, tray, auto-update
+### Phase 8: Web App Polish (IN PROGRESS)
+Remaining tasks: emoji picker search fix, reaction gateway sync, pinned panel wiring, search UI, thread UI, settings page, integration pass. See plan at `docs/plans/2026-02-20-phase-8-web-polish.md` (or `.claude/plans/soft-exploring-piglet.md`).
+
+### Remaining Work (Future Phases)
+- **Desktop:** macOS code signing + distribution artifacts
 - **Phase 7C:** Mobile app (Expo) — navigation, screens, push notifications, deep links
 - **Phase 7D:** Offline-first (WatermelonDB), tunnel/staging config
-- **Phase 8:** Performance & Scale — CDN, horizontal scaling, message partitioning
-- **Phase 9:** Polish & Launch — error tracking, analytics, marketing site integration
+- **Phase 9:** Performance & Scale — CDN, horizontal scaling, message partitioning
+- **Phase 10:** Polish & Launch — error tracking, analytics, marketing site integration
+
+### Known Gaps (Backend exists, Frontend missing)
+- **Search**: `GET /search/messages` exists — no frontend UI yet (Task 6)
+- **Threads**: Full CRUD at `/channels/:channelId/threads` — no frontend UI yet (Task 7)
+- **Polls**: Backend endpoints exist — no frontend poll UI
+- **Scheduled Messages**: Backend endpoints exist — no frontend UI
+- **Custom Emojis/Stickers**: Backend CRUD exists — no management UI
+- **Guild Moderation UI**: Ban/kick/reports backend exists — no admin panel UI
+- **Channel Edit/Delete**: Backend `PATCH/DELETE /channels/:channelId` exists — no edit modal UI
+- **Role Management UI**: Backend role CRUD exists — no assignment/management UI
+- **Read State Ack**: `channelReadState` table exists — no REST endpoint or frontend ack
+- **Typing Indicators**: Backend emits TYPING_START via gateway — frontend shows indicators but no POST endpoint
+- **Member Timeout**: `communicationDisabledUntil` column exists — no PATCH member endpoint
 
 ---
 
