@@ -1,4 +1,5 @@
 import express from 'express';
+import { performance } from 'node:perf_hooks';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
@@ -70,6 +71,22 @@ async function main() {
   );
   app.use(securityHeaders);
   app.use(globalRateLimiter);
+
+  app.use((req, res, next) => {
+    const start = performance.now();
+    res.on('finish', () => {
+      const duration = performance.now() - start;
+      if (duration >= 200) {
+        logger.warn({
+          method: req.method,
+          path: req.originalUrl,
+          status: res.statusCode,
+          durationMs: Math.round(duration),
+        }, 'Slow request');
+      }
+    });
+    next();
+  });
 
   // Trust proxy (for rate limiting behind Nginx/LB)
   app.set('trust proxy', 1);

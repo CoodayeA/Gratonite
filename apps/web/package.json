@@ -12,6 +12,7 @@
     "@gratonite/profile-resolver": "workspace:*",
     "@gratonite/types": "workspace:*",
     "@tanstack/react-query": "^5.60.0",
+    "@tanstack/react-virtual": "^3.13.2",
     "livekit-client": "^2.4.3",
     "react": "18.2.0",
     "react-dom": "18.2.0",

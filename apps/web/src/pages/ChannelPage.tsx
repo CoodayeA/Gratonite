@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Profiler } from 'react';
 import { useParams } from 'react-router-dom';
 import { useChannelsStore } from '@/stores/channels.store';
 import { useUnreadStore } from '@/stores/unread.store';
@@ -13,6 +13,7 @@ import { SearchPanel } from '@/components/search/SearchPanel';
 import { ThreadPanel } from '@/components/threads/ThreadPanel';
 import { api } from '@/lib/api';
 import { useUiStore } from '@/stores/ui.store';
+import { profileRender } from '@/lib/perf';
 import type { Message } from '@gratonite/types';
 
 export function ChannelPage() {
@@ -66,16 +67,18 @@ export function ChannelPage() {
   return (
     <div className="channel-page">
       <TopBar channelId={channelId} />
-      <MessageList
-        channelId={channelId}
-        intro={dmIntro}
-        emptyTitle={isDm ? 'Start the conversation' : 'No messages yet.'}
-        emptySubtitle={isDm
-          ? 'Say hello or share something to get it going.'
-          : 'Say something to get the conversation started.'}
-        onReply={handleReply}
-        onOpenEmojiPicker={handleOpenEmojiPicker}
-      />
+      <Profiler id="MessageList" onRender={profileRender}>
+        <MessageList
+          channelId={channelId}
+          intro={dmIntro}
+          emptyTitle={isDm ? 'Start the conversation' : 'No messages yet.'}
+          emptySubtitle={isDm
+            ? 'Say hello or share something to get it going.'
+            : 'Say something to get the conversation started.'}
+          onReply={handleReply}
+          onOpenEmojiPicker={handleOpenEmojiPicker}
+        />
+      </Profiler>
       <TypingIndicator channelId={channelId} />
       <MessageComposer
         channelId={channelId}

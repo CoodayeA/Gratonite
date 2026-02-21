@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom';
+import { Profiler } from 'react';
 import { GuildRail } from '@/components/sidebar/GuildRail';
 import { ChannelSidebar } from '@/components/sidebar/ChannelSidebar';
 import { MemberList } from '@/components/members/MemberList';
@@ -14,6 +15,7 @@ import { DmCallOverlay } from '@/components/call/DmCallOverlay';
 import { DmIncomingCallModal } from '@/components/call/DmIncomingCallModal';
 import { DmInfoPanel } from '@/components/messages/DmInfoPanel';
 import { useUiStore } from '@/stores/ui.store';
+import { profileRender } from '@/lib/perf';
 
 export function AppLayout() {
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
@@ -33,11 +35,17 @@ export function AppLayout() {
   return (
     <div className={layoutClass}>
       <GuildRail />
-      <ChannelSidebar />
+      <Profiler id="ChannelSidebar" onRender={profileRender}>
+        <ChannelSidebar />
+      </Profiler>
       <main className="app-main">
         <Outlet />
       </main>
-      {memberPanelOpen && <MemberList />}
+      {memberPanelOpen && (
+        <Profiler id="MemberList" onRender={profileRender}>
+          <MemberList />
+        </Profiler>
+      )}
       <DmInfoPanel recipient={null} />
 
       {/* Modals */}

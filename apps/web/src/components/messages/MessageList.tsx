@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { useMessagesStore } from '@/stores/messages.store';
 import { useMessages } from '@/hooks/useMessages';
 import { MessageItem } from './MessageItem';
@@ -39,17 +40,28 @@ export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onRep
     wasAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
   }, []);
 
+  const rowVirtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => containerRef.current,
+    estimateSize: () => 72,
+    overscan: 8,
+  });
+
   // Auto-scroll to bottom on new messages (if already at bottom)
   useEffect(() => {
     if (wasAtBottomRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: 'auto' });
+      if (messages.length > 0) {
+        rowVirtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
+      } else {
+        bottomRef.current?.scrollIntoView({ behavior: 'auto' });
+      }
     }
-  }, [messages.length]);
+  }, [messages.length, rowVirtualizer]);
 
   // Initial scroll to bottom
   useEffect(() => {
     hasLoadedRef.current = false;
-    bottomRef.current?.scrollIntoView();
+    rowVirtualizer.scrollToIndex(messages.length ? messages.length - 1 : 0, { align: 'end' });
   }, [channelId]);
 
   useEffect(() => {
@@ -110,17 +122,46 @@ export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onRep
         </div>
       )}
 
-      {messages.map((msg: Message, i: number) => {
-        const prev = i > 0 ? messages[i - 1] : undefined;
-        const grouped = shouldGroupMessages(
-          prev ? { authorId: prev.authorId, createdAt: prev.createdAt, type: prev.type } : undefined,
-          { authorId: msg.authorId, createdAt: msg.createdAt, type: msg.type },
-        );
+      {messages.length > 0 && (
+        <div
+          style={{
+            height: rowVirtualizer.getTotalSize(),
+            position: 'relative',
+          }}
+        >
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const msg = messages[virtualRow.index];
+            if (!msg) return null;
+            const prev = virtualRow.index > 0 ? messages[virtualRow.index - 1] : undefined;
+            const grouped = shouldGroupMessages(
+              prev ? { authorId: prev.authorId, createdAt: prev.createdAt, type: prev.type } : undefined,
+              { authorId: msg.authorId, createdAt: msg.createdAt, type: msg.type },
+            );
 
-        return (
-          <MessageItem key={msg.id} message={msg} isGrouped={grouped} onReply={onReply} onOpenEmojiPicker={onOpenEmojiPicker} />
-        );
-      })}
+            return (
+              <div
+                key={msg.id}
+                data-index={virtualRow.index}
+                ref={rowVirtualizer.measureElement}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+              >
+                <MessageItem
+                  message={msg}
+                  isGrouped={grouped}
+                  onReply={onReply}
+                  onOpenEmojiPicker={onOpenEmojiPicker}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div ref={bottomRef} />
     </div>
