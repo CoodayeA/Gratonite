@@ -64,6 +64,42 @@ None — Phase 8 is complete.
 - Offline-first (Phase 7D): WatermelonDB setup + sync
 - Phase 9: Performance & Scale — CDN, horizontal scaling, message partitioning
 
+### Phase 10: Platform & Extensibility (PLANNED)
+
+**Scope** (from ARCHITECTURE review — high-priority gaps):
+1. Plugin system: client plugin registry + permissions + load/unload UX
+2. Bots UI: bot management, OAuth flows, slash command config
+3. Theming: per-server theming + theme selector + token overrides
+4. Guild voice/video UI: channel voice, stage controls, soundboard UI
+5. Desktop + mobile parity: bring core messaging/voice/notifications to desktop + mobile
+
+**Acceptance criteria:**
+1. **Plugin system**
+   - Registry lists installed plugins with metadata and versioning
+   - Users can enable/disable plugins without restart
+   - Plugins run in a sandboxed context with explicit permissions
+   - Per-server plugin settings supported
+
+2. **Bots UI**
+   - Create/manage bots in-app (token, permissions, scopes)
+   - OAuth flow for adding bots to servers works end-to-end
+   - Slash command configuration UI (create/update/delete)
+
+3. **Theming**
+   - Theme selector in settings with live preview
+   - Per-server theme overrides applied on channel load
+   - Custom CSS/token overrides stored and re-applied on refresh
+
+4. **Guild voice/video UI**
+   - Join/leave voice channels from channel list
+   - Stage controls (speaker/listener, hand raise) functional
+   - Soundboard UI available with playback confirmation
+
+5. **Desktop + mobile parity**
+   - Desktop app loads full web UI with notifications + deep links
+   - Mobile app supports login, guild/DM navigation, messaging, and push
+   - Core realtime (messages, typing, presence) works on all clients
+
 ---
 
 ## Quick Start for New Sessions

@@ -7,6 +7,9 @@ import { SocketProvider } from '@/providers/SocketProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { App } from '@/App';
 import './styles.css';
+import { mark } from '@/lib/perf';
+
+mark('app_start');
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth.store';
 import { api, getAccessToken, setAccessToken } from '@/lib/api';
+import { mark, measure } from '@/lib/perf';
 import { useGuildsStore } from '@/stores/guilds.store';
 import { useChannelsStore } from '@/stores/channels.store';
 import { useMessagesStore } from '@/stores/messages.store';
@@ -107,6 +108,12 @@ export function App() {
       }
     });
   }, [navigate]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    mark('app_ready');
+    measure('app_ready', 'app_start', 'app_ready');
+  }, [isLoading]);
 
   if (isLoading) {
     return <LoadingScreen />;
