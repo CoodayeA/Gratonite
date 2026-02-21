@@ -1,20 +1,43 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Avatar } from '@/components/ui/Avatar';
 import { api, setAccessToken } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
-import { useGuildsStore } from '@/stores/guilds.store';
 import { useChannelsStore } from '@/stores/channels.store';
 import { useMessagesStore } from '@/stores/messages.store';
+import { useUiStore } from '@/stores/ui.store';
+import { useGuildsStore } from '@/stores/guilds.store';
+import { useMembersStore } from '@/stores/members.store';
+import { resolveProfile } from '@gratonite/profile-resolver';
+import { useUnreadStore } from '@/stores/unread.store';
 
 export function UserBar() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const openModal = useUiStore((s) => s.openModal);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const currentGuildId = useGuildsStore((s) => s.currentGuildId);
+  const member = useMembersStore((s) =>
+    currentGuildId ? s.membersByGuild.get(currentGuildId)?.get(user?.id ?? '') : undefined,
+  );
+
+  const resolved = user
+    ? resolveProfile(
+      {
+        displayName: user.displayName,
+        username: user.username,
+        avatarHash: user.avatarHash ?? null,
+      },
+      {
+        nickname: member?.profile?.nickname ?? member?.nickname,
+        avatarHash: member?.profile?.avatarHash ?? null,
+      },
+    )
+    : null;
 
   // Close menu on outside click — must be BEFORE the early return to maintain
   // consistent hook count across renders (React rules of hooks)
@@ -29,6 +52,23 @@ export function UserBar() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [menuOpen]);
 
+  // DND state
+  const [dndEnabled, setDndEnabled] = useState(false);
+
+  useEffect(() => {
+    api.users.getDndSchedule().then((s) => setDndEnabled(s.enabled)).catch(() => {});
+  }, []);
+
+  const toggleDnd = useCallback(async () => {
+    const next = !dndEnabled;
+    setDndEnabled(next);
+    try {
+      await api.users.updateDndSchedule({ enabled: next });
+    } catch {
+      setDndEnabled(!next); // revert on failure
+    }
+  }, [dndEnabled]);
+
   if (!user) return null;
 
   async function handleLogout() {
@@ -42,6 +82,8 @@ export function UserBar() {
     useGuildsStore.getState().clear();
     useChannelsStore.getState().clear();
     useMessagesStore.getState().clear();
+    useMembersStore.getState().clear();
+    useUnreadStore.getState().clear();
     queryClient.clear();
     navigate('/login', { replace: true });
   }
@@ -50,6 +92,29 @@ export function UserBar() {
     <div className="user-bar" ref={menuRef}>
       {menuOpen && (
         <div className="user-bar-menu">
+          <button
+            className="user-bar-menu-item"
+            onClick={() => {
+              openModal('edit-profile');
+              setMenuOpen(false);
+            }}
+          >
+            Edit Profile
+          </button>
+          <button
+            className="user-bar-menu-item"
+            onClick={() => {
+              navigate('/');
+              setMenuOpen(false);
+            }}
+          >
+            Friends & DMs
+          </button>
+          <button className="user-bar-menu-item" onClick={() => { toggleDnd(); setMenuOpen(false); }}>
+            <span className={`dnd-indicator ${dndEnabled ? 'dnd-active' : ''}`} />
+            {dndEnabled ? 'Disable Do Not Disturb' : 'Enable Do Not Disturb'}
+          </button>
+          <div className="user-bar-menu-divider" />
           <button className="user-bar-menu-item user-bar-menu-danger" onClick={handleLogout}>
             Log Out
           </button>
@@ -57,9 +122,9 @@ export function UserBar() {
       )}
 
       <div className="user-bar-info">
-        <Avatar name={user.displayName} hash={user.avatarHash ?? null} userId={user.id} size={32} />
+        <Avatar name={resolved?.displayName ?? user.displayName} hash={resolved?.avatarHash ?? user.avatarHash ?? null} userId={user.id} size={32} />
         <div className="user-bar-names">
-          <span className="user-bar-displayname">{user.displayName}</span>
+          <span className="user-bar-displayname">{resolved?.displayName ?? user.displayName}</span>
           <span className="user-bar-username">@{user.username}</span>
         </div>
       </div>

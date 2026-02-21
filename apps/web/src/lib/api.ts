@@ -111,8 +111,8 @@ async function apiFetch<T>(
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
-  // Default Content-Type for JSON bodies
-  if (options.body && !headers['Content-Type']) {
+  // Default Content-Type for JSON bodies — skip for FormData (browser sets multipart boundary)
+  if (options.body && !(options.body instanceof FormData) && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
 
@@ -227,6 +227,103 @@ export const api = {
         tier: string;
       };
     }>('/users/@me'),
+
+    updateProfile: (data: { displayName?: string; bio?: string; pronouns?: string; accentColor?: string }) =>
+      apiFetch<any>('/users/@me', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    uploadAvatar: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiFetch<{ avatarHash: string; avatarAnimated: boolean }>('/users/@me/avatar', {
+        method: 'POST',
+        body: formData,
+      });
+    },
+
+    deleteAvatar: () =>
+      apiFetch<void>('/users/@me/avatar', { method: 'DELETE' }),
+
+    uploadBanner: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiFetch<{ bannerHash: string; bannerAnimated: boolean }>('/users/@me/banner', {
+        method: 'POST',
+        body: formData,
+      });
+    },
+
+    deleteBanner: () =>
+      apiFetch<void>('/users/@me/banner', { method: 'DELETE' }),
+
+    updateSettings: (data: Record<string, unknown>) =>
+      apiFetch<any>('/users/@me/settings', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    getDndSchedule: () =>
+      apiFetch<{
+        enabled: boolean;
+        startTime: string;
+        endTime: string;
+        timezone: string;
+        daysOfWeek: number;
+        allowExceptions: string[];
+      }>('/users/@me/dnd-schedule'),
+
+    updateDndSchedule: (data: Record<string, unknown>) =>
+      apiFetch<any>('/users/@me/dnd-schedule', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+  },
+
+  profiles: {
+    getMemberProfile: (guildId: string, userId: string) =>
+      apiFetch<any>(`/guilds/${guildId}/members/${userId}/profile`),
+
+    updateMemberProfile: (guildId: string, data: { nickname?: string | null; bio?: string | null }) =>
+      apiFetch<any>(`/guilds/${guildId}/members/@me/profile`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    uploadMemberAvatar: (guildId: string, file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiFetch<any>(`/guilds/${guildId}/members/@me/profile/avatar`, {
+        method: 'POST',
+        body: formData,
+      });
+    },
+
+    deleteMemberAvatar: (guildId: string) =>
+      apiFetch<any>(`/guilds/${guildId}/members/@me/profile/avatar`, { method: 'DELETE' }),
+
+    uploadMemberBanner: (guildId: string, file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiFetch<any>(`/guilds/${guildId}/members/@me/profile/banner`, {
+        method: 'POST',
+        body: formData,
+      });
+    },
+
+    deleteMemberBanner: (guildId: string) =>
+      apiFetch<any>(`/guilds/${guildId}/members/@me/profile/banner`, { method: 'DELETE' }),
+  },
+
+  voice: {
+    join: (channelId: string, data?: { selfMute?: boolean; selfDeaf?: boolean }) =>
+      apiFetch<{ token: string; voiceState: any; endpoint: string }>('/voice/join', {
+        method: 'POST',
+        body: JSON.stringify({ channelId, ...(data ?? {}) }),
+      }),
+    leave: () =>
+      apiFetch<void>('/voice/leave', { method: 'POST' }),
   },
 
   guilds: {
@@ -243,11 +340,50 @@ export const api = {
         body: JSON.stringify(data),
       }),
 
+    update: (guildId: string, data: { name?: string; description?: string }) =>
+      apiFetch<Guild>(`/guilds/${guildId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
     leave: (guildId: string) =>
       apiFetch<void>(`/guilds/${guildId}/members/@me`, { method: 'DELETE' }),
 
     delete: (guildId: string) =>
       apiFetch<void>(`/guilds/${guildId}`, { method: 'DELETE' }),
+
+    getRoles: (guildId: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/roles`),
+
+    createRole: (guildId: string, data: { name: string; color?: string; permissions?: string }) =>
+      apiFetch<any>(`/guilds/${guildId}/roles`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    updateRole: (guildId: string, roleId: string, data: { name?: string; color?: string; permissions?: string }) =>
+      apiFetch<any>(`/guilds/${guildId}/roles/${roleId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    deleteRole: (guildId: string, roleId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/roles/${roleId}`, { method: 'DELETE' }),
+
+    getBans: (guildId: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/bans`),
+
+    ban: (guildId: string, userId: string, reason?: string) =>
+      apiFetch<void>(`/guilds/${guildId}/bans/${userId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ reason }),
+      }),
+
+    unban: (guildId: string, userId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/bans/${userId}`, { method: 'DELETE' }),
+
+    kickMember: (guildId: string, userId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/members/${userId}`, { method: 'DELETE' }),
   },
 
   channels: {
@@ -256,6 +392,21 @@ export const api = {
 
     get: (channelId: string) =>
       apiFetch<Channel>(`/channels/${channelId}`),
+
+    create: (guildId: string, data: { name: string; type?: string; parentId?: string; topic?: string }) =>
+      apiFetch<Channel>(`/guilds/${guildId}/channels`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    update: (channelId: string, data: { name?: string; topic?: string; nsfw?: boolean; rateLimitPerUser?: number }) =>
+      apiFetch<Channel>(`/channels/${channelId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    delete: (channelId: string) =>
+      apiFetch<void>(`/channels/${channelId}`, { method: 'DELETE' }),
   },
 
   messages: {
@@ -264,7 +415,7 @@ export const api = {
         `/channels/${channelId}/messages${params ? '?' + buildQuery(params) : ''}`,
       ),
 
-    send: (channelId: string, data: { content: string; nonce?: string }) =>
+    send: (channelId: string, data: { content: string; nonce?: string; messageReference?: { messageId: string }; attachmentIds?: string[] }) =>
       apiFetch<Message>(`/channels/${channelId}/messages`, {
         method: 'POST',
         body: JSON.stringify(data),
@@ -280,6 +431,28 @@ export const api = {
       apiFetch<void>(`/channels/${channelId}/messages/${messageId}`, {
         method: 'DELETE',
       }),
+
+    addReaction: (channelId: string, messageId: string, emoji: string) =>
+      apiFetch<void>(`/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}/@me`, {
+        method: 'PUT',
+      }),
+
+    removeReaction: (channelId: string, messageId: string, emoji: string) =>
+      apiFetch<void>(`/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}/@me`, {
+        method: 'DELETE',
+      }),
+
+    getReactions: (channelId: string, messageId: string) =>
+      apiFetch<any[]>(`/channels/${channelId}/messages/${messageId}/reactions`),
+
+    getPins: (channelId: string) =>
+      apiFetch<Message[]>(`/channels/${channelId}/pins`),
+
+    pin: (channelId: string, messageId: string) =>
+      apiFetch<void>(`/channels/${channelId}/pins/${messageId}`, { method: 'PUT' }),
+
+    unpin: (channelId: string, messageId: string) =>
+      apiFetch<void>(`/channels/${channelId}/pins/${messageId}`, { method: 'DELETE' }),
   },
 
   invites: {
@@ -292,6 +465,50 @@ export const api = {
       apiFetch<{ code: string; expiresAt: string | null }>(`/invites/guilds/${guildId}/invites`, {
         method: 'POST',
         body: JSON.stringify(data),
+      }),
+  },
+
+  files: {
+    upload: (file: File, purpose: string = 'attachment') => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('purpose', purpose);
+      return apiFetch<{ id: string; url: string; filename: string; size: number; mimeType: string }>('/files/upload', {
+        method: 'POST',
+        body: formData,
+      });
+    },
+  },
+
+  relationships: {
+    getAll: () =>
+      apiFetch<any[]>('/relationships'),
+
+    sendFriendRequest: (userId: string) =>
+      apiFetch<any>('/relationships/friends', {
+        method: 'POST',
+        body: JSON.stringify({ userId }),
+      }),
+
+    acceptFriendRequest: (userId: string) =>
+      apiFetch<any>(`/relationships/friends/${userId}`, { method: 'PUT' }),
+
+    removeFriend: (userId: string) =>
+      apiFetch<void>(`/relationships/friends/${userId}`, { method: 'DELETE' }),
+
+    block: (userId: string) =>
+      apiFetch<void>(`/relationships/blocks/${userId}`, { method: 'PUT' }),
+
+    unblock: (userId: string) =>
+      apiFetch<void>(`/relationships/blocks/${userId}`, { method: 'DELETE' }),
+
+    getDmChannels: () =>
+      apiFetch<any[]>('/relationships/channels'),
+
+    openDm: (userId: string) =>
+      apiFetch<any>('/relationships/channels', {
+        method: 'POST',
+        body: JSON.stringify({ recipientId: userId }),
       }),
   },
 };

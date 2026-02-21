@@ -1832,6 +1832,20 @@ button {
   margin: 4px 6px;
 }
 
+/* DND indicator */
+.dnd-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.dnd-indicator.dnd-active {
+  background: #ef4444;
+}
+
 /* ==========================================================================
    Context Menu
    ========================================================================== */

@@ -2,11 +2,12 @@ import type { Server as SocketIOServer, Socket } from 'socket.io';
 import type { AppContext } from '../../lib/context.js';
 import { createAuthService } from '../auth/auth.service.js';
 import { createBotsService } from '../bots/bots.service.js';
-import { users } from '@gratonite/db';
-import { eq } from 'drizzle-orm';
+import { dmRecipients, dmChannels, users, userProfiles } from '@gratonite/db';
+import { and, eq } from 'drizzle-orm';
 import { createGuildsService } from '../guilds/guilds.service.js';
 import { createVoiceService } from '../voice/voice.service.js';
 import { createChannelsService } from '../channels/channels.service.js';
+import { createDndService } from '../users/dnd.service.js';
 import { logger } from '../../lib/logger.js';
 import {
   GatewayIntents,
@@ -280,6 +281,101 @@ export function setupGateway(ctx: AppContext) {
       } catch (err) {
         logger.error({ err, userId: socket.userId }, 'SOUNDBOARD_PLAY failed');
       }
+    });
+
+    // ── DM CALLS ───────────────────────────────────────────────────────────
+
+    socket.on('CALL_INVITE', async (data: { channelId: string; type: 'voice' | 'video' }) => {
+      if (!socket.userId || !socket.username) return;
+      if (!data?.channelId) return;
+
+      const channel = await channelsService.getChannel(data.channelId);
+      if (!channel || (channel.type !== 'DM' && channel.type !== 'GROUP_DM')) return;
+
+      const recipients = await ctx.db
+        .select({ userId: dmRecipients.userId })
+        .from(dmRecipients)
+        .innerJoin(dmChannels, eq(dmChannels.id, dmRecipients.channelId))
+        .where(eq(dmRecipients.channelId, data.channelId));
+
+      const isRecipient = recipients.some((r) => r.userId === socket.userId);
+      if (!isRecipient) return;
+
+      const [caller] = await ctx.db
+        .select({
+          id: users.id,
+          displayName: userProfiles.displayName,
+          username: users.username,
+        })
+        .from(users)
+        .innerJoin(userProfiles, eq(userProfiles.userId, users.id))
+        .where(eq(users.id, socket.userId))
+        .limit(1);
+
+      const payload = {
+        channelId: data.channelId,
+        type: data.type,
+        fromUserId: socket.userId,
+        fromDisplayName: caller?.displayName ?? socket.username,
+      };
+
+      const dndService = createDndService(ctx);
+      for (const recipient of recipients) {
+        if (recipient.userId === socket.userId) continue;
+
+        // Check if recipient has DND active
+        const schedule = await dndService.getSchedule(recipient.userId);
+        if (dndService.isDndActive(schedule)) {
+          const isException = schedule?.allowExceptions?.includes(socket.userId ?? '');
+          if (!isException) {
+            // Auto-decline: notify caller that this recipient is unavailable
+            socket.emit('CALL_DECLINE', {
+              channelId: data.channelId,
+              fromUserId: recipient.userId,
+              reason: 'dnd',
+            });
+            continue;
+          }
+        }
+
+        ctx.io.to(`user:${recipient.userId}`).emit('CALL_INVITE', payload);
+      }
+    });
+
+    socket.on('CALL_CANCEL', async (data: { channelId: string }) => {
+      if (!socket.userId) return;
+      if (!data?.channelId) return;
+
+      const recipients = await ctx.db
+        .select({ userId: dmRecipients.userId })
+        .from(dmRecipients)
+        .where(eq(dmRecipients.channelId, data.channelId));
+
+      for (const recipient of recipients) {
+        if (recipient.userId === socket.userId) continue;
+        ctx.io.to(`user:${recipient.userId}`).emit('CALL_CANCEL', {
+          channelId: data.channelId,
+          fromUserId: socket.userId,
+        });
+      }
+    });
+
+    socket.on('CALL_ACCEPT', async (data: { channelId: string; toUserId: string }) => {
+      if (!socket.userId) return;
+      if (!data?.channelId || !data?.toUserId) return;
+      ctx.io.to(`user:${data.toUserId}`).emit('CALL_ACCEPT', {
+        channelId: data.channelId,
+        fromUserId: socket.userId,
+      });
+    });
+
+    socket.on('CALL_DECLINE', async (data: { channelId: string; toUserId: string }) => {
+      if (!socket.userId) return;
+      if (!data?.channelId || !data?.toUserId) return;
+      ctx.io.to(`user:${data.toUserId}`).emit('CALL_DECLINE', {
+        channelId: data.channelId,
+        fromUserId: socket.userId,
+      });
     });
 
     // ── Disconnect ─────────────────────────────────────────────────────────
