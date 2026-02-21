@@ -8,9 +8,14 @@ import type { Message } from '@gratonite/types';
 
 interface MessageListProps {
   channelId: string;
+  emptyTitle?: string;
+  emptySubtitle?: string;
+  intro?: React.ReactNode;
+  onReply: (message: Message) => void;
+  onOpenEmojiPicker: (messageId: string) => void;
 }
 
-export function MessageList({ channelId }: MessageListProps) {
+export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onReply, onOpenEmojiPicker }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const wasAtBottomRef = useRef(true);
@@ -71,6 +76,7 @@ export function MessageList({ channelId }: MessageListProps) {
 
   return (
     <div className="message-list" ref={containerRef} onScroll={handleScroll}>
+      {intro}
       {isFetchingNextPage && (
         <div className="message-list-loader">
           <LoadingSpinner size={20} />
@@ -85,7 +91,10 @@ export function MessageList({ channelId }: MessageListProps) {
 
       {messages.length === 0 && !isLoading && (
         <div className="message-list-empty">
-          No messages yet. Say something!
+          <div className="message-list-empty-title">{emptyTitle ?? 'No messages yet.'}</div>
+          <div className="message-list-empty-subtitle">
+            {emptySubtitle ?? 'Say something to get the conversation started.'}
+          </div>
         </div>
       )}
 
@@ -97,7 +106,7 @@ export function MessageList({ channelId }: MessageListProps) {
         );
 
         return (
-          <MessageItem key={msg.id} message={msg} isGrouped={grouped} />
+          <MessageItem key={msg.id} message={msg} isGrouped={grouped} onReply={onReply} onOpenEmojiPicker={onOpenEmojiPicker} />
         );
       })}
 

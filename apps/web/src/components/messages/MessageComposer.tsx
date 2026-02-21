@@ -4,6 +4,9 @@ import { useMessagesStore } from '@/stores/messages.store';
 import { useAuthStore } from '@/stores/auth.store';
 import { getSocket } from '@/lib/socket';
 import { generateNonce } from '@/lib/utils';
+import { ReplyPreview } from './ReplyPreview';
+import { FileUploadButton } from './FileUploadButton';
+import { AttachmentPreview, type PendingAttachment } from './AttachmentPreview';
 import type { Message } from '@gratonite/types';
 
 interface MessageComposerProps {
@@ -13,10 +16,13 @@ interface MessageComposerProps {
 
 export function MessageComposer({ channelId, placeholder }: MessageComposerProps) {
   const [content, setContent] = useState('');
+  const [pendingFiles, setPendingFiles] = useState<PendingAttachment[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastTypingRef = useRef(0);
   const user = useAuthStore((s) => s.user);
   const addMessage = useMessagesStore((s) => s.addMessage);
+  const replyingTo = useMessagesStore((s) => s.replyingTo.get(channelId) ?? null);
+  const setReplyingTo = useMessagesStore((s) => s.setReplyingTo);
 
   // Auto-grow textarea
   const adjustHeight = useCallback(() => {
@@ -45,11 +51,35 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
     }
   }
 
+  function handleFilesSelected(files: File[]) {
+    const newAttachments: PendingAttachment[] = files.map((file) => {
+      const att: PendingAttachment = {
+        id: crypto.randomUUID(),
+        file,
+      };
+      if (file.type.startsWith('image/')) {
+        att.preview = URL.createObjectURL(file);
+      }
+      return att;
+    });
+    setPendingFiles((prev) => [...prev, ...newAttachments]);
+  }
+
+  function handleRemoveFile(id: string) {
+    setPendingFiles((prev) => {
+      const removed = prev.find((a) => a.id === id);
+      if (removed?.preview) URL.revokeObjectURL(removed.preview);
+      return prev.filter((a) => a.id !== id);
+    });
+  }
+
   async function sendMessage() {
     const trimmed = content.trim();
-    if (!trimmed || !user) return;
+    if ((!trimmed && pendingFiles.length === 0) || !user) return;
 
     const nonce = generateNonce();
+    const currentReply = replyingTo;
+    const filesToUpload = [...pendingFiles];
 
     // Optimistic insert
     const optimistic: Message & { nonce: string; author?: { id: string; username: string; displayName: string; avatarHash: string | null } } = {
@@ -72,6 +102,8 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
 
     addMessage(optimistic);
     setContent('');
+    setPendingFiles([]);
+    if (currentReply) setReplyingTo(channelId, null);
 
     // Reset textarea height
     if (textareaRef.current) {
@@ -79,7 +111,31 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
     }
 
     try {
-      await api.messages.send(channelId, { content: trimmed, nonce });
+      // Upload files first if any
+      let attachmentIds: string[] | undefined;
+      if (filesToUpload.length > 0) {
+        const uploads = await Promise.all(
+          filesToUpload.map((att) => api.files.upload(att.file, 'attachment')),
+        );
+        attachmentIds = uploads.map((u) => u.id);
+        // Clean up object URLs
+        filesToUpload.forEach((att) => {
+          if (att.preview) URL.revokeObjectURL(att.preview);
+        });
+      }
+
+      const body: { content: string; nonce: string; messageReference?: { messageId: string }; attachmentIds?: string[] } = {
+        content: trimmed,
+        nonce,
+      };
+      if (currentReply) {
+        body.messageReference = { messageId: currentReply.id };
+      }
+      if (attachmentIds && attachmentIds.length > 0) {
+        body.attachmentIds = attachmentIds;
+      }
+
+      await api.messages.send(channelId, body);
     } catch (err) {
       // If send fails, the optimistic message stays but could be marked failed
       console.error('[Composer] Failed to send message:', err);
@@ -95,16 +151,26 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
 
   return (
     <div className="message-composer">
-      <textarea
-        ref={textareaRef}
-        className="message-composer-input"
-        placeholder={placeholder ?? `Message #channel`}
-        value={content}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        rows={1}
-        maxLength={4000}
-      />
+      {replyingTo && (
+        <ReplyPreview
+          message={replyingTo}
+          onCancel={() => setReplyingTo(channelId, null)}
+        />
+      )}
+      <AttachmentPreview attachments={pendingFiles} onRemove={handleRemoveFile} />
+      <div className="message-composer-row">
+        <FileUploadButton onFilesSelected={handleFilesSelected} />
+        <textarea
+          ref={textareaRef}
+          className="message-composer-input"
+          placeholder={placeholder ?? `Message #channel`}
+          value={content}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          rows={1}
+          maxLength={4000}
+        />
+      </div>
     </div>
   );
 }
