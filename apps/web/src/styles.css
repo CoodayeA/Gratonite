@@ -4573,41 +4573,6 @@ button.home-dashboard-tile {
   line-height: 1.4;
 }
 
-.shop-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-}
-
-.shop-card {
-  border: 1px solid color-mix(in srgb, var(--stroke) 88%, transparent);
-  border-radius: 16px;
-  padding: 14px;
-  background: rgba(10, 16, 28, 0.52);
-  display: grid;
-  gap: 8px;
-}
-
-.shop-card h2 {
-  margin: 0;
-  font-size: 15px;
-}
-
-.shop-card p {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.shop-card-meta {
-  font-size: 11px !important;
-  color: var(--text-faint) !important;
-}
-
-.shop-card-muted {
-  opacity: 0.9;
-}
 
 .shop-link {
   display: inline-flex;
@@ -8766,7 +8731,7 @@ button.home-dashboard-tile {
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .shop-grid {
@@ -8776,6 +8741,7 @@ button.home-dashboard-tile {
 }
 
 .shop-item {
+  position: relative;
   border: 1px solid var(--stroke);
   border-radius: 12px;
   background: rgba(16, 21, 32, 0.64);
@@ -9017,7 +8983,7 @@ button.home-dashboard-tile {
 
 .shop-item-description {
   font-size: 0.82rem;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   line-height: 1.35;
   min-height: 2.1em;
 }
@@ -11958,7 +11924,7 @@ button.home-dashboard-tile {
 
 .shortcuts-label {
   font-size: 0.875rem;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 kbd.shortcuts-keys {
@@ -12074,7 +12040,7 @@ kbd.shortcuts-keys {
   gap: 10px;
   position: relative;
   text-decoration: none;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   transition: background 0.15s ease;
 }
 
@@ -12186,7 +12152,7 @@ kbd.shortcuts-keys {
 }
 
 .dm-tab:hover {
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .dm-tab.active {
@@ -12263,7 +12229,7 @@ kbd.shortcuts-keys {
 }
 
 .friends-filter-btn:hover {
-  color: var(--text-secondary);
+  color: var(--text-muted);
   background: var(--bg-soft);
 }
 
@@ -12360,7 +12326,7 @@ kbd.shortcuts-keys {
   font-weight: 500;
   border: 1px solid var(--stroke);
   background: var(--bg-elevated);
-  color: var(--text-secondary);
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -12434,7 +12400,7 @@ kbd.shortcuts-keys {
 }
 
 .leaderboard-filter-btn:hover {
-  color: var(--text-secondary);
+  color: var(--text-muted);
   background: var(--bg-soft);
 }
 
@@ -12463,7 +12429,7 @@ kbd.shortcuts-keys {
 .leaderboard-table td {
   padding: 10px 12px;
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .leaderboard-row {
