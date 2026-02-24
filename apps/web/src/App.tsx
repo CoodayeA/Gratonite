@@ -28,7 +28,6 @@ const VerifyEmailConfirmPage = lazy(() =>
 const CompleteAccountSetupPage = lazy(() =>
   import('@/pages/auth/CompleteAccountSetupPage').then((m) => ({ default: m.CompleteAccountSetupPage })),
 );
-const HomePage = lazy(() => import('@/pages/HomePage').then((m) => ({ default: m.HomePage })));
 const GuildPage = lazy(() => import('@/pages/GuildPage').then((m) => ({ default: m.GuildPage })));
 const ChannelPage = lazy(() => import('@/pages/ChannelPage').then((m) => ({ default: m.ChannelPage })));
 const InvitePage = lazy(() => import('@/pages/InvitePage').then((m) => ({ default: m.InvitePage })));
