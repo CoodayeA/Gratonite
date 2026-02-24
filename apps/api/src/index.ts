@@ -30,6 +30,10 @@ import { themesRouter } from './modules/themes/themes.router.js';
 import { brandRouter } from './modules/brand/brand.router.js';
 import { profilesRouter } from './modules/profiles/profiles.router.js';
 import { botsRouter } from './modules/bots/bots.router.js';
+import { communityShopRouter } from './modules/community-shop/community-shop.router.js';
+import { economyRouter } from './modules/economy/economy.router.js';
+import { gratonitesRouter } from './modules/gratonites/gratonites.router.js';
+import { shopRouter } from './modules/shop/shop.router.js';
 import { createThemesService } from './modules/themes/themes.service.js';
 import { createThreadsService } from './modules/threads/threads.service.js';
 import { createMessagesService } from './modules/messages/messages.service.js';
@@ -38,6 +42,12 @@ import { createAnalyticsService } from './modules/analytics/analytics.service.js
 import { setupGateway } from './modules/gateway/gateway.js';
 import { RoomServiceClient } from 'livekit-server-sdk';
 import { minioClient, ensureBuckets } from './lib/minio.js';
+import { runWithRequestMetrics, getRequestCacheSummary } from './lib/request-metrics.js';
+import { isOriginAllowed, parseAllowedOrigins } from './lib/cors-origins.js';
+import { createLatencyAlerts } from './lib/latency-alerts.js';
+import { bugReportsRouter } from './modules/bug-reports/bug-reports.router.js';
+import { leaderboardRouter } from './modules/leaderboard/leaderboard.router.js';
+import { dailyLoginMiddleware } from './middleware/daily-login.js';
 
 // ============================================================================
 // Server bootstrap
@@ -60,12 +70,53 @@ async function main() {
   // ── Express app ────────────────────────────────────────────────────────
   const app = express();
   const httpServer = createServer(app);
+  const corsOrigins = env.CORS_ORIGIN.split(',').map((value) => value.trim()).filter(Boolean);
+  const parsedCorsOrigins = parseAllowedOrigins(env.CORS_ORIGIN);
+  const latencyAlerts = createLatencyAlerts({
+    routes: [
+      {
+        id: 'message_send',
+        method: 'POST',
+        pathPattern: /^\/api\/v1\/channels\/[^/]+\/messages$/,
+        p95ThresholdMs: 500,
+        minSamples: 20,
+      },
+      {
+        id: 'message_list',
+        method: 'GET',
+        pathPattern: /^\/api\/v1\/channels\/[^/]+\/messages$/,
+        p95ThresholdMs: 400,
+        minSamples: 20,
+      },
+      {
+        id: 'upload',
+        method: 'POST',
+        pathPattern: /^\/api\/v1\/files\/upload$/,
+        p95ThresholdMs: 2000,
+        minSamples: 10,
+      },
+      {
+        id: 'file_fetch',
+        method: 'GET',
+        pathPattern: /^\/api\/v1\/files\/.+$/,
+        p95ThresholdMs: 700,
+        minSamples: 20,
+      },
+    ],
+    onAlert: (payload) => {
+      logger.error(payload, 'Latency threshold alert');
+    },
+  });
 
   // Middleware
   app.use(express.json({ limit: '10mb' }));
   app.use(
     cors({
-      origin: env.CORS_ORIGIN,
+      origin: (origin, callback) => {
+        if (isOriginAllowed(origin, env.NODE_ENV, parsedCorsOrigins)) return callback(null, true);
+        logger.warn({ origin, allowedOrigins: corsOrigins }, 'CORS origin rejected');
+        return callback(new Error('Not allowed by CORS'));
+      },
       credentials: true,
     }),
   );
@@ -73,19 +124,28 @@ async function main() {
   app.use(globalRateLimiter);
 
   app.use((req, res, next) => {
-    const start = performance.now();
-    res.on('finish', () => {
-      const duration = performance.now() - start;
-      if (duration >= 200) {
-        logger.warn({
+    runWithRequestMetrics(() => {
+      const start = performance.now();
+      res.on('finish', () => {
+        const duration = performance.now() - start;
+        latencyAlerts.observe({
           method: req.method,
-          path: req.originalUrl,
-          status: res.statusCode,
-          durationMs: Math.round(duration),
-        }, 'Slow request');
-      }
+          path: req.path,
+          durationMs: duration,
+          statusCode: res.statusCode,
+        });
+        if (duration >= 200) {
+          logger.warn({
+            method: req.method,
+            path: req.originalUrl,
+            status: res.statusCode,
+            durationMs: Math.round(duration),
+            cacheSummary: getRequestCacheSummary(),
+          }, 'Slow request');
+        }
+      });
+      next();
     });
-    next();
   });
 
   // Trust proxy (for rate limiting behind Nginx/LB)
@@ -94,7 +154,11 @@ async function main() {
   // ── Socket.IO ──────────────────────────────────────────────────────────
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: env.CORS_ORIGIN,
+      origin: (origin, callback) => {
+        if (isOriginAllowed(origin, env.NODE_ENV, parsedCorsOrigins)) return callback(null, true);
+        logger.warn({ origin, allowedOrigins: corsOrigins }, 'Socket.IO CORS origin rejected');
+        return callback(new Error('Not allowed by CORS'));
+      },
       credentials: true,
     },
     transports: ['websocket', 'polling'],
@@ -124,6 +188,10 @@ async function main() {
 
   // ── API routes ─────────────────────────────────────────────────────────
   app.use('/api/v1/auth', authRouter(ctx));
+  
+  // Apply daily login middleware to protected routes
+  app.use('/api/v1', dailyLoginMiddleware(ctx));
+  
   app.use('/api/v1/users', usersRouter(ctx));
   app.use('/api/v1/guilds', guildsRouter(ctx));
   app.use('/api/v1', channelsRouter(ctx));   // handles /guilds/:id/channels and /channels/:id
@@ -142,8 +210,14 @@ async function main() {
   app.use('/api/v1', moderationRouter(ctx));
   app.use('/api/v1', analyticsRouter(ctx));
   app.use('/api/v1', themesRouter(ctx));
+  app.use('/api/v1', communityShopRouter(ctx));
+  app.use('/api/v1', economyRouter(ctx));
+  app.use('/api/v1', gratonitesRouter(ctx));
+  app.use('/api/v1', shopRouter(ctx));
   app.use('/api/v1', brandRouter(ctx));
   app.use('/api/v1', profilesRouter(ctx));
+  app.use('/api/v1', bugReportsRouter(ctx));
+  app.use('/api/v1', leaderboardRouter(ctx));
 
   // ── 404 handler ────────────────────────────────────────────────────────
   app.use((_req, res) => {
@@ -174,8 +248,12 @@ async function main() {
 
   // ── Seed built-in themes ─────────────────────────────────────────────
   const themesService = createThemesService(ctx);
-  await themesService.seedBuiltInThemes();
-  logger.info('Built-in themes seeded');
+  try {
+    await themesService.seedBuiltInThemes();
+    logger.info('Built-in themes seeded');
+  } catch (err) {
+    logger.warn({ err }, 'Skipping built-in theme seed on startup');
+  }
 
   // ── Thread auto-archive ──────────────────────────────────────────────
   const threadsService = createThreadsService(ctx);

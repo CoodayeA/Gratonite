@@ -6,7 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "e2e": "PLAYWRIGHT_BROWSERS_PATH=\"$PWD/.cache/ms-playwright\" playwright test",
+    "e2e:visual": "PLAYWRIGHT_BROWSERS_PATH=\"$PWD/.cache/ms-playwright\" playwright test tests/e2e/visual.spec.ts --update-snapshots",
+    "e2e:headed": "PLAYWRIGHT_BROWSERS_PATH=\"$PWD/.cache/ms-playwright\" playwright test --headed",
+    "e2e:ui": "PLAYWRIGHT_BROWSERS_PATH=\"$PWD/.cache/ms-playwright\" playwright test --ui",
+    "e2e:install": "PLAYWRIGHT_BROWSERS_PATH=\"$PWD/.cache/ms-playwright\" playwright install chromium"
   },
   "dependencies": {
     "@gratonite/profile-resolver": "workspace:*",
@@ -21,6 +27,7 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.17",
     "@vitejs/plugin-react": "^4.3.4",

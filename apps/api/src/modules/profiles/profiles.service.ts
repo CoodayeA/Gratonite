@@ -1,5 +1,11 @@
 import { and, eq, asc, sql } from 'drizzle-orm';
-import { memberProfiles, avatarDecorations, profileEffects, userProfiles } from '@gratonite/db';
+import {
+  memberProfiles,
+  avatarDecorations,
+  profileEffects,
+  nameplates,
+  userProfiles,
+} from '@gratonite/db';
 import type { AppContext } from '../../lib/context.js';
 import type { UpdateMemberProfileInput, EquipCustomizationInput } from './profiles.schemas.js';
 import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
@@ -208,6 +214,16 @@ export function createProfilesService(ctx: AppContext) {
       .orderBy(asc(profileEffects.sortOrder), asc(profileEffects.name));
   }
 
+  // ── Nameplates catalog ────────────────────────────────────────────────
+
+  async function getNameplates() {
+    return ctx.db
+      .select()
+      .from(nameplates)
+      .where(eq(nameplates.available, true))
+      .orderBy(asc(nameplates.sortOrder), asc(nameplates.name));
+  }
+
   // ── Equip decoration / effect ──────────────────────────────────────────
 
   async function equipCustomization(userId: string, input: EquipCustomizationInput) {
@@ -252,6 +268,25 @@ export function createProfilesService(ctx: AppContext) {
       updates.profileEffectId = input.profileEffectId;
     }
 
+    if (input.nameplateId !== undefined) {
+      if (input.nameplateId) {
+        const rows = await ctx.db
+          .select({ id: nameplates.id })
+          .from(nameplates)
+          .where(
+            and(
+              eq(nameplates.id, input.nameplateId),
+              eq(nameplates.available, true),
+            ),
+          )
+          .limit(1);
+        if (rows.length === 0) {
+          return { error: 'NAMEPLATE_NOT_FOUND' };
+        }
+      }
+      updates.nameplateId = input.nameplateId;
+    }
+
     if (Object.keys(updates).length === 0) {
       return { error: 'NO_CHANGES' };
     }
@@ -272,6 +307,7 @@ export function createProfilesService(ctx: AppContext) {
     updateMemberBanner,
     getAvatarDecorations,
     getProfileEffects,
+    getNameplates,
     equipCustomization,
   };
 }

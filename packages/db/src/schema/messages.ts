@@ -46,6 +46,7 @@ export const messages = pgTable(
   (table) => [
     index('idx_messages_channel_id').on(table.channelId, table.id),
     index('idx_messages_author_id').on(table.authorId),
+    index('idx_messages_guild_channel_id').on(table.guildId, table.channelId, table.id),
   ],
 );
 

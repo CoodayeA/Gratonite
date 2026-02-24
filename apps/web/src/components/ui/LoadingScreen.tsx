@@ -8,8 +8,8 @@ export function LoadingScreen() {
           src="/gratonite-icon.png"
           alt="Gratonite"
           className="loading-screen-logo"
-          width={64}
-          height={64}
+          width={120}
+          height={120}
         />
         <LoadingSpinner size={28} />
       </div>

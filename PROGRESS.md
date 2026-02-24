@@ -1,8 +1,120 @@
 # Gratonite — Development Progress
 
-> **Last updated:** 2026-02-20
-> **Current Phase:** Phase 8 — Web App Polish (COMPLETE — 9/9 tasks complete)
-> **Status:** Phase 8 complete: emoji picker fix, reactions sync, pinned/search/thread panels, settings page, integration pass.
+> **Last updated:** 2026-02-22
+> **Current Phase:** Phase 9 — Performance & Scale (IN PROGRESS)
+> **Status:** Perf instrumentation + MessageList virtualization complete. Voice/browser reliability hardening shipped with automated validation; final manual Safari/Zen validation deferred to beta cycle.
+
+### Recovery Track (Web-First Reset)
+
+- Priority order is now: **Web -> Desktop -> Mobile**
+- Source-of-truth execution plan: `docs/plans/2026-02-21-web-recovery-plan.md`
+- Spec-aligned sprint execution plan (active for implementation sequencing): `docs/plans/2026-02-22-spec-aligned-sprint-plan.md`
+- Active board: `docs/status/PROJECT-BOARD.md`
+- Web release gates: `docs/release/web-release-gates.md`
+- Web critical path matrix: `docs/qa/web-critical-path-matrix.md`
+- UI/UX modernization blueprint: `docs/plans/2026-02-21-ui-ux-modernization-blueprint.md`
+- UI/UX execution backlog: `docs/plans/2026-02-21-web-ui-ux-backlog.md`
+- Web finalization execution queue: `docs/plans/2026-02-21-web-finalization-queue.md`
+- Beta scope freeze (active): `docs/plans/2026-02-22-beta-scope-freeze.md`
+- Scope freeze rule reinforced: no net-new features/UX concepts until items in `docs/plans/2026-02-22-spec-aligned-sprint-plan.md` are completed or explicitly deferred.
+- Token architecture spec: `docs/design/2026-02-21-design-token-architecture.md`
+- Deterministic reset command: `pnpm test:reset`
+- Web release check command: `pnpm check:web`
+- WEB-016 implementation started: token v2 scaffold + runtime resolver/initializer added behind `VITE_UI_V2_TOKENS`
+- WEB-030 implementation started: streaming-style server gallery navigation foundation behind modern UI toggle
+- WEB-032 implementation started: server emoji management UX (settings emoji tab + emoji studio)
+- WEB-033 implementation started: markdown rendering in chat messages (safe parser, no HTML injection)
+- WEB-034 implementation started: Display Name Styles (profiles + accessibility + styled rendering)
+- WEB-035 implementation started: profile enhancements MVP (server tag + status + widgets)
+- WEB-037 implementation started: profile cosmetics shop UX (avatar decorations + profile effects + nameplates)
+- WEB-038 implementation started: nameplates backend catalog + equip APIs (cross-client persistence)
+- WEB-039 implementation started: file asset delivery reliability for cosmetics (`/api/v1/files/:hash` redirect resolver)
+- WEB-040/041/042 added to backlog: 2D Avatar Studio + wearable catalog + in-app earned currency loop
+- WEB-045/047/048 added to backlog: server onboarding templates + channel lifecycle UX + silent voice room entry
+- Added onboarding/lifecycle implementation spec: `docs/plans/2026-02-21-server-onboarding-and-channel-lifecycle.md`
+- WEB-014 implemented: Playwright runtime stability hardening (`reuseExistingServer=false` + API CORS allowlist parsing)
+- WEB-018 implemented: interaction primitive polish pack (button/input/modal/context-menu focus, keyboard, visual consistency)
+- WEB-045 implementation started: templated server creation flow with starter text/voice channels and invite handoff
+- WEB-045 implemented: templated server creation flow now creates starter channel sets and hands off invite generation in-modal
+- WEB-047 implementation started: channel lifecycle pass 1 shipped (private channel toggle + API view/connect enforcement, channel delete confirmation modal, owner-leave guard retained)
+- WEB-047 implemented pass 2: server settings now includes channel permission editor (private toggle + role/user visibility grants/removals)
+- WEB-048 implementation started: silent voice room entry UX pass 1 (silent join cues, call-state ring cleanup for guild joins, subtle presence feed)
+- WEB-019 implementation started: Theme Studio in Appearance settings (token overrides + JSON import/export + persisted manifests)
+- WEB-022 foundation pass: reduced-motion guardrails now integrated with v2 theme motion dataset
+- Core modernization pass applied across shell surfaces (sidebar/topbar/composer/modals/settings) with tokenized motion primitives and v2 visual consistency updates
+- Added web E2E coverage for channel lifecycle + silent voice entry (`tests/e2e/channel-lifecycle.spec.ts`) and full suite now passing 7/7
+- WEB-031 implemented: server gallery media controls shipped (fill/fit mode toggle, animated banner on/off preference, deterministic fallback badges/palette, e2e coverage)
+- WEB-036 implementation advanced: moderation guardrails tightened (reason-code validation, transition enforcement, centralized error mapping) + new schema/service tests
+- WEB-040 implemented foundation: local avatar studio model + deterministic sprite renderer + profile/settings integration with opt-in fallback behavior
+- WEB-041 implementation advanced: wardrobe card UX with preview/hover interactions and slot-based equip persistence
+- WEB-042 hardening implemented: soft-currency economy now includes daily earn caps, spend flow (`/economy/spend`) with insufficient-funds guards, auditor ledger route (`/economy/audit/users/:userId/ledger`), expanded schema tests, and settings spend action
+- WEB-028 progress: added keyboard/accessibility smoke test (`tests/e2e/accessibility.spec.ts`) and checklist doc (`docs/qa/web-accessibility-checklist.md`)
+- WEB-027/029 planning artifacts added: visual regression plan (`docs/qa/web-visual-regression-plan.md`) and performance budgets (`docs/qa/web-performance-budgets.md`)
+- WEB-036 integration e2e lifecycle enabled and passing (`tests/e2e/community-shop.spec.ts`) after migration parity reset (`pnpm db:migrate`)
+- WEB-027 visual baseline implemented: `tests/e2e/visual.spec.ts` + snapshot baselines + `e2e:visual` command
+- Expanded web QA run now passing for accessibility/channel lifecycle/community-shop/visual suites in one sequential invocation
+- Docker daemon recovery completed for this environment (Colima restarted; compose services healthy for test runs)
+- WEB-029 implemented: runtime interaction paint telemetry markers for `channel_switch` and `message_send_local_echo` (`apps/web/src/lib/perf.ts` + wired callers)
+- WEB-028 evidence expanded: accessibility suite now validates reduced-motion guardrails and shell contrast threshold
+- Fresh web hardening pass complete on 2026-02-22:
+  - `pnpm check:web` PASS
+  - `pnpm --filter @gratonite/web e2e -- tests/e2e/accessibility.spec.ts tests/e2e/channel-lifecycle.spec.ts tests/e2e/community-shop.spec.ts tests/e2e/visual.spec.ts` PASS (8/8)
+- Next execution batch complete on 2026-02-22 (from `docs/plans/2026-02-22-web-next-30-queue.md`):
+  - WEB-039 regression: DM list now reorders in realtime by latest message activity (store updates on `MESSAGE_CREATE`) with targeted Playwright coverage.
+  - Portal terminology pass applied on remaining high-visibility settings/modals/profile surfaces.
+  - Added portal gallery keyboard-only accessibility regression coverage.
+  - Added avatar sprite fallback regression coverage for message surfaces.
+  - Visual regression expanded with composer attachment-state baseline (`visual-composer-attachment-chromium-darwin.png`).
+- Additional execution batch complete on 2026-02-22:
+  - Portal Gallery pass 2 shipped: search, sort, favorites persistence, and direct-message jump action.
+  - Voice/video overlay hardening shipped: control disabled/pressed semantics, popover close behavior, and pending screenshare tile state.
+  - Avatar Studio polish shipped: randomize/reset controls, expanded color controls, and sprite rendering in user bar + member list (self).
+  - Composer UX polish shipped: clear-all attachment queue action + stronger remove affordances.
+  - Added dedicated attachment upload telemetry marker (`attachment_upload`) in composer critical path.
+  - Validation evidence added:
+    - `pnpm check:web` PASS
+    - `playwright` hardening pack PASS (11/11)
+    - targeted messaging delta pack PASS (3/3)
+- Remaining manual evidence before external beta: screen-reader walkthrough capture for critical path
+- Batch 3 sprint execution pass complete on 2026-02-23:
+  - Mobile/narrow hardening pass shipped (topbar action overflow scroll behavior, composer/send alignment, attachment preview horizontal scrolling, DM intro overflow, voice panel/popover scroll containment, notifications filter-chip horizontal scroll on mobile).
+  - Server Settings UX/admin workflows expanded (role sort direction toggle, channel override grouped stats, split clear actions for shown/all overrides, grant-state helper messaging, bans search + sort, disabled moderation reason badges).
+  - Notifications action center upgraded (collapsible Requests/Mentions/Unread sections, per-item dismiss actions, request ordering polish, compact empty-state guidance).
+  - Dev harness expanded for unread/mention store regression hooks (DEV-only).
+  - Batch 3 regression coverage added for notifications clear actions, mobile topbar overflow, mobile voice popover containment, and server-settings channel-override clear-shown workflow.
+  - Validation + deploy:
+    - `pnpm --filter @gratonite/web typecheck` PASS
+    - `pnpm --filter @gratonite/web build` PASS
+    - targeted Playwright Batch 3 pack exited cleanly
+    - Hetzner web deploy + route smoke PASS (`/app`, `/notifications`, `/settings`)
+- Batch 4 sprint execution pass (in progress) on 2026-02-23:
+  - Server Settings UX/admin workflow expansion:
+    - persisted channel permissions tab state per portal (selected channel + filters) across modal reopen
+    - role quick filters (`All`, `Custom Only`, `Mentionable Only`) + sort direction retained
+    - channel permission feedback messages for grant/remove/clear actions
+    - members moderation feedback messages (kick/ban/unban)
+    - bans search + sort (`Recent` / `Name`)
+    - banned reason truncation with expand/collapse affordance (`More` / `Less`)
+    - banned-user `Copy IDs` helper (owner utility)
+  - Notifications action center follow-through:
+    - collapse state persistence for Requests/Mentions/Unread (client local state)
+    - friend-request action feedback auto-clear timing
+    - per-item dismiss actions for mentions and unread conversations
+  - Mobile hardening continuation:
+    - voice control dock spacing/tap-target polish
+    - mobile server settings tab rail momentum scroll/containment
+    - notifications action row button wrapping polish on narrow widths
+  - DEV harness expanded with unread-store hooks for deterministic notifications UI regressions
+  - Batch 4 regression coverage added:
+    - notifications per-item dismiss (mentions + unread)
+    - notifications collapse/expand persistence flow
+    - mobile notifications filter-chip horizontal scroll
+    - server settings bans search + split override clear actions workflow
+  - Validation/deploy checkpoint:
+    - `pnpm --filter @gratonite/web typecheck` PASS
+    - `pnpm --filter @gratonite/web build` PASS
+    - targeted Playwright Batch 4 subset exited cleanly
+    - Hetzner web deploy + route smoke PASS (`/app`, `/notifications`, `/settings`)
 
 ### Completed This Session (Phase 8: Web App Polish)
 
@@ -52,6 +164,78 @@
 ### Remaining Phase 8 Tasks
 
 None — Phase 8 is complete.
+
+### Phase 9 — Performance & Scale (IN PROGRESS)
+
+**Completed so far:**
+- Web perf instrumentation (app boot timing + React Profiler for MessageList/ChannelSidebar/MemberList)
+- MessageList virtualization for large channels
+- API slow request logging (>=200ms)
+- Real-time joins for DM/guild rooms in SocketProvider
+- API index pass 1 completed for hot reads (`messages` search filters + `guild_members` list/membership lookups)
+- API hotspot pass 2 started: repeatable EXPLAIN benchmark (`pnpm check:api-hotspots`) + Redis cache/invalidation for guild members + guild/channel metadata reads
+- API cache behavior now has automated test coverage (`apps/api/src/modules/*/*.service.test.ts`)
+- API runtime cache smoke check added and passing (`pnpm check:api-cache-smoke`)
+- Phase C API checks wired into CI (`api-phase-c` job in `.github/workflows/pr-ci.yml`)
+- Voice preflight hardening pass shipped (mic-first preflight + media fallback/retry helper + improved media error mapping)
+- WEB-016 scaffold pass implemented:
+  - `apps/web/src/theme/tokens-v2.ts`
+  - `apps/web/src/theme/resolveTheme.ts`
+  - `apps/web/src/theme/initTheme.ts`
+  - feature flag activation in `apps/web/src/main.tsx`
+  - semantic token bridge in `apps/web/src/styles.css` (`:root[data-theme-v2='true']`)
+  - Settings toggle added for preview enable/disable (`apps/web/src/pages/SettingsPage.tsx`)
+  - First shell-level glass/motion visual pass added behind v2 theme flag
+- WEB-030 server gallery foundation implemented:
+  - Added `apps/web/src/components/home/ServerGallery.tsx`
+  - Home now renders gallery in v2 mode (`apps/web/src/pages/HomePage.tsx`)
+  - Added responsive gallery card/hover styles in `apps/web/src/styles.css`
+  - Uses existing guild banner/icon/description/member count data
+- WEB-032 server emoji management UX implemented:
+  - Added server settings modal with emoji tab and static/animated slot counts
+  - Added emoji studio modal for upload with server selection, naming, and basic zoom/rotate controls
+  - Added emoji API client methods (`getEmojis`, `createEmoji`, `deleteEmoji`)
+  - Added `Add Emoji` entry point in emoji picker for guild channels/threads
+- WEB-033 markdown chat rendering implemented:
+  - Added safe markdown renderer for message content (`MarkdownText`)
+  - Supports headers (`#`, `##`, `###`), masked links (`[text](url)`), bullet lists (`-`, `*`), block quotes (`>`), inline code (`` `code` ``), and fenced code blocks (```).
+  - Integrated into grouped + standard message rows and styled for readability
+- WEB-034 Display Name Styles web MVP implemented:
+  - Added Profiles settings editor for font/effect/colors with Change Style + Surprise Me + light/dark preview
+  - Added Accessibility toggle to enable/disable Display Name Styles globally
+  - Added reusable styled display-name renderer across message author, member list, user bar, and profile popover
+  - Implemented server-context behavior (font-only) and DM message behavior (full effects on hover)
+- WEB-035 profile enhancements MVP implemented:
+  - Added Server Tag selector in Profiles settings and clickable tag badge near message display names
+  - Added status thought bubble message with configurable expiry (1h, 4h, today, never)
+  - Added simple profile widgets list (favorites/backlog tags) displayed in profile popover
+  - Added local persistence + live update subscriptions for profile enhancement state
+- WEB-036 community shop items planning created:
+  - `docs/plans/2026-02-21-community-shop-items.md` (upload, moderation, install scopes, rollout)
+- WEB-037 profile cosmetics shop UX implemented (web MVP):
+  - Added Shop Cosmetics panel in Profiles settings with catalog preview/equip for avatar decorations + profile effects
+  - Added API-backed nameplate catalog/equip and live rendering behind display names
+  - Added avatar decoration frame rendering in user bar/message avatar (self) and profile popover
+  - Added profile effect layer rendering in profile popover + settings profile card
+  - Added DB migration for `nameplates` table + `user_profiles.nameplate_id`
+- WEB-038/039 cosmetics hardening completed:
+  - Fixed web cosmetics API client routes to match backend endpoints (`/avatar-decorations`, `/profile-effects`, `/nameplates`, `/users/@me/customization`)
+  - Added backend hash-asset resolver on `GET /api/v1/files/:fileId` for image hash requests, redirecting to CDN/MinIO object URLs
+  - Seeded default avatar decorations/profile effects/nameplates catalog rows in migration `0008_sudden_nameplates.sql`
+  - Added reproducible placeholder asset seeding command: `pnpm --filter @gratonite/api seed:cosmetics-assets`
+
+**In progress / blockers:**
+- Manual Safari/Zen cross-browser voice validation is deferred to final beta cycle (by priority decision)
+- Beta scope freeze now has a single hard blocker remaining: queue item `80` (first Oracle Cloud staging dry-run deployment).
+- Queue item `15` is complete (mobile viewport DM attachment URL safety regression added and passing).
+- Oracle dry-run preflight is complete locally (infra + API smoke + focused realtime/media/voice E2E); full OCI hostname pass remains pending cloud credentials/DNS.
+- Hosting cutover blocker completed on Hetzner (provider changed from Oracle): public TLS is live on `gratonite.chat` and `api.gratonite.chat`, with API prod + contract smoke passing.
+
+**Remaining Phase 9 tasks:**
+- Identify slow API endpoints and add indexes/caching for hot reads (guilds/channels/members/messages/search)
+- Validate MessageList perf with 1k+ message channels and tune overscan/row sizing
+- CDN/media caching plan and scale checklist (horizontal scaling + Redis adapter)
+- Finalize voice channel UX: participant list, speaking state, stable device selection
 
 ### Previous Sessions
 - **Phase 7B** (COMPLETE): Call audio, screen share, DND, desktop polish, permission refactor
@@ -1447,3 +1631,185 @@ cd packages/db && npx drizzle-kit migrate
 # Start API in dev mode (port 4000)
 cd apps/api && node_modules/.bin/tsx src/index.ts
 ```
+
+## 2026-02-23 Batch Progress (Web UX / Mobile Hardening / Admin UX)
+
+- Continued sprint-plan execution in 20-task batch mode (web-first).
+- Shipped multiple web UX/admin improvements to production on Hetzner (`gratonite.chat`):
+  - `Server Settings` workflow polish (`Members` -> `Roles` jump, role/member counts, role sort modes, member moderation filter presets)
+  - `Channel Permissions` workflow polish (channel filter, override quick filters, sorted override list, `Clear Shown Overrides`, duplicate-aware grant dropdowns)
+  - Notifications UX improvements (portal names in mention/unread cards, clear mentions/unread actions, friend-request action feedback)
+  - Mobile/narrow hardening for topbar, voice popovers/panel scroll containment, composer mention menu, typing indicator truncation, and attachment preview horizontal scrolling
+- Added targeted Playwright regression coverage for:
+  - role assignment API workflow
+  - channel permission override API workflow
+  - mobile composer attachment preview usability with multiple attachments
+- Repeated web validations and production deploys completed successfully (`typecheck`, `build`, Hetzner web deploy smoke).
+
+## 2026-02-23 Batch 5 Checkpoint (Web UX / Mobile Hardening / Server Settings / Notifications)
+
+- Continued sprint-plan execution in fixed-size batch mode and closed the remaining Batch 5 items.
+- Shipped and deployed additional web UX/admin polish to production on Hetzner (`gratonite.chat`):
+  - `Server Settings` roles workflow persistence (`selected member`, role-search context) and clearer context reset UX
+  - `Server Settings` channel/member moderation feedback/status improvements (timed feedback for grant/remove/clear + moderation actions)
+  - Notifications action-center consistency pass:
+    - collapse-state persistence
+    - clearer per-section counts/labels
+    - improved empty-state guidance by filter
+    - normalized action ordering (`Clear` + `Collapse` + count badge)
+    - friend-request feedback styling consistency
+  - Mobile/narrow topbar and notifications spacing/truncation refinements
+- Added/updated targeted Playwright regressions:
+  - mobile composer multiline + attachments send-button reachability
+  - notifications collapse-state persistence across filter switches
+  - server settings tab/channel-permissions state restore
+  - ban reason expand/collapse behavior
+- Hardened Playwright helper username generation to respect current registration validation limits (prevents false-negative E2E failures).
+- Batch 5 validation completed successfully:
+  - `pnpm --filter @gratonite/web typecheck`
+  - `pnpm --filter @gratonite/web build`
+  - focused Playwright Batch 5 pack (`4 passed`)
+- Web redeployed on Hetzner and public route smoke passed:
+  - `/app` `200`
+  - `/notifications` `200`
+  - `/settings` `200`
+
+## 2026-02-23 Batch 6 Checkpoint (Notifications Persistence + Mobile Voice Popover Hardening)
+
+- Continued sprint-plan execution on the active web polish track (mobile hardening + Server Settings admin UX + Notifications action center).
+- Shipped additional notifications persistence and recovery UX to production:
+  - persisted notifications filter (`All / Unread / Mentions / Friend Requests`) is now stable across reloads
+  - added `Reset view` action to restore default filter + expand all notification sections
+- Expanded Server Settings per-portal persistence for admin workflows:
+  - role/member list filters and sorts
+  - channel-permissions grant workflow targets and searches
+- Mobile/narrow hardening updates:
+  - mention autocomplete menu scroll containment / momentum scroll
+  - notifications action-row spacing and wrapping improvements
+  - voice popover mobile layout improvements (soundboard upload row wraps cleanly; better narrow-screen control alignment)
+- Added/updated targeted Playwright regressions:
+  - `notifications selected filter persists across reload`
+  - `notifications reset view clears persisted filter and collapsed state`
+  - `mobile voice more popover uses scroll containment and max height`
+  - notifications/server-settings persistence tests stabilized with localStorage reset helpers and scoped selectors
+- Validation/deploy completed successfully:
+  - `pnpm --filter @gratonite/web typecheck`
+  - `pnpm --filter @gratonite/web build`
+  - focused Playwright pack (`3 passed`)
+  - Hetzner web deploy (`WEB_DEPLOY_OK`) + public smoke (`/app`, `/notifications`, `/settings` all `200`)
+
+## 2026-02-23 Beta Readiness Stabilization Checkpoint (Regression + Mobile + Ops)
+
+- Completed the next planned stabilization block (web-first):
+  - broad web regression sweep + targeted burn-down of drifted tests
+  - mobile regression verification pack (`13 passed`)
+  - visual baseline refresh for updated shell/home/settings surfaces
+  - production API+web deploy + smoke validation on Hetzner
+- Test hardening completed for current UI semantics:
+  - portal gallery keyboard/favorites tests updated for multi-lane portal browsing
+  - server settings admin/permissions tests updated for current tab/filter semantics
+  - notifications action-center tests updated for current filter labels, section scoping, and action names
+  - unread indicator test updated for numeric badges/store-backed waits
+- E2E helper retry hardening expanded for setup requests (guild/channel create + open DM) to reduce local broad-suite false negatives under rate-limit pressure.
+- Production validation after deploy:
+  - public routes (`/app`, `/notifications`, `/settings`, `/discover`) -> `200`
+  - API health `status: ok`
+  - `api-prod-smoke.sh` -> OK
+  - `api-contract-smoke.sh` -> OK
+- Added beta operations docs:
+  - `docs/release/hetzner-deploy-runbook.md`
+  - `docs/ops/bug-inbox-triage-workflow.md`
+  - `docs/release/web-beta-checkpoint-2026-02-23.md`
+
+## 2026-02-23 Beta Gate Follow-Through (Triage + Structured Smoke + Readiness Review)
+
+- Bug Inbox triage completed on production:
+  - status changed from `9 open` to `5 resolved / 1 dismissed / 3 triaged`
+  - resolved duplicates/fixed regressions included image upload hyperlink issue, emoji reaction double-toggle bugs, and sidebar/background shell height issues
+  - remaining triaged items are customization-related (`custom emoji`, `portal icon/banner persistence`, `avatar/profile/banner persistence`)
+- Added and passed a new 5-user concurrency smoke test:
+  - `retains all messages under rapid concurrent sends from five members (api smoke)`
+- Structured smoke pass completed (local automated + public production smoke):
+  - auth UI register/login smoke
+  - 2-user realtime/media/voice core flows
+  - 5-user concurrent message retention
+  - public `api-prod-smoke.sh` + `api-contract-smoke.sh`
+- Mobile web validation pack rerun and passed (`13 passed`)
+- Added web beta launch readiness review:
+  - `docs/release/web-beta-launch-readiness-2026-02-23.md`
+
+## 2026-02-23 Controlled Beta Execution Pack (Steps 1-5 Operator Prep + Validation)
+
+- Built operator-facing docs/checklists to execute the controlled beta phase cleanly:
+  - `docs/release/controlled-beta-operator-checklist-2026-02-23.md`
+  - `docs/release/mobile-web-beta-manual-checklist-2026-02-23.md`
+  - `docs/ops/bug-inbox-severity-rubric.md`
+  - `docs/ops/live-beta-monitoring-checklist-2026-02-23.md`
+- Added one-command beta operations snapshot check:
+  - `scripts/checks/beta-ops-snapshot.sh`
+  - validates web routes, API health, API prod smoke, and API contract smoke
+- Executed the beta ops snapshot against production:
+  - web routes (`/app`, `/notifications`, `/settings`, `/discover`) -> `200`
+  - API health -> `status: ok`
+  - `api-prod-smoke.sh` -> OK
+  - `api-contract-smoke.sh` -> OK
+- Reconfirmed production bug inbox status before cohort start:
+  - `5 resolved / 1 dismissed / 3 triaged`
+- Linked the new operator pack into the readiness review:
+  - `docs/release/web-beta-launch-readiness-2026-02-23.md`
+
+## 2026-02-23 iOS Release Prep (Expo WebView Shell -> Native Project Boundary)
+
+- Advanced `apps/mobile` to a TestFlight-prep-ready repo state (hybrid iOS shell path):
+  - functional Expo WebView shell for Gratonite prod/LAN
+  - iOS permission strings (camera/mic/photos)
+  - bundle identifier set to `chat.gratonite.mobile`
+  - EAS build profiles added (`development`, `preview`, `production`)
+- Generated Expo iOS assets required for prebuild:
+  - `apps/mobile/assets/icon.png`
+  - `apps/mobile/assets/adaptive-icon.png`
+  - `apps/mobile/assets/splash.png`
+- Validated and generated native iOS project:
+  - `pnpm --filter @gratonite/mobile typecheck` -> PASS
+  - `npx expo config --type public` -> PASS
+  - `pnpm --filter @gratonite/mobile run ios:prebuild` -> PASS
+  - native project generated at `apps/mobile/ios`
+- Verified generated iOS config includes:
+  - `PRODUCT_BUNDLE_IDENTIFIER = chat.gratonite.mobile`
+  - camera/microphone/photo usage descriptions
+- Added iOS/TestFlight docs:
+  - `docs/release/ios-release-prep-and-runbook-2026-02-23.md`
+  - `docs/release/ios-testflight-app-store-connect-checklist-2026-02-23.md`
+  - `docs/release/ios-webview-shell-validation-matrix-2026-02-23.md`
+- Remaining local machine blockers before simulator/device run:
+  - install CocoaPods
+  - use Expo SDK 51 compatible Xcode (`<= 16.2`) or upgrade mobile SDK
+
+## 2026-02-23 iOS Simulator Build Unblocked (Path-with-Spaces Script Patch Pass)
+
+- Local iOS simulator build blocker chain resolved on the current machine:
+  - React Native path-with-spaces script failures fixed (`codegen`, `with-environment.sh`)
+  - Expo Constants (`EXConstants`) script phase path quoting fixed (`get-app-config-ios.sh`)
+  - App target `Bundle React Native code and images` script phase path quoting fixed in generated Xcode project
+  - Xcode script environment module resolution fixed for pnpm workspace (`glob`) via `apps/mobile/ios/.xcode.env.local` `NODE_PATH`
+- Validation:
+  - `cd apps/mobile/ios && pod install` -> PASS
+  - direct `xcodebuild` simulator build (`Gratonite` scheme) -> PASS (`exit 0`)
+  - `xcrun simctl install` -> PASS
+  - `xcrun simctl launch chat.gratonite.mobile` -> PASS
+- iOS track is now past the native build boundary and ready for app-shell validation + EAS/TestFlight setup.
+
+## 2026-02-23 iOS Runtime/Dev Client Unblock (Metro + Expo Dev Client)
+
+- Continued iOS validation after native build success and fixed additional runtime/dev-bundler blockers:
+  - `expo/AppEntry` resolution failure in pnpm workspace (switched mobile entry to local `apps/mobile/index.js`)
+  - Metro pnpm/monorepo resolution issues (added `apps/mobile/metro.config.js` with symlink + nodeModulesPaths support)
+  - Metro/Babel dependency resolution missing `debug` (added to mobile and workspace root)
+  - `expo/metro-config` required direct `expo-asset` dependency in `apps/mobile`
+  - installed `expo-dev-client` and regenerated iOS native project to support development-client launch flow
+  - patched local `expo-dev-menu` Swift source for Xcode 26 (`TARGET_IPHONE_SIMULATOR` -> `targetEnvironment(simulator)`)
+- Rebuilt iOS app with `expo-dev-client`; build succeeded and Expo opened the app via:
+  - `exp+gratonite-mobile://expo-development-client/?url=http://192.168.42.78:8081`
+- Remaining iOS work shifted to:
+  - complete shell validation matrix on simulator/device
+  - EAS auth/init + preview build (requires login + project ID)

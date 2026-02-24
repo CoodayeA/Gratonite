@@ -26,6 +26,19 @@ const ALLOWED_TYPES: Record<string, string[]> = {
   'server-icon': ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
 };
 
+const BLOCKED_MIME_TYPES = new Set(['image/svg+xml']);
+
+export function isMimeAllowedForPurpose(purpose: string, mimeType: string): boolean {
+  const allowed = ALLOWED_TYPES[purpose] ?? ALLOWED_TYPES.upload;
+  const isAllowed = allowed.some((t) => mimeType.startsWith(t));
+  return isAllowed && !BLOCKED_MIME_TYPES.has(mimeType);
+}
+
+export function getMaxUploadSizeForPurpose(purpose: string): number {
+  const bucketName = PURPOSE_BUCKET[purpose] ?? 'uploads';
+  return BUCKETS[bucketName].maxSize;
+}
+
 /** Max dimensions per purpose */
 const MAX_DIMENSIONS: Record<string, { width: number; height: number }> = {
   emoji: { width: 128, height: 128 },
@@ -52,7 +65,105 @@ export interface UploadResult {
   waveform: string | null;
 }
 
+export interface ResolvedAsset {
+  bucket: string;
+  key: string;
+  url: string;
+}
+
+function sanitizeContentDispositionFilename(value: string): string {
+  return value.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 128) || 'file';
+}
+
+export function buildPublicFileHeaders(contentType: string | undefined, filename: string) {
+  const safeFilename = sanitizeContentDispositionFilename(filename);
+  return {
+    'Content-Type': contentType ?? 'application/octet-stream',
+    'Cache-Control': 'public, max-age=31536000, immutable',
+    'Content-Disposition': `inline; filename="${safeFilename}"`,
+    'X-Content-Type-Options': 'nosniff',
+  };
+}
+
 export function createFilesService(ctx: AppContext) {
+  async function findObjectByHash(bucket: string, hash: string): Promise<string | null> {
+    return new Promise((resolve, reject) => {
+      const stream = ctx.minio.listObjectsV2(bucket, '', true);
+      let settled = false;
+
+      stream.on('data', (obj) => {
+        const key = obj.name;
+        if (!key) return;
+        if (key === hash || key.endsWith(`/${hash}`)) {
+          settled = true;
+          stream.destroy();
+          resolve(key);
+        }
+      });
+
+      stream.on('error', (err) => {
+        if (!settled) {
+          settled = true;
+          reject(err);
+        }
+      });
+
+      stream.on('end', () => {
+        if (!settled) {
+          settled = true;
+          resolve(null);
+        }
+      });
+    });
+  }
+
+  /**
+   * Resolve an asset hash (e.g. "abc.webp") to bucket/key for public display.
+   * Uses Redis cache to avoid repeated object scans.
+   */
+  async function resolveAssetByHash(hash: string): Promise<ResolvedAsset | null> {
+    if (!hash || hash.length > 128) return null;
+
+    const cacheKey = `asset_lookup:${hash}`;
+    const cached = await ctx.redis.get(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as { bucket: string; key: string };
+        return {
+          bucket: parsed.bucket,
+          key: parsed.key,
+          url: getFileUrl(parsed.bucket, parsed.key),
+        };
+      } catch {
+        // Ignore malformed cache entries
+      }
+    }
+
+    const searchableBuckets = [
+      BUCKETS.avatars.name,
+      BUCKETS.banners.name,
+      BUCKETS['server-icons'].name,
+      BUCKETS.emojis.name,
+      BUCKETS.stickers.name,
+      BUCKETS.uploads.name,
+    ];
+
+    for (const bucket of searchableBuckets) {
+      const key = await findObjectByHash(bucket, hash);
+      if (!key) continue;
+
+      await ctx.redis.set(
+        cacheKey,
+        JSON.stringify({ bucket, key }),
+        'EX',
+        60 * 60 * 24, // 24h
+      );
+
+      return { bucket, key, url: getFileUrl(bucket, key) };
+    }
+
+    return null;
+  }
   /**
    * Upload a file to MinIO with optional image processing.
    */
@@ -68,7 +179,7 @@ export function createFilesService(ctx: AppContext) {
     if (file.size > bucket.maxSize) {
       throw Object.assign(new Error('File too large'), {
         code: 'FILE_TOO_LARGE',
-        maxSize: bucket.maxSize,
+        maxSize: getMaxUploadSizeForPurpose(input.purpose),
       });
     }
 
@@ -77,9 +188,7 @@ export function createFilesService(ctx: AppContext) {
     const detected = await fileTypeFromBuffer(file.buffer);
     const mimeType = detected?.mime ?? file.mimetype;
 
-    const allowed = ALLOWED_TYPES[input.purpose] ?? ALLOWED_TYPES.upload;
-    const isAllowed = allowed.some((t) => mimeType.startsWith(t));
-    if (!isAllowed) {
+    if (!isMimeAllowedForPurpose(input.purpose, mimeType)) {
       throw Object.assign(new Error(`File type ${mimeType} not allowed for ${input.purpose}`), {
         code: 'INVALID_FILE_TYPE',
       });
@@ -225,6 +334,7 @@ export function createFilesService(ctx: AppContext) {
     uploadFile,
     processImage,
     getFileUrl,
+    resolveAssetByHash,
     deleteFile,
     getPendingUpload,
     clearPendingUpload,

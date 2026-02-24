@@ -10,6 +10,9 @@ import { getErrorMessage } from '@/lib/utils';
 
 export function InviteModal() {
   const activeModal = useUiStore((s) => s.activeModal);
+  const modalData = useUiStore((s) => s.modalData) as
+    | { inviteCode?: string; guildId?: string; channelId?: string }
+    | null;
   const currentGuildId = useGuildsStore((s) => s.currentGuildId);
   const currentChannelId = useChannelsStore((s) => s.currentChannelId);
 
@@ -20,7 +23,21 @@ export function InviteModal() {
 
   // Auto-generate invite on open
   useEffect(() => {
-    if (activeModal !== 'invite' || !currentGuildId || !currentChannelId) return;
+    if (activeModal !== 'invite') return;
+
+    const guildId = modalData?.guildId ?? currentGuildId;
+    const channelId = modalData?.channelId ?? currentChannelId;
+    const initialInviteCode = modalData?.inviteCode;
+
+    if (initialInviteCode) {
+      setInviteCode(initialInviteCode);
+      setError('');
+      setLoading(false);
+      setCopied(false);
+      return;
+    }
+
+    if (!guildId || !channelId) return;
 
     setLoading(true);
     setError('');
@@ -28,8 +45,8 @@ export function InviteModal() {
     setCopied(false);
 
     api.invites
-      .create(currentGuildId, {
-        channelId: currentChannelId,
+      .create(guildId, {
+        channelId,
         maxAgeSeconds: 86400, // 24 hours
       })
       .then((result) => {
@@ -39,7 +56,7 @@ export function InviteModal() {
         setError(getErrorMessage(err));
       })
       .finally(() => setLoading(false));
-  }, [activeModal, currentGuildId, currentChannelId]);
+  }, [activeModal, currentGuildId, currentChannelId, modalData]);
 
   function handleClose() {
     setInviteCode(null);

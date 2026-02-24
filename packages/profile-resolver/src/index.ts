@@ -4,6 +4,8 @@ export interface GlobalProfile {
   avatarHash?: string | null;
   bannerHash?: string | null;
   bio?: string | null;
+  primaryColor?: number | null;
+  accentColor?: number | null;
 }
 
 export interface MemberProfileOverride {
@@ -11,6 +13,8 @@ export interface MemberProfileOverride {
   avatarHash?: string | null;
   bannerHash?: string | null;
   bio?: string | null;
+  primaryColor?: number | null;
+  accentColor?: number | null;
 }
 
 export interface ResolvedProfile {
@@ -18,6 +22,8 @@ export interface ResolvedProfile {
   avatarHash: string | null;
   bannerHash: string | null;
   bio: string | null;
+  primaryColor: number | null;
+  accentColor: number | null;
 }
 
 export function resolveProfile(global: GlobalProfile, member?: MemberProfileOverride | null): ResolvedProfile {
@@ -26,6 +32,8 @@ export function resolveProfile(global: GlobalProfile, member?: MemberProfileOver
     avatarHash: member?.avatarHash ?? global.avatarHash ?? null,
     bannerHash: member?.bannerHash ?? global.bannerHash ?? null,
     bio: member?.bio ?? global.bio ?? null,
+    primaryColor: member?.primaryColor ?? global.primaryColor ?? null,
+    accentColor: member?.accentColor ?? global.accentColor ?? null,
   };
 }
 

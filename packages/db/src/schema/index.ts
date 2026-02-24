@@ -9,3 +9,5 @@ export * from './channels';
 export * from './messages';
 export * from './voice';
 export * from './bots';
+export * from './gratonites';
+export * from './shop';

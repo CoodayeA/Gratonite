@@ -42,8 +42,40 @@ const envSchema = z.object({
     .url()
     .default('http://localhost:4000/api/v1/auth/google/callback'),
 
+  // App URLs / Email delivery
+  APP_ORIGIN: z.string().default('http://localhost:5173'),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_SECURE: z
+    .string()
+    .transform((v) => v === 'true')
+    .default('false'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM_ADDRESS: z.string().email().default('no-reply@gratonite.chat'),
+  SMTP_FROM_NAME: z.string().default('Gratonite'),
+  SMTP_REQUIRE_TLS: z
+    .string()
+    .transform((v) => v === 'true')
+    .default('false'),
+  SMTP_IGNORE_TLS: z
+    .string()
+    .transform((v) => v === 'true')
+    .default('false'),
+
   // CORS
-  CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  CORS_ORIGIN: z
+    .string()
+    .default('http://localhost:5173,http://127.0.0.1:4173,http://localhost:4173'),
+  COMMUNITY_SHOP_MODERATOR_IDS: z.string().default(''),
+  ECONOMY_AUDITOR_IDS: z.string().default(''),
+  BUG_REPORT_ADMIN_USER_IDS: z.string().default(''),
+  BUG_REPORT_ADMIN_USERNAMES: z.string().default('ferdinand'),
+  AUTH_REQUIRE_EMAIL_VERIFIED_LOGIN: z
+    .string()
+    .transform((v) => v === 'true')
+    .default('false'),
+  AUTH_REQUIRE_EMAIL_VERIFIED_CREATED_AFTER: z.string().optional(),
 
   // CDN
   CDN_BASE_URL: z.string().default('http://localhost:9000'),

@@ -1,0 +1,186 @@
+{
+  "items": [
+    {
+      "id": "gg-mythic-001",
+      "label": "fireboy",
+      "normalizedKey": "mythic-002-fireboy",
+      "sourceRelativePath": "Mythics/fireboy.gif",
+      "filename": "fireboy.gif"
+    },
+    {
+      "id": "gg-mythic-002",
+      "label": "ghosty",
+      "normalizedKey": "mythic-004-ghosty",
+      "sourceRelativePath": "Mythics/ghosty.gif",
+      "filename": "ghosty.gif"
+    },
+    {
+      "id": "gg-mythic-003",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(10)",
+      "normalizedKey": "mythic-006-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(10).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(10).gif"
+    },
+    {
+      "id": "gg-mythic-004",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(11)",
+      "normalizedKey": "mythic-008-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(11).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(11).gif"
+    },
+    {
+      "id": "gg-mythic-005",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(12)",
+      "normalizedKey": "mythic-010-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(12).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(12).gif"
+    },
+    {
+      "id": "gg-mythic-006",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(13)",
+      "normalizedKey": "mythic-012-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(13).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(13).gif"
+    },
+    {
+      "id": "gg-mythic-007",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(16)",
+      "normalizedKey": "mythic-014-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(16).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(16).gif"
+    },
+    {
+      "id": "gg-mythic-008",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(17)",
+      "normalizedKey": "mythic-016-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(17).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(17).gif"
+    },
+    {
+      "id": "gg-mythic-009",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(18)",
+      "normalizedKey": "mythic-018-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(18).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(18).gif"
+    },
+    {
+      "id": "gg-mythic-010",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(19)",
+      "normalizedKey": "mythic-020-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(19).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(19).gif"
+    },
+    {
+      "id": "gg-mythic-011",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(2)",
+      "normalizedKey": "mythic-022-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(2).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(2).gif"
+    },
+    {
+      "id": "gg-mythic-012",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(20)",
+      "normalizedKey": "mythic-024-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(20).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(20).gif"
+    },
+    {
+      "id": "gg-mythic-013",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(22)",
+      "normalizedKey": "mythic-026-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(22).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(22).gif"
+    },
+    {
+      "id": "gg-mythic-014",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(23)",
+      "normalizedKey": "mythic-028-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(23).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(23).gif"
+    },
+    {
+      "id": "gg-mythic-015",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(24)",
+      "normalizedKey": "mythic-030-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(24).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(24).gif"
+    },
+    {
+      "id": "gg-mythic-016",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(25)",
+      "normalizedKey": "mythic-032-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(25).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(25).gif"
+    },
+    {
+      "id": "gg-mythic-017",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(3)",
+      "normalizedKey": "mythic-034-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(3).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(3).gif"
+    },
+    {
+      "id": "gg-mythic-018",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(4)",
+      "normalizedKey": "mythic-036-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(4).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(4).gif"
+    },
+    {
+      "id": "gg-mythic-019",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(5)",
+      "normalizedKey": "mythic-038-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(5).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(5).gif"
+    },
+    {
+      "id": "gg-mythic-020",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(7)",
+      "normalizedKey": "mythic-040-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(7).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(7).gif"
+    },
+    {
+      "id": "gg-mythic-021",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(8)",
+      "normalizedKey": "mythic-042-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(8).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(8).gif"
+    },
+    {
+      "id": "gg-mythic-022",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(9)",
+      "normalizedKey": "mythic-044-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(9).gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0(9).gif"
+    },
+    {
+      "id": "gg-mythic-023",
+      "label": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0",
+      "normalizedKey": "mythic-046-hailuo-2-3-fast-animate-the-provided-character-image-maintain-the-exact-original",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0.gif",
+      "filename": "hailuo-2_3-fast_Animate_the_provided_character_image._Maintain_the_exact_original_character_desi-0.gif"
+    },
+    {
+      "id": "gg-mythic-024",
+      "label": "hailuo-2_3-fast_the_create_does_a_little_dance_sping_shimmers_with_light_and_floats_around_while-0",
+      "normalizedKey": "mythic-048-hailuo-2-3-fast-the-create-does-a-little-dance-sping-shimmers-with-light-and-flo",
+      "sourceRelativePath": "Mythics/hailuo-2_3-fast_the_create_does_a_little_dance_sping_shimmers_with_light_and_floats_around_while-0.gif",
+      "filename": "hailuo-2_3-fast_the_create_does_a_little_dance_sping_shimmers_with_light_and_floats_around_while-0.gif"
+    },
+    {
+      "id": "gg-mythic-025",
+      "label": "unnamed",
+      "normalizedKey": "mythic-050-unnamed",
+      "sourceRelativePath": "Mythics/unnamed.gif",
+      "filename": "unnamed.gif"
+    },
+    {
+      "id": "gg-mythic-026",
+      "label": "veo-3.1-fast-generate-preview_Maintain_the_exact_original_character_design_and_proportions._Do_not_alter_the_c-0",
+      "normalizedKey": "mythic-052-veo-3-1-fast-generate-preview-maintain-the-exact-original-character-design-and-p",
+      "sourceRelativePath": "Mythics/veo-3.1-fast-generate-preview_Maintain_the_exact_original_character_design_and_proportions._Do_not_alter_the_c-0.gif",
+      "filename": "veo-3.1-fast-generate-preview_Maintain_the_exact_original_character_design_and_proportions._Do_not_alter_the_c-0.gif"
+    }
+  ]
+}

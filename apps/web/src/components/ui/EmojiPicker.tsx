@@ -242,9 +242,10 @@ interface EmojiPickerProps {
   onClose: () => void;
   x?: number;
   y?: number;
+  onAddEmoji?: () => void;
 }
 
-export function EmojiPicker({ onSelect, onClose, x, y }: EmojiPickerProps) {
+export function EmojiPicker({ onSelect, onClose, x, y, onAddEmoji }: EmojiPickerProps) {
   const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
   const hasPosition = x !== undefined && y !== undefined;
@@ -307,6 +308,18 @@ export function EmojiPicker({ onSelect, onClose, x, y }: EmojiPickerProps) {
           onChange={(e) => setSearch(e.target.value)}
           autoFocus
         />
+        {onAddEmoji && (
+          <button
+            type="button"
+            className="emoji-picker-add"
+            onClick={() => {
+              onClose();
+              onAddEmoji();
+            }}
+          >
+            Add Emoji
+          </button>
+        )}
       </div>
       <div className="emoji-picker-grid">
         {filtered ? (

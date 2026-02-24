@@ -23,6 +23,8 @@ export interface Channel {
   availableTags: ForumTag[] | null; // for forums
   defaultReactionEmoji: { emojiId: Snowflake | null; emojiName: string | null } | null;
   createdAt: string;
+  /** Computed: true when @everyone has VIEW_CHANNEL denied */
+  isPrivate?: boolean;
 }
 
 /** Thread (treated as a sub-channel) */

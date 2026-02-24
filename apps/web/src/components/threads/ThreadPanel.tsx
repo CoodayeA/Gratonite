@@ -7,6 +7,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useThreads } from '@/hooks/useThreads';
 import { useUiStore } from '@/stores/ui.store';
 import { useMessagesStore } from '@/stores/messages.store';
+import { useChannelsStore } from '@/stores/channels.store';
 import { api } from '@/lib/api';
 import type { Thread } from '@gratonite/types';
 
@@ -20,7 +21,9 @@ export function ThreadPanel({ channelId }: ThreadPanelProps) {
   const closeThreadPanel = useUiStore((s) => s.closeThreadPanel);
   const showThreadList = useUiStore((s) => s.showThreadList);
   const openThread = useUiStore((s) => s.openThread);
+  const openModal = useUiStore((s) => s.openModal);
   const setReplyingTo = useMessagesStore((s) => s.setReplyingTo);
+  const parentChannel = useChannelsStore((s) => s.channels.get(channelId));
 
   const [emojiTarget, setEmojiTarget] = useState<{ messageId: string; x?: number; y?: number } | null>(null);
 
@@ -110,6 +113,11 @@ export function ThreadPanel({ channelId }: ThreadPanelProps) {
                   api.messages.addReaction(activeThreadId, emojiTarget.messageId, emoji).catch(console.error);
                   setEmojiTarget(null);
                 }}
+                onAddEmoji={
+                  parentChannel?.guildId
+                    ? () => openModal('emoji-studio', { guildId: parentChannel.guildId })
+                    : undefined
+                }
                 onClose={() => setEmojiTarget(null)}
                 x={emojiTarget.x}
                 y={emojiTarget.y}

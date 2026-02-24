@@ -18,6 +18,7 @@ import type { AppContext } from '../../lib/context.js';
 import { generateId } from '../../lib/snowflake.js';
 import { logger } from '../../lib/logger.js';
 import { BUCKETS } from '../../lib/minio.js';
+import { recordRequestCacheResult } from '../../lib/request-metrics.js';
 import type { CreateGuildInput, UpdateGuildInput, CreateRoleInput, UpdateRoleInput } from './guilds.schemas.js';
 import type { CreateEmojiInput, UpdateEmojiInput, CreateStickerInput, UpdateStickerInput } from './emojis.schemas.js';
 
@@ -38,7 +39,133 @@ const DEFAULT_PERMISSIONS =
   (1 << 29) | // USE_VOICE_ACTIVITY
   (1 << 31); // CHANGE_NICKNAME
 
+const GUILD_MEMBERS_CACHE_TTL_SECONDS = 20;
+const GUILD_METADATA_CACHE_TTL_SECONDS = 20;
+const USER_GUILDS_CACHE_TTL_SECONDS = 20;
+const CACHE_LOG_EVERY = 100;
+
 export function createGuildsService(ctx: AppContext) {
+  type GuildMemberListItem = {
+    userId: string;
+    guildId: string;
+    nickname: string | null;
+    joinedAt: Date;
+    user: {
+      id: string;
+      username: string;
+      displayName: string;
+      avatarHash: string | null;
+      primaryColor: number | null;
+      accentColor: number | null;
+    };
+    profile: {
+      nickname: string | null;
+      avatarHash: string | null;
+      bannerHash: string | null;
+      bio: string | null;
+    };
+  };
+
+  type CachedGuildMemberListItem = Omit<GuildMemberListItem, 'joinedAt'> & {
+    joinedAt: string;
+  };
+
+  const cacheStats: Record<string, { hits: number; misses: number }> = {};
+
+  function recordCacheResult(cache: string, hit: boolean) {
+    recordRequestCacheResult(cache, hit);
+
+    if (!cacheStats[cache]) {
+      cacheStats[cache] = { hits: 0, misses: 0 };
+    }
+
+    if (hit) {
+      cacheStats[cache].hits += 1;
+    } else {
+      cacheStats[cache].misses += 1;
+    }
+
+    const total = cacheStats[cache].hits + cacheStats[cache].misses;
+    if (total % CACHE_LOG_EVERY === 0) {
+      logger.info(
+        {
+          cache,
+          hits: cacheStats[cache].hits,
+          misses: cacheStats[cache].misses,
+          hitRate: cacheStats[cache].hits / total,
+        },
+        'Cache stats',
+      );
+    }
+  }
+
+  function guildMembersCacheKey(guildId: string, limit: number, after?: string) {
+    return `guild:${guildId}:members:${limit}:${after ?? 'start'}`;
+  }
+
+  function guildCacheKey(guildId: string) {
+    return `guild:${guildId}:meta`;
+  }
+
+  function userGuildsCacheKey(userId: string) {
+    return `user:${userId}:guilds`;
+  }
+
+  async function invalidateGuildCache(guildId: string) {
+    try {
+      await ctx.redis.del(guildCacheKey(guildId));
+    } catch (error) {
+      logger.warn({ error, guildId }, 'Failed to invalidate guild cache');
+    }
+  }
+
+  async function invalidateUserGuildsCache(userId: string) {
+    try {
+      await ctx.redis.del(userGuildsCacheKey(userId));
+    } catch (error) {
+      logger.warn({ error, userId }, 'Failed to invalidate user guilds cache');
+    }
+  }
+
+  async function invalidateAllUserGuildsCaches() {
+    let cursor = '0';
+
+    try {
+      do {
+        const [nextCursor, keys] = await ctx.redis.scan(
+          cursor,
+          'MATCH',
+          'user:*:guilds',
+          'COUNT',
+          100,
+        );
+        if (keys.length > 0) {
+          await ctx.redis.del(...keys);
+        }
+        cursor = nextCursor;
+      } while (cursor !== '0');
+    } catch (error) {
+      logger.warn({ error }, 'Failed to invalidate user guilds caches');
+    }
+  }
+
+  async function invalidateGuildMembersCache(guildId: string) {
+    const pattern = `guild:${guildId}:members:*`;
+    let cursor = '0';
+
+    try {
+      do {
+        const [nextCursor, keys] = await ctx.redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        if (keys.length > 0) {
+          await ctx.redis.del(...keys);
+        }
+        cursor = nextCursor;
+      } while (cursor !== '0');
+    } catch (error) {
+      logger.warn({ error, guildId }, 'Failed to invalidate guild members cache');
+    }
+  }
+
   async function createGuild(ownerId: string, input: CreateGuildInput) {
     const guildId = generateId();
     const everyoneRoleId = generateId();
@@ -76,6 +203,8 @@ export function createGuildsService(ctx: AppContext) {
 
     // Add owner as member
     await ctx.db.insert(guildMembers).values({ userId: ownerId, guildId });
+    await invalidateUserGuildsCache(ownerId);
+    await invalidateGuildCache(guildId);
 
     logger.info({ guildId, ownerId }, 'Guild created');
 
@@ -83,11 +212,36 @@ export function createGuildsService(ctx: AppContext) {
   }
 
   async function getGuild(guildId: string) {
+    try {
+      const cached = await ctx.redis.get(guildCacheKey(guildId));
+      if (cached) {
+        recordCacheResult('guild_meta', true);
+        return JSON.parse(cached);
+      }
+      recordCacheResult('guild_meta', false);
+    } catch (error) {
+      logger.warn({ error, guildId }, 'Failed to read guild cache');
+    }
+
     const [guild] = await ctx.db
       .select()
       .from(guilds)
       .where(eq(guilds.id, guildId))
       .limit(1);
+
+    if (guild) {
+      try {
+        await ctx.redis.set(
+          guildCacheKey(guildId),
+          JSON.stringify(guild),
+          'EX',
+          GUILD_METADATA_CACHE_TTL_SECONDS,
+        );
+      } catch (error) {
+        logger.warn({ error, guildId }, 'Failed to write guild cache');
+      }
+    }
+
     return guild ?? null;
   }
 
@@ -95,6 +249,10 @@ export function createGuildsService(ctx: AppContext) {
     const updates: Record<string, unknown> = {};
     if (input.name !== undefined) updates.name = input.name;
     if (input.description !== undefined) updates.description = input.description;
+    if (input.iconHash !== undefined) updates.iconHash = input.iconHash;
+    if (input.iconAnimated !== undefined) updates.iconAnimated = input.iconAnimated;
+    if (input.bannerHash !== undefined) updates.bannerHash = input.bannerHash;
+    if (input.bannerAnimated !== undefined) updates.bannerAnimated = input.bannerAnimated;
     if (input.preferredLocale !== undefined) updates.preferredLocale = input.preferredLocale;
     if (input.nsfwLevel !== undefined) updates.nsfwLevel = input.nsfwLevel;
     if (input.verificationLevel !== undefined) updates.verificationLevel = input.verificationLevel;
@@ -111,11 +269,17 @@ export function createGuildsService(ctx: AppContext) {
       .where(eq(guilds.id, guildId))
       .returning();
 
+    await invalidateGuildCache(guildId);
+    await invalidateAllUserGuildsCaches();
+
     return updated ?? null;
   }
 
   async function deleteGuild(guildId: string) {
     await ctx.db.delete(guilds).where(eq(guilds.id, guildId));
+    await invalidateGuildCache(guildId);
+    await invalidateGuildMembersCache(guildId);
+    await invalidateAllUserGuildsCaches();
   }
 
   // ── Members ──────────────────────────────────────────────────────────────
@@ -135,6 +299,9 @@ export function createGuildsService(ctx: AppContext) {
       .update(guilds)
       .set({ memberCount: sql`${guilds.memberCount} + 1` })
       .where(eq(guilds.id, guildId));
+    await invalidateGuildCache(guildId);
+    await invalidateGuildMembersCache(guildId);
+    await invalidateUserGuildsCache(userId);
   }
 
   async function removeMember(guildId: string, userId: string) {
@@ -149,14 +316,34 @@ export function createGuildsService(ctx: AppContext) {
       .update(guilds)
       .set({ memberCount: sql`GREATEST(${guilds.memberCount} - 1, 0)` })
       .where(eq(guilds.id, guildId));
+    await invalidateGuildCache(guildId);
+    await invalidateGuildMembersCache(guildId);
+    await invalidateUserGuildsCache(userId);
   }
 
   async function getMembers(guildId: string, limit = 100, after?: string) {
+    const cacheKey = guildMembersCacheKey(guildId, limit, after);
+
+    try {
+      const cached = await ctx.redis.get(cacheKey);
+      if (cached) {
+        recordCacheResult('guild_members', true);
+        const parsed = JSON.parse(cached) as CachedGuildMemberListItem[];
+        return parsed.map((item) => ({
+          ...item,
+          joinedAt: new Date(item.joinedAt),
+        }));
+      }
+      recordCacheResult('guild_members', false);
+    } catch (error) {
+      logger.warn({ error, guildId }, 'Failed to read guild members cache');
+    }
+
     const condition = after
       ? and(eq(guildMembers.guildId, guildId), sql`${guildMembers.userId} > ${after}`)
       : eq(guildMembers.guildId, guildId);
 
-    const rows = await ctx.db
+    const rows: GuildMemberListItem[] = await ctx.db
       .select({
         userId: guildMembers.userId,
         guildId: guildMembers.guildId,
@@ -167,6 +354,8 @@ export function createGuildsService(ctx: AppContext) {
           username: users.username,
           displayName: userProfiles.displayName,
           avatarHash: userProfiles.avatarHash,
+          primaryColor: userProfiles.primaryColor,
+          accentColor: userProfiles.accentColor,
         },
         profile: {
           nickname: memberProfiles.nickname,
@@ -185,6 +374,21 @@ export function createGuildsService(ctx: AppContext) {
       .where(condition)
       .limit(limit);
 
+    try {
+      const payload: CachedGuildMemberListItem[] = rows.map((item) => ({
+        ...item,
+        joinedAt: item.joinedAt.toISOString(),
+      }));
+      await ctx.redis.set(
+        cacheKey,
+        JSON.stringify(payload),
+        'EX',
+        GUILD_MEMBERS_CACHE_TTL_SECONDS,
+      );
+    } catch (error) {
+      logger.warn({ error, guildId }, 'Failed to write guild members cache');
+    }
+
     return rows;
   }
 
@@ -198,6 +402,17 @@ export function createGuildsService(ctx: AppContext) {
   }
 
   async function getUserGuilds(userId: string) {
+    try {
+      const cached = await ctx.redis.get(userGuildsCacheKey(userId));
+      if (cached) {
+        recordCacheResult('user_guilds', true);
+        return JSON.parse(cached);
+      }
+      recordCacheResult('user_guilds', false);
+    } catch (error) {
+      logger.warn({ error, userId }, 'Failed to read user guilds cache');
+    }
+
     const memberships = await ctx.db
       .select({ guildId: guildMembers.guildId })
       .from(guildMembers)
@@ -206,10 +421,23 @@ export function createGuildsService(ctx: AppContext) {
     if (memberships.length === 0) return [];
 
     const guildIds = memberships.map((m) => m.guildId);
-    return ctx.db
+    const userGuilds = await ctx.db
       .select()
       .from(guilds)
       .where(inArray(guilds.id, guildIds));
+
+    try {
+      await ctx.redis.set(
+        userGuildsCacheKey(userId),
+        JSON.stringify(userGuilds),
+        'EX',
+        USER_GUILDS_CACHE_TTL_SECONDS,
+      );
+    } catch (error) {
+      logger.warn({ error, userId }, 'Failed to write user guilds cache');
+    }
+
+    return userGuilds;
   }
 
   // ── Roles ────────────────────────────────────────────────────────────────
@@ -597,6 +825,7 @@ export function createGuildsService(ctx: AppContext) {
     isBanned,
     getBans,
     createAuditLogEntry,
+    invalidateGuildCache,
     // Emojis
     createEmoji,
     getGuildEmojis,

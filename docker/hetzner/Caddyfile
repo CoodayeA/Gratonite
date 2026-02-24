@@ -1,0 +1,38 @@
+{
+	email admin@gratonite.chat
+}
+
+gratonite.chat {
+	encode zstd gzip
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options SAMEORIGIN
+	}
+	@api path /api /api/*
+	@socketio path /socket.io /socket.io/*
+	handle @api {
+		reverse_proxy api:4000
+	}
+	handle @socketio {
+		reverse_proxy api:4000
+	}
+	handle {
+		reverse_proxy web:80
+	}
+}
+
+gratonite.com, gratonitechat.com {
+	redir https://gratonite.chat{uri} permanent
+}
+
+api.gratonite.chat {
+	encode zstd gzip
+
+	# LiveKit is mounted under /livekit on the public API host; strip the prefix.
+	handle_path /livekit* {
+		reverse_proxy livekit:7880
+	}
+
+	reverse_proxy api:4000
+}

@@ -18,17 +18,26 @@
     ]
   },
   "scripts": {
-    "dev": "turbo dev",
-    "build": "turbo build",
-    "lint": "turbo lint",
-    "typecheck": "turbo typecheck",
-    "test": "turbo test",
-    "clean": "turbo clean && rm -rf node_modules",
+    "dev": "pnpm -r --parallel --if-present run dev",
+    "build": "pnpm --filter @gratonite/web build",
+    "lint": "echo \"Lint is not configured yet\"",
+    "typecheck": "pnpm --filter @gratonite/types typecheck && pnpm --filter @gratonite/profile-resolver typecheck && pnpm --filter @gratonite/web typecheck",
+    "test": "pnpm --filter @gratonite/api run test:ci",
+    "check:web": "./scripts/checks/web-release.sh",
+    "check:api-hotspots": "./scripts/checks/api-hotspots-explain.sh",
+    "check:api-cache-smoke": "./scripts/checks/api-cache-smoke.sh",
+    "check:web:quick": "pnpm --filter @gratonite/web typecheck && pnpm --filter @gratonite/web build",
+    "e2e:web": "pnpm --filter @gratonite/web e2e",
+    "test:reset": "./scripts/checks/reset-test-data.sh --yes",
+    "clean": "pnpm -r --if-present run clean && rm -rf node_modules .turbo",
     "db:generate": "pnpm --filter @gratonite/db generate",
     "db:migrate": "pnpm --filter @gratonite/db migrate",
     "db:studio": "pnpm --filter @gratonite/db studio",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:reset": "docker-compose down -v && docker-compose up -d"
+  },
+  "devDependencies": {
+    "debug": "^4.4.3"
   }
 }

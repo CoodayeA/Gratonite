@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { RoomEvent, Track, type RemoteTrack, ConnectionQuality, type RemoteParticipant, type Participant } from 'livekit-client';
 import { useCallStore } from '@/stores/call.store';
+import { useChannelsStore } from '@/stores/channels.store';
 import { endDmCall, toggleMute, toggleVideo, toggleScreenShare } from '@/lib/dmCall';
 
 export function DmCallOverlay() {
   const { status, channelId, muted, videoEnabled, screenShareEnabled, error, localVideoTrack, room, outgoingCall } = useCallStore();
+  const channel = useChannelsStore((s) => (channelId ? s.channels.get(channelId) : undefined));
   const videoRef = useRef<HTMLVideoElement>(null);
   const [remoteTracks, setRemoteTracks] = useState<Array<{ id: string; track: RemoteTrack; kind: 'video' | 'audio'; identity?: string }>>([]);
 
@@ -78,6 +80,7 @@ export function DmCallOverlay() {
   };
 
   if (status === 'idle' || !channelId) return null;
+  if (channel?.type === 'GUILD_VOICE' || channel?.type === 'GUILD_STAGE_VOICE') return null;
 
   return (
     <div className="dm-call-overlay">

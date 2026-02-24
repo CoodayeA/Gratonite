@@ -1,4 +1,4 @@
-import React, { forwardRef, useState } from 'react';
+import React, { forwardRef, useId, useState } from 'react';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -9,14 +9,21 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, hint, type, className = '', ...props }, ref) => {
     const [showPassword, setShowPassword] = useState(false);
+    const generatedId = useId();
+    const inputId = props.id ?? `input-${generatedId}`;
     const isPassword = type === 'password';
 
     return (
       <div className={`input-group ${error ? 'input-error' : ''} ${className}`}>
-        {label && <label className="input-label">{label}</label>}
+        {label && (
+          <label className="input-label" htmlFor={inputId}>
+            {label}
+          </label>
+        )}
         <div className="input-wrapper">
           <input
             ref={ref}
+            id={inputId}
             type={isPassword && showPassword ? 'text' : type}
             className="input-field"
             {...props}
@@ -26,7 +33,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               type="button"
               className="input-toggle"
               onClick={() => setShowPassword(!showPassword)}
-              tabIndex={-1}
+              aria-label={showPassword ? 'Hide value' : 'Show value'}
+              aria-pressed={showPassword}
             >
               {showPassword ? 'Hide' : 'Show'}
             </button>

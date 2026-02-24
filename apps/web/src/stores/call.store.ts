@@ -5,6 +5,8 @@ type CallStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
 type CallType = 'voice' | 'video';
 
+type CallMode = 'dm' | 'guild' | null;
+
 interface IncomingCall {
   channelId: string;
   fromUserId: string;
@@ -20,6 +22,7 @@ interface OutgoingCall {
 
 interface CallState {
   status: CallStatus;
+  mode: CallMode;
   channelId: string | null;
   muted: boolean;
   videoEnabled: boolean;
@@ -32,12 +35,16 @@ interface CallState {
   screenShareEnabled: boolean;
   localScreenTrack: LocalVideoTrack | null;
   connectionQualities: Record<string, string>; // participantId → 'excellent' | 'good' | 'poor' | 'unknown'
+  inputDeviceId: string | null;
+  outputDeviceId: string | null;
+  videoDeviceId: string | null;
   setState: (partial: Partial<CallState>) => void;
   reset: () => void;
 }
 
 const initialState: Omit<CallState, 'setState' | 'reset'> = {
   status: 'idle',
+  mode: null,
   channelId: null,
   muted: false,
   videoEnabled: false,
@@ -50,6 +57,9 @@ const initialState: Omit<CallState, 'setState' | 'reset'> = {
   screenShareEnabled: false,
   localScreenTrack: null,
   connectionQualities: {},
+  inputDeviceId: null,
+  outputDeviceId: null,
+  videoDeviceId: null,
 };
 
 export const useCallStore = create<CallState>((set) => ({

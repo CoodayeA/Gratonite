@@ -9,6 +9,11 @@ import type {
   Message,
   GuildMember,
   Thread,
+  GuildEmoji,
+  AvatarDecoration,
+  ProfileEffect,
+  Nameplate,
+  PresenceStatus,
 } from '@gratonite/types';
 
 // ---------------------------------------------------------------------------
@@ -218,6 +223,73 @@ interface SearchMessagesResponse {
   offset: number;
 }
 
+export interface CommunityShopItem {
+  id: string;
+  itemType: 'display_name_style_pack' | 'profile_widget_pack' | 'server_tag_badge' | 'avatar_decoration' | 'profile_effect' | 'nameplate';
+  name: string;
+  description: string | null;
+  uploaderId: string;
+  payload: Record<string, unknown>;
+  payloadSchemaVersion: number;
+  assetHash: string | null;
+  tags: string[];
+  status: 'draft' | 'pending_review' | 'approved' | 'rejected' | 'published' | 'unpublished';
+  moderationNotes: string | null;
+  rejectionCode: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  installCount: number;
+}
+
+export interface CurrencyWallet {
+  userId: string;
+  balance: number;
+  lifetimeEarned: number;
+  lifetimeSpent: number;
+  updatedAt: string;
+}
+
+export interface CurrencyLedgerEntry {
+  id: string;
+  userId: string;
+  direction: 'earn' | 'spend';
+  amount: number;
+  source: 'chat_message' | 'server_engagement' | 'daily_checkin' | 'shop_purchase' | 'creator_item_purchase';
+  description: string | null;
+  contextKey: string | null;
+  createdAt: string;
+}
+
+export interface BetaBugReport {
+  id: string;
+  reporterId: string;
+  title: string;
+  summary: string;
+  steps: string | null;
+  expected: string | null;
+  actual: string | null;
+  route: string | null;
+  pageUrl: string | null;
+  channelLabel: string | null;
+  viewport: string | null;
+  userAgent: string | null;
+  clientTimestamp: string | null;
+  submissionSource: string;
+  status: 'open' | 'triaged' | 'resolved' | 'dismissed';
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BetaBugReportInboxItem extends BetaBugReport {
+  reporterProfile?: {
+    userId: string;
+    displayName: string;
+    avatarHash: string | null;
+  } | null;
+}
+
 export const api = {
   auth: {
     register: (data: RegisterRequest) =>
@@ -241,6 +313,50 @@ export const api = {
       apiFetch<{ available: boolean }>(
         `/auth/username-available?username=${encodeURIComponent(username)}`,
       ),
+
+    requestEmailVerification: (email: string) =>
+      apiFetch<{ ok: true; message: string }>('/auth/verify-email/request', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+
+    confirmEmailVerification: (token: string) =>
+      apiFetch<{ ok: true; message: string }>('/auth/verify-email/confirm', {
+        method: 'POST',
+        body: JSON.stringify({ token }),
+      }),
+
+    getMfaStatus: () =>
+      apiFetch<{ enabled: boolean; pendingSetup: boolean; backupCodeCount: number }>('/auth/mfa/status'),
+
+    startMfaSetup: (deviceLabel?: string) =>
+      apiFetch<{
+        secret: string;
+        otpauthUrl: string;
+        qrCodeDataUrl: string;
+        expiresInSeconds: number;
+      }>('/auth/mfa/setup/start', {
+        method: 'POST',
+        body: JSON.stringify(deviceLabel ? { deviceLabel } : {}),
+      }),
+
+    enableMfa: (code: string) =>
+      apiFetch<{ ok: true; backupCodes: string[] }>('/auth/mfa/setup/enable', {
+        method: 'POST',
+        body: JSON.stringify({ code }),
+      }),
+
+    disableMfa: (code: string) =>
+      apiFetch<{ ok: true }>('/auth/mfa/disable', {
+        method: 'POST',
+        body: JSON.stringify({ code }),
+      }),
+
+    regenerateMfaBackupCodes: (code: string) =>
+      apiFetch<{ ok: true; backupCodes: string[] }>('/auth/mfa/backup-codes/regenerate', {
+        method: 'POST',
+        body: JSON.stringify({ code }),
+      }),
   },
 
   users: {
@@ -256,12 +372,34 @@ export const api = {
         bannerHash: string | null;
         bio: string | null;
         pronouns: string | null;
+        avatarDecorationId: string | null;
+        profileEffectId: string | null;
+        nameplateId: string | null;
         tier: string;
+        previousAvatarHashes: string[];
+        messageCount: number;
       };
     }>('/users/@me'),
 
-    updateProfile: (data: { displayName?: string; bio?: string; pronouns?: string; accentColor?: string }) =>
+    updateProfile: (data: { displayName?: string; bio?: string; pronouns?: string; accentColor?: string; primaryColor?: string }) =>
       apiFetch<any>('/users/@me', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    updateAccountBasics: (data: { username?: string; displayName?: string }) =>
+      apiFetch<{
+        success: true;
+        user: {
+          id: string;
+          username: string;
+          email: string;
+          emailVerified: boolean;
+        };
+        profile: {
+          displayName: string;
+        } | null;
+      }>('/users/@me/account', {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
@@ -311,6 +449,48 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
+
+    getSummaries: (ids: string[]) =>
+      apiFetch<Array<{ id: string; username: string; displayName: string; avatarHash: string | null }>>(
+        `/users?ids=${encodeURIComponent(ids.join(','))}`,
+      ),
+
+    searchUsers: (query: string) =>
+      apiFetch<Array<{ id: string; username: string; displayName: string; avatarHash: string | null }>>(
+        `/users/search?q=${encodeURIComponent(query)}`,
+      ),
+
+    getPresences: (ids: string[]) =>
+      apiFetch<Array<{ userId: string; status: PresenceStatus; lastSeen: number | null }>>(
+        `/users/presences?ids=${encodeURIComponent(ids.join(','))}`,
+      ),
+
+    getProfile: (userId: string) =>
+      apiFetch<{
+        id: string;
+        username: string;
+        displayName: string;
+        avatarHash: string | null;
+        bannerHash: string | null;
+        bio: string | null;
+        pronouns: string | null;
+        accentColor: string | null;
+        primaryColor: string | null;
+        messageCount: number;
+        createdAt: string;
+      }>(`/users/${userId}/profile`),
+
+    getMutuals: (userId: string) =>
+      apiFetch<{
+        mutualServers: Array<{ id: string; name: string; iconHash: string | null; nickname: string | null }>;
+        mutualFriends: Array<{ id: string; username: string; displayName: string; avatarHash: string | null }>;
+      }>(`/users/${userId}/mutuals`),
+
+    updatePresence: (status: Extract<PresenceStatus, 'online' | 'idle' | 'dnd' | 'invisible'>) =>
+      apiFetch<{ status: PresenceStatus }>('/users/@me/presence', {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
   },
 
   profiles: {
@@ -346,6 +526,114 @@ export const api = {
 
     deleteMemberBanner: (guildId: string) =>
       apiFetch<any>(`/guilds/${guildId}/members/@me/profile/banner`, { method: 'DELETE' }),
+
+    getAvatarDecorations: () =>
+      apiFetch<AvatarDecoration[]>('/avatar-decorations'),
+
+    getProfileEffects: () =>
+      apiFetch<ProfileEffect[]>('/profile-effects'),
+
+    getNameplates: () =>
+      apiFetch<Nameplate[]>('/nameplates'),
+
+    updateCustomization: (data: { avatarDecorationId?: string | null; profileEffectId?: string | null; nameplateId?: string | null }) =>
+      apiFetch<any>('/users/@me/customization', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+  },
+
+  communityShop: {
+    listItems: (params: {
+      itemType?: string;
+      status?: string;
+      search?: string;
+      mine?: boolean;
+      limit?: number;
+      offset?: number;
+    } = {}) => {
+      const query = new URLSearchParams();
+      if (params.itemType) query.set('itemType', params.itemType);
+      if (params.status) query.set('status', params.status);
+      if (params.search) query.set('search', params.search);
+      if (params.mine !== undefined) query.set('mine', String(params.mine));
+      if (params.limit !== undefined) query.set('limit', String(params.limit));
+      if (params.offset !== undefined) query.set('offset', String(params.offset));
+      const suffix = query.toString() ? `?${query.toString()}` : '';
+      return apiFetch<CommunityShopItem[]>(`/community-items${suffix}`);
+    },
+
+    createItem: (data: {
+      itemType: CommunityShopItem['itemType'];
+      name: string;
+      description?: string;
+      payload?: Record<string, unknown>;
+      payloadSchemaVersion?: number;
+      assetHash?: string;
+      tags?: string[];
+    }) =>
+      apiFetch<CommunityShopItem>('/community-items', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    submitForReview: (itemId: string) =>
+      apiFetch<CommunityShopItem>(`/community-items/${itemId}/submit`, {
+        method: 'POST',
+      }),
+
+    install: (itemId: string, data: { scope?: 'global' | 'guild'; scopeId?: string } = {}) =>
+      apiFetch<any>(`/community-items/${itemId}/install`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    uninstall: (itemId: string, data: { scope?: 'global' | 'guild'; scopeId?: string } = {}) => {
+      const query = new URLSearchParams();
+      if (data.scope) query.set('scope', data.scope);
+      if (data.scopeId) query.set('scopeId', data.scopeId);
+      const suffix = query.toString() ? `?${query.toString()}` : '';
+      return apiFetch<void>(`/community-items/${itemId}/install${suffix}`, { method: 'DELETE' });
+    },
+
+    getMyItems: () =>
+      apiFetch<{
+        created: CommunityShopItem[];
+        installed: Array<{
+          itemId: string;
+          scope: 'global' | 'guild';
+          scopeId: string | null;
+          installedAt: string;
+        }>;
+      }>('/users/@me/community-items'),
+  },
+
+  economy: {
+    getWallet: () =>
+      apiFetch<CurrencyWallet>('/economy/wallet'),
+
+    getLedger: (limit = 20) =>
+      apiFetch<CurrencyLedgerEntry[]>(`/economy/ledger?limit=${limit}`),
+
+    claimReward: (data: {
+      source: 'chat_message' | 'server_engagement' | 'daily_checkin';
+      contextKey?: string;
+    }) =>
+      apiFetch<{ wallet: CurrencyWallet; ledgerEntry: CurrencyLedgerEntry | null; amount: number }>('/economy/rewards/claim', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    spend: (data: {
+      source: 'shop_purchase' | 'creator_item_purchase';
+      amount: number;
+      description: string;
+      contextKey?: string;
+    }) =>
+      apiFetch<{ wallet: CurrencyWallet | null; ledgerEntry: CurrencyLedgerEntry | null }>('/economy/spend', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 
   voice: {
@@ -356,6 +644,43 @@ export const api = {
       }),
     leave: () =>
       apiFetch<void>('/voice/leave', { method: 'POST' }),
+    getChannelStates: (channelId: string) =>
+      apiFetch<any[]>(`/channels/${channelId}/voice-states`),
+    getSoundboard: (guildId: string) =>
+      apiFetch<Array<{
+        id: string;
+        guildId: string;
+        name: string;
+        soundHash: string;
+        volume: number;
+        emojiId?: string | null;
+        emojiName?: string | null;
+        uploaderId: string;
+        available: boolean;
+      }>>(`/guilds/${guildId}/soundboard`),
+    playSoundboard: (guildId: string, soundId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/soundboard/${soundId}/play`, {
+        method: 'POST',
+      }),
+    createSoundboard: (
+      guildId: string,
+      data: { name: string; soundHash: string; volume?: number; emojiName?: string },
+    ) =>
+      apiFetch<any>(`/guilds/${guildId}/soundboard`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    updateSoundboard: (
+      guildId: string,
+      soundId: string,
+      data: { name?: string; volume?: number; available?: boolean; emojiName?: string | null },
+    ) =>
+      apiFetch<any>(`/guilds/${guildId}/soundboard/${soundId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    deleteSoundboard: (guildId: string, soundId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/soundboard/${soundId}`, { method: 'DELETE' }),
   },
 
   guilds: {
@@ -384,16 +709,40 @@ export const api = {
     delete: (guildId: string) =>
       apiFetch<void>(`/guilds/${guildId}`, { method: 'DELETE' }),
 
+    uploadIcon: (guildId: string, file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiFetch<{ iconHash: string; iconAnimated: boolean }>(`/guilds/${guildId}/icon`, {
+        method: 'POST',
+        body: formData,
+      });
+    },
+
+    deleteIcon: (guildId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/icon`, { method: 'DELETE' }),
+
+    uploadBanner: (guildId: string, file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiFetch<{ bannerHash: string; bannerAnimated: boolean }>(`/guilds/${guildId}/banner`, {
+        method: 'POST',
+        body: formData,
+      });
+    },
+
+    deleteBanner: (guildId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/banner`, { method: 'DELETE' }),
+
     getRoles: (guildId: string) =>
       apiFetch<any[]>(`/guilds/${guildId}/roles`),
 
-    createRole: (guildId: string, data: { name: string; color?: string; permissions?: string }) =>
+    createRole: (guildId: string, data: { name: string; color?: number; mentionable?: boolean; permissions?: number }) =>
       apiFetch<any>(`/guilds/${guildId}/roles`, {
         method: 'POST',
         body: JSON.stringify(data),
       }),
 
-    updateRole: (guildId: string, roleId: string, data: { name?: string; color?: string; permissions?: string }) =>
+    updateRole: (guildId: string, roleId: string, data: { name?: string; color?: number; mentionable?: boolean; permissions?: number }) =>
       apiFetch<any>(`/guilds/${guildId}/roles/${roleId}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
@@ -401,6 +750,15 @@ export const api = {
 
     deleteRole: (guildId: string, roleId: string) =>
       apiFetch<void>(`/guilds/${guildId}/roles/${roleId}`, { method: 'DELETE' }),
+
+    getMemberRoles: (guildId: string, userId: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/members/${userId}/roles`),
+
+    assignMemberRole: (guildId: string, userId: string, roleId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/members/${userId}/roles/${roleId}`, { method: 'PUT' }),
+
+    removeMemberRole: (guildId: string, userId: string, roleId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/members/${userId}/roles/${roleId}`, { method: 'DELETE' }),
 
     getBans: (guildId: string) =>
       apiFetch<any[]>(`/guilds/${guildId}/bans`),
@@ -416,6 +774,22 @@ export const api = {
 
     kickMember: (guildId: string, userId: string) =>
       apiFetch<void>(`/guilds/${guildId}/members/${userId}`, { method: 'DELETE' }),
+
+    getEmojis: (guildId: string) =>
+      apiFetch<GuildEmoji[]>(`/guilds/${guildId}/emojis`),
+
+    createEmoji: (guildId: string, data: { name: string; file: File }) => {
+      const formData = new FormData();
+      formData.append('name', data.name);
+      formData.append('file', data.file);
+      return apiFetch<GuildEmoji>(`/guilds/${guildId}/emojis`, {
+        method: 'POST',
+        body: formData,
+      });
+    },
+
+    deleteEmoji: (guildId: string, emojiId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/emojis/${emojiId}`, { method: 'DELETE' }),
   },
 
   channels: {
@@ -425,7 +799,17 @@ export const api = {
     get: (channelId: string) =>
       apiFetch<Channel>(`/channels/${channelId}`),
 
-    create: (guildId: string, data: { name: string; type?: string; parentId?: string; topic?: string }) =>
+    create: (
+      guildId: string,
+      data: {
+        name: string;
+        type?: string;
+        parentId?: string;
+        topic?: string;
+        nsfw?: boolean;
+        rateLimitPerUser?: number;
+      },
+    ) =>
       apiFetch<Channel>(`/guilds/${guildId}/channels`, {
         method: 'POST',
         body: JSON.stringify(data),
@@ -439,6 +823,31 @@ export const api = {
 
     delete: (channelId: string) =>
       apiFetch<void>(`/channels/${channelId}`, { method: 'DELETE' }),
+
+    getPermissionOverrides: (channelId: string) =>
+      apiFetch<Array<{ id: string; channelId: string; targetId: string; targetType: 'role' | 'user'; allow: string; deny: string }>>(
+        `/channels/${channelId}/permissions`,
+      ),
+
+    setPermissionOverride: (
+      channelId: string,
+      targetId: string,
+      data: { targetType: 'role' | 'user'; allow: string; deny: string },
+    ) =>
+      apiFetch<{ id: string; channelId: string; targetId: string; targetType: 'role' | 'user'; allow: string; deny: string }>(
+        `/channels/${channelId}/permissions/${targetId}`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({
+            type: data.targetType,
+            allow: data.allow,
+            deny: data.deny,
+          }),
+        },
+      ),
+
+    deletePermissionOverride: (channelId: string, targetId: string) =>
+      apiFetch<void>(`/channels/${channelId}/permissions/${targetId}`, { method: 'DELETE' }),
   },
 
   messages: {
@@ -536,7 +945,7 @@ export const api = {
   },
 
   files: {
-    upload: (file: File, purpose: string = 'attachment') => {
+    upload: (file: File, purpose: string = 'upload') => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('purpose', purpose);
@@ -575,7 +984,61 @@ export const api = {
     openDm: (userId: string) =>
       apiFetch<any>('/relationships/channels', {
         method: 'POST',
-        body: JSON.stringify({ recipientId: userId }),
+        body: JSON.stringify({ userId }),
       }),
+  },
+
+  bugReports: {
+    create: (data: {
+      title: string;
+      summary: string;
+      steps?: string;
+      expected?: string;
+      actual?: string;
+      route?: string;
+      pageUrl?: string;
+      channelLabel?: string;
+      viewport?: string;
+      userAgent?: string;
+      clientTimestamp?: string;
+      metadata?: Record<string, unknown>;
+    }) =>
+      apiFetch<BetaBugReport>('/bug-reports', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    list: (params: {
+      status?: 'open' | 'triaged' | 'resolved' | 'dismissed';
+      mine?: boolean;
+      limit?: number;
+    } = {}) => {
+      const query = new URLSearchParams();
+      if (params.status) query.set('status', params.status);
+      if (params.mine !== undefined) query.set('mine', String(params.mine));
+      if (params.limit !== undefined) query.set('limit', String(params.limit));
+      const suffix = query.toString() ? `?${query.toString()}` : '';
+      return apiFetch<{ items: BetaBugReportInboxItem[]; adminView: boolean }>(`/bug-reports${suffix}`);
+    },
+
+    updateStatus: (reportId: string, status: 'open' | 'triaged' | 'resolved' | 'dismissed') =>
+      apiFetch<BetaBugReport>(`/bug-reports/${reportId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+  },
+
+  leaderboard: {
+    get: (period: 'week' | 'month' | 'all' = 'week') =>
+      apiFetch<Array<{
+        rank: number;
+        userId: string;
+        username: string;
+        displayName: string;
+        avatarHash: string | null;
+        messageCount: number;
+        gratonitesEarned: number;
+        memberSince: string;
+      }>>(`/leaderboard?period=${period}`),
   },
 };

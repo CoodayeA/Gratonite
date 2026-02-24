@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import type { AppContext } from '../../lib/context.js';
 import type { SearchMessagesInput } from './search.schemas.js';
+import { relationships } from '@gratonite/db';
 
 export function createSearchService(ctx: AppContext) {
   async function searchMessages(userId: string, params: SearchMessagesInput) {
@@ -10,6 +11,16 @@ export function createSearchService(ctx: AppContext) {
     const conditions: ReturnType<typeof sql>[] = [
       sql`m.search_vector @@ plainto_tsquery('english', ${query})`,
       sql`m.deleted_at IS NULL`,
+      sql`NOT EXISTS (
+        SELECT 1
+        FROM ${relationships} r
+        WHERE r.type = 'blocked'
+          AND (
+            (r.user_id = ${userId} AND r.target_id = m.author_id)
+            OR
+            (r.target_id = ${userId} AND r.user_id = m.author_id)
+          )
+      )`,
     ];
 
     if (channelId) {

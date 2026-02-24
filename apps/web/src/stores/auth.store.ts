@@ -6,7 +6,13 @@ export interface AuthUser {
   email: string;
   displayName: string;
   avatarHash: string | null;
+  avatarDecorationId?: string | null;
+  profileEffectId?: string | null;
+  nameplateId?: string | null;
   tier: string;
+  messageCount?: number;
+  primaryColor?: string | null;
+  accentColor?: string | null;
 }
 
 interface AuthState {

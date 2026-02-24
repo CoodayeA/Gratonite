@@ -108,12 +108,12 @@ export function createAnalyticsService(ctx: AppContext) {
           .sort((a, b) => b.messageCount - a.messageCount)
           .slice(0, 10);
 
-        const dateTs = new Date(`${date}T00:00:00Z`);
+        const dateSql = `${date}`;
 
         // Upsert using raw SQL for ON CONFLICT
         await ctx.db.execute(sql`
           INSERT INTO server_analytics_daily (guild_id, date, messages_sent, new_members, left_members, active_members, reactions_added, top_channels, total_members, voice_minutes)
-          VALUES (${guildId}, ${dateTs}, ${parseInt(data.messages_sent || '0', 10)}, ${parseInt(data.new_members || '0', 10)}, ${parseInt(data.left_members || '0', 10)}, ${activeCount}, ${parseInt(data.reactions_added || '0', 10)}, ${JSON.stringify(topChannels)}::jsonb, 0, 0)
+          VALUES (${guildId}, ${dateSql}::date, ${parseInt(data.messages_sent || '0', 10)}, ${parseInt(data.new_members || '0', 10)}, ${parseInt(data.left_members || '0', 10)}, ${activeCount}, ${parseInt(data.reactions_added || '0', 10)}, ${JSON.stringify(topChannels)}::jsonb, 0, 0)
           ON CONFLICT (guild_id, date) DO UPDATE SET
             messages_sent = server_analytics_daily.messages_sent + EXCLUDED.messages_sent,
             new_members = server_analytics_daily.new_members + EXCLUDED.new_members,
@@ -144,11 +144,11 @@ export function createAnalyticsService(ctx: AppContext) {
         const data = await ctx.redis.hgetall(key);
         if (!Object.keys(data).length) continue;
 
-        const hourTs = new Date(`${hourStr}:00:00Z`);
+        const hourSql = `${hourStr}:00:00Z`;
 
         await ctx.db.execute(sql`
           INSERT INTO server_analytics_hourly (guild_id, hour, messages, active_users, voice_users)
-          VALUES (${guildId}, ${hourTs}, ${parseInt(data.messages || '0', 10)}, ${parseInt(data.active_users || '0', 10)}, ${parseInt(data.voice_users || '0', 10)})
+          VALUES (${guildId}, ${hourSql}::timestamptz, ${parseInt(data.messages || '0', 10)}, ${parseInt(data.active_users || '0', 10)}, ${parseInt(data.voice_users || '0', 10)})
           ON CONFLICT (guild_id, hour) DO UPDATE SET
             messages = server_analytics_hourly.messages + EXCLUDED.messages,
             active_users = greatest(server_analytics_hourly.active_users, EXCLUDED.active_users),

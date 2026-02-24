@@ -8,6 +8,10 @@ export const createGuildSchema = z.object({
 export const updateGuildSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   description: z.string().max(1000).nullable().optional(),
+  iconHash: z.string().max(64).nullable().optional(),
+  iconAnimated: z.boolean().optional(),
+  bannerHash: z.string().max(64).nullable().optional(),
+  bannerAnimated: z.boolean().optional(),
   preferredLocale: z.string().max(10).optional(),
   nsfwLevel: z.enum(['default', 'explicit', 'safe', 'age_restricted']).optional(),
   verificationLevel: z.enum(['none', 'low', 'medium', 'high', 'very_high']).optional(),

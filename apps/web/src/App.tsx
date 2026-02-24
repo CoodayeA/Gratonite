@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth.store';
 import { api, getAccessToken, setAccessToken } from '@/lib/api';
 import { mark, measure } from '@/lib/perf';
@@ -9,28 +9,41 @@ import { useMessagesStore } from '@/stores/messages.store';
 import { onDeepLink, onNavigate } from '@/lib/desktop';
 import { useUnreadBadge } from '@/hooks/useUnreadBadge';
 
-// Layouts
-import { AuthLayout } from '@/layouts/AuthLayout';
-import { AppLayout } from '@/layouts/AppLayout';
-
-// Guards
 import { RequireAuth } from '@/components/guards/RequireAuth';
 import { RequireGuest } from '@/components/guards/RequireGuest';
-
-// Pages
-import { LoginPage } from '@/pages/auth/LoginPage';
-import { RegisterPage } from '@/pages/auth/RegisterPage';
-import { HomePage } from '@/pages/HomePage';
-import { GuildPage } from '@/pages/GuildPage';
-import { ChannelPage } from '@/pages/ChannelPage';
-import { InvitePage } from '@/pages/InvitePage';
-import { SettingsPage } from '@/pages/SettingsPage';
 
 // Loading
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
+const AuthLayout = lazy(() => import('@/layouts/AuthLayout').then((m) => ({ default: m.AuthLayout })));
+const AppLayout = lazy(() => import('@/layouts/AppLayout').then((m) => ({ default: m.AppLayout })));
+const LoginPage = lazy(() => import('@/pages/auth/LoginPage').then((m) => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })));
+const VerifyEmailPendingPage = lazy(() =>
+  import('@/pages/auth/VerifyEmailPendingPage').then((m) => ({ default: m.VerifyEmailPendingPage })),
+);
+const VerifyEmailConfirmPage = lazy(() =>
+  import('@/pages/auth/VerifyEmailConfirmPage').then((m) => ({ default: m.VerifyEmailConfirmPage })),
+);
+const CompleteAccountSetupPage = lazy(() =>
+  import('@/pages/auth/CompleteAccountSetupPage').then((m) => ({ default: m.CompleteAccountSetupPage })),
+);
+const HomePage = lazy(() => import('@/pages/HomePage').then((m) => ({ default: m.HomePage })));
+const GuildPage = lazy(() => import('@/pages/GuildPage').then((m) => ({ default: m.GuildPage })));
+const ChannelPage = lazy(() => import('@/pages/ChannelPage').then((m) => ({ default: m.ChannelPage })));
+const InvitePage = lazy(() => import('@/pages/InvitePage').then((m) => ({ default: m.InvitePage })));
+const SettingsPage = lazy(() => import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const BlogPage = lazy(() => import('@/pages/BlogPage').then((m) => ({ default: m.BlogPage })));
+const BugInboxPage = lazy(() => import('@/pages/BugInboxPage').then((m) => ({ default: m.BugInboxPage })));
+const DiscoverPage = lazy(() => import('@/pages/DiscoverPage').then((m) => ({ default: m.DiscoverPage })));
+const ShopPage = lazy(() => import('@/pages/ShopPage').then((m) => ({ default: m.ShopPage })));
+const NotificationsPage = lazy(() => import('@/pages/NotificationsPage').then((m) => ({ default: m.NotificationsPage })));
+const FriendsPage = lazy(() => import('@/pages/FriendsPage').then((m) => ({ default: m.FriendsPage })));
+const GratoniteDashboard = lazy(() => import('@/pages/GratoniteDashboard').then((m) => ({ default: m.GratoniteDashboard })));
+const LeaderboardPage = lazy(() => import('@/pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
+
 export function App() {
-  const { isLoading, login, logout, setLoading } = useAuthStore();
+  const { isLoading, isAuthenticated, login, logout, setLoading } = useAuthStore();
   const navigate = useNavigate();
   useUnreadBadge();
 
@@ -50,6 +63,9 @@ export function App() {
             email: me.email,
             displayName: me.profile.displayName,
             avatarHash: me.profile.avatarHash,
+            avatarDecorationId: me.profile.avatarDecorationId ?? null,
+            profileEffectId: me.profile.profileEffectId ?? null,
+            nameplateId: me.profile.nameplateId ?? null,
             tier: me.profile.tier,
           });
           return;
@@ -68,6 +84,9 @@ export function App() {
             email: me.email,
             displayName: me.profile.displayName,
             avatarHash: me.profile.avatarHash,
+            avatarDecorationId: me.profile.avatarDecorationId ?? null,
+            profileEffectId: me.profile.profileEffectId ?? null,
+            nameplateId: me.profile.nameplateId ?? null,
             tier: me.profile.tier,
           });
           return;
@@ -120,37 +139,51 @@ export function App() {
   }
 
   return (
-    <Routes>
-      {/* Auth routes (guest only) */}
-      <Route
-        element={
-          <RequireGuest>
-            <AuthLayout />
-          </RequireGuest>
-        }
-      >
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-      </Route>
+    <Suspense fallback={<LoadingScreen />}>
+      <Routes>
+        <Route path="/blog" element={<BlogPage />} />
+        <Route path="/verify-email" element={<VerifyEmailConfirmPage />} />
 
-      {/* Invite page (works for both guest and auth) */}
-      <Route path="/invite/:code" element={<InvitePage />} />
-
-      {/* Authenticated routes */}
-      <Route
-        element={
-          <RequireAuth>
-            <AppLayout />
-          </RequireAuth>
-        }
-      >
-        <Route path="/" element={<HomePage />} />
-        <Route path="/guild/:guildId" element={<GuildPage />}>
-          <Route path="channel/:channelId" element={<ChannelPage />} />
+        {/* Auth routes (guest only) */}
+        <Route
+          element={
+            <RequireGuest>
+              <AuthLayout />
+            </RequireGuest>
+          }
+        >
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/verify-email/pending" element={<VerifyEmailPendingPage />} />
         </Route>
-        <Route path="/dm/:channelId" element={<ChannelPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-      </Route>
-    </Routes>
+
+        {/* Invite page (works for both guest and auth) */}
+        <Route path="/invite/:code" element={<InvitePage />} />
+
+        {/* Authenticated routes */}
+        <Route
+          element={
+            <RequireAuth>
+              <AppLayout />
+            </RequireAuth>
+          }
+        >
+          <Route path="/" element={<FriendsPage />} />
+          <Route path="/onboarding/account" element={<CompleteAccountSetupPage />} />
+          <Route path="/discover" element={<DiscoverPage />} />
+          <Route path="/shop" element={<ShopPage />} />
+          <Route path="/friends" element={<FriendsPage />} />
+          <Route path="/gratonite" element={<GratoniteDashboard />} />
+          <Route path="/leaderboard" element={<LeaderboardPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/guild/:guildId" element={<GuildPage />}>
+            <Route path="channel/:channelId" element={<ChannelPage />} />
+          </Route>
+          <Route path="/dm/:channelId" element={<ChannelPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/ops/bugs" element={<BugInboxPage />} />
+        </Route>
+      </Routes>
+    </Suspense>
   );
 }

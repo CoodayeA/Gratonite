@@ -214,6 +214,7 @@ export interface ServerToClientEvents {
     userId: Snowflake;
     avatarDecorationId: Snowflake | null;
     profileEffectId: Snowflake | null;
+    nameplateId: Snowflake | null;
   }) => void;
 }
 

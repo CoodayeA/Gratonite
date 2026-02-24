@@ -13,6 +13,8 @@ export function TopBar({ channelId }: TopBarProps) {
   const toggleMemberPanel = useUiStore((s) => s.toggleMemberPanel);
   const togglePinnedPanel = useUiStore((s) => s.togglePinnedPanel);
   const toggleSearchPanel = useUiStore((s) => s.toggleSearchPanel);
+  const toggleMobileGuildRail = useUiStore((s) => s.toggleMobileGuildRail);
+  const toggleMobileChannelSidebar = useUiStore((s) => s.toggleMobileChannelSidebar);
   const openModal = useUiStore((s) => s.openModal);
   const isDm = channel?.type === 'DM' || channel?.type === 'GROUP_DM';
   const channelLabel = channel?.name ?? (isDm ? 'Direct Message' : 'channel');
@@ -25,6 +27,21 @@ export function TopBar({ channelId }: TopBarProps) {
   return (
     <header className={`topbar ${isDm ? 'topbar-dm' : ''}`}>
       <div className="topbar-info">
+        <div className="topbar-mobile-nav">
+          <button className="topbar-btn topbar-btn-mobile-nav" title="Open portals" onClick={toggleMobileGuildRail}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="8" />
+              <path d="M12 4v16M4 12h16" />
+            </svg>
+          </button>
+          <button className="topbar-btn topbar-btn-mobile-nav" title="Open channels" onClick={toggleMobileChannelSidebar}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="4" y1="7" x2="20" y2="7" />
+              <line x1="4" y1="12" x2="20" y2="12" />
+              <line x1="4" y1="17" x2="20" y2="17" />
+            </svg>
+          </button>
+        </div>
         {channel && (
           <>
             {isDm ? (
@@ -95,6 +112,19 @@ export function TopBar({ channelId }: TopBarProps) {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        </button>
+        <button
+          className="topbar-btn"
+          onClick={() => openModal('bug-report', { route: window.location.pathname, channelLabel })}
+          title="Report bug"
+          aria-label="Report bug"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8 2h8" />
+            <path d="M9 2v3.5l-2 2V11H5l-2 2 2 2h2v3.5l2 2V22h6v-1.5l2-2V15h2l2-2-2-2h-2V7.5l-2-2V2" />
+            <circle cx="10" cy="10" r="1" />
+            <circle cx="14" cy="14" r="1" />
           </svg>
         </button>
         {showMembersToggle && (

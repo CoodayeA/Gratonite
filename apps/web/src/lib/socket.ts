@@ -25,7 +25,25 @@ function stopHeartbeat() {
 export function connectSocket(): GratoniteSocket {
   if (socket?.connected) return socket;
 
-  const wsUrl = import.meta.env.VITE_WS_URL ?? 'http://localhost:4000';
+  const explicitWsUrl = import.meta.env.VITE_WS_URL;
+  const apiBase = import.meta.env.VITE_API_URL as string | undefined;
+  let derivedWsUrl: string | null = null;
+  if (!explicitWsUrl && apiBase) {
+    try {
+      const apiUrl = new URL(apiBase, typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173');
+      apiUrl.pathname = '';
+      apiUrl.search = '';
+      apiUrl.hash = '';
+      derivedWsUrl = apiUrl.toString().replace(/\/$/, '');
+    } catch {
+      derivedWsUrl = null;
+    }
+  }
+
+  const wsUrl =
+    explicitWsUrl ??
+    derivedWsUrl ??
+    (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4000');
 
   socket = io(wsUrl, {
     transports: ['websocket', 'polling'],

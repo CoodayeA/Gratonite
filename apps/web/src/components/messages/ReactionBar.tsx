@@ -1,5 +1,7 @@
+import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
-import type { MouseEvent } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo, type MouseEvent } from 'react';
 
 interface Reaction {
   emoji: string;
@@ -15,6 +17,26 @@ interface ReactionBarProps {
 
 export function ReactionBar({ reactions, onToggle, onAddReaction }: ReactionBarProps) {
   const userId = useAuthStore((s) => s.user?.id);
+  const reactionUserIds = useMemo(
+    () => Array.from(new Set(reactions.flatMap((r) => r.userIds ?? []).map(String))).filter(Boolean),
+    [reactions],
+  );
+  const { data: reactionUsers = [] } = useQuery({
+    queryKey: ['users', 'summaries', 'reaction-bar', reactionUserIds],
+    queryFn: () => api.users.getSummaries(reactionUserIds),
+    enabled: reactionUserIds.length > 0,
+    staleTime: 60_000,
+  });
+  const reactionUserNameById = useMemo(
+    () =>
+      new Map(
+        reactionUsers.map((u: any) => [
+          String(u.id),
+          String(u.displayName || u.username || u.id),
+        ]),
+      ),
+    [reactionUsers],
+  );
 
   if (!reactions.length) return null;
 
@@ -22,18 +44,23 @@ export function ReactionBar({ reactions, onToggle, onAddReaction }: ReactionBarP
     <div className="reaction-bar">
       {reactions.map((r) => {
         const iReacted = r.userIds?.includes(userId ?? '') ?? false;
+        const names = (r.userIds ?? []).map((id) => reactionUserNameById.get(String(id)) ?? String(id));
+        const title = names.length > 0 ? `${r.emoji} • ${names.join(', ')}` : `${r.emoji} • ${r.count} reaction${r.count === 1 ? '' : 's'}`;
         return (
           <button
             key={r.emoji}
+            type="button"
             className={`reaction-pill ${iReacted ? 'reaction-pill-active' : ''}`}
             onClick={() => onToggle(r.emoji)}
+            title={title}
+            aria-label={title}
           >
             <span className="reaction-emoji">{r.emoji}</span>
             <span className="reaction-count">{r.count}</span>
           </button>
         );
       })}
-      <button className="reaction-pill reaction-pill-add" onClick={onAddReaction} title="Add reaction">
+      <button type="button" className="reaction-pill reaction-pill-add" onClick={onAddReaction} title="Add reaction">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10" />
           <line x1="12" y1="8" x2="12" y2="16" />

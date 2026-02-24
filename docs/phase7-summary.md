@@ -25,3 +25,9 @@
 - Deep link handling end-to-end (desktop + mobile + backend)
 - Offline-first implementation (WatermelonDB + sync boundaries)
 - Mobile navigation + functional screens
+
+## Voice UX Status (Phase 9 In Progress)
+
+- Guild voice channel UI is implemented in web (join/leave, control dock, preflight)
+- LiveKit local dev still blocked on media permissions/constraints in some browsers (Safari, Zen)
+- Next: stabilize preflight, verify device selection, and validate across browsers

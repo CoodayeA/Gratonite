@@ -6,19 +6,19 @@ import { createMessagesService } from './messages.service.js';
 import { createChannelsService } from '../channels/channels.service.js';
 import { createGuildsService } from '../guilds/guilds.service.js';
 import { createThreadsService } from '../threads/threads.service.js';
+import { createRelationshipsService } from '../relationships/relationships.service.js';
 import {
   createMessageSchema,
   updateMessageSchema,
   getMessagesSchema,
   createScheduledMessageSchema,
 } from './messages.schemas.js';
-import { messages } from '@gratonite/db';
-import { and, eq } from 'drizzle-orm';
+import { messages, dmRecipients, relationships, messageReactionUsers } from '@gratonite/db';
+import { and, eq, or } from 'drizzle-orm';
 import { createLinkPreviewService } from './link-preview.service.js';
 import { createAutoModService } from '../automod/automod.service.js';
 import { createAnalyticsService } from '../analytics/analytics.service.js';
 import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
-
 export function messagesRouter(ctx: AppContext): Router {
   const router = Router();
   const messagesService = createMessagesService(ctx);
@@ -29,11 +29,94 @@ export function messagesRouter(ctx: AppContext): Router {
   const autoModService = createAutoModService(ctx);
   const analyticsService = createAnalyticsService(ctx);
   const auth = requireAuth(ctx);
+  const relService = createRelationshipsService(ctx);
+
+  async function getBlockedUserIdsForViewer(viewerId: string): Promise<Set<string>> {
+    const rows = await ctx.db
+      .select({ userId: relationships.userId, targetId: relationships.targetId })
+      .from(relationships)
+      .where(
+        and(
+          eq(relationships.type, 'blocked'),
+          or(eq(relationships.userId, viewerId), eq(relationships.targetId, viewerId)),
+        ),
+      );
+
+    const blocked = new Set<string>();
+    for (const row of rows) {
+      const a = String(row.userId);
+      const b = String(row.targetId);
+      if (a === viewerId) blocked.add(b);
+      if (b === viewerId) blocked.add(a);
+    }
+    return blocked;
+  }
+
+  async function ensureDmNotBlocked(channelId: string, senderId: string) {
+    const recipients = await ctx.db
+      .select({ userId: dmRecipients.userId })
+      .from(dmRecipients)
+      .where(eq(dmRecipients.channelId, channelId));
+
+    const otherIds = recipients
+      .map((row) => String(row.userId))
+      .filter((id) => id !== senderId);
+    if (otherIds.length === 0) return null;
+
+    for (const otherId of otherIds) {
+      const blockedByOther = await relService.isBlocked(senderId, otherId);
+      const blockedBySender = await relService.isBlocked(otherId, senderId);
+      if (blockedByOther || blockedBySender) {
+        return { code: 'BLOCKED', message: 'Messages cannot be sent because one user has blocked the other.' as const };
+      }
+    }
+
+    return null;
+  }
+
+  async function emitDmReactionEvent(
+    channelId: string,
+    actorUserId: string,
+    eventName: 'MESSAGE_REACTION_ADD' | 'MESSAGE_REACTION_REMOVE',
+    payload: {
+      messageId: string;
+      channelId: string;
+      userId: string;
+      emoji: { id: null; name: string };
+      burst?: boolean;
+    },
+  ) {
+    const recipients = await ctx.db
+      .select({ userId: dmRecipients.userId })
+      .from(dmRecipients)
+      .where(eq(dmRecipients.channelId, channelId));
+
+    for (const recipient of recipients) {
+      const recipientId = String(recipient.userId);
+      if (recipientId === actorUserId) {
+        ctx.io.to(`user:${recipientId}`).emit(eventName, payload);
+        continue;
+      }
+      const blockedByRecipient = await relService.isBlocked(actorUserId, recipientId);
+      const blockedByActor = await relService.isBlocked(recipientId, actorUserId);
+      if (blockedByRecipient || blockedByActor) continue;
+      ctx.io.to(`user:${recipientId}`).emit(eventName, payload);
+    }
+  }
 
   // Helper: check the caller has access to the channel
   async function checkChannelAccess(channelId: string, userId: string) {
     const channel = await channelsService.getChannel(channelId);
     if (!channel) {
+      const [dmMembership] = await ctx.db
+        .select({ channelId: dmRecipients.channelId })
+        .from(dmRecipients)
+        .where(and(eq(dmRecipients.channelId, channelId), eq(dmRecipients.userId, userId)))
+        .limit(1);
+      if (dmMembership) {
+        return { id: channelId, guildId: null, type: 'DM' } as any;
+      }
+
       const thread = await threadsService.getThread(channelId);
       if (!thread) return null;
       const isMember = await guildsService.isMember(thread.guildId, userId);
@@ -46,9 +129,21 @@ export function messagesRouter(ctx: AppContext): Router {
 
       return { id: thread.id, guildId: thread.guildId } as any;
     }
+
+    if (!channel.guildId && ['DM', 'GROUP_DM', 'dm', 'group_dm'].includes(String(channel.type))) {
+      const [dmMembership] = await ctx.db
+        .select({ channelId: dmRecipients.channelId })
+        .from(dmRecipients)
+        .where(and(eq(dmRecipients.channelId, channelId), eq(dmRecipients.userId, userId)))
+        .limit(1);
+      if (!dmMembership) return null;
+    }
+
     if (channel.guildId) {
       const isMember = await guildsService.isMember(channel.guildId, userId);
       if (!isMember) return null;
+      const canView = await channelsService.canAccessChannel(channel.id, userId);
+      if (!canView) return null;
     }
     return channel;
   }
@@ -81,7 +176,8 @@ export function messagesRouter(ctx: AppContext): Router {
     }
 
     const msgs = await messagesService.getMessages(channelId, parsed.data);
-    res.json(msgs);
+    const blockedIds = await getBlockedUserIdsForViewer(req.user!.userId);
+    res.json(msgs.filter((msg) => !blockedIds.has(String(msg.authorId))));
   });
 
   // ── Get single message ───────────────────────────────────────────────────
@@ -96,6 +192,11 @@ export function messagesRouter(ctx: AppContext): Router {
       return res.status(404).json({ code: 'NOT_FOUND' });
     }
 
+    const blockedIds = await getBlockedUserIdsForViewer(req.user!.userId);
+    if (blockedIds.has(String(message.authorId))) {
+      return res.status(404).json({ code: 'NOT_FOUND' });
+    }
+
     res.json(message);
   });
 
@@ -105,6 +206,13 @@ export function messagesRouter(ctx: AppContext): Router {
     const channelId = req.params.channelId;
     const channel = await checkChannelAccess(channelId, req.user!.userId);
     if (!channel) return res.status(403).json({ code: 'FORBIDDEN' });
+
+    if (!channel.guildId && ['DM', 'GROUP_DM', 'dm', 'group_dm'].includes(String(channel.type))) {
+      const blocked = await ensureDmNotBlocked(channelId, req.user!.userId);
+      if (blocked) {
+        return res.status(403).json(blocked);
+      }
+    }
 
     const parsed = createMessageSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -457,6 +565,10 @@ export function messagesRouter(ctx: AppContext): Router {
     const channelId = req.params.channelId;
     const channel = await checkChannelAccess(channelId, req.user!.userId);
     if (!channel) return res.status(403).json({ code: 'FORBIDDEN' });
+    if (!channel.guildId && ['DM', 'GROUP_DM', 'dm', 'group_dm'].includes(String(channel.type))) {
+      const blocked = await ensureDmNotBlocked(channelId, req.user!.userId);
+      if (blocked) return res.status(403).json(blocked);
+    }
 
     const emojiName = decodeURIComponent(req.params.emoji);
     const added = await messagesService.addReaction(
@@ -465,20 +577,30 @@ export function messagesRouter(ctx: AppContext): Router {
       emojiName,
     );
 
-    if (added && channel.guildId) {
-      await emitRoomWithIntent(
-        ctx.io,
-        `guild:${channel.guildId}`,
-        GatewayIntents.GUILD_MESSAGES,
-        'MESSAGE_REACTION_ADD',
-        {
+    if (added) {
+      if (channel.guildId) {
+        await emitRoomWithIntent(
+          ctx.io,
+          `guild:${channel.guildId}`,
+          GatewayIntents.GUILD_MESSAGES,
+          'MESSAGE_REACTION_ADD',
+          {
+            messageId: req.params.messageId,
+            channelId,
+            userId: req.user!.userId,
+            emoji: { id: null, name: emojiName },
+            burst: false,
+          },
+        );
+      } else {
+        await emitDmReactionEvent(channelId, req.user!.userId, 'MESSAGE_REACTION_ADD', {
           messageId: req.params.messageId,
           channelId,
           userId: req.user!.userId,
           emoji: { id: null, name: emojiName },
           burst: false,
-        },
-      );
+        });
+      }
     }
 
     res.status(204).send();
@@ -489,13 +611,18 @@ export function messagesRouter(ctx: AppContext): Router {
     const channelId = req.params.channelId;
     const channel = await checkChannelAccess(channelId, req.user!.userId);
     if (!channel) return res.status(403).json({ code: 'FORBIDDEN' });
+    if (!channel.guildId && ['DM', 'GROUP_DM', 'dm', 'group_dm'].includes(String(channel.type))) {
+      const blocked = await ensureDmNotBlocked(channelId, req.user!.userId);
+      if (blocked) return res.status(403).json(blocked);
+    }
 
     const emojiName = decodeURIComponent(req.params.emoji);
-    await messagesService.removeReaction(
+    const removed = await messagesService.removeReaction(
       req.params.messageId,
       req.user!.userId,
       emojiName,
     );
+    if (!removed) return res.status(204).send();
 
     if (channel.guildId) {
       await emitRoomWithIntent(
@@ -510,6 +637,13 @@ export function messagesRouter(ctx: AppContext): Router {
           emoji: { id: null, name: emojiName },
         },
       );
+    } else {
+      await emitDmReactionEvent(channelId, req.user!.userId, 'MESSAGE_REACTION_REMOVE', {
+        messageId: req.params.messageId,
+        channelId,
+        userId: req.user!.userId,
+        emoji: { id: null, name: emojiName },
+      });
     }
 
     res.status(204).send();
@@ -520,6 +654,40 @@ export function messagesRouter(ctx: AppContext): Router {
     const channelId = req.params.channelId;
     const channel = await checkChannelAccess(channelId, req.user!.userId);
     if (!channel) return res.status(403).json({ code: 'FORBIDDEN' });
+
+    if (!channel.guildId && ['DM', 'GROUP_DM', 'dm', 'group_dm'].includes(String((channel as any).type))) {
+      const blockedIds = await getBlockedUserIdsForViewer(req.user!.userId);
+      const rows = await ctx.db
+        .select({
+          messageId: messageReactionUsers.messageId,
+          emojiId: messageReactionUsers.emojiId,
+          emojiName: messageReactionUsers.emojiName,
+          userId: messageReactionUsers.userId,
+          burst: messageReactionUsers.burst,
+        })
+        .from(messageReactionUsers)
+        .where(eq(messageReactionUsers.messageId, req.params.messageId));
+
+      const aggregates = new Map<string, { messageId: string; emojiId: string | null; emojiName: string; count: number; burstCount: number }>();
+      for (const row of rows) {
+        if (blockedIds.has(String(row.userId))) continue;
+        const key = `${row.emojiId ?? ''}:${row.emojiName}`;
+        const existing = aggregates.get(key);
+        if (existing) {
+          existing.count += 1;
+          if (row.burst) existing.burstCount += 1;
+          continue;
+        }
+        aggregates.set(key, {
+          messageId: String(row.messageId),
+          emojiId: row.emojiId ? String(row.emojiId) : null,
+          emojiName: String(row.emojiName),
+          count: 1,
+          burstCount: row.burst ? 1 : 0,
+        });
+      }
+      return res.json(Array.from(aggregates.values()));
+    }
 
     const reactions = await messagesService.getReactions(req.params.messageId);
     res.json(reactions);
@@ -534,7 +702,8 @@ export function messagesRouter(ctx: AppContext): Router {
     if (!channel) return res.status(403).json({ code: 'FORBIDDEN' });
 
     const pins = await messagesService.getPins(channelId);
-    res.json(pins);
+    const blockedIds = await getBlockedUserIdsForViewer(req.user!.userId);
+    res.json(pins.filter((msg) => !blockedIds.has(String((msg as any).authorId))));
   });
 
   // Pin a message

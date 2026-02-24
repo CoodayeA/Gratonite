@@ -42,10 +42,10 @@ export function LeaveGuildModal() {
   }
 
   return (
-    <Modal id="leave-guild" title={`Leave "${guild?.name ?? 'Server'}"`} size="sm">
+    <Modal id="leave-guild" title={`Leave "${guild?.name ?? 'Portal'}"`} size="sm">
       {isOwner ? (
         <div>
-          <p>You are the owner of this server. Transfer ownership before leaving.</p>
+          <p>You are the owner of this portal. Transfer ownership before leaving.</p>
           <div className="modal-footer">
             <Button variant="ghost" onClick={closeModal}>OK</Button>
           </div>
@@ -62,7 +62,7 @@ export function LeaveGuildModal() {
           <div className="modal-footer">
             <Button variant="ghost" onClick={closeModal}>Cancel</Button>
             <Button variant="danger" onClick={handleLeave} loading={loading}>
-              Leave Server
+              Leave Portal
             </Button>
           </div>
         </div>

@@ -8,6 +8,7 @@ import {
   pgEnum,
   jsonb,
   real,
+  index,
 } from 'drizzle-orm/pg-core';
 import { bigintString } from './helpers';
 import { users } from './users';
@@ -99,20 +100,27 @@ export const guilds = pgTable('guilds', {
 // Guild members
 // ============================================================================
 
-export const guildMembers = pgTable('guild_members', {
-  userId: bigintString('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  guildId: bigintString('guild_id')
-    .notNull()
-    .references(() => guilds.id, { onDelete: 'cascade' }),
-  nickname: varchar('nickname', { length: 32 }),
-  joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
-  premiumSince: timestamp('premium_since', { withTimezone: true }),
-  deaf: boolean('deaf').notNull().default(false),
-  mute: boolean('mute').notNull().default(false),
-  communicationDisabledUntil: timestamp('communication_disabled_until', { withTimezone: true }),
-});
+export const guildMembers = pgTable(
+  'guild_members',
+  {
+    userId: bigintString('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    guildId: bigintString('guild_id')
+      .notNull()
+      .references(() => guilds.id, { onDelete: 'cascade' }),
+    nickname: varchar('nickname', { length: 32 }),
+    joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
+    premiumSince: timestamp('premium_since', { withTimezone: true }),
+    deaf: boolean('deaf').notNull().default(false),
+    mute: boolean('mute').notNull().default(false),
+    communicationDisabledUntil: timestamp('communication_disabled_until', { withTimezone: true }),
+  },
+  (table) => [
+    index('idx_guild_members_guild_user').on(table.guildId, table.userId),
+    index('idx_guild_members_user_guild').on(table.userId, table.guildId),
+  ],
+);
 
 // ============================================================================
 // Per-server member profiles

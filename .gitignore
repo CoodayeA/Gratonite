@@ -26,6 +26,16 @@ dist/
 
 # Testing
 coverage/
+.cache/
+**/ms-playwright/
+test-results/
+playwright-report/
+
+# Mobile
+apps/mobile/.expo/
+apps/mobile/ios/Pods/
+apps/mobile/ios/build/
+*.xcworkspace/xcuserdata/
 
 # Docker volumes
 docker-data/
