@@ -43,12 +43,19 @@ export function AppLayout() {
   const activeModal = useUiStore((s) => s.activeModal);
 
   const isGuildContext = !!useMatch('/guild/:guildId/*');
+  const setSidebarCollapsed = useUiStore((s) => s.setSidebarCollapsed);
 
   useGlobalKeyboardShortcuts();
 
   useEffect(() => {
     closeMobileDrawers();
   }, [location.pathname, location.hash, closeMobileDrawers]);
+
+  useEffect(() => {
+    if (isGuildContext && sidebarCollapsed) {
+      setSidebarCollapsed(false);
+    }
+  }, [isGuildContext]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const layoutClass = [
     'app-layout',

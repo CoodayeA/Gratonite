@@ -40,6 +40,7 @@ interface UiState {
   dmChannelId: string | null;
 
   toggleSidebar: () => void;
+  setSidebarCollapsed: (value: boolean) => void;
   toggleMemberPanel: () => void;
   toggleMobileGuildRail: () => void;
   toggleMobileChannelSidebar: () => void;
@@ -74,6 +75,9 @@ export const useUiStore = create<UiState>((set) => ({
 
   toggleSidebar: () =>
     set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+
+  setSidebarCollapsed: (value: boolean) =>
+    set({ sidebarCollapsed: value }),
 
   toggleMemberPanel: () =>
     set((state) => ({ memberPanelOpen: !state.memberPanelOpen })),
