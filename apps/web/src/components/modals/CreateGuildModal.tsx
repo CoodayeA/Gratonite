@@ -10,48 +10,125 @@ import { useGuildsStore } from '@/stores/guilds.store';
 import { getErrorMessage } from '@/lib/utils';
 
 type ServerTemplate = {
-  id: 'gaming' | 'study' | 'chill' | 'creative' | 'custom';
+  id: string;
   label: string;
+  icon: string;
   description: string;
-  textChannels: string[];
-  voiceChannels: string[];
+  categories: {
+    name: string;
+    textChannels: string[];
+    voiceChannels: string[];
+  }[];
+  roles: { name: string; color: string }[];
 };
 
 const SERVER_TEMPLATES: ServerTemplate[] = [
   {
     id: 'gaming',
     label: 'Gaming',
+    icon: '🎮',
     description: 'Clips, match talk, and queue-up voice rooms.',
-    textChannels: ['game-talk', 'clips-and-highlights'],
-    voiceChannels: ['lobby', 'gaming'],
+    categories: [
+      { name: 'Info', textChannels: ['announcements', 'rules'], voiceChannels: [] },
+      { name: 'Text', textChannels: ['general', 'lfg', 'clips-and-highlights'], voiceChannels: [] },
+      { name: 'Voice', textChannels: [], voiceChannels: ['lobby', 'squad-1', 'squad-2'] },
+    ],
+    roles: [
+      { name: 'Moderator', color: '#5865F2' },
+      { name: 'Gamer', color: '#57F287' },
+    ],
   },
   {
     id: 'study',
-    label: 'Study',
+    label: 'Study Group',
+    icon: '📚',
     description: 'Focused rooms for study sessions and resources.',
-    textChannels: ['resources', 'assignments'],
-    voiceChannels: ['study-hall', 'break-room'],
+    categories: [
+      { name: 'Info', textChannels: ['resources', 'syllabus'], voiceChannels: [] },
+      { name: 'Text', textChannels: ['general', 'homework-help', 'study-tips'], voiceChannels: [] },
+      { name: 'Voice', textChannels: [], voiceChannels: ['study-hall', 'break-room'] },
+    ],
+    roles: [
+      { name: 'Tutor', color: '#EB459E' },
+      { name: 'Student', color: '#FEE75C' },
+    ],
   },
   {
-    id: 'chill',
-    label: 'Chill',
-    description: 'Low-pressure hangout with light conversation.',
-    textChannels: ['media-share', 'daily-chat'],
-    voiceChannels: ['hangout', 'music-room'],
+    id: 'art',
+    label: 'Art Studio',
+    icon: '🎨',
+    description: 'Showcase work, share WIPs, and give critiques.',
+    categories: [
+      { name: 'Gallery', textChannels: ['showcase', 'wip', 'critique', 'commissions'], voiceChannels: [] },
+      { name: 'Hangout', textChannels: ['general'], voiceChannels: ['co-work', 'hangout'] },
+    ],
+    roles: [
+      { name: 'Artist', color: '#E67E22' },
+    ],
   },
   {
-    id: 'creative',
-    label: 'Creative',
-    description: 'Show work, trade feedback, and co-create.',
-    textChannels: ['show-and-tell', 'project-lab'],
-    voiceChannels: ['co-work', 'critique'],
+    id: 'music',
+    label: 'Music Hub',
+    icon: '🎵',
+    description: 'Share releases, collaborate, and jam together.',
+    categories: [
+      { name: 'Music', textChannels: ['releases', 'production', 'collabs', 'feedback'], voiceChannels: [] },
+      { name: 'Hangout', textChannels: ['general'], voiceChannels: ['listening-party', 'studio'] },
+    ],
+    roles: [
+      { name: 'Producer', color: '#9B59B6' },
+    ],
   },
   {
-    id: 'custom',
-    label: 'Custom',
+    id: 'creator',
+    label: 'Content Creator',
+    icon: '📹',
+    description: 'Engage your audience with behind-the-scenes content.',
+    categories: [
+      { name: 'Info', textChannels: ['announcements', 'schedule'], voiceChannels: [] },
+      { name: 'Community', textChannels: ['general', 'behind-the-scenes', 'fan-art'], voiceChannels: [] },
+      { name: 'Voice', textChannels: [], voiceChannels: ['stream-chat', 'collab'] },
+    ],
+    roles: [
+      { name: 'Mod', color: '#2ECC71' },
+      { name: 'Subscriber', color: '#3498DB' },
+    ],
+  },
+  {
+    id: 'friends',
+    label: 'Friend Group',
+    icon: '👋',
+    description: 'Low-pressure hangout with your crew.',
+    categories: [
+      { name: 'Text', textChannels: ['general', 'memes', 'plans'], voiceChannels: [] },
+      { name: 'Voice', textChannels: [], voiceChannels: ['hangout', 'gaming'] },
+    ],
+    roles: [],
+  },
+  {
+    id: 'dev',
+    label: 'Dev Team',
+    icon: '💻',
+    description: 'Coordinate development across frontend, backend, and ops.',
+    categories: [
+      { name: 'General', textChannels: ['general', 'standups'], voiceChannels: [] },
+      { name: 'Engineering', textChannels: ['frontend', 'backend', 'devops'], voiceChannels: [] },
+      { name: 'Voice', textChannels: [], voiceChannels: ['standup', 'pair-programming'] },
+    ],
+    roles: [
+      { name: 'Lead', color: '#E74C3C' },
+      { name: 'Dev', color: '#1ABC9C' },
+    ],
+  },
+  {
+    id: 'blank',
+    label: 'Blank',
+    icon: '📝',
     description: 'Start minimal and shape channels as your group evolves.',
-    textChannels: ['chat'],
-    voiceChannels: ['voice'],
+    categories: [
+      { name: 'General', textChannels: ['general'], voiceChannels: ['voice'] },
+    ],
+    roles: [],
   },
 ];
 
@@ -64,7 +141,7 @@ export function CreateGuildModal() {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [templateId, setTemplateId] = useState<ServerTemplate['id']>('gaming');
+  const [templateId, setTemplateId] = useState('gaming');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -83,24 +160,34 @@ export function CreateGuildModal() {
     setLoading(true);
 
     try {
-      const template = SERVER_TEMPLATES.find((item) => item.id === templateId) ?? SERVER_TEMPLATES[0]!;
+      const template = SERVER_TEMPLATES.find((item) => item.id === templateId) ?? SERVER_TEMPLATES[SERVER_TEMPLATES.length - 1]!;
       const guild = await api.guilds.create({
         name: name.trim(),
         description: description.trim() || undefined,
       });
 
-      for (const channelName of template.textChannels) {
-        await api.channels.create(guild.id, {
-          name: channelName,
-          type: 'GUILD_TEXT',
+      // Create channels from template categories
+      for (const category of template.categories) {
+        const cat = await api.channels.create(guild.id, {
+          name: category.name,
+          type: 'GUILD_CATEGORY',
         });
-      }
 
-      for (const channelName of template.voiceChannels) {
-        await api.channels.create(guild.id, {
-          name: channelName,
-          type: 'GUILD_VOICE',
-        });
+        for (const channelName of category.textChannels) {
+          await api.channels.create(guild.id, {
+            name: channelName,
+            type: 'GUILD_TEXT',
+            parentId: cat.id,
+          });
+        }
+
+        for (const channelName of category.voiceChannels) {
+          await api.channels.create(guild.id, {
+            name: channelName,
+            type: 'GUILD_VOICE',
+            parentId: cat.id,
+          });
+        }
       }
 
       const guildChannels = await api.channels.getGuildChannels(guild.id);
@@ -150,13 +237,14 @@ export function CreateGuildModal() {
                 className={`create-guild-template-card ${templateId === template.id ? 'create-guild-template-card-active' : ''}`}
                 onClick={() => setTemplateId(template.id)}
               >
+                <span className="create-guild-template-icon">{template.icon}</span>
                 <span className="create-guild-template-title">{template.label}</span>
                 <span className="create-guild-template-description">{template.description}</span>
               </button>
             ))}
           </div>
           <div className="create-guild-template-hint">
-            Starter layout stays intentionally small so your channels can grow based on real usage.
+            Each template creates organized categories with text and voice channels. Customize freely after creation.
           </div>
         </div>
 
