@@ -5049,6 +5049,11 @@ button.home-dashboard-tile {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent) inset;
 }
 
+.create-guild-template-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
 .create-guild-template-title {
   font-size: 13px;
   font-weight: 700;
