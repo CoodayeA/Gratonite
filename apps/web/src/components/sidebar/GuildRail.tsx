@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useMatch, useNavigate } from 'react-router-dom';
 import { useGuildsStore } from '@/stores/guilds.store';
 import { useChannelsStore } from '@/stores/channels.store';
 import { useGuilds } from '@/hooks/useGuilds';
@@ -16,22 +16,35 @@ export function GuildRail() {
   const channels = useChannelsStore((s) => s.channels);
   const unreadCountByChannel = useUnreadStore((s) => s.unreadCountByChannel);
   const openModal = useUiStore((s) => s.openModal);
+  const toggleSidebar = useUiStore((s) => s.toggleSidebar);
+  const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
+  const navigate = useNavigate();
+  const isGuildContext = !!useMatch('/guild/:guildId/*');
+
+  const handleHomeClick = (e: React.MouseEvent) => {
+    if (!isGuildContext) {
+      // Already in DM context — toggle sidebar collapse
+      e.preventDefault();
+      toggleSidebar();
+    } else {
+      // In guild context — navigate to DM home and ensure sidebar is open
+      e.preventDefault();
+      if (sidebarCollapsed) toggleSidebar();
+      navigate('/');
+    }
+  };
 
   return (
     <nav className="guild-rail">
-      {/* Home button */}
-      <NavLink to="/" className="guild-rail-item guild-rail-home" end>
+      {/* Home / DM toggle button */}
+      <NavLink
+        to="/"
+        className={`guild-rail-item guild-rail-home ${!isGuildContext ? 'is-dm-home' : ''}`}
+        onClick={handleHomeClick}
+        title={!isGuildContext ? 'Toggle DM sidebar' : 'Direct Messages'}
+      >
         <div className="guild-rail-icon guild-rail-home-icon">
           <img src="/gratonite-icon.png" alt="Gratonite" width={48} height={48} style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
-        </div>
-      </NavLink>
-
-      {/* Messages / DM area */}
-      <NavLink to="/friends" className="guild-rail-item guild-rail-utility" title="Messages">
-        <div className="guild-rail-icon guild-rail-utility-icon" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
         </div>
       </NavLink>
 

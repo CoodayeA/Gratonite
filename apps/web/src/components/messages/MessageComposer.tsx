@@ -14,6 +14,7 @@ import { ReplyPreview } from './ReplyPreview';
 import { FileUploadButton } from './FileUploadButton';
 import { AttachmentPreview, type PendingAttachment } from './AttachmentPreview';
 import { startInteraction, endInteractionAfterPaint } from '@/lib/perf';
+import { EmojiPicker } from '@/components/ui/EmojiPicker';
 import type { Message } from '@gratonite/types';
 
 interface MessageComposerProps {
@@ -29,7 +30,9 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionRange, setMentionRange] = useState<{ start: number; end: number } | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const lastTypingRef = useRef(0);
   const isComposingRef = useRef(false);
   const user = useAuthStore((s) => s.user);
@@ -274,6 +277,24 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
     });
   }
 
+  function handleEmojiSelect(emoji: string) {
+    const ta = textareaRef.current;
+    if (ta) {
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      const newContent = content.slice(0, start) + emoji + content.slice(end);
+      setContent(newContent);
+      // Move cursor after emoji
+      requestAnimationFrame(() => {
+        ta.selectionStart = ta.selectionEnd = start + emoji.length;
+        ta.focus();
+      });
+    } else {
+      setContent((prev) => prev + emoji);
+    }
+    setEmojiOpen(false);
+  }
+
   async function sendMessage(contentOverride?: string) {
     const trimmed = (contentOverride ?? content).trim();
     if (!trimmed && pendingFiles.length === 0) return;
@@ -460,6 +481,21 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
               </div>
             )}
             <button
+              ref={emojiButtonRef}
+              type="button"
+              className="message-emoji-btn"
+              onClick={() => setEmojiOpen((prev) => !prev)}
+              aria-label="Emoji"
+              title="Emoji"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                <line x1="9" y1="9" x2="9.01" y2="9" />
+                <line x1="15" y1="9" x2="15.01" y2="9" />
+              </svg>
+            </button>
+            <button
               type="submit"
               className="message-send-btn"
               disabled={!canSend}
@@ -468,6 +504,12 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
             >
               Send
             </button>
+            {emojiOpen && (
+              <EmojiPicker
+                onSelect={handleEmojiSelect}
+                onClose={() => setEmojiOpen(false)}
+              />
+            )}
           </div>
         </div>
       </form>
