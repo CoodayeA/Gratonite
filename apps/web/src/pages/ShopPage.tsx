@@ -27,6 +27,15 @@ interface ShopItem {
   isFeatured: boolean;
 }
 
+/** Generate a stable hue from a string name for CSS-based previews */
+function nameToHue(name: string): number {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash) % 360;
+}
+
 export function ShopPage() {
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
@@ -255,6 +264,49 @@ export function ShopPage() {
     }
   }
 
+  function renderShopCard(item: ShopItem, owned: boolean, canAfford: boolean, hue: number) {
+    return (
+      <article key={item.id} className={`shop-item ${owned ? 'shop-item-owned' : ''}`}>
+        <div className="shop-item-preview">
+          {item.type === 'avatar_decoration' && (
+            item.assetHash ? (
+              <Avatar name={resolvedDisplayName} hash={resolvedAvatarHash} decorationHash={item.assetHash} userId={user!.id} size={56} />
+            ) : (
+              <div className="shop-preview-ring" style={{ '--ring-hue': hue } as CSSProperties}>
+                <Avatar name={resolvedDisplayName} hash={resolvedAvatarHash} userId={user!.id} size={48} />
+              </div>
+            )
+          )}
+          {item.type === 'profile_effect' && (
+            item.assetHash ? (
+              <div className="shop-effect-preview-small">
+                <img src={`/api/v1/files/${item.assetHash}`} alt="" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4 }} />
+              </div>
+            ) : (
+              <div className="shop-preview-effect" style={{ '--effect-hue': hue } as CSSProperties} />
+            )
+          )}
+          {item.type === 'nameplate' && (
+            item.assetHash ? (
+              <span className="display-name-nameplate nameplate-from-asset" style={{ '--nameplate-image': `url(/api/v1/files/${item.assetHash})` } as CSSProperties}>{resolvedDisplayName}</span>
+            ) : (
+              <span className="shop-preview-nameplate" style={{ '--np-hue': hue } as CSSProperties}>{resolvedDisplayName}</span>
+            )
+          )}
+        </div>
+        <div className="shop-item-name">{item.name}</div>
+        {item.description && <div className="shop-item-description">{item.description}</div>}
+        <div className="shop-item-price">
+          <span className={`price-tag ${!canAfford && !owned ? 'price-unaffordable' : ''}`}>{item.price.toLocaleString()} G</span>
+          {owned && <span className="owned-badge">Owned</span>}
+        </div>
+        <Button variant={owned ? 'ghost' : 'primary'} loading={purchasing === item.id} disabled={owned || !canAfford} onClick={() => handlePurchaseItem(item.id, item.price)}>
+          {owned ? 'Owned' : canAfford ? 'Purchase' : 'Too Expensive'}
+        </Button>
+      </article>
+    );
+  }
+
   if (!user) return null;
 
   return (
@@ -302,16 +354,23 @@ export function ShopPage() {
             <div className="shop-grid">
               {avatarDecorations.map((decoration) => {
                 const equipped = user.avatarDecorationId === decoration.id;
+                const hue = nameToHue(decoration.name);
                 return (
                   <article key={decoration.id} className={`shop-item ${equipped ? 'shop-item-equipped' : ''}`}>
                     <div className="shop-item-preview">
-                      <Avatar
-                        name={resolvedDisplayName}
-                        hash={resolvedAvatarHash}
-                        decorationHash={decoration.assetHash}
-                        userId={user.id}
-                        size={56}
-                      />
+                      {decoration.assetHash ? (
+                        <Avatar
+                          name={resolvedDisplayName}
+                          hash={resolvedAvatarHash}
+                          decorationHash={decoration.assetHash}
+                          userId={user.id}
+                          size={56}
+                        />
+                      ) : (
+                        <div className="shop-preview-ring" style={{ '--ring-hue': hue } as CSSProperties}>
+                          <Avatar name={resolvedDisplayName} hash={resolvedAvatarHash} userId={user.id} size={48} />
+                        </div>
+                      )}
                     </div>
                     <div className="shop-item-name">{decoration.name}</div>
                     {decoration.description && (
@@ -344,6 +403,7 @@ export function ShopPage() {
             <div className="shop-grid">
               {profileEffects.map((effect) => {
                 const equipped = user.profileEffectId === effect.id;
+                const hue = nameToHue(effect.name);
                 return (
                   <article key={effect.id} className={`shop-item ${equipped ? 'shop-item-equipped' : ''}`}>
                     <div className="shop-effect-preview">
@@ -355,7 +415,11 @@ export function ShopPage() {
                             context="profile"
                           />
                         </div>
-                        <img src={`/api/v1/files/${effect.assetHash}`} alt="" aria-hidden="true" />
+                        {effect.assetHash ? (
+                          <img src={`/api/v1/files/${effect.assetHash}`} alt="" aria-hidden="true" />
+                        ) : (
+                          <div className="shop-preview-effect" style={{ '--effect-hue': hue, position: 'absolute', inset: 0, width: '100%', height: '100%', borderRadius: 'inherit' } as CSSProperties} />
+                        )}
                       </div>
                     </div>
                     <div className="shop-item-name">{effect.name}</div>
@@ -389,15 +453,22 @@ export function ShopPage() {
             <div className="shop-grid">
               {nameplates.map((nameplate) => {
                 const equipped = user.nameplateId === nameplate.id;
+                const hue = nameToHue(nameplate.name);
                 return (
                   <article key={nameplate.id} className={`shop-item ${equipped ? 'shop-item-equipped' : ''}`}>
                     <div className="shop-nameplate-preview">
-                      <span
-                        className="display-name-nameplate nameplate-from-asset"
-                        style={{ '--nameplate-image': `url(/api/v1/files/${nameplate.assetHash})` } as CSSProperties}
-                      >
-                        {resolvedDisplayName}
-                      </span>
+                      {nameplate.assetHash ? (
+                        <span
+                          className="display-name-nameplate nameplate-from-asset"
+                          style={{ '--nameplate-image': `url(/api/v1/files/${nameplate.assetHash})` } as CSSProperties}
+                        >
+                          {resolvedDisplayName}
+                        </span>
+                      ) : (
+                        <span className="shop-preview-nameplate" style={{ '--np-hue': hue } as CSSProperties}>
+                          {resolvedDisplayName}
+                        </span>
+                      )}
                     </div>
                     <div className="shop-item-name">{nameplate.name}</div>
                     <div className="shop-item-description">{nameplate.description ?? ''}</div>
@@ -418,72 +489,118 @@ export function ShopPage() {
 
       {tab === 'gratonites' && (
         <section className="shop-section">
-          <div className="shop-section-header">Gratonites Shop</div>
-          <p className="shop-section-desc">
-            Purchase exclusive cosmetics with your earned Gratonites! 
-            <strong> Balance: {shopBalance.toLocaleString()} G</strong>
-          </p>
+          {/* Balance banner */}
+          <div className="shop-balance-banner">
+            <div className="shop-balance-coin">⬡</div>
+            <div className="shop-balance-info">
+              <div className="shop-balance-amount">{shopBalance.toLocaleString()}</div>
+              <div className="shop-balance-label">Gratonites</div>
+            </div>
+          </div>
+
           {shopItemsLoading ? (
             <div className="settings-muted">Loading shop items…</div>
           ) : shopItems.length === 0 ? (
             <div className="settings-muted">No items available yet. Check back soon!</div>
           ) : (
-            <div className="shop-grid">
-              {shopItems.map((item) => {
-                const owned = ownedItems.has(item.id);
-                const canAfford = shopBalance >= item.price;
-                return (
-                  <article key={item.id} className={`shop-item ${owned ? 'shop-item-owned' : ''}`}>
-                    <div className="shop-item-preview">
-                      {item.type === 'avatar_decoration' && item.assetHash && (
-                        <Avatar
-                          name={resolvedDisplayName}
-                          hash={resolvedAvatarHash}
-                          decorationHash={item.assetHash}
-                          userId={user.id}
-                          size={56}
-                        />
-                      )}
-                      {item.type === 'profile_effect' && item.assetHash && (
-                        <div className="shop-effect-preview-small">
-                          <img 
-                            src={`/api/v1/files/${item.assetHash}`} 
-                            alt="" 
-                            style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4 }}
-                          />
-                        </div>
-                      )}
-                      {item.type === 'nameplate' && item.assetHash && (
-                        <span
-                          className="display-name-nameplate nameplate-from-asset"
-                          style={{ '--nameplate-image': `url(/api/v1/files/${item.assetHash})` } as CSSProperties}
-                        >
-                          {resolvedDisplayName}
-                        </span>
-                      )}
-                    </div>
-                    <div className="shop-item-name">{item.name}</div>
-                    {item.description && (
-                      <div className="shop-item-description">{item.description}</div>
-                    )}
-                    <div className="shop-item-price">
-                      <span className={`price-tag ${!canAfford && !owned ? 'price-unaffordable' : ''}`}>
-                        {item.price.toLocaleString()} G
-                      </span>
-                      {owned && <span className="owned-badge">Owned</span>}
-                    </div>
-                    <Button
-                      variant={owned ? 'ghost' : 'primary'}
-                      loading={purchasing === item.id}
-                      disabled={owned || !canAfford}
-                      onClick={() => handlePurchaseItem(item.id, item.price)}
-                    >
-                      {owned ? 'Owned' : canAfford ? 'Purchase' : 'Too Expensive'}
-                    </Button>
-                  </article>
-                );
-              })}
-            </div>
+            <>
+              {/* Featured items */}
+              {shopItems.some((i) => i.isFeatured) && (
+                <div className="shop-featured-section">
+                  <div className="shop-section-header">⭐ Featured</div>
+                  <div className="shop-grid shop-grid-featured">
+                    {shopItems.filter((i) => i.isFeatured).map((item) => {
+                      const owned = ownedItems.has(item.id);
+                      const canAfford = shopBalance >= item.price;
+                      const hue = nameToHue(item.name);
+                      return (
+                        <article key={item.id} className={`shop-item shop-item-featured ${owned ? 'shop-item-owned' : ''}`}>
+                          <div className="shop-item-type-badge">{item.type === 'avatar_decoration' ? '🎭' : item.type === 'profile_effect' ? '✨' : '🏷️'}</div>
+                          <div className="shop-item-preview">
+                            {item.type === 'avatar_decoration' && (
+                              item.assetHash ? (
+                                <Avatar name={resolvedDisplayName} hash={resolvedAvatarHash} decorationHash={item.assetHash} userId={user.id} size={56} />
+                              ) : (
+                                <div className="shop-preview-ring" style={{ '--ring-hue': hue } as CSSProperties}>
+                                  <Avatar name={resolvedDisplayName} hash={resolvedAvatarHash} userId={user.id} size={48} />
+                                </div>
+                              )
+                            )}
+                            {item.type === 'profile_effect' && (
+                              item.assetHash ? (
+                                <div className="shop-effect-preview-small"><img src={`/api/v1/files/${item.assetHash}`} alt="" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4 }} /></div>
+                              ) : (
+                                <div className="shop-preview-effect" style={{ '--effect-hue': hue } as CSSProperties} />
+                              )
+                            )}
+                            {item.type === 'nameplate' && (
+                              item.assetHash ? (
+                                <span className="display-name-nameplate nameplate-from-asset" style={{ '--nameplate-image': `url(/api/v1/files/${item.assetHash})` } as CSSProperties}>{resolvedDisplayName}</span>
+                              ) : (
+                                <span className="shop-preview-nameplate" style={{ '--np-hue': hue } as CSSProperties}>{resolvedDisplayName}</span>
+                              )
+                            )}
+                          </div>
+                          <div className="shop-item-name">{item.name}</div>
+                          <div className="shop-item-price">
+                            <span className={`price-tag ${!canAfford && !owned ? 'price-unaffordable' : ''}`}>{item.price.toLocaleString()} G</span>
+                            {owned && <span className="owned-badge">Owned</span>}
+                          </div>
+                          <Button variant={owned ? 'ghost' : 'primary'} loading={purchasing === item.id} disabled={owned || !canAfford} onClick={() => handlePurchaseItem(item.id, item.price)}>
+                            {owned ? 'Owned' : canAfford ? 'Purchase' : 'Too Expensive'}
+                          </Button>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Avatar Decorations */}
+              {shopItems.some((i) => i.type === 'avatar_decoration') && (
+                <div className="shop-type-section">
+                  <div className="shop-section-header">🎭 Avatar Decorations</div>
+                  <div className="shop-grid">
+                    {shopItems.filter((i) => i.type === 'avatar_decoration').map((item) => {
+                      const owned = ownedItems.has(item.id);
+                      const canAfford = shopBalance >= item.price;
+                      const hue = nameToHue(item.name);
+                      return renderShopCard(item, owned, canAfford, hue);
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Profile Effects */}
+              {shopItems.some((i) => i.type === 'profile_effect') && (
+                <div className="shop-type-section">
+                  <div className="shop-section-header">✨ Profile Effects</div>
+                  <div className="shop-grid">
+                    {shopItems.filter((i) => i.type === 'profile_effect').map((item) => {
+                      const owned = ownedItems.has(item.id);
+                      const canAfford = shopBalance >= item.price;
+                      const hue = nameToHue(item.name);
+                      return renderShopCard(item, owned, canAfford, hue);
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Nameplates */}
+              {shopItems.some((i) => i.type === 'nameplate') && (
+                <div className="shop-type-section">
+                  <div className="shop-section-header">🏷️ Nameplates</div>
+                  <div className="shop-grid">
+                    {shopItems.filter((i) => i.type === 'nameplate').map((item) => {
+                      const owned = ownedItems.has(item.id);
+                      const canAfford = shopBalance >= item.price;
+                      const hue = nameToHue(item.name);
+                      return renderShopCard(item, owned, canAfford, hue);
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </section>
       )}

@@ -2178,15 +2178,22 @@ button {
     linear-gradient(210deg, rgba(138, 123, 255, 0.045), transparent 45%),
     rgba(13, 19, 32, 0.94);
   border-right: 1px solid color-mix(in srgb, var(--stroke) 85%, transparent);
+  transition: width 0.18s ease, min-width 0.18s ease;
+  overflow: hidden;
 }
 
 .app-layout.sidebar-collapsed {
   grid-template-columns: var(--guild-rail-width) 0 1fr;
 }
 
-/* DM context: keep channel sidebar visible */
+/* DM context: show channel sidebar by default */
 .app-layout.dm-context {
   grid-template-columns: var(--guild-rail-width) var(--channel-sidebar-width) 1fr;
+}
+
+/* DM context + collapsed: hide channel sidebar */
+.app-layout.dm-context.sidebar-collapsed {
+  grid-template-columns: var(--guild-rail-width) 0 1fr;
 }
 
 
@@ -2284,6 +2291,20 @@ button {
 
 .guild-rail-home-icon:hover {
   border-radius: var(--radius-md);
+}
+
+/* Subtle dimming when DM sidebar is collapsed to hint toggle state */
+.guild-rail-home.is-dm-home .guild-rail-home-icon {
+  cursor: pointer;
+}
+
+.sidebar-collapsed .guild-rail-home.is-dm-home .guild-rail-home-icon {
+  opacity: 0.7;
+  box-shadow: 0 0 0 2px rgba(121, 223, 255, 0.25);
+}
+
+.sidebar-collapsed .guild-rail-home.is-dm-home .guild-rail-home-icon:hover {
+  opacity: 1;
 }
 
 .guild-rail-utility-icon {
@@ -3878,6 +3899,25 @@ button {
 
 .message-composer-input::placeholder {
   color: var(--text-faint);
+}
+
+.message-emoji-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.message-emoji-btn:hover {
+  color: var(--text);
+  background: rgba(121, 223, 255, 0.08);
 }
 
 .message-send-btn {
@@ -6579,7 +6619,7 @@ button.home-dashboard-tile {
 }
 
 .app-layout.sidebar-collapsed.dm-info-panel-open {
-  grid-template-columns: var(--guild-rail-width) var(--channel-sidebar-width) 1fr 340px;
+  grid-template-columns: var(--guild-rail-width) 0 1fr 340px;
 }
 
 /* ==========================================================================
@@ -6998,6 +7038,14 @@ button.home-dashboard-tile {
 
 .emoji-picker-item:hover {
   background: rgba(95, 215, 255, 0.1);
+}
+
+.message-composer-controls .emoji-picker {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 8px;
+  z-index: 50;
 }
 
 /* ==========================================================================
@@ -8741,6 +8789,90 @@ button.home-dashboard-tile {
   box-shadow: 0 0 0 1px rgba(96, 130, 255, 0.3) inset;
 }
 
+/* Gratonites Shop — balance banner */
+.shop-balance-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(251, 191, 36, 0.12), rgba(245, 158, 11, 0.06));
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.shop-balance-coin {
+  font-size: 28px;
+  color: #fbbf24;
+  text-shadow: 0 0 12px rgba(251, 191, 36, 0.4);
+}
+
+.shop-balance-info {
+  display: grid;
+  gap: 1px;
+}
+
+.shop-balance-amount {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fbbf24;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.shop-balance-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+/* Shop type sections */
+.shop-type-section,
+.shop-featured-section {
+  display: grid;
+  gap: 10px;
+}
+
+.shop-featured-section {
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--stroke);
+}
+
+.shop-grid-featured {
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+}
+
+.shop-item-featured {
+  position: relative;
+  border-color: rgba(251, 191, 36, 0.25);
+  background: rgba(251, 191, 36, 0.04);
+}
+
+.shop-item-featured:hover {
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+.shop-item-type-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* Item card hover */
+.shop-item {
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.shop-item:hover {
+  border-color: var(--stroke-strong, rgba(255, 255, 255, 0.15));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
 /* Gratonites Shop styles */
 .shop-item-owned {
   border-color: #22c55e;
@@ -8796,6 +8928,60 @@ button.home-dashboard-tile {
   align-items: center;
   justify-content: center;
   padding: 10px;
+}
+
+/* CSS-based previews for items without uploaded assets */
+.shop-preview-ring {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: conic-gradient(
+    hsl(var(--ring-hue, 200), 80%, 60%),
+    hsl(calc(var(--ring-hue, 200) + 60), 70%, 55%),
+    hsl(var(--ring-hue, 200), 80%, 60%)
+  );
+  padding: 3px;
+}
+
+.shop-preview-ring > * {
+  border-radius: 50%;
+}
+
+.shop-preview-effect {
+  width: 80px;
+  height: 60px;
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 20% 30%, hsla(var(--effect-hue, 260), 70%, 60%, 0.4), transparent 50%),
+    radial-gradient(circle at 80% 70%, hsla(calc(var(--effect-hue, 260) + 40), 60%, 55%, 0.35), transparent 50%),
+    linear-gradient(135deg, hsla(var(--effect-hue, 260), 40%, 18%, 0.6), hsla(calc(var(--effect-hue, 260) + 30), 30%, 12%, 0.5));
+  border: 1px solid hsla(var(--effect-hue, 260), 50%, 50%, 0.2);
+  animation: shop-effect-pulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes shop-effect-pulse {
+  0% { opacity: 0.85; }
+  100% { opacity: 1; }
+}
+
+.shop-preview-nameplate {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  background: linear-gradient(
+    135deg,
+    hsla(var(--np-hue, 200), 70%, 45%, 0.5),
+    hsla(calc(var(--np-hue, 200) + 30), 60%, 40%, 0.4)
+  );
+  color: hsl(var(--np-hue, 200), 90%, 88%);
+  border: 1px solid hsla(var(--np-hue, 200), 50%, 50%, 0.25);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .shop-effect-card {
@@ -12933,3 +13119,4 @@ kbd.shortcuts-keys {
 .full-profile-more-danger:hover {
   background: rgba(242, 63, 67, 0.12);
 }
+
