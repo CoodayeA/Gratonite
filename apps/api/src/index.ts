@@ -34,6 +34,7 @@ import { communityShopRouter } from './modules/community-shop/community-shop.rou
 import { economyRouter } from './modules/economy/economy.router.js';
 import { gratonitesRouter } from './modules/gratonites/gratonites.router.js';
 import { shopRouter } from './modules/shop/shop.router.js';
+import { adminRouter } from './modules/admin/admin.router.js';
 import { createThemesService } from './modules/themes/themes.service.js';
 import { createThreadsService } from './modules/threads/threads.service.js';
 import { createMessagesService } from './modules/messages/messages.service.js';
@@ -214,6 +215,7 @@ async function main() {
   app.use('/api/v1', economyRouter(ctx));
   app.use('/api/v1', gratonitesRouter(ctx));
   app.use('/api/v1', shopRouter(ctx));
+  app.use('/api/v1', adminRouter(ctx));
   app.use('/api/v1', brandRouter(ctx));
   app.use('/api/v1', profilesRouter(ctx));
   app.use('/api/v1', bugReportsRouter(ctx));
