@@ -13,7 +13,7 @@ import {
   saveProfileEffectsCatalog,
 } from '@/lib/profileCosmetics';
 
-type CosmeticsTab = 'decorations' | 'effects' | 'nameplates' | 'creator' | 'gratonites';
+type CosmeticsTab = 'decorations' | 'effects' | 'nameplates' | 'soundboard' | 'creator' | 'gratonites';
 
 interface ShopItem {
   id: string;
@@ -324,6 +324,7 @@ export function ShopPage() {
           ['decorations', 'Avatar Decorations'],
           ['effects', 'Profile Effects'],
           ['nameplates', 'Nameplates'],
+          ['soundboard', 'Soundboard'],
           ['gratonites', 'Gratonites Shop'],
           ['creator', 'Creator'],
         ] as const).map(([value, label]) => (
@@ -482,6 +483,73 @@ export function ShopPage() {
                   </article>
                 );
               })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {tab === 'soundboard' && (
+        <section className="shop-section">
+          <div className="shop-section-header">Soundboard</div>
+          <p className="shop-section-desc">Sound effects you can play in voice channels. Purchase and add to your personal soundboard.</p>
+
+          {/* Balance banner */}
+          <div className="shop-balance-banner">
+            <div className="shop-balance-coin">⬡</div>
+            <div className="shop-balance-info">
+              <div className="shop-balance-amount">{shopBalance.toLocaleString()}</div>
+              <div className="shop-balance-label">Gratonites</div>
+            </div>
+          </div>
+
+          {shopItemsLoading ? (
+            <div className="settings-muted">Loading soundboard items…</div>
+          ) : (
+            <div className="shop-grid">
+              {shopItems
+                .filter((item) => item.type === 'soundboard_sound')
+                .map((item) => {
+                  const owned = ownedItems.has(item.id);
+                  const canAfford = shopBalance >= item.price;
+                  return (
+                    <article key={item.id} className={`shop-item ${item.isFeatured ? 'shop-item-featured' : ''} ${owned ? 'shop-item-owned' : ''}`}>
+                      <div className="shop-sound-preview">
+                        <button
+                          type="button"
+                          className="shop-sound-play-btn"
+                          onClick={() => {
+                            if (item.assetHash) {
+                              const audio = new Audio(`/api/v1/files/${item.assetHash}`);
+                              audio.play().catch(() => {});
+                            }
+                          }}
+                          disabled={!item.assetHash}
+                          title="Preview sound"
+                        >
+                          ▶
+                        </button>
+                        <span className="shop-sound-name">{item.name}</span>
+                        {item.isFeatured && <span className="shop-item-type-badge">⭐</span>}
+                      </div>
+                      <div className="shop-item-description">{item.description}</div>
+                      <div className="shop-item-price">
+                        <span className={`price-tag ${!canAfford && !owned ? 'price-unaffordable' : ''}`}>{item.price.toLocaleString()} G</span>
+                        {owned && <span className="owned-badge">Owned</span>}
+                      </div>
+                      <Button
+                        variant={owned ? 'ghost' : 'primary'}
+                        loading={purchasing === item.id}
+                        disabled={owned || !canAfford}
+                        onClick={() => handlePurchaseItem(item.id, item.price)}
+                      >
+                        {owned ? 'Owned' : canAfford ? 'Purchase' : 'Too Expensive'}
+                      </Button>
+                    </article>
+                  );
+                })}
+              {shopItems.filter((item) => item.type === 'soundboard_sound').length === 0 && (
+                <div className="shop-empty settings-muted">No soundboard items available yet.</div>
+              )}
             </div>
           )}
         </section>
