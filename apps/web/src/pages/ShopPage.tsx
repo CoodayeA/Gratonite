@@ -138,18 +138,21 @@ export function ShopPage() {
       try {
         const [itemsRes, balanceRes, inventoryRes] = await Promise.all([
           fetch('/api/v1/shop/items', { credentials: 'include' }),
-          fetch('/api/v1/gratonites/balance', { credentials: 'include' }),
+          fetch('/api/v1/economy/wallet', { credentials: 'include' }),
           fetch('/api/v1/shop/inventory', { credentials: 'include' }),
         ]);
-        
+
         if (cancelled) return;
-        
-        const items = itemsRes.ok ? await itemsRes.json() : [];
-        const balance = balanceRes.ok ? await balanceRes.json() : { balance: 0 };
-        const inventory = inventoryRes.ok ? await inventoryRes.json() : [];
-        
+
+        const rawItems = itemsRes.ok ? await itemsRes.json() : [];
+        const wallet = balanceRes.ok ? await balanceRes.json() : { balance: 0 };
+        const rawInventory = inventoryRes.ok ? await inventoryRes.json() : [];
+
+        const items = Array.isArray(rawItems) ? rawItems : [];
+        const inventory = Array.isArray(rawInventory) ? rawInventory : [];
+
         setShopItems(items);
-        setShopBalance(balance.balance || 0);
+        setShopBalance(wallet.balance || 0);
         setOwnedItems(new Set(inventory.map((inv: any) => inv.itemId)));
       } catch (err) {
         if (!cancelled) setShopError(getErrorMessage(err));

@@ -1,6 +1,8 @@
+import { useState, useMemo } from 'react';
 import { NavLink, useMatch, useNavigate } from 'react-router-dom';
 import { useGuildsStore } from '@/stores/guilds.store';
 import { useChannelsStore } from '@/stores/channels.store';
+import { useVoiceStore } from '@/stores/voice.store';
 import { useGuilds } from '@/hooks/useGuilds';
 import { useUiStore } from '@/stores/ui.store';
 import { useUnreadStore } from '@/stores/unread.store';
@@ -14,12 +16,32 @@ export function GuildRail() {
   const guilds = useGuildsStore((s) => s.guilds);
   const guildOrder = useGuildsStore((s) => s.guildOrder);
   const channels = useChannelsStore((s) => s.channels);
+  const statesByChannel = useVoiceStore((s) => s.statesByChannel);
   const unreadCountByChannel = useUnreadStore((s) => s.unreadCountByChannel);
   const openModal = useUiStore((s) => s.openModal);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
   const navigate = useNavigate();
   const isGuildContext = !!useMatch('/guild/:guildId/*');
+  const [hoveredVoiceGuild, setHoveredVoiceGuild] = useState<string | null>(null);
+
+  // Build a map of guildId → voice channel info (channel name + user count)
+  const guildVoiceInfo = useMemo(() => {
+    const info = new Map<string, Array<{ channelId: string; channelName: string; userCount: number }>>();
+    for (const [channelId, voiceStates] of statesByChannel.entries()) {
+      if (!voiceStates || voiceStates.length === 0) continue;
+      const ch = channels.get(channelId);
+      if (!ch?.guildId) continue;
+      const existing = info.get(ch.guildId) ?? [];
+      existing.push({
+        channelId,
+        channelName: ch.name ?? 'Voice Channel',
+        userCount: voiceStates.length,
+      });
+      info.set(ch.guildId, existing);
+    }
+    return info;
+  }, [statesByChannel, channels]);
 
   const handleHomeClick = (e: React.MouseEvent) => {
     if (!isGuildContext) {
@@ -85,6 +107,9 @@ export function GuildRail() {
         {guildOrder.map((id) => {
           const guild = guilds.get(id);
           if (!guild) return null;
+          const voiceChannels = guildVoiceInfo.get(id);
+          const hasVoice = voiceChannels && voiceChannels.length > 0;
+          const totalVoiceUsers = hasVoice ? voiceChannels.reduce((sum, vc) => sum + vc.userCount, 0) : 0;
           return (
             <NavLink
               key={id}
@@ -92,6 +117,8 @@ export function GuildRail() {
               className={({ isActive }) =>
                 `guild-rail-item ${isActive ? 'guild-rail-item-active' : ''}`
               }
+              onMouseEnter={hasVoice ? () => setHoveredVoiceGuild(id) : undefined}
+              onMouseLeave={hasVoice ? () => setHoveredVoiceGuild(null) : undefined}
             >
               {(() => {
                 let guildUnread = 0;
@@ -105,6 +132,26 @@ export function GuildRail() {
                   </span>
                 ) : null;
               })()}
+              {hasVoice && (
+                <span className="guild-rail-voice-badge" aria-label={`${totalVoiceUsers} in voice`} title="">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                  </svg>
+                </span>
+              )}
+              {hasVoice && hoveredVoiceGuild === id && (
+                <div className="guild-rail-voice-tooltip">
+                  <div className="guild-rail-voice-tooltip-title">Voice Active</div>
+                  {voiceChannels.map((vc) => (
+                    <div key={vc.channelId} className="guild-rail-voice-tooltip-channel">
+                      <span className="guild-rail-voice-tooltip-icon">🔊</span>
+                      <span className="guild-rail-voice-tooltip-name">{vc.channelName}</span>
+                      <span className="guild-rail-voice-tooltip-count">{vc.userCount}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <GuildIcon
                 name={guild.name}
                 iconHash={guild.iconHash}

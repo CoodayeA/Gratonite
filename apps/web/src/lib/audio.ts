@@ -33,6 +33,16 @@ export function playSound(name: SoundName): void {
   el.play().catch(() => {});
 }
 
+/** Preview a sound ignoring user prefs (for settings preview buttons). */
+export function previewSoundDirect(name: SoundName): void {
+  const prefs = readNotificationSoundPrefs();
+  const el = getAudio(name);
+  el.loop = name === 'ringtone' || name === 'outgoing-ring';
+  el.volume = Math.max(0, Math.min(1, (prefs.volume || 80) / 100));
+  el.currentTime = 0;
+  el.play().catch(() => {});
+}
+
 /** Stop a specific sound. */
 export function stopSound(name: SoundName): void {
   const el = audioCache.get(name);

@@ -3,14 +3,15 @@ import {
   shopItems,
   userInventory,
   shopPurchases,
-  gratonitesBalances,
+  currencyWallets,
+  currencyLedger,
 } from '@gratonite/db';
 import type { AppContext } from '../../lib/context.js';
 import { generateId } from '../../lib/snowflake.js';
-import { createGratonitesService } from '../gratonites/gratonites.service.js';
+import { createEconomyService } from '../economy/economy.service.js';
 
 export function createShopService(ctx: AppContext) {
-  const gratonitesService = createGratonitesService(ctx);
+  const economyService = createEconomyService(ctx);
 
   // Get all active shop items
   async function getItems(category?: string) {
@@ -93,23 +94,35 @@ export function createShopService(ctx: AppContext) {
       throw new Error('ALREADY_OWNED');
     }
 
-    // Check balance
-    const balance = await gratonitesService.getBalance(userId);
-    if (balance.balance < item.price) {
+    // Check balance using economy wallet
+    const wallet = await economyService.getWallet(userId);
+    if ((wallet?.balance ?? 0) < item.price) {
       throw new Error('INSUFFICIENT_FUNDS');
     }
 
     // Perform purchase in transaction
     const result = await ctx.db.transaction(async (tx) => {
-      // Deduct from balance
+      // Deduct from economy wallet
       await tx
-        .update(gratonitesBalances)
+        .update(currencyWallets)
         .set({
-          balance: sql`${gratonitesBalances.balance} - ${item.price}`,
-          lifetimeSpent: sql`${gratonitesBalances.lifetimeSpent} + ${item.price}`,
+          balance: sql`${currencyWallets.balance} - ${item.price}`,
+          lifetimeSpent: sql`${currencyWallets.lifetimeSpent} + ${item.price}`,
           updatedAt: new Date(),
         })
-        .where(eq(gratonitesBalances.userId, userId));
+        .where(eq(currencyWallets.userId, userId));
+
+      // Record in economy ledger
+      const ledgerId = generateId();
+      await tx.insert(currencyLedger).values({
+        id: ledgerId,
+        userId,
+        direction: 'spend',
+        amount: item.price,
+        source: 'shop_purchase',
+        description: `Purchased ${item.name}`,
+        contextKey: `shop:${itemId}`,
+      });
 
       // Add to inventory
       const inventoryId = generateId();

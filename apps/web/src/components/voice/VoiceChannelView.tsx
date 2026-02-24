@@ -15,6 +15,7 @@ import { MessageComposer } from '@/components/messages/MessageComposer';
 import { TypingIndicator } from '@/components/messages/TypingIndicator';
 import type { VoiceState } from '@gratonite/types';
 import { useAuthStore } from '@/stores/auth.store';
+import { SoundTrimmer } from '@/components/shop/SoundTrimmer';
 
 interface VoiceChannelViewProps {
   channelId: string;
@@ -58,6 +59,9 @@ export function VoiceChannelView({ channelId, channelName }: VoiceChannelViewPro
   }>>([]);
   const [uploadingSound, setUploadingSound] = useState(false);
   const [newSoundName, setNewSoundName] = useState('');
+  const [trimPendingFile, setTrimPendingFile] = useState<File | null>(null);
+  const [trimAudioUrl, setTrimAudioUrl] = useState('');
+  const [trimDuration, setTrimDuration] = useState(0);
   const [soundboardFavorites, setSoundboardFavorites] = useState<string[]>(() => readSoundboardPrefs().favorites);
   const [purchasedSounds, setPurchasedSounds] = useState<Array<{
     itemId: string;
@@ -273,7 +277,8 @@ export function VoiceChannelView({ channelId, channelName }: VoiceChannelViewPro
     try {
       const res = await fetch('/api/v1/shop/inventory', { credentials: 'include' });
       if (!res.ok) return;
-      const data = await res.json();
+      const raw = await res.json();
+      const data = Array.isArray(raw) ? raw : [];
       const sounds = data
         .filter((entry: any) => entry.item?.type === 'soundboard_sound' && entry.item?.assetHash)
         .map((entry: any) => ({
@@ -397,11 +402,20 @@ export function VoiceChannelView({ channelId, channelName }: VoiceChannelViewPro
       ];
 
       if (nextEvents.length > 0) {
-        setPresenceEvents((prev) => [...nextEvents, ...prev].slice(0, 5));
+        setPresenceEvents((prev) => [...nextEvents, ...prev].slice(0, 3));
       }
     }
     previousIdsRef.current = nextIds;
   }, [states, currentUserId, voiceUserLabelMap]);
+
+  // Auto-expire presence events after 4 seconds
+  useEffect(() => {
+    if (presenceEvents.length === 0) return;
+    const timer = window.setTimeout(() => {
+      setPresenceEvents([]);
+    }, 4000);
+    return () => window.clearTimeout(timer);
+  }, [presenceEvents]);
 
   return (
     <div className="voice-channel-view">
@@ -819,10 +833,49 @@ export function VoiceChannelView({ channelId, channelName }: VoiceChannelViewPro
                   hidden
                   onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) handleUploadSound(file).catch(() => undefined);
+                    if (!file) return;
+                    // Load audio to get duration, then show trimmer
+                    const url = URL.createObjectURL(file);
+                    const audio = new Audio(url);
+                    audio.addEventListener('loadedmetadata', () => {
+                      const durMs = Math.round(audio.duration * 1000);
+                      if (durMs <= 5000) {
+                        // Short enough, upload directly
+                        handleUploadSound(file).catch(() => undefined);
+                        URL.revokeObjectURL(url);
+                      } else {
+                        setTrimPendingFile(file);
+                        setTrimAudioUrl(url);
+                        setTrimDuration(durMs);
+                      }
+                    }, { once: true });
+                    audio.addEventListener('error', () => {
+                      URL.revokeObjectURL(url);
+                      handleUploadSound(file).catch(() => undefined);
+                    }, { once: true });
+                    if (soundUploadInputRef.current) soundUploadInputRef.current.value = '';
                   }}
                 />
               </div>
+              {trimPendingFile && trimAudioUrl && (
+                <SoundTrimmer
+                  audioUrl={trimAudioUrl}
+                  durationMs={trimDuration}
+                  onSave={() => {
+                    handleUploadSound(trimPendingFile).catch(() => undefined);
+                    URL.revokeObjectURL(trimAudioUrl);
+                    setTrimPendingFile(null);
+                    setTrimAudioUrl('');
+                    setTrimDuration(0);
+                  }}
+                  onCancel={() => {
+                    URL.revokeObjectURL(trimAudioUrl);
+                    setTrimPendingFile(null);
+                    setTrimAudioUrl('');
+                    setTrimDuration(0);
+                  }}
+                />
+              )}
             </div>
           )}
 
