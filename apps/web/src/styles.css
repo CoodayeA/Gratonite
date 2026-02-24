@@ -13374,3 +13374,77 @@ kbd.shortcuts-keys {
   justify-content: flex-end;
 }
 
+/* ==========================================================================
+   Discord Import
+   ========================================================================== */
+
+.discord-import-link {
+  display: block;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 8px;
+}
+
+.discord-import-link:hover {
+  text-decoration: underline;
+}
+
+.discord-import-info {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.discord-import-preview {
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+}
+
+.discord-import-category {
+  margin-bottom: 8px;
+}
+
+.discord-import-category-name {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.discord-import-channel {
+  font-size: 14px;
+  color: var(--text);
+  padding: 2px 0 2px 12px;
+}
+
+.discord-import-channel-icon {
+  color: var(--text-muted);
+  margin-right: 4px;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.discord-import-roles-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.discord-import-role {
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--bg-soft);
+  border-radius: 12px;
+  padding: 2px 10px;
+}
+

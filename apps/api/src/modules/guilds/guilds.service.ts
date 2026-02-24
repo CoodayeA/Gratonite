@@ -838,7 +838,159 @@ export function createGuildsService(ctx: AppContext) {
     getSticker,
     updateSticker,
     deleteSticker,
+    // Discord import
+    parseDiscordExport,
+    createGuildFromImport,
   };
+
+  // ── Discord Import ─────────────────────────────────────────────────────
+
+  interface DiscordImportChannel {
+    name: string;
+    type: 'text' | 'voice';
+    topic?: string;
+  }
+
+  interface DiscordImportCategory {
+    name: string;
+    channels: DiscordImportChannel[];
+  }
+
+  interface DiscordImportRole {
+    name: string;
+    color: string;
+  }
+
+  interface DiscordImportResult {
+    name: string;
+    categories: DiscordImportCategory[];
+    roles: DiscordImportRole[];
+  }
+
+  function parseDiscordExport(data: unknown): DiscordImportResult {
+    const raw = data as any;
+
+    // Support both "guild" wrapper and flat structure
+    const guild = raw?.guild ?? raw;
+    if (!guild || typeof guild !== 'object') {
+      throw new Error('INVALID_FORMAT');
+    }
+
+    const name = String(guild.name ?? 'Imported Server').slice(0, 100);
+
+    // Parse channels: type 0=text, 2=voice, 4=category
+    const rawChannels: any[] = Array.isArray(guild.channels) ? guild.channels : [];
+
+    // Build category map
+    const categoryMap = new Map<string | null, { name: string; channels: DiscordImportChannel[] }>();
+    const categoryOrder: (string | null)[] = [];
+
+    for (const ch of rawChannels) {
+      if (ch.type === 4) {
+        categoryMap.set(ch.id, { name: String(ch.name ?? 'Category').slice(0, 100), channels: [] });
+        categoryOrder.push(ch.id);
+      }
+    }
+
+    // Place channels under their parent category
+    for (const ch of rawChannels) {
+      if (ch.type === 4) continue;
+      const type: 'text' | 'voice' = ch.type === 2 ? 'voice' : 'text';
+      const parentId = ch.parent_id ?? null;
+      const channel: DiscordImportChannel = {
+        name: String(ch.name ?? 'channel').slice(0, 100),
+        type,
+        topic: ch.topic ? String(ch.topic).slice(0, 1024) : undefined,
+      };
+
+      if (parentId && categoryMap.has(parentId)) {
+        categoryMap.get(parentId)!.channels.push(channel);
+      } else {
+        // Channels without a category go to a "General" fallback
+        if (!categoryMap.has(null)) {
+          categoryMap.set(null, { name: 'General', channels: [] });
+          categoryOrder.push(null);
+        }
+        categoryMap.get(null)!.channels.push(channel);
+      }
+    }
+
+    const categories = categoryOrder
+      .map((id) => categoryMap.get(id)!)
+      .filter((cat) => cat.channels.length > 0)
+      .slice(0, 20);
+
+    // Limit total channels to 50
+    let totalChannels = 0;
+    for (const cat of categories) {
+      const remaining = 50 - totalChannels;
+      if (remaining <= 0) { cat.channels = []; continue; }
+      cat.channels = cat.channels.slice(0, remaining);
+      totalChannels += cat.channels.length;
+    }
+
+    // Parse roles (skip @everyone and managed bot roles)
+    const rawRoles: any[] = Array.isArray(guild.roles) ? guild.roles : [];
+    const roles: DiscordImportRole[] = rawRoles
+      .filter((r) => r.name !== '@everyone' && !r.managed)
+      .map((r) => ({
+        name: String(r.name).slice(0, 100),
+        color: r.color ? `#${Number(r.color).toString(16).padStart(6, '0')}` : '#99aab5',
+      }))
+      .slice(0, 25);
+
+    return { name, categories, roles };
+  }
+
+  async function createGuildFromImport(
+    ownerId: string,
+    input: DiscordImportResult,
+  ) {
+    // Create the guild
+    const { guildId } = await createGuild(ownerId, { name: input.name });
+
+    // Create categories and channels
+    let position = 1; // 0 is taken by the default general channel
+    for (const category of input.categories) {
+      const catId = generateId();
+      await ctx.db.insert(channels).values({
+        id: catId,
+        guildId,
+        type: 'GUILD_CATEGORY',
+        name: category.name,
+        position: position++,
+      });
+
+      for (const ch of category.channels) {
+        const chId = generateId();
+        await ctx.db.insert(channels).values({
+          id: chId,
+          guildId,
+          type: ch.type === 'voice' ? 'GUILD_VOICE' : 'GUILD_TEXT',
+          name: ch.name,
+          topic: ch.topic ?? null,
+          parentId: catId,
+          position: position++,
+        });
+      }
+    }
+
+    // Create roles
+    let rolePosition = 1;
+    for (const role of input.roles) {
+      const roleId = generateId();
+      await ctx.db.insert(guildRoles).values({
+        id: roleId,
+        guildId,
+        name: role.name,
+        color: role.color,
+        position: rolePosition++,
+        permissions: DEFAULT_PERMISSIONS,
+      });
+    }
+
+    return { guildId };
+  }
 }
 
 export type GuildsService = ReturnType<typeof createGuildsService>;
