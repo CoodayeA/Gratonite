@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Avatar } from '@/components/ui/Avatar';
 import { useUiStore } from '@/stores/ui.store';
+import { usePresenceStore } from '@/stores/presence.store';
 
 type FilterTab = 'all' | 'online' | 'pending' | 'blocked';
 
@@ -57,6 +58,34 @@ export function FriendsPage() {
     return map;
   }, [userSummaries]);
 
+  // ── Presence (online status) ──────────────────────────────────────────
+
+  const presenceMap = usePresenceStore((s) => s.byUserId);
+  const setManyPresences = usePresenceStore((s) => s.setMany);
+
+  // Extract friend user IDs for presence fetching
+  const friendUserIds = useMemo(() => {
+    return relationships
+      .filter((r) => r.type === 'friend')
+      .map((r) => r.targetId);
+  }, [relationships]);
+
+  // Fetch presences for all friends (re-poll every 30s for freshness)
+  const { data: presences } = useQuery({
+    queryKey: ['users', 'presences', friendUserIds],
+    queryFn: () => api.users.getPresences(friendUserIds),
+    enabled: friendUserIds.length > 0,
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+  });
+
+  // Sync fetched presences into the Zustand store
+  useEffect(() => {
+    if (presences && presences.length > 0) {
+      setManyPresences(presences);
+    }
+  }, [presences, setManyPresences]);
+
   // ── Mutations ──────────────────────────────────────────────────────────
 
   const acceptMutation = useMutation({
@@ -92,8 +121,14 @@ export function FriendsPage() {
   const filtered = useMemo(() => {
     switch (filter) {
       case 'all':
-      case 'online':
         return relationships.filter((r) => r.type === 'friend');
+      case 'online':
+        return relationships.filter((r) => {
+          if (r.type !== 'friend') return false;
+          const presence = presenceMap.get(r.targetId);
+          const status = presence?.status ?? 'offline';
+          return status === 'online' || status === 'idle' || status === 'dnd';
+        });
       case 'pending':
         return relationships.filter(
           (r) => r.type === 'pending_incoming' || r.type === 'pending_outgoing',
@@ -103,7 +138,7 @@ export function FriendsPage() {
       default:
         return [];
     }
-  }, [relationships, filter]);
+  }, [relationships, filter, presenceMap]);
 
   // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -121,9 +156,17 @@ export function FriendsPage() {
 
   // ── Render ─────────────────────────────────────────────────────────────
 
+  const onlineCount = useMemo(() => {
+    return relationships.filter((r) => {
+      if (r.type !== 'friend') return false;
+      const status = presenceMap.get(r.targetId)?.status ?? 'offline';
+      return status === 'online' || status === 'idle' || status === 'dnd';
+    }).length;
+  }, [relationships, presenceMap]);
+
   const filters: { key: FilterTab; label: string }[] = [
     { key: 'all', label: 'All' },
-    { key: 'online', label: 'Online' },
+    { key: 'online', label: `Online${onlineCount > 0 ? ` — ${onlineCount}` : ''}` },
     { key: 'pending', label: 'Pending' },
     { key: 'blocked', label: 'Blocked' },
   ];
@@ -169,9 +212,13 @@ export function FriendsPage() {
 
             // Friend rows (All / Online filters)
             if (filter === 'all' || filter === 'online') {
+              const friendStatus = presenceMap.get(user.id)?.status ?? 'offline';
               return (
                 <div key={user.id} className="friend-row">
-                  <Avatar name={user.displayName} hash={user.avatarHash} userId={user.id} size={40} />
+                  <div className="friend-row-avatar-wrap">
+                    <Avatar name={user.displayName} hash={user.avatarHash} userId={user.id} size={40} />
+                    <span className={`friend-presence-dot presence-${friendStatus}`} title={friendStatus} />
+                  </div>
                   <div className="friend-row-info">
                     <div className="friend-row-name">{user.displayName}</div>
                     <div className="friend-row-username">@{user.username}</div>
