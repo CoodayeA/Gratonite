@@ -13147,3 +13147,162 @@ kbd.shortcuts-keys {
   background: rgba(242, 63, 67, 0.12);
 }
 
+/* ==========================================================================
+   Admin Shop
+   ========================================================================== */
+
+.admin-shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.admin-shop-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.15s;
+}
+
+.admin-shop-card:hover {
+  border-color: var(--accent);
+}
+
+.admin-shop-card-inactive {
+  opacity: 0.45;
+}
+
+.admin-shop-card-preview {
+  width: 100%;
+  aspect-ratio: 1;
+  background: var(--bg-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.admin-shop-card-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.admin-shop-no-asset {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.admin-shop-card-body {
+  padding: 10px 12px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-shop-item-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
+
+.admin-shop-item-name:hover {
+  background: var(--bg-soft);
+}
+
+.admin-shop-item-price {
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
+
+.admin-shop-item-price:hover {
+  background: var(--bg-soft);
+}
+
+.admin-shop-card-actions {
+  padding: 8px 12px 10px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.admin-inline-input {
+  background: var(--bg-soft);
+  border: 1px solid var(--stroke);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 4px 8px;
+  outline: none;
+  width: 100%;
+}
+
+.admin-inline-input:focus {
+  border-color: var(--accent);
+}
+
+.admin-toggle-btn {
+  background: var(--bg-soft);
+  border: 1px solid var(--stroke);
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+
+.admin-toggle-btn:hover {
+  opacity: 0.7;
+}
+
+.admin-toggle-active {
+  opacity: 1;
+  border-color: var(--accent);
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.admin-shop-upload-btn {
+  background: var(--bg-soft);
+  border: 1px solid var(--stroke);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.admin-shop-upload-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.admin-shop-delete-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 4px 8px;
+  cursor: pointer;
+  margin-left: auto;
+  transition: color 0.15s, background 0.15s;
+}
+
+.admin-shop-delete-btn:hover {
+  color: var(--danger, #f23f43);
+  background: rgba(242, 63, 67, 0.1);
+}
+

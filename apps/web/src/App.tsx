@@ -40,6 +40,7 @@ const NotificationsPage = lazy(() => import('@/pages/NotificationsPage').then((m
 const FriendsPage = lazy(() => import('@/pages/FriendsPage').then((m) => ({ default: m.FriendsPage })));
 const GratoniteDashboard = lazy(() => import('@/pages/GratoniteDashboard').then((m) => ({ default: m.GratoniteDashboard })));
 const LeaderboardPage = lazy(() => import('@/pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
+const AdminShopPage = lazy(() => import('@/pages/AdminShopPage').then((m) => ({ default: m.AdminShopPage })));
 
 export function App() {
   const { isLoading, isAuthenticated, login, logout, setLoading } = useAuthStore();
@@ -180,6 +181,7 @@ export function App() {
           </Route>
           <Route path="/dm/:channelId" element={<ChannelPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/admin/shop" element={<AdminShopPage />} />
           <Route path="/ops/bugs" element={<BugInboxPage />} />
         </Route>
       </Routes>
