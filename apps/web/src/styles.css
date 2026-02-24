@@ -12291,6 +12291,27 @@ kbd.shortcuts-keys {
   background: var(--bg-soft);
 }
 
+.friend-row-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.friend-presence-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2.5px solid var(--bg);
+  background: #747f8d;
+}
+
+.friend-presence-dot.presence-online { background: #23a55a; }
+.friend-presence-dot.presence-idle    { background: #f0b232; }
+.friend-presence-dot.presence-dnd     { background: #f23f43; }
+.friend-presence-dot.presence-offline { background: #80848e; }
+
 .friend-row-info {
   flex: 1;
   min-width: 0;
