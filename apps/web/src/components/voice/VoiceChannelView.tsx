@@ -59,6 +59,12 @@ export function VoiceChannelView({ channelId, channelName }: VoiceChannelViewPro
   const [uploadingSound, setUploadingSound] = useState(false);
   const [newSoundName, setNewSoundName] = useState('');
   const [soundboardFavorites, setSoundboardFavorites] = useState<string[]>(() => readSoundboardPrefs().favorites);
+  const [purchasedSounds, setPurchasedSounds] = useState<Array<{
+    itemId: string;
+    name: string;
+    assetHash: string | null;
+    metadata?: Record<string, any>;
+  }>>([]);
   const soundUploadInputRef = useRef<HTMLInputElement>(null);
   const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
   const [videoInputs, setVideoInputs] = useState<MediaDeviceInfo[]>([]);
@@ -263,10 +269,30 @@ export function VoiceChannelView({ channelId, channelName }: VoiceChannelViewPro
     }
   }, [guildId]);
 
+  const loadPurchasedSounds = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/shop/inventory', { credentials: 'include' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const sounds = data
+        .filter((entry: any) => entry.item?.type === 'soundboard_sound' && entry.item?.assetHash)
+        .map((entry: any) => ({
+          itemId: entry.itemId,
+          name: entry.item.name,
+          assetHash: entry.item.assetHash,
+          metadata: entry.metadata,
+        }));
+      setPurchasedSounds(sounds);
+    } catch {
+      // non-critical
+    }
+  }, []);
+
   useEffect(() => {
     if (!soundboardOpen) return;
     loadSoundboard().catch(() => undefined);
-  }, [soundboardOpen, loadSoundboard]);
+    loadPurchasedSounds().catch(() => undefined);
+  }, [soundboardOpen, loadSoundboard, loadPurchasedSounds]);
 
   useEffect(() => subscribeSoundboardPrefs((prefs) => setSoundboardFavorites(prefs.favorites)), []);
 
@@ -734,6 +760,38 @@ export function VoiceChannelView({ channelId, channelName }: VoiceChannelViewPro
                     </div>
                   ))}
                 </div>
+              )}
+              {purchasedSounds.length > 0 && (
+                <>
+                  <div className="voice-soundboard-head" style={{ marginTop: 8 }}>
+                    <strong>My Sounds</strong>
+                  </div>
+                  <div className="voice-soundboard-list">
+                    {purchasedSounds.map((ps) => (
+                      <div key={ps.itemId} className="voice-soundboard-item-wrap">
+                        <button
+                          type="button"
+                          className="voice-soundboard-item"
+                          onClick={() => {
+                            if (!ps.assetHash) return;
+                            const trimStart = ps.metadata?.trimStartMs ?? 0;
+                            const trimEnd = ps.metadata?.trimEndMs;
+                            playSoundboardClip({ soundHash: ps.assetHash, volume: 1 });
+                            if (trimEnd) {
+                              const duration = trimEnd - trimStart;
+                              setTimeout(() => {
+                                import('@/lib/soundboard').then(({ stopSoundboardPlayback }) => stopSoundboardPlayback());
+                              }, duration);
+                            }
+                          }}
+                        >
+                          <span className="voice-soundboard-item-name">{ps.name}</span>
+                          <span className="voice-soundboard-item-meta">Shop</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
               <div className="voice-soundboard-upload">
                 <div className="voice-soundboard-upload-row">

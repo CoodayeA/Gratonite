@@ -42,6 +42,7 @@ export const userInventory = pgTable('user_inventory', {
   purchasedAt: timestamp('purchased_at', { withTimezone: true }).notNull().defaultNow(),
   isEquipped: boolean('is_equipped').notNull().default(false),
   equippedAt: timestamp('equipped_at', { withTimezone: true }),
+  metadata: jsonb('metadata').$type<Record<string, any>>().default({}),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -140,7 +140,7 @@ export function createShopService(ctx: AppContext) {
   }
 
   // Equip/unequip an item
-  async function setEquipped(userId: string, itemId: string, equipped: boolean) {
+  async function setEquipped(userId: string, itemId: string, equipped: boolean, metadata?: Record<string, any>) {
     const [inventory] = await ctx.db
       .select()
       .from(userInventory)
@@ -187,7 +187,7 @@ export function createShopService(ctx: AppContext) {
         // Equip this item
         await tx
           .update(userInventory)
-          .set({ isEquipped: true, equippedAt: new Date() })
+          .set({ isEquipped: true, equippedAt: new Date(), ...(metadata ? { metadata } : {}) })
           .where(and(
             eq(userInventory.userId, userId),
             eq(userInventory.itemId, itemId)

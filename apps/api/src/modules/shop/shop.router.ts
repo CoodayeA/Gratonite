@@ -59,18 +59,18 @@ export function shopRouter(ctx: AppContext): Router {
 
   // Equip/unequip an item
   router.post('/shop/equip', auth, async (req, res) => {
-    const { itemId, equipped } = req.body;
-    
+    const { itemId, equipped, metadata } = req.body;
+
     if (!itemId || typeof itemId !== 'string') {
       return res.status(400).json({ code: 'INVALID_ITEM_ID' });
     }
-    
+
     if (typeof equipped !== 'boolean') {
       return res.status(400).json({ code: 'INVALID_EQUIPPED_STATE' });
     }
 
     try {
-      const result = await service.setEquipped(req.user!.userId, itemId, equipped);
+      const result = await service.setEquipped(req.user!.userId, itemId, equipped, metadata);
       return res.json(result);
     } catch (err) {
       if (err instanceof Error && err.message === 'ITEM_NOT_OWNED') {

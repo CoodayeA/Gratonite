@@ -148,6 +148,13 @@
       "when": 1772193600000,
       "tag": "0020_shop_soundboard_items",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1772280000000,
+      "tag": "0021_inventory_metadata",
+      "breakpoints": true
     }
   ]
 }
