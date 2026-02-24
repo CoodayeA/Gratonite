@@ -300,40 +300,28 @@ const nameplateGenerators = [
 // ── Main ────────────────────────────────────────────────────────────────────
 
 async function run() {
+  let generated = 0;
+
+  // ── 1. Shop items (paid cosmetics) ──────────────────────────────────────
   console.log('Querying shop_items from database…');
   const items = await sql`SELECT id, name, type FROM shop_items WHERE type != 'soundboard_sound' ORDER BY id`;
-  console.log(`Found ${items.length} cosmetic items to generate assets for.`);
-
-  let generated = 0;
+  console.log(`Found ${items.length} cosmetic shop items to generate assets for.`);
 
   for (const item of items) {
     const hue = nameToHue(item.name);
     const assetKey = `shop-${item.id}.webp`;
-    let svgContent;
 
     if (item.type === 'avatar_decoration') {
       const gen = decorationGenerators[Number(item.id) % decorationGenerators.length];
-      svgContent = gen(hue);
-      const buffer = await sharp(Buffer.from(svgContent))
-        .resize(256, 256)
-        .webp({ quality: 90 })
-        .toBuffer();
+      const buffer = await sharp(Buffer.from(gen(hue))).resize(256, 256).webp({ quality: 90 }).toBuffer();
       await upload(assetKey, buffer);
     } else if (item.type === 'profile_effect') {
       const gen = effectGenerators[Number(item.id) % effectGenerators.length];
-      svgContent = gen(hue);
-      const buffer = await sharp(Buffer.from(svgContent))
-        .resize(400, 240, { fit: 'cover' })
-        .webp({ quality: 88 })
-        .toBuffer();
+      const buffer = await sharp(Buffer.from(gen(hue))).resize(400, 240, { fit: 'cover' }).webp({ quality: 88 }).toBuffer();
       await upload(assetKey, buffer);
     } else if (item.type === 'nameplate') {
       const gen = nameplateGenerators[Number(item.id) % nameplateGenerators.length];
-      svgContent = gen(hue);
-      const buffer = await sharp(Buffer.from(svgContent))
-        .resize(400, 48)
-        .webp({ quality: 90 })
-        .toBuffer();
+      const buffer = await sharp(Buffer.from(gen(hue))).resize(400, 48).webp({ quality: 90 }).toBuffer();
       await upload(assetKey, buffer);
     } else {
       continue;
@@ -341,10 +329,58 @@ async function run() {
 
     await sql`UPDATE shop_items SET asset_hash = ${assetKey} WHERE id = ${item.id}`;
     generated++;
-    console.log(`  [${generated}/${items.length}] ${item.type} "${item.name}" → cosmetics/${assetKey}`);
+    console.log(`  [${generated}] shop_item ${item.type} "${item.name}" → cosmetics/${assetKey}`);
   }
 
-  console.log(`\nDone. Generated ${generated} assets and updated database.`);
+  // ── 2. Free catalog: avatar_decorations ─────────────────────────────────
+  console.log('\nQuerying avatar_decorations (free catalog)…');
+  const decorations = await sql`SELECT id, name FROM avatar_decorations ORDER BY id`;
+  console.log(`Found ${decorations.length} free avatar decorations.`);
+
+  for (const dec of decorations) {
+    const hue = nameToHue(dec.name);
+    const assetKey = `deco-${dec.id}.webp`;
+    const gen = decorationGenerators[Number(dec.id) % decorationGenerators.length];
+    const buffer = await sharp(Buffer.from(gen(hue))).resize(256, 256).webp({ quality: 90 }).toBuffer();
+    await upload(assetKey, buffer);
+    await sql`UPDATE avatar_decorations SET asset_hash = ${assetKey} WHERE id = ${dec.id}`;
+    generated++;
+    console.log(`  [${generated}] avatar_decoration "${dec.name}" → cosmetics/${assetKey}`);
+  }
+
+  // ── 3. Free catalog: profile_effects ────────────────────────────────────
+  console.log('\nQuerying profile_effects (free catalog)…');
+  const effects = await sql`SELECT id, name FROM profile_effects ORDER BY id`;
+  console.log(`Found ${effects.length} free profile effects.`);
+
+  for (const eff of effects) {
+    const hue = nameToHue(eff.name);
+    const assetKey = `effect-${eff.id}.webp`;
+    const gen = effectGenerators[Number(eff.id) % effectGenerators.length];
+    const buffer = await sharp(Buffer.from(gen(hue))).resize(400, 240, { fit: 'cover' }).webp({ quality: 88 }).toBuffer();
+    await upload(assetKey, buffer);
+    await sql`UPDATE profile_effects SET asset_hash = ${assetKey} WHERE id = ${eff.id}`;
+    generated++;
+    console.log(`  [${generated}] profile_effect "${eff.name}" → cosmetics/${assetKey}`);
+  }
+
+  // ── 4. Free catalog: nameplates ─────────────────────────────────────────
+  console.log('\nQuerying nameplates (free catalog)…');
+  const nps = await sql`SELECT id, name FROM nameplates ORDER BY id`;
+  console.log(`Found ${nps.length} free nameplates.`);
+
+  for (const np of nps) {
+    const hue = nameToHue(np.name);
+    const assetKey = `nameplate-${np.id}.webp`;
+    const gen = nameplateGenerators[Number(np.id) % nameplateGenerators.length];
+    const buffer = await sharp(Buffer.from(gen(hue))).resize(400, 48).webp({ quality: 90 }).toBuffer();
+    await upload(assetKey, buffer);
+    await sql`UPDATE nameplates SET asset_hash = ${assetKey} WHERE id = ${np.id}`;
+    generated++;
+    console.log(`  [${generated}] nameplate "${np.name}" → cosmetics/${assetKey}`);
+  }
+
+  console.log(`\nDone. Generated ${generated} total assets and updated database.`);
   await sql.end();
 }
 

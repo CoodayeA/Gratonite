@@ -52,7 +52,7 @@ export function AppLayout() {
   }, [location.pathname, location.hash, closeMobileDrawers]);
 
   useEffect(() => {
-    if (isGuildContext && sidebarCollapsed) {
+    if (sidebarCollapsed) {
       setSidebarCollapsed(false);
     }
   }, [isGuildContext]); // eslint-disable-line react-hooks/exhaustive-deps

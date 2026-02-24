@@ -10,7 +10,7 @@ import {
   updateNotificationSoundPrefs,
   type NotificationSoundPrefs,
 } from '@/lib/notificationSoundPrefs';
-import { playSound, stopSound, type SoundName } from '@/lib/audio';
+import { previewSoundDirect, stopSound, type SoundName } from '@/lib/audio';
 import {
   DEFAULT_SOUNDBOARD_PREFS,
   readSoundboardPrefs,
@@ -78,7 +78,7 @@ export function NotificationsSection() {
   );
 
   const previewSound = useCallback((name: SoundName) => {
-    playSound(name);
+    previewSoundDirect(name);
     if (name === 'ringtone' || name === 'outgoing-ring') {
       window.setTimeout(() => stopSound(name), 1200);
     }
