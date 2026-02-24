@@ -66,6 +66,8 @@ export function voiceRouter(ctx: AppContext): Router {
     if (channel.guildId) {
       const isMember = await guildsService.isMember(channel.guildId, userId);
       if (!isMember) return res.status(403).json({ code: 'FORBIDDEN' });
+      const canConnect = await channelsService.canConnectToVoiceChannel(channel.id, userId);
+      if (!canConnect) return res.status(403).json({ code: 'FORBIDDEN' });
     }
 
     // Must be a DM recipient for DM calls
@@ -173,6 +175,8 @@ export function voiceRouter(ctx: AppContext): Router {
     if (channel.guildId) {
       const isMember = await guildsService.isMember(channel.guildId, req.user!.userId);
       if (!isMember) return res.status(403).json({ code: 'FORBIDDEN' });
+      const canConnect = await channelsService.canConnectToVoiceChannel(channel.id, req.user!.userId);
+      if (!canConnect) return res.status(403).json({ code: 'FORBIDDEN' });
     }
 
     const states = await voiceService.getChannelVoiceStates(req.params.channelId);

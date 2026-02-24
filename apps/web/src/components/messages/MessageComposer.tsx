@@ -1,12 +1,19 @@
-import { useState, useRef, useCallback, type KeyboardEvent, type ChangeEvent } from 'react';
+import { useState, useRef, useCallback, useMemo, type KeyboardEvent, type ChangeEvent, type FormEvent } from 'react';
 import { api } from '@/lib/api';
 import { useMessagesStore } from '@/stores/messages.store';
 import { useAuthStore } from '@/stores/auth.store';
 import { getSocket } from '@/lib/socket';
 import { generateNonce } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/utils';
+import { useChannelsStore } from '@/stores/channels.store';
+import { useGuildsStore } from '@/stores/guilds.store';
+import { useMembersStore } from '@/stores/members.store';
+import { queryClient } from '@/lib/queryClient';
+import { useQuery } from '@tanstack/react-query';
 import { ReplyPreview } from './ReplyPreview';
 import { FileUploadButton } from './FileUploadButton';
 import { AttachmentPreview, type PendingAttachment } from './AttachmentPreview';
+import { startInteraction, endInteractionAfterPaint } from '@/lib/perf';
 import type { Message } from '@gratonite/types';
 
 interface MessageComposerProps {
@@ -17,12 +24,167 @@ interface MessageComposerProps {
 export function MessageComposer({ channelId, placeholder }: MessageComposerProps) {
   const [content, setContent] = useState('');
   const [pendingFiles, setPendingFiles] = useState<PendingAttachment[]>([]);
+  const [sendError, setSendError] = useState('');
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionRange, setMentionRange] = useState<{ start: number; end: number } | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastTypingRef = useRef(0);
+  const isComposingRef = useRef(false);
   const user = useAuthStore((s) => s.user);
+  const channel = useChannelsStore((s) => s.channels.get(channelId));
+  const currentGuildId = useGuildsStore((s) => s.currentGuildId);
+  const guildId = channel?.guildId ?? currentGuildId ?? null;
+  const guildMembers = useMembersStore((s) => (guildId ? s.membersByGuild.get(guildId) : undefined));
   const addMessage = useMessagesStore((s) => s.addMessage);
   const replyingTo = useMessagesStore((s) => s.replyingTo.get(channelId) ?? null);
   const setReplyingTo = useMessagesStore((s) => s.setReplyingTo);
+  const canSend = content.trim().length > 0 || pendingFiles.length > 0;
+  const { data: guildRoles = [] } = useQuery({
+    queryKey: ['guilds', guildId, 'roles'],
+    queryFn: () => (guildId ? api.guilds.getRoles(guildId) : Promise.resolve([])),
+    enabled: Boolean(guildId),
+    staleTime: 60_000,
+  });
+
+  const baseMentionCandidates = useMemo(() => {
+    const seen = new Set<string>();
+    const out: Array<{
+      id: string;
+      label: string;
+      secondary?: string;
+      token: string;
+      insertText: string;
+      kind: 'user' | 'group';
+    }> = [];
+
+    if (guildMembers) {
+      for (const [id, member] of guildMembers.entries()) {
+        if (user && id === user.id) continue;
+        const label = member.profile?.nickname ?? member.nickname ?? member.user?.displayName ?? member.user?.username ?? `User ${id}`;
+        const secondary = member.user?.username ? `@${member.user.username}` : undefined;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const handle = member.user?.username ?? label;
+        out.push({ id, label, secondary, token: `<@${id}>`, insertText: `@${handle}`, kind: 'user' });
+      }
+    } else if (channel?.type === 'DM') {
+      const dmChannels = (queryClient.getQueryData(['relationships', 'dms']) as Array<{ id: string; otherUserId?: string | null }> | undefined) ?? [];
+      const dm = dmChannels.find((row) => row.id === channelId);
+      const otherUserId = dm?.otherUserId ?? null;
+      if (otherUserId && (!user || otherUserId !== user.id)) {
+        const allUserSummaryCache = queryClient
+          .getQueriesData<Array<{ id: string; username: string; displayName: string }>>({ queryKey: ['users', 'summaries'] })
+          .flatMap(([, data]) => data ?? []);
+        const summary = allUserSummaryCache.find((u) => u.id === otherUserId);
+        out.push({
+          id: otherUserId,
+          label: summary?.displayName ?? summary?.username ?? `User ${otherUserId}`,
+          secondary: summary?.username ? `@${summary.username}` : undefined,
+          token: `<@${otherUserId}>`,
+          insertText: `@${summary?.username ?? summary?.displayName ?? `user-${otherUserId.slice(-4)}`}`,
+          kind: 'user',
+        });
+      }
+    }
+
+    if (guildId) {
+      for (const role of guildRoles as Array<{ id: string; name: string; mentionable?: boolean; managed?: boolean }>) {
+        if (role.managed) continue;
+        if (role.mentionable === false) continue;
+        const roleId = String(role.id);
+        const key = `role:${roleId}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({
+          id: roleId,
+          label: role.name,
+          secondary: 'Group',
+          token: `<@&${roleId}>`,
+          insertText: `@${role.name}`,
+          kind: 'group',
+        });
+      }
+    }
+
+    return out.sort((a, b) => a.label.localeCompare(b.label));
+  }, [guildMembers, channel?.type, channelId, user, guildId, guildRoles]);
+
+  const filteredMentionCandidates = useMemo(() => {
+    if (!mentionOpen) return [];
+    const q = mentionQuery.trim().toLowerCase();
+    const filtered = q
+      ? baseMentionCandidates.filter((candidate) =>
+        candidate.label.toLowerCase().includes(q)
+        || candidate.secondary?.toLowerCase().includes(q),
+      )
+      : baseMentionCandidates;
+    return filtered.slice(0, 8);
+  }, [mentionOpen, mentionQuery, baseMentionCandidates]);
+
+  const mentionTokenMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const candidate of baseMentionCandidates) {
+      map.set(candidate.insertText.toLowerCase(), candidate.token);
+      map.set(`@${candidate.label}`.toLowerCase(), candidate.token);
+      if (candidate.secondary?.startsWith('@')) {
+        map.set(candidate.secondary.toLowerCase(), candidate.token);
+      }
+    }
+    return map;
+  }, [baseMentionCandidates]);
+
+  const serializeMentionsForSend = useCallback((inputText: string) => {
+    if (!inputText.includes('@') || mentionTokenMap.size === 0) return inputText;
+    const keys = Array.from(mentionTokenMap.keys()).sort((a, b) => b.length - a.length);
+    let out = '';
+    let i = 0;
+    while (i < inputText.length) {
+      let matched = false;
+      for (const key of keys) {
+        if (!inputText.slice(i).toLowerCase().startsWith(key)) continue;
+        const prev = i > 0 ? (inputText[i - 1] ?? '') : '';
+        const next = inputText[i + key.length] ?? '';
+        const prevOk = i === 0 || /\s|[([{'"`]/.test(prev);
+        const nextOk = !next || /\s|[)\]}'"`,.!?:;/-]/.test(next);
+        if (!prevOk || !nextOk) continue;
+        out += mentionTokenMap.get(key) ?? inputText.slice(i, i + key.length);
+        i += key.length;
+        matched = true;
+        break;
+      }
+      if (!matched) {
+        out += inputText[i] ?? '';
+        i += 1;
+      }
+    }
+    return out;
+  }, [mentionTokenMap]);
+
+  const closeMentionMenu = useCallback(() => {
+    setMentionOpen(false);
+    setMentionQuery('');
+    setMentionRange(null);
+    setMentionIndex(0);
+  }, []);
+
+  const syncMentionState = useCallback((nextValue: string, selectionStart: number | null) => {
+    const caret = selectionStart ?? nextValue.length;
+    const beforeCaret = nextValue.slice(0, caret);
+    const match = beforeCaret.match(/(?:^|\s)@([a-zA-Z0-9_.-]{0,32})$/);
+    if (!match) {
+      closeMentionMenu();
+      return;
+    }
+    const raw = match[1] ?? '';
+    const atPos = beforeCaret.lastIndexOf('@');
+    if (atPos < 0) return;
+    setMentionOpen(true);
+    setMentionQuery(raw);
+    setMentionRange({ start: atPos, end: caret });
+    setMentionIndex(0);
+  }, [closeMentionMenu]);
 
   // Auto-grow textarea
   const adjustHeight = useCallback(() => {
@@ -44,9 +206,38 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
   }, [channelId]);
 
   function handleChange(e: ChangeEvent<HTMLTextAreaElement>) {
-    setContent(e.target.value);
+    const nextValue = e.target.value;
+    const endsWithLineBreak = nextValue.endsWith('\n');
+    const normalizedValue = endsWithLineBreak ? nextValue.replace(/\r?\n$/, '') : nextValue;
+
+    setContent(normalizedValue);
+    syncMentionState(normalizedValue, e.target.selectionStart);
     adjustHeight();
-    if (e.target.value.trim()) {
+    if (normalizedValue.trim()) {
+      emitTyping();
+    }
+
+    // iOS virtual keyboards can insert a line break instead of firing a reliable Enter key event.
+    // Treat a trailing newline as an explicit send action for mobile send-key behavior.
+    if (endsWithLineBreak && !isComposingRef.current) {
+      sendMessage(normalizedValue);
+    }
+  }
+
+  function insertMention(insertText: string, label: string) {
+    const ta = textareaRef.current;
+    const range = mentionRange;
+    if (!ta || !range) return;
+    const next = `${content.slice(0, range.start)}${insertText} ${content.slice(range.end)}`;
+    const nextCaret = range.start + insertText.length + 1;
+    setContent(next);
+    closeMentionMenu();
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.setSelectionRange(nextCaret, nextCaret);
+      adjustHeight();
+    });
+    if (label) {
       emitTyping();
     }
   }
@@ -54,7 +245,7 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
   function handleFilesSelected(files: File[]) {
     const newAttachments: PendingAttachment[] = files.map((file) => {
       const att: PendingAttachment = {
-        id: crypto.randomUUID(),
+        id: generateNonce(),
         file,
       };
       if (file.type.startsWith('image/')) {
@@ -63,6 +254,7 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
       return att;
     });
     setPendingFiles((prev) => [...prev, ...newAttachments]);
+    closeMentionMenu();
   }
 
   function handleRemoveFile(id: string) {
@@ -73,34 +265,55 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
     });
   }
 
-  async function sendMessage() {
-    const trimmed = content.trim();
-    if ((!trimmed && pendingFiles.length === 0) || !user) return;
+  function handleClearFiles() {
+    setPendingFiles((prev) => {
+      prev.forEach((att) => {
+        if (att.preview) URL.revokeObjectURL(att.preview);
+      });
+      return [];
+    });
+  }
+
+  async function sendMessage(contentOverride?: string) {
+    const trimmed = (contentOverride ?? content).trim();
+    if (!trimmed && pendingFiles.length === 0) return;
+    setSendError('');
+    closeMentionMenu();
 
     const nonce = generateNonce();
     const currentReply = replyingTo;
     const filesToUpload = [...pendingFiles];
+    const sendInteraction = startInteraction('message_send_local_echo', {
+      channelId,
+      hasAttachments: filesToUpload.length > 0 ? '1' : '0',
+    });
 
     // Optimistic insert
-    const optimistic: Message & { nonce: string; author?: { id: string; username: string; displayName: string; avatarHash: string | null } } = {
-      id: nonce, // temp ID
+    if (user) {
+      const optimistic: Message & { nonce: string; author?: { id: string; username: string; displayName: string; avatarHash: string | null } } = {
+        id: nonce, // temp ID
+        channelId,
+        authorId: user.id,
+        content: trimmed,
+        type: 0,
+        createdAt: new Date().toISOString(),
+        editedTimestamp: null,
+        pinned: false,
+        nonce,
+        author: {
+          id: user.id,
+          username: user.username,
+          displayName: user.displayName,
+          avatarHash: user.avatarHash ?? null,
+        },
+      } as any;
+      addMessage(optimistic);
+    }
+    endInteractionAfterPaint(sendInteraction, {
       channelId,
-      authorId: user.id,
-      content: trimmed,
-      type: 0,
-      createdAt: new Date().toISOString(),
-      editedTimestamp: null,
-      pinned: false,
-      nonce,
-      author: {
-        id: user.id,
-        username: user.username,
-        displayName: user.displayName,
-        avatarHash: user.avatarHash ?? null,
-      },
-    } as any;
-
-    addMessage(optimistic);
+      optimisticBytes: trimmed.length,
+      attachmentCount: filesToUpload.length,
+    });
     setContent('');
     setPendingFiles([]);
     if (currentReply) setReplyingTo(channelId, null);
@@ -114,9 +327,17 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
       // Upload files first if any
       let attachmentIds: string[] | undefined;
       if (filesToUpload.length > 0) {
+        const uploadInteraction = startInteraction('attachment_upload', {
+          channelId,
+          attachmentCount: String(filesToUpload.length),
+        });
         const uploads = await Promise.all(
-          filesToUpload.map((att) => api.files.upload(att.file, 'attachment')),
+          filesToUpload.map((att) => api.files.upload(att.file, 'upload')),
         );
+        endInteractionAfterPaint(uploadInteraction, {
+          channelId,
+          attachmentCount: filesToUpload.length,
+        });
         attachmentIds = uploads.map((u) => u.id);
         // Clean up object URLs
         filesToUpload.forEach((att) => {
@@ -124,8 +345,9 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
         });
       }
 
+      const serializedContent = serializeMentionsForSend(trimmed);
       const body: { content: string; nonce: string; messageReference?: { messageId: string }; attachmentIds?: string[] } = {
-        content: trimmed,
+        content: serializedContent,
         nonce,
       };
       if (currentReply) {
@@ -135,18 +357,48 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
         body.attachmentIds = attachmentIds;
       }
 
-      await api.messages.send(channelId, body);
+      const created = await api.messages.send(channelId, body);
+      addMessage(created as any);
     } catch (err) {
       // If send fails, the optimistic message stays but could be marked failed
       console.error('[Composer] Failed to send message:', err);
+      setSendError(getErrorMessage(err));
     }
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (mentionOpen && filteredMentionCandidates.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setMentionIndex((prev) => (prev + 1) % filteredMentionCandidates.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setMentionIndex((prev) => (prev - 1 + filteredMentionCandidates.length) % filteredMentionCandidates.length);
+        return;
+      }
+      if (e.key === 'Tab' || e.key === 'Enter') {
+        e.preventDefault();
+        const selected = filteredMentionCandidates[mentionIndex] ?? filteredMentionCandidates[0];
+        if (selected) insertMention(selected.insertText, selected.label);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeMentionMenu();
+        return;
+      }
+    }
+    if (e.key === 'Enter' && !e.shiftKey && !isComposingRef.current) {
       e.preventDefault();
       sendMessage();
     }
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    sendMessage();
   }
 
   return (
@@ -157,20 +409,69 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
           onCancel={() => setReplyingTo(channelId, null)}
         />
       )}
-      <AttachmentPreview attachments={pendingFiles} onRemove={handleRemoveFile} />
-      <div className="message-composer-row">
+      <form className="message-composer-row" onSubmit={handleSubmit}>
         <FileUploadButton onFilesSelected={handleFilesSelected} />
-        <textarea
-          ref={textareaRef}
-          className="message-composer-input"
-          placeholder={placeholder ?? `Message #channel`}
-          value={content}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          rows={1}
-          maxLength={4000}
-        />
-      </div>
+        <div className="message-composer-shell">
+          <AttachmentPreview
+            attachments={pendingFiles}
+            onRemove={handleRemoveFile}
+            onClearAll={pendingFiles.length > 1 ? handleClearFiles : undefined}
+            compact
+          />
+          <div className="message-composer-controls">
+            <textarea
+              ref={textareaRef}
+              className="message-composer-input"
+              placeholder={placeholder ?? `Message #channel`}
+              value={content}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              onCompositionStart={() => {
+                isComposingRef.current = true;
+              }}
+              onCompositionEnd={() => {
+                isComposingRef.current = false;
+              }}
+              onClick={(e) => syncMentionState((e.target as HTMLTextAreaElement).value, (e.target as HTMLTextAreaElement).selectionStart)}
+              onKeyUp={(e) => syncMentionState((e.target as HTMLTextAreaElement).value, (e.target as HTMLTextAreaElement).selectionStart)}
+              rows={1}
+              maxLength={4000}
+              enterKeyHint="send"
+            />
+            {mentionOpen && filteredMentionCandidates.length > 0 && (
+              <div className="composer-mention-menu" role="listbox" aria-label="Mention suggestions">
+                {filteredMentionCandidates.map((candidate, idx) => (
+                  <button
+                    key={candidate.id}
+                    type="button"
+                    className={`composer-mention-item ${idx === mentionIndex ? 'is-active' : ''}`}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      insertMention(candidate.insertText, candidate.label);
+                    }}
+                  >
+                    <span className="composer-mention-item-label">
+                      @{candidate.label}
+                      {candidate.kind === 'group' && <span className="composer-mention-kind"> group</span>}
+                    </span>
+                    {candidate.secondary && <span className="composer-mention-item-meta">{candidate.secondary}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              type="submit"
+              className="message-send-btn"
+              disabled={!canSend}
+              aria-label="Send message"
+              title="Send"
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      </form>
+      {sendError && <div className="home-error">{sendError}</div>}
     </div>
   );
 }

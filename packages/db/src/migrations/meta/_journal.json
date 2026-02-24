@@ -50,6 +50,62 @@
       "when": 1771641739195,
       "tag": "0006_aspiring_skreet",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1771683513783,
+      "tag": "0007_curvy_blackheart",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1771701000000,
+      "tag": "0008_sudden_nameplates",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1771746000000,
+      "tag": "0009_community_shop_pipeline",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1771749000000,
+      "tag": "0010_soft_currency_ledger",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1771750500000,
+      "tag": "0011_reward_source_spend_values",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1771741102672,
+      "tag": "0012_ambitious_vengeance",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1771828200000,
+      "tag": "0013_bug_report_inbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1771942308016,
+      "tag": "0014_powerful_kabuki",
+      "breakpoints": true
     }
   ]
 }

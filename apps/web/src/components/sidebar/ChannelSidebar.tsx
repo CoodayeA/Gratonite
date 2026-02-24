@@ -1,43 +1,205 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { NavLink, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { NavLink, useNavigate, useParams } from 'react-router-dom';
 import { useChannelsStore } from '@/stores/channels.store';
 import { useGuildsStore } from '@/stores/guilds.store';
 import { useUiStore } from '@/stores/ui.store';
+import { useAuthStore } from '@/stores/auth.store';
 import { useGuildChannels } from '@/hooks/useGuildChannels';
-import { UserBar } from './UserBar';
+import { api } from '@/lib/api';
 import type { Channel } from '@gratonite/types';
 import { useUnreadStore } from '@/stores/unread.store';
+import { ContextMenu } from '@/components/ui/ContextMenu';
+import { startNamedInteraction } from '@/lib/perf';
+import { useVoiceStore } from '@/stores/voice.store';
+import { DmSearchBar } from '@/components/dm/DmSearchBar';
+import { DmListItem } from '@/components/dm/DmListItem';
+import type { VoiceState } from '@gratonite/types';
 
 // Channel type constants (API returns string enums)
 const GUILD_VOICE = 'GUILD_VOICE';
 const GUILD_CATEGORY = 'GUILD_CATEGORY';
+const GUILD_TEXT = 'GUILD_TEXT';
+const GUILD_ANNOUNCEMENT = 'GUILD_ANNOUNCEMENT';
+const GUILD_FORUM = 'GUILD_FORUM';
 const DM = 'DM';
 const GROUP_DM = 'GROUP_DM';
 
 // Stable empty array to avoid creating new references on every selector call
 const EMPTY_IDS: string[] = [];
 
-function ChannelIcon({ type }: { type: string | number }) {
-  if (type === GUILD_VOICE) return <span className="channel-icon">🔊</span>;
+function parseOrderId(value: string | null | undefined): bigint {
+  if (!value) return 0n;
+  try {
+    return BigInt(value);
+  } catch {
+    return 0n;
+  }
+}
+
+function ChannelIcon({ type, isPrivate }: { type: string | number; isPrivate?: boolean }) {
+  if (type === GUILD_VOICE) {
+    return (
+      <span className="channel-icon">
+        🔊
+        {isPrivate && <span className="channel-lock-badge" aria-label="Private" title="Private channel">🔒</span>}
+      </span>
+    );
+  }
   if (type === DM || type === GROUP_DM) return <span className="channel-icon">@</span>;
-  return <span className="channel-icon">#</span>;
+  return (
+    <span className="channel-icon">
+      {isPrivate ? (
+        <svg className="channel-icon-lock" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-label="Private channel" role="img">
+          <path d="M17 11V7a5 5 0 0 0-10 0v4H5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-2Zm-8-4a3 3 0 1 1 6 0v4H9V7Z"/>
+        </svg>
+      ) : '#'}
+    </span>
+  );
 }
 
 export function ChannelSidebar() {
+  const navigate = useNavigate();
   const { guildId } = useParams<{ guildId: string }>();
   const guild = useGuildsStore((s) => (guildId ? s.guilds.get(guildId) : undefined));
+  const user = useAuthStore((s) => s.user);
   const channels = useChannelsStore((s) => s.channels);
+  const addChannel = useChannelsStore((s) => s.addChannel);
+  const updateChannel = useChannelsStore((s) => s.updateChannel);
   const channelIds = useChannelsStore((s) =>
     guildId ? s.channelsByGuild.get(guildId) ?? EMPTY_IDS : EMPTY_IDS,
   );
   const openModal = useUiStore((s) => s.openModal);
   const unreadByChannel = useUnreadStore((s) => s.unreadByChannel);
+  const unreadCountByChannel = useUnreadStore((s) => s.unreadCountByChannel);
+  const beginChannelSwitch = (channelId: string) => {
+    startNamedInteraction('channel_switch', 'channel_switch', { channelId });
+  };
+
+  const renderUnreadBadge = (channelId: string) => {
+    if (!unreadByChannel.has(channelId)) return null;
+    const count = unreadCountByChannel.get(channelId) ?? 1;
+    return <span className="channel-unread-badge">{count > 99 ? '99+' : count}</span>;
+  };
+
+  const isOwner = guild?.ownerId === user?.id;
 
   const dmChannels = useMemo(() => {
     return Array.from(channels.values())
       .filter((ch) => ch.type === DM || ch.type === GROUP_DM)
-      .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+      .sort((a, b) => {
+        const aOrder = parseOrderId(a.lastMessageId);
+        const bOrder = parseOrderId(b.lastMessageId);
+        if (aOrder !== bOrder) return bOrder > aOrder ? 1 : -1;
+        return (a.name ?? '').localeCompare(b.name ?? '');
+      });
   }, [channels]);
+  const voiceStatesByChannel = useVoiceStore((s) => s.statesByChannel);
+
+  const { data: dmDirectory = [] } = useQuery({
+    queryKey: ['relationships', 'dms'],
+    queryFn: () =>
+      api.relationships.getDmChannels() as Promise<
+        Array<{ id: string; type: 'dm' | 'group_dm'; name: string | null; lastMessageId: string | null; otherUserId?: string | null; recipientIds?: string[]; lastMessageContent?: string | null; lastMessageAt?: string | null }>
+      >,
+    enabled: !!user,
+  });
+
+  const dmUserIds = useMemo(
+    () =>
+      Array.from(
+        new Set(dmDirectory.map((dm) => dm.otherUserId).filter((id): id is string => Boolean(id))),
+      ),
+    [dmDirectory],
+  );
+
+  const { data: dmUsers = [] } = useQuery({
+    queryKey: ['users', 'summaries', dmUserIds],
+    queryFn: () => api.users.getSummaries(dmUserIds),
+    enabled: dmUserIds.length > 0,
+  });
+
+  const dmUserNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    dmUsers.forEach((u) => map.set(u.id, u.displayName || u.username || 'Direct Message'));
+    return map;
+  }, [dmUsers]);
+
+  const guildVoiceUserIds = useMemo(() => {
+    if (!guildId) return [] as string[];
+    const ids = new Set<string>();
+    for (const [channelId, states] of voiceStatesByChannel.entries()) {
+      const channel = channels.get(channelId);
+      if (!channel || channel.guildId !== guildId || channel.type !== GUILD_VOICE) continue;
+      states.forEach((state) => ids.add(String(state.userId)));
+    }
+    return Array.from(ids);
+  }, [channels, guildId, voiceStatesByChannel]);
+
+  const { data: voiceUsers = [] } = useQuery({
+    queryKey: ['users', 'summaries', 'voice-sidebar', guildVoiceUserIds],
+    queryFn: () => api.users.getSummaries(guildVoiceUserIds),
+    enabled: guildVoiceUserIds.length > 0,
+  });
+
+  const voiceUserNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    voiceUsers.forEach((u) => map.set(u.id, u.displayName || u.username || 'User'));
+    return map;
+  }, [voiceUsers]);
+
+  const dmDirectoryById = useMemo(() => {
+    const map = new Map<string, { name: string | null; otherUserId?: string | null; lastMessageContent?: string | null; lastMessageAt?: string | null }>();
+    dmDirectory.forEach((dm) => map.set(dm.id, { name: dm.name, otherUserId: dm.otherUserId ?? null, lastMessageContent: dm.lastMessageContent ?? null, lastMessageAt: dm.lastMessageAt ?? null }));
+    return map;
+  }, [dmDirectory]);
+
+  useEffect(() => {
+    dmDirectory.forEach((dm) => {
+      const existing = channels.get(dm.id);
+      const resolvedName =
+        dm.name ?? (dm.otherUserId ? dmUserNameById.get(dm.otherUserId) : null) ?? existing?.name ?? 'Direct Message';
+
+      if (!existing) {
+        addChannel({
+          id: dm.id,
+          guildId: null,
+          type: dm.type === 'group_dm' ? 'GROUP_DM' : 'DM',
+          name: resolvedName,
+          topic: null,
+          position: 0,
+          parentId: null,
+          nsfw: false,
+          lastMessageId: dm.lastMessageId ?? null,
+          rateLimitPerUser: 0,
+          defaultAutoArchiveDuration: null,
+          defaultThreadRateLimitPerUser: null,
+          defaultSortOrder: null,
+          defaultForumLayout: null,
+          availableTags: null,
+          defaultReactionEmoji: null,
+          createdAt: new Date().toISOString(),
+        });
+        return;
+      }
+
+      if ((existing.name ?? '') !== resolvedName) {
+        updateChannel(dm.id, { name: resolvedName });
+      }
+    });
+  }, [addChannel, channels, dmDirectory, dmUserNameById, updateChannel]);
+
+  const [textOpen, setTextOpen] = useState(true);
+  const [voiceOpen, setVoiceOpen] = useState(true);
+  const [channelOrders, setChannelOrders] = useState<Record<string, string[]>>({});
+  const [channelMenu, setChannelMenu] = useState<{
+    x: number;
+    y: number;
+    channelId: string;
+    parentId: string | null;
+    section: 'text' | 'voice';
+    type: string;
+  } | null>(null);
 
   // Guild header dropdown
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -58,7 +220,39 @@ export function ChannelSidebar() {
   // Close dropdown when navigating away from guild
   useEffect(() => {
     setDropdownOpen(false);
+    setChannelMenu(null);
   }, [guildId]);
+
+  const channelMenuItems = useMemo(() => {
+    if (!channelMenu || !guildId) return [];
+
+    const items: Array<{ label: string; onClick: () => void; danger?: boolean }> = [
+      {
+        label: channelMenu.section === 'voice' ? 'Create Voice Channel' : 'Create Text Channel',
+        onClick: () => {
+          openModal('create-channel', {
+            guildId,
+            parentId: channelMenu.parentId ?? undefined,
+            type: channelMenu.section === 'voice' ? GUILD_VOICE : GUILD_TEXT,
+          });
+          setChannelMenu(null);
+        },
+      },
+    ];
+
+    if (isOwner && channelMenu.type !== GUILD_CATEGORY) {
+      items.push({
+        label: 'Delete Channel',
+        danger: true,
+        onClick: () => {
+          openModal('delete-channel', { guildId, channelId: channelMenu.channelId });
+          setChannelMenu(null);
+        },
+      });
+    }
+
+    return items;
+  }, [channelMenu, guildId, isOwner, openModal]);
 
   // Fetch channels for this guild
   useGuildChannels(guildId);
@@ -69,10 +263,261 @@ export function ChannelSidebar() {
     .filter((ch): ch is Channel => ch !== undefined)
     .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 
-  const categories = allChannels.filter((ch) => ch.type === GUILD_CATEGORY);
-  const uncategorized = allChannels.filter(
-    (ch) => ch.type !== GUILD_CATEGORY && !ch.parentId,
-  );
+  const guildTextChannelIds = useMemo(() => {
+    if (!guildId) return EMPTY_IDS;
+    return channelIds.filter((id) => {
+      const ch = channels.get(id);
+      if (!ch) return false;
+      return [GUILD_TEXT, GUILD_ANNOUNCEMENT, GUILD_FORUM].includes(ch.type);
+    });
+  }, [channelIds, channels, guildId]);
+
+  const guildVoiceChannelIds = useMemo(() => {
+    if (!guildId) return EMPTY_IDS;
+    return channelIds.filter((id) => {
+      const ch = channels.get(id);
+      if (!ch) return false;
+      return ch.type === GUILD_VOICE;
+    });
+  }, [channelIds, channels, guildId]);
+
+  useEffect(() => {
+    if (!guildId) return;
+    try {
+      const stored = window.localStorage.getItem(`gratonite:channel-sections:${guildId}`);
+      if (!stored) return;
+      const parsed = JSON.parse(stored) as { textOpen?: boolean; voiceOpen?: boolean };
+      if (typeof parsed.textOpen === 'boolean') setTextOpen(parsed.textOpen);
+      if (typeof parsed.voiceOpen === 'boolean') setVoiceOpen(parsed.voiceOpen);
+    } catch {
+      // ignore
+    }
+  }, [guildId]);
+
+  useEffect(() => {
+    if (!guildId) return;
+    try {
+      window.localStorage.setItem(
+        `gratonite:channel-sections:${guildId}`,
+        JSON.stringify({ textOpen, voiceOpen }),
+      );
+    } catch {
+      // ignore
+    }
+  }, [guildId, textOpen, voiceOpen]);
+
+  function getOrderKey(section: 'text' | 'voice', categoryId: string | null) {
+    return `gratonite:channel-order:${guildId ?? 'global'}:${section}:${categoryId ?? 'uncategorized'}`;
+  }
+
+  function getStoredOrder(key: string): string[] | undefined {
+    if (channelOrders[key]) return channelOrders[key];
+    try {
+      const stored = window.localStorage.getItem(key);
+      if (!stored) return undefined;
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) return parsed as string[];
+      return undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  function setStoredOrder(key: string, order: string[]) {
+    setChannelOrders((prev) => ({ ...prev, [key]: order }));
+    try {
+      window.localStorage.setItem(key, JSON.stringify(order));
+    } catch {
+      // ignore
+    }
+  }
+
+  function sortWithOrder(list: Channel[], order?: string[]) {
+    if (!order || order.length === 0) return list;
+    const index = new Map(order.map((id, i) => [id, i]));
+    return [...list].sort((a, b) => {
+      const ai = index.get(a.id);
+      const bi = index.get(b.id);
+      if (ai === undefined && bi === undefined) return (a.position ?? 0) - (b.position ?? 0);
+      if (ai === undefined) return 1;
+      if (bi === undefined) return -1;
+      return ai - bi;
+    });
+  }
+
+  function handleDrop(
+    event: React.DragEvent<HTMLAnchorElement>,
+    section: 'text' | 'voice',
+    categoryId: string | null,
+    targetId: string,
+    listIds: string[],
+  ) {
+    event.preventDefault();
+    const data = event.dataTransfer.getData('application/gratonite-channel');
+    if (!data) return;
+    try {
+      const payload = JSON.parse(data) as { id: string; section: 'text' | 'voice'; categoryId: string | null };
+      if (payload.section !== section) return;
+      if ((payload.categoryId ?? null) !== (categoryId ?? null)) return;
+      if (payload.id === targetId) return;
+
+      const order = listIds.filter((id) => id !== payload.id);
+      const targetIndex = order.indexOf(targetId);
+      const insertIndex = targetIndex < 0 ? order.length : targetIndex;
+      order.splice(insertIndex, 0, payload.id);
+
+      const key = getOrderKey(section, categoryId);
+      setStoredOrder(key, order);
+    } catch {
+      // ignore
+    }
+  }
+
+  function renderVoicePresence(channelId: string) {
+    const states = (voiceStatesByChannel.get(channelId) ?? []) as VoiceState[];
+    if (states.length === 0) return null;
+    return (
+      <div className="channel-voice-presence" aria-label={`${states.length} people in voice`}>
+        {states.slice(0, 6).map((state) => {
+          const userId = String(state.userId);
+          const label =
+            voiceUserNameById.get(userId) ??
+            (userId === user?.id ? 'You' : `User ${userId.slice(-4)}`);
+          return (
+            <div key={userId} className="channel-voice-presence-item">
+              <span className="channel-voice-presence-dot" aria-hidden="true" />
+              <span className="channel-voice-presence-name">{label}</span>
+            </div>
+          );
+        })}
+        {states.length > 6 && (
+          <div className="channel-voice-presence-item channel-voice-presence-more">
+            +{states.length - 6} more
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderGuildChannels(ids: string[], section: 'text' | 'voice') {
+    const scopedChannels = ids
+      .map((id) => channels.get(id))
+      .filter((ch): ch is Channel => ch !== undefined)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+
+    const categories = scopedChannels.filter((ch) => ch.type === GUILD_CATEGORY);
+    const uncategorized = scopedChannels.filter(
+      (ch) => ch.type !== GUILD_CATEGORY && !ch.parentId,
+    );
+
+    const uncategorizedOrder = getStoredOrder(getOrderKey(section, null));
+    const sortedUncategorized = sortWithOrder(uncategorized, uncategorizedOrder);
+
+    return (
+      <>
+        {sortedUncategorized.map((ch) => (
+          <NavLink
+            key={ch.id}
+            to={`/guild/${guildId}/channel/${ch.id}`}
+            className={({ isActive }) =>
+              `channel-item ${isActive ? 'channel-item-active' : ''}`
+            }
+            draggable
+            onDragStart={(event) => {
+              event.dataTransfer.setData(
+                'application/gratonite-channel',
+                JSON.stringify({ id: ch.id, section, categoryId: null }),
+              );
+              event.dataTransfer.effectAllowed = 'move';
+            }}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) =>
+              handleDrop(event, section, null, ch.id, sortedUncategorized.map((c) => c.id))
+            }
+            onContextMenu={(event) => {
+              event.preventDefault();
+              setChannelMenu({
+                x: event.clientX,
+                y: event.clientY,
+                channelId: ch.id,
+                parentId: null,
+                section,
+                type: ch.type,
+              });
+            }}
+            onClick={() => beginChannelSwitch(ch.id)}
+          >
+            <span className="channel-drag-handle" aria-hidden="true">⋮⋮</span>
+            <ChannelIcon type={ch.type} isPrivate={ch.isPrivate} />
+            <span className="channel-name">{ch.name}</span>
+            {renderUnreadBadge(ch.id)}
+            {section === 'voice' && renderVoicePresence(ch.id)}
+          </NavLink>
+        ))}
+
+        {categories.map((cat) => {
+          const children = scopedChannels.filter((ch) => ch.parentId === cat.id);
+          const categoryOrder = getStoredOrder(getOrderKey(section, cat.id));
+          const sortedChildren = sortWithOrder(children, categoryOrder);
+          return (
+            <div key={cat.id} className="channel-category">
+              <div className="channel-category-header">
+                <span className="channel-category-name">{cat.name}</span>
+                {guildId && (
+                  <button
+                    className="channel-category-add"
+                    onClick={() => openModal('create-channel', { guildId, parentId: cat.id })}
+                    title={`Add channel to ${cat.name}`}
+                  >
+                    +
+                  </button>
+                )}
+              </div>
+              {sortedChildren.map((ch) => (
+                <NavLink
+                  key={ch.id}
+                  to={`/guild/${guildId}/channel/${ch.id}`}
+                  className={({ isActive }) =>
+                    `channel-item ${isActive ? 'channel-item-active' : ''}`
+                  }
+                  draggable
+                  onDragStart={(event) => {
+                    event.dataTransfer.setData(
+                      'application/gratonite-channel',
+                      JSON.stringify({ id: ch.id, section, categoryId: cat.id }),
+                    );
+                    event.dataTransfer.effectAllowed = 'move';
+                  }}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) =>
+                    handleDrop(event, section, cat.id, ch.id, sortedChildren.map((c) => c.id))
+                  }
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    setChannelMenu({
+                      x: event.clientX,
+                      y: event.clientY,
+                      channelId: ch.id,
+                      parentId: cat.id,
+                      section,
+                      type: ch.type,
+                    });
+                  }}
+                  onClick={() => beginChannelSwitch(ch.id)}
+                >
+                  <span className="channel-drag-handle" aria-hidden="true">⋮⋮</span>
+                  <ChannelIcon type={ch.type} isPrivate={ch.isPrivate} />
+                  <span className="channel-name">{ch.name}</span>
+                  {renderUnreadBadge(ch.id)}
+                  {section === 'voice' && renderVoicePresence(ch.id)}
+                </NavLink>
+              ))}
+            </div>
+          );
+        })}
+      </>
+    );
+  }
 
   return (
     <aside className="channel-sidebar">
@@ -101,113 +546,179 @@ export function ChannelSidebar() {
             </button>
             <button
               className="dropdown-item"
-              onClick={() => { openModal('edit-server-profile', { guildId }); setDropdownOpen(false); }}
+              onClick={() => { openModal('settings', { type: 'server', guildId }); setDropdownOpen(false); }}
             >
-              Server Profile
+              Portal Settings
+            </button>
+            <button
+              className="dropdown-item"
+              onClick={() => { openModal('settings', { type: 'server', guildId, initialSection: 'overview' }); setDropdownOpen(false); }}
+            >
+              Portal Profile
             </button>
             <div className="dropdown-divider" />
             <button
               className="dropdown-item dropdown-danger"
               onClick={() => { openModal('leave-guild'); setDropdownOpen(false); }}
             >
-              Leave Server
+              Leave Portal
             </button>
+            {isOwner && (
+              <button
+                className="dropdown-item dropdown-danger"
+                onClick={() => { openModal('delete-guild'); setDropdownOpen(false); }}
+              >
+                Delete Portal
+              </button>
+            )}
           </div>
         )}
+
+        <div className="channel-sidebar-header-actions" aria-label="Quick actions">
+          {guildId ? (
+            <>
+              <button
+                type="button"
+                className="channel-sidebar-header-action"
+                onClick={() => openModal('settings', { type: 'server', guildId })}
+                title="Portal settings"
+              >
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                </svg>
+                <span>Settings</span>
+              </button>
+              <button
+                type="button"
+                className="channel-sidebar-header-action"
+                onClick={() => openModal('invite')}
+                title="Invite people"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="8.5" cy="7" r="4" />
+                  <path d="M20 8v6" />
+                  <path d="M23 11h-6" />
+                </svg>
+                <span>Invite</span>
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="channel-sidebar-header-action"
+              onClick={() => navigate('/settings')}
+              title="Open settings"
+            >
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+              </svg>
+              <span>Settings</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="channel-sidebar-list">
         {!guildId && (
           <>
+            <DmSearchBar />
+            <div className="dm-action-buttons">
+              <button
+                type="button"
+                className="dm-action-btn"
+                onClick={() => openModal('add-friend')}
+                title="Add a friend"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="8.5" cy="7" r="4" />
+                  <path d="M20 8v6" />
+                  <path d="M23 11h-6" />
+                </svg>
+                <span>Add Friend</span>
+              </button>
+            </div>
+
             <div className="channel-sidebar-section">
               <span className="channel-sidebar-section-title">DMs</span>
             </div>
             {dmChannels.length === 0 && (
               <div className="channel-empty">No direct messages yet.</div>
             )}
-            {dmChannels.map((ch) => (
-              <NavLink
-                key={ch.id}
-                to={`/dm/${ch.id}`}
-                className={({ isActive }) =>
-                  `channel-item ${isActive ? 'channel-item-active' : ''}`
-                }
-              >
-                <ChannelIcon type={ch.type} />
-                <span className="channel-name">{ch.name ?? 'Direct Message'}</span>
-                {unreadByChannel.has(ch.id) && <span className="channel-unread-dot" />}
-              </NavLink>
-            ))}
+            {dmChannels.map((ch) => {
+              const meta = dmDirectoryById.get(ch.id);
+              const name = ch.name ?? meta?.name ?? (meta?.otherUserId ? dmUserNameById.get(meta.otherUserId) : null) ?? 'Direct Message';
+              const recipientId = meta?.otherUserId ?? '';
+              const recipientAvatar = meta?.otherUserId ? dmUsers.find(u => u.id === meta.otherUserId)?.avatarHash ?? null : null;
+              return (
+                <DmListItem
+                  key={ch.id}
+                  channelId={ch.id}
+                  recipientName={name}
+                  recipientAvatar={recipientAvatar}
+                  recipientId={recipientId}
+                  lastMessage={meta?.lastMessageContent}
+                  lastMessageAt={meta?.lastMessageAt}
+                  unreadCount={unreadCountByChannel.get(ch.id)}
+                  channelType={ch.type}
+                />
+              );
+            })}
           </>
         )}
 
         {guildId && (
           <>
-        <div className="channel-sidebar-section">
-          <span className="channel-sidebar-section-title">Channels</span>
-          {guildId && (
-            <button
-              className="channel-sidebar-add"
-              onClick={() => openModal('create-channel', { guildId })}
-              title="Create channel"
-            >
-              +
-            </button>
-          )}
-        </div>
-        {/* Uncategorized channels */}
-        {uncategorized.map((ch) => (
-          <NavLink
-            key={ch.id}
-            to={`/guild/${guildId}/channel/${ch.id}`}
-            className={({ isActive }) =>
-              `channel-item ${isActive ? 'channel-item-active' : ''}`
-            }
-          >
-            <ChannelIcon type={ch.type} />
-            <span className="channel-name">{ch.name}</span>
-            {unreadByChannel.has(ch.id) && <span className="channel-unread-dot" />}
-          </NavLink>
-        ))}
-
-        {/* Categorized channels */}
-        {categories.map((cat) => {
-          const children = allChannels.filter((ch) => ch.parentId === cat.id);
-          return (
-            <div key={cat.id} className="channel-category">
-              <div className="channel-category-header">
-                <span className="channel-category-name">{cat.name}</span>
-                {guildId && (
-                  <button
-                    className="channel-category-add"
-                    onClick={() => openModal('create-channel', { guildId, parentId: cat.id })}
-                    title={`Add channel to ${cat.name}`}
-                  >
-                    +
-                  </button>
-                )}
-              </div>
-              {children.map((ch) => (
-                <NavLink
-                  key={ch.id}
-                  to={`/guild/${guildId}/channel/${ch.id}`}
-                  className={({ isActive }) =>
-                    `channel-item ${isActive ? 'channel-item-active' : ''}`
-                  }
-                >
-                  <ChannelIcon type={ch.type} />
-                  <span className="channel-name">{ch.name}</span>
-                  {unreadByChannel.has(ch.id) && <span className="channel-unread-dot" />}
-                </NavLink>
-              ))}
+            <div className="channel-sidebar-section channel-sidebar-section-toggle">
+              <button
+                className="channel-sidebar-section-title"
+                onClick={() => setTextOpen((prev) => !prev)}
+                type="button"
+              >
+                <span>{textOpen ? '▾' : '▸'}</span>
+                <span>Text Channels</span>
+              </button>
+              <button
+                className="channel-sidebar-add"
+                onClick={() => openModal('create-channel', { guildId, type: GUILD_TEXT })}
+                title="Create channel"
+              >
+                +
+              </button>
             </div>
-          );
-        })}
+            {textOpen && renderGuildChannels(guildTextChannelIds, 'text')}
+
+            <div className="channel-sidebar-section channel-sidebar-section-toggle">
+              <button
+                className="channel-sidebar-section-title"
+                onClick={() => setVoiceOpen((prev) => !prev)}
+                type="button"
+              >
+                <span>{voiceOpen ? '▾' : '▸'}</span>
+                <span>Voice Channels</span>
+              </button>
+              <button
+                className="channel-sidebar-add"
+                onClick={() => openModal('create-channel', { guildId, type: GUILD_VOICE })}
+                title="Create channel"
+              >
+                +
+              </button>
+            </div>
+            {voiceOpen && renderGuildChannels(guildVoiceChannelIds, 'voice')}
           </>
         )}
       </div>
 
-      <UserBar />
+      {channelMenu && channelMenuItems.length > 0 && (
+        <ContextMenu
+          x={channelMenu.x}
+          y={channelMenu.y}
+          items={channelMenuItems}
+          onClose={() => setChannelMenu(null)}
+        />
+      )}
     </aside>
   );
 }

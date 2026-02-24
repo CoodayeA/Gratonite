@@ -47,7 +47,7 @@ export function SearchPanel({ channelId }: SearchPanelProps) {
 
   const title = useMemo(() => {
     if (isDm) return 'Search in this conversation';
-    return 'Search this server';
+    return 'Search this portal';
   }, [isDm]);
 
   return (

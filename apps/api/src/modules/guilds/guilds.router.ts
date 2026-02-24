@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { createHash, randomBytes } from 'crypto';
 import multer from 'multer';
 import sharp from 'sharp';
+import { eq } from 'drizzle-orm';
+import { guilds as guildsTable } from '@gratonite/db';
 import type { AppContext } from '../../lib/context.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { uploadRateLimiter } from '../../middleware/rate-limiter.js';
@@ -24,6 +26,16 @@ const emojiUpload = multer({
 const stickerUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: BUCKETS.stickers.maxSize },
+});
+
+const guildIconUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: BUCKETS['server-icons'].maxSize },
+});
+
+const guildBannerUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: BUCKETS.banners.maxSize },
 });
 
 export function guildsRouter(ctx: AppContext): Router {
@@ -95,6 +107,181 @@ export function guildsRouter(ctx: AppContext): Router {
     }
 
     res.json(updated);
+  });
+
+  // Upload guild icon
+  router.post('/:guildId/icon', auth, uploadRateLimiter, guildIconUpload.single('file'), async (req, res) => {
+    const guildId = req.params.guildId;
+    const guild = await guildsService.getGuild(guildId);
+    if (!guild) return res.status(404).json({ code: 'NOT_FOUND' });
+    if (guild.ownerId !== req.user!.userId) {
+      return res.status(403).json({ code: 'FORBIDDEN', message: 'Only the server owner can modify settings' });
+    }
+    if (!req.file) return res.status(400).json({ code: 'NO_FILE', message: 'No file provided' });
+
+    const isGif = req.file!.mimetype === 'image/gif';
+    let processed: Buffer;
+    let contentType: string;
+    let ext: string;
+
+    if (isGif) {
+      // Preserve original GIF animation
+      processed = req.file!.buffer;
+      contentType = 'image/gif';
+      ext = 'gif';
+    } else {
+      // Convert to WebP for static images
+      processed = await sharp(req.file!.buffer)
+        .rotate()
+        .resize(512, 512, { fit: 'cover' })
+        .webp({ quality: 85 })
+        .toBuffer();
+      contentType = 'image/webp';
+      ext = 'webp';
+    }
+
+    const hash = createHash('sha256').update(processed).digest('hex').slice(0, 32);
+    const key = `guilds/${guildId}/${hash}.${ext}`;
+
+    await ctx.minio.putObject(BUCKETS['server-icons'].name, key, processed, processed.length, {
+      'Content-Type': contentType,
+    });
+
+    const [updated] = await ctx.db
+      .update(guildsTable)
+      .set({ iconHash: `${hash}.${ext}`, iconAnimated: isGif })
+      .where(eq(guildsTable.id, BigInt(guildId)))
+      .returning();
+
+    if (updated) {
+      await guildsService.invalidateGuildCache(guildId);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${guildId}`,
+        GatewayIntents.GUILDS,
+        'GUILD_UPDATE',
+        updated as any,
+      );
+    }
+
+    res.status(201).json({ iconHash: `${hash}.${ext}`, iconAnimated: isGif });
+
+  });
+
+  // Remove guild icon
+  router.delete('/:guildId/icon', auth, async (req, res) => {
+    const guildId = req.params.guildId;
+    const guild = await guildsService.getGuild(guildId);
+    if (!guild) return res.status(404).json({ code: 'NOT_FOUND' });
+    if (guild.ownerId !== req.user!.userId) {
+      return res.status(403).json({ code: 'FORBIDDEN', message: 'Only the server owner can modify settings' });
+    }
+
+    const [updated] = await ctx.db
+      .update(guildsTable)
+      .set({ iconHash: null, iconAnimated: false })
+      .where(eq(guildsTable.id, BigInt(guildId)))
+      .returning();
+
+    if (updated) {
+      await guildsService.invalidateGuildCache(guildId);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${guildId}`,
+        GatewayIntents.GUILDS,
+        'GUILD_UPDATE',
+        updated as any,
+      );
+    }
+
+    res.status(204).send();
+  });
+
+  // Upload guild banner
+  router.post('/:guildId/banner', auth, uploadRateLimiter, guildBannerUpload.single('file'), async (req, res) => {
+    const guildId = req.params.guildId;
+    const guild = await guildsService.getGuild(guildId);
+    if (!guild) return res.status(404).json({ code: 'NOT_FOUND' });
+    if (guild.ownerId !== req.user!.userId) {
+      return res.status(403).json({ code: 'FORBIDDEN', message: 'Only the server owner can modify settings' });
+    }
+    if (!req.file) return res.status(400).json({ code: 'NO_FILE', message: 'No file provided' });
+
+    const isGif = req.file!.mimetype === 'image/gif';
+    let processed: Buffer;
+    let contentType: string;
+    let ext: string;
+
+    if (isGif) {
+      // Preserve original GIF animation
+      processed = req.file!.buffer;
+      contentType = 'image/gif';
+      ext = 'gif';
+    } else {
+      // Convert to WebP for static images
+      processed = await sharp(req.file!.buffer)
+        .rotate()
+        .resize(1920, 1080, { fit: 'cover' })
+        .webp({ quality: 85 })
+        .toBuffer();
+      contentType = 'image/webp';
+      ext = 'webp';
+    }
+
+    const hash = createHash('sha256').update(processed).digest('hex').slice(0, 32);
+    const key = `guilds/${guildId}/${hash}.${ext}`;
+
+    await ctx.minio.putObject(BUCKETS.banners.name, key, processed, processed.length, {
+      'Content-Type': contentType,
+    });
+
+    const [updated] = await ctx.db
+      .update(guildsTable)
+      .set({ bannerHash: `${hash}.${ext}`, bannerAnimated: isGif })
+      .where(eq(guildsTable.id, BigInt(guildId)))
+      .returning();
+
+    if (updated) {
+      await guildsService.invalidateGuildCache(guildId);
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${guildId}`,
+        GatewayIntents.GUILDS,
+        'GUILD_UPDATE',
+        updated as any,
+      );
+    }
+
+    res.status(201).json({ bannerHash: `${hash}.${ext}`, bannerAnimated: isGif });
+
+  });
+
+  // Remove guild banner
+  router.delete('/:guildId/banner', auth, async (req, res) => {
+    const guildId = req.params.guildId;
+    const guild = await guildsService.getGuild(guildId);
+    if (!guild) return res.status(404).json({ code: 'NOT_FOUND' });
+    if (guild.ownerId !== req.user!.userId) {
+      return res.status(403).json({ code: 'FORBIDDEN', message: 'Only the server owner can modify settings' });
+    }
+
+    const [updated] = await ctx.db
+      .update(guildsTable)
+      .set({ bannerHash: null, bannerAnimated: false })
+      .where(eq(guildsTable.id, BigInt(guildId)))
+      .returning();
+
+    if (updated) {
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${guildId}`,
+        GatewayIntents.GUILDS,
+        'GUILD_UPDATE',
+        updated as any,
+      );
+    }
+
+    res.status(204).send();
   });
 
   // Delete guild
@@ -288,6 +475,20 @@ export function guildsRouter(ctx: AppContext): Router {
     );
 
     res.status(204).send();
+  });
+
+  // Assign role to member
+  router.get('/:guildId/members/:userId/roles', auth, async (req, res) => {
+    const guildId = req.params.guildId;
+    const userId = req.params.userId;
+    if (!await guildsService.isMember(guildId, req.user!.userId)) {
+      return res.status(403).json({ code: 'NOT_A_MEMBER' });
+    }
+    if (!await guildsService.isMember(guildId, userId)) {
+      return res.status(404).json({ code: 'NOT_FOUND' });
+    }
+    const roles = await guildsService.getMemberRoles(guildId, userId);
+    res.json(roles);
   });
 
   // Assign role to member

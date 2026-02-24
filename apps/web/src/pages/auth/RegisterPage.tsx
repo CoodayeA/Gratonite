@@ -181,6 +181,11 @@ export function RegisterPage() {
         Continue
       </Button>
 
+      <div className="auth-note">
+        Email verification is being rolled out. New accounts will soon need to verify their email
+        before full sign-in.
+      </div>
+
       <p className="auth-link">
         <Link to="/login">Already have an account?</Link>
       </p>

@@ -4,6 +4,7 @@
     "slug": "gratonite-mobile",
     "version": "0.1.0",
     "scheme": "gratonite",
+    "owner": "coodaye",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "splash": {
@@ -14,9 +15,26 @@
     "updates": {
       "fallbackToCacheTimeout": 0
     },
-    "assetBundlePatterns": ["**/*"],
+    "extra": {
+      "webAppProdUrl": "https://gratonite.chat/app",
+      "webAppLanUrl": "http://192.168.42.78:5173/app",
+      "eas": {
+        "projectId": "2c90539e-5fd5-4eed-a08e-507c32d77ed8"
+      }
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "chat.gratonite.mobile",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Gratonite uses the camera for profile photos and video calls.",
+        "NSMicrophoneUsageDescription": "Gratonite uses the microphone for voice channels and calls.",
+        "NSPhotoLibraryUsageDescription": "Gratonite accesses your photos so you can upload images and videos in chats.",
+        "NSPhotoLibraryAddUsageDescription": "Gratonite may save media from chats to your photo library when you choose to download files."
+      }
     },
     "android": {
       "adaptiveIcon": {

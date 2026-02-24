@@ -108,8 +108,15 @@ export const userProfiles = pgTable('user_profiles', {
   pronouns: varchar('pronouns', { length: 40 }),
   avatarDecorationId: bigintString('avatar_decoration_id'),
   profileEffectId: bigintString('profile_effect_id'),
+  nameplateId: bigintString('nameplate_id'),
   themePreference: themePreferenceEnum('theme_preference').notNull().default('dark'),
   tier: userTierEnum('tier').notNull().default('free'),
+  primaryColor: integer('primary_color'),
+  previousAvatarHashes: jsonb('previous_avatar_hashes')
+    .$type<string[]>()
+    .notNull()
+    .default([]),
+  messageCount: integer('message_count').notNull().default(0),
 });
 
 // ============================================================================
@@ -309,5 +316,193 @@ export const profileEffects = pgTable('profile_effects', {
   category: varchar('category', { length: 32 }),
   sortOrder: integer('sort_order').notNull().default(0),
   available: boolean('available').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ============================================================================
+// Nameplates (catalog)
+// ============================================================================
+
+export const nameplates = pgTable('nameplates', {
+  id: bigintString('id').primaryKey(),
+  name: varchar('name', { length: 64 }).notNull(),
+  description: varchar('description', { length: 255 }),
+  assetHash: varchar('asset_hash', { length: 64 }).notNull(),
+  animated: boolean('animated').notNull().default(false),
+  category: varchar('category', { length: 32 }),
+  sortOrder: integer('sort_order').notNull().default(0),
+  available: boolean('available').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ============================================================================
+// Community shop items
+// ============================================================================
+
+export const communityItemTypeEnum = pgEnum('community_item_type', [
+  'display_name_style_pack',
+  'profile_widget_pack',
+  'server_tag_badge',
+  'avatar_decoration',
+  'profile_effect',
+  'nameplate',
+]);
+
+export const communityItemStatusEnum = pgEnum('community_item_status', [
+  'draft',
+  'pending_review',
+  'approved',
+  'rejected',
+  'published',
+  'unpublished',
+]);
+
+export const communityItemScopeEnum = pgEnum('community_item_scope', [
+  'global',
+  'guild',
+]);
+
+export const communityReportStatusEnum = pgEnum('community_report_status', [
+  'open',
+  'resolved',
+  'dismissed',
+]);
+
+export const betaBugReportStatusEnum = pgEnum('beta_bug_report_status', [
+  'open',
+  'triaged',
+  'resolved',
+  'dismissed',
+]);
+
+export const communityItems = pgTable('community_items', {
+  id: bigintString('id').primaryKey(),
+  itemType: communityItemTypeEnum('item_type').notNull(),
+  name: varchar('name', { length: 64 }).notNull(),
+  description: varchar('description', { length: 255 }),
+  uploaderId: bigintString('uploader_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  payload: jsonb('payload').notNull().default({}),
+  payloadSchemaVersion: integer('payload_schema_version').notNull().default(1),
+  assetHash: varchar('asset_hash', { length: 64 }),
+  tags: jsonb('tags').notNull().default([]),
+  status: communityItemStatusEnum('status').notNull().default('draft'),
+  moderationNotes: text('moderation_notes'),
+  rejectionCode: varchar('rejection_code', { length: 64 }),
+  publishedAt: timestamp('published_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const communityItemInstalls = pgTable('community_item_installs', {
+  userId: bigintString('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  itemId: bigintString('item_id')
+    .notNull()
+    .references(() => communityItems.id, { onDelete: 'cascade' }),
+  scope: communityItemScopeEnum('scope').notNull().default('global'),
+  scopeId: bigintString('scope_id'),
+  installedAt: timestamp('installed_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const communityItemReports = pgTable('community_item_reports', {
+  id: bigintString('id').primaryKey(),
+  itemId: bigintString('item_id')
+    .notNull()
+    .references(() => communityItems.id, { onDelete: 'cascade' }),
+  reporterId: bigintString('reporter_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  reason: varchar('reason', { length: 64 }).notNull(),
+  details: varchar('details', { length: 500 }),
+  status: communityReportStatusEnum('status').notNull().default('open'),
+  reviewedBy: bigintString('reviewed_by').references(() => users.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+});
+
+export const betaBugReports = pgTable('beta_bug_reports', {
+  id: bigintString('id').primaryKey(),
+  reporterId: bigintString('reporter_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  title: varchar('title', { length: 120 }).notNull(),
+  summary: text('summary').notNull(),
+  steps: text('steps'),
+  expected: text('expected'),
+  actual: text('actual'),
+  route: varchar('route', { length: 255 }),
+  pageUrl: text('page_url'),
+  channelLabel: varchar('channel_label', { length: 120 }),
+  viewport: varchar('viewport', { length: 64 }),
+  userAgent: text('user_agent'),
+  clientTimestamp: timestamp('client_timestamp', { withTimezone: true }),
+  submissionSource: varchar('submission_source', { length: 32 }).notNull().default('web'),
+  status: betaBugReportStatusEnum('status').notNull().default('open'),
+  metadata: jsonb('metadata').notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ============================================================================
+// Soft currency economy
+// ============================================================================
+
+export const rewardSourceEnum = pgEnum('reward_source', [
+  'chat_message',
+  'server_engagement',
+  'daily_checkin',
+  'shop_purchase',
+  'creator_item_purchase',
+]);
+
+export const currencyWallets = pgTable('currency_wallets', {
+  userId: bigintString('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  balance: integer('balance').notNull().default(0),
+  lifetimeEarned: integer('lifetime_earned').notNull().default(0),
+  lifetimeSpent: integer('lifetime_spent').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const currencyLedger = pgTable('currency_ledger', {
+  id: bigintString('id').primaryKey(),
+  userId: bigintString('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  direction: varchar('direction', { length: 10 }).notNull(), // earn | spend
+  amount: integer('amount').notNull(),
+  source: rewardSourceEnum('source').notNull(),
+  description: varchar('description', { length: 255 }),
+  contextKey: varchar('context_key', { length: 100 }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const rewardEvents = pgTable('reward_events', {
+  id: bigintString('id').primaryKey(),
+  userId: bigintString('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  source: rewardSourceEnum('source').notNull(),
+  contextKey: varchar('context_key', { length: 100 }),
+  amount: integer('amount').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ============================================================================
+// Email verification tokens (hashed, single-use)
+// ============================================================================
+
+export const emailVerificationTokens = pgTable('email_verification_tokens', {
+  id: bigintString('id').primaryKey(),
+  userId: bigintString('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  tokenHash: varchar('token_hash', { length: 128 }).notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  usedAt: timestamp('used_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

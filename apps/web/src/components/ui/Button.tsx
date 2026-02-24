@@ -19,9 +19,11 @@ export function Button({
     <button
       className={`btn btn-${variant} btn-${size} ${loading ? 'btn-loading' : ''} ${className}`}
       disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      data-loading={loading ? 'true' : 'false'}
       {...props}
     >
-      {loading && <span className="btn-spinner" />}
+      {loading && <span className="btn-spinner" aria-hidden="true" />}
       {children}
     </button>
   );

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { getInitials } from '@/lib/utils';
 
 interface GuildIconProps {
@@ -9,15 +10,17 @@ interface GuildIconProps {
 }
 
 export function GuildIcon({ name, iconHash, guildId, size = 48, className = '' }: GuildIconProps) {
+  const [imgError, setImgError] = useState(false);
   const sizeStyle = { width: size, height: size, fontSize: size * 0.35 };
 
-  if (iconHash && guildId) {
+  if (iconHash && guildId && !imgError) {
     return (
       <img
         className={`guild-icon ${className}`}
         src={`/api/v1/files/${iconHash}`}
         alt={name}
         style={sizeStyle}
+        onError={() => setImgError(true)}
       />
     );
   }

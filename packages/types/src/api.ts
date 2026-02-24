@@ -28,6 +28,7 @@ export interface LoginRequest {
   login: string; // username or email
   password: string;
   mfaCode?: string; // TOTP code
+  mfaBackupCode?: string; // one-time recovery code
 }
 
 /** Auth response (successful login/register) */

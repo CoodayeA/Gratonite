@@ -69,7 +69,9 @@ services:
       - "7882:7882/udp"   # RTC over UDP
     environment:
       LIVEKIT_KEYS: "devkey: secret"
-    command: --dev --bind 0.0.0.0
+    command: --config /etc/livekit.yaml --dev --bind 0.0.0.0
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml
 
   # ──────────────────────────────────────────────────────────────────────────
   # Coturn — TURN/STUN server for NAT traversal

@@ -89,7 +89,15 @@ export function shouldGroupMessages(
  * Generate a random nonce for optimistic messages.
  */
 export function generateNonce(): string {
-  return crypto.randomUUID();
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+  } catch {
+    // Fall through to non-crypto fallback below.
+  }
+
+  return `nonce_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
 }
 
 /**
@@ -101,7 +109,19 @@ export function getErrorMessage(err: unknown): string {
 
   // API errors (4xx/5xx with structured body)
   if (err instanceof Error && err.name === 'ApiRequestError') {
-    return (err as Error & { code: string }).message;
+    const apiErr = err as Error & { code?: string; message?: string };
+    if (apiErr.code === 'FORBIDDEN') {
+      return "You don't have permission to do that in this portal.";
+    }
+    if (apiErr.code === 'NOT_A_MEMBER') {
+      return 'You must be a member of this portal to do that.';
+    }
+    if (apiErr.code === 'USER_NOT_FOUND') {
+      return 'User not found.';
+    }
+    if (apiErr.message) return apiErr.message;
+    if (apiErr.code) return apiErr.code;
+    return 'An unexpected error occurred.';
   }
 
   // Rate limit errors (429)

@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { createHash } from 'crypto';
 import multer from 'multer';
 import sharp from 'sharp';
-import { eq } from 'drizzle-orm';
-import { users, userProfiles, userSettings } from '@gratonite/db';
+import { eq, ilike, or, and } from 'drizzle-orm';
+import { users, userProfiles, userSettings, relationships, guildMembers, guilds } from '@gratonite/db';
+import { inArray } from 'drizzle-orm';
 import { createDndService } from './dnd.service.js';
 import type { AppContext } from '../../lib/context.js';
 import { requireAuth } from '../../middleware/auth.js';
@@ -24,6 +25,87 @@ const bannerUpload = multer({
 export function usersRouter(ctx: AppContext): Router {
   const router = Router();
   const auth = requireAuth(ctx);
+  const allowedPresenceStatuses = new Set(['online', 'idle', 'dnd', 'invisible']);
+
+  // ── GET /api/v1/users (batch summary) ─────────────────────────────────
+  // ids=comma-separated list of user IDs
+  router.get('/', auth, async (req, res) => {
+    try {
+      const idsParam = String(req.query['ids'] ?? '').trim();
+      if (!idsParam) {
+        res.json([]);
+        return;
+      }
+      const ids = idsParam.split(',').map((id) => id.trim()).filter(Boolean);
+      if (ids.length === 0) {
+        res.json([]);
+        return;
+      }
+      if (ids.length > 100) {
+        res.status(400).json({ code: 'TOO_MANY_IDS', message: 'Max 100 ids per request' });
+        return;
+      }
+
+      const bigintIds = ids.map((id) => BigInt(id));
+      const rows = await ctx.db
+        .select({
+          id: users.id,
+          username: users.username,
+          displayName: userProfiles.displayName,
+          avatarHash: userProfiles.avatarHash,
+        })
+        .from(users)
+        .leftJoin(userProfiles, eq(userProfiles.userId, users.id))
+        .where(inArray(users.id, bigintIds));
+
+      res.json(rows.map((row) => ({
+        id: row.id.toString(),
+        username: row.username,
+        displayName: row.displayName,
+        avatarHash: row.avatarHash,
+      })));
+    } catch (err) {
+      logger.error({ err }, 'Error fetching user summaries');
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An error occurred' });
+    }
+  });
+
+  // ── GET /api/v1/users/search ─────────────────────────────────────────
+  // Search users by username or display name
+  router.get('/search', auth, async (req, res) => {
+    try {
+      const query = String(req.query['q'] ?? '').trim();
+      if (!query || query.length < 2) {
+        return res.json([]);
+      }
+
+      const pattern = `%${query}%`;
+      const rows = await ctx.db
+        .select({
+          id: users.id,
+          username: users.username,
+          displayName: userProfiles.displayName,
+          avatarHash: userProfiles.avatarHash,
+        })
+        .from(users)
+        .leftJoin(userProfiles, eq(userProfiles.userId, users.id))
+        .where(or(
+          ilike(users.username, pattern),
+          ilike(userProfiles.displayName, pattern),
+        ))
+        .limit(10);
+
+      res.json(rows.map((row) => ({
+        id: row.id.toString(),
+        username: row.username,
+        displayName: row.displayName,
+        avatarHash: row.avatarHash,
+      })));
+    } catch (err) {
+      logger.error({ err }, 'Error searching users');
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An error occurred' });
+    }
+  });
 
   // ── GET /api/v1/users/@me ──────────────────────────────────────────────
   // Returns the current authenticated user's profile
@@ -73,8 +155,13 @@ export function usersRouter(ctx: AppContext): Router {
               accentColor: profile.accentColor,
               bio: profile.bio,
               pronouns: profile.pronouns,
+              avatarDecorationId: profile.avatarDecorationId?.toString() ?? null,
+              profileEffectId: profile.profileEffectId?.toString() ?? null,
+              nameplateId: profile.nameplateId?.toString() ?? null,
               themePreference: profile.themePreference,
               tier: profile.tier,
+              previousAvatarHashes: profile.previousAvatarHashes ?? [],
+              messageCount: profile.messageCount,
             }
           : null,
         settings: settings
@@ -99,18 +186,54 @@ export function usersRouter(ctx: AppContext): Router {
     }
   });
 
+  // ── GET /api/v1/users/presences (batch) ────────────────────────────────
+  router.get('/presences', auth, async (req, res) => {
+    try {
+      const idsParam = String(req.query.ids ?? '').trim();
+      if (!idsParam) return res.json([]);
+
+      const ids = idsParam.split(',').map((id) => id.trim()).filter(Boolean);
+      if (ids.length === 0) return res.json([]);
+      if (ids.length > 100) {
+        return res.status(400).json({ code: 'TOO_MANY_IDS', message: 'Max 100 ids per request' });
+      }
+
+      const presences = await Promise.all(
+        ids.map(async (userId) => {
+          const [presence, isOnline] = await Promise.all([
+            ctx.redis.hgetall(`presence:${userId}`),
+            ctx.redis.sismember('online_users', userId),
+          ]);
+          const rawStatus = String(presence['status'] ?? '').trim();
+          const status = rawStatus || (isOnline ? 'online' : 'offline');
+          return {
+            userId,
+            status: status === 'invisible' ? 'offline' : status,
+            lastSeen: presence['lastSeen'] ? Number(presence['lastSeen']) : null,
+          };
+        }),
+      );
+
+      res.json(presences);
+    } catch (err) {
+      logger.error({ err }, 'Error fetching presences');
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An error occurred' });
+    }
+  });
+
   // ── PATCH /api/v1/users/@me ────────────────────────────────────────────
   // Update current user's profile
   router.patch('/@me', requireAuth(ctx), async (req, res) => {
     try {
       const userId = BigInt(req.user!.userId);
-      const { displayName, bio, pronouns, accentColor } = req.body;
+      const { displayName, bio, pronouns, accentColor, primaryColor } = req.body;
 
       const updateData: Record<string, unknown> = {};
       if (displayName !== undefined) updateData.displayName = displayName;
       if (bio !== undefined) updateData.bio = bio;
       if (pronouns !== undefined) updateData.pronouns = pronouns;
       if (accentColor !== undefined) updateData.accentColor = accentColor;
+      if (primaryColor !== undefined) updateData.primaryColor = primaryColor;
 
       if (Object.keys(updateData).length === 0) {
         res.status(400).json({
@@ -132,6 +255,91 @@ export function usersRouter(ctx: AppContext): Router {
         code: 'INTERNAL_ERROR',
         message: 'An error occurred',
       });
+    }
+  });
+
+  // ── PATCH /api/v1/users/@me/account ────────────────────────────────────
+  // Update account basics used by onboarding flows (username/display name)
+  router.patch('/@me/account', requireAuth(ctx), async (req, res) => {
+    try {
+      const userId = BigInt(req.user!.userId);
+      const usernameRaw = typeof req.body?.username === 'string' ? req.body.username.trim().toLowerCase() : undefined;
+      const displayNameRaw = typeof req.body?.displayName === 'string' ? req.body.displayName.trim() : undefined;
+
+      const fieldErrors: Record<string, string[]> = {};
+
+      if (usernameRaw !== undefined) {
+        if (!/^[a-z0-9_.-]{2,32}$/.test(usernameRaw)) {
+          fieldErrors['username'] = ['Username must be 2-32 characters and use letters, numbers, ., _, or -'];
+        } else {
+          const [existing] = await ctx.db
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.username, usernameRaw))
+            .limit(1);
+          if (existing && existing.id !== userId) {
+            fieldErrors['username'] = ['This username is already taken'];
+          }
+        }
+      }
+
+      if (displayNameRaw !== undefined && (displayNameRaw.length < 1 || displayNameRaw.length > 64)) {
+        fieldErrors['displayName'] = ['Display name must be between 1 and 64 characters'];
+      }
+
+      if (Object.keys(fieldErrors).length > 0) {
+        return res.status(400).json({
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid account data',
+          details: fieldErrors,
+        });
+      }
+
+      if (usernameRaw === undefined && displayNameRaw === undefined) {
+        return res.status(400).json({
+          code: 'NO_CHANGES',
+          message: 'No valid fields to update',
+        });
+      }
+
+      if (usernameRaw !== undefined) {
+        await ctx.db
+          .update(users)
+          .set({ username: usernameRaw })
+          .where(eq(users.id, userId));
+      }
+
+      if (displayNameRaw !== undefined) {
+        await ctx.db
+          .update(userProfiles)
+          .set({ displayName: displayNameRaw })
+          .where(eq(userProfiles.userId, userId));
+      }
+
+      const [user] = await ctx.db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      const [profile] = await ctx.db
+        .select({ displayName: userProfiles.displayName })
+        .from(userProfiles)
+        .where(eq(userProfiles.userId, userId))
+        .limit(1);
+
+      return res.json({
+        success: true,
+        user: {
+          id: user!.id.toString(),
+          username: user!.username,
+          email: user!.email,
+          emailVerified: user!.emailVerified,
+        },
+        profile: profile ?? null,
+      });
+    } catch (err) {
+      logger.error({ err }, 'Error updating account basics');
+      return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An error occurred' });
     }
   });
 
@@ -186,6 +394,26 @@ export function usersRouter(ctx: AppContext): Router {
     }
   });
 
+  // ── PATCH /api/v1/users/@me/presence ───────────────────────────────────
+  router.patch('/@me/presence', auth, async (req, res) => {
+    try {
+      const status = String(req.body?.['status'] ?? '').trim();
+      if (!allowedPresenceStatuses.has(status)) {
+        return res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Invalid presence status' });
+      }
+
+      await ctx.redis.hset(`presence:${req.user!.userId}`, {
+        status,
+        lastSeen: Date.now().toString(),
+      });
+
+      res.json({ status });
+    } catch (err) {
+      logger.error({ err }, 'Error updating presence');
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An error occurred' });
+    }
+  });
+
   // ── Upload global avatar ───────────────────────────────────────────────
   router.post('/@me/avatar', auth, uploadRateLimiter, avatarUpload.single('file'), async (req, res) => {
     try {
@@ -194,25 +422,51 @@ export function usersRouter(ctx: AppContext): Router {
         return res.status(400).json({ code: 'NO_FILE' });
       }
 
-      const processed = await sharp(req.file.buffer)
-        .rotate()
-        .resize(1024, 1024, { fit: 'cover' })
-        .webp({ quality: 85 })
-        .toBuffer();
+      const isGif = req.file!.mimetype === 'image/gif';
+      let processed: Buffer;
+      let contentType: string;
+      let ext: string;
+
+      if (isGif) {
+        // Preserve original GIF animation
+        processed = req.file!.buffer;
+        contentType = 'image/gif';
+        ext = 'gif';
+      } else {
+        // Convert to WebP for static images
+        processed = await sharp(req.file!.buffer)
+          .rotate()
+          .resize(1024, 1024, { fit: 'cover' })
+          .webp({ quality: 85 })
+          .toBuffer();
+        contentType = 'image/webp';
+        ext = 'webp';
+      }
 
       const hash = createHash('sha256').update(processed).digest('hex').slice(0, 32);
-      const key = `users/${userId}/${hash}.webp`;
+      const key = `users/${userId}/${hash}.${ext}`;
 
       await ctx.minio.putObject(BUCKETS.avatars.name, key, processed, processed.length, {
-        'Content-Type': 'image/webp',
+        'Content-Type': contentType,
       });
+
+      const currentProfile = await ctx.db
+        .select({ avatarHash: userProfiles.avatarHash, prev: userProfiles.previousAvatarHashes })
+        .from(userProfiles)
+        .where(eq(userProfiles.userId, BigInt(userId)))
+        .then((r: unknown[]) => r[0]);
+
+      const updatedPrev = currentProfile?.avatarHash
+        ? [currentProfile.avatarHash, ...(currentProfile.prev ?? [])].slice(0, 5)
+        : (currentProfile?.prev ?? []);
 
       await ctx.db
         .update(userProfiles)
-        .set({ avatarHash: `${hash}.webp`, avatarAnimated: false })
+        .set({ avatarHash: `${hash}.${ext}`, avatarAnimated: isGif, previousAvatarHashes: updatedPrev })
         .where(eq(userProfiles.userId, BigInt(userId)));
 
-      res.json({ avatarHash: `${hash}.webp`, avatarAnimated: false });
+      res.json({ avatarHash: `${hash}.${ext}`, avatarAnimated: isGif });
+
     } catch (err) {
       logger.error({ err }, 'Error uploading avatar');
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An error occurred' });
@@ -234,6 +488,42 @@ export function usersRouter(ctx: AppContext): Router {
     }
   });
 
+  // ── Restore a previous avatar ──────────────────────────────────────────
+  router.post('/@me/avatar/restore', auth, async (req, res) => {
+    try {
+      const userId = BigInt(req.user!.userId);
+      const { hash } = req.body as { hash: string };
+
+      if (!hash || typeof hash !== 'string') {
+        return res.status(400).json({ message: 'hash is required' });
+      }
+
+      const profile = await ctx.db
+        .select({ prev: userProfiles.previousAvatarHashes, avatarHash: userProfiles.avatarHash })
+        .from(userProfiles)
+        .where(eq(userProfiles.userId, userId))
+        .then((r: unknown[]) => r[0]);
+
+      if (!profile?.prev?.includes(hash)) {
+        return res.status(403).json({ message: 'Hash not in recent avatars' });
+      }
+
+      const updatedPrev = profile.avatarHash
+        ? [profile.avatarHash, ...profile.prev.filter((h: string) => h !== hash)].slice(0, 5)
+        : profile.prev.filter((h: string) => h !== hash);
+
+      await ctx.db
+        .update(userProfiles)
+        .set({ avatarHash: hash, previousAvatarHashes: updatedPrev })
+        .where(eq(userProfiles.userId, userId));
+
+      return res.json({ avatarHash: hash });
+    } catch (err) {
+      logger.error({ err }, 'Error restoring avatar');
+      return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An error occurred' });
+    }
+  });
+
   // ── Upload global banner ───────────────────────────────────────────────
   router.post('/@me/banner', auth, uploadRateLimiter, bannerUpload.single('file'), async (req, res) => {
     try {
@@ -242,25 +532,41 @@ export function usersRouter(ctx: AppContext): Router {
         return res.status(400).json({ code: 'NO_FILE' });
       }
 
-      const processed = await sharp(req.file.buffer)
-        .rotate()
-        .resize(1920, 1080, { fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 85 })
-        .toBuffer();
+      const isGif = req.file!.mimetype === 'image/gif';
+      let processed: Buffer;
+      let contentType: string;
+      let ext: string;
+
+      if (isGif) {
+        // Preserve original GIF animation
+        processed = req.file!.buffer;
+        contentType = 'image/gif';
+        ext = 'gif';
+      } else {
+        // Convert to WebP for static images
+        processed = await sharp(req.file!.buffer)
+          .rotate()
+          .resize(1920, 1080, { fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: 85 })
+          .toBuffer();
+        contentType = 'image/webp';
+        ext = 'webp';
+      }
 
       const hash = createHash('sha256').update(processed).digest('hex').slice(0, 32);
-      const key = `users/${userId}/${hash}.webp`;
+      const key = `users/${userId}/${hash}.${ext}`;
 
       await ctx.minio.putObject(BUCKETS.banners.name, key, processed, processed.length, {
-        'Content-Type': 'image/webp',
+        'Content-Type': contentType,
       });
 
       await ctx.db
         .update(userProfiles)
-        .set({ bannerHash: `${hash}.webp`, bannerAnimated: false })
+        .set({ bannerHash: `${hash}.${ext}`, bannerAnimated: isGif })
         .where(eq(userProfiles.userId, BigInt(userId)));
 
-      res.json({ bannerHash: `${hash}.webp`, bannerAnimated: false });
+      res.json({ bannerHash: `${hash}.${ext}`, bannerAnimated: isGif });
+
     } catch (err) {
       logger.error({ err }, 'Error uploading banner');
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An error occurred' });
@@ -319,6 +625,141 @@ export function usersRouter(ctx: AppContext): Router {
       res.json(result);
     } catch (err) {
       logger.error({ err }, 'Error updating DND schedule');
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An error occurred' });
+    }
+  });
+
+  // ── GET /api/v1/users/:userId/profile ───────────────────────────────
+  // Returns public profile data for a specific user
+  router.get('/:userId/profile', auth, async (req, res) => {
+    try {
+      const targetUserId = BigInt(req.params.userId);
+
+      const [row] = await ctx.db
+        .select({
+          id: users.id,
+          username: users.username,
+          createdAt: users.createdAt,
+          displayName: userProfiles.displayName,
+          avatarHash: userProfiles.avatarHash,
+          bannerHash: userProfiles.bannerHash,
+          bio: userProfiles.bio,
+          pronouns: userProfiles.pronouns,
+          accentColor: userProfiles.accentColor,
+          primaryColor: userProfiles.primaryColor,
+          messageCount: userProfiles.messageCount,
+        })
+        .from(users)
+        .leftJoin(userProfiles, eq(userProfiles.userId, users.id))
+        .where(eq(users.id, targetUserId))
+        .limit(1);
+
+      if (!row) {
+        return res.status(404).json({ code: 'USER_NOT_FOUND', message: 'User not found' });
+      }
+
+      res.json({
+        id: row.id.toString(),
+        username: row.username,
+        displayName: row.displayName,
+        avatarHash: row.avatarHash,
+        bannerHash: row.bannerHash,
+        bio: row.bio,
+        pronouns: row.pronouns,
+        accentColor: row.accentColor,
+        primaryColor: row.primaryColor,
+        messageCount: row.messageCount ?? 0,
+        createdAt: row.createdAt.toISOString(),
+      });
+    } catch (err) {
+      logger.error({ err }, 'Error fetching user profile');
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An error occurred' });
+    }
+  });
+
+  // ── GET /api/v1/users/:userId/mutuals ───────────────────────────────
+  router.get('/:userId/mutuals', auth, async (req, res) => {
+    try {
+      const currentUserId = BigInt(req.user!.userId);
+      const targetUserId = BigInt(req.params.userId);
+
+      // --- Mutual friends ---
+      const [currentFriendRows, targetFriendRows] = await Promise.all([
+        ctx.db
+          .select({ targetId: relationships.targetId })
+          .from(relationships)
+          .where(and(eq(relationships.userId, currentUserId), eq(relationships.type, 'friend'))),
+        ctx.db
+          .select({ targetId: relationships.targetId })
+          .from(relationships)
+          .where(and(eq(relationships.userId, targetUserId), eq(relationships.type, 'friend'))),
+      ]);
+
+      const currentFriendIds = new Set(currentFriendRows.map((r) => r.targetId.toString()));
+      const mutualFriendIds = targetFriendRows
+        .map((r) => r.targetId)
+        .filter((id) => currentFriendIds.has(id.toString()));
+
+      let mutualFriends: Array<{ id: string; username: string; displayName: string; avatarHash: string | null }> = [];
+      if (mutualFriendIds.length > 0) {
+        const friendRows = await ctx.db
+          .select({
+            id: users.id,
+            username: users.username,
+            displayName: userProfiles.displayName,
+            avatarHash: userProfiles.avatarHash,
+          })
+          .from(users)
+          .leftJoin(userProfiles, eq(userProfiles.userId, users.id))
+          .where(inArray(users.id, mutualFriendIds));
+
+        mutualFriends = friendRows.map((row) => ({
+          id: row.id.toString(),
+          username: row.username,
+          displayName: row.displayName,
+          avatarHash: row.avatarHash,
+        }));
+      }
+
+      // --- Mutual servers ---
+      const [currentGuildRows, targetGuildRows] = await Promise.all([
+        ctx.db
+          .select({ guildId: guildMembers.guildId })
+          .from(guildMembers)
+          .where(eq(guildMembers.userId, currentUserId)),
+        ctx.db
+          .select({ guildId: guildMembers.guildId, nickname: guildMembers.nickname })
+          .from(guildMembers)
+          .where(eq(guildMembers.userId, targetUserId)),
+      ]);
+
+      const currentGuildIds = new Set(currentGuildRows.map((r) => r.guildId.toString()));
+      const mutualGuildEntries = targetGuildRows.filter((r) => currentGuildIds.has(r.guildId.toString()));
+      const mutualGuildIds = mutualGuildEntries.map((r) => r.guildId);
+
+      let mutualServers: Array<{ id: string; name: string; iconHash: string | null; nickname: string | null }> = [];
+      if (mutualGuildIds.length > 0) {
+        const nicknameByGuildId = new Map(mutualGuildEntries.map((r) => [r.guildId.toString(), r.nickname]));
+        const guildRows = await ctx.db
+          .select({
+            id: guilds.id,
+            name: guilds.name,
+            iconHash: guilds.iconHash,
+          })
+          .from(guilds)
+          .where(inArray(guilds.id, mutualGuildIds));
+
+        mutualServers = guildRows.map((row) => ({
+          id: row.id.toString(),
+          name: row.name,
+          iconHash: row.iconHash,
+          nickname: nicknameByGuildId.get(row.id.toString()) ?? null,
+        }));
+      }
+
+      res.json({ mutualServers, mutualFriends });
+    } catch (err) {
+      logger.error({ err }, 'Error fetching mutuals');
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An error occurred' });
     }
   });

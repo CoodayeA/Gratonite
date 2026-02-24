@@ -1,0 +1,13 @@
+.git
+.github
+node_modules
+**/node_modules
+.turbo
+**/.turbo
+apps/web/.cache
+apps/web/test-results
+dist
+**/dist
+coverage
+*.log
+.DS_Store

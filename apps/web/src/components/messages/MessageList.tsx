@@ -2,9 +2,12 @@ import { useRef, useEffect, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useMessagesStore } from '@/stores/messages.store';
 import { useMessages } from '@/hooks/useMessages';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 import { MessageItem } from './MessageItem';
 import { shouldGroupMessages } from '@/lib/utils';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { endNamedInteractionAfterPaint } from '@/lib/perf';
 import type { Message } from '@gratonite/types';
 
 interface MessageListProps {
@@ -14,11 +17,12 @@ interface MessageListProps {
   intro?: React.ReactNode;
   onReply: (message: Message) => void;
   onOpenEmojiPicker: (messageId: string, coords?: { x: number; y: number }) => void;
+  hideIntroEmpty?: boolean;
 }
 
 const EMPTY_MESSAGES: Message[] = [];
 
-export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onReply, onOpenEmojiPicker }: MessageListProps) {
+export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onReply, onOpenEmojiPicker, hideIntroEmpty }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const wasAtBottomRef = useRef(true);
@@ -32,6 +36,13 @@ export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onRep
   );
 
   const { fetchNextPage, isFetchingNextPage, isLoading } = useMessages(channelId);
+  const { data: relationships = [] } = useQuery({
+    queryKey: ['relationships'],
+    queryFn: () => api.relationships.getAll() as Promise<Array<{ targetId: string; type: string }>>,
+    staleTime: 15_000,
+  });
+  const blockedIds = new Set(relationships.filter((r) => r.type === 'blocked').map((r) => r.targetId));
+  const visibleMessages = messages.filter((m) => !blockedIds.has(String(m.authorId)));
 
   // Check if scrolled to bottom
   const checkAtBottom = useCallback(() => {
@@ -41,7 +52,7 @@ export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onRep
   }, []);
 
   const rowVirtualizer = useVirtualizer({
-    count: messages.length,
+    count: visibleMessages.length,
     getScrollElement: () => containerRef.current,
     estimateSize: () => 72,
     overscan: 8,
@@ -50,18 +61,18 @@ export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onRep
   // Auto-scroll to bottom on new messages (if already at bottom)
   useEffect(() => {
     if (wasAtBottomRef.current) {
-      if (messages.length > 0) {
-        rowVirtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
+      if (visibleMessages.length > 0) {
+        rowVirtualizer.scrollToIndex(visibleMessages.length - 1, { align: 'end' });
       } else {
         bottomRef.current?.scrollIntoView({ behavior: 'auto' });
       }
     }
-  }, [messages.length, rowVirtualizer]);
+  }, [visibleMessages.length, rowVirtualizer]);
 
   // Initial scroll to bottom
   useEffect(() => {
     hasLoadedRef.current = false;
-    rowVirtualizer.scrollToIndex(messages.length ? messages.length - 1 : 0, { align: 'end' });
+    rowVirtualizer.scrollToIndex(visibleMessages.length ? visibleMessages.length - 1 : 0, { align: 'end' });
   }, [channelId]);
 
   useEffect(() => {
@@ -70,13 +81,21 @@ export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onRep
     }
   }, [isLoading]);
 
+  useEffect(() => {
+    if (isLoading) return;
+    endNamedInteractionAfterPaint('channel_switch', {
+      channelId,
+      messageCount: visibleMessages.length,
+    });
+  }, [channelId, isLoading, visibleMessages.length]);
+
   // Scroll-to-top pagination
   const handleScroll = useCallback(() => {
     checkAtBottom();
     const el = containerRef.current;
     if (!el) return;
     if (!hasLoadedRef.current) return;
-    if (messages.length === 0) return;
+    if (visibleMessages.length === 0) return;
     if (el.scrollTop < 100 && hasMore && !isFetchingNextPage) {
       const prevHeight = el.scrollHeight;
       fetchNextPage().then(() => {
@@ -88,7 +107,7 @@ export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onRep
         });
       });
     }
-  }, [checkAtBottom, hasMore, isFetchingNextPage, fetchNextPage, messages.length]);
+  }, [checkAtBottom, hasMore, isFetchingNextPage, fetchNextPage, visibleMessages.length]);
 
   if (isLoading) {
     return (
@@ -100,20 +119,20 @@ export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onRep
 
   return (
     <div className="message-list" ref={containerRef} onScroll={handleScroll}>
-      {intro}
+      {!hideIntroEmpty && intro}
       {isFetchingNextPage && (
         <div className="message-list-loader">
           <LoadingSpinner size={20} />
         </div>
       )}
 
-      {!hasMore && messages.length > 0 && (
+      {!hasMore && visibleMessages.length > 0 && (
         <div className="message-list-beginning">
           This is the beginning of the conversation.
         </div>
       )}
 
-      {messages.length === 0 && !isLoading && (
+      {visibleMessages.length === 0 && !isLoading && !hideIntroEmpty && (
         <div className="message-list-empty">
           <div className="message-list-empty-title">{emptyTitle ?? 'No messages yet.'}</div>
           <div className="message-list-empty-subtitle">
@@ -122,7 +141,7 @@ export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onRep
         </div>
       )}
 
-      {messages.length > 0 && (
+      {visibleMessages.length > 0 && (
         <div
           style={{
             height: rowVirtualizer.getTotalSize(),
@@ -130,9 +149,9 @@ export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onRep
           }}
         >
           {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-            const msg = messages[virtualRow.index];
+            const msg = visibleMessages[virtualRow.index];
             if (!msg) return null;
-            const prev = virtualRow.index > 0 ? messages[virtualRow.index - 1] : undefined;
+            const prev = virtualRow.index > 0 ? visibleMessages[virtualRow.index - 1] : undefined;
             const grouped = shouldGroupMessages(
               prev ? { authorId: prev.authorId, createdAt: prev.createdAt, type: prev.type } : undefined,
               { authorId: msg.authorId, createdAt: msg.createdAt, type: msg.type },

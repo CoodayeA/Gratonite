@@ -7,7 +7,7 @@ import { useUiStore } from '@/stores/ui.store';
 import { useChannelsStore } from '@/stores/channels.store';
 import { api } from '@/lib/api';
 import { getErrorMessage } from '@/lib/utils';
-import type { Channel } from '@gratonite/types';
+import { PermissionFlags, type Channel } from '@gratonite/types';
 
 const GUILD_TEXT = 'GUILD_TEXT';
 const GUILD_VOICE = 'GUILD_VOICE';
@@ -22,6 +22,7 @@ export function CreateChannelModal() {
 
   const guildId = (modalData?.['guildId'] as string | undefined) ?? undefined;
   const defaultParentId = (modalData?.['parentId'] as string | undefined) ?? '';
+  const defaultType = (modalData?.['type'] as string | undefined) ?? GUILD_TEXT;
 
   const channels = useChannelsStore((s) => s.channels);
   const channelIds = useChannelsStore((s) =>
@@ -41,15 +42,17 @@ export function CreateChannelModal() {
   const [topic, setTopic] = useState('');
   const [type, setType] = useState(GUILD_TEXT);
   const [parentId, setParentId] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const wasOpenRef = useRef(false);
 
-  function resetForm(nextParentId = '') {
+  function resetForm(nextParentId = '', nextType = GUILD_TEXT) {
     setName('');
     setTopic('');
-    setType(GUILD_TEXT);
+    setType(nextType);
     setParentId(nextParentId);
+    setIsPrivate(false);
     setError('');
     setLoading(false);
   }
@@ -61,8 +64,8 @@ export function CreateChannelModal() {
     }
     if (wasOpenRef.current) return;
     wasOpenRef.current = true;
-    resetForm(defaultParentId);
-  }, [activeModal, defaultParentId]);
+    resetForm(defaultParentId, defaultType);
+  }, [activeModal, defaultParentId, defaultType]);
 
   function handleClose() {
     closeModal();
@@ -82,6 +85,19 @@ export function CreateChannelModal() {
         topic: type === GUILD_CATEGORY ? undefined : (topic.trim() || undefined),
       };
       const channel = await api.channels.create(guildId, payload);
+
+      if (isPrivate && type !== GUILD_CATEGORY) {
+        const roles = await api.guilds.getRoles(guildId);
+        const everyoneRole = roles.find((role) => role.name === '@everyone');
+        if (everyoneRole) {
+          await api.channels.setPermissionOverride(channel.id, everyoneRole.id, {
+            targetType: 'role',
+            allow: '0',
+            deny: PermissionFlags.VIEW_CHANNEL.toString(),
+          });
+        }
+      }
+
       addChannel(channel);
       handleClose();
       if (type !== GUILD_CATEGORY) {
@@ -157,6 +173,23 @@ export function CreateChannelModal() {
               />
             </div>
           </div>
+        )}
+
+        {type !== GUILD_CATEGORY && (
+          <label className="channel-private-toggle">
+            <input
+              type="checkbox"
+              checked={isPrivate}
+              onChange={(event) => setIsPrivate(event.target.checked)}
+            />
+            <span>Private channel</span>
+          </label>
+        )}
+
+        {type !== GUILD_CATEGORY && (
+          <p className="channel-private-note">
+            Only members with explicit permissions can view this channel.
+          </p>
         )}
 
         <div className="modal-footer">

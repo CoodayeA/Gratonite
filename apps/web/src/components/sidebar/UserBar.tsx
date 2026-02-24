@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Avatar } from '@/components/ui/Avatar';
 import { api, setAccessToken } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
@@ -11,19 +12,40 @@ import { useGuildsStore } from '@/stores/guilds.store';
 import { useMembersStore } from '@/stores/members.store';
 import { resolveProfile } from '@gratonite/profile-resolver';
 import { useUnreadStore } from '@/stores/unread.store';
+import { DisplayNameText } from '@/components/ui/DisplayNameText';
+import { getActiveStatusText, readProfileEnhancementsPrefs } from '@/lib/profileEnhancements';
+import { getAvatarDecorationById } from '@/lib/profileCosmetics';
+import { AvatarSprite } from '@/components/ui/AvatarSprite';
+import { DEFAULT_AVATAR_STUDIO_PREFS, readAvatarStudioPrefs, subscribeAvatarStudioChanges } from '@/lib/avatarStudio';
+import { usePresenceStore, type PresenceStatus } from '@/stores/presence.store';
+import { readPresencePreference, savePresencePreference, type PresencePreference } from '@/lib/presencePrefs';
+import { getSocket } from '@/lib/socket';
 
-export function UserBar() {
+export function UserBar({ compact = false }: { compact?: boolean }) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const openModal = useUiStore((s) => s.openModal);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [avatarStudioPrefs, setAvatarStudioPrefs] = useState(DEFAULT_AVATAR_STUDIO_PREFS);
+  const [selectedPresence, setSelectedPresence] = useState<PresencePreference>(() => readPresencePreference());
+  const rootRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const compactTriggerRef = useRef<HTMLButtonElement>(null);
+  const [compactMenuPos, setCompactMenuPos] = useState<{ top: number; left: number } | null>(null);
   const currentGuildId = useGuildsStore((s) => s.currentGuildId);
   const member = useMembersStore((s) =>
     currentGuildId ? s.membersByGuild.get(currentGuildId)?.get(user?.id ?? '') : undefined,
   );
+
+  // Fetch Gratonites balance
+  const { data: balanceData } = useQuery({
+    queryKey: ['gratonites', 'balance'],
+    queryFn: () => fetch('/api/v1/gratonites/balance', { credentials: 'include' }).then(r => r.json()),
+    enabled: !!user?.id,
+    staleTime: 60000, // 1 minute
+  });
 
   const resolved = user
     ? resolveProfile(
@@ -38,13 +60,25 @@ export function UserBar() {
       },
     )
     : null;
+  const statusText = user ? getActiveStatusText(readProfileEnhancementsPrefs(user.id)) : '';
+  const presenceMap = usePresenceStore((s) => s.byUserId);
+  const livePresence = user ? presenceMap.get(user.id)?.status : undefined;
+  const effectivePresence: PresenceStatus =
+    selectedPresence === 'invisible' ? 'invisible' : (livePresence ?? selectedPresence);
+  const visiblePresenceBadge: PresenceStatus = effectivePresence === 'invisible' ? 'offline' : effectivePresence;
+  const avatarDecorationHash = user?.avatarDecorationId
+    ? getAvatarDecorationById(user.avatarDecorationId)?.assetHash ?? null
+    : null;
 
   // Close menu on outside click — must be BEFORE the early return to maintain
   // consistent hook count across renders (React rules of hooks)
   useEffect(() => {
     if (!menuOpen) return;
     function handleClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const clickedInsideRoot = !!rootRef.current?.contains(target);
+      const clickedInsideMenu = !!menuRef.current?.contains(target);
+      if (!clickedInsideRoot && !clickedInsideMenu) {
         setMenuOpen(false);
       }
     }
@@ -52,22 +86,62 @@ export function UserBar() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [menuOpen]);
 
-  // DND state
-  const [dndEnabled, setDndEnabled] = useState(false);
+  useEffect(() => {
+    if (!compact || !menuOpen) return;
+
+    const updatePos = () => {
+      const trigger = compactTriggerRef.current;
+      if (!trigger || typeof window === 'undefined') return;
+      const rect = trigger.getBoundingClientRect();
+      const menuWidth = 240;
+      const gap = 36;
+      const margin = 12;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      let left = rect.right + gap;
+      if (left + menuWidth > viewportWidth - margin) {
+        left = Math.max(margin, viewportWidth - menuWidth - margin);
+      }
+      let top = rect.top;
+      const estimatedMenuHeight = 300;
+      if (top + estimatedMenuHeight > viewportHeight - margin) {
+        top = Math.max(margin, viewportHeight - estimatedMenuHeight - margin);
+      }
+      setCompactMenuPos({ top: Math.round(top), left: Math.round(left) });
+    };
+
+    updatePos();
+    window.addEventListener('resize', updatePos);
+    window.addEventListener('scroll', updatePos, true);
+    return () => {
+      window.removeEventListener('resize', updatePos);
+      window.removeEventListener('scroll', updatePos, true);
+    };
+  }, [compact, menuOpen]);
 
   useEffect(() => {
-    api.users.getDndSchedule().then((s) => setDndEnabled(s.enabled)).catch(() => {});
-  }, []);
-
-  const toggleDnd = useCallback(async () => {
-    const next = !dndEnabled;
-    setDndEnabled(next);
-    try {
-      await api.users.updateDndSchedule({ enabled: next });
-    } catch {
-      setDndEnabled(!next); // revert on failure
+    if (!user?.id) {
+      setAvatarStudioPrefs(DEFAULT_AVATAR_STUDIO_PREFS);
+      return;
     }
-  }, [dndEnabled]);
+    setAvatarStudioPrefs(readAvatarStudioPrefs(user.id));
+    return subscribeAvatarStudioChanges((changedUserId) => {
+      if (changedUserId !== user.id) return;
+      setAvatarStudioPrefs(readAvatarStudioPrefs(user.id));
+    });
+  }, [user?.id]);
+
+  const applyPresence = useCallback(async (status: PresencePreference) => {
+    setSelectedPresence(status);
+    savePresencePreference(status);
+    usePresenceStore.getState().upsert({ userId: user?.id ?? '0', status });
+    getSocket()?.emit('PRESENCE_UPDATE', { status });
+    try {
+      await api.users.updatePresence(status);
+    } catch {
+      // Realtime emit is best-effort primary path; keep local selection even if REST call fails.
+    }
+  }, [user?.id]);
 
   if (!user) return null;
 
@@ -84,18 +158,21 @@ export function UserBar() {
     useMessagesStore.getState().clear();
     useMembersStore.getState().clear();
     useUnreadStore.getState().clear();
+    usePresenceStore.getState().clear();
     queryClient.clear();
     navigate('/login', { replace: true });
   }
 
-  return (
-    <div className="user-bar" ref={menuRef}>
-      {menuOpen && (
-        <div className="user-bar-menu">
+  const menuContent = menuOpen ? (
+    <div
+      ref={menuRef}
+      className={`user-bar-menu ${compact ? 'user-bar-menu-compact' : ''}`}
+      style={compact && compactMenuPos ? { top: compactMenuPos.top, left: compactMenuPos.left } : undefined}
+    >
           <button
             className="user-bar-menu-item"
             onClick={() => {
-              openModal('edit-profile');
+              openModal('settings', { type: 'user', initialSection: 'profile' });
               setMenuOpen(false);
             }}
           >
@@ -110,25 +187,115 @@ export function UserBar() {
           >
             Friends & DMs
           </button>
-          <button className="user-bar-menu-item" onClick={() => { toggleDnd(); setMenuOpen(false); }}>
-            <span className={`dnd-indicator ${dndEnabled ? 'dnd-active' : ''}`} />
-            {dndEnabled ? 'Disable Do Not Disturb' : 'Enable Do Not Disturb'}
-          </button>
+          <div className="user-bar-menu-group-label">Status</div>
+          <div className="user-bar-presence-grid">
+            {([
+              ['online', 'Online'],
+              ['idle', 'Away'],
+              ['dnd', 'Do Not Disturb'],
+              ['invisible', 'Invisible'],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                className={`user-bar-menu-item user-bar-presence-item ${selectedPresence === value ? 'is-active' : ''}`}
+                onClick={() => {
+                  applyPresence(value);
+                  setMenuOpen(false);
+                }}
+              >
+                <span className={`presence-dot presence-${value}`} />
+                {label}
+              </button>
+            ))}
+          </div>
           <div className="user-bar-menu-divider" />
           <button className="user-bar-menu-item user-bar-menu-danger" onClick={handleLogout}>
             Log Out
           </button>
         </div>
-      )}
+  ) : null;
 
+  return (
+    <div className={`user-bar ${compact ? 'user-bar-compact' : ''}`} ref={rootRef}>
+      {compact ? (menuContent && typeof document !== 'undefined' ? createPortal(menuContent, document.body) : null) : menuContent}
+
+      {compact ? (
+        <button
+          ref={compactTriggerRef}
+          className="user-bar-compact-trigger"
+          onClick={() => setMenuOpen((prev) => !prev)}
+          title="Profile and status"
+          aria-label="Profile and status"
+        >
+          {avatarStudioPrefs.enabled ? (
+            <span className="avatar-status-wrap">
+              <AvatarSprite config={avatarStudioPrefs.sprite} size={34} className="user-bar-sprite" />
+              <span className={`avatar-presence-badge presence-${visiblePresenceBadge}`} />
+            </span>
+          ) : (
+            <Avatar
+              name={resolved?.displayName ?? user.displayName}
+              hash={resolved?.avatarHash ?? user.avatarHash ?? null}
+              decorationHash={avatarDecorationHash}
+              userId={user.id}
+              size={34}
+              presenceStatus={visiblePresenceBadge}
+            />
+          )}
+        </button>
+      ) : (
       <div className="user-bar-info">
-        <Avatar name={resolved?.displayName ?? user.displayName} hash={resolved?.avatarHash ?? user.avatarHash ?? null} userId={user.id} size={32} />
+        {avatarStudioPrefs.enabled ? (
+          <span className="avatar-status-wrap">
+            <AvatarSprite config={avatarStudioPrefs.sprite} size={34} className="user-bar-sprite" />
+            <span className={`avatar-presence-badge presence-${visiblePresenceBadge}`} />
+          </span>
+        ) : (
+          <Avatar
+            name={resolved?.displayName ?? user.displayName}
+            hash={resolved?.avatarHash ?? user.avatarHash ?? null}
+            decorationHash={avatarDecorationHash}
+            userId={user.id}
+            size={32}
+            presenceStatus={visiblePresenceBadge}
+          />
+        )}
         <div className="user-bar-names">
-          <span className="user-bar-displayname">{resolved?.displayName ?? user.displayName}</span>
+          <span className="user-bar-displayname">
+            <DisplayNameText
+              text={resolved?.displayName ?? user.displayName}
+              userId={user.id}
+              guildId={currentGuildId}
+              context={currentGuildId ? 'server' : 'profile'}
+            />
+          </span>
+          {statusText && <span className="user-bar-status" title={statusText}>💭 {statusText}</span>}
+          <span className="user-bar-presence-label">
+            <span className={`presence-dot presence-${effectivePresence}`} />
+            {effectivePresence === 'idle'
+              ? 'Away'
+              : effectivePresence === 'dnd'
+                ? 'Do Not Disturb'
+                : effectivePresence === 'invisible'
+                  ? 'Invisible'
+                  : effectivePresence === 'offline'
+                    ? 'Offline'
+                    : 'Online'}
+          </span>
           <span className="user-bar-username">@{user.username}</span>
+          {balanceData && (
+            <span className="user-bar-balance" title="Gratonites Currency">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: '4px', color: '#fbbf24' }}>
+                <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2"/>
+                <text x="12" y="16" textAnchor="middle" fontSize="12" fill="currentColor">G</text>
+              </svg>
+              {balanceData.balance?.toLocaleString() || 0}
+            </span>
+          )}
         </div>
       </div>
-
+      )}
+      {!compact && (
       <div className="user-bar-actions">
         <button
           className="user-bar-settings"
@@ -153,6 +320,7 @@ export function UserBar() {
           </svg>
         </button>
       </div>
+      )}
     </div>
   );
 }

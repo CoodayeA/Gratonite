@@ -8,6 +8,7 @@ export const updateMemberProfileSchema = z.object({
 export const equipCustomizationSchema = z.object({
   avatarDecorationId: z.string().nullable().optional(),
   profileEffectId: z.string().nullable().optional(),
+  nameplateId: z.string().nullable().optional(),
 });
 
 export type UpdateMemberProfileInput = z.infer<typeof updateMemberProfileSchema>;

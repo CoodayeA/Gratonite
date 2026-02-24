@@ -2,8 +2,8 @@ import type { Server as SocketIOServer, Socket } from 'socket.io';
 import type { AppContext } from '../../lib/context.js';
 import { createAuthService } from '../auth/auth.service.js';
 import { createBotsService } from '../bots/bots.service.js';
-import { dmRecipients, dmChannels, users, userProfiles } from '@gratonite/db';
-import { and, eq } from 'drizzle-orm';
+import { dmRecipients, dmChannels, users, userProfiles, relationships, channels } from '@gratonite/db';
+import { and, eq, or } from 'drizzle-orm';
 import { createGuildsService } from '../guilds/guilds.service.js';
 import { createVoiceService } from '../voice/voice.service.js';
 import { createChannelsService } from '../channels/channels.service.js';
@@ -33,8 +33,47 @@ export function setupGateway(ctx: AppContext) {
   const voiceService = createVoiceService(ctx);
   const channelsService = createChannelsService(ctx);
 
+  async function isBlockedEither(userA: string, userB: string): Promise<boolean> {
+    const [row] = await ctx.db
+      .select({ userId: relationships.userId })
+      .from(relationships)
+      .where(
+        and(
+          eq(relationships.type, 'blocked'),
+          or(
+            and(eq(relationships.userId, userA), eq(relationships.targetId, userB)),
+            and(eq(relationships.userId, userB), eq(relationships.targetId, userA)),
+          ),
+        ),
+      )
+      .limit(1);
+    return !!row;
+  }
+
+  async function emitDmChannelEventFiltered(
+    channelId: string,
+    actorUserId: string,
+    event: string,
+    payload: unknown,
+  ) {
+    const recipients = await ctx.db
+      .select({ userId: dmRecipients.userId })
+      .from(dmRecipients)
+      .where(eq(dmRecipients.channelId, channelId));
+
+    for (const recipient of recipients) {
+      const recipientId = String(recipient.userId);
+      if (recipientId !== actorUserId) {
+        const blocked = await isBlockedEither(actorUserId, recipientId);
+        if (blocked) continue;
+      }
+      ctx.io.to(`user:${recipientId}`).emit(event, payload as any);
+    }
+  }
+
   ctx.io.on('connection', (rawSocket: Socket) => {
     const socket = rawSocket as AuthenticatedSocket;
+    const allowedPresenceStatuses = new Set(['online', 'idle', 'dnd', 'invisible']);
     logger.debug({ socketId: socket.id }, 'Socket connected (unauthenticated)');
 
     // ── IDENTIFY — authenticate the socket connection ────────────────────
@@ -137,9 +176,17 @@ export function setupGateway(ctx: AppContext) {
         timestamp: Date.now(),
       };
 
-      const rooms = Array.from(socket.rooms).filter((r) => r.startsWith('guild:'));
-      for (const room of rooms) {
-        await emitRoomWithIntent(ctx.io, room, GatewayIntents.GUILD_MESSAGE_TYPING, 'TYPING_START', payload);
+      const channel = await channelsService.getChannel(data.channelId);
+      if (channel?.guildId) {
+        await emitRoomWithIntent(
+          ctx.io,
+          `guild:${channel.guildId}`,
+          GatewayIntents.GUILD_MESSAGE_TYPING,
+          'TYPING_START',
+          payload,
+        );
+      } else {
+        await emitDmChannelEventFiltered(data.channelId, socket.userId, 'TYPING_START', payload);
       }
 
       // Also publish to Redis for multi-server
@@ -191,12 +238,23 @@ export function setupGateway(ctx: AppContext) {
 
     socket.on('PRESENCE_UPDATE', async (data: { status: string }) => {
       if (!socket.userId) return;
+      const status = String(data?.status ?? '').trim();
+      if (!allowedPresenceStatuses.has(status)) return;
 
       // Store presence in Redis
       await ctx.redis.hset(`presence:${socket.userId}`, {
-        status: data.status,
+        status,
         lastSeen: Date.now().toString(),
       });
+
+      const payload = {
+        userId: socket.userId,
+        status: status === 'invisible' ? 'offline' : status,
+        activities: [],
+        clientStatus: {
+          web: status,
+        },
+      };
 
       // Broadcast to all guilds the user is in
       const rooms = Array.from(socket.rooms).filter((r) => r.startsWith('guild:'));
@@ -206,12 +264,10 @@ export function setupGateway(ctx: AppContext) {
           room,
           GatewayIntents.GUILD_PRESENCES,
           'PRESENCE_UPDATE',
-          {
-            userId: socket.userId,
-            status: data.status,
-          },
+          payload,
         );
       }
+      ctx.io.to(`user:${socket.userId}`).emit('PRESENCE_UPDATE', payload as any);
     });
 
     // ── VOICE_STATE_UPDATE — join/leave/mute voice channels ─────────────────
@@ -369,6 +425,8 @@ export function setupGateway(ctx: AppContext) {
           }
         }
 
+        const blocked = await isBlockedEither(socket.userId, String(recipient.userId));
+        if (blocked) continue;
         ctx.io.to(`user:${recipient.userId}`).emit('CALL_INVITE', payload);
       }
     });
@@ -384,6 +442,8 @@ export function setupGateway(ctx: AppContext) {
 
       for (const recipient of recipients) {
         if (recipient.userId === socket.userId) continue;
+        const blocked = await isBlockedEither(socket.userId, String(recipient.userId));
+        if (blocked) continue;
         ctx.io.to(`user:${recipient.userId}`).emit('CALL_CANCEL', {
           channelId: data.channelId,
           fromUserId: socket.userId,
@@ -394,6 +454,7 @@ export function setupGateway(ctx: AppContext) {
     socket.on('CALL_ACCEPT', async (data: { channelId: string; toUserId: string }) => {
       if (!socket.userId) return;
       if (!data?.channelId || !data?.toUserId) return;
+      if (await isBlockedEither(socket.userId, data.toUserId)) return;
       ctx.io.to(`user:${data.toUserId}`).emit('CALL_ACCEPT', {
         channelId: data.channelId,
         fromUserId: socket.userId,
@@ -403,6 +464,7 @@ export function setupGateway(ctx: AppContext) {
     socket.on('CALL_DECLINE', async (data: { channelId: string; toUserId: string }) => {
       if (!socket.userId) return;
       if (!data?.channelId || !data?.toUserId) return;
+      if (await isBlockedEither(socket.userId, data.toUserId)) return;
       ctx.io.to(`user:${data.toUserId}`).emit('CALL_DECLINE', {
         channelId: data.channelId,
         fromUserId: socket.userId,
@@ -450,6 +512,8 @@ export function setupGateway(ctx: AppContext) {
             {
               userId: socket.userId,
               status: 'offline',
+              activities: [],
+              clientStatus: { web: 'offline' },
             } as any,
           );
         }
@@ -477,12 +541,54 @@ async function setupRedisPubSub(ctx: AppContext) {
   redisSub.psubscribe('channel:*:messages', 'guild:*:events', 'user:*:sync');
 
   redisSub.on('pmessage', (pattern: string, channel: string, message: string) => {
-    try {
+    (async () => {
+      try {
       const data = JSON.parse(message);
 
       if (pattern === 'channel:*:messages') {
         const channelId = channel.split(':')[1];
-        ctx.io.to(`channel:${channelId}`).emit(data.type, data.data);
+        const eventType = String(data?.type ?? '');
+        const payload = data?.data as any;
+        const authorId = payload?.authorId ? String(payload.authorId) : null;
+
+        const [channelRow] = await ctx.db
+          .select({ id: channels.id, type: channels.type, guildId: channels.guildId })
+          .from(channels)
+          .where(eq(channels.id, channelId))
+          .limit(1);
+
+        const isDmChannel =
+          channelRow && !channelRow.guildId && ['DM', 'GROUP_DM', 'dm', 'group_dm'].includes(String(channelRow.type));
+
+        if (isDmChannel && authorId && eventType === 'MESSAGE_CREATE') {
+          const recipients = await ctx.db
+            .select({ userId: dmRecipients.userId })
+            .from(dmRecipients)
+            .where(eq(dmRecipients.channelId, channelId));
+
+          for (const recipient of recipients) {
+            const recipientId = String(recipient.userId);
+            if (recipientId !== authorId) {
+              const [block] = await ctx.db
+                .select({ userId: relationships.userId })
+                .from(relationships)
+                .where(
+                  and(
+                    eq(relationships.type, 'blocked'),
+                    or(
+                      and(eq(relationships.userId, authorId), eq(relationships.targetId, recipientId)),
+                      and(eq(relationships.userId, recipientId), eq(relationships.targetId, authorId)),
+                    ),
+                  ),
+                )
+                .limit(1);
+              if (block) continue;
+            }
+            ctx.io.to(`user:${recipientId}`).emit(eventType, payload);
+          }
+        } else {
+          ctx.io.to(`channel:${channelId}`).emit(eventType, payload);
+        }
       } else if (pattern === 'guild:*:events') {
         const guildId = channel.split(':')[1];
         const intent = intentForGuildEvent(String(data.type));
@@ -491,8 +597,9 @@ async function setupRedisPubSub(ctx: AppContext) {
         const userId = channel.split(':')[1];
         ctx.io.to(`user:${userId}`).emit(data.type, data.data);
       }
-    } catch {
-      // Ignore malformed messages
-    }
+      } catch {
+        // Ignore malformed messages
+      }
+    })();
   });
 }

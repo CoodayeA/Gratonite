@@ -1,10 +1,69 @@
-import { eq, and, sql } from 'drizzle-orm';
-import { channels, channelPermissions } from '@gratonite/db';
+import { eq, and, sql, inArray } from 'drizzle-orm';
+import { channels, channelPermissions, guilds, guildRoles, userRoles } from '@gratonite/db';
 import type { AppContext } from '../../lib/context.js';
 import { generateId } from '../../lib/snowflake.js';
 import type { CreateChannelInput, UpdateChannelInput } from './channels.schemas.js';
+import { logger } from '../../lib/logger.js';
+import { recordRequestCacheResult } from '../../lib/request-metrics.js';
+import { hasPermission, PermissionFlags } from '@gratonite/types';
+
+const CHANNEL_CACHE_TTL_SECONDS = 20;
+const CACHE_LOG_EVERY = 100;
 
 export function createChannelsService(ctx: AppContext) {
+  const cacheStats: Record<string, { hits: number; misses: number }> = {};
+
+  function recordCacheResult(cache: string, hit: boolean) {
+    recordRequestCacheResult(cache, hit);
+
+    if (!cacheStats[cache]) {
+      cacheStats[cache] = { hits: 0, misses: 0 };
+    }
+
+    if (hit) {
+      cacheStats[cache].hits += 1;
+    } else {
+      cacheStats[cache].misses += 1;
+    }
+
+    const total = cacheStats[cache].hits + cacheStats[cache].misses;
+    if (total % CACHE_LOG_EVERY === 0) {
+      logger.info(
+        {
+          cache,
+          hits: cacheStats[cache].hits,
+          misses: cacheStats[cache].misses,
+          hitRate: cacheStats[cache].hits / total,
+        },
+        'Cache stats',
+      );
+    }
+  }
+
+  function channelCacheKey(channelId: string) {
+    return `channel:${channelId}:meta`;
+  }
+
+  function guildChannelsCacheKey(guildId: string) {
+    return `guild:${guildId}:channels`;
+  }
+
+  async function invalidateChannelCache(channelId: string) {
+    try {
+      await ctx.redis.del(channelCacheKey(channelId));
+    } catch (error) {
+      logger.warn({ error, channelId }, 'Failed to invalidate channel cache');
+    }
+  }
+
+  async function invalidateGuildChannelsCache(guildId: string) {
+    try {
+      await ctx.redis.del(guildChannelsCacheKey(guildId));
+    } catch (error) {
+      logger.warn({ error, guildId }, 'Failed to invalidate guild channels cache');
+    }
+  }
+
   async function createChannel(guildId: string, input: CreateChannelInput) {
     const channelId = generateId();
 
@@ -23,24 +82,74 @@ export function createChannelsService(ctx: AppContext) {
       })
       .returning();
 
+    await invalidateGuildChannelsCache(guildId);
     return channel;
   }
 
   async function getChannel(channelId: string) {
+    try {
+      const cached = await ctx.redis.get(channelCacheKey(channelId));
+      if (cached) {
+        recordCacheResult('channel_meta', true);
+        return JSON.parse(cached);
+      }
+      recordCacheResult('channel_meta', false);
+    } catch (error) {
+      logger.warn({ error, channelId }, 'Failed to read channel cache');
+    }
+
     const [channel] = await ctx.db
       .select()
       .from(channels)
       .where(eq(channels.id, channelId))
       .limit(1);
+
+    if (channel) {
+      try {
+        await ctx.redis.set(
+          channelCacheKey(channelId),
+          JSON.stringify(channel),
+          'EX',
+          CHANNEL_CACHE_TTL_SECONDS,
+        );
+      } catch (error) {
+        logger.warn({ error, channelId }, 'Failed to write channel cache');
+      }
+    }
+
     return channel ?? null;
   }
 
   async function getGuildChannels(guildId: string) {
-    return ctx.db
+    try {
+      const cached = await ctx.redis.get(guildChannelsCacheKey(guildId));
+      if (cached) {
+        recordCacheResult('guild_channels', true);
+        return JSON.parse(cached);
+      }
+      recordCacheResult('guild_channels', false);
+    } catch (error) {
+      logger.warn({ error, guildId }, 'Failed to read guild channels cache');
+    }
+
+    const guildChannels = await ctx.db
       .select()
       .from(channels)
       .where(eq(channels.guildId, guildId))
       .orderBy(channels.position);
+
+    try {
+      await ctx.redis.set(
+        guildChannelsCacheKey(guildId),
+        JSON.stringify(guildChannels),
+        'EX',
+        CHANNEL_CACHE_TTL_SECONDS,
+      );
+    } catch (error) {
+      logger.warn({ error, guildId }, 'Failed to write guild channels cache');
+    }
+
+    return guildChannels;
   }
 
   async function updateChannel(channelId: string, input: UpdateChannelInput) {
@@ -60,11 +169,28 @@ export function createChannelsService(ctx: AppContext) {
       .where(eq(channels.id, channelId))
       .returning();
 
+    if (updated) {
+      await invalidateChannelCache(channelId);
+      if (updated.guildId) {
+        await invalidateGuildChannelsCache(String(updated.guildId));
+      }
+    }
+
     return updated ?? null;
   }
 
   async function deleteChannel(channelId: string) {
+    const [existing] = await ctx.db
+      .select({ guildId: channels.guildId })
+      .from(channels)
+      .where(eq(channels.id, channelId))
+      .limit(1);
+
     await ctx.db.delete(channels).where(eq(channels.id, channelId));
+    await invalidateChannelCache(channelId);
+    if (existing?.guildId) {
+      await invalidateGuildChannelsCache(String(existing.guildId));
+    }
   }
 
   async function reorderChannels(
@@ -80,7 +206,9 @@ export function createChannelsService(ctx: AppContext) {
         .update(channels)
         .set(updates)
         .where(and(eq(channels.id, item.id), eq(channels.guildId, guildId)));
+      await invalidateChannelCache(item.id);
     }
+    await invalidateGuildChannelsCache(guildId);
   }
 
   // ── Permission overrides ─────────────────────────────────────────────────
@@ -151,6 +279,105 @@ export function createChannelsService(ctx: AppContext) {
       );
   }
 
+  async function getMemberChannelPermissions(channelId: string, userId: string): Promise<bigint | null> {
+    const channel = await getChannel(channelId);
+    if (!channel) return null;
+
+    // Non-guild channels are managed by dedicated membership checks in route handlers.
+    if (!channel.guildId) return ~0n;
+
+    const guildId = String(channel.guildId);
+    const [guild] = await ctx.db
+      .select({ ownerId: guilds.ownerId })
+      .from(guilds)
+      .where(eq(guilds.id, guildId))
+      .limit(1);
+
+    if (!guild) return 0n;
+    if (guild.ownerId === userId) return ~0n;
+
+    const [everyoneRole] = await ctx.db
+      .select({ id: guildRoles.id, permissions: guildRoles.permissions })
+      .from(guildRoles)
+      .where(and(eq(guildRoles.guildId, guildId), eq(guildRoles.name, '@everyone')))
+      .limit(1);
+
+    let permissions = everyoneRole ? BigInt(everyoneRole.permissions) : 0n;
+
+    const assignedRoles = await ctx.db
+      .select({ roleId: userRoles.roleId })
+      .from(userRoles)
+      .where(and(eq(userRoles.guildId, guildId), eq(userRoles.userId, userId)));
+
+    const memberRoleIds = assignedRoles.map((row) => row.roleId);
+    if (memberRoleIds.length > 0) {
+      const roles = await ctx.db
+        .select({ id: guildRoles.id, permissions: guildRoles.permissions })
+        .from(guildRoles)
+        .where(inArray(guildRoles.id, memberRoleIds));
+
+      for (const role of roles) {
+        permissions |= BigInt(role.permissions);
+      }
+    }
+
+    if (hasPermission(permissions, PermissionFlags.ADMINISTRATOR)) {
+      return ~0n;
+    }
+
+    const overrides = await getPermissionOverrides(channelId);
+
+    const everyoneOverride = everyoneRole
+      ? overrides.find(
+          (override) =>
+            override.targetType === 'role' && override.targetId === everyoneRole.id,
+        )
+      : undefined;
+
+    if (everyoneOverride) {
+      permissions &= ~BigInt(everyoneOverride.deny);
+      permissions |= BigInt(everyoneOverride.allow);
+    }
+
+    let roleAllow = 0n;
+    let roleDeny = 0n;
+    for (const override of overrides) {
+      if (override.targetType !== 'role') continue;
+      if (everyoneRole && override.targetId === everyoneRole.id) continue;
+      if (!memberRoleIds.includes(override.targetId)) continue;
+      roleAllow |= BigInt(override.allow);
+      roleDeny |= BigInt(override.deny);
+    }
+    permissions &= ~roleDeny;
+    permissions |= roleAllow;
+
+    const userOverride = overrides.find(
+      (override) =>
+        override.targetType === 'user' && override.targetId === userId,
+    );
+    if (userOverride) {
+      permissions &= ~BigInt(userOverride.deny);
+      permissions |= BigInt(userOverride.allow);
+    }
+
+    return permissions;
+  }
+
+  async function canAccessChannel(channelId: string, userId: string) {
+    const permissions = await getMemberChannelPermissions(channelId, userId);
+    if (permissions === null) return false;
+    return hasPermission(permissions, PermissionFlags.VIEW_CHANNEL);
+  }
+
+  async function canConnectToVoiceChannel(channelId: string, userId: string) {
+    const permissions = await getMemberChannelPermissions(channelId, userId);
+    if (permissions === null) return false;
+    return (
+      hasPermission(permissions, PermissionFlags.VIEW_CHANNEL) &&
+      hasPermission(permissions, PermissionFlags.CONNECT)
+    );
+  }
+
   return {
     createChannel,
     getChannel,
@@ -161,6 +388,9 @@ export function createChannelsService(ctx: AppContext) {
     getPermissionOverrides,
     setPermissionOverride,
     deletePermissionOverride,
+    getMemberChannelPermissions,
+    canAccessChannel,
+    canConnectToVoiceChannel,
   };
 }
 

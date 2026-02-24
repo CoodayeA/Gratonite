@@ -4,9 +4,10 @@ import { requireAuth } from '../../middleware/auth.js';
 import { createGuildsService } from '../guilds/guilds.service.js';
 import { createChannelsService } from '../channels/channels.service.js';
 import { createThreadsService } from './threads.service.js';
+import { createRelationshipsService } from '../relationships/relationships.service.js';
 import { createThreadSchema, updateThreadSchema } from './threads.schemas.js';
-import { messages } from '@gratonite/db';
-import { desc, eq } from 'drizzle-orm';
+import { messages, relationships } from '@gratonite/db';
+import { and, desc, eq, or } from 'drizzle-orm';
 import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
 
 export function threadsRouter(ctx: AppContext): Router {
@@ -15,6 +16,7 @@ export function threadsRouter(ctx: AppContext): Router {
   const guildsService = createGuildsService(ctx);
   const channelsService = createChannelsService(ctx);
   const threadsService = createThreadsService(ctx);
+  const relService = createRelationshipsService(ctx);
 
   async function ensureChannelAccess(channelId: string, userId: string) {
     const channel = await channelsService.getChannel(channelId);
@@ -38,6 +40,26 @@ export function threadsRouter(ctx: AppContext): Router {
     }
 
     return thread;
+  }
+
+  async function getBlockedUserIdsForViewer(viewerId: string): Promise<Set<string>> {
+    const rows = await ctx.db
+      .select({ userId: relationships.userId, targetId: relationships.targetId })
+      .from(relationships)
+      .where(
+        and(
+          eq(relationships.type, 'blocked'),
+          or(eq(relationships.userId, viewerId), eq(relationships.targetId, viewerId)),
+        ),
+      );
+    const blocked = new Set<string>();
+    for (const row of rows) {
+      const a = String(row.userId);
+      const b = String(row.targetId);
+      if (a === viewerId) blocked.add(b);
+      if (b === viewerId) blocked.add(a);
+    }
+    return blocked;
   }
 
   // ── Create thread ───────────────────────────────────────────────────────
@@ -182,7 +204,8 @@ export function threadsRouter(ctx: AppContext): Router {
     if (!thread) return res.status(403).json({ code: 'FORBIDDEN' });
 
     const members = await threadsService.getThreadMembers(req.params.threadId);
-    res.json(members);
+    const blockedIds = await getBlockedUserIdsForViewer(req.user!.userId);
+    res.json(members.filter((member: any) => !blockedIds.has(String(member.userId ?? member.id))));
   });
 
   router.put('/threads/:threadId/members/@me', auth, async (req, res) => {

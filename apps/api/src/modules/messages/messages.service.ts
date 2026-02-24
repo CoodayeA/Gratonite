@@ -14,6 +14,8 @@ import {
   scheduledMessages,
   users,
   userProfiles,
+  userRoles,
+  guildRoles,
 } from '@gratonite/db';
 import type { AppContext } from '../../lib/context.js';
 import { generateId } from '../../lib/snowflake.js';
@@ -23,6 +25,7 @@ import type {
   CreateScheduledMessageInput,
 } from './messages.schemas.js';
 import { createFilesService } from '../files/files.service.js';
+import { createGratonitesService } from '../gratonites/gratonites.service.js';
 import { GatewayIntents, emitRoomWithIntent } from '../../lib/gateway-intents.js';
 
 const MESSAGE_TYPE_POLL = 22;
@@ -54,16 +57,50 @@ export function createMessagesService(ctx: AppContext) {
 
     // Parse mentions from content
     const mentionMatches = content.match(/<@!?(\d+)>/g) ?? [];
-    const mentionIds = mentionMatches.map((m) => m.replace(/<@!?/, '').replace(/>/, ''));
+    let mentionIds = mentionMatches.map((m) => m.replace(/<@!?/, '').replace(/>/, ''));
     const mentionEveryone = content.includes('@everyone') || content.includes('@here');
     const roleMentionMatches = content.match(/<@&(\d+)>/g) ?? [];
     const roleMentionIds = roleMentionMatches.map((m) => m.replace(/<@&/, '').replace(/>/, ''));
+    if (guildId && roleMentionIds.length > 0) {
+      const validRoles = await ctx.db
+        .select({ id: guildRoles.id })
+        .from(guildRoles)
+        .where(
+          and(
+            eq(guildRoles.guildId, guildId),
+            inArray(guildRoles.id, roleMentionIds),
+            eq(guildRoles.mentionable, true),
+          ),
+        );
+      const validRoleIds = validRoles.map((row) => String(row.id));
+      if (validRoleIds.length > 0) {
+        const roleMembers = await ctx.db
+          .select({ userId: userRoles.userId })
+          .from(userRoles)
+          .where(
+            and(
+              eq(userRoles.guildId, guildId),
+              inArray(userRoles.roleId, validRoleIds),
+            ),
+          );
+        const merged = new Set(mentionIds);
+        for (const row of roleMembers) {
+          const id = String(row.userId);
+          if (id !== authorId) merged.add(id);
+        }
+        mentionIds = Array.from(merged);
+      }
+    }
 
     // Build message reference snapshot if replying
     let referencedMessage = null;
     if (input.messageReference) {
       const [ref] = await ctx.db
-        .select({ id: messages.id, content: messages.content, authorId: messages.authorId })
+        .select({ 
+          id: messages.id, 
+          content: messages.content, 
+          authorId: messages.authorId,
+        })
         .from(messages)
         .where(eq(messages.id, input.messageReference.messageId))
         .limit(1);
@@ -157,6 +194,24 @@ export function createMessagesService(ctx: AppContext) {
 
       return created;
     });
+
+    // Increment user's message count and check for milestones (non-blocking)
+    if (!authorId.startsWith('bot_')) { // Skip bots
+      const gratonitesService = createGratonitesService(ctx);
+      
+      // Update message count
+      const [updatedProfile] = await ctx.db
+        .update(userProfiles)
+        .set({ messageCount: sql`${userProfiles.messageCount} + 1` })
+        .where(eq(userProfiles.userId, authorId))
+        .returning({ messageCount: userProfiles.messageCount });
+
+      // Check for milestones
+      if (updatedProfile) {
+        gratonitesService.checkMessageMilestone(authorId, updatedProfile.messageCount)
+          .catch(() => {}); // Best effort, don't block
+      }
+    }
 
     if (uploadedIds.length > 0) {
       await Promise.all(uploadedIds.map((id) => filesService.clearPendingUpload(id)));
@@ -374,7 +429,20 @@ export function createMessagesService(ctx: AppContext) {
   }
 
   async function removeReaction(messageId: string, userId: string, emojiName: string) {
-    const deleted = await ctx.db
+    const [existing] = await ctx.db
+      .select()
+      .from(messageReactionUsers)
+      .where(
+        and(
+          eq(messageReactionUsers.messageId, messageId),
+          eq(messageReactionUsers.userId, userId),
+          eq(messageReactionUsers.emojiName, emojiName),
+        ),
+      )
+      .limit(1);
+    if (!existing) return false;
+
+    await ctx.db
       .delete(messageReactionUsers)
       .where(
         and(
@@ -405,6 +473,7 @@ export function createMessagesService(ctx: AppContext) {
           eq(messageReactions.count, 0),
         ),
       );
+    return true;
   }
 
   async function getReactions(messageId: string) {
@@ -790,6 +859,35 @@ export function createMessagesService(ctx: AppContext) {
       .from(messageAttachments)
       .where(eq(messageAttachments.messageId, message.id));
 
+    const reactionsList = await ctx.db
+      .select({
+        messageId: messageReactions.messageId,
+        emoji: messageReactions.emojiName,
+        count: messageReactions.count,
+      })
+      .from(messageReactions)
+      .where(eq(messageReactions.messageId, message.id));
+
+    const reactionUsers = await ctx.db
+      .select({
+        messageId: messageReactionUsers.messageId,
+        emoji: messageReactionUsers.emojiName,
+        userId: messageReactionUsers.userId,
+      })
+      .from(messageReactionUsers)
+      .where(eq(messageReactionUsers.messageId, message.id));
+
+    const reactionsByEmoji = new Map<string, { emoji: string; count: number; userIds: string[] }>();
+    for (const r of reactionsList) {
+      reactionsByEmoji.set(r.emoji, { emoji: r.emoji, count: r.count, userIds: [] });
+    }
+    for (const ru of reactionUsers) {
+      const existing = reactionsByEmoji.get(ru.emoji)
+        ?? { emoji: ru.emoji, count: 0, userIds: [] };
+      existing.userIds.push(ru.userId.toString());
+      reactionsByEmoji.set(ru.emoji, existing);
+    }
+
     const poll = message.pollId ? await getPoll(message.pollId) : null;
 
     // Fetch author info
@@ -808,6 +906,7 @@ export function createMessagesService(ctx: AppContext) {
     return {
       ...message,
       attachments,
+      reactions: Array.from(reactionsByEmoji.values()),
       poll,
       author: authorRow ?? { id: message.authorId, username: 'Deleted User', displayName: 'Deleted User', avatarHash: null },
     };
@@ -841,13 +940,15 @@ export function createMessagesService(ctx: AppContext) {
             username: users.username,
             displayName: userProfiles.displayName,
             avatarHash: userProfiles.avatarHash,
+            primaryColor: userProfiles.primaryColor,
+            accentColor: userProfiles.accentColor,
           })
           .from(users)
           .innerJoin(userProfiles, eq(users.id, userProfiles.userId))
           .where(inArray(users.id, authorIds))
       : [];
     const authorsById = new Map(authorRows.map((a) => [a.id, a]));
-    const deletedAuthor = { id: '0', username: 'Deleted User', displayName: 'Deleted User', avatarHash: null };
+    const deletedAuthor = { id: '0', username: 'Deleted User', displayName: 'Deleted User', avatarHash: null, primaryColor: null, accentColor: null };
 
     // Fetch polls
     let pollsById = new Map<string, any>();
@@ -868,9 +969,43 @@ export function createMessagesService(ctx: AppContext) {
       );
     }
 
+    // Fetch reactions
+    const reactions = await ctx.db
+      .select({
+        messageId: messageReactions.messageId,
+        emoji: messageReactions.emojiName,
+        count: messageReactions.count,
+      })
+      .from(messageReactions)
+      .where(inArray(messageReactions.messageId, messageIds));
+
+    const reactionUsers = await ctx.db
+      .select({
+        messageId: messageReactionUsers.messageId,
+        emoji: messageReactionUsers.emojiName,
+        userId: messageReactionUsers.userId,
+      })
+      .from(messageReactionUsers)
+      .where(inArray(messageReactionUsers.messageId, messageIds));
+
+    const reactionsByMessage = new Map<string, Map<string, { emoji: string; count: number; userIds: string[] }>>();
+    for (const r of reactions) {
+      const byEmoji = reactionsByMessage.get(r.messageId) ?? new Map();
+      byEmoji.set(r.emoji, { emoji: r.emoji, count: r.count, userIds: [] });
+      reactionsByMessage.set(r.messageId, byEmoji);
+    }
+    for (const ru of reactionUsers) {
+      const byEmoji = reactionsByMessage.get(ru.messageId) ?? new Map();
+      const existing = byEmoji.get(ru.emoji) ?? { emoji: ru.emoji, count: 0, userIds: [] };
+      existing.userIds.push(ru.userId.toString());
+      byEmoji.set(ru.emoji, existing);
+      reactionsByMessage.set(ru.messageId, byEmoji);
+    }
+
     return list.map((message) => ({
       ...message,
       attachments: attachmentsByMessage.get(message.id) ?? [],
+      reactions: Array.from(reactionsByMessage.get(message.id)?.values() ?? []),
       poll: message.pollId ? pollsById.get(message.pollId) ?? null : null,
       author: authorsById.get(message.authorId) ?? { ...deletedAuthor, id: message.authorId },
     }));

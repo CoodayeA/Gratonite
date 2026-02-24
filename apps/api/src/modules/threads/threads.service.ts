@@ -166,17 +166,17 @@ export function createThreadsService(ctx: AppContext) {
 
   async function archiveStaleThreads() {
     await ctx.db.execute(sql`
-      UPDATE ${threads}
-      SET ${threads.archived} = true
-      WHERE ${threads.archived} = false
+      UPDATE ${threads} AS t
+      SET archived = true
+      WHERE t.archived = false
         AND COALESCE(
           (
             SELECT MAX(${messages.createdAt})
             FROM ${messages}
-            WHERE ${messages.channelId} = ${threads.id}
+            WHERE ${messages.channelId} = t.id
           ),
-          ${threads.createdAt}
-        ) < (NOW() - (${threads.autoArchiveDuration} * INTERVAL '1 minute'))
+          t.created_at
+        ) < (NOW() - (t.auto_archive_duration * INTERVAL '1 minute'))
     `);
   }
 

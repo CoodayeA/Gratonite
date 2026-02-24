@@ -176,8 +176,12 @@ export const useMessagesStore = create<MessagesState>((set) => ({
       const reactionIdx = reactions.findIndex((r: any) => r.emoji === emoji);
       if (reactionIdx >= 0) {
         const r = { ...reactions[reactionIdx]! };
-        r.count = (r.count ?? 0) + 1;
-        r.userIds = [...(r.userIds ?? []), userId];
+        const existingUserIds = Array.isArray(r.userIds) ? [...r.userIds] : [];
+        if (existingUserIds.includes(userId)) {
+          return state;
+        }
+        r.userIds = [...existingUserIds, userId];
+        r.count = Math.max(r.userIds.length, (r.count ?? 0) + 1);
         reactions[reactionIdx] = r;
       } else {
         reactions.push({ emoji, count: 1, userIds: [userId] });
@@ -203,8 +207,12 @@ export const useMessagesStore = create<MessagesState>((set) => ({
       if (reactionIdx < 0) return state;
 
       const r = { ...reactions[reactionIdx]! };
-      r.count = Math.max(0, (r.count ?? 1) - 1);
-      r.userIds = (r.userIds ?? []).filter((id: string) => id !== userId);
+      const existingUserIds = Array.isArray(r.userIds) ? r.userIds : [];
+      if (!existingUserIds.includes(userId)) {
+        return state;
+      }
+      r.userIds = existingUserIds.filter((id: string) => id !== userId);
+      r.count = r.userIds.length;
       if (r.count <= 0) {
         reactions.splice(reactionIdx, 1);
       } else {

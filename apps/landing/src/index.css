@@ -1,0 +1,138 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-serif: "Libre Baskerville", serif;
+  
+  --color-paper: #f8fafc;
+  --color-gratonite: #7C3AED;
+  --color-gratonite-light: #A855F7;
+  --color-gratonite-dark: #581C87;
+  --color-gratonite-pink: #EC4899;
+  --color-gratonite-teal: #14B8A6;
+  --color-gratonite-yellow: #F59E0B;
+  --color-gratonite-purple-soft: #EDE9FE;
+  --color-ink: #1e293b;
+  --color-ink-light: #64748b;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  body {
+    @apply bg-paper text-ink antialiased selection:bg-gratonite/20 transition-colors duration-500;
+  }
+  
+  body.dark {
+    @apply bg-[#0f0a1a] text-slate-200;
+  }
+  
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight;
+  }
+}
+
+.hexagon {
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+
+.organic-blob {
+  @apply absolute rounded-full blur-[120px] opacity-40 pointer-events-none transition-opacity duration-700;
+}
+
+.dark .organic-blob {
+  @apply opacity-20;
+}
+
+.glass-card {
+  @apply bg-white/70 backdrop-blur-xl border border-white/40 transition-all duration-500;
+  box-shadow: 0 10px 40px rgba(124, 58, 237, 0.1);
+}
+
+.dark .glass-card {
+  @apply bg-[#1a1025]/80 border-gratonite-dark/30;
+  box-shadow: none;
+}
+
+.gratonite-gradient {
+  @apply bg-gradient-to-br from-gratonite via-gratonite-light to-gratonite-pink;
+}
+
+.text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-gratonite via-gratonite-light to-gratonite-pink;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(2deg); }
+}
+
+@keyframes float-reverse {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(20px) rotate(-2deg); }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-30px) rotate(3deg); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(124, 58, 237, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(124, 58, 237, 0.6); }
+}
+
+@keyframes bubble-rise {
+  0% { transform: translateY(0) scale(1); opacity: 0.8; }
+  100% { transform: translateY(-100px) scale(0.5); opacity: 0; }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+  animation: float-reverse 7s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float-slow 8s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes float-particle {
+  0%, 100% { 
+    transform: translateY(0px) translateX(0px); 
+    opacity: 0;
+  }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { 
+    transform: translateY(-100vh) translateX(20px); 
+    opacity: 0;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease infinite;
+}
+
+.floating-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.8) 0%, transparent 70%);
+  pointer-events: none;
+}

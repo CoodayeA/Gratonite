@@ -197,6 +197,12 @@ export function profilesRouter(ctx: AppContext): Router {
     res.json(effects);
   });
 
+  // ── List nameplates ────────────────────────────────────────────────────
+  router.get('/nameplates', optAuth, async (_req, res) => {
+    const nameplates = await profilesService.getNameplates();
+    res.json(nameplates);
+  });
+
   // ── Equip decoration / effect ──────────────────────────────────────────
   router.patch('/users/@me/customization', auth, async (req, res) => {
     const parsed = equipCustomizationSchema.safeParse(req.body);
@@ -209,7 +215,11 @@ export function profilesRouter(ctx: AppContext): Router {
     const result = await profilesService.equipCustomization(req.user!.userId, parsed.data);
 
     if ('error' in result) {
-      if (result.error === 'DECORATION_NOT_FOUND' || result.error === 'EFFECT_NOT_FOUND') {
+      if (
+        result.error === 'DECORATION_NOT_FOUND' ||
+        result.error === 'EFFECT_NOT_FOUND' ||
+        result.error === 'NAMEPLATE_NOT_FOUND'
+      ) {
         return res.status(404).json({ code: result.error });
       }
       return res.status(400).json({ code: result.error });

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 import { useMessagesStore } from '@/stores/messages.store';
 import { useAuthStore } from '@/stores/auth.store';
 import { formatTypingText } from '@/lib/utils';
@@ -32,25 +34,30 @@ export function TypingIndicator({ channelId }: TypingIndicatorProps) {
     return () => clearInterval(interval);
   }, [channelId, typingMap, clearTyping]);
 
-  if (!typingMap || typingMap.size === 0) {
-    return <div className="typing-indicator" />;
-  }
-
   // Filter out current user and stale entries
   const now = Date.now();
   const activeTypers: string[] = [];
-  typingMap.forEach((timestamp, userId) => {
+  typingMap?.forEach((timestamp, userId) => {
     if (userId !== currentUserId && now - timestamp < TYPING_TIMEOUT) {
       activeTypers.push(userId);
     }
   });
 
-  if (activeTypers.length === 0) {
+  const { data: typers = [] } = useQuery({
+    queryKey: ['users', 'summaries', activeTypers],
+    queryFn: () => api.users.getSummaries(activeTypers),
+    enabled: activeTypers.length > 0,
+  });
+
+  const typerNameById = new Map(
+    typers.map((u) => [u.id, u.displayName || u.username || 'Someone']),
+  );
+  const resolvedTypers = activeTypers.map((id) => typerNameById.get(id) ?? 'Someone');
+  const text = formatTypingText(resolvedTypers);
+
+  if (!typingMap || typingMap.size === 0 || activeTypers.length === 0) {
     return <div className="typing-indicator" />;
   }
-
-  // For MVP we show userIds — ideally we'd resolve to display names
-  const text = formatTypingText(activeTypers);
 
   return (
     <div className="typing-indicator typing-indicator-active">
