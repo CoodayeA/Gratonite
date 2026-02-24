@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useRef, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/components/ui/Modal';
@@ -145,12 +145,25 @@ export function CreateGuildModal() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Discord import state
+  const [importMode, setImportMode] = useState(false);
+  const [importPreview, setImportPreview] = useState<{
+    name: string;
+    categories: { name: string; channels: { name: string; type: 'text' | 'voice'; topic?: string }[] }[];
+    roles: { name: string; color: string }[];
+  } | null>(null);
+  const [importing, setImporting] = useState(false);
+  const importFileRef = useRef<HTMLInputElement>(null);
+
   function handleClose() {
     setName('');
     setDescription('');
     setTemplateId('gaming');
     setError('');
     setLoading(false);
+    setImportMode(false);
+    setImportPreview(null);
+    setImporting(false);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -222,61 +235,208 @@ export function CreateGuildModal() {
     }
   }
 
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setError('');
+    setImporting(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/v1/guilds/import/discord', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Import failed');
+      }
+      const preview = await res.json();
+      setImportPreview(preview);
+      setName(preview.name);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  async function handleConfirmImport(e: FormEvent) {
+    e.preventDefault();
+    if (!importPreview) return;
+    setError('');
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/v1/guilds/import/discord/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: name.trim() || importPreview.name,
+          categories: importPreview.categories,
+          roles: importPreview.roles,
+        }),
+      });
+      if (!res.ok) throw new Error('Import creation failed');
+      const { guildId } = await res.json();
+
+      const guildChannels = await api.channels.getGuildChannels(guildId);
+      const textChannels = guildChannels.filter((channel) => channel.type === 'GUILD_TEXT');
+      const landingChannel = textChannels.find((channel) => channel.name === 'general') ?? textChannels[0] ?? guildChannels[0];
+
+      queryClient.invalidateQueries({ queryKey: ['guilds', '@me'] });
+      closeModal();
+      handleClose();
+      if (landingChannel) {
+        navigate(`/guild/${guildId}/channel/${landingChannel.id}`);
+      } else {
+        navigate(`/guild/${guildId}`);
+      }
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <Modal id="create-guild" title="Create a Portal" onClose={handleClose}>
-      <form onSubmit={handleSubmit} className="modal-form">
-        {error && <div className="auth-error">{error}</div>}
+    <Modal id="create-guild" title={importMode ? 'Import from Discord' : 'Create a Portal'} onClose={handleClose}>
+      {importMode ? (
+        <form onSubmit={handleConfirmImport} className="modal-form">
+          {error && <div className="auth-error">{error}</div>}
+          <input ref={importFileRef} type="file" accept=".json" hidden onChange={handleImportFile} />
 
-        <div className="create-guild-template-group">
-          <div className="input-label">Template</div>
-          <div className="create-guild-template-grid">
-            {SERVER_TEMPLATES.map((template) => (
-              <button
-                key={template.id}
+          {!importPreview ? (
+            <>
+              <div className="discord-import-info">
+                Upload a Discord server export JSON file. Your server structure (channels, categories, roles) will be recreated as a Gratonite portal.
+              </div>
+              <Button
                 type="button"
-                className={`create-guild-template-card ${templateId === template.id ? 'create-guild-template-card-active' : ''}`}
-                onClick={() => setTemplateId(template.id)}
+                variant="primary"
+                loading={importing}
+                onClick={() => importFileRef.current?.click()}
               >
-                <span className="create-guild-template-icon">{template.icon}</span>
-                <span className="create-guild-template-title">{template.label}</span>
-                <span className="create-guild-template-description">{template.description}</span>
-              </button>
-            ))}
+                Choose File
+              </Button>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Portal Name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                maxLength={100}
+              />
+
+              <div className="discord-import-preview">
+                <div className="input-label">Preview</div>
+                {importPreview.categories.map((cat, i) => (
+                  <div key={i} className="discord-import-category">
+                    <div className="discord-import-category-name">{cat.name}</div>
+                    {cat.channels.map((ch, j) => (
+                      <div key={j} className="discord-import-channel">
+                        <span className="discord-import-channel-icon">{ch.type === 'voice' ? '#)' : '#'}</span>
+                        {ch.name}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+                {importPreview.roles.length > 0 && (
+                  <div className="discord-import-roles">
+                    <div className="input-label" style={{ marginTop: 8 }}>Roles</div>
+                    <div className="discord-import-roles-list">
+                      {importPreview.roles.map((role, i) => (
+                        <span key={i} className="discord-import-role" style={{ color: role.color }}>
+                          {role.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          <div className="modal-footer">
+            <Button variant="ghost" type="button" onClick={() => { setImportMode(false); setImportPreview(null); setError(''); }}>
+              Back
+            </Button>
+            {importPreview && (
+              <Button type="submit" loading={loading}>
+                Create Portal
+              </Button>
+            )}
           </div>
-          <div className="create-guild-template-hint">
-            Each template creates organized categories with text and voice channels. Customize freely after creation.
+        </form>
+      ) : (
+        <form onSubmit={handleSubmit} className="modal-form">
+          {error && <div className="auth-error">{error}</div>}
+
+          <div className="create-guild-template-group">
+            <div className="input-label">Template</div>
+            <div className="create-guild-template-grid">
+              {SERVER_TEMPLATES.map((template) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  className={`create-guild-template-card ${templateId === template.id ? 'create-guild-template-card-active' : ''}`}
+                  onClick={() => setTemplateId(template.id)}
+                >
+                  <span className="create-guild-template-icon">{template.icon}</span>
+                  <span className="create-guild-template-title">{template.label}</span>
+                  <span className="create-guild-template-description">{template.description}</span>
+                </button>
+              ))}
+            </div>
+            <div className="create-guild-template-hint">
+              Each template creates organized categories with text and voice channels. Customize freely after creation.
+            </div>
+            <button
+              type="button"
+              className="discord-import-link"
+              onClick={() => setImportMode(true)}
+            >
+              Or import from Discord
+            </button>
           </div>
-        </div>
 
-        <Input
-          label="Portal Name"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          autoFocus
-          maxLength={100}
-          placeholder="My Awesome Portal"
-        />
+          <Input
+            label="Portal Name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            autoFocus
+            maxLength={100}
+            placeholder="My Awesome Portal"
+          />
 
-        <Input
-          label="Description (optional)"
-          type="text"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          maxLength={1000}
-          placeholder="What is this portal about?"
-        />
+          <Input
+            label="Description (optional)"
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            maxLength={1000}
+            placeholder="What is this portal about?"
+          />
 
-        <div className="modal-footer">
-          <Button variant="ghost" type="button" onClick={() => { closeModal(); handleClose(); }}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={loading} disabled={!name.trim()}>
-            Create
-          </Button>
-        </div>
-      </form>
+          <div className="modal-footer">
+            <Button variant="ghost" type="button" onClick={() => { closeModal(); handleClose(); }}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={loading} disabled={!name.trim()}>
+              Create
+            </Button>
+          </div>
+        </form>
+      )}
     </Modal>
   );
 }

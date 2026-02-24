@@ -867,5 +867,49 @@ export function guildsRouter(ctx: AppContext): Router {
     res.status(204).send();
   });
 
+  // ── Discord Import ───────────────────────────────────────────────────
+
+  const importUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  });
+
+  // Preview Discord export (parse only, no creation)
+  router.post('/import/discord', auth, importUpload.single('file'), async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ code: 'NO_FILE', message: 'File required' });
+    }
+
+    try {
+      const data = JSON.parse(req.file.buffer.toString('utf8'));
+      const parsed = guildsService.parseDiscordExport(data);
+      return res.json(parsed);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        return res.status(400).json({ code: 'INVALID_JSON', message: 'File is not valid JSON' });
+      }
+      if (err instanceof Error && err.message === 'INVALID_FORMAT') {
+        return res.status(400).json({ code: 'INVALID_FORMAT', message: 'Unrecognized Discord export format' });
+      }
+      throw err;
+    }
+  });
+
+  // Confirm and create guild from Discord import
+  router.post('/import/discord/confirm', auth, async (req, res) => {
+    const { name, categories, roles } = req.body;
+
+    if (!name || !Array.isArray(categories)) {
+      return res.status(400).json({ code: 'INVALID_INPUT', message: 'name and categories required' });
+    }
+
+    try {
+      const result = await guildsService.createGuildFromImport(req.user!.userId, { name, categories, roles: roles ?? [] });
+      return res.status(201).json(result);
+    } catch (err) {
+      throw err;
+    }
+  });
+
   return router;
 }
