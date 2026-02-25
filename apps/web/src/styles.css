@@ -1969,20 +1969,17 @@ button {
   display: grid;
   place-items: center;
   padding: 24px;
-  background:
-    radial-gradient(circle at 10% 20%, rgba(95, 215, 255, 0.08), transparent 35%),
-    radial-gradient(circle at 80% 10%, rgba(255, 207, 106, 0.06), transparent 40%),
-    radial-gradient(circle at 70% 80%, rgba(155, 255, 223, 0.06), transparent 35%),
-    var(--bg);
+  background: linear-gradient(135deg, #2c2c3e 0%, #3e3a5a 40%, #5a4a7a 100%);
 }
 
 .auth-card {
   width: 100%;
   max-width: 440px;
-  background: rgba(17, 26, 43, 0.85);
-  backdrop-filter: blur(24px);
-  border: 1px solid var(--stroke);
-  border-radius: var(--radius-xl);
+  background: rgba(44, 44, 62, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(74, 70, 96, 0.5);
+  border-radius: 16px;
   padding: 40px;
 }
 
