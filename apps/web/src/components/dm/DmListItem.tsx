@@ -41,9 +41,10 @@ export function DmListItem({
   lastMessageAt,
   unreadCount,
 }: DmListItemProps) {
+  const hasUnread = unreadCount != null && unreadCount > 0;
   const preview =
-    lastMessage && lastMessage.length > 40
-      ? lastMessage.slice(0, 40) + '...'
+    lastMessage && lastMessage.length > 36
+      ? lastMessage.slice(0, 36) + '\u2026'
       : lastMessage;
 
   return (
@@ -52,27 +53,43 @@ export function DmListItem({
       className={({ isActive }) =>
         `dm-list-item${isActive ? ' active' : ''}`
       }
+      style={{
+        cursor: 'pointer',
+      }}
     >
       <Avatar
         name={recipientName}
         hash={recipientAvatar}
         userId={recipientId}
-        size={32}
+        size={36}
       />
       <div className="dm-list-item-info">
-        <span className="dm-list-item-name">{recipientName}</span>
+        <span
+          className="dm-list-item-name"
+          style={hasUnread ? { fontWeight: 700 } : undefined}
+        >
+          {recipientName}
+        </span>
         {preview && (
-          <span className="dm-list-item-preview">{preview}</span>
+          <span
+            className="dm-list-item-preview"
+            style={hasUnread ? { color: 'var(--text, #e8e4e0)' } : undefined}
+          >
+            {preview}
+          </span>
         )}
       </div>
       <div className="dm-list-item-meta">
         {lastMessageAt && (
-          <span className="dm-list-item-time">
+          <span
+            className="dm-list-item-time"
+            style={hasUnread ? { color: 'var(--accent, #d4af37)' } : undefined}
+          >
             {formatRelativeTime(lastMessageAt)}
           </span>
         )}
-        {unreadCount != null && unreadCount > 0 && (
-          <span className="channel-unread-badge">
+        {hasUnread && (
+          <span className="dm-list-item-unread-badge">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -83,7 +100,7 @@ export function DmListItem({
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          console.log('close DM', channelId);
+          // TODO: implement DM close/hide
         }}
         title="Close DM"
         aria-label="Close DM"
