@@ -8,15 +8,15 @@
   color-scheme: dark;
 
   /* Backgrounds */
-  --bg: #0a0f1a;
-  --bg-elevated: #111a2b;
-  --bg-soft: #141f33;
-  --bg-float: #0d1425;
-  --bg-input: rgba(10, 15, 26, 0.8);
+  --bg: #2c2c3e;
+  --bg-elevated: #353348;
+  --bg-soft: #413d58;
+  --bg-float: #25243a;
+  --bg-input: #25243a;
 
   /* Borders */
-  --stroke: rgba(140, 178, 220, 0.16);
-  --stroke-strong: rgba(140, 178, 220, 0.28);
+  --stroke: #4a4660;
+  --stroke-strong: rgba(74, 70, 96, 0.5);
 
   /* === Gratonite Design System — Fonts === */
   --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
@@ -24,29 +24,41 @@
   --font-serif: 'Libre Baskerville', serif;
 
   /* === Gratonite Design System — Brand Colors === */
-  --gratonite: #7C3AED;
-  --gratonite-light: #A855F7;
-  --gratonite-dark: #581C87;
-  --gratonite-pink: #EC4899;
-  --gratonite-teal: #14B8A6;
-  --gratonite-yellow: #F59E0B;
-  --gratonite-purple-soft: #EDE9FE;
+  --gratonite: #d4af37;
+  --gratonite-light: #e8c547;
+  --gratonite-dark: #a08828;
+  --gratonite-gold: #d4af37;
+  --gratonite-gold-bright: #e8c547;
+  --gratonite-purple: #5a4a7a;
+  --gratonite-purple-soft: #3e3a5a;
 
   /* Accents */
-  --accent: #7C3AED;
-  --accent-2: #ffcf6a;
-  --accent-3: #9bffdf;
-  --danger: #ff6b6b;
-  --danger-bg: rgba(255, 107, 107, 0.12);
+  --accent: #d4af37;
+  --accent-2: #e8c547;
+  --accent-3: #6aea8a;
+  --danger: #e85a6e;
+  --danger-bg: rgba(232, 90, 110, 0.12);
 
   /* Text */
-  --text: #f1f6ff;
-  --text-muted: #9fb1c7;
-  --text-faint: #6a7d94;
+  --text: #e8e4e0;
+  --text-muted: #a8a4b8;
+  --text-faint: #6e6a80;
 
   /* Gradients */
-  --gradient-primary: linear-gradient(120deg, rgba(95, 215, 255, 0.25), rgba(255, 207, 106, 0.2));
+  --gradient-primary: linear-gradient(120deg, rgba(212, 175, 55, 0.25), rgba(90, 74, 122, 0.2));
   --gradient-accent: linear-gradient(135deg, var(--accent), var(--accent-2));
+
+  /* Extended Palette */
+  --bg-purple-velvet: #5a4a7a;
+  --bg-purple-dark: #3e3a5a;
+  --text-on-gold: #1a1a2e;
+  --gold-glow: rgba(212, 175, 55, 0.125);
+  --gold-subtle: rgba(212, 175, 55, 0.19);
+  --border-gold: rgba(212, 175, 55, 0.25);
+  --frosted-glass: rgba(44, 44, 62, 0.15);
+  --success: #4a8a5a;
+  --success-text: #6aea8a;
+  --danger-wine: #6a2a3a;
 
   /* Motion */
   --motion-fast: 140ms;
@@ -66,6 +78,143 @@
   --radius-xl: 20px;
   --radius-pill: 999px;
 }
+
+/* ==========================================================================
+   Light Mode Overrides
+   ========================================================================== */
+
+:root[data-color-mode='light'] {
+  color-scheme: light;
+
+  /* Backgrounds */
+  --bg: #f5f7fb;
+  --bg-elevated: #ffffff;
+  --bg-soft: #edf0f7;
+  --bg-float: #ffffff;
+  --bg-input: rgba(237, 240, 247, 0.9);
+
+  /* Borders */
+  --stroke: rgba(60, 80, 120, 0.14);
+  --stroke-strong: rgba(60, 80, 120, 0.24);
+
+  /* Accents — slightly adjusted for light backgrounds */
+  --accent: #a08828;
+  --accent-2: #c4a030;
+  --accent-3: #3a8a4a;
+  --danger: #d44a5a;
+  --danger-bg: rgba(212, 74, 90, 0.08);
+
+  /* Text */
+  --text: #1a1a2e;
+  --text-muted: #5a5670;
+  --text-faint: #8a86a0;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(120deg, rgba(160, 136, 40, 0.10), rgba(90, 74, 122, 0.08));
+  --gradient-accent: linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+
+/* Component-specific light overrides for elements with hardcoded dark colors */
+:root[data-color-mode='light'] .mobile-bottom-nav {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(245, 247, 251, 0.92));
+  border-color: rgba(60, 80, 120, 0.12);
+  box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.06);
+}
+
+:root[data-color-mode='light'] .mobile-bottom-nav-item.active {
+  background: linear-gradient(135deg, rgba(160, 136, 40, 0.10), rgba(90, 74, 122, 0.08));
+  border-color: rgba(160, 136, 40, 0.15);
+}
+
+:root[data-color-mode='light'] .mobile-bottom-nav-badge {
+  background: rgba(160, 136, 40, 0.12);
+  border-color: rgba(160, 136, 40, 0.25);
+}
+
+:root[data-color-mode='light'] .guild-rail {
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.06);
+}
+
+:root[data-color-mode='light'] .guild-rail-home-icon,
+:root[data-color-mode='light'] .guild-rail-icon {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+:root[data-color-mode='light'] .channel-sidebar {
+  background: var(--bg);
+  border-right: 1px solid var(--stroke);
+}
+
+:root[data-color-mode='light'] .topbar {
+  background: var(--bg-elevated);
+  box-shadow: 0 1px 0 var(--stroke);
+}
+
+:root[data-color-mode='light'] .mobile-shell-backdrop {
+  background: rgba(0, 0, 0, 0.20);
+}
+
+:root[data-color-mode='light'] .modal-overlay {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+:root[data-color-mode='light'] .modal-card {
+  background: var(--bg-elevated);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+:root[data-color-mode='light'] .create-guild-template-card {
+  background: var(--bg-soft);
+}
+
+:root[data-color-mode='light'] .create-guild-template-card:hover {
+  background: var(--bg);
+  border-color: var(--stroke-strong);
+}
+
+:root[data-color-mode='light'] .create-guild-template-card-active {
+  background: color-mix(in srgb, var(--accent) 6%, var(--bg-elevated));
+}
+
+:root[data-color-mode='light'] .create-guild-tag-input {
+  background: var(--bg-soft);
+}
+
+:root[data-color-mode='light'] .message-row:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+:root[data-color-mode='light'] .chat-input-wrapper {
+  background: var(--bg-elevated);
+  box-shadow: 0 -1px 0 var(--stroke);
+}
+
+:root[data-color-mode='light'] .settings-shell {
+  background: var(--bg);
+}
+
+:root[data-color-mode='light'] .dm-tab-bar {
+  background: var(--bg-elevated);
+}
+
+:root[data-color-mode='light'] .guild-rail-voice-tooltip {
+  background: var(--bg-elevated);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+:root[data-color-mode='light'] .discover-tag.active {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+:root[data-color-mode='light'] .auth-error {
+  background: rgba(220, 38, 38, 0.06);
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+/* ==========================================================================
+   V2 Theme Token Layer
+   ========================================================================== */
 
 :root[data-theme-v2='true'] {
   --bg: var(--semantic-surface-base, #08101c);
@@ -2033,6 +2182,24 @@ button {
     width: min(220px, 100%);
     justify-self: center;
   }
+
+  /* ── Create Guild Wizard Mobile ── */
+  .create-guild-step-indicator {
+    gap: 2px;
+  }
+
+  .create-guild-step-dot {
+    padding: 6px 4px;
+    justify-content: center;
+  }
+
+  .create-guild-step-label {
+    display: none;
+  }
+
+  .create-guild-category-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* ==========================================================================
@@ -3475,6 +3642,15 @@ button {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
 }
 
+.markdown-custom-emoji {
+  display: inline-block;
+  vertical-align: middle;
+  width: 1.5em;
+  height: 1.5em;
+  object-fit: contain;
+  margin: 0 2px;
+}
+
 .markdown-link {
   color: var(--accent);
   text-decoration: underline;
@@ -3862,12 +4038,19 @@ button {
   border-radius: 999px;
   border: 1px solid rgba(104, 223, 255, 0.2);
   background: rgba(104, 223, 255, 0.1);
-  color: #b8f3ff;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+}
+
+.composer-emoji-menu .composer-mention-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.composer-emoji-preview {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 4px;
 }
 
 .message-composer-input {
@@ -4789,19 +4972,15 @@ button.home-dashboard-tile {
   50% { box-shadow: 0 0 0 3px rgba(46, 204, 113, 0); }
 }
 
-/* Voice tooltip on guild hover */
+/* Voice tooltip on guild hover — rendered via portal with position:fixed */
 .guild-rail-voice-tooltip {
-  position: absolute;
-  left: calc(100% + 12px);
-  top: 50%;
-  transform: translateY(-50%);
   min-width: 160px;
   max-width: 220px;
   background: var(--bg-secondary, #1a1f2e);
   border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
   border-radius: 8px;
   padding: 8px 10px;
-  z-index: 100;
+  z-index: 9999;
   pointer-events: none;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
@@ -5090,6 +5269,191 @@ button.home-dashboard-tile {
   gap: 16px;
   min-width: 0;
 }
+
+/* ── Create Guild Wizard Steps ── */
+
+.create-guild-step-indicator {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.create-guild-step-dot {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--stroke);
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.create-guild-step-dot:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.create-guild-step-dot.active {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.create-guild-step-dot.done {
+  color: var(--text-muted);
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.create-guild-step-num {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.create-guild-step-dot.active .create-guild-step-num {
+  background: var(--accent);
+  color: #fff;
+}
+
+.create-guild-step-dot.done .create-guild-step-num {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.create-guild-step-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.create-guild-step-content {
+  display: grid;
+  gap: 12px;
+}
+
+.create-guild-step-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.create-guild-step-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* ── Categories Grid ── */
+
+.create-guild-category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.create-guild-category-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--stroke);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.create-guild-category-card:hover {
+  border-color: var(--stroke-strong);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.create-guild-category-card.selected {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--text);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent) inset;
+}
+
+.create-guild-category-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.create-guild-category-label {
+  line-height: 1.2;
+}
+
+/* ── Tags Picker ── */
+
+.create-guild-tag-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.create-guild-tag-pill {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.create-guild-tag-pill:hover {
+  border-color: var(--stroke-strong);
+  color: var(--text);
+}
+
+.create-guild-tag-pill.selected {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--text);
+}
+
+.create-guild-tag-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--stroke);
+  background: var(--bg-input, rgba(9, 14, 24, 0.72));
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.create-guild-tag-input:focus {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.create-guild-tag-input::placeholder {
+  color: var(--text-faint);
+}
+
+/* ── Template Grid (existing) ── */
 
 .create-guild-template-group {
   display: grid;
@@ -8797,6 +9161,39 @@ button.home-dashboard-tile {
   flex-wrap: wrap;
 }
 
+/* Color Mode Toggle Buttons */
+.settings-color-mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--stroke);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--motion-fast) ease;
+}
+
+.settings-color-mode-btn:hover {
+  background: var(--bg-soft);
+  color: var(--text);
+  border-color: var(--stroke-strong);
+}
+
+.settings-color-mode-btn.active {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+}
+
+.settings-color-mode-btn svg {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
 .settings-shop-card {
   margin-top: 18px;
   border: 1px solid var(--stroke);
@@ -10475,7 +10872,8 @@ button.home-dashboard-tile {
 
 @media (max-width: 900px) {
   .app-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 1fr !important;
     position: relative;
     height: 100dvh;
     min-height: 100dvh;
@@ -10497,25 +10895,27 @@ button.home-dashboard-tile {
     top: 0;
     bottom: 0;
     z-index: 80;
-    width: min(88vw, 340px);
+    width: 0;
+    overflow: visible;
     pointer-events: none;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 
   .layout-rail-shell {
     left: 0;
-    width: min(82vw, 320px);
   }
 
   .layout-channel-shell {
     right: 0;
-    width: min(88vw, 360px);
   }
 
-  .layout-rail-shell .guild-rail,
-  .layout-channel-shell .channel-sidebar {
+  .layout-rail-shell .guild-rail {
     display: flex;
     height: 100%;
-    width: 100%;
+    width: min(82vw, 320px);
     transform: translateX(-104%);
     transition: transform 0.2s ease;
     pointer-events: auto;
@@ -10523,7 +10923,13 @@ button.home-dashboard-tile {
   }
 
   .layout-channel-shell .channel-sidebar {
+    display: flex;
+    height: 100%;
+    width: min(88vw, 360px);
     transform: translateX(104%);
+    transition: transform 0.2s ease;
+    pointer-events: auto;
+    box-shadow: 0 24px 80px rgba(2, 8, 24, 0.5);
   }
 
   .app-layout.mobile-guild-rail-open .layout-rail-shell,
@@ -10560,14 +10966,14 @@ button.home-dashboard-tile {
 
   .mobile-bottom-nav {
     position: fixed;
-    left: 12px;
-    right: 12px;
-    bottom: max(10px, env(safe-area-inset-bottom, 0px));
+    left: 8px;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
     z-index: 85;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-    padding: 8px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    padding: 6px;
     border-radius: 18px;
     border: 1px solid color-mix(in srgb, var(--stroke) 85%, transparent);
     background:
@@ -10582,16 +10988,20 @@ button.home-dashboard-tile {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    min-height: 48px;
-    border-radius: 12px;
+    gap: 2px;
+    min-height: 44px;
+    border-radius: 10px;
     color: var(--text-muted);
     text-decoration: none;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.01em;
     transition: background 0.16s ease, color 0.16s ease;
     position: relative;
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 0;
   }
 
   .mobile-bottom-nav-item.active {
@@ -11078,8 +11488,32 @@ button.home-dashboard-tile {
     border-right: none;
     border-bottom: 1px solid var(--stroke);
     flex-direction: row;
-    flex-wrap: wrap;
-    gap: 10px;
+    flex-wrap: nowrap;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 14px;
+  }
+
+  .settings-sidebar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .settings-sidebar-title {
+    display: none;
+  }
+
+  .settings-nav {
+    flex-direction: row;
+    gap: 6px;
+  }
+
+  .settings-nav-item {
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 13px;
+    padding: 6px 12px;
   }
 
   .settings-content {
@@ -11393,6 +11827,8 @@ button.home-dashboard-tile {
     overflow-x: auto;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
+    mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
   }
 
   .dm-tab-bar::-webkit-scrollbar {
