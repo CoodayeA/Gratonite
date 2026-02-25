@@ -109,6 +109,12 @@ export const authApi = {
     }),
 
   refresh: () => refreshToken(),
+
+  requestEmailVerification: (email: string) =>
+    apiFetch<{ ok: true; message: string }>('/auth/verify-email/request', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
 };
 
 // ── Users ─────────────────────────────────────────────
