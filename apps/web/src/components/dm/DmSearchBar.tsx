@@ -80,7 +80,7 @@ export function DmSearchBar() {
       <input
         ref={inputRef}
         type="text"
-        placeholder="Find or Start a Conversation"
+        placeholder="Search conversations..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => {

@@ -621,51 +621,154 @@ export function ChannelSidebar() {
 
       <div className="channel-sidebar-list">
         {!guildId && (
-          <>
-            <DmSearchBar />
-            <div className="dm-action-buttons">
-              <button
-                type="button"
-                className="dm-action-btn"
-                onClick={() => openModal('add-friend')}
-                title="Add a friend"
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%',
+              background: 'var(--bg-elevated, #353348)',
+              borderRight: '1px solid var(--stroke, #4a4660)',
+              width: '100%',
+              maxWidth: 280,
+            }}
+          >
+            {/* Header section: Messages title + search + add friend */}
+            <div
+              style={{
+                padding: 20,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 16,
+                flexShrink: 0,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="8.5" cy="7" r="4" />
-                  <path d="M20 8v6" />
-                  <path d="M23 11h-6" />
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: 'var(--text, #e8e4e0)',
+                    letterSpacing: '0.01em',
+                  }}
+                >
+                  Messages
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => openModal('add-friend')}
+                  title="Add a friend"
+                  aria-label="Add a friend"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 28,
+                    height: 28,
+                    borderRadius: 6,
+                    border: '1px solid var(--stroke, #4a4660)',
+                    background: 'transparent',
+                    color: 'var(--text-muted, #a8a4b8)',
+                    cursor: 'pointer',
+                    transition: 'background 0.15s ease, color 0.15s ease, border-color 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-soft, #413d58)';
+                    e.currentTarget.style.color = 'var(--text, #e8e4e0)';
+                    e.currentTarget.style.borderColor = 'var(--accent, #d4af37)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = 'var(--text-muted, #a8a4b8)';
+                    e.currentTarget.style.borderColor = 'var(--stroke, #4a4660)';
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="8.5" cy="7" r="4" />
+                    <path d="M20 8v6" />
+                    <path d="M23 11h-6" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Search bar with icon */}
+              <div style={{ position: 'relative' }}>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--text-faint, #6e6a80)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    left: 10,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    pointerEvents: 'none',
+                    zIndex: 1,
+                  }}
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35" />
                 </svg>
-                <span>Add Friend</span>
-              </button>
+                <DmSearchBar />
+              </div>
             </div>
 
-            <div className="channel-sidebar-section">
-              <span className="channel-sidebar-section-title">DMs</span>
+            {/* Conversation list (scrollable) */}
+            <div
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '4px 8px',
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'var(--stroke, #4a4660) transparent',
+              }}
+            >
+              {dmChannels.length === 0 && (
+                <div
+                  style={{
+                    padding: '24px 12px',
+                    textAlign: 'center',
+                    color: 'var(--text-faint, #6e6a80)',
+                    fontSize: 13,
+                  }}
+                >
+                  No direct messages yet.
+                </div>
+              )}
+              {dmChannels.map((ch) => {
+                const meta = dmDirectoryById.get(ch.id);
+                const name = ch.name ?? meta?.name ?? (meta?.otherUserId ? dmUserNameById.get(meta.otherUserId) : null) ?? 'Direct Message';
+                const recipientId = meta?.otherUserId ?? '';
+                const recipientAvatar = meta?.otherUserId ? dmUsers.find(u => u.id === meta.otherUserId)?.avatarHash ?? null : null;
+                return (
+                  <DmListItem
+                    key={ch.id}
+                    channelId={ch.id}
+                    recipientName={name}
+                    recipientAvatar={recipientAvatar}
+                    recipientId={recipientId}
+                    lastMessage={meta?.lastMessageContent}
+                    lastMessageAt={meta?.lastMessageAt}
+                    unreadCount={unreadCountByChannel.get(ch.id)}
+                    channelType={ch.type}
+                  />
+                );
+              })}
             </div>
-            {dmChannels.length === 0 && (
-              <div className="channel-empty">No direct messages yet.</div>
-            )}
-            {dmChannels.map((ch) => {
-              const meta = dmDirectoryById.get(ch.id);
-              const name = ch.name ?? meta?.name ?? (meta?.otherUserId ? dmUserNameById.get(meta.otherUserId) : null) ?? 'Direct Message';
-              const recipientId = meta?.otherUserId ?? '';
-              const recipientAvatar = meta?.otherUserId ? dmUsers.find(u => u.id === meta.otherUserId)?.avatarHash ?? null : null;
-              return (
-                <DmListItem
-                  key={ch.id}
-                  channelId={ch.id}
-                  recipientName={name}
-                  recipientAvatar={recipientAvatar}
-                  recipientId={recipientId}
-                  lastMessage={meta?.lastMessageContent}
-                  lastMessageAt={meta?.lastMessageAt}
-                  unreadCount={unreadCountByChannel.get(ch.id)}
-                  channelType={ch.type}
-                />
-              );
-            })}
-          </>
+          </div>
         )}
 
         {guildId && (
