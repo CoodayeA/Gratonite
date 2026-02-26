@@ -1,9 +1,9 @@
+import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useUiStore } from '@/stores/ui.store';
 import { Avatar } from '@/components/ui/Avatar';
 import type { PresenceStatus } from '@/stores/presence.store';
-import { useMemo } from 'react';
 
 const STATUS_LABELS: Record<string, string> = {
   online: 'Online',
@@ -13,12 +13,99 @@ const STATUS_LABELS: Record<string, string> = {
   invisible: 'Offline',
 };
 
+const STATUS_COLORS: Record<string, string> = {
+  online: '#23a55a',
+  idle: '#f0b232',
+  dnd: '#f23f43',
+  offline: '#80848e',
+  invisible: '#80848e',
+};
+
+const styles = {
+  panel: {
+    width: 340,
+    background: 'rgba(11, 17, 28, 0.95)',
+    borderLeft: '1px solid var(--stroke, #4a4660)',
+    overflowY: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+  } as React.CSSProperties,
+  header: {
+    padding: 16,
+    borderBottom: '1px solid var(--stroke, #4a4660)',
+    flexShrink: 0,
+  } as React.CSSProperties,
+  title: {
+    fontFamily: 'var(--font-display)',
+    fontSize: 15,
+    fontWeight: 600,
+    color: 'var(--text, #e8e4e0)',
+  } as React.CSSProperties,
+  list: {
+    padding: 8,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+  } as React.CSSProperties,
+  row: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: 8,
+    borderRadius: 6,
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    width: '100%',
+    textAlign: 'left',
+    color: 'inherit',
+    font: 'inherit',
+    transition: 'background 0.15s ease',
+  } as React.CSSProperties,
+  rowHover: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: 8,
+    borderRadius: 6,
+    background: 'rgba(255, 255, 255, 0.04)',
+    border: 'none',
+    cursor: 'pointer',
+    width: '100%',
+    textAlign: 'left',
+    color: 'inherit',
+    font: 'inherit',
+    transition: 'background 0.15s ease',
+  } as React.CSSProperties,
+  name: {
+    fontSize: 14,
+    color: 'var(--text, #e8e4e0)',
+    flex: 1,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  } as React.CSSProperties,
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: '50%',
+    flexShrink: 0,
+  } as React.CSSProperties,
+  empty: {
+    padding: 16,
+    textAlign: 'center',
+    fontSize: 14,
+    color: 'var(--text-muted, #a8a4b8)',
+    margin: 0,
+  } as React.CSSProperties,
+} as const;
+
 export function GroupMembersPanel({ channelId }: { channelId: string }) {
   const open = useUiStore((s) => s.dmInfoPanelOpen);
   const openModal = useUiStore((s) => s.openModal);
   const queryClient = useQueryClient();
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-  // Get the recipientIds from the DM directory cache
   const memberIds = useMemo(() => {
     const dmChannels = (
       queryClient.getQueryData(['relationships', 'dms']) as
@@ -51,20 +138,23 @@ export function GroupMembersPanel({ channelId }: { channelId: string }) {
   if (!open) return null;
 
   return (
-    <aside className="group-members-panel">
-      <div className="group-members-header">
-        <span className="group-members-title">
+    <aside style={styles.panel}>
+      <div style={styles.header}>
+        <span style={styles.title}>
           Members &mdash; {members.length}
         </span>
       </div>
-      <div className="group-members-list">
+      <div style={styles.list}>
         {members.map((member) => {
           const status: PresenceStatus = presenceMap.get(member.id) ?? 'offline';
+          const dotColor = STATUS_COLORS[status] ?? STATUS_COLORS.offline;
           return (
             <button
               key={member.id}
               type="button"
-              className="group-members-row"
+              style={hoveredId === member.id ? styles.rowHover : styles.row}
+              onMouseEnter={() => setHoveredId(member.id)}
+              onMouseLeave={() => setHoveredId(null)}
               onClick={() => openModal('full-profile' as any, { userId: member.id })}
             >
               <Avatar
@@ -73,18 +163,18 @@ export function GroupMembersPanel({ channelId }: { channelId: string }) {
                 userId={member.id}
                 size={32}
               />
-              <span className="group-members-name">
+              <span style={styles.name}>
                 {member.displayName || member.username}
               </span>
               <span
-                className={`group-members-status-dot group-members-status-${status}`}
+                style={{ ...styles.statusDot, background: dotColor }}
                 title={STATUS_LABELS[status] ?? 'Offline'}
               />
             </button>
           );
         })}
         {members.length === 0 && (
-          <p className="group-members-empty">No members found</p>
+          <p style={styles.empty}>No members found</p>
         )}
       </div>
     </aside>

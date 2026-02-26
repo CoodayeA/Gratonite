@@ -1,11 +1,20 @@
 import { Router } from 'express';
+import multer from 'multer';
 import type { AppContext } from '../../lib/context.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { createVoiceService } from './voice.service.js';
 import { createGuildsService } from '../guilds/guilds.service.js';
 import { createChannelsService } from '../channels/channels.service.js';
-import { dmRecipients, dmChannels, channels } from '@gratonite/db';
-import { and, eq } from 'drizzle-orm';
+import { createMessagesService } from '../messages/messages.service.js';
+import { createFilesService } from '../files/files.service.js';
+import { dmRecipients, dmChannels, channels, messages, messageAttachments } from '@gratonite/db';
+import { and, eq, desc, sql } from 'drizzle-orm';
+import { generateId } from '../../lib/snowflake.js';
+
+const voiceMessageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+});
 import {
   joinVoiceSchema,
   updateVoiceStateSchema,

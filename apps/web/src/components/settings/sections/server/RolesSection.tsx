@@ -1,8 +1,214 @@
-import { useEffect, useMemo, useState } from 'react';
+import { type CSSProperties, useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
 import { getErrorMessage } from '@/lib/utils';
+
+/* ------------------------------------------------------------------ */
+/*  Inline style objects                                               */
+/* ------------------------------------------------------------------ */
+
+const styles = {
+  section: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+  },
+  headerRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  heading: {
+    fontSize: 18,
+    fontWeight: 700,
+    color: '#e8e4e0',
+    margin: 0,
+  },
+  muted: {
+    fontSize: 13,
+    color: '#a8a4b8',
+    margin: 0,
+  },
+  actions: {
+    display: 'flex',
+    gap: 8,
+    flexShrink: 0,
+  },
+  resetBtn: {
+    background: 'transparent',
+    border: '1px solid #4a4660',
+    color: '#a8a4b8',
+    borderRadius: 6,
+    padding: '4px 12px',
+    fontSize: 12,
+    cursor: 'pointer',
+  },
+  error: {
+    background: 'rgba(240,71,71,0.12)',
+    color: '#f04747',
+    border: '1px solid rgba(240,71,71,0.3)',
+    borderRadius: 8,
+    padding: '8px 12px',
+    fontSize: 13,
+  },
+  feedback: {
+    background: 'rgba(212,175,55,0.10)',
+    color: '#d4af37',
+    border: '1px solid rgba(212,175,55,0.25)',
+    borderRadius: 8,
+    padding: '8px 12px',
+    fontSize: 13,
+  },
+  tabRow: {
+    display: 'flex',
+    gap: 8,
+    flexWrap: 'wrap' as const,
+    marginBottom: 12,
+  },
+  tab: {
+    background: '#353348',
+    border: '1px solid #4a4660',
+    color: '#a8a4b8',
+    borderRadius: 16,
+    padding: '5px 14px',
+    fontSize: 13,
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  },
+  tabActive: {
+    background: '#d4af37',
+    border: '1px solid #d4af37',
+    color: '#1a1a2e',
+    borderRadius: 16,
+    padding: '5px 14px',
+    fontSize: 13,
+    cursor: 'pointer',
+    fontWeight: 600,
+  },
+  card: {
+    background: '#25243a',
+    borderRadius: 8,
+    border: '1px solid #4a4660',
+    padding: 16,
+  },
+  cardInner: {
+    background: 'rgba(0,0,0,0.15)',
+    borderRadius: 8,
+    border: '1px solid #4a4660',
+    padding: 12,
+    marginTop: 10,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: '#e8e4e0',
+    marginBottom: 8,
+  },
+  inputField: {
+    width: '100%',
+    background: '#25243a',
+    border: '1px solid #4a4660',
+    borderRadius: 6,
+    padding: '8px 12px',
+    fontSize: 13,
+    color: '#e8e4e0',
+    outline: 'none',
+    boxSizing: 'border-box' as const,
+  },
+  selectField: {
+    background: '#25243a',
+    border: '1px solid #4a4660',
+    borderRadius: 6,
+    padding: '8px 12px',
+    fontSize: 13,
+    color: '#e8e4e0',
+    outline: 'none',
+    flex: 1,
+  },
+  row: {
+    display: 'flex',
+    gap: 8,
+    alignItems: 'center',
+  },
+  list: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  },
+  listItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '8px 12px',
+    borderRadius: 6,
+    background: '#353348',
+  },
+  roleTarget: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: '#e8e4e0',
+    marginRight: 'auto',
+  },
+  badge: {
+    fontSize: 11,
+    color: '#a8a4b8',
+    background: '#413d58',
+    borderRadius: 10,
+    padding: '2px 8px',
+    whiteSpace: 'nowrap' as const,
+  },
+  statPill: {
+    fontSize: 12,
+    color: '#a8a4b8',
+    background: '#413d58',
+    borderRadius: 10,
+    padding: '2px 10px',
+    whiteSpace: 'nowrap' as const,
+  },
+  smallBtn: {
+    background: 'transparent',
+    border: '1px solid #4a4660',
+    color: '#a8a4b8',
+    borderRadius: 6,
+    padding: '3px 10px',
+    fontSize: 12,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+  },
+  deleteBtn: {
+    background: 'transparent',
+    border: '1px solid rgba(240,71,71,0.4)',
+    color: '#f04747',
+    borderRadius: 6,
+    padding: '3px 10px',
+    fontSize: 12,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+  },
+  toggleLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    margin: 0,
+    fontSize: 12,
+    color: '#a8a4b8',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+  },
+  statsRow: {
+    display: 'flex',
+    gap: 8,
+    flexWrap: 'wrap' as const,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+};
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
 
 interface RolesSectionProps {
   guildId: string;
@@ -270,47 +476,47 @@ export function RolesSection({ guildId }: RolesSectionProps) {
   }
 
   return (
-    <section className="settings-section">
-      <div className="server-settings-header-row">
+    <section style={styles.section}>
+      <div style={styles.headerRow}>
         <div>
-          <h2 className="settings-shell-section-heading">Roles &amp; Groups</h2>
-          <p className="server-settings-muted">
+          <h2 style={styles.heading}>Roles &amp; Groups</h2>
+          <p style={styles.muted}>
             Roles power @group mentions. Create a role, make it mentionable, then assign members.
           </p>
         </div>
-        <div className="server-settings-actions">
-          <button type="button" className="btn btn-ghost btn-sm" onClick={resetView}>
+        <div style={styles.actions}>
+          <button type="button" style={styles.resetBtn} onClick={resetView}>
             Reset
           </button>
         </div>
       </div>
 
-      {error && <div className="modal-error">{error}</div>}
+      {error && <div style={styles.error}>{error}</div>}
       {roleMembershipFeedback && (
-        <div className="server-settings-feedback" role="status" aria-live="polite">
+        <div style={styles.feedback} role="status" aria-live="polite">
           {roleMembershipFeedback}
         </div>
       )}
 
       {/* Tab navigation */}
-      <div className="server-settings-inline-stats" style={{ marginBottom: 12 }}>
+      <div style={styles.tabRow}>
         <button
           type="button"
-          className={`discover-tag ${activeTab === 'list' ? 'active' : ''}`}
+          style={activeTab === 'list' ? styles.tabActive : styles.tab}
           onClick={() => setActiveTab('list')}
         >
           All Roles ({roleStats.total})
         </button>
         <button
           type="button"
-          className={`discover-tag ${activeTab === 'assign' ? 'active' : ''}`}
+          style={activeTab === 'assign' ? styles.tabActive : styles.tab}
           onClick={() => setActiveTab('assign')}
         >
           Assign Members
         </button>
         <button
           type="button"
-          className={`discover-tag ${activeTab === 'create' ? 'active' : ''}`}
+          style={activeTab === 'create' ? styles.tabActive : styles.tab}
           onClick={() => setActiveTab('create')}
         >
           + Create Role
@@ -319,14 +525,14 @@ export function RolesSection({ guildId }: RolesSectionProps) {
 
       {/* Create Role tab */}
       {activeTab === 'create' && (
-        <div className="channel-permission-card" style={{ marginBottom: 12 }}>
-          <div className="channel-permission-title">Create New Role</div>
-          <p className="server-settings-muted" style={{ marginBottom: 8 }}>
+        <div style={{ ...styles.card, marginBottom: 12 }}>
+          <div style={styles.cardTitle}>Create New Role</div>
+          <p style={{ ...styles.muted, marginBottom: 8 }}>
             New roles are mentionable by default. You can change this after creation.
           </p>
-          <div className="channel-permission-row">
+          <div style={styles.row}>
             <input
-              className="input-field"
+              style={styles.inputField}
               value={newRoleName}
               onChange={(e) => setNewRoleName(e.target.value)}
               placeholder="Ex: raid-team"
@@ -344,22 +550,21 @@ export function RolesSection({ guildId }: RolesSectionProps) {
 
       {/* Assign Members tab */}
       {activeTab === 'assign' && (
-        <div className="channel-permission-card" style={{ marginBottom: 12 }}>
-          <div className="channel-permission-title">Assign Members to Roles</div>
-          <p className="server-settings-muted" style={{ marginBottom: 8 }}>
+        <div style={{ ...styles.card, marginBottom: 12 }}>
+          <div style={styles.cardTitle}>Assign Members to Roles</div>
+          <p style={{ ...styles.muted, marginBottom: 8 }}>
             Select a member, then pick a role to assign. Existing roles for the selected member are shown below.
           </p>
           <input
-            className="input-field"
+            style={{ ...styles.inputField, marginBottom: 8 }}
             value={rolesMemberSearch}
             onChange={(e) => setRolesMemberSearch(e.target.value)}
             placeholder="Filter members by name or ID"
             disabled={savingRoleMembership}
-            style={{ marginBottom: 8 }}
           />
-          <div className="channel-permission-row" style={{ marginBottom: 8 }}>
+          <div style={{ ...styles.row, marginBottom: 8 }}>
             <select
-              className="input-field"
+              style={styles.selectField}
               value={selectedMemberForRoles}
               onChange={(e) => setSelectedMemberForRoles(e.target.value)}
               disabled={savingRoleMembership}
@@ -373,16 +578,15 @@ export function RolesSection({ guildId }: RolesSectionProps) {
             </select>
           </div>
           <input
-            className="input-field"
+            style={{ ...styles.inputField, marginBottom: 8 }}
             value={assignRoleSearch}
             onChange={(e) => setAssignRoleSearch(e.target.value)}
             placeholder="Filter roles"
             disabled={!selectedMemberForRoles || savingRoleMembership}
-            style={{ marginBottom: 8 }}
           />
-          <div className="channel-permission-row">
+          <div style={styles.row}>
             <select
-              className="input-field"
+              style={styles.selectField}
               value={assignRoleId}
               onChange={(e) => setAssignRoleId(e.target.value)}
               disabled={!selectedMemberForRoles || savingRoleMembership}
@@ -403,23 +607,23 @@ export function RolesSection({ guildId }: RolesSectionProps) {
             </Button>
           </div>
           {assignRoleAlreadyPresent && (
-            <div className="server-settings-muted" style={{ marginTop: 2 }}>
+            <div style={{ ...styles.muted, marginTop: 2 }}>
               This member already has that role.
             </div>
           )}
           {selectedMemberForRoles && !assignRoleAlreadyPresent && filteredAvailableAssignableRoles.length === 0 && (
-            <div className="server-settings-muted" style={{ marginTop: 2 }}>
+            <div style={{ ...styles.muted, marginTop: 2 }}>
               This member already has all available custom roles.
             </div>
           )}
 
           {selectedMemberForRoles && (
-            <div className="channel-permission-card" style={{ marginTop: 10, background: 'rgba(0,0,0,0.15)' }}>
-              <div className="server-settings-inline-stats" style={{ marginBottom: 6 }}>
-                <span className="server-settings-stat-pill">Managing: {selectedMemberRoleTargetLabel}</span>
+            <div style={styles.cardInner}>
+              <div style={{ ...styles.statsRow, marginBottom: 6 }}>
+                <span style={styles.statPill}>Managing: {selectedMemberRoleTargetLabel}</span>
                 <button
                   type="button"
-                  className="channel-permission-remove"
+                  style={styles.smallBtn}
                   onClick={() => {
                     setSelectedMemberForRoles('');
                     setAssignRoleId('');
@@ -431,18 +635,18 @@ export function RolesSection({ guildId }: RolesSectionProps) {
                 </button>
               </div>
 
-              <div className="channel-permission-list">
+              <div style={styles.list}>
                 {selectedMemberRoles.filter((role) => role.name !== '@everyone').length === 0 && (
-                  <div className="server-settings-muted">This member has no custom roles yet.</div>
+                  <div style={styles.muted}>This member has no custom roles yet.</div>
                 )}
                 {selectedMemberRoles
                   .filter((role) => role.name !== '@everyone')
                   .map((role) => (
-                    <div key={role.id} className="channel-permission-item">
-                      <span className="channel-permission-target">@{role.name}</span>
+                    <div key={role.id} style={styles.listItem}>
+                      <span style={styles.roleTarget}>@{role.name}</span>
                       <button
                         type="button"
-                        className="channel-permission-remove"
+                        style={styles.smallBtn}
                         onClick={() => handleRemoveRoleFromMember(role.id)}
                         disabled={savingRoleMembership}
                       >
@@ -458,39 +662,39 @@ export function RolesSection({ guildId }: RolesSectionProps) {
 
       {/* Role List tab */}
       {activeTab === 'list' && (
-        <div className="channel-permission-card">
-          <div className="server-settings-inline-stats" style={{ marginBottom: 8 }}>
-            <span className="server-settings-stat-pill">{roleStats.total} total</span>
-            <span className="server-settings-stat-pill">{roleStats.custom} custom</span>
-            <span className="server-settings-stat-pill">{roleStats.mentionable} mentionable</span>
+        <div style={styles.card}>
+          <div style={styles.statsRow}>
+            <span style={styles.statPill}>{roleStats.total} total</span>
+            <span style={styles.statPill}>{roleStats.custom} custom</span>
+            <span style={styles.statPill}>{roleStats.mentionable} mentionable</span>
           </div>
 
           {/* Sort controls */}
-          <div className="server-settings-inline-stats" style={{ marginBottom: 8 }}>
+          <div style={styles.statsRow}>
             <button
               type="button"
-              className={`discover-tag ${roleListSort === 'alpha' ? 'active' : ''}`}
+              style={roleListSort === 'alpha' ? styles.tabActive : styles.tab}
               onClick={() => setRoleListSort('alpha')}
             >
               A-Z
             </button>
             <button
               type="button"
-              className={`discover-tag ${roleListSort === 'memberCount' ? 'active' : ''}`}
+              style={roleListSort === 'memberCount' ? styles.tabActive : styles.tab}
               onClick={() => setRoleListSort('memberCount')}
             >
               Members
             </button>
             <button
               type="button"
-              className={`discover-tag ${roleListSort === 'mentionable' ? 'active' : ''}`}
+              style={roleListSort === 'mentionable' ? styles.tabActive : styles.tab}
               onClick={() => setRoleListSort('mentionable')}
             >
               Mentionable
             </button>
             <button
               type="button"
-              className={`discover-tag ${roleListSortDir === 'asc' ? 'active' : ''}`}
+              style={roleListSortDir === 'asc' ? styles.tabActive : styles.tab}
               onClick={() => setRoleListSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
               title={roleListSortDir === 'asc' ? 'Ascending' : 'Descending'}
             >
@@ -499,24 +703,24 @@ export function RolesSection({ guildId }: RolesSectionProps) {
           </div>
 
           {/* Quick filters */}
-          <div className="server-settings-inline-stats" style={{ marginBottom: 8 }}>
+          <div style={styles.statsRow}>
             <button
               type="button"
-              className={`discover-tag ${roleListQuickFilter === 'all' ? 'active' : ''}`}
+              style={roleListQuickFilter === 'all' ? styles.tabActive : styles.tab}
               onClick={() => setRoleListQuickFilter('all')}
             >
               All Roles
             </button>
             <button
               type="button"
-              className={`discover-tag ${roleListQuickFilter === 'custom' ? 'active' : ''}`}
+              style={roleListQuickFilter === 'custom' ? styles.tabActive : styles.tab}
               onClick={() => setRoleListQuickFilter('custom')}
             >
               Custom Only
             </button>
             <button
               type="button"
-              className={`discover-tag ${roleListQuickFilter === 'mentionable' ? 'active' : ''}`}
+              style={roleListQuickFilter === 'mentionable' ? styles.tabActive : styles.tab}
               onClick={() => setRoleListQuickFilter('mentionable')}
             >
               Mentionable Only
@@ -524,22 +728,21 @@ export function RolesSection({ guildId }: RolesSectionProps) {
           </div>
 
           <input
-            className="input-field"
+            style={{ ...styles.inputField, marginBottom: 8 }}
             value={roleListSearch}
             onChange={(e) => setRoleListSearch(e.target.value)}
             placeholder="Search roles..."
-            style={{ marginBottom: 8 }}
           />
 
-          <div className="channel-permission-list">
-            {roles.length === 0 && <div className="server-settings-muted">No roles found.</div>}
+          <div style={styles.list}>
+            {roles.length === 0 && <div style={styles.muted}>No roles found.</div>}
             {roles.length > 0 && filteredRoleList.length === 0 && (
-              <div className="server-settings-muted">No roles match the current filter.</div>
+              <div style={styles.muted}>No roles match the current filter.</div>
             )}
             {sortedRoleList.map((role) => (
-              <div key={role.id} className="channel-permission-item">
-                <span className="channel-permission-target">@{role.name}</span>
-                <span className="channel-permission-badge">
+              <div key={role.id} style={styles.listItem}>
+                <span style={styles.roleTarget}>@{role.name}</span>
+                <span style={styles.badge}>
                   {(() => {
                     const count = roleMemberCountByRoleId.get(String(role.id)) ?? 0;
                     if (count > 99) return '99+ members';
@@ -548,13 +751,13 @@ export function RolesSection({ guildId }: RolesSectionProps) {
                 </span>
                 <button
                   type="button"
-                  className="channel-permission-remove"
+                  style={styles.smallBtn}
                   onClick={() => copyTextToClipboard(String(role.id), 'Copied role ID.')}
                   title="Copy role ID"
                 >
                   Copy ID
                 </button>
-                <label className="channel-private-toggle" style={{ margin: 0, gap: 8 }}>
+                <label style={styles.toggleLabel}>
                   <input
                     type="checkbox"
                     checked={Boolean(role.mentionable)}
@@ -566,7 +769,7 @@ export function RolesSection({ guildId }: RolesSectionProps) {
                 {role.name !== '@everyone' && (
                   <button
                     type="button"
-                    className="channel-permission-remove"
+                    style={styles.deleteBtn}
                     onClick={() => handleDeleteRole(role.id)}
                   >
                     Delete

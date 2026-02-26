@@ -223,7 +223,7 @@ export function VerifyEmailPendingPage() {
             disabled={loading || !email}
             style={loading || !email ? styles.resendButtonDisabled : styles.resendButton}
           >
-            {loading ? 'Sending...' : 'Resend'}
+            {loading ? 'Sending...' : 'Resend email'}
           </button>
         </div>
 

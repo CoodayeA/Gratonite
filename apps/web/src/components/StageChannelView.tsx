@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
@@ -9,6 +9,227 @@ import { useChannelsStore } from '@/stores/channels.store';
 import { joinVoiceChannel, leaveVoiceChannel, toggleMute } from '@/lib/dmCall';
 import { useCallStore } from '@/stores/call.store';
 import type { VoiceState } from '@gratonite/types';
+
+const styles = {
+  view: {
+    flex: 1,
+    padding: 24,
+    overflowY: 'auto',
+  } as React.CSSProperties,
+
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+    gap: 16,
+  } as React.CSSProperties,
+
+  headerInfo: {
+    flex: 1,
+  } as React.CSSProperties,
+
+  title: {
+    fontSize: 20,
+    fontWeight: 700,
+    color: 'var(--text)',
+    margin: '0 0 4px',
+  } as React.CSSProperties,
+
+  topic: {
+    fontSize: 14,
+    color: 'var(--text-muted)',
+    margin: 0,
+  } as React.CSSProperties,
+
+  muted: {
+    color: 'var(--text-faint)',
+    fontSize: 13,
+  } as React.CSSProperties,
+
+  headerActions: {
+    display: 'flex',
+    gap: 8,
+  } as React.CSSProperties,
+
+  connection: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  } as React.CSSProperties,
+
+  error: {
+    background: 'rgba(255, 107, 107, 0.1)',
+    border: '1px solid rgba(255, 107, 107, 0.3)',
+    color: '#ffd2d2',
+    borderRadius: 8,
+    padding: '8px 12px',
+    fontSize: 13,
+    marginBottom: 12,
+  } as React.CSSProperties,
+
+  feedback: {
+    background: 'rgba(106, 234, 138, 0.1)',
+    border: '1px solid rgba(106, 234, 138, 0.3)',
+    color: '#b8ffc8',
+    borderRadius: 8,
+    padding: '8px 12px',
+    fontSize: 13,
+    marginBottom: 12,
+  } as React.CSSProperties,
+
+  card: {
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  } as React.CSSProperties,
+
+  cardLast: {
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 12,
+    padding: 16,
+  } as React.CSSProperties,
+
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: 'var(--text)',
+    marginBottom: 8,
+  } as React.CSSProperties,
+
+  inputField: {
+    background: 'var(--bg-input)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 8,
+    color: 'var(--text)',
+    padding: '8px 12px',
+    fontSize: 14,
+    width: '100%',
+  } as React.CSSProperties,
+
+  permissionRow: {
+    display: 'flex',
+    gap: 8,
+    alignItems: 'center',
+    marginBottom: 8,
+  } as React.CSSProperties,
+
+  permissionList: {
+    display: 'grid',
+    gap: 6,
+  } as React.CSSProperties,
+
+  permissionItem: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    padding: '6px 0',
+  } as React.CSSProperties,
+
+  permissionTarget: {
+    fontSize: 13,
+    color: 'var(--text)',
+  } as React.CSSProperties,
+
+  ghostBtn: {
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid var(--stroke)',
+    color: 'var(--text-muted)',
+    borderRadius: 8,
+    padding: '4px 10px',
+    fontSize: 12,
+    cursor: 'pointer',
+  } as React.CSSProperties,
+
+  inlineStats: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  } as React.CSSProperties,
+
+  statPill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    fontSize: 12,
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 999,
+    padding: '4px 10px',
+    color: 'var(--text-muted)',
+  } as React.CSSProperties,
+
+  participantsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+    gap: 10,
+    marginTop: 8,
+  } as React.CSSProperties,
+
+  participantCard: {
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 10,
+    padding: 12,
+    textAlign: 'center',
+  } as React.CSSProperties,
+
+  participantSpeaker: {
+    background: 'var(--bg-elevated)',
+    border: '1px solid rgba(106, 234, 138, 0.4)',
+    borderRadius: 10,
+    padding: 12,
+    textAlign: 'center',
+  } as React.CSSProperties,
+
+  participantAudience: {
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 10,
+    padding: 12,
+    textAlign: 'center',
+  } as React.CSSProperties,
+
+  participantAvatar: {
+    fontSize: 28,
+    marginBottom: 4,
+  } as React.CSSProperties,
+
+  participantName: {
+    fontSize: 13,
+    fontWeight: 500,
+    color: 'var(--text)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  } as React.CSSProperties,
+
+  participantBadge: {
+    display: 'inline-block',
+    fontSize: 11,
+    background: 'var(--bg-elevated)',
+    borderRadius: 8,
+    padding: '1px 6px',
+    marginTop: 4,
+    color: 'var(--text-muted)',
+  } as React.CSSProperties,
+
+  removeBtn: {
+    background: 'none',
+    border: '1px solid rgba(255, 107, 107, 0.3)',
+    color: '#ffb4b4',
+    borderRadius: 6,
+    padding: '2px 8px',
+    fontSize: 11,
+    cursor: 'pointer',
+    marginTop: 4,
+  } as React.CSSProperties,
+};
 
 interface StageChannelViewProps {
   channelId: string;
@@ -60,7 +281,7 @@ export function StageChannelView({ channelId, channelName }: StageChannelViewPro
 
   // Fetch user summaries for voice participants
   const voiceUserIds = useMemo(
-    () => Array.from(new Set(states.map((s) => String(s.userId)))),
+    () => Array.from(new Set(states.map((st) => String(st.userId)))),
     [states],
   );
 
@@ -192,24 +413,24 @@ export function StageChannelView({ channelId, channelName }: StageChannelViewPro
   }
 
   // Check if current user has raised hand
-  const currentUserState = states.find((s) => s.userId === currentUserId);
+  const currentUserState = states.find((st) => st.userId === currentUserId);
   const hasRaisedHand = Boolean(currentUserState?.requestToSpeakTimestamp);
   const isSpeaker = currentUserState ? !currentUserState.suppress : false;
 
   return (
-    <div className="stage-channel-view">
+    <div style={styles.view}>
       {/* Stage header */}
-      <div className="stage-header">
-        <div className="stage-header-info">
-          <h2 className="stage-title">🎙 {channelName}</h2>
+      <div style={styles.header}>
+        <div style={styles.headerInfo}>
+          <h2 style={styles.title}>{'\uD83C\uDF99'} {channelName}</h2>
           {stageInstance && (
-            <p className="stage-topic">{stageInstance.topic}</p>
+            <p style={styles.topic}>{stageInstance.topic}</p>
           )}
           {!stageInstance && (
-            <p className="server-settings-muted">No active stage. Start one below.</p>
+            <p style={styles.muted}>No active stage. Start one below.</p>
           )}
         </div>
-        <div className="stage-header-actions">
+        <div style={styles.headerActions}>
           {stageInstance && (
             <Button variant="danger" size="sm" onClick={handleEndStage}>
               End Stage
@@ -218,20 +439,20 @@ export function StageChannelView({ channelId, channelName }: StageChannelViewPro
         </div>
       </div>
 
-      {error && <div className="modal-error">{error}</div>}
+      {error && <div style={styles.error}>{error}</div>}
       {feedback && (
-        <div className="server-settings-feedback" role="status" aria-live="polite">
+        <div style={styles.feedback} role="status" aria-live="polite">
           {feedback}
         </div>
       )}
 
       {/* Start stage form (when no active stage) */}
       {!stageInstance && (
-        <div className="channel-permission-card" style={{ marginBottom: 16 }}>
-          <div className="channel-permission-title">Start a Stage</div>
-          <div className="channel-permission-row" style={{ marginBottom: 8 }}>
+        <div style={styles.card}>
+          <div style={styles.cardTitle}>Start a Stage</div>
+          <div style={styles.permissionRow}>
             <input
-              className="input-field"
+              style={styles.inputField}
               value={newTopic}
               onChange={(e) => setNewTopic(e.target.value)}
               placeholder="What's the topic? (e.g. AMA, Community Q&A)"
@@ -253,7 +474,7 @@ export function StageChannelView({ channelId, channelName }: StageChannelViewPro
       )}
 
       {/* Connection controls */}
-      <div className="stage-connection" style={{ marginBottom: 16 }}>
+      <div style={styles.connection}>
         {!isConnected && !isConnecting && (
           <Button variant="primary" onClick={handleJoinStage}>
             Join Stage
@@ -265,20 +486,20 @@ export function StageChannelView({ channelId, channelName }: StageChannelViewPro
           </Button>
         )}
         {isConnected && (
-          <div className="server-settings-inline-stats">
+          <div style={styles.inlineStats}>
             <Button variant="ghost" size="sm" onClick={() => toggleMute()}>
-              {muted ? '🔇 Unmute' : '🔊 Mute'}
+              {muted ? '\uD83D\uDD07 Unmute' : '\uD83D\uDD0A Mute'}
             </Button>
             {!isSpeaker && !hasRaisedHand && stageInstance && (
               <Button variant="primary" size="sm" onClick={handleRequestToSpeak}>
-                ✋ Raise Hand
+                {'\u270B'} Raise Hand
               </Button>
             )}
             {hasRaisedHand && !isSpeaker && (
-              <span className="server-settings-stat-pill">✋ Hand Raised</span>
+              <span style={styles.statPill}>{'\u270B'} Hand Raised</span>
             )}
             {isSpeaker && (
-              <span className="server-settings-stat-pill" style={{ color: '#6aea8a' }}>🎤 Speaking</span>
+              <span style={{ ...styles.statPill, color: '#6aea8a' }}>{'\uD83C\uDF99'} Speaking</span>
             )}
             <Button variant="danger" size="sm" onClick={handleLeaveStage}>
               Leave
@@ -289,19 +510,19 @@ export function StageChannelView({ channelId, channelName }: StageChannelViewPro
 
       {/* Speaker queue (hand raises) */}
       {handRaised.length > 0 && (
-        <div className="channel-permission-card" style={{ marginBottom: 16 }}>
-          <div className="channel-permission-title">
-            ✋ Hand Raised ({handRaised.length})
+        <div style={styles.card}>
+          <div style={styles.cardTitle}>
+            {'\u270B'} Hand Raised ({handRaised.length})
           </div>
-          <div className="channel-permission-list">
+          <div style={styles.permissionList}>
             {handRaised.map((state) => (
-              <div key={state.userId} className="channel-permission-item">
-                <span className="channel-permission-target">
+              <div key={state.userId} style={styles.permissionItem}>
+                <span style={styles.permissionTarget}>
                   {getUserLabel(state.userId)}
                 </span>
                 <button
                   type="button"
-                  className="btn btn-ghost btn-sm"
+                  style={styles.ghostBtn}
                   onClick={() => handleInviteSpeaker(state.userId)}
                 >
                   Invite to Speak
@@ -313,25 +534,24 @@ export function StageChannelView({ channelId, channelName }: StageChannelViewPro
       )}
 
       {/* Speakers section */}
-      <div className="channel-permission-card" style={{ marginBottom: 16 }}>
-        <div className="channel-permission-title">
-          🎤 Speakers ({speakers.length})
+      <div style={styles.card}>
+        <div style={styles.cardTitle}>
+          {'\uD83C\uDF99'} Speakers ({speakers.length})
         </div>
         {speakers.length === 0 ? (
-          <div className="server-settings-muted">No speakers yet.</div>
+          <div style={styles.muted}>No speakers yet.</div>
         ) : (
-          <div className="stage-participants-grid">
+          <div style={styles.participantsGrid}>
             {speakers.map((state) => (
-              <div key={state.userId} className="stage-participant-card stage-participant-speaker">
-                <div className="stage-participant-avatar">🎤</div>
-                <div className="stage-participant-name">{getUserLabel(state.userId)}</div>
-                {state.selfMute && <span className="stage-participant-badge">Muted</span>}
+              <div key={state.userId} style={styles.participantSpeaker}>
+                <div style={styles.participantAvatar}>{'\uD83C\uDF99'}</div>
+                <div style={styles.participantName}>{getUserLabel(state.userId)}</div>
+                {state.selfMute && <span style={styles.participantBadge}>Muted</span>}
                 {state.userId !== currentUserId && (
                   <button
                     type="button"
-                    className="channel-permission-remove"
+                    style={styles.removeBtn}
                     onClick={() => handleRemoveSpeaker(state.userId)}
-                    style={{ marginTop: 4 }}
                   >
                     Move to Audience
                   </button>
@@ -343,20 +563,20 @@ export function StageChannelView({ channelId, channelName }: StageChannelViewPro
       </div>
 
       {/* Audience section */}
-      <div className="channel-permission-card">
-        <div className="channel-permission-title">
-          👥 Audience ({audience.length})
+      <div style={styles.cardLast}>
+        <div style={styles.cardTitle}>
+          {'\uD83D\uDC65'} Audience ({audience.length})
         </div>
         {audience.length === 0 ? (
-          <div className="server-settings-muted">No audience members.</div>
+          <div style={styles.muted}>No audience members.</div>
         ) : (
-          <div className="stage-participants-grid">
+          <div style={styles.participantsGrid}>
             {audience.map((state) => (
-              <div key={state.userId} className="stage-participant-card stage-participant-audience">
-                <div className="stage-participant-avatar">👤</div>
-                <div className="stage-participant-name">{getUserLabel(state.userId)}</div>
+              <div key={state.userId} style={styles.participantAudience}>
+                <div style={styles.participantAvatar}>{'\uD83D\uDC64'}</div>
+                <div style={styles.participantName}>{getUserLabel(state.userId)}</div>
                 {state.requestToSpeakTimestamp && (
-                  <span className="stage-participant-badge">✋</span>
+                  <span style={styles.participantBadge}>{'\u270B'}</span>
                 )}
               </div>
             ))}

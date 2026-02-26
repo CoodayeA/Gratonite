@@ -11,6 +11,139 @@ interface PinnedMessagesPanelProps {
   channelId: string;
 }
 
+const styles = {
+  panel: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+    background: '#353348',
+    border: '1px solid #4a4660',
+    borderRadius: 12,
+    overflow: 'hidden',
+  } as React.CSSProperties,
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '16px 20px',
+    borderBottom: '1px solid #4a4660',
+    flexShrink: 0,
+  } as React.CSSProperties,
+  headerLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+  } as React.CSSProperties,
+  title: {
+    margin: 0,
+    fontSize: 16,
+    fontWeight: 600,
+    color: '#e8e4e0',
+  } as React.CSSProperties,
+  countBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 22,
+    height: 22,
+    padding: '0 7px',
+    borderRadius: 11,
+    background: '#d4af37',
+    color: '#1a1a2e',
+    fontSize: 12,
+    fontWeight: 700,
+    lineHeight: 1,
+  } as React.CSSProperties,
+  closeBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#a8a4b8',
+    fontSize: 22,
+    cursor: 'pointer',
+    padding: '4px 8px',
+    borderRadius: 6,
+    lineHeight: 1,
+    transition: 'color 0.15s, background 0.15s',
+  } as React.CSSProperties,
+  list: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: 12,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+  } as React.CSSProperties,
+  loading: {
+    display: 'flex',
+    justifyContent: 'center',
+    padding: 32,
+  } as React.CSSProperties,
+  empty: {
+    color: '#6e6a80',
+    textAlign: 'center',
+    padding: 32,
+    fontSize: 14,
+  } as React.CSSProperties,
+  item: {
+    background: '#2c2c3e',
+    borderRadius: 10,
+    padding: 14,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+  } as React.CSSProperties,
+  itemTop: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+  } as React.CSSProperties,
+  itemAuthor: {
+    color: '#d4af37',
+    fontWeight: 600,
+    fontSize: 14,
+  } as React.CSSProperties,
+  itemTime: {
+    color: '#6e6a80',
+    fontSize: 12,
+    marginLeft: 'auto',
+  } as React.CSSProperties,
+  itemContent: {
+    color: '#e8e4e0',
+    fontSize: 14,
+    lineHeight: 1.5,
+    wordBreak: 'break-word',
+  } as React.CSSProperties,
+  itemActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+    justifyContent: 'flex-end',
+  } as React.CSSProperties,
+  jumpBtn: {
+    background: 'none',
+    border: '1px solid #4a4660',
+    color: '#a8a4b8',
+    fontSize: 12,
+    fontWeight: 500,
+    padding: '4px 12px',
+    borderRadius: 6,
+    cursor: 'pointer',
+    transition: 'border-color 0.15s, color 0.15s',
+  } as React.CSSProperties,
+  unpinBtn: {
+    background: 'none',
+    border: '1px solid #4a4660',
+    color: '#a8a4b8',
+    fontSize: 12,
+    fontWeight: 500,
+    padding: '4px 12px',
+    borderRadius: 6,
+    cursor: 'pointer',
+    transition: 'border-color 0.15s, color 0.15s',
+  } as React.CSSProperties,
+};
+
 export function PinnedMessagesPanel({ channelId }: PinnedMessagesPanelProps) {
   const togglePinnedPanel = useUiStore((s) => s.togglePinnedPanel);
   const { data: pins, isLoading, refetch } = usePinnedMessages(channelId);
@@ -26,38 +159,83 @@ export function PinnedMessagesPanel({ channelId }: PinnedMessagesPanelProps) {
     }
   }
 
+  const pinCount = pins?.length ?? 0;
+
   return (
-    <div className="pinned-panel">
-      <div className="pinned-panel-header">
-        <h3 className="pinned-panel-title">Pinned Messages</h3>
-        <button className="pinned-panel-close" onClick={togglePinnedPanel} aria-label="Close">
+    <div style={styles.panel}>
+      <div style={styles.header}>
+        <div style={styles.headerLeft}>
+          <h3 style={styles.title}>Pinned Messages</h3>
+          {pinCount > 0 && (
+            <span style={styles.countBadge}>{pinCount}</span>
+          )}
+        </div>
+        <button
+          style={styles.closeBtn}
+          onClick={togglePinnedPanel}
+          aria-label="Close"
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = '#e8e4e0';
+            e.currentTarget.style.background = '#413d58';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = '#a8a4b8';
+            e.currentTarget.style.background = 'none';
+          }}
+        >
           &times;
         </button>
       </div>
-      <div className="pinned-panel-list">
+      <div style={styles.list}>
         {isLoading && (
-          <div className="pinned-panel-loading">
+          <div style={styles.loading}>
             <LoadingSpinner size={20} />
           </div>
         )}
         {!isLoading && (!pins || pins.length === 0) && (
-          <div className="pinned-panel-empty">No pinned messages in this channel.</div>
+          <div style={styles.empty}>No pinned messages in this channel.</div>
         )}
         {pins?.map((msg: Message) => {
           const author = (msg as any).author;
           const displayName = author?.displayName ?? 'Unknown';
           const avatarHash = author?.avatarHash ?? null;
           return (
-            <div key={msg.id} className="pinned-panel-item">
-              <div className="pinned-panel-item-header">
-                <Avatar name={displayName} hash={avatarHash} userId={msg.authorId} size={24} />
-                <span className="pinned-panel-item-author">{displayName}</span>
-                <span className="pinned-panel-item-time">{formatTimestamp(msg.createdAt)}</span>
+            <div key={msg.id} style={styles.item}>
+              <div style={styles.itemTop}>
+                <Avatar name={displayName} hash={avatarHash} userId={msg.authorId} size={28} />
+                <span style={styles.itemAuthor}>{displayName}</span>
+                <span style={styles.itemTime}>{formatTimestamp(msg.createdAt)}</span>
               </div>
-              <div className="pinned-panel-item-content">{msg.content}</div>
-              <button className="pinned-panel-item-unpin" onClick={() => handleUnpin(msg.id)}>
-                Unpin
-              </button>
+              <div style={styles.itemContent}>{msg.content}</div>
+              <div style={styles.itemActions}>
+                <button
+                  style={styles.jumpBtn}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#d4af37';
+                    e.currentTarget.style.color = '#d4af37';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#4a4660';
+                    e.currentTarget.style.color = '#a8a4b8';
+                  }}
+                >
+                  Jump
+                </button>
+                <button
+                  style={styles.unpinBtn}
+                  onClick={() => handleUnpin(msg.id)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#f04747';
+                    e.currentTarget.style.color = '#f04747';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#4a4660';
+                    e.currentTarget.style.color = '#a8a4b8';
+                  }}
+                >
+                  Unpin
+                </button>
+              </div>
             </div>
           );
         })}

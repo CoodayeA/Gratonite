@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import React, { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -28,6 +28,297 @@ import {
   subscribeProfileEnhancementChanges,
   type StatusExpiryPreset,
 } from '@/lib/profileEnhancements';
+
+const styles = {
+  section: {
+    maxWidth: 720,
+  } as React.CSSProperties,
+  heading: {
+    fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
+    fontSize: 20,
+    fontWeight: 700,
+    color: 'var(--text)',
+    marginBottom: 4,
+  } as React.CSSProperties,
+  card: {
+    background: 'rgba(8, 12, 20, 0.6)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-lg)',
+    padding: 20,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+  } as React.CSSProperties,
+  modalForm: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+    minWidth: 0,
+  } as React.CSSProperties,
+  modalError: {
+    padding: '10px 14px',
+    background: 'var(--danger-bg)',
+    border: '1px solid rgba(255, 107, 107, 0.25)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--danger)',
+    fontSize: 13,
+  } as React.CSSProperties,
+  profileModalHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    padding: '8px 0 4px',
+  } as React.CSSProperties,
+  profileModalHeaderText: {
+    display: 'flex',
+    flexDirection: 'column',
+  } as React.CSSProperties,
+  profileModalName: {
+    fontSize: 16,
+    fontWeight: 700,
+    color: 'var(--text)',
+  } as React.CSSProperties,
+  profileModalSubtitle: {
+    fontSize: 12,
+    color: 'var(--text-muted)',
+  } as React.CSSProperties,
+  mediaGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gap: 12,
+  } as React.CSSProperties,
+  mediaCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+    padding: 12,
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--stroke)',
+    background: 'rgba(12, 18, 30, 0.7)',
+  } as React.CSSProperties,
+  mediaPreview: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+  } as React.CSSProperties,
+  mediaTitle: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: 'var(--text)',
+  } as React.CSSProperties,
+  mediaSubtitle: {
+    fontSize: 11,
+    color: 'var(--text-faint)',
+  } as React.CSSProperties,
+  mediaActions: {
+    display: 'flex',
+    gap: 8,
+    flexWrap: 'wrap',
+  } as React.CSSProperties,
+  bannerPreview: {
+    width: '100%',
+    height: 100,
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    background: 'rgba(0, 0, 0, 0.25)',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    display: 'grid',
+    placeItems: 'center',
+    color: 'var(--text-faint)',
+    fontSize: 12,
+  } as React.CSSProperties,
+  bannerPlaceholder: {
+    opacity: 0.8,
+  } as React.CSSProperties,
+  fileInput: {
+    display: 'none',
+  } as React.CSSProperties,
+  inputGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  } as React.CSSProperties,
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    color: 'var(--text-muted)',
+  } as React.CSSProperties,
+  inputWrapper: {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+  } as React.CSSProperties,
+  inputField: {
+    width: '100%',
+    padding: '10px 14px',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--text)',
+    fontFamily: 'inherit',
+    fontSize: 14,
+    outline: 'none',
+    transition: 'border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease',
+  } as React.CSSProperties,
+  bioInput: {
+    width: '100%',
+    padding: '10px 14px',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--text)',
+    fontFamily: 'inherit',
+    fontSize: 14,
+    outline: 'none',
+    resize: 'vertical',
+    minHeight: 72,
+    transition: 'border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease',
+  } as React.CSSProperties,
+  avatarNote: {
+    fontSize: 12,
+    color: 'var(--text-faint)',
+    background: 'rgba(255, 255, 255, 0.04)',
+    border: '1px dashed var(--stroke)',
+    padding: '10px 12px',
+    borderRadius: 'var(--radius-md)',
+  } as React.CSSProperties,
+  modalFooter: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: 10,
+    flexWrap: 'wrap',
+  } as React.CSSProperties,
+  field: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  } as React.CSSProperties,
+  fieldLabel: {
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    color: 'var(--text-faint)',
+  } as React.CSSProperties,
+  fieldValue: {
+    fontSize: 14,
+    color: 'var(--text)',
+  } as React.CSSProperties,
+  fieldControl: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+  } as React.CSSProperties,
+  fieldRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    flexWrap: 'wrap',
+  } as React.CSSProperties,
+  fieldGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: 12,
+  } as React.CSSProperties,
+  dnsPreview: {
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    background: 'rgba(10, 16, 28, 0.72)',
+    padding: 12,
+    display: 'grid',
+    gap: 6,
+  } as React.CSSProperties,
+  dnsPreviewLight: {
+    border: '1px solid #d3dceb',
+    borderRadius: 'var(--radius-md)',
+    background: '#f4f7fb',
+    padding: 12,
+    display: 'grid',
+    gap: 6,
+  } as React.CSSProperties,
+  dnsPreviewLabel: {
+    color: 'var(--text-faint)',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  } as React.CSSProperties,
+  dnsPreviewLabelLight: {
+    color: '#607089',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  } as React.CSSProperties,
+  dnsPreviewName: {
+    color: 'var(--text)',
+    fontSize: 24,
+    fontWeight: 700,
+  } as React.CSSProperties,
+  dnsPreviewNameLight: {
+    color: '#101726',
+    fontSize: 24,
+    fontWeight: 700,
+  } as React.CSSProperties,
+  dnsEditor: {
+    borderTop: '1px solid var(--stroke)',
+    paddingTop: 12,
+    display: 'grid',
+    gap: 10,
+  } as React.CSSProperties,
+  dnsColors: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 12,
+  } as React.CSSProperties,
+  dnsColorInput: {
+    width: 44,
+    height: 30,
+    borderRadius: 8,
+    border: '1px solid var(--stroke)',
+    background: 'transparent',
+    padding: 0,
+  } as React.CSSProperties,
+  settingsSelect: {
+    background: 'rgba(6, 10, 18, 0.6)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--text)',
+    padding: '6px 10px',
+    fontFamily: 'inherit',
+    fontSize: 13,
+  } as React.CSSProperties,
+  recentAvatars: {
+    marginTop: 12,
+  } as React.CSSProperties,
+  sectionLabel: {
+    fontSize: 12,
+    color: 'var(--text-faint)',
+  } as React.CSSProperties,
+  recentAvatarsStrip: {
+    display: 'flex',
+    gap: 8,
+    marginTop: 6,
+  } as React.CSSProperties,
+  recentAvatarBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: '50%',
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderStyle: 'solid',
+    borderColor: 'transparent',
+    cursor: 'pointer',
+    transition: 'border-color 0.15s',
+    background: 'none',
+    padding: 0,
+  } as React.CSSProperties,
+  recentAvatarImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  } as React.CSSProperties,
+};
 
 export function ProfileSection() {
   const user = useAuthStore((s) => s.user);
@@ -68,6 +359,9 @@ export function ProfileSection() {
   const [profileEnhancementsVersion, setProfileEnhancementsVersion] = useState(0);
   const [statusInput, setStatusInput] = useState('');
   const [statusExpiryPreset, setStatusExpiryPreset] = useState<StatusExpiryPreset>('4h');
+
+  // --- Hover state for recent avatar buttons ---
+  const [hoveredAvatarHash, setHoveredAvatarHash] = useState<string | null>(null);
 
   useEffect(() => subscribeDisplayNameStyleChanges(() => setStyleVersion((v) => v + 1)), []);
   useEffect(() => subscribeProfileEnhancementChanges(() => setProfileEnhancementsVersion((v) => v + 1)), []);
@@ -144,7 +438,7 @@ export function ProfileSection() {
 
   async function handleSaveColors() {
     try {
-      await api.users.updateProfile({ 
+      await api.users.updateProfile({
         primaryColor: primaryColor != null ? `#${primaryColor.toString(16).padStart(6, '0')}` : undefined,
         accentColor: accentColor != null ? `#${accentColor.toString(16).padStart(6, '0')}` : undefined,
       });
@@ -273,25 +567,27 @@ export function ProfileSection() {
 
   if (!user) return null;
 
+  const isLight = previewTheme === 'light';
+
   return (
-    <section className="settings-section">
-      <h2 className="settings-shell-section-heading">Profile</h2>
+    <section style={styles.section}>
+      <h2 style={styles.heading}>Profile</h2>
 
       {/* --- Profile Edit Form (from EditProfileModal) --- */}
-      <div className="settings-card">
-        <form className="modal-form" onSubmit={handleSubmit}>
-          {profileError && <div className="modal-error">{profileError}</div>}
+      <div style={styles.card}>
+        <form style={styles.modalForm} onSubmit={handleSubmit}>
+          {profileError && <div style={styles.modalError}>{profileError}</div>}
 
-          <div className="profile-modal-header">
+          <div style={styles.profileModalHeader}>
             <Avatar
               name={displayName || user.displayName}
               hash={avatarHash ?? null}
               userId={user.id}
               size={48}
             />
-            <div className="profile-modal-header-text">
-              <span className="profile-modal-name">{displayName || user.displayName}</span>
-              <span className="profile-modal-subtitle">Update your profile details</span>
+            <div style={styles.profileModalHeaderText}>
+              <span style={styles.profileModalName}>{displayName || user.displayName}</span>
+              <span style={styles.profileModalSubtitle}>Update your profile details</span>
             </div>
           </div>
 
@@ -306,9 +602,9 @@ export function ProfileSection() {
             disabled={loadingProfile}
           />
 
-          <div className="profile-media-grid">
-            <div className="profile-media-card">
-              <div className="profile-media-preview">
+          <div style={styles.mediaGrid}>
+            <div style={styles.mediaCard}>
+              <div style={styles.mediaPreview}>
                 <Avatar
                   name={displayName || user.displayName}
                   hash={avatarHash ?? null}
@@ -316,17 +612,17 @@ export function ProfileSection() {
                   size={56}
                 />
                 <div>
-                  <div className="profile-media-title">Default Avatar</div>
-                  <div className="profile-media-subtitle">Used unless overridden per portal.</div>
+                  <div style={styles.mediaTitle}>Default Avatar</div>
+                  <div style={styles.mediaSubtitle}>Used unless overridden per portal.</div>
                 </div>
               </div>
-              <div className="profile-media-actions">
+              <div style={styles.mediaActions}>
                 <label className="btn btn-ghost btn-sm">
                   {uploadingAvatar ? 'Uploading...' : 'Upload'}
                   <input
                     type="file"
                     accept="image/*"
-                    className="file-input"
+                    style={styles.fileInput}
                     onChange={(e) => handleAvatarUpload(e.target.files?.[0] ?? null)}
                     disabled={uploadingAvatar}
                   />
@@ -348,21 +644,26 @@ export function ProfileSection() {
                 </button>
               </div>
               {previousAvatarHashes && previousAvatarHashes.length > 0 && (
-                <div className="profile-recent-avatars">
-                  <p className="profile-section-label">Recent Avatars</p>
-                  <div className="profile-recent-avatars-strip">
+                <div style={styles.recentAvatars}>
+                  <p style={styles.sectionLabel}>Recent Avatars</p>
+                  <div style={styles.recentAvatarsStrip}>
                     {previousAvatarHashes.slice(0, 5).map((hash: string) => (
                       <button
                         key={hash}
                         type="button"
-                        className="profile-recent-avatar-btn"
+                        style={{
+                          ...styles.recentAvatarBtn,
+                          borderColor: hoveredAvatarHash === hash ? 'var(--accent)' : 'transparent',
+                        }}
                         onClick={() => handleRestoreAvatar(hash)}
+                        onMouseEnter={() => setHoveredAvatarHash(hash)}
+                        onMouseLeave={() => setHoveredAvatarHash(null)}
                         title="Restore this avatar"
                       >
                         <img
                           src={`/api/v1/files/${hash}`}
                           alt="Previous avatar"
-                          className="profile-recent-avatar-img"
+                          style={styles.recentAvatarImg}
                         />
                       </button>
                     ))}
@@ -371,20 +672,19 @@ export function ProfileSection() {
               )}
             </div>
 
-            <div className="profile-media-card">
+            <div style={styles.mediaCard}>
               <div
-                className="profile-banner-preview"
-                style={bannerHash ? { backgroundImage: `url(/api/v1/files/${bannerHash})` } : undefined}
+                style={bannerHash ? { ...styles.bannerPreview, backgroundImage: `url(/api/v1/files/${bannerHash})` } : styles.bannerPreview}
               >
-                {!bannerHash && <span className="profile-banner-placeholder">No banner set</span>}
+                {!bannerHash && <span style={styles.bannerPlaceholder}>No banner set</span>}
               </div>
-              <div className="profile-media-actions">
+              <div style={styles.mediaActions}>
                 <label className="btn btn-ghost btn-sm">
                   {uploadingBanner ? 'Uploading...' : 'Upload Banner'}
                   <input
                     type="file"
                     accept="image/*"
-                    className="file-input"
+                    style={styles.fileInput}
                     onChange={(e) => handleBannerUpload(e.target.files?.[0] ?? null)}
                     disabled={uploadingBanner}
                   />
@@ -408,11 +708,11 @@ export function ProfileSection() {
             </div>
           </div>
 
-          <div className="input-group">
-            <label className="input-label">Bio</label>
-            <div className="input-wrapper">
+          <div style={styles.inputGroup}>
+            <label style={styles.inputLabel}>Bio</label>
+            <div style={styles.inputWrapper}>
               <textarea
-                className="input-field profile-bio-input"
+                style={styles.bioInput}
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 placeholder="Tell people a little about you"
@@ -433,11 +733,11 @@ export function ProfileSection() {
             disabled={loadingProfile}
           />
 
-          <div className="profile-avatar-note">
+          <div style={styles.avatarNote}>
             Per-portal nickname, avatar, and banner overrides live in the portal profile menu.
           </div>
 
-          <div className="modal-footer">
+          <div style={styles.modalFooter}>
             <Button type="submit" loading={saving} disabled={loadingProfile || !displayName.trim()}>
               Save Changes
             </Button>
@@ -446,14 +746,14 @@ export function ProfileSection() {
       </div>
 
       {/* --- Display Name Styles (from SettingsPage customization) --- */}
-      <div className="settings-card">
-        <div className="settings-field">
-          <div className="settings-field-label">Display Name Styles</div>
-          <div className="settings-field-value">Customize font, effect, and colors.</div>
+      <div style={styles.card}>
+        <div style={styles.field}>
+          <div style={styles.fieldLabel}>Display Name Styles</div>
+          <div style={styles.fieldValue}>Customize font, effect, and colors.</div>
         </div>
-        <div className={`dns-preview ${previewTheme === 'light' ? 'dns-preview-light' : ''}`}>
-          <div className="dns-preview-label">Preview</div>
-          <div className="dns-preview-name">
+        <div style={isLight ? styles.dnsPreviewLight : styles.dnsPreview}>
+          <div style={isLight ? styles.dnsPreviewLabelLight : styles.dnsPreviewLabel}>Preview</div>
+          <div style={isLight ? styles.dnsPreviewNameLight : styles.dnsPreviewName}>
             <DisplayNameText
               text={displayName || user.displayName}
               userId={user.id}
@@ -462,7 +762,7 @@ export function ProfileSection() {
             />
           </div>
         </div>
-        <div className="settings-field-control settings-field-row">
+        <div style={styles.fieldRow}>
           <Button
             variant="ghost"
             onClick={() => setPreviewTheme((p) => (p === 'dark' ? 'light' : 'dark'))}
@@ -478,12 +778,12 @@ export function ProfileSection() {
         </div>
 
         {styleEditorOpen && (
-          <div className="dns-editor">
-            <div className="settings-field">
-              <div className="settings-field-label">Style Scope</div>
-              <div className="settings-field-control">
+          <div style={styles.dnsEditor}>
+            <div style={styles.field}>
+              <div style={styles.fieldLabel}>Style Scope</div>
+              <div style={styles.fieldControl}>
                 <select
-                  className="settings-select"
+                  style={styles.settingsSelect}
                   value={styleScope}
                   onChange={(e) => setStyleScope(e.target.value)}
                 >
@@ -500,11 +800,11 @@ export function ProfileSection() {
                 </select>
               </div>
             </div>
-            <div className="settings-field">
-              <div className="settings-field-label">Font</div>
-              <div className="settings-field-control">
+            <div style={styles.field}>
+              <div style={styles.fieldLabel}>Font</div>
+              <div style={styles.fieldControl}>
                 <select
-                  className="settings-select"
+                  style={styles.settingsSelect}
                   value={activeStyle.font}
                   onChange={(e) =>
                     updateStyle({ ...activeStyle, font: e.target.value as DisplayNameStyle['font'] })
@@ -518,11 +818,11 @@ export function ProfileSection() {
                 </select>
               </div>
             </div>
-            <div className="settings-field">
-              <div className="settings-field-label">Effect</div>
-              <div className="settings-field-control">
+            <div style={styles.field}>
+              <div style={styles.fieldLabel}>Effect</div>
+              <div style={styles.fieldControl}>
                 <select
-                  className="settings-select"
+                  style={styles.settingsSelect}
                   value={activeStyle.effect}
                   onChange={(e) =>
                     updateStyle({
@@ -539,24 +839,24 @@ export function ProfileSection() {
                 </select>
               </div>
             </div>
-            <div className="settings-field-grid dns-colors">
-              <div className="settings-field">
-                <div className="settings-field-label">Primary Color</div>
-                <div className="settings-field-control">
+            <div style={styles.dnsColors}>
+              <div style={styles.field}>
+                <div style={styles.fieldLabel}>Primary Color</div>
+                <div style={styles.fieldControl}>
                   <input
                     type="color"
-                    className="dns-color-input"
+                    style={styles.dnsColorInput}
                     value={activeStyle.colorA}
                     onChange={(e) => updateStyle({ ...activeStyle, colorA: e.target.value })}
                   />
                 </div>
               </div>
-              <div className="settings-field">
-                <div className="settings-field-label">Secondary Color</div>
-                <div className="settings-field-control">
+              <div style={styles.field}>
+                <div style={styles.fieldLabel}>Secondary Color</div>
+                <div style={styles.fieldControl}>
                   <input
                     type="color"
-                    className="dns-color-input"
+                    style={styles.dnsColorInput}
                     value={activeStyle.colorB}
                     onChange={(e) => updateStyle({ ...activeStyle, colorB: e.target.value })}
                   />
@@ -567,12 +867,12 @@ export function ProfileSection() {
         )}
 
         {/* --- Profile Enhancements --- */}
-        <div className="dns-editor">
-          <div className="settings-field">
-            <div className="settings-field-label">Portal Tag</div>
-            <div className="settings-field-control">
+        <div style={styles.dnsEditor}>
+          <div style={styles.field}>
+            <div style={styles.fieldLabel}>Portal Tag</div>
+            <div style={styles.fieldControl}>
               <select
-                className="settings-select"
+                style={styles.settingsSelect}
                 value={profileEnhancements.serverTagGuildId ?? ''}
                 onChange={(e) => setServerTag(e.target.value || null)}
               >
@@ -590,9 +890,9 @@ export function ProfileSection() {
             </div>
           </div>
 
-          <div className="settings-field">
-            <div className="settings-field-label">Status Message</div>
-            <div className="settings-field-control settings-field-row">
+          <div style={styles.field}>
+            <div style={styles.fieldLabel}>Status Message</div>
+            <div style={styles.fieldRow}>
               <Input
                 type="text"
                 value={statusInput}
@@ -600,7 +900,7 @@ export function ProfileSection() {
                 placeholder="What's on your mind?"
               />
               <select
-                className="settings-select"
+                style={styles.settingsSelect}
                 value={statusExpiryPreset}
                 onChange={(e) => setStatusExpiryPreset(e.target.value as StatusExpiryPreset)}
               >
@@ -613,9 +913,9 @@ export function ProfileSection() {
             </div>
           </div>
 
-          <div className="settings-field">
-            <div className="settings-field-label">Profile Widgets</div>
-            <div className="settings-field-control">
+          <div style={styles.field}>
+            <div style={styles.fieldLabel}>Profile Widgets</div>
+            <div style={styles.fieldControl}>
               <Input
                 type="text"
                 value={profileEnhancements.widgets.join(', ')}
@@ -627,23 +927,23 @@ export function ProfileSection() {
         </div>
 
         {/* --- Profile Theme (Two-Color) --- */}
-        <div className="settings-field">
-          <div className="settings-field-label">Profile Theme</div>
-          <div className="settings-field-value">Customize your profile card colors.</div>
+        <div style={styles.field}>
+          <div style={styles.fieldLabel}>Profile Theme</div>
+          <div style={styles.fieldValue}>Customize your profile card colors.</div>
         </div>
-        <div className="settings-field-grid dns-colors">
-          <div className="settings-field">
-            <div className="settings-field-label">Primary Color</div>
-            <div className="settings-field-control">
+        <div style={styles.dnsColors}>
+          <div style={styles.field}>
+            <div style={styles.fieldLabel}>Primary Color</div>
+            <div style={styles.fieldControl}>
               <input
                 type="color"
-                className="dns-color-input"
+                style={styles.dnsColorInput}
                 value={primaryColor != null ? `#${primaryColor.toString(16).padStart(6, '0')}` : '#000000'}
                 onChange={(e) => setPrimaryColor(parseInt(e.target.value.slice(1), 16))}
               />
               <input
                 type="text"
-                className="input-field"
+                style={styles.inputField}
                 value={primaryColor != null ? `#${primaryColor.toString(16).padStart(6, '0')}` : ''}
                 onChange={(e) => {
                   const val = e.target.value.replace('#', '');
@@ -656,18 +956,18 @@ export function ProfileSection() {
               />
             </div>
           </div>
-          <div className="settings-field">
-            <div className="settings-field-label">Accent Color</div>
-            <div className="settings-field-control">
+          <div style={styles.field}>
+            <div style={styles.fieldLabel}>Accent Color</div>
+            <div style={styles.fieldControl}>
               <input
                 type="color"
-                className="dns-color-input"
+                style={styles.dnsColorInput}
                 value={accentColor != null ? `#${accentColor.toString(16).padStart(6, '0')}` : '#000000'}
                 onChange={(e) => setAccentColor(parseInt(e.target.value.slice(1), 16))}
               />
               <input
                 type="text"
-                className="input-field"
+                style={styles.inputField}
                 value={accentColor != null ? `#${accentColor.toString(16).padStart(6, '0')}` : ''}
                 onChange={(e) => {
                   const val = e.target.value.replace('#', '');
@@ -681,7 +981,7 @@ export function ProfileSection() {
             </div>
           </div>
         </div>
-        <div className="settings-field-control">
+        <div style={styles.fieldControl}>
           <Button onClick={handleSaveColors}>Save Theme Colors</Button>
         </div>
       </div>

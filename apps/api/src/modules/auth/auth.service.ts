@@ -183,7 +183,9 @@ export function createAuthService(ctx: AppContext) {
     const passwordHash = await hashPassword(input.password);
 
     // TODO: Encrypt dateOfBirth with AES-256-GCM before storage
-    const encryptedDob = input.dateOfBirth; // placeholder — will encrypt in production
+    const encryptedDob = input.dateOfBirth ?? null; // placeholder — will encrypt in production
+
+    const resolvedDisplayName = input.displayName ?? input.username;
 
     // Insert user
     await ctx.db.insert(users).values({
@@ -198,7 +200,7 @@ export function createAuthService(ctx: AppContext) {
     // Insert default profile
     await ctx.db.insert(userProfiles).values({
       userId,
-      displayName: input.displayName,
+      displayName: resolvedDisplayName,
     });
 
     // Insert default settings
@@ -213,7 +215,7 @@ export function createAuthService(ctx: AppContext) {
       const mailResult = await sendVerificationEmail({
         env: ctx.env,
         toEmail: input.email.toLowerCase(),
-        displayName: input.displayName,
+        displayName: resolvedDisplayName,
         token,
       });
       if (!mailResult.sent) {
@@ -241,7 +243,7 @@ export function createAuthService(ctx: AppContext) {
         id: userId,
         username: input.username,
         email: input.email,
-        displayName: input.displayName,
+        displayName: resolvedDisplayName,
         avatarHash: null,
         tier: 'free' as const,
       },
