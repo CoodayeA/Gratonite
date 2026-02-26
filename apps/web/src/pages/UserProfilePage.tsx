@@ -27,16 +27,16 @@ function formatJoinDate(iso: string | undefined | null): string {
 const pageStyle: React.CSSProperties = {
   display: 'flex',
   height: '100%',
-  background: '#2c2c3e',
-  color: '#e8e4e0',
+  background: 'var(--bg)',
+  color: 'var(--text)',
   overflow: 'hidden',
 };
 
 const sidebarStyle: React.CSSProperties = {
   width: 260,
   minWidth: 260,
-  background: '#353348',
-  borderRight: '1px solid #4a4660',
+  background: 'var(--bg-elevated)',
+  borderRight: '1px solid var(--stroke)',
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',
@@ -45,17 +45,17 @@ const sidebarStyle: React.CSSProperties = {
 const sidebarHeaderStyle: React.CSSProperties = {
   padding: '16px 16px 12px',
   fontSize: 16,
-  fontWeight: 700,
-  color: '#e8e4e0',
+  fontWeight: 600,
+  color: 'var(--text)',
 };
 
 const searchInputStyle: React.CSSProperties = {
   width: '100%',
   padding: '8px 12px',
-  background: '#25243a',
-  border: '1px solid #4a4660',
-  borderRadius: 6,
-  color: '#e8e4e0',
+  background: 'var(--bg-input)',
+  border: '1px solid var(--stroke)',
+  borderRadius: 'var(--radius-sm)',
+  color: 'var(--text)',
   fontSize: 13,
   outline: 'none',
   boxSizing: 'border-box' as const,
@@ -63,10 +63,10 @@ const searchInputStyle: React.CSSProperties = {
 
 const sectionLabelStyle: React.CSSProperties = {
   fontSize: 11,
-  fontWeight: 700,
-  color: '#6e6a80',
+  fontWeight: 600,
+  color: 'var(--text-faint)',
   textTransform: 'uppercase',
-  letterSpacing: '0.05em',
+  letterSpacing: '0.08em',
   padding: '12px 16px 6px',
 };
 
@@ -76,19 +76,19 @@ const friendItemStyle: React.CSSProperties = {
   gap: 10,
   padding: '6px 16px',
   cursor: 'pointer',
-  borderRadius: 6,
+  borderRadius: 'var(--radius-sm)',
   transition: 'background 0.15s',
 };
 
 const friendNameStyle: React.CSSProperties = {
   fontSize: 14,
   fontWeight: 500,
-  color: '#e8e4e0',
+  color: 'var(--text)',
 };
 
 const friendStatusStyle: React.CSSProperties = {
   fontSize: 12,
-  color: '#a8a4b8',
+  color: 'var(--text-muted)',
 };
 
 const mainContentStyle: React.CSSProperties = {
@@ -100,7 +100,7 @@ const mainContentStyle: React.CSSProperties = {
 
 const bannerStyle: React.CSSProperties = {
   height: 180,
-  background: 'linear-gradient(135deg, #413d58 0%, #2c2c3e 50%, #353348 100%)',
+  background: 'linear-gradient(135deg, var(--bg-soft) 0%, var(--bg) 50%, var(--bg-elevated) 100%)',
   position: 'relative',
   flexShrink: 0,
 };
@@ -112,8 +112,8 @@ const avatarWrapStyle: React.CSSProperties = {
   width: 96,
   height: 96,
   borderRadius: '50%',
-  border: '4px solid #d4af37',
-  background: '#2c2c3e',
+  border: '4px solid var(--accent)',
+  background: 'var(--bg)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -142,7 +142,7 @@ const nameGroupStyle: React.CSSProperties = {
 const displayNameStyle: React.CSSProperties = {
   fontSize: 24,
   fontWeight: 700,
-  color: '#e8e4e0',
+  color: 'var(--text)',
   display: 'flex',
   alignItems: 'center',
   gap: 8,
@@ -155,15 +155,15 @@ const verifiedBadgeStyle: React.CSSProperties = {
   width: 20,
   height: 20,
   borderRadius: '50%',
-  background: '#d4af37',
-  color: '#1a1a2e',
+  background: 'var(--accent)',
+  color: 'var(--text-on-gold)',
   fontSize: 11,
   fontWeight: 700,
 };
 
 const usernameStyle: React.CSSProperties = {
   fontSize: 14,
-  color: '#a8a4b8',
+  color: 'var(--text-muted)',
 };
 
 const buttonRowStyle: React.CSSProperties = {
@@ -173,10 +173,10 @@ const buttonRowStyle: React.CSSProperties = {
 
 const editBtnStyle: React.CSSProperties = {
   padding: '8px 16px',
-  borderRadius: 6,
-  background: '#413d58',
-  border: '1px solid #4a4660',
-  color: '#e8e4e0',
+  borderRadius: 'var(--radius-sm)',
+  background: 'var(--bg-soft)',
+  border: '1px solid var(--stroke)',
+  color: 'var(--text)',
   fontSize: 13,
   fontWeight: 600,
   cursor: 'pointer',
@@ -184,10 +184,10 @@ const editBtnStyle: React.CSSProperties = {
 
 const shareBtnStyle: React.CSSProperties = {
   padding: '8px 16px',
-  borderRadius: 6,
+  borderRadius: 'var(--radius-sm)',
   background: 'transparent',
-  border: '1px solid #4a4660',
-  color: '#a8a4b8',
+  border: '1px solid var(--stroke)',
+  color: 'var(--text-muted)',
   fontSize: 13,
   fontWeight: 600,
   cursor: 'pointer',
@@ -195,7 +195,7 @@ const shareBtnStyle: React.CSSProperties = {
 
 const bioStyle: React.CSSProperties = {
   fontSize: 14,
-  color: '#a8a4b8',
+  color: 'var(--text-muted)',
   lineHeight: 1.6,
 };
 
@@ -214,12 +214,12 @@ const statItemStyle: React.CSSProperties = {
 const statValueStyle: React.CSSProperties = {
   fontSize: 16,
   fontWeight: 700,
-  color: '#e8e4e0',
+  color: 'var(--text)',
 };
 
 const statLabelStyle: React.CSSProperties = {
   fontSize: 12,
-  color: '#6e6a80',
+  color: 'var(--text-faint)',
   textTransform: 'uppercase',
 };
 
@@ -247,11 +247,11 @@ const balanceLabelStyle: React.CSSProperties = {
 };
 
 const sectionTitleStyle: React.CSSProperties = {
-  fontSize: 13,
-  fontWeight: 700,
-  color: '#6e6a80',
+  fontSize: 11,
+  fontWeight: 600,
+  color: 'var(--text-faint)',
   textTransform: 'uppercase',
-  letterSpacing: '0.05em',
+  letterSpacing: '0.08em',
   marginBottom: 12,
 };
 
@@ -265,14 +265,14 @@ const badgeCircleStyle: React.CSSProperties = {
   width: 44,
   height: 44,
   borderRadius: '50%',
-  background: '#413d58',
-  border: '1px solid #4a4660',
+  background: 'var(--bg-soft)',
+  border: '1px solid var(--stroke)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   fontSize: 12,
   fontWeight: 700,
-  color: '#a8a4b8',
+  color: 'var(--text-muted)',
 };
 
 const widgetsRowStyle: React.CSSProperties = {
@@ -286,7 +286,7 @@ const widgetPillStyle: React.CSSProperties = {
   borderRadius: 20,
   fontSize: 12,
   fontWeight: 600,
-  color: '#e8e4e0',
+  color: 'var(--text)',
 };
 
 const WIDGET_COLORS = [
@@ -299,28 +299,28 @@ const portalItemStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: 10,
   padding: '8px 12px',
-  background: '#25243a',
-  borderRadius: 8,
+  background: 'var(--bg-input)',
+  borderRadius: 'var(--radius-sm)',
   cursor: 'pointer',
 };
 
 const portalIconStyle: React.CSSProperties = {
   width: 32,
   height: 32,
-  borderRadius: 8,
-  background: '#413d58',
+  borderRadius: 'var(--radius-sm)',
+  background: 'var(--bg-soft)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   fontSize: 14,
   fontWeight: 700,
-  color: '#d4af37',
+  color: 'var(--accent)',
 };
 
 const portalNameStyle: React.CSSProperties = {
   fontSize: 14,
   fontWeight: 500,
-  color: '#e8e4e0',
+  color: 'var(--text)',
 };
 
 const loadingWrapStyle: React.CSSProperties = {
@@ -329,7 +329,7 @@ const loadingWrapStyle: React.CSSProperties = {
   justifyContent: 'center',
   height: '100%',
   width: '100%',
-  background: '#2c2c3e',
+  background: 'var(--bg)',
 };
 
 export function UserProfilePage() {
@@ -492,7 +492,7 @@ export function UserProfilePage() {
             </>
           )}
           {!friendsLoading && filteredFriends.length === 0 && (
-            <div style={{ padding: '16px', color: '#6e6a80', fontSize: 13, textAlign: 'center' as const }}>
+            <div style={{ padding: '16px', color: 'var(--text-faint)', fontSize: 13, textAlign: 'center' as const }}>
               No friends found
             </div>
           )}
@@ -618,7 +618,7 @@ export function UserProfilePage() {
                   ))}
                 </div>
               ) : mutualFriends.length === 0 ? (
-                <div style={{ fontSize: 13, color: '#6e6a80' }}>No mutuals</div>
+                <div style={{ fontSize: 13, color: 'var(--text-faint)' }}>No mutuals</div>
               ) : (
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
                   {mutualFriends.map((f: any) => (
@@ -640,7 +640,7 @@ export function UserProfilePage() {
                   ))}
                 </div>
               ) : mutualServers.length === 0 ? (
-                <div style={{ fontSize: 13, color: '#6e6a80' }}>No mutuals</div>
+                <div style={{ fontSize: 13, color: 'var(--text-faint)' }}>No mutuals</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 } as React.CSSProperties}>
                   {mutualServers.map((server: any) => (
