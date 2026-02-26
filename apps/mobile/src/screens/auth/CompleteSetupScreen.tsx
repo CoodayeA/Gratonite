@@ -89,13 +89,13 @@ export function CompleteSetupScreen() {
       // Build profile update payload
       const profileData: Record<string, any> = {};
       if (displayName.trim()) {
-        profileData.displayName = displayName.trim();
+        profileData['displayName'] = displayName.trim();
       }
       if (avatarHash) {
-        profileData.avatarHash = avatarHash;
+        profileData['avatarHash'] = avatarHash;
       }
       if (selectedInterests.size > 0) {
-        profileData.interests = Array.from(selectedInterests);
+        profileData['interests'] = Array.from(selectedInterests);
       }
 
       // Update profile if there's anything to save
@@ -103,8 +103,8 @@ export function CompleteSetupScreen() {
         await usersApi.updateProfile(profileData);
 
         // Update local auth store
-        if (profileData.displayName) {
-          updateUser({ displayName: profileData.displayName });
+        if (profileData['displayName']) {
+          updateUser({ displayName: profileData['displayName'] as string });
         }
         if (avatarHash) {
           updateUser({ avatar: avatarHash });

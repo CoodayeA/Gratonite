@@ -304,7 +304,7 @@ export function RegisterScreen() {
 
   // DOB display values
   const monthDisplay = dobMonth
-    ? MONTHS[parseInt(dobMonth, 10) - 1]
+    ? (MONTHS[parseInt(dobMonth, 10) - 1] ?? '')
     : '';
   const dayDisplay = dobDay || '';
   const yearDisplay = dobYear || '';
