@@ -193,7 +193,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
         width: 18,
         height: 18,
         borderRadius: '50%',
-        background: checked ? '#1a1a2e' : 'var(--text-muted)',
+        background: checked ? 'var(--bg-float)' : 'var(--text-muted)',
         transition: 'left 0.2s',
       }} />
     </button>
