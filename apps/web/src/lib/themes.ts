@@ -299,6 +299,7 @@ let _appliedThemeId: string | null = null;
  */
 export function applyTheme(theme: Theme): void {
   const root = document.documentElement;
+  for (const key of VALID_THEME_KEYS) root.style.removeProperty(key);
   for (const [key, value] of Object.entries(theme.vars)) {
     root.style.setProperty(key, value);
   }
@@ -330,7 +331,10 @@ export function loadSavedTheme(): void {
         root.style.setProperty(key, value);
       }
     }
-    if (typeof p['id'] === 'string') _appliedThemeId = p['id'];
+    if (typeof p['id'] === 'string') {
+      const known = BUILT_IN_THEMES.find(t => t.id === p['id']);
+      if (known) _appliedThemeId = known.id;
+    }
   } catch {
     // corrupt data — ignore
   }
