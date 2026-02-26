@@ -432,6 +432,89 @@ export const voiceApi = {
     }),
 };
 
+// ── Events ────────────────────────────────────────────
+export const eventsApi = {
+  list: (guildId: string, params?: { status?: string; limit?: number; before?: string }) => {
+    const parts: string[] = [];
+    if (params?.status) parts.push(`status=${encodeURIComponent(params.status)}`);
+    if (params?.limit) parts.push(`limit=${params.limit}`);
+    if (params?.before) parts.push(`before=${encodeURIComponent(params.before)}`);
+    const qs = parts.length ? `?${parts.join('&')}` : '';
+    return apiFetch<any[]>(`/guilds/${guildId}/scheduled-events${qs}`);
+  },
+
+  get: (guildId: string, eventId: string) =>
+    apiFetch<any>(`/guilds/${guildId}/scheduled-events/${eventId}`),
+
+  create: (
+    guildId: string,
+    data: {
+      name: string;
+      description?: string;
+      scheduledStartTime: string;
+      scheduledEndTime?: string;
+      entityType: 'stage_instance' | 'voice' | 'external';
+      channelId?: string;
+      entityMetadata?: { location?: string };
+    },
+  ) =>
+    apiFetch<any>(`/guilds/${guildId}/scheduled-events`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (guildId: string, eventId: string, data: Record<string, any>) =>
+    apiFetch<any>(`/guilds/${guildId}/scheduled-events/${eventId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (guildId: string, eventId: string) =>
+    apiFetch<void>(`/guilds/${guildId}/scheduled-events/${eventId}`, { method: 'DELETE' }),
+
+  rsvp: (guildId: string, eventId: string) =>
+    apiFetch<void>(`/guilds/${guildId}/scheduled-events/${eventId}/users/@me`, { method: 'PUT' }),
+
+  unrsvp: (guildId: string, eventId: string) =>
+    apiFetch<void>(`/guilds/${guildId}/scheduled-events/${eventId}/users/@me`, { method: 'DELETE' }),
+
+  getUsers: (guildId: string, eventId: string) =>
+    apiFetch<any[]>(`/guilds/${guildId}/scheduled-events/${eventId}/users`),
+};
+
+// ── Threads ───────────────────────────────────────────
+export const threadsApi = {
+  listForChannel: (channelId: string) =>
+    apiFetch<any[]>(`/channels/${channelId}/threads`),
+
+  get: (threadId: string) =>
+    apiFetch<any>(`/threads/${threadId}`),
+
+  create: (channelId: string, data: { name: string; type?: string; message?: string }) =>
+    apiFetch<any>(`/channels/${channelId}/threads`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (threadId: string, data: { name?: string; archived?: boolean; locked?: boolean }) =>
+    apiFetch<any>(`/threads/${threadId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (threadId: string) =>
+    apiFetch<void>(`/threads/${threadId}`, { method: 'DELETE' }),
+
+  getMembers: (threadId: string) =>
+    apiFetch<any[]>(`/threads/${threadId}/members`),
+
+  join: (threadId: string) =>
+    apiFetch<void>(`/threads/${threadId}/members/@me`, { method: 'PUT' }),
+
+  leave: (threadId: string) =>
+    apiFetch<void>(`/threads/${threadId}/members/@me`, { method: 'DELETE' }),
+};
+
 /**
  * Build an absolute URL for a file served by the API.
  * The API endpoint `GET /api/v1/files/:hash` resolves any asset
