@@ -11,16 +11,9 @@ const styles = {
   section: {
     maxWidth: 720,
   } as React.CSSProperties,
-  heading: {
-    fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
-    fontSize: 20,
-    fontWeight: 700,
-    color: 'var(--text)',
-    marginBottom: 4,
-  } as React.CSSProperties,
   profileCard: {
     position: 'relative',
-    background: 'rgba(8, 12, 20, 0.6)',
+    background: 'var(--bg-float)',
     border: '1px solid var(--stroke)',
     borderRadius: 'var(--radius-lg)',
     overflow: 'hidden',
@@ -88,7 +81,7 @@ const styles = {
     color: 'var(--text)',
   } as React.CSSProperties,
   card: {
-    background: 'rgba(8, 12, 20, 0.6)',
+    background: 'var(--bg-float)',
     border: '1px solid var(--stroke)',
     borderRadius: 'var(--radius-lg)',
     padding: 20,
@@ -150,7 +143,27 @@ export function AccountSection() {
 
   return (
     <section style={styles.section}>
-      <h2 style={styles.heading}>My Account</h2>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+        paddingBottom: 16,
+        borderBottom: '1px solid var(--stroke)',
+        marginBottom: 8,
+      }}>
+        <h2 style={{
+          fontSize: 20,
+          fontWeight: 700,
+          color: 'var(--text)',
+          margin: 0,
+          fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
+        }}>
+          My Account
+        </h2>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
+          Manage your account settings and preferences.
+        </p>
+      </div>
 
       <div style={styles.profileCard}>
         <div style={bannerStyle} />
