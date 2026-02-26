@@ -21,6 +21,7 @@ import { FullProfileOverlay } from '@/components/modals/FullProfileOverlay';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useGlobalKeyboardShortcuts';
 import { DmCallOverlay } from '@/components/call/DmCallOverlay';
 import { DmIncomingCallModal } from '@/components/call/DmIncomingCallModal';
+import { OnboardingOverlay } from '@/components/ui/OnboardingOverlay';
 import { DmProfilePanel } from '@/components/dm/DmProfilePanel';
 import { GroupMembersPanel } from '@/components/dm/GroupMembersPanel';
 import { DmTabBar } from '@/components/dm/DmTabBar';
@@ -120,6 +121,7 @@ export function AppLayout() {
       {activeModal === 'full-profile' && <FullProfileOverlay />}
       <DmCallOverlay />
       <DmIncomingCallModal />
+      <OnboardingOverlay />
     </div>
   );
 }
