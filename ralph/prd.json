@@ -1,0 +1,1064 @@
+{
+  "project": "Gratonite",
+  "branchName": "ralph/massive-ui-ux-upgrade",
+  "description": "Massive UI/UX redesign: new charcoal/gold design tokens, redesigned auth flows, updated navigation hubs, chat ecosystem, discovery, economy, settings, plus 20+ brand new feature screens (Wiki, Events, Polls, Q&A, Analytics, AutoMod, Stage, Soundboard, Themes, Bots) \u2014 all wired to existing backend APIs.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Update web design tokens (tokens-v2.ts)",
+      "description": "As a developer, I need the web token system updated so all components inherit the new charcoal/gold visual language.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/theme/tokens-v2.ts DEFAULT_THEME_V2 tokens",
+        "Map semantic/surface/base to #2c2c3e (bg-charcoal)",
+        "Map semantic/surface/raised to #353348 (bg-surface)",
+        "Map semantic/surface/soft to #413d58 (bg-surface-elevated)",
+        "Map semantic/surface/float to #25243a (bg-input)",
+        "Map semantic/surface/input to #25243a (bg-input)",
+        "Map semantic/text/primary to #e8e4e0, muted to #a8a4b8, faint to #6e6a80",
+        "Map semantic/border/default to #4a4660, strong to #4a466080",
+        "Map semantic/action/accent to #d4af37 (accent-gold)",
+        "Map semantic/action/accent-2 to #e8c547 (gratonite-gold)",
+        "Map semantic/status/danger to #e85a6e",
+        "Update gradients for purple velvet: bg-purple-velvet #5a4a7a to bg-purple-dark #3e3a5a",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Foundation \u2014 every web component reads from these tokens. File: apps/web/src/theme/tokens-v2.ts"
+    },
+    {
+      "id": "US-002",
+      "title": "Update web CSS variables (:root in styles.css)",
+      "description": "As a developer, I need the CSS custom properties updated to the new palette so all CSS-based styling reflects the new design.",
+      "acceptanceCriteria": [
+        "Update :root in apps/web/src/styles.css (first ~68 lines)",
+        "--bg: #2c2c3e, --bg-elevated: #353348, --bg-soft: #413d58, --bg-float: #25243a, --bg-input: #25243a",
+        "--stroke: #4a4660, --stroke-strong: #4a466080",
+        "--accent: #d4af37, --accent-2: #e8c547, --accent-3: #6aea8a",
+        "--danger: #e85a6e, --danger-bg: rgba(232,90,110,0.12)",
+        "--text: #e8e4e0, --text-muted: #a8a4b8, --text-faint: #6e6a80",
+        "Update --gradient-primary and --gradient-accent for gold/purple scheme",
+        "Add --gold-glow: #d4af3720, --gold-subtle: #d4af3730, --border-gold: #d4af3740",
+        "Add --bg-purple-velvet: #5a4a7a, --bg-purple-dark: #3e3a5a",
+        "Add --text-on-gold: #1a1a2e, --frosted-glass: #2c2c3e26",
+        "Keep font imports for Inter (add if not present), keep sizing/motion/radius vars",
+        "Update light mode overrides section to have matching light variants",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Only modify the CSS custom property declarations (:root block), not component styles. File is ~290KB so use offset/limit when reading. Focus on lines 1-120."
+    },
+    {
+      "id": "US-003",
+      "title": "Update web AuthLayout with gradient background",
+      "description": "As a user, I want the auth pages to have the purple velvet gradient background matching the new designs.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/layouts/AuthLayout.tsx",
+        "Add gradient background: linear-gradient from #5a4a7a (top) to #3e3a5a (bottom)",
+        "Center the auth card vertically and horizontally with min-height: 100vh",
+        "Auth card should use bg-surface (#353348) with border-subtle (#4a4660) border",
+        "Card should have border-radius: 16px (radius-lg) and frosted glass effect",
+        "Keep existing Outlet, brand logo, and title structure",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Small file (21 lines). Add inline styles or CSS classes. File: apps/web/src/layouts/AuthLayout.tsx"
+    },
+    {
+      "id": "US-004",
+      "title": "Update mobile color palette (colors.ts)",
+      "description": "As a developer, I need the mobile color palette replaced with the new charcoal/gold design system.",
+      "acceptanceCriteria": [
+        "Update apps/mobile/src/theme/colors.ts",
+        "bg.primary: '#2c2c3e', bg.secondary: '#353348', bg.tertiary: '#413d58', bg.elevated: '#413d58', bg.surface: '#353348', bg.overlay: 'rgba(0,0,0,0.6)'",
+        "text.primary: '#e8e4e0', text.secondary: '#a8a4b8', text.muted: '#6e6a80', text.inverse: '#1a1a2e', text.link: '#d4af37'",
+        "brand.primary: '#d4af37', brand.secondary: '#e8c547', brand.gradient: ['#d4af37','#e8c547']",
+        "stroke.primary: '#4a4660', stroke.secondary: '#4a466080', stroke.active: '#d4af37'",
+        "accent.success: '#6aea8a', accent.warning: '#e8c547', accent.error: '#e85a6e', accent.info: '#a8a4b8'",
+        "message.self: '#3e3a5a', message.other: '#353348', message.mention: 'rgba(212,175,55,0.1)', message.reply: 'rgba(212,175,55,0.08)'",
+        "Keep status colors (online green, idle amber, dnd red, offline gray)",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "File: apps/mobile/src/theme/colors.ts. Preserve the Colors type export."
+    },
+    {
+      "id": "US-005",
+      "title": "Update mobile tab bar to gold accent",
+      "description": "As a user, I want the mobile tab bar to use gold active color instead of indigo.",
+      "acceptanceCriteria": [
+        "Update apps/mobile/src/navigation/MainTabs.tsx",
+        "tabBarActiveTintColor: colors.brand.primary (will now be #d4af37 after US-004)",
+        "tabBarInactiveTintColor: colors.text.muted (will now be #6e6a80)",
+        "Android tabBarStyle backgroundColor: colors.bg.primary (now #2c2c3e)",
+        "borderTopColor: colors.stroke.primary (now #4a4660)",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "This should auto-resolve after US-004 changes the color values, but verify the colors reference correctly. File: apps/mobile/src/navigation/MainTabs.tsx"
+    },
+    {
+      "id": "US-006",
+      "title": "Redesign web LoginPage with 2FA and OAuth",
+      "description": "As a user, I want the login page to match the new design with 2FA code input and OAuth buttons.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/pages/auth/LoginPage.tsx to match .pen design node Gt45f",
+        "Dark charcoal card centered on gradient background",
+        "Email/username and password inputs with bg-input (#25243a) background",
+        "Gold primary CTA button: bg #d4af37, text #1a1a2e",
+        "Add 2FA section: 6 digit code input boxes (shown when server returns 2FA required)",
+        "Add 'Use backup code instead' link below 2FA boxes",
+        "Add OAuth buttons section: 'Continue with Google' and 'Continue with Discord'",
+        "Add 'Don't have an account? Sign Up' link at bottom",
+        "Preserve existing login API call (authApi.login or api.auth.login) and auth store usage",
+        "Preserve existing error handling and loading states",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Read the .pen design at node Gt45f (depth 4) for exact layout. Keep all existing API logic. OAuth buttons can be UI-only for now (onclick shows 'Coming soon' toast)."
+    },
+    {
+      "id": "US-007",
+      "title": "Redesign web RegisterPage with DOB and terms",
+      "description": "As a user, I want the registration page to match the new design with full name, DOB, and terms checkbox.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/pages/auth/RegisterPage.tsx to match .pen design node 5vl1N",
+        "Add First Name and Last Name fields (send as displayName: 'First Last')",
+        "Keep Username and Email fields",
+        "Add Date of Birth with Month/Day/Year dropdowns",
+        "Keep Password field",
+        "Add 'I agree to Terms of Service and Privacy Policy' checkbox (required)",
+        "Gold 'Create Account' CTA button",
+        "Add 'Already have an account? Log In' link",
+        "Preserve existing register API call and auth store usage",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Read .pen node 5vl1N for layout. DOB can be stored in profile via a follow-up API call or sent with registration. Keep existing API contract."
+    },
+    {
+      "id": "US-008",
+      "title": "Redesign web VerifyEmail pages (pending + confirmed)",
+      "description": "As a user, I want the verify email screens to show both pending and confirmed states with the new design.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/pages/auth/VerifyEmailPendingPage.tsx to match .pen node lQdG3 (pending state)",
+        "Update apps/web/src/pages/auth/VerifyEmailConfirmPage.tsx to match .pen node lQdG3 (confirmed state)",
+        "Pending state: envelope icon, 'Check Your Email' heading, subtitle with email address, 'Resend Email' button, 'Back to Login' link",
+        "Confirmed state: checkmark icon, 'Email Verified!' heading, gold 'Continue' CTA button",
+        "Both use gradient background (purple velvet) and centered card",
+        "Preserve existing API calls and navigation logic",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Two separate files to update. Read .pen node lQdG3 at depth 3+ for both state designs."
+    },
+    {
+      "id": "US-009",
+      "title": "Redesign web CompleteAccountSetup with avatar and interests",
+      "description": "As a user, I want the account setup page to include avatar upload and interest tag picking.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/pages/auth/CompleteAccountSetupPage.tsx to match .pen node qEzko",
+        "Display name input field",
+        "Bio/About Me text area",
+        "Avatar upload circle with camera icon overlay",
+        "Interest tag picker grid: Gaming, Music, Tech, Art, Sports, Anime, Movies, Books, Cooking, Travel, Science, Photography (pill-shaped, gold when selected)",
+        "Gold 'Complete Setup' CTA button",
+        "Preserve existing API call to update profile (usersApi.updateProfile or api.users.patchProfile)",
+        "Avatar upload should use existing filesApi.upload",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Read .pen node qEzko for layout. Interest tags are visual for now; store as comma-separated string in user bio or settings if no dedicated field exists."
+    },
+    {
+      "id": "US-010",
+      "title": "Redesign mobile LoginScreen with 2FA and OAuth",
+      "description": "As a mobile user, I want the login screen updated to match the new design with 2FA and OAuth.",
+      "acceptanceCriteria": [
+        "Update apps/mobile/src/screens/auth/LoginScreen.tsx to match .pen node 15sFM",
+        "Purple velvet gradient background (top #5a4a7a to bottom #3e3a5a)",
+        "Gratonite logo and title at top",
+        "Email/password inputs with new input styling (bg-input #25243a, border-subtle #4a4660)",
+        "Gold 'Sign In' button (bg #d4af37, text #1a1a2e)",
+        "2FA section: 6 digit code input (shown conditionally)",
+        "OAuth buttons: 'Continue with Google', 'Continue with Discord'",
+        "'Don't have an account? Sign Up' link",
+        "Preserve existing authApi.login call and auth store usage",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Read .pen node 15sFM for mobile layout."
+    },
+    {
+      "id": "US-011",
+      "title": "Redesign mobile RegisterScreen with full form",
+      "description": "As a mobile user, I want the registration screen updated with name, DOB, and terms.",
+      "acceptanceCriteria": [
+        "Update apps/mobile/src/screens/auth/RegisterScreen.tsx to match .pen node yjV0w",
+        "Purple velvet gradient background",
+        "First Name, Last Name, Username, Email, DOB (picker), Password fields",
+        "Terms checkbox",
+        "Gold 'Create Account' button",
+        "Preserve existing authApi.register call",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Read .pen node yjV0w for mobile layout."
+    },
+    {
+      "id": "US-012",
+      "title": "Create mobile VerifyEmailScreen",
+      "description": "As a mobile user, I need a verify email screen for the auth flow.",
+      "acceptanceCriteria": [
+        "Create apps/mobile/src/screens/auth/VerifyEmailScreen.tsx matching .pen node licw8",
+        "Two states: pending (envelope icon, 'Check Your Email') and confirmed ('Email Verified!')",
+        "Purple velvet gradient background",
+        "Resend email button, continue button",
+        "Add 'VerifyEmail' route to apps/mobile/src/navigation/AuthStack.tsx",
+        "Add VerifyEmail to navigation types in apps/mobile/src/navigation/types.ts",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "New file. Read .pen node licw8 for design."
+    },
+    {
+      "id": "US-013",
+      "title": "Create mobile CompleteSetupScreen",
+      "description": "As a mobile user, I need a complete setup screen for onboarding.",
+      "acceptanceCriteria": [
+        "Create apps/mobile/src/screens/auth/CompleteSetupScreen.tsx matching .pen node MJi72",
+        "Display name, bio, avatar upload, interest tag picker",
+        "Gold 'Complete Setup' button",
+        "Add 'CompleteSetup' route to AuthStack.tsx",
+        "Add CompleteSetup to navigation types",
+        "Wire avatar upload to filesApi.upload, profile update to usersApi.updateProfile",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "New file. Read .pen node MJi72 for design."
+    },
+    {
+      "id": "US-014",
+      "title": "Redesign web HomePage dashboard",
+      "description": "As a user, I want the home page to show a dashboard with 6 action tiles matching the new design.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/pages/HomePage.tsx to match .pen node N12TG",
+        "Welcome header with user's display name",
+        "6 action tile cards in grid: Create Portal, Discover, Join Gratonite Lounge, Give Feedback, Donate, Open Settings",
+        "Each tile: elevated surface (#413d58), gold accent icon, title, subtitle",
+        "Cards use border-radius: 16px, border: 1px solid #4a4660",
+        "Tiles link to existing routes (/discover, /settings, etc.)",
+        "Preserve any existing API calls or data fetching",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": "Read .pen node N12TG for exact layout."
+    },
+    {
+      "id": "US-015",
+      "title": "Redesign web FriendsPage with new layout",
+      "description": "As a user, I want the friends page to match the new design with profile preview panel.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/pages/FriendsPage.tsx to match .pen node I7d3P",
+        "Left panel: friend list with tabs (Online, All, Pending, Blocked)",
+        "Each friend row: avatar, display name, status indicator, actions",
+        "Right panel: selected friend profile preview (avatar, banner, bio, mutual servers)",
+        "'Add Friend' button in header (gold accent)",
+        "Search/filter bar at top",
+        "Use new color tokens throughout",
+        "Preserve existing relationships API and React Query hooks",
+        "Typecheck passes"
+      ],
+      "priority": 15,
+      "passes": true,
+      "notes": "Read .pen node I7d3P for layout details."
+    },
+    {
+      "id": "US-016",
+      "title": "Redesign web DM list in ChannelSidebar",
+      "description": "As a user, I want the DM list sidebar to match the new design.",
+      "acceptanceCriteria": [
+        "Update DM-related rendering in apps/web/src/components/sidebar/ChannelSidebar.tsx and apps/web/src/components/dm/ components",
+        "Match .pen node KYSij design",
+        "Messages header with search bar",
+        "DM conversation list with: avatar, display name, last message preview, timestamp, unread badge",
+        "Use new surface/text/stroke colors",
+        "Preserve all existing DM channel fetching and navigation logic",
+        "Typecheck passes"
+      ],
+      "priority": 16,
+      "passes": true,
+      "notes": "Read .pen node KYSij for DM list design. Multiple files may need updating."
+    },
+    {
+      "id": "US-017",
+      "title": "Redesign web Portal list in GuildRail",
+      "description": "As a user, I want the portal/guild rail to match the new design.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/components/sidebar/GuildRail.tsx to match .pen node fPJP8",
+        "Portal icons with gold active ring indicator",
+        "Hover tooltip with portal name",
+        "Separator between DM button and portal list",
+        "'Create or Join Portal' button at bottom (+ icon)",
+        "Use new bg-charcoal background, border-subtle dividers",
+        "Preserve existing guild store integration and navigation",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": true,
+      "notes": "Read .pen node fPJP8 for portal rail design."
+    },
+    {
+      "id": "US-018",
+      "title": "Create web WikiPage and wire to API",
+      "description": "As a user, I want to view and edit wiki pages within a portal.",
+      "acceptanceCriteria": [
+        "Create apps/web/src/pages/WikiPage.tsx matching .pen node 0G1UW",
+        "Left nav: page tree (Getting Started, Quick Start Guide, API Reference, Configuration)",
+        "Main content: markdown viewer with rendered wiki content",
+        "Breadcrumbs at top",
+        "'On this page' sidebar (table of contents)",
+        "Edit button that switches to editor mode",
+        "Revision history panel",
+        "Add wiki API methods to apps/web/src/lib/api.ts: listWikiPages, getWikiPage, createWikiPage, updateWikiPage, deleteWikiPage, getWikiRevisions, revertWikiRevision",
+        "Backend endpoints exist: GET/POST /channels/:channelId/wiki, GET/PATCH/DELETE /wiki/:pageId, GET /wiki/:pageId/revisions, POST /wiki/:pageId/revert/:revisionId",
+        "Add route '/guild/:guildId/wiki' to App.tsx",
+        "Typecheck passes"
+      ],
+      "priority": 18,
+      "passes": true,
+      "notes": "NEW PAGE. Backend API fully exists. Read .pen node 0G1UW for desktop design."
+    },
+    {
+      "id": "US-019",
+      "title": "Create web EventsPage and wire to API",
+      "description": "As a user, I want to view and RSVP to events in a portal.",
+      "acceptanceCriteria": [
+        "Create apps/web/src/pages/EventsPage.tsx matching .pen node BDLR5",
+        "Left sidebar: upcoming/past event tabs",
+        "Main view: event card with banner image, date/time, description, attendee list, RSVP button",
+        "Add events API methods to api.ts: listEvents, getEvent, createEvent, updateEvent, deleteEvent, rsvpEvent, unrsvpEvent, getAttendees",
+        "Backend endpoints: GET/POST /guilds/:guildId/scheduled-events, GET/PATCH/DELETE /:eventId, PUT/DELETE /:eventId/users/@me, GET /:eventId/users",
+        "Add route '/guild/:guildId/events' to App.tsx",
+        "Typecheck passes"
+      ],
+      "priority": 19,
+      "passes": true,
+      "notes": "NEW PAGE. Backend fully exists. Read .pen node BDLR5 for design."
+    },
+    {
+      "id": "US-020",
+      "title": "Create web PollsPage and wire to API",
+      "description": "As a user, I want to view polls and vote within a portal.",
+      "acceptanceCriteria": [
+        "Create apps/web/src/pages/PollsPage.tsx matching .pen node clxOR",
+        "Left sidebar: active/recent/my polls list",
+        "Main view: poll question, vote options with gold progress bars and percentages, total votes, time remaining",
+        "Vote action: clicking an option calls the poll vote API",
+        "Add poll API methods to api.ts: votePoll, unvotePoll, getPollResults, finalizePoll",
+        "Backend: PUT/DELETE /channels/:channelId/polls/:pollId/votes/:answerId, GET /polls/:pollId/votes, POST /polls/:pollId/finalize",
+        "Add route '/guild/:guildId/polls' to App.tsx",
+        "Typecheck passes"
+      ],
+      "priority": 20,
+      "passes": true,
+      "notes": "NEW PAGE. Polls are integrated with messages on the backend. Read .pen node clxOR."
+    },
+    {
+      "id": "US-021",
+      "title": "Create web QandAPage and wire to API",
+      "description": "As a user, I want a Q&A section in portals for questions and answers.",
+      "acceptanceCriteria": [
+        "Create apps/web/src/pages/QandAPage.tsx matching .pen node cOE2F",
+        "Question list with vote counts, titles, answer counts",
+        "Detail view: question with votes, answers, accept answer button",
+        "Ask question form (creates thread)",
+        "Add Q&A API methods to api.ts: listQuestions, getQuestion, createQuestion, voteQuestion, voteAnswer, acceptAnswer",
+        "Backend: GET/POST /channels/:channelId/questions, GET /questions/:threadId, PUT/DELETE votes, PUT/DELETE accept",
+        "Add route '/guild/:guildId/qa' to App.tsx",
+        "Typecheck passes"
+      ],
+      "priority": 21,
+      "passes": true,
+      "notes": "NEW PAGE. Backend fully exists. Read .pen node cOE2F."
+    },
+    {
+      "id": "US-022",
+      "title": "Create web AnalyticsPage and wire to API",
+      "description": "As a portal owner, I want to see analytics for my portal.",
+      "acceptanceCriteria": [
+        "Create apps/web/src/pages/AnalyticsPage.tsx matching .pen node k9wOS",
+        "Overview stats cards: Total Members, Active Daily, Messages Today, Gratonites Earned",
+        "Member growth line chart (use recharts or similar lightweight lib already in deps)",
+        "Message activity bar chart by hour",
+        "Channel breakdown table",
+        "Top contributors list",
+        "Add analytics API to api.ts: getAnalytics(guildId, period), getAnalyticsHeatmap(guildId)",
+        "Backend: GET /guilds/:guildId/analytics, GET /guilds/:guildId/analytics/heatmap",
+        "Add route '/guild/:guildId/analytics' to App.tsx",
+        "Typecheck passes"
+      ],
+      "priority": 22,
+      "passes": true,
+      "notes": "NEW PAGE. Backend fully exists. Read .pen node k9wOS. Check if recharts is already in package.json."
+    },
+    {
+      "id": "US-023",
+      "title": "Create web ScheduledMessagesPage",
+      "description": "As a user, I want to manage scheduled messages in a channel.",
+      "acceptanceCriteria": [
+        "Create apps/web/src/pages/ScheduledMessagesPage.tsx matching .pen node d92T4",
+        "List of scheduled messages with: content preview, channel name, scheduled time, cancel button",
+        "Create scheduled message form: channel selector, message content, date/time picker",
+        "Add scheduled messages API to api.ts: listScheduledMessages, createScheduledMessage, cancelScheduledMessage",
+        "Backend: GET/POST /channels/:channelId/scheduled-messages, DELETE /:scheduledMessageId",
+        "Add route '/guild/:guildId/scheduled-messages' to App.tsx",
+        "Typecheck passes"
+      ],
+      "priority": 23,
+      "passes": true,
+      "notes": "NEW PAGE. Backend fully exists."
+    },
+    {
+      "id": "US-024",
+      "title": "Create web AutoModPage and wire to API",
+      "description": "As a portal admin, I want to configure auto-moderation rules.",
+      "acceptanceCriteria": [
+        "Create apps/web/src/pages/AutoModPage.tsx matching .pen node 4t5bx",
+        "Rule list with toggle switches (enable/disable)",
+        "Rule types: keyword filter, spam detection, link blocking, mention limits",
+        "Create/edit rule modal with trigger config and action config",
+        "Logs section showing recent auto-mod actions",
+        "Add automod API to api.ts: listAutoModRules, createAutoModRule, updateAutoModRule, deleteAutoModRule, getAutoModLogs",
+        "Backend: CRUD /guilds/:guildId/auto-moderation/rules, GET /auto-moderation/logs",
+        "Add route '/guild/:guildId/automod' to App.tsx",
+        "Typecheck passes"
+      ],
+      "priority": 24,
+      "passes": true,
+      "notes": "NEW PAGE. Backend fully exists."
+    },
+    {
+      "id": "US-025",
+      "title": "Create web ThemeMarketplacePage",
+      "description": "As a user, I want to browse and install themes from the marketplace.",
+      "acceptanceCriteria": [
+        "Create apps/web/src/pages/ThemeMarketplacePage.tsx matching .pen node E4KFq",
+        "Grid of theme preview cards with: name, author, preview image, install count, rating",
+        "Category filters: All, Dark, Light, Community, Built-in",
+        "Install/uninstall button per theme",
+        "Theme detail modal with full preview and color swatches",
+        "Add themes API to api.ts: listThemes, getTheme, createTheme, installTheme, uninstallTheme, rateTheme, getUserThemes",
+        "Backend: GET/POST /themes, POST /:themeId/install, DELETE /:themeId/install, POST /:themeId/rate",
+        "Add route '/themes' to App.tsx",
+        "Typecheck passes"
+      ],
+      "priority": 25,
+      "passes": true,
+      "notes": "NEW PAGE. Backend fully exists with built-in theme seeding."
+    },
+    {
+      "id": "US-026",
+      "title": "Create web BotConfigPage and wire to API",
+      "description": "As a developer, I want to create and manage bots for my portal.",
+      "acceptanceCriteria": [
+        "Create apps/web/src/pages/BotConfigPage.tsx matching .pen node W2991 (guild context) and I3SHC (create bot)",
+        "Bot list for the guild with: name, avatar, status, configure button",
+        "Create bot flow: OAuth app creation, bot user creation, slash command management",
+        "Bot detail view: token display (masked), reset token button, slash commands list",
+        "Add bots API to api.ts: createOAuthApp, listOAuthApps, getOAuthApp, createBot, resetBotToken, listSlashCommands, createSlashCommand, updateSlashCommand, deleteSlashCommand",
+        "Backend: Full OAuth/bot CRUD exists at /oauth/apps/*",
+        "Add route '/guild/:guildId/bots' to App.tsx",
+        "Typecheck passes"
+      ],
+      "priority": 26,
+      "passes": true,
+      "notes": "NEW PAGE. Backend fully implemented with OAuth, bot lifecycle, and slash commands."
+    },
+    {
+      "id": "US-027",
+      "title": "Redesign web ChannelPage (chat views) with new styling",
+      "description": "As a user, I want the DM and channel chat views to match the new design.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/pages/ChannelPage.tsx styling to match .pen nodes nRiMl (DM) and 24o96 (channel)",
+        "Update MessageList, MessageItem, MessageComposer component styling",
+        "Chat area: bg-charcoal (#2c2c3e) background",
+        "Messages: surface card styling, gold accent on user names",
+        "Composer: bg-input (#25243a) background, gold send button",
+        "Update reply preview, reaction bar, attachment display colors",
+        "Preserve ALL existing message store, socket, API, thread, pin, reaction logic",
+        "Typecheck passes"
+      ],
+      "priority": 27,
+      "passes": true,
+      "notes": "STYLE ONLY update. Do NOT change any API calls, store usage, or socket handlers. Multiple component files."
+    },
+    {
+      "id": "US-028",
+      "title": "Redesign web DiscoverPage with new layout",
+      "description": "As a user, I want the discover page to match the new design with category sidebar and featured content.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/pages/DiscoverPage.tsx to match .pen node rHI88",
+        "Left category sidebar: Featured, Portals, Bots, Themes, Gaming, Music",
+        "Tab pills at top of main content area",
+        "Tag chips for filtering",
+        "Featured portal cards with gradient images",
+        "Popular Bots section with bot cards",
+        "Themes preview section",
+        "Preserve existing discover API integration",
+        "Typecheck passes"
+      ],
+      "priority": 28,
+      "passes": true,
+      "notes": "Read .pen node rHI88 for layout."
+    },
+    {
+      "id": "US-029",
+      "title": "Redesign web ShopPage with new layout",
+      "description": "As a user, I want the shop to match the new design with category sidebar and item grid.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/pages/ShopPage.tsx to match .pen node NqRed",
+        "Category sidebar: Avatar Decorations, Profile Effects, Nameplates, Soundboard, Discovery Bios, Creator",
+        "Balance display bar at top showing Gratonites",
+        "Grid of purchasable items with prices",
+        "Creator Studio section",
+        "Gold accent on prices and CTA buttons",
+        "Preserve existing shop API and purchase logic",
+        "Typecheck passes"
+      ],
+      "priority": 29,
+      "passes": true,
+      "notes": "Read .pen node NqRed for layout."
+    },
+    {
+      "id": "US-030",
+      "title": "Redesign web GratoniteDashboard with new layout",
+      "description": "As a user, I want the currency dashboard to match the new design.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/pages/GratoniteDashboard.tsx to match .pen node HQAK6",
+        "Large balance card with gold accent",
+        "Daily rewards progress (5/7 days + claim button)",
+        "Earning milestones (100, 500, 1K, 5K, 10K) with progress indicators",
+        "Ways to earn grid (messaging, voice, reactions, etc.)",
+        "Earn/spend history timeline",
+        "Preserve existing economy API calls",
+        "Typecheck passes"
+      ],
+      "priority": 30,
+      "passes": true,
+      "notes": "Read .pen node HQAK6."
+    },
+    {
+      "id": "US-031",
+      "title": "Redesign web LeaderboardPage with new layout",
+      "description": "As a user, I want the leaderboard to match the new design.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/pages/LeaderboardPage.tsx to match .pen node QHOAL",
+        "Weekly/Monthly/All Time toggle pills",
+        "Podium display for top 3 (gold/silver/bronze styling)",
+        "Ranked table with: rank, avatar, name, level, messages, gratonites",
+        "Gold accent on first place, proper medal colors",
+        "Preserve existing leaderboard API and period selection",
+        "Typecheck passes"
+      ],
+      "priority": 31,
+      "passes": true,
+      "notes": "Read .pen node QHOAL."
+    },
+    {
+      "id": "US-032",
+      "title": "Redesign web SettingsPage with new layout",
+      "description": "As a user, I want settings to match the new design with left nav sidebar.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/pages/SettingsPage.tsx and settings components to match .pen node zpDVC",
+        "Left nav sidebar: Profile, Account, Privacy, Appearance, Notifications, Connections, Earn Gratonites, Security, Billing",
+        "Log Out button at bottom of sidebar",
+        "Content area shows selected section",
+        "Use new surface/text colors throughout",
+        "Preserve all existing settings sections and their API calls",
+        "Typecheck passes"
+      ],
+      "priority": 32,
+      "passes": true,
+      "notes": "Read .pen node zpDVC. Multiple sub-component files."
+    },
+    {
+      "id": "US-033",
+      "title": "Redesign web NotificationsPage with new layout",
+      "description": "As a user, I want notifications to match the new design.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/pages/NotificationsPage.tsx to match .pen node RDDrl",
+        "Filter tabs: All, Unread, Mentions, System",
+        "Notification list with: icon, title, description, timestamp, read/unread state",
+        "Notification detail panel with reply action",
+        "Gold accent on unread indicators",
+        "Preserve existing notification data fetching",
+        "Typecheck passes"
+      ],
+      "priority": 33,
+      "passes": true,
+      "notes": "Read .pen node RDDrl."
+    },
+    {
+      "id": "US-034",
+      "title": "Create web Portal Interior and Portal Preview pages",
+      "description": "As a user, I want to see portal details and preview before joining.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/pages/GuildPage.tsx layout to match .pen node l1WhT (portal interior)",
+        "Create apps/web/src/pages/PortalPreviewPage.tsx matching .pen node o3PGr",
+        "Portal Preview: banner image, portal info (members, online, rating), tags, 'Join Portal' CTA, recent activity",
+        "Add route '/portal/:guildId/preview' to App.tsx",
+        "Wire Join Portal to existing invite accept API",
+        "Typecheck passes"
+      ],
+      "priority": 34,
+      "passes": true,
+      "notes": "Read .pen nodes l1WhT and o3PGr."
+    },
+    {
+      "id": "US-035",
+      "title": "Update web AddFriend to full page + Invite page redesign",
+      "description": "As a user, I want a dedicated Add Friend page and redesigned invite page.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/components/modals/AddFriendModal.tsx or create new AddFriendPage matching .pen node n5fEl",
+        "QR code sharing section, recent searches, pending friend requests list with accept/decline",
+        "Update apps/web/src/pages/InvitePage.tsx styling to match .pen node 6I66F",
+        "Preserve existing relationships and invite APIs",
+        "Typecheck passes"
+      ],
+      "priority": 35,
+      "passes": true,
+      "notes": "Read .pen nodes n5fEl and 6I66F."
+    },
+    {
+      "id": "US-036",
+      "title": "Create web Events Creation Flow (3-step wizard)",
+      "description": "As a portal admin, I want a multi-step event creation wizard.",
+      "acceptanceCriteria": [
+        "Create apps/web/src/pages/CreateEventPage.tsx with 3 steps matching .pen nodes vpkXq, 5RM2E, JjC3d",
+        "Step 1: Event type selection and channel selection",
+        "Step 2: Event details form (title, description, date/time, banner image, location)",
+        "Step 3: Preview and confirm with RSVP",
+        "Wire to existing events API: POST /guilds/:guildId/scheduled-events",
+        "Add route '/guild/:guildId/events/create' to App.tsx",
+        "Typecheck passes"
+      ],
+      "priority": 36,
+      "passes": true,
+      "notes": "NEW PAGE with wizard flow. Read .pen nodes vpkXq, 5RM2E, JjC3d for 3 steps."
+    },
+    {
+      "id": "US-037",
+      "title": "Create web Status Menu Popover and User Strip",
+      "description": "As a user, I want a status menu popover and updated user strip in the sidebar.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/components/sidebar/UserBar.tsx to match .pen nodes 52KO2 (status menu) and urhDh (user strip)",
+        "User strip at bottom: avatar, display name, status text, settings gear icon",
+        "Click avatar opens status popover: Online, Idle, DND, Invisible options with colored dots",
+        "Custom status text input field in popover",
+        "Wire status changes to existing presence API (usersApi.updatePresence)",
+        "Typecheck passes"
+      ],
+      "priority": 37,
+      "passes": true,
+      "notes": "Read .pen nodes 52KO2 and urhDh. Update existing UserBar component."
+    },
+    {
+      "id": "US-038",
+      "title": "Create web Context Menu and Portal Dropdown",
+      "description": "As a user, I want right-click context menus and portal header dropdown matching the new design.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/components/ui/ContextMenu.tsx styling to match .pen node HUrmc",
+        "Dark surface (#353348) background, gold hover accent, proper dividers",
+        "Context menu items: icon + label + optional shortcut text",
+        "Create/update portal header dropdown matching .pen node wLcF7",
+        "Dropdown items: Invite People, Server Settings, Create Channel, Notifications, etc.",
+        "Preserve existing context menu functionality",
+        "Typecheck passes"
+      ],
+      "priority": 38,
+      "passes": true,
+      "notes": "Read .pen nodes HUrmc and wLcF7."
+    },
+    {
+      "id": "US-039",
+      "title": "Update web Emoji Picker styling",
+      "description": "As a user, I want the emoji picker to match the new design.",
+      "acceptanceCriteria": [
+        "Update apps/web/src/components/ui/EmojiPicker.tsx styling to match .pen node 7BAd4",
+        "Dark surface background (#353348)",
+        "Category tabs with gold active indicator",
+        "Search bar with bg-input styling",
+        "Emoji grid with hover highlight",
+        "Preserve all existing emoji selection and reaction logic",
+        "Typecheck passes"
+      ],
+      "priority": 39,
+      "passes": true,
+      "notes": "STYLE ONLY. Read .pen node 7BAd4."
+    },
+    {
+      "id": "US-040",
+      "title": "Create web Onboarding Tutorial overlay",
+      "description": "As a new user, I want a first-time tutorial that guides me through the app.",
+      "acceptanceCriteria": [
+        "Create apps/web/src/components/ui/OnboardingOverlay.tsx matching .pen node 5nwgm",
+        "Multi-step tooltip walkthrough: welcome, create portal, send message, add friends, discover",
+        "Step indicator dots at bottom",
+        "Skip and Next buttons",
+        "Gold accent on active step",
+        "Store completion state in localStorage",
+        "Show on first login (check localStorage flag)",
+        "Typecheck passes"
+      ],
+      "priority": 40,
+      "passes": true,
+      "notes": "NEW COMPONENT. Read .pen node 5nwgm."
+    },
+    {
+      "id": "US-041",
+      "title": "Create web Loading Skeletons and Empty States",
+      "description": "As a user, I want proper loading skeletons and empty states instead of spinners.",
+      "acceptanceCriteria": [
+        "Create apps/web/src/components/ui/Skeleton.tsx \u2014 reusable skeleton component (animated shimmer)",
+        "Create apps/web/src/components/ui/EmptyState.tsx \u2014 reusable empty state (icon + title + description + optional CTA)",
+        "Match .pen nodes XnVwF (loading states) and YBcne (error/empty states)",
+        "Add skeleton variants: MessageSkeleton, ChannelListSkeleton, MemberListSkeleton, CardSkeleton",
+        "Add empty state variants: NoMessages, NoChannels, NoFriends, NoResults",
+        "Error state: red accent border, retry button",
+        "Integrate into key pages: replace LoadingSpinner usage in ChannelPage, FriendsPage, etc.",
+        "Typecheck passes"
+      ],
+      "priority": 41,
+      "passes": true,
+      "notes": "NEW COMPONENTS. Read .pen nodes XnVwF and YBcne."
+    },
+    {
+      "id": "US-042",
+      "title": "Create web Confirmation Dialogs and Toast system",
+      "description": "As a user, I want consistent confirmation dialogs and toast notifications.",
+      "acceptanceCriteria": [
+        "Create apps/web/src/components/ui/ConfirmDialog.tsx matching .pen node 6Kvgn",
+        "Create apps/web/src/components/ui/Toast.tsx and useToast hook",
+        "ConfirmDialog: title, description, danger/warning variants, confirm/cancel buttons",
+        "Toast: success (green), error (red), warning (gold), info variants",
+        "Auto-dismiss after 5 seconds with progress bar",
+        "Stack toasts vertically in bottom-right corner",
+        "Wire into existing delete/leave guild modals as example usage",
+        "Typecheck passes"
+      ],
+      "priority": 42,
+      "passes": true,
+      "notes": "NEW COMPONENTS. Read .pen node 6Kvgn."
+    },
+    {
+      "id": "US-043",
+      "title": "Create web Typing Indicators and Message States display",
+      "description": "As a user, I want to see typing indicators and message delivery states.",
+      "acceptanceCriteria": [
+        "Update typing indicator display in chat to match .pen node XWKrj",
+        "Animated dots with user name ('Alex is typing...')",
+        "Multiple users: 'Alex and Jordan are typing...'",
+        "Message states: sending (opacity 0.6), sent (normal), failed (red border + retry)",
+        "Preserve existing typing socket events and store",
+        "Typecheck passes"
+      ],
+      "priority": 43,
+      "passes": true,
+      "notes": "Read .pen node XWKrj. Mostly styling updates to existing components."
+    },
+    {
+      "id": "US-044",
+      "title": "Create mobile WikiScreen and wire to API",
+      "description": "As a mobile user, I want to browse wiki pages in a portal.",
+      "acceptanceCriteria": [
+        "Create apps/mobile/src/screens/portals/WikiScreen.tsx matching .pen node QQKCs",
+        "Page list view and detail view",
+        "Markdown content rendering",
+        "Add wiki API methods to apps/mobile/src/lib/api.ts",
+        "Add WikiScreen to PortalsStack navigation",
+        "Typecheck passes"
+      ],
+      "priority": 44,
+      "passes": true,
+      "notes": "NEW SCREEN. Backend exists."
+    },
+    {
+      "id": "US-045",
+      "title": "Create mobile EventsScreen and wire to API",
+      "description": "As a mobile user, I want to view events and RSVP in a portal.",
+      "acceptanceCriteria": [
+        "Create apps/mobile/src/screens/portals/EventsScreen.tsx matching .pen node 2a2mF",
+        "Event list with date/time, title, attendee count",
+        "Event detail with RSVP button",
+        "Add events API methods to mobile api.ts",
+        "Add EventsScreen to PortalsStack",
+        "Typecheck passes"
+      ],
+      "priority": 45,
+      "passes": true,
+      "notes": "NEW SCREEN. Backend exists."
+    },
+    {
+      "id": "US-046",
+      "title": "Create mobile PollsScreen and wire to API",
+      "description": "As a mobile user, I want to view and vote on polls.",
+      "acceptanceCriteria": [
+        "Create apps/mobile/src/screens/portals/PollsScreen.tsx matching .pen node ISSH1",
+        "Poll list and detail with voting",
+        "Gold progress bars for vote percentages",
+        "Add poll API methods to mobile api.ts",
+        "Add PollsScreen to PortalsStack",
+        "Typecheck passes"
+      ],
+      "priority": 46,
+      "passes": true,
+      "notes": "NEW SCREEN."
+    },
+    {
+      "id": "US-047",
+      "title": "Create mobile AnalyticsScreen, QandAScreen, and ScheduledMessagesScreen",
+      "description": "As a mobile user, I want analytics, Q&A, and scheduled messages screens.",
+      "acceptanceCriteria": [
+        "Create apps/mobile/src/screens/portals/AnalyticsScreen.tsx matching .pen node r2Bl8",
+        "Create apps/mobile/src/screens/portals/QandAScreen.tsx matching .pen node 8FIKx",
+        "Create apps/mobile/src/screens/portals/ScheduledMessagesScreen.tsx matching .pen node qo374",
+        "Add corresponding API methods to mobile api.ts",
+        "Add all 3 screens to PortalsStack navigation",
+        "Typecheck passes"
+      ],
+      "priority": 47,
+      "passes": true,
+      "notes": "3 NEW SCREENS. All backends exist."
+    },
+    {
+      "id": "US-048",
+      "title": "Redesign mobile FriendsScreen, DmChatScreen, and ChannelScreen",
+      "description": "As a mobile user, I want the core screens updated to the new design.",
+      "acceptanceCriteria": [
+        "Update apps/mobile/src/screens/home/FriendsScreen.tsx styling to match .pen node DnfW3",
+        "Update apps/mobile/src/screens/home/DmChatScreen.tsx styling to match .pen DM mobile design",
+        "Update apps/mobile/src/screens/portals/ChannelScreen.tsx styling to match .pen channel mobile design",
+        "Apply new color tokens: charcoal bg, gold accents, updated text colors",
+        "Preserve ALL existing navigation, API calls, stores, socket handlers",
+        "Typecheck passes"
+      ],
+      "priority": 48,
+      "passes": true,
+      "notes": "STYLE ONLY updates to existing screens."
+    },
+    {
+      "id": "US-049",
+      "title": "Redesign mobile SettingsScreen and sub-screens",
+      "description": "As a mobile user, I want settings screens updated to the new design.",
+      "acceptanceCriteria": [
+        "Update apps/mobile/src/screens/profile/SettingsScreen.tsx to match .pen node zFSbJ",
+        "Update AccountSettingsScreen, AppearanceSettingsScreen, NotificationSettingsScreen styling",
+        "Apply charcoal/gold palette, updated card styles, section headers",
+        "Preserve all existing settings logic and API calls",
+        "Typecheck passes"
+      ],
+      "priority": 49,
+      "passes": true,
+      "notes": "STYLE ONLY. Multiple files."
+    },
+    {
+      "id": "US-050",
+      "title": "Redesign mobile DiscoverScreen, ShopScreen, LeaderboardScreen, GratoniteDashboardScreen",
+      "description": "As a mobile user, I want discovery and economy screens updated.",
+      "acceptanceCriteria": [
+        "Update DiscoverScreen.tsx styling to match .pen node wuwiz",
+        "Update Shop.tsx (in profile/) styling to match .pen node xR8gZ",
+        "Update LeaderboardScreen.tsx styling to match .pen node Z71S0",
+        "Update GratoniteDashboardScreen.tsx styling to match .pen node ExFXV",
+        "Apply charcoal/gold palette throughout",
+        "Preserve all existing API calls and data fetching",
+        "Typecheck passes"
+      ],
+      "priority": 50,
+      "passes": true,
+      "notes": "STYLE ONLY. 4 files."
+    },
+    {
+      "id": "US-051",
+      "title": "Create mobile AutoMod, Soundboard, and StageChannel screens",
+      "description": "As a mobile user, I want AutoMod, Soundboard, and Stage Channel screens.",
+      "acceptanceCriteria": [
+        "Create apps/mobile/src/screens/portals/AutoModScreen.tsx matching .pen node yvcMB",
+        "Create apps/mobile/src/screens/portals/SoundboardScreen.tsx matching .pen node T1OBa",
+        "Create apps/mobile/src/screens/portals/StageChannelScreen.tsx matching .pen node wl28P",
+        "Add corresponding API methods to mobile api.ts for automod rules, soundboard sounds, stage instances",
+        "Add screens to PortalsStack navigation",
+        "Typecheck passes"
+      ],
+      "priority": 51,
+      "passes": true,
+      "notes": "3 NEW SCREENS. All backends exist."
+    },
+    {
+      "id": "US-052",
+      "title": "Create mobile ThemeMarketplace and BotConfig screens",
+      "description": "As a mobile user, I want to browse themes and configure bots.",
+      "acceptanceCriteria": [
+        "Create apps/mobile/src/screens/portals/ThemeMarketplaceScreen.tsx matching .pen node TWzIg",
+        "Create apps/mobile/src/screens/portals/BotConfigScreen.tsx matching .pen node CgdDs",
+        "Add themes and bots API methods to mobile api.ts",
+        "Add screens to PortalsStack or ProfileStack navigation",
+        "Typecheck passes"
+      ],
+      "priority": 52,
+      "passes": true,
+      "notes": "2 NEW SCREENS. Both backends exist."
+    },
+    {
+      "id": "US-053",
+      "title": "Create web and mobile Roles Manager, Member List, and CreatePortal redesigns",
+      "description": "As a portal admin, I want redesigned management pages.",
+      "acceptanceCriteria": [
+        "Update web RolesSection.tsx to match .pen node jPmzx",
+        "Update web MembersSection.tsx to match .pen node VzPci",
+        "Update web CreateGuildModal.tsx to match .pen node O6ibv (template picker)",
+        "Update web CreateChannelModal.tsx to match .pen node blunH",
+        "Update mobile GuildRolesScreen.tsx, GuildMembersScreen.tsx styling",
+        "Preserve all existing role/member/guild CRUD logic",
+        "Typecheck passes"
+      ],
+      "priority": 53,
+      "passes": true,
+      "notes": "Style + layout updates across multiple files."
+    },
+    {
+      "id": "US-054",
+      "title": "Create web and mobile Voice Messages, Soundboard page, and Stage Channels views",
+      "description": "As a user, I want voice messages, a full soundboard page, and stage channel views.",
+      "acceptanceCriteria": [
+        "Create apps/web/src/pages/SoundboardPage.tsx matching .pen node W0SeL",
+        "Create apps/web/src/components/StageChannelView.tsx matching .pen node VsfJO (integrate into ChannelPage for GUILD_STAGE_VOICE type)",
+        "Add voice message UI to MessageComposer (record button, waveform preview) matching .pen node paWqi",
+        "Soundboard: grid of sounds with play button, volume slider, add new sound form",
+        "Stage: speaker/audience layout, hand raise, speaker queue",
+        "Wire to existing backend APIs for soundboard and stage instances",
+        "Typecheck passes"
+      ],
+      "priority": 54,
+      "passes": true,
+      "notes": "Soundboard and stage APIs fully exist. Voice message recording is UI-only (async recording API not yet on backend)."
+    },
+    {
+      "id": "US-055",
+      "title": "Create web ShopItemDetailPage and AppearanceSettings redesign",
+      "description": "As a user, I want a shop item detail page and redesigned appearance settings.",
+      "acceptanceCriteria": [
+        "Create apps/web/src/pages/ShopItemDetailPage.tsx matching .pen node YrkKK",
+        "Item preview, description, price, purchase button, inventory status",
+        "Update apps/web/src/components/settings/sections/user/AppearanceSection.tsx to match .pen node fNfqM",
+        "Theme selector cards, color mode toggle, font scaling",
+        "Add route '/shop/:itemId' to App.tsx",
+        "Preserve existing shop purchase and theme logic",
+        "Typecheck passes"
+      ],
+      "priority": 55,
+      "passes": true,
+      "notes": "Read .pen nodes YrkKK and fNfqM."
+    },
+    {
+      "id": "US-056",
+      "title": "Create mobile Events Creation Flow screens",
+      "description": "As a mobile user, I want to create events through a multi-step flow.",
+      "acceptanceCriteria": [
+        "Create apps/mobile/src/screens/portals/CreateEventScreen.tsx with 3 steps matching .pen nodes 2dFSI, jXfsS, FDsoY",
+        "Step 1: event type and channel selection",
+        "Step 2: details form (title, description, date/time picker, banner)",
+        "Step 3: preview and confirm",
+        "Wire to events API: createEvent",
+        "Add to PortalsStack navigation",
+        "Typecheck passes"
+      ],
+      "priority": 56,
+      "passes": true,
+      "notes": "NEW SCREEN. 3-step wizard. Backend exists."
+    },
+    {
+      "id": "US-057",
+      "title": "Create mobile ThreadScreen and update navigation",
+      "description": "As a mobile user, I want to view and participate in message threads.",
+      "acceptanceCriteria": [
+        "Create apps/mobile/src/screens/portals/ThreadScreen.tsx",
+        "Thread header with parent message preview",
+        "Reply list using MessageList component",
+        "MessageComposer for thread replies",
+        "Wire to existing threads API in api.ts",
+        "Add ThreadScreen to PortalsStack and HomeStack navigation",
+        "Typecheck passes"
+      ],
+      "priority": 57,
+      "passes": true,
+      "notes": "NEW SCREEN. Thread APIs exist on backend."
+    },
+    {
+      "id": "US-058",
+      "title": "Create mobile Emoji Picker and Status Picker components",
+      "description": "As a mobile user, I want an emoji picker for reactions and a status picker.",
+      "acceptanceCriteria": [
+        "Create apps/mobile/src/components/ui/EmojiPicker.tsx matching .pen node TCXaV",
+        "Bottom sheet with emoji categories and search",
+        "Create apps/mobile/src/components/ui/StatusPicker.tsx matching .pen node jDohE",
+        "Online/Idle/DND/Invisible options with custom status text input",
+        "Wire emoji picker into MessageItem long-press menu for reactions",
+        "Wire status picker into SettingsScreen or ProfileTab",
+        "Typecheck passes"
+      ],
+      "priority": 58,
+      "passes": true,
+      "notes": "2 NEW COMPONENTS."
+    },
+    {
+      "id": "US-059",
+      "title": "Create web and mobile File Preview and Media components",
+      "description": "As a user, I want proper file sharing previews and media display.",
+      "acceptanceCriteria": [
+        "Update web AttachmentDisplay.tsx to match .pen node WMkPf design",
+        "Image attachments: thumbnail with lightbox on click",
+        "Video attachments: inline player with controls",
+        "File attachments: download card with file icon, name, size",
+        "Audio attachments: waveform player",
+        "Preserve existing file upload and display logic",
+        "Typecheck passes"
+      ],
+      "priority": 59,
+      "passes": true,
+      "notes": "Read .pen node WMkPf."
+    },
+    {
+      "id": "US-060",
+      "title": "Final web CSS component styling pass",
+      "description": "As a developer, I need to update all remaining CSS component classes in styles.css to use new tokens.",
+      "acceptanceCriteria": [
+        "Update button styles in styles.css: .btn-primary uses gold bg (#d4af37) with dark text (#1a1a2e)",
+        "Update input styles: bg-input (#25243a), border-subtle (#4a4660), focus ring gold",
+        "Update card/surface styles: bg-surface (#353348), elevated (#413d58)",
+        "Update modal overlay: frosted glass effect",
+        "Update scrollbar styling for dark theme",
+        "Update selection highlight color to gold",
+        "Ensure all hard-coded old blue/purple accent colors are replaced with gold",
+        "Typecheck passes"
+      ],
+      "priority": 60,
+      "passes": true,
+      "notes": "This is a sweep through the massive styles.css file. Focus on class-based styles that reference old colors."
+    }
+  ]
+}
