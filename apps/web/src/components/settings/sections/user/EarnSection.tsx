@@ -13,15 +13,8 @@ const styles = {
   section: {
     maxWidth: 720,
   } as React.CSSProperties,
-  heading: {
-    fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
-    fontSize: 20,
-    fontWeight: 700,
-    color: 'var(--text)',
-    marginBottom: 4,
-  } as React.CSSProperties,
   card: {
-    background: 'rgba(8, 12, 20, 0.6)',
+    background: 'var(--bg-float)',
     border: '1px solid var(--stroke)',
     borderRadius: 'var(--radius-lg)',
     padding: 20,
@@ -53,7 +46,7 @@ const styles = {
   balanceAmount: {
     fontSize: 32,
     fontWeight: 700,
-    color: '#fbbf24',
+    color: 'var(--accent-2)',
   } as React.CSSProperties,
   balanceLabel: {
     fontSize: 14,
@@ -143,7 +136,7 @@ const styles = {
     marginBottom: 8,
   } as React.CSSProperties,
   reward: {
-    color: '#fbbf24',
+    color: 'var(--accent-2)',
     fontWeight: 600,
   } as React.CSSProperties,
   progressBar: {
@@ -188,7 +181,27 @@ export function EarnSection() {
 
   return (
     <section style={styles.section}>
-      <h2 style={styles.heading}>Earn Gratonites</h2>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+        paddingBottom: 16,
+        borderBottom: '1px solid var(--stroke)',
+        marginBottom: 8,
+      }}>
+        <h2 style={{
+          fontSize: 20,
+          fontWeight: 700,
+          color: 'var(--text)',
+          margin: 0,
+          fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
+        }}>
+          Earn Gratonites
+        </h2>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
+          Track your balance, daily login streaks, and message milestones.
+        </p>
+      </div>
 
       {/* Balance Overview */}
       <div style={styles.card}>
