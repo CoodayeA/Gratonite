@@ -14204,7 +14204,6 @@ kbd.shortcuts-keys {
   padding: 2px 10px;
 }
 
-<<<<<<< Updated upstream
 /* ==========================================================================
    Portal Interior (GuildPage redesign — US-034)
    ========================================================================== */
@@ -16043,7 +16042,6 @@ kbd.shortcuts-keys {
   animation: voice-pulse 1s ease-in-out infinite;
 }
 
-=======
 
 /* ========== Wiki Page ========== */
 .wiki-page {
@@ -17055,4 +17053,3 @@ kbd.shortcuts-keys {
 .skeleton-table { display: flex; flex-direction: column; gap: 8px; }
 .skeleton-table-header { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--stroke); }
 .skeleton-table-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
->>>>>>> Stashed changes
