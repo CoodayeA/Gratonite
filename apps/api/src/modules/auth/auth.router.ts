@@ -18,7 +18,6 @@ import { authRateLimiter, registerRateLimiter } from '../../middleware/rate-limi
 import { logger } from '../../lib/logger.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { isEmailDeliveryConfigured } from '../../lib/mailer.js';
-import { createOAuthService, type OAuthProvider } from './oauth.service.js';
 
 export function authRouter(ctx: AppContext): Router {
   const router = Router();
@@ -44,41 +43,12 @@ export function authRouter(ctx: AppContext): Router {
         return;
       }
 
-      // Check username availability
-      const isAvailable = await authService.checkUsernameAvailability(parsed.data.username);
-      if (!isAvailable) {
-        res.status(409).json({
-          code: 'USERNAME_TAKEN',
-          message: 'This username is already taken',
-        });
-        return;
-      }
-
       const result = await authService.register(parsed.data);
 
-      // Set refresh token as HttpOnly cookie
-      res.cookie('refreshToken', result.refreshToken, {
-        httpOnly: true,
-        secure: ctx.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        path: '/api/v1/auth',
-      });
-
-      res.status(201).json({
-        accessToken: result.accessToken,
-        user: result.user,
-      });
+      res.status(201).json({ email: result.email });
     } catch (err: unknown) {
       // Handle unique constraint violations
       if (err instanceof Error && err.message.includes('unique')) {
-        if (err.message.includes('username')) {
-          res.status(409).json({
-            code: 'USERNAME_TAKEN',
-            message: 'This username is already taken',
-          });
-          return;
-        }
         if (err.message.includes('email')) {
           res.status(409).json({
             code: 'EMAIL_TAKEN',
@@ -272,7 +242,7 @@ export function authRouter(ctx: AppContext): Router {
       }
 
       const result = await authService.confirmEmailVerificationToken(parsed.data.token);
-      if ('error' in result) {
+      if (result.error) {
         const code = result.error === 'TOKEN_EXPIRED' ? 410 : 400;
         res.status(code).json({
           code: result.error,
@@ -281,8 +251,17 @@ export function authRouter(ctx: AppContext): Router {
         return;
       }
 
+      res.cookie('refreshToken', result.refreshToken, {
+        httpOnly: true,
+        secure: ctx.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: '/api/v1/auth',
+      });
+
       res.json({
         ok: true,
+        accessToken: result.accessToken,
         message: 'Email verified successfully',
       });
     } catch (err) {
@@ -435,125 +414,6 @@ export function authRouter(ctx: AppContext): Router {
   router.post('/logout', (_req, res) => {
     res.clearCookie('refreshToken', { path: '/api/v1/auth' });
     res.json({ success: true });
-  });
-
-  // ════════════════════════════════════════════════════════════════════════
-  // OAuth Routes (Google, Apple, Facebook)
-  // ════════════════════════════════════════════════════════════════════════
-
-  const oauthService = createOAuthService(ctx, authService);
-  const validProviders = new Set<OAuthProvider>(['google', 'apple', 'facebook']);
-  const appOrigin = ctx.env.APP_ORIGIN.replace(/\/$/, '');
-
-  // GET /api/v1/auth/:provider — redirect to provider consent page
-  router.get('/:provider', async (req, res) => {
-    const provider = req.params.provider as OAuthProvider;
-    if (!validProviders.has(provider)) {
-      res.status(404).json({ code: 'UNKNOWN_PROVIDER', message: 'Unknown OAuth provider' });
-      return;
-    }
-
-    if (!oauthService.isProviderConfigured(provider)) {
-      res.status(501).json({
-        code: 'PROVIDER_NOT_CONFIGURED',
-        message: `${provider} sign-in is not configured yet`,
-      });
-      return;
-    }
-
-    try {
-      const url = await oauthService.getAuthUrl(provider);
-      res.redirect(url);
-    } catch (err) {
-      logger.error({ err, provider }, 'Failed to generate OAuth URL');
-      res.redirect(`${appOrigin}/app/login?error=oauth_failed`);
-    }
-  });
-
-  // GET /api/v1/auth/:provider/callback — handle OAuth callback
-  router.get('/:provider/callback', async (req, res) => {
-    const provider = req.params.provider as OAuthProvider;
-    if (!validProviders.has(provider)) {
-      res.status(404).json({ code: 'UNKNOWN_PROVIDER', message: 'Unknown OAuth provider' });
-      return;
-    }
-
-    const { code, state, error: oauthError } = req.query as Record<string, string>;
-
-    if (oauthError) {
-      logger.warn({ provider, error: oauthError }, 'OAuth provider returned error');
-      res.redirect(`${appOrigin}/app/login?error=oauth_denied`);
-      return;
-    }
-
-    if (!code || !state) {
-      res.redirect(`${appOrigin}/app/login?error=oauth_missing_params`);
-      return;
-    }
-
-    const result = await oauthService.handleCallback(provider, code, state, {
-      ip: req.ip,
-      userAgent: req.get('user-agent'),
-    });
-
-    if ('error' in result) {
-      logger.warn({ provider, error: result.error }, 'OAuth callback failed');
-      res.redirect(`${appOrigin}/app/login?error=oauth_failed`);
-      return;
-    }
-
-    // Set refresh token as httpOnly cookie
-    res.cookie('refreshToken', result.refreshToken, {
-      httpOnly: true,
-      secure: ctx.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/api/v1/auth',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    // Redirect to frontend with access token in URL fragment (not query param for security)
-    res.redirect(`${appOrigin}/app/oauth/callback#token=${result.accessToken}`);
-  });
-
-  // POST /api/v1/auth/:provider/callback — Apple uses form_post
-  router.post('/:provider/callback', async (req, res) => {
-    const provider = req.params.provider as OAuthProvider;
-    if (provider !== 'apple') {
-      res.status(404).json({ code: 'UNKNOWN_PROVIDER', message: 'POST callback only for Apple' });
-      return;
-    }
-
-    const { code, state, error: oauthError } = req.body as Record<string, string>;
-
-    if (oauthError) {
-      res.redirect(`${appOrigin}/app/login?error=oauth_denied`);
-      return;
-    }
-
-    if (!code || !state) {
-      res.redirect(`${appOrigin}/app/login?error=oauth_missing_params`);
-      return;
-    }
-
-    const result = await oauthService.handleCallback(provider, code, state, {
-      ip: req.ip,
-      userAgent: req.get('user-agent'),
-    });
-
-    if ('error' in result) {
-      res.redirect(`${appOrigin}/app/login?error=oauth_failed`);
-      return;
-    }
-
-    res.cookie('refreshToken', result.refreshToken, {
-      httpOnly: true,
-      secure: ctx.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/api/v1/auth',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    res.redirect(`${appOrigin}/app/oauth/callback#token=${result.accessToken}`);
   });
 
   return router;

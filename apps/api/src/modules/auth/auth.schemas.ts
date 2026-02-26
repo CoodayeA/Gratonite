@@ -13,41 +13,11 @@ const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{8,128}$/;
 
 export const registerSchema = z.object({
   email: z.string().email('Invalid email address').max(255),
-  username: z
-    .string()
-    .min(2, 'Username must be at least 2 characters')
-    .max(32, 'Username must be at most 32 characters')
-    .regex(
-      usernameRegex,
-      'Username must be lowercase and can only contain letters, numbers, dots, and underscores',
-    ),
-  displayName: z
-    .string()
-    .min(1, 'Display name is required')
-    .max(32, 'Display name must be at most 32 characters')
-    .optional(),
   password: z
     .string()
     .min(8, 'Password must be at least 8 characters')
     .max(128, 'Password must be at most 128 characters')
     .regex(passwordRegex, 'Password must contain at least 1 letter and 1 number'),
-  dateOfBirth: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date of birth must be in YYYY-MM-DD format')
-    .refine(
-      (dob) => {
-        const birthDate = new Date(dob);
-        const today = new Date();
-        const age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-        const dayDiff = today.getDate() - birthDate.getDate();
-        const adjustedAge =
-          monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
-        return adjustedAge >= 16;
-      },
-      { message: 'You must be at least 16 years old to register' },
-    )
-    .optional(),
 });
 
 export const loginSchema = z.object({
