@@ -19,7 +19,7 @@ interface ShopItem {
   id: string;
   name: string;
   description: string;
-  type: 'avatar_decoration' | 'profile_effect' | 'nameplate';
+  type: 'avatar_decoration' | 'profile_effect' | 'nameplate' | 'soundboard_sound';
   category: string;
   price: number;
   assetHash: string | null;
@@ -136,17 +136,13 @@ export function ShopPage() {
       setShopItemsLoading(true);
       setShopError('');
       try {
-        const [itemsRes, balanceRes, inventoryRes] = await Promise.all([
-          fetch('/api/v1/shop/items', { credentials: 'include' }),
-          fetch('/api/v1/economy/wallet', { credentials: 'include' }),
-          fetch('/api/v1/shop/inventory', { credentials: 'include' }),
+        const [rawItems, wallet, rawInventory] = await Promise.all([
+          api.shop.getItems().catch(() => []),
+          api.economy.getWallet().catch(() => ({ balance: 0 } as any)),
+          api.shop.getInventory().catch(() => []),
         ]);
 
         if (cancelled) return;
-
-        const rawItems = itemsRes.ok ? await itemsRes.json() : [];
-        const wallet = balanceRes.ok ? await balanceRes.json() : { balance: 0 };
-        const rawInventory = inventoryRes.ok ? await inventoryRes.json() : [];
 
         const items = Array.isArray(rawItems) ? rawItems : [];
         const inventory = Array.isArray(rawInventory) ? rawInventory : [];
@@ -245,18 +241,8 @@ export function ShopPage() {
     setPurchasing(itemId);
     setShopError('');
     try {
-      const res = await fetch('/api/v1/shop/purchase', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ itemId }),
-      });
-      
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.code || 'Purchase failed');
-      }
-      
+      await api.shop.purchase(itemId);
+
       // Update owned items and balance
       setOwnedItems((prev) => new Set([...prev, itemId]));
       setShopBalance((prev) => prev - price);

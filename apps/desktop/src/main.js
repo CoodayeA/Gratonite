@@ -68,10 +68,6 @@ function deeplinkToPath(url) {
   return null;
 }
 
-function getUpdateUrl() {
-  return process.env.GRATONITE_UPDATE_URL ?? null;
-}
-
 function resolveAppUrl() {
   const args = process.argv.slice(1);
   const forceIndex = args.findIndex((arg) => arg === '--force-server');
@@ -83,7 +79,7 @@ function resolveAppUrl() {
     return process.env.GRATONITE_DESKTOP_URL;
   }
 
-  return null;
+  return 'https://gratonite.chat/app/';
 }
 
 function createTray() {
@@ -102,13 +98,6 @@ function createTray() {
       },
     },
   ];
-
-  if (getUpdateUrl()) {
-    template.push({
-      label: 'Check for Updates',
-      click: () => autoUpdater.checkForUpdates().catch((err) => log.error('[AutoUpdater] check failed', err)),
-    });
-  }
 
   template.push(
     { type: 'separator' },
@@ -136,6 +125,7 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     backgroundColor: '#0b0f15',
+    icon: join(__dirname, '../assets/icon.png'),
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -145,20 +135,19 @@ function createWindow() {
 
   if (state.isMaximized) mainWindow.maximize();
 
-  const appUrl = resolveAppUrl();
-  if (appUrl) {
-    loadedAppUrl = appUrl;
-    mainWindow.loadURL(appUrl);
-  } else {
-    loadedAppUrl = null;
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
-  }
+  loadedAppUrl = resolveAppUrl();
+  mainWindow.loadURL(loadedAppUrl);
 
   mainWindow.webContents.on('did-finish-load', () => {
     if (pendingDeepLink) {
       mainWindow.webContents.send('gratonite:deeplink', pendingDeepLink);
       pendingDeepLink = null;
     }
+  });
+
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    log.error('[Load] failed', errorCode, errorDescription, validatedURL);
+    mainWindow.loadFile(join(__dirname, '../renderer/offline.html'));
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -180,23 +169,41 @@ function createWindow() {
 }
 
 function configureAutoUpdates() {
-  const updateUrl = getUpdateUrl();
-  if (!updateUrl) return;
-
   autoUpdater.logger = log;
-  autoUpdater.autoDownload = false;
-  autoUpdater.setFeedURL({ url: updateUrl });
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
 
   autoUpdater.on('error', (err) => {
     log.error('[AutoUpdater] error', err);
   });
 
-  autoUpdater.on('update-available', () => {
-    log.info('[AutoUpdater] update available');
+  autoUpdater.on('checking-for-update', () => {
+    log.info('[AutoUpdater] checking for updates...');
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    log.info('[AutoUpdater] update available:', info.version);
+    if (mainWindow) {
+      mainWindow.webContents.send('gratonite:update-available', info);
+    }
   });
 
   autoUpdater.on('update-not-available', () => {
-    log.info('[AutoUpdater] update not available');
+    log.info('[AutoUpdater] up to date');
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    log.info('[AutoUpdater] download progress:', progress.percent);
+    if (mainWindow) {
+      mainWindow.webContents.send('gratonite:update-progress', progress);
+    }
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    log.info('[AutoUpdater] update downloaded:', info.version);
+    if (mainWindow) {
+      mainWindow.webContents.send('gratonite:update-ready', info);
+    }
   });
 
   autoUpdater.checkForUpdates().catch((err) => {
@@ -235,9 +242,22 @@ function configureIpc() {
     shell.openExternal(url);
   });
 
-  ipcMain.handle('gratonite:check-updates', () => {
-    if (!getUpdateUrl()) return;
+  ipcMain.handle('gratonite:retry-connection', () => {
+    if (mainWindow && loadedAppUrl) {
+      mainWindow.loadURL(loadedAppUrl);
+    }
+  });
+
+  ipcMain.handle('gratonite:check-for-updates', () => {
     return autoUpdater.checkForUpdates();
+  });
+
+  ipcMain.handle('gratonite:download-update', () => {
+    return autoUpdater.downloadUpdate();
+  });
+
+  ipcMain.handle('gratonite:install-update', () => {
+    autoUpdater.quitAndInstall();
   });
 }
 

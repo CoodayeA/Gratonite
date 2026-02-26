@@ -81,7 +81,7 @@ export function VoiceChannelView({ channelId, channelName }: VoiceChannelViewPro
   const [remoteTracks, setRemoteTracks] = useState<
     Array<{ id: string; track: RemoteTrack; kind: 'video' | 'audio'; source: string; participantLabel: string }>
   >([]);
-  const [presenceEvents, setPresenceEvents] = useState<Array<{ id: string; text: string }>>([]);
+  const [presenceEvents, setPresenceEvents] = useState<Array<{ id: string; text: string; ts: number }>>([]);
   const previousIdsRef = useRef<Set<string>>(new Set());
   const attemptedAutoJoinRef = useRef<string | null>(null);
 
@@ -377,45 +377,57 @@ export function VoiceChannelView({ channelId, channelName }: VoiceChannelViewPro
     return 'Not connected';
   }, [isConnected, isConnecting, callError, callChannelId, channelId]);
 
+  // Detect join/leave events — deduplicate per user (only latest event per userId)
   useEffect(() => {
     const nextIds = new Set(states.map((state) => String(state.userId)));
     const prevIds = previousIdsRef.current;
     if (prevIds.size > 0) {
-      const joined: string[] = [];
-      const left: string[] = [];
+      const now = Date.now();
+      const newEntries: Array<{ userId: string; id: string; text: string; ts: number }> = [];
       nextIds.forEach((id) => {
-        if (!prevIds.has(id)) joined.push(id);
+        if (!prevIds.has(id)) {
+          newEntries.push({
+            userId: id,
+            id: `join-${id}`,
+            text: id === currentUserId ? 'You entered the room' : `${voiceUserLabelMap.get(id) ?? `User ${id.slice(-4)}`} joined`,
+            ts: now,
+          });
+        }
       });
       prevIds.forEach((id) => {
-        if (!nextIds.has(id)) left.push(id);
+        if (!nextIds.has(id)) {
+          newEntries.push({
+            userId: id,
+            id: `left-${id}`,
+            text: id === currentUserId ? 'You left the room' : `${voiceUserLabelMap.get(id) ?? `User ${id.slice(-4)}`} left`,
+            ts: now,
+          });
+        }
       });
 
-      const nextEvents = [
-        ...joined.map((id) => ({
-          id: `join-${id}-${Date.now()}`,
-          text: id === currentUserId ? 'You entered the room' : `${voiceUserLabelMap.get(id) ?? `User ${id.slice(-4)}`} joined`,
-        })),
-        ...left.map((id) => ({
-          id: `left-${id}-${Date.now()}`,
-          text: id === currentUserId ? 'You left the room' : `${voiceUserLabelMap.get(id) ?? `User ${id.slice(-4)}`} left`,
-        })),
-      ];
-
-      if (nextEvents.length > 0) {
-        setPresenceEvents((prev) => [...nextEvents, ...prev].slice(0, 3));
+      if (newEntries.length > 0) {
+        setPresenceEvents((prev) => {
+          // Replace existing events for the same userId with the new one
+          const byUser = new Map(prev.map((e) => [e.id.replace(/^(join|left)-/, ''), e]));
+          newEntries.forEach((e) => byUser.set(e.userId, { id: e.id, text: e.text, ts: e.ts }));
+          return Array.from(byUser.values()).slice(0, 3);
+        });
       }
     }
     previousIdsRef.current = nextIds;
   }, [states, currentUserId, voiceUserLabelMap]);
 
-  // Auto-expire presence events after 4 seconds
+  // Prune expired presence events every second (stable interval, not reset by new events)
   useEffect(() => {
-    if (presenceEvents.length === 0) return;
-    const timer = window.setTimeout(() => {
-      setPresenceEvents([]);
-    }, 4000);
-    return () => window.clearTimeout(timer);
-  }, [presenceEvents]);
+    const interval = window.setInterval(() => {
+      setPresenceEvents((prev) => {
+        const now = Date.now();
+        const alive = prev.filter((e) => now - e.ts < 4000);
+        return alive.length === prev.length ? prev : alive;
+      });
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   return (
     <div className="voice-channel-view">
@@ -788,8 +800,8 @@ export function VoiceChannelView({ channelId, channelName }: VoiceChannelViewPro
                           className="voice-soundboard-item"
                           onClick={() => {
                             if (!ps.assetHash) return;
-                            const trimStart = ps.metadata?.trimStartMs ?? 0;
-                            const trimEnd = ps.metadata?.trimEndMs;
+                            const trimStart = ps.metadata?.['trimStartMs'] ?? 0;
+                            const trimEnd = ps.metadata?.['trimEndMs'];
                             playSoundboardClip({ soundHash: ps.assetHash, volume: 1 });
                             if (trimEnd) {
                               const duration = trimEnd - trimStart;

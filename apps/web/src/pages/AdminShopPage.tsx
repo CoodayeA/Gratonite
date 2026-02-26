@@ -59,7 +59,7 @@ export function AdminShopPage() {
       const res = await fetch('/api/v1/shop/items', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to load items');
       const data = await res.json();
-      setItems(data);
+      setItems(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {

@@ -1,4 +1,4 @@
-import { Link, Navigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth.store';
 import { GratoniteGuysPackOpeningLab } from '@/components/gratoniteguys/GratoniteGuysPackOpeningLab';
 import { GratoniteGuysNativeLab } from '@/components/gratoniteguys/GratoniteGuysNativeLab';
@@ -7,11 +7,9 @@ import mythicAliases from '@/assets/gratoniteguys/mythics-gif-aliases.json';
 
 export function GratoniteGuysLabPage() {
   const user = useAuthStore((s) => s.user);
-  const [params] = useSearchParams();
   const isAdmin = user?.username === 'ferdinand' || user?.username === 'coodaye';
-  const devBypass = params.get('dev') === '1';
 
-  if (!isAdmin && !devBypass) {
+  if (!isAdmin) {
     return <Navigate to="/shop" replace />;
   }
 

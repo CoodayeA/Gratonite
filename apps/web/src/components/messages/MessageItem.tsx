@@ -38,6 +38,12 @@ export function MessageItem({ message, isGrouped, onReply, onOpenEmojiPicker }: 
   const author = (message as Message & { author?: { displayName: string; avatarHash: string | null; username?: string; primaryColor?: number | null; accentColor?: number | null } }).author;
   const channel = useChannelsStore((s) => s.channels.get(message.channelId));
   const guildId = channel?.guildId ?? null;
+  const { data: emojis = [] } = useQuery({
+    queryKey: ['guild-emojis', guildId],
+    queryFn: () => (guildId ? api.guilds.getEmojis(guildId) : Promise.resolve([])),
+    enabled: Boolean(guildId),
+    staleTime: 300_000,
+  });
   const isGuildChannel = Boolean(channel?.guildId);
   const member = useMembersStore((s) =>
     guildId ? s.membersByGuild.get(guildId)?.get(message.authorId) : undefined,
@@ -304,7 +310,7 @@ export function MessageItem({ message, isGrouped, onReply, onOpenEmojiPicker }: 
             </div>
           ) : (
             <div className="message-content">
-              <MarkdownText content={message.content ?? ''} mentionLabels={mentionLabels} roleMentionLabels={roleMentionLabels} />
+              <MarkdownText content={message.content ?? ''} mentionLabels={mentionLabels} roleMentionLabels={roleMentionLabels} emojis={emojis} />
             </div>
           )}
           {attachments.length > 0 && <AttachmentDisplay attachments={attachments} />}

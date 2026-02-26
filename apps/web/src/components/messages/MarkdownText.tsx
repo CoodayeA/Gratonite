@@ -1,10 +1,18 @@
 import { Fragment, type ReactNode } from 'react';
 import { MentionLink } from './MentionLink';
 
+interface GuildEmoji {
+  id: string;
+  name: string;
+  url: string;
+  animated: boolean;
+}
+
 interface MarkdownTextProps {
   content: string;
   mentionLabels?: Record<string, string>;
   roleMentionLabels?: Record<string, string>;
+  emojis?: GuildEmoji[];
 }
 
 type Block =
@@ -125,9 +133,11 @@ function renderInline(
   text: string,
   mentionLabels: Record<string, string> = {},
   roleMentionLabels: Record<string, string> = {},
+  emojis: GuildEmoji[] = [],
 ): ReactNode[] {
+  const emojiMap = new Map(emojis.map((e) => [e.name.toLowerCase(), e]));
   const out: ReactNode[] = [];
-  const re = /`([^`]+)`|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|<@!?(\d+)>|<@&(\d+)>/g;
+  const re = /`([^`]+)`|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|<@!?(\d+)>|<@&(\d+)>|:([a-zA-Z0-9_]+):/g;
   let last = 0;
   let m: RegExpExecArray | null = re.exec(text);
 
@@ -169,6 +179,22 @@ function renderInline(
           @{label}
         </span>,
       );
+    } else if (m[6] !== undefined) {
+      const shortcode = m[6];
+      const emoji = emojiMap.get(shortcode.toLowerCase());
+      if (emoji) {
+        out.push(
+          <img
+            key={`emoji-${m.index}`}
+            src={emoji.url}
+            alt={`:${emoji.name}:`}
+            className="markdown-custom-emoji"
+            title={`:${emoji.name}:`}
+          />,
+        );
+      } else {
+        out.push(`:${shortcode}:`);
+      }
     }
     last = re.lastIndex;
     m = re.exec(text);
@@ -185,15 +211,16 @@ function renderLinesWithBreaks(
   lines: string[],
   mentionLabels: Record<string, string>,
   roleMentionLabels: Record<string, string>,
+  emojis: GuildEmoji[] = [],
 ): ReactNode[] {
   return lines.flatMap((line, idx) => {
-    const segment: ReactNode[] = [<Fragment key={`line-${idx}`}>{renderInline(line, mentionLabels, roleMentionLabels)}</Fragment>];
+    const segment: ReactNode[] = [<Fragment key={`line-${idx}`}>{renderInline(line, mentionLabels, roleMentionLabels, emojis)}</Fragment>];
     if (idx < lines.length - 1) segment.push(<br key={`br-${idx}`} />);
     return segment;
   });
 }
 
-export function MarkdownText({ content, mentionLabels = {}, roleMentionLabels = {} }: MarkdownTextProps) {
+export function MarkdownText({ content, mentionLabels = {}, roleMentionLabels = {}, emojis = [] }: MarkdownTextProps) {
   const blocks = parseBlocks(content);
 
   return (
@@ -203,20 +230,20 @@ export function MarkdownText({ content, mentionLabels = {}, roleMentionLabels = 
           if (block.level === 1) {
             return (
               <h1 key={idx} className="markdown-h1">
-                {renderInline(block.text, mentionLabels, roleMentionLabels)}
+                {renderInline(block.text, mentionLabels, roleMentionLabels, emojis)}
               </h1>
             );
           }
           if (block.level === 2) {
             return (
               <h2 key={idx} className="markdown-h2">
-                {renderInline(block.text, mentionLabels, roleMentionLabels)}
+                {renderInline(block.text, mentionLabels, roleMentionLabels, emojis)}
               </h2>
             );
           }
           return (
             <h3 key={idx} className="markdown-h3">
-              {renderInline(block.text, mentionLabels, roleMentionLabels)}
+              {renderInline(block.text, mentionLabels, roleMentionLabels, emojis)}
             </h3>
           );
         }
@@ -225,7 +252,7 @@ export function MarkdownText({ content, mentionLabels = {}, roleMentionLabels = 
           return (
             <ul key={idx} className="markdown-list">
               {block.items.map((item, itemIdx) => (
-                <li key={itemIdx}>{renderInline(item, mentionLabels, roleMentionLabels)}</li>
+                <li key={itemIdx}>{renderInline(item, mentionLabels, roleMentionLabels, emojis)}</li>
               ))}
             </ul>
           );
@@ -234,7 +261,7 @@ export function MarkdownText({ content, mentionLabels = {}, roleMentionLabels = 
         if (block.type === 'blockquote') {
           return (
             <blockquote key={idx} className="markdown-quote">
-              {renderLinesWithBreaks(block.lines, mentionLabels, roleMentionLabels)}
+              {renderLinesWithBreaks(block.lines, mentionLabels, roleMentionLabels, emojis)}
             </blockquote>
           );
         }
@@ -249,7 +276,7 @@ export function MarkdownText({ content, mentionLabels = {}, roleMentionLabels = 
 
         return (
           <p key={idx} className="markdown-paragraph">
-            {renderLinesWithBreaks(block.lines, mentionLabels, roleMentionLabels)}
+            {renderLinesWithBreaks(block.lines, mentionLabels, roleMentionLabels, emojis)}
           </p>
         );
       })}

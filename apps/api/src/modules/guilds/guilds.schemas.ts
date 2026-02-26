@@ -3,6 +3,8 @@ import { z } from 'zod';
 export const createGuildSchema = z.object({
   name: z.string().min(2).max(100),
   description: z.string().max(1000).optional(),
+  tags: z.array(z.string().min(1).max(50)).max(20).optional().default([]),
+  categories: z.array(z.string().min(1).max(50)).max(3).optional().default([]),
 });
 
 export const updateGuildSchema = z.object({
@@ -20,6 +22,8 @@ export const updateGuildSchema = z.object({
     .optional(),
   defaultMessageNotifications: z.enum(['all_messages', 'only_mentions']).optional(),
   discoverable: z.boolean().optional(),
+  tags: z.array(z.string().min(1).max(50)).max(20).optional(),
+  categories: z.array(z.string().min(1).max(50)).max(3).optional(),
 });
 
 export const createRoleSchema = z.object({
