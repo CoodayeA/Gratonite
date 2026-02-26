@@ -1,829 +1,563 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useGuildsStore } from '@/stores/guilds.store';
+import { api } from '@/lib/api';
+import {
+  type Theme,
+  BUILT_IN_THEMES,
+  applyTheme,
+  getCurrentThemeId,
+} from '@/lib/themes';
 
-type Category = 'featured' | 'portals' | 'bots' | 'themes' | 'gaming' | 'music';
+// ─── Discover portals type ──────────────────────────────────────────────────
 
-const categories: { id: Category; label: string; icon: string }[] = [
-  { id: 'featured', label: 'Featured', icon: '\u2605' },
-  { id: 'portals', label: 'Portals', icon: '\u26A1' },
-  { id: 'bots', label: 'Bots', icon: '\u2699' },
-  { id: 'themes', label: 'Themes', icon: '\u{1F3A8}' },
-  { id: 'gaming', label: 'Gaming', icon: '\u{1F3AE}' },
-  { id: 'music', label: 'Music', icon: '\u266B' },
-];
+type DiscoverGuild = {
+  id: string;
+  name: string;
+  description: string | null;
+  iconHash: string | null;
+  bannerHash: string | null;
+  memberCount: number;
+  tags: string[];
+  categories: string[];
+};
 
-const portalCardData = [
-  {
-    id: 'celestial',
-    name: 'Celestial Lounge',
-    desc: 'Premium gaming & music community',
-    members: '2.4k',
-    badge: 'Featured',
-    gradient: 'linear-gradient(180deg, #5a4a7a 0%, #3e3a5a 100%)',
-  },
-  {
-    id: 'neon',
-    name: 'Neon Arcade',
-    desc: 'Retro gaming with modern vibes',
-    members: '1.8k',
-    badge: null,
-    gradient: 'linear-gradient(180deg, #4a3a6a 0%, #2a2a4a 100%)',
-  },
-  {
-    id: 'velvet',
-    name: 'Velvet Studios',
-    desc: 'Art & design creative collective',
-    members: '3.1k',
-    badge: 'Featured',
-    gradient: 'linear-gradient(180deg, #3a4a6a 0%, #2a3a5a 100%)',
-  },
-];
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const CDN_BASE = (import.meta.env['VITE_CDN_URL'] as string | undefined) ?? '';
+
+function guildIconUrl(guildId: string, iconHash: string) {
+  return `${CDN_BASE}/server-icons/${guildId}/${iconHash}`;
+}
+
+function guildBannerUrl(guildId: string, bannerHash: string) {
+  return `${CDN_BASE}/banners/${guildId}/${bannerHash}`;
+}
+
+function formatMemberCount(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return String(n);
+}
+
+// ─── Mini theme preview component ────────────────────────────────────────────
+
+function ThemePreview({ theme }: { theme: Theme }) {
+  const v = theme.vars;
+  return (
+    <div style={{
+      width: '100%',
+      height: 120,
+      borderRadius: '8px 8px 0 0',
+      overflow: 'hidden',
+      display: 'flex',
+      flexShrink: 0,
+      border: `1px solid ${v['--stroke']}`,
+      borderBottom: 'none',
+    }}>
+      {/* Mini sidebar */}
+      <div style={{
+        width: 40,
+        background: v['--bg-float'],
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        paddingTop: 6,
+        gap: 4,
+        borderRight: `1px solid ${v['--stroke']}`,
+      }}>
+        {[0,1,2].map(i => (
+          <div key={i} style={{
+            width: 24,
+            height: 24,
+            borderRadius: i === 0 ? 8 : 12,
+            background: i === 0 ? v['--accent'] : v['--bg-soft'],
+          }} />
+        ))}
+      </div>
+      {/* Channel sidebar */}
+      <div style={{
+        width: 56,
+        background: v['--bg-elevated'],
+        padding: '6px 4px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 3,
+        borderRight: `1px solid ${v['--stroke']}`,
+      }}>
+        <div style={{ height: 8, width: 36, borderRadius: 4, background: v['--text-faint'], opacity: 0.6 }} />
+        {[0,1,2,3].map(i => (
+          <div key={i} style={{
+            height: 6,
+            width: i === 0 ? 44 : i === 1 ? 36 : i === 2 ? 48 : 32,
+            borderRadius: 3,
+            background: i === 0 ? v['--accent'] + '40' : v['--bg-soft'],
+          }} />
+        ))}
+      </div>
+      {/* Main chat area */}
+      <div style={{
+        flex: 1,
+        background: v['--bg'],
+        padding: 6,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+      }}>
+        {[32, 24, 40, 20].map((w, i) => (
+          <div key={i} style={{
+            display: 'flex',
+            gap: 4,
+            alignItems: 'center',
+          }}>
+            {i % 2 === 0 && <div style={{ width: 12, height: 12, borderRadius: 6, background: v['--bg-soft'], flexShrink: 0 }} />}
+            <div style={{ height: 6, width: `${w}%`, borderRadius: 3, background: i === 0 ? v['--text'] + '60' : v['--text-faint'] + '50' }} />
+          </div>
+        ))}
+        {/* Accent button */}
+        <div style={{ marginTop: 'auto', display: 'flex', gap: 4 }}>
+          <div style={{ flex: 1, height: 12, borderRadius: 6, background: v['--bg-elevated'], border: `1px solid ${v['--stroke']}` }} />
+          <div style={{ width: 20, height: 12, borderRadius: 4, background: v['--accent'] }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Portal card (Issue 1: moved to module scope) ─────────────────────────────
+
+function PortalCard({ guild }: { guild: DiscoverGuild }) {
+  const [imgErr, setImgErr] = useState(false);
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column',
+      borderRadius: 12, overflow: 'hidden',
+      background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+      cursor: 'pointer', transition: 'border-color 140ms',
+    }}>
+      {/* Banner */}
+      <div style={{ position: 'relative', height: 100, background: 'linear-gradient(135deg, #353348 0%, #25243a 100%)' }}>
+        {guild.bannerHash && !imgErr && (
+          <img
+            src={guildBannerUrl(guild.id, guild.bannerHash)}
+            alt=""
+            onError={() => setImgErr(true)}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        )}
+        {/* Guild icon */}
+        <div style={{
+          position: 'absolute', bottom: -20, left: 16,
+          width: 40, height: 40, borderRadius: 10,
+          background: 'var(--bg-soft)',
+          border: '3px solid var(--bg-elevated)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 16, overflow: 'hidden',
+        }}>
+          {guild.iconHash
+            ? <img src={guildIconUrl(guild.id, guild.iconHash)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : guild.name.charAt(0).toUpperCase()
+          }
+        </div>
+      </div>
+      {/* Body */}
+      <div style={{ padding: '28px 16px 16px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{guild.name}</span>
+          <span style={{
+            fontSize: 11, fontWeight: 600, color: 'var(--accent)',
+            background: 'rgba(212,175,55,0.15)', padding: '2px 8px', borderRadius: 100, whiteSpace: 'nowrap',
+          }}>
+            {formatMemberCount(guild.memberCount)} members
+          </span>
+        </div>
+        {guild.description && (
+          <span style={{ fontSize: 13, color: 'var(--text-muted)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>
+            {guild.description}
+          </span>
+        )}
+        {guild.tags.length > 0 && (
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {guild.tags.slice(0, 3).map(t => (
+              <span key={t} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 100, background: 'var(--bg-soft)', color: 'var(--text-faint)' }}>
+                #{t}
+              </span>
+            ))}
+          </div>
+        )}
+        {/* Issue 5: Join button disabled until join flow is implemented */}
+        <button
+          type="button"
+          disabled
+          style={{
+            marginTop: 'auto', height: 34, borderRadius: 8,
+            background: 'var(--bg-soft)', color: 'var(--text-faint)',
+            fontSize: 13, fontWeight: 600, border: '1px solid var(--stroke)',
+            cursor: 'not-allowed', opacity: 0.6,
+          }}
+        >
+          Join (coming soon)
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Theme card (Issue 1: moved to module scope) ──────────────────────────────
+
+type ThemeCardProps = {
+  theme: Theme;
+  appliedId: string | null;
+  onApply: (theme: Theme) => void;
+};
+
+function ThemeCard({ theme, appliedId, onApply }: ThemeCardProps) {
+  const isApplied = appliedId === theme.id;
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column',
+      borderRadius: 12, overflow: 'hidden',
+      background: 'var(--bg-elevated)',
+      border: `1px solid ${isApplied ? 'var(--accent)' : 'var(--stroke)'}`,
+      boxShadow: isApplied ? '0 0 0 2px rgba(212,175,55,0.25)' : 'none',
+      transition: 'border-color 140ms',
+    }}>
+      <ThemePreview theme={theme} />
+      <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{theme.name}</span>
+          <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>v{theme.version}</span>
+        </div>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{theme.description}</span>
+        {/* Color swatches */}
+        <div style={{ display: 'flex', gap: 4 }}>
+          {[theme.vars['--bg'], theme.vars['--bg-elevated'], theme.vars['--accent'], theme.vars['--text']].map((c, i) => (
+            <div key={i} style={{ width: 14, height: 14, borderRadius: '50%', background: c, border: '1px solid rgba(255,255,255,0.15)' }} />
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {theme.tags.map(t => (
+            <span key={t} style={{ fontSize: 11, padding: '2px 7px', borderRadius: 100, background: 'var(--bg-soft)', color: 'var(--text-faint)' }}>#{t}</span>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => onApply(theme)}
+          style={{
+            height: 32, borderRadius: 8, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
+            background: isApplied ? 'rgba(212,175,55,0.2)' : 'var(--accent)',
+            color: isApplied ? 'var(--accent)' : '#1a1a2e',
+            transition: 'all 140ms',
+          }}
+        >
+          {isApplied ? '✓ Applied' : 'Apply Theme'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Empty state (Issue 1: moved to module scope) ─────────────────────────────
+
+type EmptyStateProps = {
+  icon: string;
+  title: string;
+  sub: string;
+  onReset?: () => void;
+};
+
+function EmptyState({ icon, title, sub, onReset }: EmptyStateProps) {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: 12, padding: '64px 32px', borderRadius: 14, border: '1px solid var(--stroke)',
+      color: 'var(--text-muted)', textAlign: 'center',
+    }}>
+      <span style={{ fontSize: 40 }}>{icon}</span>
+      <strong style={{ fontSize: 16, color: 'var(--text)' }}>{title}</strong>
+      <span style={{ fontSize: 13 }}>{sub}</span>
+      {onReset && (
+        <button type="button" onClick={onReset}
+          style={{ marginTop: 4, border: '1px solid var(--stroke)', background: 'rgba(255,255,255,0.04)', color: 'var(--text)', borderRadius: 999, padding: '6px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+          Reset filters
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export function DiscoverPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = (searchParams.get('tab') as 'portals' | 'bots' | 'themes' | null) ?? 'portals';
-  const initialSort = (searchParams.get('sort') as 'trending' | 'new' | 'name' | null) ?? 'trending';
   const [tab, setTab] = useState<'portals' | 'bots' | 'themes'>(
     ['portals', 'bots', 'themes'].includes(initialTab) ? initialTab : 'portals',
   );
   const [query, setQuery] = useState(searchParams.get('q') ?? '');
-  const [tag, setTag] = useState<string>(searchParams.get('tag') ?? 'all');
-  const [sortBy, setSortBy] = useState<'trending' | 'new' | 'name'>(
-    ['trending', 'new', 'name'].includes(initialSort) ? initialSort : 'trending',
-  );
-  const [activeCategory, setActiveCategory] = useState<Category>('featured');
+  const [activeTag, setActiveTag] = useState<string>(searchParams.get('tag') ?? 'all');
+  const [portals, setPortals] = useState<DiscoverGuild[]>([]);
+  const [portalsLoading, setPortalsLoading] = useState(true);
+  const [appliedId, setAppliedId] = useState<string | null>(getCurrentThemeId);
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  const botCards = useMemo(
-    () => [
-      { id: 'music', name: 'MusicBot Pro', desc: 'High-quality music streaming', tags: ['audio', 'voice'], iconColor: '#d4af37', iconBg: '#5a4a7a' },
-      { id: 'mod', name: 'GuardianBot', desc: 'Advanced moderation suite', tags: ['safety', 'moderation'], iconColor: '#a8a4b8', iconBg: '#3e3a5a' },
-      { id: 'ops', name: 'GameStats', desc: 'Track gaming achievements', tags: ['ops', 'productivity'], iconColor: '#6aea8a', iconBg: '#3a4a3a' },
-    ],
-    [],
-  );
-  const themeCards = useMemo(
-    () => [
-      { id: 'ice', name: 'Ice Glass', desc: 'Cool cyan accents and clean glass surfaces.', tags: ['light', 'glass'], gradient: 'linear-gradient(90deg, #a8d8ea 0%, #5ab9ea 50%, #d4e4f7 100%)' },
-      { id: 'ember', name: 'Ember', desc: 'Warm amber accents with premium contrast.', tags: ['warm', 'glass'], gradient: 'linear-gradient(90deg, #e85a3a 0%, #d4622a 50%, #f0a040 100%)' },
-      { id: 'soul', name: 'Soul Aurora', desc: 'Faceted neon highlights inspired by the Soul prototype.', tags: ['aurora', 'premium'], gradient: 'linear-gradient(90deg, #2a8a6a 0%, #3aaa8a 50%, #40d0b0 100%)' },
-    ],
-    [],
-  );
-
-  // Dynamic portal tags: extract from actual guild data, fall back to defaults
-  const guilds = useGuildsStore((s) => s.guilds);
-  const portalTagsFromGuilds = useMemo(() => {
-    const tagCount = new Map<string, number>();
-    for (const guild of guilds.values()) {
-      const guildTags = (guild as any).tags;
-      if (Array.isArray(guildTags)) {
-        for (const t of guildTags) {
-          if (typeof t === 'string') tagCount.set(t, (tagCount.get(t) ?? 0) + 1);
-        }
-      }
-      const guildCats = (guild as any).categories;
-      if (Array.isArray(guildCats)) {
-        for (const c of guildCats) {
-          if (typeof c === 'string') tagCount.set(c.toLowerCase(), (tagCount.get(c.toLowerCase()) ?? 0) + 1);
-        }
-      }
-    }
-    // Sort by frequency, take top 8
-    const sorted = Array.from(tagCount.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([t]) => t)
-      .slice(0, 8);
-    return sorted.length > 0 ? sorted : ['gaming', 'music', 'tech', 'art', 'social'];
-  }, [guilds]);
-
-  const activeTags = tab === 'portals'
-    ? portalTagsFromGuilds
-    : tab === 'bots'
-      ? ['moderation', 'voice', 'music', 'productivity', 'fun']
-      : ['glass', 'light', 'aurora', 'cyber', 'minimal'];
-
-  const filteredCards = useMemo(() => {
-    const source = tab === 'bots' ? botCards : themeCards;
-    const q = query.trim().toLowerCase();
-    const filtered = source.filter((card) => {
-      const matchesQ = !q || card.name.toLowerCase().includes(q) || card.desc.toLowerCase().includes(q);
-      const matchesTag = tag === 'all' || card.tags.includes(tag);
-      return matchesQ && matchesTag;
-    });
-    if (sortBy === 'name') {
-      return filtered.sort((a, b) => a.name.localeCompare(b.name));
-    }
-    if (sortBy === 'new') {
-      return filtered.sort((a, b) => b.id.localeCompare(a.id));
-    }
-    return filtered;
-  }, [botCards, query, sortBy, tab, tag, themeCards]);
-
+  // Sync URL params
   useEffect(() => {
     const next = new URLSearchParams();
     next.set('tab', tab);
     if (query.trim()) next.set('q', query.trim());
-    if (tag !== 'all') next.set('tag', tag);
-    if (sortBy !== 'trending') next.set('sort', sortBy);
+    if (activeTag !== 'all') next.set('tag', activeTag);
     setSearchParams(next, { replace: true });
-  }, [tab, query, tag, sortBy, setSearchParams]);
+  }, [tab, query, activeTag, setSearchParams]);
 
-  const portalStats = useMemo(
-    () => ({
-      lanes: 5,
-      curated: 24,
-      liveThemes: 3,
-      botPackPreviews: 3,
+  // Fetch discoverable portals
+  useEffect(() => {
+    setPortalsLoading(true);
+    api.guilds.discover()
+      .then(setPortals)
+      .catch(() => setPortals([]))
+      .finally(() => setPortalsLoading(false));
+  }, []);
+
+  // Compute tags from portals
+  const portalTags = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const g of portals) {
+      for (const t of [...g.tags, ...g.categories]) {
+        if (t) counts.set(t.toLowerCase(), (counts.get(t.toLowerCase()) ?? 0) + 1);
+      }
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([t]) => t)
+      .slice(0, 8);
+  }, [portals]);
+
+  const themeAllTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of BUILT_IN_THEMES) for (const tag of t.tags) set.add(tag);
+    return Array.from(set);
+  }, []);
+
+  const activeTags = tab === 'portals' ? portalTags : tab === 'themes' ? themeAllTags : ['moderation', 'music', 'fun', 'productivity'];
+
+  // Issue 2: Filter portals with case-insensitive tag comparison
+  const filteredPortals = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return portals.filter(g => {
+      const matchQ = !q || g.name.toLowerCase().includes(q) || (g.description ?? '').toLowerCase().includes(q);
+      const matchTag = activeTag === 'all' ||
+        g.tags.some(t => t.toLowerCase() === activeTag) ||
+        g.categories.some(c => c.toLowerCase() === activeTag);
+      return matchQ && matchTag;
+    });
+  }, [portals, query, activeTag]);
+
+  // Filter themes
+  const filteredThemes = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return BUILT_IN_THEMES.filter(t => {
+      const matchQ = !q || t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q);
+      const matchTag = activeTag === 'all' || t.tags.includes(activeTag);
+      return matchQ && matchTag;
+    });
+  }, [query, activeTag]);
+
+  function handleApplyTheme(theme: Theme) {
+    applyTheme(theme);
+    setAppliedId(theme.id);
+  }
+
+  function switchTab(newTab: 'portals' | 'bots' | 'themes') {
+    setTab(newTab);
+    setActiveTag('all');
+    setQuery('');
+  }
+
+  function handleResetFilters() {
+    setQuery('');
+    setActiveTag('all');
+  }
+
+  // ─── Tab content labels ───────────────────────────────────────────────────
+  const headings: Record<string, { title: string; subtitle: string; placeholder: string }> = {
+    portals: { title: 'Discover Portals', subtitle: 'Find communities to join and explore.', placeholder: 'Search portals...' },
+    bots: { title: 'Discover Bots', subtitle: 'Add powerful bots to your portals.', placeholder: 'Search bots...' },
+    themes: { title: 'Discover Themes', subtitle: 'Personalize your Gratonite experience.', placeholder: 'Search themes...' },
+  };
+  const heading = headings[tab]!;
+
+  // ─── Styles ───────────────────────────────────────────────────────────────
+  const s = {
+    page: { display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' } as React.CSSProperties,
+    sidebar: {
+      width: 232, minWidth: 232, background: 'var(--bg-float)',
+      display: 'flex', flexDirection: 'column' as const, padding: '20px 12px',
+      borderRight: '1px solid var(--stroke)', overflowY: 'auto' as const, gap: 2,
+    } as React.CSSProperties,
+    sidebarTitle: { margin: '0 0 16px 8px', fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: 0.2 } as React.CSSProperties,
+    navItem: (active: boolean): React.CSSProperties => ({
+      display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
+      borderRadius: 8, fontSize: 14, fontWeight: active ? 600 : 400,
+      color: active ? 'var(--accent)' : 'var(--text-muted)',
+      background: active ? 'rgba(212,175,55,0.1)' : 'transparent',
+      border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' as const,
+      transition: 'background 140ms, color 140ms',
     }),
-    [],
-  );
-  const hasActiveFilters = query.trim().length > 0 || tag !== 'all' || sortBy !== 'trending';
-
-  const tabSummary =
-    tab === 'portals'
-      ? `${portalStats.curated} curated portals`
-      : `${filteredCards.length} ${tab === 'bots' ? 'bot' : 'theme'} result${filteredCards.length === 1 ? '' : 's'}`;
-
-  // --- Styles ---
-  const pageStyle: React.CSSProperties = {
-    display: 'flex',
-    flex: 1,
-    minHeight: 0,
-    overflow: 'hidden',
+    main: {
+      flex: 1, minWidth: 0, background: 'var(--bg)',
+      display: 'flex', flexDirection: 'column' as const,
+      overflowY: 'auto' as const,
+    } as React.CSSProperties,
+    mainInner: {
+      maxWidth: 1100, width: '100%', margin: '0 auto',
+      padding: '40px 40px 60px', display: 'flex', flexDirection: 'column' as const, gap: 28,
+    } as React.CSSProperties,
+    hero: { display: 'flex', flexDirection: 'column' as const, gap: 8, alignItems: 'center', textAlign: 'center' as const } as React.CSSProperties,
+    heroTitle: { margin: 0, fontSize: 32, fontWeight: 700, color: 'var(--text)' } as React.CSSProperties,
+    heroSub: { margin: 0, fontSize: 15, color: 'var(--text-muted)' } as React.CSSProperties,
+    searchWrap: {
+      display: 'flex', alignItems: 'center', gap: 10,
+      width: '100%', maxWidth: 560, height: 48, padding: '0 18px',
+      borderRadius: 12, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+      fontSize: 14, color: 'var(--text-faint)',
+    } as React.CSSProperties,
+    searchInput: {
+      flex: 1, border: 'none', background: 'transparent',
+      color: 'var(--text)', fontSize: 14, outline: 'none',
+    } as React.CSSProperties,
+    tagsRow: { display: 'flex', gap: 8, flexWrap: 'wrap' as const, justifyContent: 'center' } as React.CSSProperties,
+    tagPill: (active: boolean): React.CSSProperties => ({
+      padding: '6px 16px', borderRadius: 100, fontSize: 13, fontWeight: active ? 600 : 400,
+      background: active ? 'var(--accent)' : 'var(--bg-elevated)',
+      color: active ? '#1a1a2e' : 'var(--text-muted)',
+      border: active ? 'none' : '1px solid var(--stroke)',
+      cursor: 'pointer', transition: 'all 140ms',
+    }),
+    sectionLabel: { margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text)' } as React.CSSProperties,
+    grid4: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+      gap: 20, width: '100%',
+    } as React.CSSProperties,
+    grid3: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+      gap: 20, width: '100%',
+    } as React.CSSProperties,
   };
 
-  const sidebarStyle: React.CSSProperties = {
-    width: 240,
-    minWidth: 240,
-    background: '#25243a',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 4,
-    padding: 16,
-    overflowY: 'auto',
-    borderRight: '1px solid var(--stroke)',
-  };
+  // ─── Sidebar nav items ────────────────────────────────────────────────────
+  const navItems = [
+    { id: 'portals' as const, label: 'Portals', icon: '⚡' },
+    { id: 'bots' as const, label: 'Bots', icon: '⚙️' },
+    { id: 'themes' as const, label: 'Themes', icon: '🎨' },
+  ];
 
-  const mainStyle: React.CSSProperties = {
-    flex: 1,
-    minWidth: 0,
-    background: 'var(--bg)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 24,
-    padding: '32px 40px',
-    overflowY: 'auto',
-  };
-
-  const catTitleStyle: React.CSSProperties = {
-    margin: 0,
-    fontSize: 16,
-    fontWeight: 700,
-    color: 'var(--text)',
-  };
-
-  const catLabelStyle: React.CSSProperties = {
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: 1,
-    color: 'var(--text-faint)',
-    textTransform: 'uppercase',
-  };
-
-  const catItemBase: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    padding: '8px 12px',
-    borderRadius: 6,
-    fontSize: 14,
-    fontWeight: 400,
-    color: 'var(--text-muted)',
-    cursor: 'pointer',
-    border: 'none',
-    background: 'transparent',
-    width: '100%',
-    textAlign: 'left',
-  };
-
-  const catItemActiveStyle: React.CSSProperties = {
-    ...catItemBase,
-    background: 'rgba(212, 175, 55, 0.13)',
-    color: 'var(--accent)',
-    fontWeight: 500,
-  };
-
-  const headerRowStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-  };
-
-  const searchBarStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    height: 40,
-    width: 320,
-    padding: '0 14px',
-    borderRadius: 10,
-    background: '#25243a',
-    border: '1px solid var(--stroke)',
-    color: 'var(--text-faint)',
-    fontSize: 13,
-  };
-
-  const searchInputStyle: React.CSSProperties = {
-    flex: 1,
-    border: 'none',
-    background: 'transparent',
-    color: 'var(--text)',
-    fontSize: 13,
-    outline: 'none',
-  };
-
-  const tabsRowStyle: React.CSSProperties = {
-    display: 'flex',
-    width: '100%',
-    gap: 0,
-  };
-
-  const tabBaseStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 36,
-    padding: '0 20px',
-    fontSize: 14,
-    fontWeight: 500,
-    color: 'var(--text-muted)',
-    background: 'transparent',
-    border: 'none',
-    borderBottom: '2px solid transparent',
-    cursor: 'pointer',
-  };
-
-  const tabActiveStyle: React.CSSProperties = {
-    ...tabBaseStyle,
-    color: 'var(--accent)',
-    borderBottom: '2px solid var(--accent)',
-  };
-
-  const dividerStyle: React.CSSProperties = {
-    width: '100%',
-    height: 1,
-    background: 'var(--stroke)',
-    flexShrink: 0,
-  };
-
-  const tagRowStyle: React.CSSProperties = {
-    display: 'flex',
-    gap: 8,
-    width: '100%',
-    flexWrap: 'wrap',
-  };
-
-  const tagChipBase: React.CSSProperties = {
-    padding: '6px 14px',
-    borderRadius: 100,
-    fontSize: 12,
-    fontWeight: 400,
-    color: 'var(--text-muted)',
-    background: '#353348',
-    border: 'none',
-    cursor: 'pointer',
-  };
-
-  const tagChipActiveStyle: React.CSSProperties = {
-    ...tagChipBase,
-    background: 'var(--accent)',
-    color: '#1a1a2e',
-    fontWeight: 600,
-  };
-
-  const sectionHeaderStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    width: '100%',
-  };
-
-  const sectionTitleStyle: React.CSSProperties = {
-    margin: 0,
-    fontSize: 18,
-    fontWeight: 600,
-    color: 'var(--text)',
-  };
-
-  const sortDropdownStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '6px 12px',
-    borderRadius: 6,
-    background: '#353348',
-    border: '1px solid var(--stroke)',
-    color: 'var(--text-muted)',
-    fontSize: 12,
-    fontWeight: 500,
-    cursor: 'pointer',
-  };
-
-  const cardGridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-    gap: 20,
-    width: '100%',
-  };
-
-  const portalCardStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    borderRadius: 10,
-    overflow: 'hidden',
-    background: '#353348',
-    border: '1px solid var(--stroke)',
-    cursor: 'pointer',
-  };
-
-  const portalBannerStyle = (gradient: string): React.CSSProperties => ({
-    height: 80,
-    width: '100%',
-    background: gradient,
-  });
-
-  const portalBodyStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 8,
-    padding: 16,
-  };
-
-  const botGridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: 16,
-    width: '100%',
-  };
-
-  const botCardStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 14,
-    padding: 14,
-    borderRadius: 10,
-    background: '#353348',
-    border: '1px solid var(--stroke)',
-  };
-
-  const botAvatarStyle = (bg: string): React.CSSProperties => ({
-    width: 40,
-    height: 40,
-    minWidth: 40,
-    borderRadius: 10,
-    background: bg,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 18,
-  });
-
-  const botInfoStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 2,
-    flex: 1,
-    minWidth: 0,
-  };
-
-  const addBtnGoldStyle: React.CSSProperties = {
-    padding: '6px 14px',
-    borderRadius: 6,
-    background: 'var(--accent)',
-    color: '#1a1a2e',
-    fontSize: 12,
-    fontWeight: 600,
-    border: 'none',
-    cursor: 'pointer',
-  };
-
-  const addBtnMutedStyle: React.CSSProperties = {
-    padding: '6px 14px',
-    borderRadius: 6,
-    background: '#413d58',
-    color: 'var(--text-muted)',
-    fontSize: 12,
-    fontWeight: 500,
-    border: '1px solid var(--stroke)',
-    cursor: 'pointer',
-  };
-
-  const themeGridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: 16,
-    width: '100%',
-  };
-
-  const themeCardStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    borderRadius: 10,
-    overflow: 'hidden',
-    background: '#353348',
-    border: '1px solid var(--stroke)',
-  };
-
-  const themePreviewStyle = (gradient: string): React.CSSProperties => ({
-    height: 90,
-    width: '100%',
-    background: gradient,
-  });
-
-  const themeBodyStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 8,
-    padding: 14,
-  };
-
-  const previewBtnStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '6px 14px',
-    borderRadius: 6,
-    background: '#413d58',
-    color: 'var(--text-faint)',
-    fontSize: 12,
-    border: 'none',
-    cursor: 'pointer',
-  };
+  const hasActiveFilters = !!(query || activeTag !== 'all');
 
   return (
-    <div style={pageStyle}>
-      {/* Category Sidebar */}
-      <div style={sidebarStyle}>
-        <h2 style={catTitleStyle}>Discover</h2>
-        <div style={{ height: 12 }} />
-        <span style={catLabelStyle}>CATEGORIES</span>
-        <div style={{ height: 4 }} />
-        {categories.map((cat) => (
-          <button
-            key={cat.id}
-            type="button"
-            style={activeCategory === cat.id ? catItemActiveStyle : catItemBase}
-            onClick={() => {
-              setActiveCategory(cat.id);
-              if (cat.id === 'bots') { setTab('bots'); setTag('all'); setQuery(''); }
-              else if (cat.id === 'themes') { setTab('themes'); setTag('all'); setQuery(''); }
-              else if (cat.id === 'portals' || cat.id === 'featured') { setTab('portals'); setTag('all'); setQuery(''); }
-              else if (cat.id === 'gaming') { setTab('portals'); setTag('gaming'); }
-              else if (cat.id === 'music') { setTab('portals'); setTag('music'); }
-            }}
-          >
-            <span style={{ fontSize: 14, width: 16, textAlign: 'center' as const }}>{cat.icon}</span>
-            {cat.label}
+    <div style={s.page}>
+      {/* Sidebar */}
+      <div style={s.sidebar}>
+        <h2 style={s.sidebarTitle}>Discover</h2>
+        {navItems.map(item => (
+          <button key={item.id} type="button" style={s.navItem(tab === item.id)} onClick={() => switchTab(item.id)}>
+            <span style={{ fontSize: 15, width: 20, textAlign: 'center' }}>{item.icon}</span>
+            {item.label}
           </button>
         ))}
       </div>
 
-      {/* Main Content */}
-      <div style={mainStyle}>
-        {/* Header row: title + search */}
-        <div style={headerRowStyle}>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: 'var(--text)' }}>Discover</h1>
-          <div style={searchBarStyle}>
-            <span style={{ fontSize: 14, color: 'var(--text-faint)' }}>{'\u{1F50D}'}</span>
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Discover public portals..."
-              style={searchInputStyle}
-            />
+      {/* Main */}
+      <div style={s.main}>
+        <div style={s.mainInner}>
+          {/* Hero */}
+          <div style={s.hero}>
+            <h1 style={s.heroTitle}>{heading.title}</h1>
+            <p style={s.heroSub}>{heading.subtitle}</p>
+            <div style={s.searchWrap}>
+              <span style={{ fontSize: 15 }}>🔍</span>
+              <input
+                ref={searchRef}
+                type="search"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder={heading.placeholder}
+                style={s.searchInput}
+              />
+              {query && (
+                <button type="button" onClick={() => setQuery('')}
+                  style={{ border: 'none', background: 'none', color: 'var(--text-faint)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>
+                  ×
+                </button>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Tab pills */}
-        <div>
-          <div style={tabsRowStyle} role="tablist" aria-label="Discover sections">
-            {([
-              ['portals', 'Portals'],
-              ['bots', 'Bots'],
-              ['themes', 'Themes'],
-            ] as const).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                style={tab === value ? tabActiveStyle : tabBaseStyle}
-                role="tab"
-                aria-selected={tab === value}
-                onClick={() => {
-                  setTab(value);
-                  setTag('all');
-                  setQuery('');
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <div style={dividerStyle} />
-        </div>
-
-        {/* Tag chips row */}
-        <div style={tagRowStyle} role="group" aria-label="Popular tags">
-          <button
-            type="button"
-            style={tag === 'all' ? tagChipActiveStyle : tagChipBase}
-            onClick={() => setTag('all')}
-          >
-            All
-          </button>
-          {activeTags.map((t) => (
-            <button
-              key={t}
-              type="button"
-              style={tag === t ? tagChipActiveStyle : tagChipBase}
-              onClick={() => setTag(t)}
-            >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-        </div>
-
-        {/* Featured Portals section */}
-        <div style={sectionHeaderStyle}>
-          <h2 style={sectionTitleStyle}>Featured Portals</h2>
-          <div style={sortDropdownStyle}>
-            <span style={{ fontSize: 12 }}>{'\u2195'}</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'trending' | 'new' | 'name')}
-              style={{
-                border: 'none',
-                background: 'transparent',
-                color: 'var(--text-muted)',
-                fontSize: 12,
-                fontWeight: 500,
-                outline: 'none',
-                cursor: 'pointer',
-                appearance: 'none',
-                WebkitAppearance: 'none',
-                paddingRight: 4,
-              } as React.CSSProperties}
-            >
-              <option value="trending">Trending</option>
-              <option value="new">Newest</option>
-              <option value="name">Name</option>
-            </select>
-            <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>{'\u25BC'}</span>
-          </div>
-        </div>
-
-        {tab === 'portals' ? (
-          <>
-            {/* Portal cards */}
-            {(() => {
-              const q = query.trim().toLowerCase();
-              const visiblePortals = portalCardData.filter((card) =>
-                !q || card.name.toLowerCase().includes(q) || card.desc.toLowerCase().includes(q),
-              );
-              if (visiblePortals.length === 0) {
-                return (
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 12,
-                    padding: '64px 32px',
-                    borderRadius: 14,
-                    border: '1px solid var(--stroke)',
-                    color: 'var(--text-muted)',
-                  } as React.CSSProperties}>
-                    <span style={{ fontSize: 36 }}>🔍</span>
-                    <strong style={{ fontSize: 16, color: 'var(--text)' }}>No portals found</strong>
-                    <span style={{ fontSize: 13 }}>Try a different search term or clear the filter.</span>
-                    <button
-                      type="button"
-                      style={{
-                        marginTop: 4,
-                        border: '1px solid var(--stroke)',
-                        background: 'rgba(255,255,255,0.03)',
-                        color: 'var(--text)',
-                        borderRadius: 999,
-                        padding: '6px 14px',
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      } as React.CSSProperties}
-                      onClick={() => { setQuery(''); setTag('all'); setSortBy('trending'); }}
-                    >
-                      Reset filters
-                    </button>
-                  </div>
-                );
-              }
-              return (
-            <div style={cardGridStyle}>
-              {visiblePortals.map((card) => (
-                <div key={card.id} style={portalCardStyle}>
-                  <div style={portalBannerStyle(card.gradient)} />
-                  <div style={portalBodyStyle}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>{card.name}</span>
-                      <span style={{
-                        padding: '3px 8px',
-                        borderRadius: 100,
-                        background: 'rgba(212, 175, 55, 0.18)',
-                        color: 'var(--accent)',
-                        fontSize: 11,
-                        fontWeight: 600,
-                        whiteSpace: 'nowrap' as const,
-                      }}>
-                        {card.members} members
-                      </span>
-                    </div>
-                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{card.desc}</span>
-                    <button
-                      type="button"
-                      style={{
-                        marginTop: 4,
-                        height: 36,
-                        width: '100%',
-                        borderRadius: 6,
-                        background: 'var(--accent)',
-                        color: '#1a1a2e',
-                        fontSize: 13,
-                        fontWeight: 600,
-                        border: 'none',
-                        cursor: 'pointer',
-                      } as React.CSSProperties}
-                    >
-                      Join
-                    </button>
-                  </div>
-                </div>
+          {/* Tags */}
+          {activeTags.length > 0 && (
+            <div style={s.tagsRow}>
+              <button type="button" style={s.tagPill(activeTag === 'all')} onClick={() => setActiveTag('all')}>All</button>
+              {activeTags.map(t => (
+                <button key={t} type="button" style={s.tagPill(activeTag === t)} onClick={() => setActiveTag(t)}>
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                </button>
               ))}
             </div>
-              );
-            })()}
+          )}
 
-            {/* Popular Bots section */}
-            <h2 style={sectionTitleStyle}>Popular Bots</h2>
-            <div style={botGridStyle}>
-              {botCards.map((bot, i) => (
-                <div key={bot.id} style={botCardStyle}>
-                  <div style={botAvatarStyle(bot.iconBg)}>
-                    <span style={{ color: bot.iconColor, fontSize: 16 }}>
-                      {bot.id === 'music' ? '\u266B' : bot.id === 'mod' ? '\u{1F6E1}' : '\u{1F3AE}'}
-                    </span>
-                  </div>
-                  <div style={botInfoStyle}>
-                    <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)' }}>{bot.name}</span>
-                    <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>{bot.desc}</span>
-                  </div>
-                  <button type="button" style={i === 0 ? addBtnGoldStyle : addBtnMutedStyle}>
-                    Add
-                  </button>
+          {/* Portals tab */}
+          {tab === 'portals' && (
+            <>
+              <h2 style={s.sectionLabel}>
+                {portalsLoading ? 'Loading portals...' : `${filteredPortals.length} ${filteredPortals.length === 1 ? 'Portal' : 'Portals'}`}
+              </h2>
+              {portalsLoading ? (
+                <div style={{ ...s.grid4 }}>
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} style={{ height: 220, borderRadius: 12, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', opacity: 0.5 }} />
+                  ))}
                 </div>
-              ))}
-            </div>
+              ) : filteredPortals.length === 0 ? (
+                <EmptyState
+                  icon="⚡"
+                  title="No portals found"
+                  sub={portals.length === 0 ? 'No discoverable portals yet. Enable discovery in your portal settings.' : 'Try a different search or tag.'}
+                  onReset={hasActiveFilters ? handleResetFilters : undefined}
+                />
+              ) : (
+                <div style={s.grid4}>
+                  {filteredPortals.map(g => <PortalCard key={g.id} guild={g} />)}
+                </div>
+              )}
+            </>
+          )}
 
-            {/* Themes section */}
-            <h2 style={sectionTitleStyle}>Themes</h2>
-            <div style={themeGridStyle}>
-              {themeCards.map((theme) => (
-                <div key={theme.id} style={themeCardStyle}>
-                  <div style={themePreviewStyle(theme.gradient)} />
-                  <div style={themeBodyStyle}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{theme.name}</span>
-                    <button type="button" style={previewBtnStyle}>
-                      Preview (Soon)
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          /* Bots or Themes tab content when selected directly */
-          <>
-            {tab === 'bots' ? (
-              <>
-                <h2 style={sectionTitleStyle}>{tabSummary}</h2>
-                <div style={botGridStyle}>
-                  {filteredCards.map((card, i) => {
-                    const bot = card as typeof botCards[number];
-                    return (
-                      <div key={card.id} style={botCardStyle}>
-                        <div style={botAvatarStyle(bot.iconBg ?? '#3e3a5a')}>
-                          <span style={{ color: bot.iconColor ?? '#a8a4b8', fontSize: 16 }}>
-                            {card.id === 'music' ? '\u266B' : card.id === 'mod' ? '\u{1F6E1}' : '\u{1F3AE}'}
-                          </span>
-                        </div>
-                        <div style={botInfoStyle}>
-                          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)' }}>{card.name}</span>
-                          <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>{card.desc}</span>
-                        </div>
-                        <button type="button" style={i === 0 ? addBtnGoldStyle : addBtnMutedStyle}>
-                          Add
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              <>
-                <h2 style={sectionTitleStyle}>{tabSummary}</h2>
-                <div style={themeGridStyle}>
-                  {filteredCards.map((card) => {
-                    const theme = card as typeof themeCards[number];
-                    return (
-                      <div key={card.id} style={themeCardStyle}>
-                        <div style={themePreviewStyle(theme.gradient ?? 'linear-gradient(90deg, #5a4a7a, #3e3a5a)')} />
-                        <div style={themeBodyStyle}>
-                          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{card.name}</span>
-                          <button type="button" style={previewBtnStyle}>
-                            Preview (Soon)
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-            {filteredCards.length === 0 && (
-              <div style={{
-                borderRadius: 14,
-                border: '1px solid var(--stroke)',
-                padding: 24,
-                color: 'var(--text-muted)',
-                fontSize: 13,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
-              }}>
-                <strong style={{ color: 'var(--text)', fontSize: 14 }}>No results yet.</strong>
-                <span style={{ fontSize: 12 }}>Try a different search, clear the tag filter, or switch tabs.</span>
-                <div style={{ marginTop: 6 }}>
-                  <button
-                    type="button"
-                    style={{
-                      border: '1px solid var(--stroke)',
-                      background: 'rgba(255,255,255,0.03)',
-                      color: 'var(--text)',
-                      borderRadius: 999,
-                      padding: '6px 12px',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => {
-                      setQuery('');
-                      setTag('all');
-                      setSortBy('trending');
-                    }}
-                  >
-                    Reset discover filters
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
+          {/* Bots tab */}
+          {tab === 'bots' && (
+            <EmptyState icon="⚙️" title="Bots coming soon" sub="We're building the bot marketplace. Check back soon!" />
+          )}
 
-        {hasActiveFilters && (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button
-              type="button"
-              style={{
-                border: '1px solid var(--stroke)',
-                background: 'rgba(255,255,255,0.03)',
-                color: 'var(--text)',
-                borderRadius: 999,
-                padding: '6px 12px',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-              onClick={() => {
-                setQuery('');
-                setTag('all');
-                setSortBy('trending');
-              }}
-            >
-              Clear filters
-            </button>
-          </div>
-        )}
+          {/* Themes tab */}
+          {tab === 'themes' && (
+            <>
+              <h2 style={s.sectionLabel}>{filteredThemes.length} {filteredThemes.length === 1 ? 'Theme' : 'Themes'}</h2>
+              {filteredThemes.length === 0 ? (
+                <EmptyState
+                  icon="🎨"
+                  title="No themes found"
+                  sub="Try a different search or tag."
+                  onReset={hasActiveFilters ? handleResetFilters : undefined}
+                />
+              ) : (
+                <div style={s.grid3}>
+                  {filteredThemes.map(t => (
+                    <ThemeCard key={t.id} theme={t} appliedId={appliedId} onApply={handleApplyTheme} />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
