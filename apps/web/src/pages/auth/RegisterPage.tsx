@@ -32,20 +32,6 @@ const styles = {
     gap: 24,
   } as React.CSSProperties,
 
-  logo: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-    background: 'var(--accent)',
-    color: 'var(--text-on-gold)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 24,
-    fontWeight: 700,
-    flexShrink: 0,
-  } as React.CSSProperties,
-
   heading: {
     fontSize: 26,
     fontWeight: 600,
@@ -189,7 +175,11 @@ export function RegisterPage() {
     <div style={styles.page}>
       <form style={styles.card} onSubmit={handleSubmit} noValidate>
         {/* Logo */}
-        <div style={styles.logo} aria-hidden="true">G</div>
+        <img
+          src={`${import.meta.env.BASE_URL}gratonite-icon.png`}
+          alt="Gratonite"
+          style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover' }}
+        />
 
         {/* Heading */}
         <div>
