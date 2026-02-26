@@ -1,4 +1,4 @@
-import { useState, useEffect, type CSSProperties } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import {
@@ -23,6 +23,10 @@ import {
   setThemeManifestPreference,
   setUiV2TokensPreference,
   shouldEnableUiV2Tokens,
+  readUiColorModePreference,
+  setUiColorModePreference,
+  applyColorMode,
+  type UiColorMode,
   type UiGlassMode,
   type UiSurfaceBackgroundMode,
   type UiContentScrim,
@@ -32,27 +36,7 @@ import { applyThemeV2, resolveThemeV2 } from '@/theme/resolveTheme';
 import { DEFAULT_THEME_V2 } from '@/theme/tokens-v2';
 import { api } from '@/lib/api';
 import { getErrorMessage } from '@/lib/utils';
-
-const COLOR_MODE_KEY = 'gratonite_color_mode';
-
-type ColorMode = 'dark' | 'light' | 'system';
-
-function readColorMode(): ColorMode {
-  const stored = localStorage.getItem(COLOR_MODE_KEY);
-  if (stored === 'dark' || stored === 'light' || stored === 'system') return stored;
-  return 'dark';
-}
-
-function applyColorMode(mode: ColorMode) {
-  localStorage.setItem(COLOR_MODE_KEY, mode);
-  const resolved =
-    mode === 'system'
-      ? window.matchMedia('(prefers-color-scheme: light)').matches
-        ? 'light'
-        : 'dark'
-      : mode;
-  document.documentElement.setAttribute('data-color-mode', resolved);
-}
+import { useEffect } from 'react';
 
 const THEME_TOKEN_CONTROLS: Array<{ key: string; label: string; type: 'color' | 'text' }> = [
   { key: 'semantic/action/accent', label: 'Primary Accent', type: 'color' },
@@ -62,25 +46,10 @@ const THEME_TOKEN_CONTROLS: Array<{ key: string; label: string; type: 'color' | 
   { key: 'semantic/gradient/accent', label: 'Accent Gradient', type: 'text' },
 ];
 
-const THEME_PRESETS_V3: Array<{
-  name: string;
-  description: string;
-  accentPreview: string;
-  surfacePreview: string;
-  overrides: Record<string, string>;
-}> = [
-  {
-    name: 'Gratonite',
-    description: 'Default charcoal + gold',
-    accentPreview: '#d4af37',
-    surfacePreview: '#2c2c3e',
-    overrides: {},
-  },
+const THEME_PRESETS_V3: Array<{ name: string; description: string; overrides: Record<string, string> }> = [
   {
     name: 'Ice',
     description: 'Lighter cyan/ice glass',
-    accentPreview: '#7ad8ff',
-    surfacePreview: '#10182a',
     overrides: {
       'semantic/surface/base': '#10182a',
       'semantic/surface/raised': 'rgba(27, 39, 61, 0.84)',
@@ -93,8 +62,6 @@ const THEME_PRESETS_V3: Array<{
   {
     name: 'Cyberpunk',
     description: 'Indigo + cyan neon glass',
-    accentPreview: '#7a5cff',
-    surfacePreview: '#12162b',
     overrides: {
       'semantic/surface/base': '#12162b',
       'semantic/surface/raised': 'rgba(25, 30, 58, 0.84)',
@@ -107,8 +74,6 @@ const THEME_PRESETS_V3: Array<{
   {
     name: 'Ember',
     description: 'Warm orange + gold glass',
-    accentPreview: '#ff7a45',
-    surfacePreview: '#1a1411',
     overrides: {
       'semantic/surface/base': '#1a1411',
       'semantic/surface/raised': 'rgba(42, 26, 20, 0.84)',
@@ -121,8 +86,6 @@ const THEME_PRESETS_V3: Array<{
   {
     name: 'Toxic',
     description: 'Green neon community theme',
-    accentPreview: '#2dff9f',
-    surfacePreview: '#0f1510',
     overrides: {
       'semantic/surface/base': '#0f1510',
       'semantic/surface/raised': 'rgba(18, 33, 22, 0.84)',
@@ -135,7 +98,7 @@ const THEME_PRESETS_V3: Array<{
 ];
 
 export function AppearanceSection() {
-  const [colorMode, setColorModeState] = useState<ColorMode>(() => readColorMode());
+  const [colorMode, setColorMode] = useState<UiColorMode>(() => readUiColorModePreference());
   const [fontScale, setFontScaleState] = useState(1);
   const [messageDisplay, setMessageDisplayState] = useState('cozy');
   const [uiV2TokensEnabled, setUiV2TokensEnabled] = useState(() => shouldEnableUiV2Tokens());
@@ -175,11 +138,6 @@ export function AppearanceSection() {
 
   function setMessageDisplay(value: string) {
     setMessageDisplayState(value);
-  }
-
-  function handleColorModeChange(mode: ColorMode) {
-    setColorModeState(mode);
-    applyColorMode(mode);
   }
 
   function handleToggleUiV2Tokens(nextEnabled: boolean) {
@@ -379,99 +337,57 @@ export function AppearanceSection() {
   return (
     <section className="settings-section">
       <h2 className="settings-shell-section-heading">Appearance</h2>
-
-      {/* Color Mode Toggle */}
       <div className="settings-card">
         <div className="settings-field">
           <div className="settings-field-label">Color Mode</div>
-          <div className="settings-field-desc">Choose between dark, light, or system preference.</div>
-        </div>
-        <div className="appearance-color-mode-row">
-          {([
-            ['dark', 'Dark', 'Default dark theme for comfortable viewing.'],
-            ['light', 'Light', 'Bright interface for well-lit environments.'],
-            ['system', 'System', 'Follows your OS color scheme preference.'],
-          ] as const).map(([mode, label, desc]) => (
-            <button
-              key={mode}
-              type="button"
-              className={`appearance-color-mode-card ${colorMode === mode ? 'appearance-color-mode-card-active' : ''}`}
-              onClick={() => handleColorModeChange(mode)}
-            >
-              <div
-                className="appearance-color-mode-preview"
-                style={{
-                  '--mode-bg': mode === 'dark' ? '#2c2c3e' : mode === 'light' ? '#f5f7fb' : 'linear-gradient(135deg, #2c2c3e 50%, #f5f7fb 50%)',
-                } as CSSProperties}
-              />
-              <div className="appearance-color-mode-label">{label}</div>
-              <div className="appearance-color-mode-desc">{desc}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Theme Selector Cards */}
-      <div className="settings-card">
-        <div className="settings-field">
-          <div className="settings-field-label">Theme</div>
-          <div className="settings-field-desc">Select a preset theme or customize your own below.</div>
-        </div>
-        <div className="appearance-theme-cards">
-          {THEME_PRESETS_V3.map((preset) => {
-            const isActive = themeName === preset.name;
-            return (
+          <div className="settings-field-control settings-field-row">
+            {(['light', 'dark', 'system'] as const).map((mode) => (
               <button
-                key={preset.name}
+                key={mode}
                 type="button"
-                className={`appearance-theme-card ${isActive ? 'appearance-theme-card-active' : ''}`}
-                onClick={() => handleApplyThemePreset(preset)}
+                className={`settings-color-mode-btn ${colorMode === mode ? 'active' : ''}`}
+                onClick={() => {
+                  setUiColorModePreference(mode);
+                  setColorMode(mode);
+                  applyColorMode();
+                  // Re-apply V2 tokens to respect light/dark token filtering
+                  if (shouldEnableUiV2Tokens()) {
+                    const { theme } = resolveThemeV2(readThemeManifestPreference() ?? undefined);
+                    applyThemeV2(theme);
+                  }
+                  api.users.updateSettings({ theme: mode }).catch(() => undefined);
+                }}
               >
-                <div className="appearance-theme-card-swatches">
-                  <div
-                    className="appearance-theme-swatch-surface"
-                    style={{ background: preset.surfacePreview }}
-                  />
-                  <div
-                    className="appearance-theme-swatch-accent"
-                    style={{ background: preset.accentPreview }}
-                  />
-                </div>
-                <div className="appearance-theme-card-name">{preset.name}</div>
-                <div className="appearance-theme-card-desc">{preset.description}</div>
+                {mode === 'light' && (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                  </svg>
+                )}
+                {mode === 'dark' && (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                  </svg>
+                )}
+                {mode === 'system' && (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                    <line x1="12" y1="17" x2="12" y2="21" />
+                  </svg>
+                )}
+                <span>{mode.charAt(0).toUpperCase() + mode.slice(1)}</span>
               </button>
-            );
-          })}
+            ))}
+          </div>
         </div>
-      </div>
-
-      {/* Font Scaling */}
-      <div className="settings-card">
-        <div className="settings-field">
-          <div className="settings-field-label">Font Scaling</div>
-          <div className="settings-field-desc">Adjust the base text size across the entire interface.</div>
-        </div>
-        <div className="appearance-font-scale-row">
-          <span className="appearance-font-scale-label-sm">A</span>
-          <input
-            className="settings-range appearance-font-scale-slider"
-            type="range"
-            min="0.8"
-            max="1.4"
-            step="0.05"
-            value={fontScale}
-            onChange={(event) => setFontScale(Number(event.target.value))}
-          />
-          <span className="appearance-font-scale-label-lg">A</span>
-          <span className="settings-range-value">{fontScale.toFixed(2)}x</span>
-        </div>
-        <div className="appearance-font-scale-preview" style={{ fontSize: `${fontScale}rem` }}>
-          The quick brown fox jumps over the lazy dog.
-        </div>
-      </div>
-
-      {/* Visual Presets & Settings */}
-      <div className="settings-card">
         <div className="settings-field">
           <div className="settings-field-label">Visual Presets</div>
           <div className="settings-field-control settings-field-row">
@@ -492,6 +408,21 @@ export function AppearanceSection() {
               <option value="cozy">Cozy</option>
               <option value="compact">Compact</option>
             </select>
+          </div>
+        </div>
+        <div className="settings-field">
+          <div className="settings-field-label">Font Scale</div>
+          <div className="settings-field-control">
+            <input
+              className="settings-range"
+              type="range"
+              min="0.8"
+              max="1.4"
+              step="0.05"
+              value={fontScale}
+              onChange={(event) => setFontScale(Number(event.target.value))}
+            />
+            <span className="settings-range-value">{fontScale.toFixed(2)}x</span>
           </div>
         </div>
         <div className="settings-field">
@@ -625,10 +556,6 @@ export function AppearanceSection() {
         <div className="settings-note">
           Background and scrim settings affect message surfaces in portals, DMs, and voice chat panels to preserve readability while keeping custom visual style.
         </div>
-      </div>
-
-      {/* Theme Studio */}
-      <div className="settings-card">
         <div className="settings-theme-editor">
           <div className="settings-theme-header">
             <h3 className="settings-theme-title">Theme Studio (v1)</h3>

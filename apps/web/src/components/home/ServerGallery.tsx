@@ -93,7 +93,10 @@ export function ServerGallery({ onOpenDirectMessages }: ServerGalleryProps) {
 
   const withMeta = useMemo(() => {
     return items.map((guild) => {
-      const themeLabel = inferPortalThemeLabel(guild.name, guild.description);
+      // Use stored categories first, fall back to inference
+      const themeLabel = (guild as any).categories?.length > 0
+        ? (guild as any).categories[0]
+        : inferPortalThemeLabel(guild.name, guild.description);
       const isFavorite = Boolean(favoriteIds[guild.id]);
       const isActive = (guild.memberCount ?? 0) > 0;
       const isNew = (guild.memberCount ?? 0) === 0;

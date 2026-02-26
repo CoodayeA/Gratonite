@@ -28,6 +28,17 @@ const VerifyEmailConfirmPage = lazy(() =>
 const CompleteAccountSetupPage = lazy(() =>
   import('@/pages/auth/CompleteAccountSetupPage').then((m) => ({ default: m.CompleteAccountSetupPage })),
 );
+
+// New Feature Pages (Phase 3)
+const WikiPage = lazy(() => import('@/pages/WikiPage').then((m) => ({ default: m.WikiPage })));
+const EventsPage = lazy(() => import('@/pages/EventsPage').then((m) => ({ default: m.EventsPage })));
+const AnalyticsPage = lazy(() => import('@/pages/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })));
+const BotsPage = lazy(() => import('@/pages/BotsPage').then((m) => ({ default: m.BotsPage })));
+const ThemesPage = lazy(() => import('@/pages/ThemesPage').then((m) => ({ default: m.ThemesPage })));
+const PollsPage = lazy(() => import('@/pages/PollsPage').then((m) => ({ default: m.PollsPage })));
+const QAPage = lazy(() => import('@/pages/QAPage').then((m) => ({ default: m.QAPage })));
+const ScheduledMsgsPage = lazy(() => import('@/pages/ScheduledMsgsPage').then((m) => ({ default: m.ScheduledMsgsPage })));
+const AutoModPage = lazy(() => import('@/pages/AutoModPage').then((m) => ({ default: m.AutoModPage })));
 const GuildPage = lazy(() => import('@/pages/GuildPage').then((m) => ({ default: m.GuildPage })));
 const ChannelPage = lazy(() => import('@/pages/ChannelPage').then((m) => ({ default: m.ChannelPage })));
 const InvitePage = lazy(() => import('@/pages/InvitePage').then((m) => ({ default: m.InvitePage })));
@@ -41,20 +52,7 @@ const FriendsPage = lazy(() => import('@/pages/FriendsPage').then((m) => ({ defa
 const GratoniteDashboard = lazy(() => import('@/pages/GratoniteDashboard').then((m) => ({ default: m.GratoniteDashboard })));
 const LeaderboardPage = lazy(() => import('@/pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
 const AdminShopPage = lazy(() => import('@/pages/AdminShopPage').then((m) => ({ default: m.AdminShopPage })));
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 const PortalPreviewPage = lazy(() => import('@/pages/PortalPreviewPage').then((m) => ({ default: m.PortalPreviewPage })));
-const AddFriendPage = lazy(() => import('@/pages/AddFriendPage').then((m) => ({ default: m.AddFriendPage })));
-=======
-const CreateEventPage = lazy(() => import('@/pages/CreateEventPage').then((m) => ({ default: m.CreateEventPage })));
->>>>>>> 9ee4fd6 (feat: US-036 - Web Events Creation Flow wizard)
-=======
-const ShopItemDetailPage = lazy(() => import('@/pages/ShopItemDetailPage').then((m) => ({ default: m.ShopItemDetailPage })));
->>>>>>> e07d225 (feat: US-040 + US-055 - Onboarding overlay and ShopItemDetail/Appearance redesign)
-=======
-const SoundboardPage = lazy(() => import('@/pages/SoundboardPage').then((m) => ({ default: m.SoundboardPage })));
->>>>>>> 1ab54ce (feat: US-053 + US-054 - Admin and Voice/Soundboard/Stage redesigns)
 
 export function App() {
   const { isLoading, isAuthenticated, login, logout, setLoading } = useAuthStore();
@@ -186,7 +184,6 @@ export function App() {
           <Route path="/onboarding/account" element={<CompleteAccountSetupPage />} />
           <Route path="/discover" element={<DiscoverPage />} />
           <Route path="/shop" element={<ShopPage />} />
-          <Route path="/shop/:itemId" element={<ShopItemDetailPage />} />
           <Route path="/friends" element={<FriendsPage />} />
           <Route path="/gratonite" element={<GratoniteDashboard />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
@@ -194,14 +191,22 @@ export function App() {
           <Route path="/portal/:guildId/preview" element={<PortalPreviewPage />} />
           <Route path="/guild/:guildId" element={<GuildPage />}>
             <Route path="channel/:channelId" element={<ChannelPage />} />
-            <Route path="soundboard" element={<SoundboardPage />} />
           </Route>
-          <Route path="/guild/:guildId/events/create" element={<CreateEventPage />} />
           <Route path="/dm/:channelId" element={<ChannelPage />} />
-          <Route path="/add-friend" element={<AddFriendPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/admin/shop" element={<AdminShopPage />} />
           <Route path="/ops/bugs" element={<BugInboxPage />} />
+          
+          {/* Phase 3: New Feature Pages */}
+          <Route path="/wiki/:guildId/:channelId" element={<WikiPage />} />
+          <Route path="/events/:guildId" element={<EventsPage />} />
+          <Route path="/analytics/:guildId" element={<AnalyticsPage />} />
+          <Route path="/bots" element={<BotsPage />} />
+          <Route path="/themes" element={<ThemesPage />} />
+          <Route path="/polls" element={<PollsPage />} />
+          <Route path="/qa/:guildId/:channelId" element={<QAPage />} />
+          <Route path="/scheduled-messages/:guildId" element={<ScheduledMsgsPage />} />
+          <Route path="/automod/:guildId" element={<AutoModPage />} />
         </Route>
       </Routes>
     </Suspense>

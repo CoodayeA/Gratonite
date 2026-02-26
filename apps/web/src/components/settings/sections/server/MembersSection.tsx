@@ -46,7 +46,7 @@ export function MembersSection({ guildId }: MembersSectionProps) {
   });
 
   const bannedUserIds = useMemo(
-    () => Array.from(new Set((bans as Array<any>).map((ban) => String(ban.userId)).filter(Boolean))),
+    () => Array.from(new Set((Array.isArray(bans) ? bans : []).map((ban: any) => String(ban.userId)).filter(Boolean))),
     [bans],
   );
 
@@ -93,11 +93,13 @@ export function MembersSection({ guildId }: MembersSectionProps) {
     return () => window.clearTimeout(timer);
   }, [memberActionFeedback]);
 
-  const everyoneRole = useMemo(() => roles.find((role) => role.name === '@everyone'), [roles]);
+  const safeRoles = Array.isArray(roles) ? roles : [];
+  const safeMembers = Array.isArray(members) ? members : [];
+  const everyoneRole = useMemo(() => safeRoles.find((role) => role.name === '@everyone'), [safeRoles]);
 
   const filteredMembers = useMemo(() => {
     const q = memberSearch.trim().toLowerCase();
-    let next = members;
+    let next = safeMembers;
     if (memberListFilter === 'owners') {
       next = next.filter((member) => guild?.ownerId && guild.ownerId === member.userId);
     } else if (memberListFilter === 'moderatable') {
@@ -112,7 +114,7 @@ export function MembersSection({ guildId }: MembersSectionProps) {
         member.userId;
       return String(displayName).toLowerCase().includes(q) || String(member.userId).includes(q);
     });
-  }, [members, memberSearch, memberListFilter, guild?.ownerId, currentUserId]);
+  }, [safeMembers, memberSearch, memberListFilter, guild?.ownerId, currentUserId]);
 
   const bannedUserMap = useMemo(() => {
     const map = new Map<string, { username: string; displayName: string }>();
@@ -122,7 +124,7 @@ export function MembersSection({ guildId }: MembersSectionProps) {
 
   const filteredSortedBans = useMemo(() => {
     const q = banSearch.trim().toLowerCase();
-    const rows = [...(bans as Array<any>)].filter((ban) => {
+    const rows = (Array.isArray(bans) ? [...bans] : []).filter((ban: any) => {
       if (!q) return true;
       const summary = bannedUserMap.get(String(ban.userId));
       return (

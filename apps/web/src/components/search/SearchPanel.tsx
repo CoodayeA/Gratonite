@@ -8,6 +8,18 @@ import { Avatar } from '@/components/ui/Avatar';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { formatTimestamp } from '@/lib/utils';
 
+/** Sanitize HTML to only allow <mark> tags (used for search highlighting). */
+function sanitizeHighlight(html: string): string {
+  return html
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/&lt;mark&gt;/gi, '<mark>')
+    .replace(/&lt;\/mark&gt;/gi, '</mark>');
+}
+
 interface SearchPanelProps {
   channelId: string;
 }
@@ -112,7 +124,7 @@ export function SearchPanel({ channelId }: SearchPanelProps) {
                 </div>
                 <div
                   className="search-result-content"
-                  dangerouslySetInnerHTML={{ __html: result.highlight || result.content }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHighlight(result.highlight || result.content) }}
                 />
               </div>
             </button>

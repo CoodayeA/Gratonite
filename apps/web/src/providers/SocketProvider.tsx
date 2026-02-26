@@ -37,7 +37,8 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     connectedRef.current = true;
 
     const getBlockedIds = () => {
-      const rels = (queryClient.getQueryData(['relationships']) as Array<{ targetId: string; type: string }> | undefined) ?? [];
+      const raw = queryClient.getQueryData(['relationships']);
+      const rels = Array.isArray(raw) ? raw as Array<{ targetId: string; type: string }> : [];
       return new Set(rels.filter((r) => r.type === 'blocked').map((r) => r.targetId));
     };
 

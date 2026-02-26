@@ -1,42 +1,26 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useParams, useNavigate, Outlet, Link } from 'react-router-dom';
 import { useGuildsStore } from '@/stores/guilds.store';
 import { useChannelsStore } from '@/stores/channels.store';
 import { useGuildChannels } from '@/hooks/useGuildChannels';
 import { useGuildMembers } from '@/hooks/useGuildMembers';
-import { useMembersStore } from '@/stores/members.store';
 import { getSocket } from '@/lib/socket';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { GuildIcon } from '@/components/ui/GuildIcon';
 
 // Channel type constants (API returns string enums)
 const GUILD_TEXT = 'GUILD_TEXT';
-const GUILD_VOICE = 'GUILD_VOICE';
-
-/* ── CSS variable tokens ─────────────────────────────────────────── */
-const V = {
-  bg:          'var(--bg, #2c2c3e)',
-  bgElevated:  'var(--bg-elevated, #353348)',
-  bgSoft:      'var(--bg-soft, #413d58)',
-  bgInput:     'var(--bg-input, #25243a)',
-  stroke:      'var(--stroke, #4a4660)',
-  accent:      'var(--accent, #d4af37)',
-  text:        'var(--text, #e8e4e0)',
-  textMuted:   'var(--text-muted, #a8a4b8)',
-  textFaint:   'var(--text-faint, #6e6a80)',
-  textOnGold:  'var(--text-on-gold, #1a1a2e)',
-  goldSubtle:  '#d4af3730',
-} as const;
 
 export function GuildPage() {
   const { guildId, channelId } = useParams<{ guildId: string; channelId?: string }>();
   const navigate = useNavigate();
 
+  const guilds = useGuildsStore((s) => s.guilds);
   const setCurrentGuild = useGuildsStore((s) => s.setCurrentGuild);
-  const guild = useGuildsStore((s) => (guildId ? s.guilds.get(guildId) : undefined));
   const channelsByGuild = useChannelsStore((s) => s.channelsByGuild);
   const channels = useChannelsStore((s) => s.channels);
-  const membersByGuild = useMembersStore((s) => s.membersByGuild);
+
+  const guild = guildId ? guilds.get(guildId) : undefined;
 
   // Fetch channels for this guild
   const { isLoading } = useGuildChannels(guildId);
@@ -76,18 +60,6 @@ export function GuildPage() {
     }
   }, [channelId, isLoading, guildId, channelsByGuild, channels, navigate]);
 
-  // Derived channel lists
-  const guildChannelIds = guildId ? channelsByGuild.get(guildId) ?? [] : [];
-  const textChannels = useMemo(
-    () => guildChannelIds.map((id) => channels.get(id)).filter((ch) => ch?.type === GUILD_TEXT),
-    [guildChannelIds, channels],
-  );
-  const voiceChannels = useMemo(
-    () => guildChannelIds.map((id) => channels.get(id)).filter((ch) => ch?.type === GUILD_VOICE),
-    [guildChannelIds, channels],
-  );
-  const memberCount = guildId ? (membersByGuild.get(guildId)?.size ?? guild?.memberCount ?? 0) : 0;
-
   if (isLoading) {
     return (
       <div className="guild-page-loading">
@@ -101,127 +73,114 @@ export function GuildPage() {
     return <Outlet />;
   }
 
-  // Portal interior — shown when no channel is selected
+  // Portal interior — no channel selected yet
+  // Show a polished welcome/interior view for the portal
+  const guildChannelIds = guildId ? channelsByGuild.get(guildId) : undefined;
+  const textChannels = guildChannelIds
+    ? guildChannelIds
+        .map((id) => channels.get(id))
+        .filter((ch) => ch?.type === GUILD_TEXT)
+    : [];
+
   return (
-    <div className="portal-interior">
-      {/* ── Banner ──────────────────────────────────────────────── */}
-      <div className="portal-interior-banner">
+    <div className="guild-page-interior">
+      {/* Hero */}
+      <div className="guild-interior-hero">
         {guild?.bannerHash ? (
           <img
             src={`/api/v1/files/${guild.bannerHash}`}
-            alt=""
-            className="portal-interior-banner-img"
+            alt={`${guild.name} banner`}
+            className="guild-interior-banner-img"
           />
         ) : (
-          <div className="portal-interior-banner-fallback" />
+          <div className="guild-interior-banner-placeholder" aria-hidden="true" />
         )}
-        <div className="portal-interior-banner-overlay" />
-      </div>
+        <div className="guild-interior-banner-overlay" />
 
-      {/* ── Header info ─────────────────────────────────────────── */}
-      <div className="portal-interior-header">
-        <div className="portal-interior-icon-wrap">
-          <GuildIcon
-            name={guild?.name ?? 'Portal'}
-            iconHash={guild?.iconHash ?? null}
-            guildId={guildId ?? ''}
-            size={72}
-          />
-        </div>
-        <div className="portal-interior-meta">
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: V.text }}>
-            {guild?.name ?? 'Portal'}
-          </h1>
-          {guild?.description && (
-            <p style={{ margin: '4px 0 0', fontSize: 14, color: V.textMuted, lineHeight: 1.5 }}>
-              {guild.description}
-            </p>
+        <div className="guild-interior-identity">
+          {guild && (
+            <GuildIcon
+              name={guild.name}
+              iconHash={guild.iconHash}
+              guildId={guild.id}
+              size={64}
+              className="guild-interior-icon"
+            />
           )}
-          <div className="portal-interior-stats">
-            <span className="portal-interior-stat">
-              <span className="portal-interior-stat-dot portal-interior-stat-dot--members" />
-              {memberCount} {memberCount === 1 ? 'Member' : 'Members'}
-            </span>
-            <span className="portal-interior-stat">
-              <span className="portal-interior-stat-dot portal-interior-stat-dot--channels" />
-              {textChannels.length} Text {textChannels.length === 1 ? 'Channel' : 'Channels'}
-            </span>
-            {voiceChannels.length > 0 && (
-              <span className="portal-interior-stat">
-                <span className="portal-interior-stat-dot portal-interior-stat-dot--voice" />
-                {voiceChannels.length} Voice
-              </span>
+          <div>
+            <h1 className="guild-interior-name">{guild?.name ?? 'Portal'}</h1>
+            {guild?.description && (
+              <p className="guild-interior-desc">{guild.description}</p>
             )}
           </div>
         </div>
       </div>
 
-      {/* ── Channel list ────────────────────────────────────────── */}
-      <div className="portal-interior-body">
-        <section className="portal-interior-section">
-          <div className="portal-interior-section-title">Text Channels</div>
+      {/* Body */}
+      <div className="guild-interior-body">
+        {/* Channels quick-pick */}
+        <section className="guild-interior-section">
+          <h2 className="guild-interior-section-title">Channels</h2>
           {textChannels.length === 0 ? (
-            <div className="portal-interior-empty">No text channels yet.</div>
+            <p className="guild-interior-empty">No text channels yet. Ask an admin to create one.</p>
           ) : (
-            <div className="portal-interior-channel-list">
-              {textChannels.map((ch) =>
+            <ul className="guild-interior-channel-list" role="list">
+              {textChannels.slice(0, 10).map((ch) =>
                 ch ? (
-                  <Link
-                    key={ch.id}
-                    to={`/guild/${guildId}/channel/${ch.id}`}
-                    className="portal-interior-channel-row"
-                  >
-                    <span className="portal-interior-channel-hash">#</span>
-                    <span className="portal-interior-channel-name">{ch.name}</span>
-                  </Link>
+                  <li key={ch.id} role="listitem">
+                    <Link
+                      to={`/guild/${guildId}/channel/${ch.id}`}
+                      className="guild-interior-channel-link"
+                    >
+                      <span className="guild-interior-channel-hash" aria-hidden="true">#</span>
+                      <span className="guild-interior-channel-name">{ch.name}</span>
+                      {ch.topic && (
+                        <span className="guild-interior-channel-topic">{ch.topic}</span>
+                      )}
+                    </Link>
+                  </li>
                 ) : null,
               )}
-            </div>
+            </ul>
           )}
         </section>
 
-        {voiceChannels.length > 0 && (
-          <section className="portal-interior-section">
-            <div className="portal-interior-section-title">Voice Channels</div>
-            <div className="portal-interior-channel-list">
-              {voiceChannels.map((ch) =>
-                ch ? (
-                  <div key={ch.id} className="portal-interior-channel-row portal-interior-channel-row--voice">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                      <line x1="12" y1="19" x2="12" y2="23" />
-                      <line x1="8" y1="23" x2="16" y2="23" />
-                    </svg>
-                    <span className="portal-interior-channel-name">{ch.name}</span>
-                  </div>
-                ) : null,
-              )}
+        {/* Portal stats */}
+        {guild && (
+          <section className="guild-interior-section">
+            <h2 className="guild-interior-section-title">Portal Info</h2>
+            <div className="guild-interior-stats">
+              <div className="guild-interior-stat">
+                <span className="guild-interior-stat-value">
+                  {guild.memberCount.toLocaleString()}
+                </span>
+                <span className="guild-interior-stat-label">Members</span>
+              </div>
+              <div className="guild-interior-stat">
+                <span className="guild-interior-stat-value">{guild.boostCount}</span>
+                <span className="guild-interior-stat-label">Boosts</span>
+              </div>
+              <div className="guild-interior-stat">
+                <span className="guild-interior-stat-value">Tier {guild.boostTier}</span>
+                <span className="guild-interior-stat-label">Boost Tier</span>
+              </div>
             </div>
+
+            {/* Tags */}
+            {guild.tags && guild.tags.length > 0 && (
+              <div className="guild-interior-tags" aria-label="Portal tags">
+                {guild.tags.slice(0, 6).map((tag) => (
+                  <span key={tag} className="guild-interior-tag">#{tag}</span>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
-        {/* ── Quick actions ───────────────────────────────────────── */}
-        <section className="portal-interior-section">
-          <div className="portal-interior-section-title">Quick Actions</div>
-          <div className="portal-interior-actions">
-            {textChannels[0] && (
-              <button
-                type="button"
-                className="portal-interior-action-btn portal-interior-action-btn--primary"
-                onClick={() => navigate(`/guild/${guildId}/channel/${textChannels[0]!.id}`)}
-              >
-                Start Chatting
-              </button>
-            )}
-            <Link
-              to={`/portal/${guildId}/preview`}
-              className="portal-interior-action-btn portal-interior-action-btn--ghost"
-            >
-              View Portal Preview
-            </Link>
-          </div>
-        </section>
+        {/* Prompt to select a channel */}
+        <div className="guild-interior-cta-row">
+          <p className="guild-interior-cta-text">Pick a channel above or use the sidebar to start chatting.</p>
+        </div>
       </div>
     </div>
   );

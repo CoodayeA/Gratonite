@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ServerGallery } from '@/components/home/ServerGallery';
+import { useGuildsStore } from '@/stores/guilds.store';
 
 export function DiscoverPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -32,8 +33,34 @@ export function DiscoverPage() {
     [],
   );
 
+  // Dynamic portal tags: extract from actual guild data, fall back to defaults
+  const guilds = useGuildsStore((s) => s.guilds);
+  const portalTagsFromGuilds = useMemo(() => {
+    const tagCount = new Map<string, number>();
+    for (const guild of guilds.values()) {
+      const guildTags = (guild as any).tags;
+      if (Array.isArray(guildTags)) {
+        for (const t of guildTags) {
+          if (typeof t === 'string') tagCount.set(t, (tagCount.get(t) ?? 0) + 1);
+        }
+      }
+      const guildCats = (guild as any).categories;
+      if (Array.isArray(guildCats)) {
+        for (const c of guildCats) {
+          if (typeof c === 'string') tagCount.set(c.toLowerCase(), (tagCount.get(c.toLowerCase()) ?? 0) + 1);
+        }
+      }
+    }
+    // Sort by frequency, take top 8
+    const sorted = Array.from(tagCount.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([t]) => t)
+      .slice(0, 8);
+    return sorted.length > 0 ? sorted : ['gaming', 'productivity', 'creative', 'study', 'social'];
+  }, [guilds]);
+
   const activeTags = tab === 'portals'
-    ? ['gaming', 'productivity', 'creative', 'study', 'social']
+    ? portalTagsFromGuilds
     : tab === 'bots'
       ? ['moderation', 'voice', 'music', 'productivity', 'fun']
       : ['glass', 'light', 'aurora', 'cyber', 'minimal'];

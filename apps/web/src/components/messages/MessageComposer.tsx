@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo, useEffect, type KeyboardEvent, type ChangeEvent, type FormEvent } from 'react';
+import { useState, useRef, useCallback, useMemo, type KeyboardEvent, type ChangeEvent, type FormEvent } from 'react';
 import { api } from '@/lib/api';
 import { useMessagesStore } from '@/stores/messages.store';
 import { useAuthStore } from '@/stores/auth.store';
@@ -17,6 +17,13 @@ import { startInteraction, endInteractionAfterPaint } from '@/lib/perf';
 import { EmojiPicker } from '@/components/ui/EmojiPicker';
 import type { Message } from '@gratonite/types';
 
+interface GuildEmoji {
+  id: string;
+  name: string;
+  url: string;
+  animated: boolean;
+}
+
 interface MessageComposerProps {
   channelId: string;
   placeholder?: string;
@@ -31,6 +38,10 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
   const [mentionRange, setMentionRange] = useState<{ start: number; end: number } | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [emojiAutocompleteOpen, setEmojiAutocompleteOpen] = useState(false);
+  const [emojiQuery, setEmojiQuery] = useState('');
+  const [emojiRange, setEmojiRange] = useState<{ start: number; end: number } | null>(null);
+  const [emojiIndex, setEmojiIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const lastTypingRef = useRef(0);
@@ -43,24 +54,29 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
   const addMessage = useMessagesStore((s) => s.addMessage);
   const replyingTo = useMessagesStore((s) => s.replyingTo.get(channelId) ?? null);
   const setReplyingTo = useMessagesStore((s) => s.setReplyingTo);
-  // Voice message recording state (UI-only, backend recording API not yet available)
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const [voiceMessageBlob, setVoiceMessageBlob] = useState<Blob | null>(null);
-  const [voiceMessageUrl, setVoiceMessageUrl] = useState<string | null>(null);
-  const [waveformData, setWaveformData] = useState<number[]>([]);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordingTimerRef = useRef<number | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-
-  const canSend = content.trim().length > 0 || pendingFiles.length > 0 || voiceMessageBlob !== null;
+  const canSend = content.trim().length > 0 || pendingFiles.length > 0;
   const { data: guildRoles = [] } = useQuery({
     queryKey: ['guilds', guildId, 'roles'],
     queryFn: () => (guildId ? api.guilds.getRoles(guildId) : Promise.resolve([])),
     enabled: Boolean(guildId),
     staleTime: 60_000,
   });
+
+  const { data: guildEmojis = [] } = useQuery<GuildEmoji[]>({
+    queryKey: ['guild-emojis', guildId],
+    queryFn: () => (guildId ? api.guilds.getEmojis(guildId) : Promise.resolve([])),
+    enabled: Boolean(guildId),
+    staleTime: 300_000,
+  });
+
+  const filteredEmojiCandidates = useMemo(() => {
+    if (!emojiAutocompleteOpen) return [];
+    const q = emojiQuery.trim().toLowerCase();
+    const filtered = q
+      ? guildEmojis.filter((emoji) => emoji.name.toLowerCase().includes(q))
+      : guildEmojis;
+    return filtered.slice(0, 8);
+  }, [emojiAutocompleteOpen, emojiQuery, guildEmojis]);
 
   const baseMentionCandidates = useMemo(() => {
     const seen = new Set<string>();
@@ -183,6 +199,13 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
     setMentionIndex(0);
   }, []);
 
+  const closeEmojiMenu = useCallback(() => {
+    setEmojiAutocompleteOpen(false);
+    setEmojiQuery('');
+    setEmojiRange(null);
+    setEmojiIndex(0);
+  }, []);
+
   const syncMentionState = useCallback((nextValue: string, selectionStart: number | null) => {
     const caret = selectionStart ?? nextValue.length;
     const beforeCaret = nextValue.slice(0, caret);
@@ -199,6 +222,23 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
     setMentionRange({ start: atPos, end: caret });
     setMentionIndex(0);
   }, [closeMentionMenu]);
+
+  const syncEmojiState = useCallback((nextValue: string, selectionStart: number | null) => {
+    const caret = selectionStart ?? nextValue.length;
+    const beforeCaret = nextValue.slice(0, caret);
+    const match = beforeCaret.match(/(?:^|\s):([a-zA-Z0-9_]{0,32})$/);
+    if (!match) {
+      closeEmojiMenu();
+      return;
+    }
+    const raw = match[1] ?? '';
+    const colonPos = beforeCaret.lastIndexOf(':');
+    if (colonPos < 0) return;
+    setEmojiAutocompleteOpen(true);
+    setEmojiQuery(raw);
+    setEmojiRange({ start: colonPos, end: caret });
+    setEmojiIndex(0);
+  }, [closeEmojiMenu]);
 
   // Auto-grow textarea
   const adjustHeight = useCallback(() => {
@@ -226,6 +266,7 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
 
     setContent(normalizedValue);
     syncMentionState(normalizedValue, e.target.selectionStart);
+    syncEmojiState(normalizedValue, e.target.selectionStart);
     adjustHeight();
     if (normalizedValue.trim()) {
       emitTyping();
@@ -254,6 +295,22 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
     if (label) {
       emitTyping();
     }
+  }
+
+  function insertEmoji(emoji: GuildEmoji) {
+    const ta = textareaRef.current;
+    const range = emojiRange;
+    if (!ta || !range) return;
+    const shortcode = `:${emoji.name}:`;
+    const next = `${content.slice(0, range.start)}${shortcode} ${content.slice(range.end)}`;
+    const nextCaret = range.start + shortcode.length + 1;
+    setContent(next);
+    closeEmojiMenu();
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.setSelectionRange(nextCaret, nextCaret);
+      adjustHeight();
+    });
   }
 
   function handleFilesSelected(files: File[]) {
@@ -306,119 +363,9 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
     setEmojiOpen(false);
   }
 
-  // Voice recording handlers
-  async function startRecording() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      const chunks: BlobPart[] = [];
-
-      // Set up audio analysis for waveform
-      const audioContext = new AudioContext();
-      const source = audioContext.createMediaStreamSource(stream);
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 64;
-      source.connect(analyser);
-      analyserRef.current = analyser;
-
-      // Animate waveform
-      function updateWaveform() {
-        if (!analyserRef.current) return;
-        const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-        analyserRef.current.getByteFrequencyData(dataArray);
-        const normalized = Array.from(dataArray.slice(0, 24)).map((v) => v / 255);
-        setWaveformData(normalized);
-        animationFrameRef.current = requestAnimationFrame(updateWaveform);
-      }
-      updateWaveform();
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
-      };
-
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' });
-        const url = URL.createObjectURL(blob);
-        setVoiceMessageBlob(blob);
-        setVoiceMessageUrl(url);
-        stream.getTracks().forEach((track) => track.stop());
-        audioContext.close();
-        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-        analyserRef.current = null;
-      };
-
-      mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.start();
-      setIsRecording(true);
-      setRecordingDuration(0);
-      setWaveformData([]);
-
-      // Duration timer
-      recordingTimerRef.current = window.setInterval(() => {
-        setRecordingDuration((prev) => prev + 1);
-      }, 1000);
-    } catch {
-      setSendError('Could not access microphone.');
-    }
-  }
-
-  function stopRecording() {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-    mediaRecorderRef.current = null;
-    setIsRecording(false);
-    if (recordingTimerRef.current) {
-      clearInterval(recordingTimerRef.current);
-      recordingTimerRef.current = null;
-    }
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-  }
-
-  function cancelRecording() {
-    stopRecording();
-    if (voiceMessageUrl) URL.revokeObjectURL(voiceMessageUrl);
-    setVoiceMessageBlob(null);
-    setVoiceMessageUrl(null);
-    setWaveformData([]);
-    setRecordingDuration(0);
-  }
-
-  function formatDuration(seconds: number) {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  }
-
-  // Cleanup recording on unmount
-  useEffect(() => {
-    return () => {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-      if (voiceMessageUrl) URL.revokeObjectURL(voiceMessageUrl);
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   async function sendMessage(contentOverride?: string) {
     const trimmed = (contentOverride ?? content).trim();
-    if (!trimmed && pendingFiles.length === 0 && !voiceMessageBlob) return;
-
-    // If there's a voice message, add it to pending files
-    if (voiceMessageBlob) {
-      const voiceFile = new File([voiceMessageBlob], 'voice-message.webm', { type: 'audio/webm' });
-      pendingFiles.push({ id: generateNonce(), file: voiceFile });
-      setVoiceMessageBlob(null);
-      if (voiceMessageUrl) URL.revokeObjectURL(voiceMessageUrl);
-      setVoiceMessageUrl(null);
-      setWaveformData([]);
-      setRecordingDuration(0);
-    }
+    if (!trimmed && pendingFiles.length === 0) return;
     setSendError('');
     closeMentionMenu();
 
@@ -532,6 +479,29 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
         return;
       }
     }
+    if (emojiAutocompleteOpen && filteredEmojiCandidates.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setEmojiIndex((prev) => (prev + 1) % filteredEmojiCandidates.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setEmojiIndex((prev) => (prev - 1 + filteredEmojiCandidates.length) % filteredEmojiCandidates.length);
+        return;
+      }
+      if (e.key === 'Tab' || e.key === 'Enter') {
+        e.preventDefault();
+        const selected = filteredEmojiCandidates[emojiIndex] ?? filteredEmojiCandidates[0];
+        if (selected) insertEmoji(selected);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeEmojiMenu();
+        return;
+      }
+    }
     if (e.key === 'Enter' && !e.shiftKey && !isComposingRef.current) {
       e.preventDefault();
       sendMessage();
@@ -560,48 +530,6 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
             onClearAll={pendingFiles.length > 1 ? handleClearFiles : undefined}
             compact
           />
-          {/* Voice message recording/preview */}
-          {(isRecording || voiceMessageUrl) && (
-            <div className="voice-message-preview">
-              {isRecording && (
-                <div className="voice-recording-indicator">
-                  <span className="voice-recording-dot" />
-                  <span className="voice-recording-time">{formatDuration(recordingDuration)}</span>
-                  <div className="voice-waveform">
-                    {waveformData.map((value, i) => (
-                      <div
-                        key={i}
-                        className="voice-waveform-bar"
-                        style={{ height: `${Math.max(4, value * 32)}px` }}
-                      />
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    className="voice-cancel-btn"
-                    onClick={cancelRecording}
-                    title="Cancel recording"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-              {!isRecording && voiceMessageUrl && (
-                <div className="voice-playback-preview">
-                  <audio src={voiceMessageUrl} controls className="voice-audio-player" />
-                  <span className="voice-recording-time">{formatDuration(recordingDuration)}</span>
-                  <button
-                    type="button"
-                    className="voice-cancel-btn"
-                    onClick={cancelRecording}
-                    title="Discard voice message"
-                  >
-                    Discard
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
           <div className="message-composer-controls">
             <textarea
               ref={textareaRef}
@@ -616,8 +544,14 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
               onCompositionEnd={() => {
                 isComposingRef.current = false;
               }}
-              onClick={(e) => syncMentionState((e.target as HTMLTextAreaElement).value, (e.target as HTMLTextAreaElement).selectionStart)}
-              onKeyUp={(e) => syncMentionState((e.target as HTMLTextAreaElement).value, (e.target as HTMLTextAreaElement).selectionStart)}
+            onClick={(e) => {
+              syncMentionState((e.target as HTMLTextAreaElement).value, (e.target as HTMLTextAreaElement).selectionStart);
+              syncEmojiState((e.target as HTMLTextAreaElement).value, (e.target as HTMLTextAreaElement).selectionStart);
+            }}
+            onKeyUp={(e) => {
+              syncMentionState((e.target as HTMLTextAreaElement).value, (e.target as HTMLTextAreaElement).selectionStart);
+              syncEmojiState((e.target as HTMLTextAreaElement).value, (e.target as HTMLTextAreaElement).selectionStart);
+            }}
               rows={1}
               maxLength={4000}
               enterKeyHint="send"
@@ -643,21 +577,25 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
                 ))}
               </div>
             )}
-            {/* Voice message record button */}
-            <button
-              type="button"
-              className={`message-emoji-btn ${isRecording ? 'voice-recording-active' : ''}`}
-              onClick={isRecording ? stopRecording : startRecording}
-              aria-label={isRecording ? 'Stop recording' : 'Record voice message'}
-              title={isRecording ? 'Stop recording' : 'Record voice message'}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                <line x1="12" y1="19" x2="12" y2="23" />
-                <line x1="8" y1="23" x2="16" y2="23" />
-              </svg>
-            </button>
+            {emojiAutocompleteOpen && filteredEmojiCandidates.length > 0 && (
+              <div className="composer-mention-menu composer-emoji-menu" role="listbox" aria-label="Emoji suggestions">
+                {filteredEmojiCandidates.map((emoji, idx) => (
+                  <button
+                    key={emoji.id}
+                    type="button"
+                    className={`composer-mention-item ${idx === emojiIndex ? 'is-active' : ''}`}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      insertEmoji(emoji);
+                    }}
+                  >
+                    <img src={emoji.url} alt={emoji.name} className="composer-emoji-preview" />
+                    <span className="composer-mention-item-label">:{emoji.name}:</span>
+                    {emoji.animated && <span className="composer-mention-kind"> GIF</span>}
+                  </button>
+                ))}
+              </div>
+            )}
             <button
               ref={emojiButtonRef}
               type="button"

@@ -21,7 +21,7 @@ export function InvitesSection({ guildId }: InvitesSectionProps) {
     enabled: Boolean(guildId),
   });
 
-  const textChannels = channels.filter((c) => c.type === 'GUILD_TEXT');
+  const textChannels = (Array.isArray(channels) ? channels : []).filter((c) => c.type === 'GUILD_TEXT');
 
   async function handleGenerateInvite() {
     if (!channelId) return;

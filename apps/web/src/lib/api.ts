@@ -646,6 +646,8 @@ export const api = {
       apiFetch<void>('/voice/leave', { method: 'POST' }),
     getChannelStates: (channelId: string) =>
       apiFetch<any[]>(`/channels/${channelId}/voice-states`),
+    getGuildVoiceStates: (guildId: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/voice-states`),
     getSoundboard: (guildId: string) =>
       apiFetch<Array<{
         id: string;
@@ -681,35 +683,6 @@ export const api = {
       }),
     deleteSoundboard: (guildId: string, soundId: string) =>
       apiFetch<void>(`/guilds/${guildId}/soundboard/${soundId}`, { method: 'DELETE' }),
-
-    // Stage instances
-    getStageInstances: (guildId: string) =>
-      apiFetch<Array<{
-        id: string;
-        guildId: string;
-        channelId: string;
-        topic: string;
-        privacyLevel: 'public' | 'guild_only';
-        scheduledEventId: string | null;
-      }>>(`/guilds/${guildId}/stage-instances`),
-    createStageInstance: (guildId: string, data: { channelId: string; topic: string; privacyLevel?: 'public' | 'guild_only' }) =>
-      apiFetch<any>(`/guilds/${guildId}/stage-instances`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    updateStageInstance: (stageId: string, data: { topic?: string; privacyLevel?: 'public' | 'guild_only' }) =>
-      apiFetch<any>(`/stage-instances/${stageId}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      }),
-    deleteStageInstance: (stageId: string) =>
-      apiFetch<void>(`/stage-instances/${stageId}`, { method: 'DELETE' }),
-    requestToSpeak: (stageId: string) =>
-      apiFetch<void>(`/stage-instances/${stageId}/request-to-speak`, { method: 'PUT' }),
-    addSpeaker: (stageId: string, userId: string) =>
-      apiFetch<void>(`/stage-instances/${stageId}/speakers/${userId}`, { method: 'PUT' }),
-    removeSpeaker: (stageId: string, userId: string) =>
-      apiFetch<void>(`/stage-instances/${stageId}/speakers/${userId}`, { method: 'DELETE' }),
   },
 
   guilds: {
@@ -720,13 +693,13 @@ export const api = {
     getMembers: (guildId: string, limit = 100) =>
       apiFetch<GuildMember[]>(`/guilds/${guildId}/members?limit=${limit}`),
 
-    create: (data: { name: string; description?: string }) =>
+    create: (data: { name: string; description?: string; tags?: string[]; categories?: string[] }) =>
       apiFetch<Guild>('/guilds', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
 
-    update: (guildId: string, data: { name?: string; description?: string }) =>
+    update: (guildId: string, data: { name?: string; description?: string; tags?: string[]; categories?: string[] }) =>
       apiFetch<Guild>(`/guilds/${guildId}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
@@ -1057,44 +1030,47 @@ export const api = {
       }),
   },
 
-  events: {
-    create: (
-      guildId: string,
-      data: {
-        name: string;
-        description?: string;
-        scheduledStartTime: string;
-        scheduledEndTime?: string;
-        entityType: 'stage_instance' | 'voice' | 'external';
-        channelId?: string;
-        entityMetadata?: { location?: string };
-      },
-    ) =>
-      apiFetch<any>(`/guilds/${guildId}/scheduled-events`, {
+  shop: {
+    getItems: () =>
+      apiFetch<any[]>('/shop/items'),
+
+    getInventory: () =>
+      apiFetch<any[]>('/shop/inventory'),
+
+    purchase: (itemId: string) =>
+      apiFetch<any>('/shop/purchase', {
+        method: 'POST',
+        body: JSON.stringify({ itemId }),
+      }),
+  },
+
+  wiki: {
+    listPages: (channelId: string) =>
+      apiFetch<any[]>(`/channels/${channelId}/wiki`),
+
+    createPage: (channelId: string, data: { title: string; content: string }) =>
+      apiFetch<any>(`/channels/${channelId}/wiki`, {
         method: 'POST',
         body: JSON.stringify(data),
       }),
 
-    list: (guildId: string, params?: { status?: string; limit?: number }) => {
-      const query = new URLSearchParams();
-      if (params?.status) query.set('status', params.status);
-      if (params?.limit) query.set('limit', String(params.limit));
-      const suffix = query.toString() ? `?${query.toString()}` : '';
-      return apiFetch<any[]>(`/guilds/${guildId}/scheduled-events${suffix}`);
-    },
+    getPage: (pageId: string) =>
+      apiFetch<any>(`/wiki/${pageId}`),
 
-    get: (guildId: string, eventId: string) =>
-      apiFetch<any>(`/guilds/${guildId}/scheduled-events/${eventId}`),
-
-    rsvp: (guildId: string, eventId: string) =>
-      apiFetch<void>(`/guilds/${guildId}/scheduled-events/${eventId}/users/@me`, {
-        method: 'PUT',
+    updatePage: (pageId: string, data: { title?: string; content?: string }) =>
+      apiFetch<any>(`/wiki/${pageId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
       }),
 
-    unrsvp: (guildId: string, eventId: string) =>
-      apiFetch<void>(`/guilds/${guildId}/scheduled-events/${eventId}/users/@me`, {
-        method: 'DELETE',
-      }),
+    deletePage: (pageId: string) =>
+      apiFetch<void>(`/wiki/${pageId}`, { method: 'DELETE' }),
+
+    getRevisions: (pageId: string) =>
+      apiFetch<any[]>(`/wiki/${pageId}/revisions`),
+
+    revertRevision: (pageId: string, revisionId: string) =>
+      apiFetch<any>(`/wiki/${pageId}/revert/${revisionId}`, { method: 'POST' }),
   },
 
   leaderboard: {

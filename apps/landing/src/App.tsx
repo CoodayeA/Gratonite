@@ -4,13 +4,14 @@
  */
 
 import { motion, useScroll, useTransform, useSpring, AnimatePresence } from "motion/react";
-import { 
+import {
   BrowserRouter as Router, 
   Routes, 
   Route, 
   Link, 
   useLocation,
-  useNavigate
+  useNavigate,
+  useParams
 } from "react-router-dom";
 import {
   Download,
@@ -109,7 +110,7 @@ const Navbar = ({ isDark, toggleDark }: { isDark: boolean, toggleDark: () => voi
         </Link>
         
         <nav className="hidden lg:flex items-center gap-6">
-          <NavLink href="#download">Download</NavLink>
+          <NavLink to="/download">Download</NavLink>
           <NavLink to="/discover" hasDropdown>Discover</NavLink>
           <NavLink to="/safety">Safety</NavLink>
           <NavLink to="/support" hasDropdown>Support</NavLink>
@@ -548,22 +549,39 @@ const DownloadSection = () => (
       
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { name: 'macOS', icon: Cpu },
-          { name: 'Windows', icon: Monitor },
-          { name: 'Linux', icon: Globe },
-          { name: 'Mobile', icon: Smartphone },
+          { name: 'macOS', icon: Cpu, href: '#', comingSoon: true },
+          { name: 'Windows', icon: Monitor, href: '/Gratonite-Setup.exe' },
+          { name: 'Linux', icon: Globe, href: '#', comingSoon: true },
+          { name: 'Mobile', icon: Smartphone, href: '#', comingSoon: true },
         ].map((os) => (
-          <motion.button 
-            key={os.name}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center gap-4 p-5 rounded-[1.5rem] bg-white dark:bg-[#1a1025] border border-gratonite/10 hover:border-gratonite/30 transition-all text-left group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-gratonite/10 flex items-center justify-center group-hover:bg-gratonite group-hover:text-white transition-colors">
-              <os.icon size={20} />
-            </div>
-            <span className="font-medium text-ink dark:text-white">{os.name}</span>
-          </motion.button>
+          os.comingSoon ? (
+            <motion.div
+              key={os.name}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-4 p-5 rounded-[1.5rem] bg-white dark:bg-[#1a1025] border border-gratonite/10 hover:border-gratonite/30 transition-all text-left group opacity-60 cursor-not-allowed"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gratonite/10 flex items-center justify-center group-hover:bg-gratonite group-hover:text-white transition-colors">
+                <os.icon size={20} />
+              </div>
+              <span className="font-medium text-ink dark:text-white">{os.name}</span>
+              <span className="ml-auto text-xs text-gray-400">Soon</span>
+            </motion.div>
+          ) : (
+            <a
+              key={os.name}
+              href={os.href}
+              download
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-4 p-5 rounded-[1.5rem] bg-white dark:bg-[#1a1025] border border-gratonite/10 hover:border-gratonite/30 transition-all text-left group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gratonite/10 flex items-center justify-center group-hover:bg-gratonite group-hover:text-white transition-colors">
+                <os.icon size={20} />
+              </div>
+              <span className="font-medium text-ink dark:text-white">{os.name}</span>
+            </a>
+          )
         ))}
       </div>
 
@@ -573,6 +591,135 @@ const DownloadSection = () => (
     </div>
   </section>
 );
+
+const DownloadPage = () => {
+  const [macArch, setMacArch] = useState("arm64");
+  
+  const downloads = [
+    { 
+      name: 'Windows', 
+      icon: Monitor, 
+      href: '/Gratonite-Setup-0.1.0.exe',
+      description: 'Windows 10 or later'
+    },
+    { 
+      name: 'macOS', 
+      icon: Cpu, 
+      href: macArch === 'arm64' ? '/Gratonite-0.1.0-arm64.dmg' : '/Gratonite-0.1.0-x64.dmg',
+      description: macArch === 'arm64' ? 'Apple Silicon (M1, M2, M3)' : 'Intel Mac',
+      showDropdown: true
+    },
+    { 
+      name: 'Linux', 
+      icon: Globe, 
+      href: '#',
+      comingSoon: true,
+      description: 'Coming soon'
+    },
+    { 
+      name: 'Mobile', 
+      icon: Smartphone, 
+      href: '#',
+      comingSoon: true,
+      description: 'Coming soon'
+    },
+  ];
+
+  return (
+    <div className="min-h-screen pt-32 pb-20 px-6">
+      <div className="max-w-4xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          <h1 className="text-4xl md:text-6xl font-bold mb-4 dark:text-white">Download Gratonite</h1>
+          <p className="text-lg text-ink-light dark:text-slate-400">
+            Choose your platform. Free forever. No credit card required.
+          </p>
+        </motion.div>
+
+        <div className="grid sm:grid-cols-2 gap-6">
+          {downloads.map((app) => (
+            app.comingSoon ? (
+              <motion.div
+                key={app.name}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="p-8 rounded-3xl bg-white dark:bg-[#1a1025] border border-gratonite/10 opacity-60"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-gratonite/10 flex items-center justify-center mb-4">
+                  <app.icon size={32} className="text-gratonite" />
+                </div>
+                <h3 className="text-xl font-bold mb-2 dark:text-white">{app.name}</h3>
+                <p className="text-ink-light dark:text-slate-400 mb-4">{app.description}</p>
+                <span className="inline-block px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm font-medium text-gray-500">
+                  Coming Soon
+                </span>
+              </motion.div>
+            ) : (
+              <motion.div
+                key={app.name}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="p-8 rounded-3xl bg-white dark:bg-[#1a1025] border border-gratonite/10 hover:border-gratonite/30 transition-all"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-gratonite flex items-center justify-center mb-4">
+                  <app.icon size={32} className="text-white" />
+                </div>
+                <h3 className="text-xl font-bold mb-2 dark:text-white">{app.name}</h3>
+                <p className="text-ink-light dark:text-slate-400 mb-4">{app.description}</p>
+                {app.showDropdown ? (
+                  <div className="flex flex-col gap-3">
+                    <select 
+                      value={macArch}
+                      onChange={(e) => setMacArch(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-gratonite-purple-soft/20 dark:bg-[#2d1f3d] border border-gratonite/20 text-ink dark:text-white focus:outline-none focus:border-gratonite/40 cursor-pointer"
+                    >
+                      <option value="arm64">Apple Silicon (M1, M2, M3)</option>
+                      <option value="x64">Intel Mac</option>
+                    </select>
+                    <a
+                      href={app.href}
+                      download
+                      className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gratonite text-white font-medium hover:bg-gratonite-pink transition-colors"
+                    >
+                      <Download size={16} />
+                      Download for {macArch === 'arm64' ? 'Apple Silicon' : 'Intel'}
+                    </a>
+                  </div>
+                ) : (
+                  <a
+                    href={app.href}
+                    download
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gratonite text-white font-medium"
+                  >
+                    <Download size={16} />
+                    Download
+                  </a>
+                )}
+              </motion.div>
+            )
+          ))}
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.6 }}
+          className="mt-12 text-center"
+        >
+          <p className="text-ink-light dark:text-slate-400">
+            Or just use it in your browser. <a href="/app" className="text-gratonite hover:underline">No install needed.</a>
+          </p>
+        </motion.div>
+      </div>
+    </div>
+  );
+};
 
 const CommunitySection = () => (
   <section className="py-32 px-6 relative overflow-hidden">
@@ -632,7 +779,7 @@ const Footer = () => (
         <div>
           <h4 className="font-semibold mb-4 text-sm text-ink dark:text-white">Use</h4>
           <ul className="space-y-3 text-sm text-ink-light dark:text-slate-400">
-            <li><a href="#download" className="hover:text-gratonite transition-colors">Download</a></li>
+            <li><a href="/download" className="hover:text-gratonite transition-colors">Download</a></li>
             <li><a href="#features" className="hover:text-gratonite transition-colors">Features</a></li>
             <li><Link to="/blog" className="hover:text-gratonite transition-colors">Blog</Link></li>
           </ul>
@@ -828,20 +975,36 @@ const VerifyPage = () => {
 
 const BlogPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
   
   const posts = [
     {
       id: 1,
+      slug: "welcome-to-gratonite",
       title: "Welcome to Gratonite — What We're Building and Why",
       excerpt: "Gratonite is a new kind of communication platform built for communities, gamers, and creators. Here's the vision behind it and where we're headed.",
       author: "Coodaye",
       date: "Feb 24, 2026",
       readTime: "4 min read",
       category: "Announcement",
-      featured: true
+      featured: true,
+      content: "Gratonite is more than just a chat app — it's a space built for communities that want to connect without the noise. We're creating something different from the big tech platforms: no ads, no data selling, no corporate interference.\n\nOur focus is on three things: communities, gaming, and creators. Whether you're running a Discord server, streaming on Twitch, or building a fan community for your creative work, Gratonite gives you the tools to make it happen.\n\nWe're building this from the ground up with privacy and user control at the core. Your data stays yours. Your community, your rules."
     },
     {
       id: 2,
+      slug: "desktop-app-released",
+      title: "Desktop App Now Available: Download for Windows and Mac",
+      excerpt: "The Gratonite desktop app is here. Download for Windows or Mac (Apple Silicon & Intel supported). Includes auto-updates and native notifications.",
+      author: "Coodaye",
+      date: "Feb 25, 2026",
+      readTime: "2 min read",
+      category: "Announcement",
+      featured: true,
+      content: "Good news — you can now download the Gratonite desktop app for both Windows and macOS!\n\n**What's included:**\n- Native desktop experience with system tray support\n- Auto-updates so you're always on the latest version\n- Native notifications that work with your OS\n- Better performance than the web version\n\n**Downloads:**\n- Windows: Gratonite-0.1.0.exe\n- macOS Apple Silicon (M1, M2, M3): Gratonite-0.1.0-arm64.dmg\n- macOS Intel: Gratonite-0.1.0-x64.dmg\n\nJust head to our download page and pick your version. No sign-up required to download — you can use the app or stick with the web version. Either way, your account works the same."
+    },
+    {
+      id: 3,
+      slug: "getting-started",
       title: "Getting Started with Gratonite: Your First Server",
       excerpt: "A step-by-step walkthrough for creating your first server, setting up channels, inviting friends, and customizing your space on Gratonite.",
       author: "Coodaye",
@@ -850,7 +1013,8 @@ const BlogPage = () => {
       category: "Guide"
     },
     {
-      id: 3,
+      id: 4,
+      slug: "gratonites-currency",
       title: "Introducing Gratonites: Our Virtual Currency System",
       excerpt: "Earn Gratonites by chatting, logging in daily, and hitting milestones. Spend them in the Shop on profile cosmetics, decorations, and more.",
       author: "Coodaye",
@@ -859,7 +1023,8 @@ const BlogPage = () => {
       category: "Feature"
     },
     {
-      id: 4,
+      id: 5,
+      slug: "voice-video-calls",
       title: "Voice & Video Calls on Gratonite",
       excerpt: "Low-latency voice and video calling is live. Jump into voice channels with your server or start private calls in DMs — no third-party apps needed.",
       author: "Coodaye",
@@ -868,7 +1033,8 @@ const BlogPage = () => {
       category: "Feature"
     },
     {
-      id: 5,
+      id: 6,
+      slug: "profile-customization",
       title: "Customize Your Profile: Banners, Bios, and Cosmetics",
       excerpt: "Express yourself with custom avatars, profile banners, bios, color themes, animated decorations, and more. Your profile, your rules.",
       author: "Coodaye",
@@ -877,7 +1043,8 @@ const BlogPage = () => {
       category: "Guide"
     },
     {
-      id: 6,
+      id: 7,
+      slug: "gratonite-shop",
       title: "The Gratonite Shop: What's Available Right Now",
       excerpt: "Browse avatar decorations, profile effects, nameplates, and animated frames in the Shop. Everything is earnable through Gratonites — no real money required.",
       author: "Coodaye",
@@ -886,7 +1053,8 @@ const BlogPage = () => {
       category: "Feature"
     },
     {
-      id: 7,
+      id: 8,
+      slug: "server-discovery",
       title: "Server Discovery: Find Your Community",
       excerpt: "Use the Discover page to browse and join public servers across gaming, art, music, tech, and more. Filter by tags and find your people.",
       author: "Coodaye",
@@ -895,7 +1063,8 @@ const BlogPage = () => {
       category: "Guide"
     },
     {
-      id: 8,
+      id: 9,
+      slug: "beta-roadmap",
       title: "Gratonite Beta Roadmap: What's Coming Next",
       excerpt: "A look at what's on deck for Gratonite — keyboard shortcuts, DM redesign, emoji system, leaderboard, bot integrations, and the mobile app.",
       author: "Coodaye",
@@ -945,76 +1114,247 @@ const BlogPage = () => {
         </div>
 
         {featuredPost && (
-          <motion.article 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-16 group relative overflow-hidden rounded-[4rem] bg-white dark:bg-[#1a1025] border border-gratonite/10 shadow-2xl shadow-[#7C3AED]/10 flex flex-col lg:flex-row"
-          >
-            <div className="lg:w-1/2 h-64 lg:h-auto bg-gratonite-purple-soft/20 relative overflow-hidden">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <img src="/gratonite-icon.png" alt="Gratonite" className="w-32 h-32 object-cover opacity-20" />
-              </div>
-            </div>
-            <div className="lg:w-1/2 p-10 md:p-16 flex flex-col justify-center">
-              <div className="flex items-center gap-4 mb-6">
-                <span className="px-4 py-1.5 rounded-full bg-gratonite text-white text-xs font-bold uppercase tracking-widest">
-                  Featured: {featuredPost.category}
-                </span>
-                <span className="text-ink/30 text-sm font-medium">{featuredPost.date}</span>
-              </div>
-              <h2 className="text-4xl md:text-5xl font-bold text-ink dark:text-white mb-6 group-hover:text-gratonite transition-colors">
-                {featuredPost.title}
-              </h2>
-              <p className="text-xl text-ink/50 dark:text-slate-400 mb-10 leading-relaxed font-serif">
-                {featuredPost.excerpt}
-              </p>
-              <div className="flex items-center justify-between mt-auto">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gratonite-purple-soft/40" />
-                  <span className="font-bold text-ink/60 dark:text-slate-400">{featuredPost.author}</span>
-                </div>
-                <div className="flex items-center gap-2 text-gratonite font-bold group-hover:translate-x-2 transition-transform">
-                  <span>Read Story</span>
-                  <ChevronRight size={20} />
+          <Link to={`/blog/${featuredPost.slug}`}>
+            <motion.article 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-16 group relative overflow-hidden rounded-[4rem] bg-white dark:bg-[#1a1025] border border-gratonite/10 shadow-2xl shadow-[#7C3AED]/10 flex flex-col lg:flex-row cursor-pointer"
+            >
+              <div className="lg:w-1/2 h-64 lg:h-auto bg-gratonite-purple-soft/20 relative overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <img src="/gratonite-icon.png" alt="Gratonite" className="w-32 h-32 object-cover opacity-20" />
                 </div>
               </div>
-            </div>
-          </motion.article>
+              <div className="lg:w-1/2 p-10 md:p-16 flex flex-col justify-center">
+                <div className="flex items-center gap-4 mb-6">
+                  <span className="px-4 py-1.5 rounded-full bg-gratonite text-white text-xs font-bold uppercase tracking-widest">
+                    Featured: {featuredPost.category}
+                  </span>
+                  <span className="text-ink/30 text-sm font-medium">{featuredPost.date}</span>
+                </div>
+                <h2 className="text-4xl md:text-5xl font-bold text-ink dark:text-white mb-6 group-hover:text-gratonite transition-colors">
+                  {featuredPost.title}
+                </h2>
+                <p className="text-xl text-ink/50 dark:text-slate-400 mb-10 leading-relaxed font-serif">
+                  {featuredPost.excerpt}
+                </p>
+                <div className="flex items-center justify-between mt-auto">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gratonite-purple-soft/40" />
+                    <span className="font-bold text-ink/60 dark:text-slate-400">{featuredPost.author}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gratonite font-bold group-hover:translate-x-2 transition-transform">
+                    <span>Read Story</span>
+                    <ChevronRight size={20} />
+                  </div>
+                </div>
+              </div>
+            </motion.article>
+          </Link>
         )}
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {regularPosts.map((post, idx) => (
-            <motion.article 
-              key={post.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1 }}
-              whileHover={{ y: -8 }}
-              className="group bg-white dark:bg-[#1a1025] p-10 rounded-[3rem] border border-gratonite/5 shadow-sm hover:shadow-2xl hover:shadow-[#7C3AED]/15 transition-all cursor-pointer flex flex-col"
-            >
-              <div className="flex items-center gap-4 mb-6">
-                <span className="px-3 py-1 rounded-full bg-gratonite-purple-soft/20 text-gratonite text-[10px] font-bold uppercase tracking-widest">
-                  {post.category}
-                </span>
-                <span className="text-ink/20 text-xs font-medium">{post.date}</span>
-              </div>
-              
-              <h3 className="text-2xl font-bold text-ink dark:text-white mb-4 group-hover:text-gratonite transition-colors leading-tight">
-                {post.title}
-              </h3>
-              <p className="text-ink/50 dark:text-slate-400 mb-8 leading-relaxed line-clamp-3">
-                {post.excerpt}
-              </p>
-              
-              <div className="mt-auto pt-6 border-t border-gratonite/5 flex items-center justify-between">
-                <span className="text-xs font-bold text-ink/30 uppercase tracking-wider">{post.readTime}</span>
-                <div className="w-8 h-8 rounded-full bg-gratonite-purple-soft/20 flex items-center justify-center text-gratonite group-hover:bg-gratonite group-hover:text-white transition-all">
-                  <ChevronRight size={16} />
+            <Link key={post.id} to={`/blog/${post.slug}`}>
+              <motion.article 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                whileHover={{ y: -8 }}
+                className="group bg-white dark:bg-[#1a1025] p-10 rounded-[3rem] border border-gratonite/5 shadow-sm hover:shadow-2xl hover:shadow-[#7C3AED]/15 transition-all cursor-pointer flex flex-col h-full"
+              >
+                <div className="flex items-center gap-4 mb-6">
+                  <span className="px-3 py-1 rounded-full bg-gratonite-purple-soft/20 text-gratonite text-[10px] font-bold uppercase tracking-widest">
+                    {post.category}
+                  </span>
+                  <span className="text-ink/20 text-xs font-medium">{post.date}</span>
                 </div>
-              </div>
-            </motion.article>
+                
+                <h3 className="text-2xl font-bold text-ink dark:text-white mb-4 group-hover:text-gratonite transition-colors leading-tight">
+                  {post.title}
+                </h3>
+                <p className="text-ink/50 dark:text-slate-400 mb-8 leading-relaxed line-clamp-3">
+                  {post.excerpt}
+                </p>
+                
+                <div className="mt-auto pt-6 border-t border-gratonite/5 flex items-center justify-between">
+                  <span className="text-xs font-bold text-ink/30 uppercase tracking-wider">{post.readTime}</span>
+                  <div className="w-8 h-8 rounded-full bg-gratonite-purple-soft/20 flex items-center justify-center text-gratonite group-hover:bg-gratonite group-hover:text-white transition-all">
+                    <ChevronRight size={16} />
+                  </div>
+                </div>
+              </motion.article>
+            </Link>
           ))}
         </div>
+      </div>
+    </div>
+  );
+};
+
+const BlogPostPage = () => {
+  const { slug } = useParams();
+  const navigate = useNavigate();
+  
+  const posts = [
+    {
+      id: 1,
+      slug: "welcome-to-gratonite",
+      title: "Welcome to Gratonite — What We're Building and Why",
+      excerpt: "Gratonite is a new kind of communication platform built for communities, gamers, and creators. Here's the vision behind it and where we're headed.",
+      author: "Coodaye",
+      date: "Feb 24, 2026",
+      readTime: "4 min read",
+      category: "Announcement",
+      featured: true,
+      content: "Gratonite is more than just a chat app — it's a space built for communities that want to connect without the noise. We're creating something different from the big tech platforms: no ads, no data selling, no corporate interference.\n\nOur focus is on three things: communities, gaming, and creators. Whether you're running a Discord server, streaming on Twitch, or building a fan community for your creative work, Gratonite gives you the tools to make it happen.\n\nWe're building this from the ground up with privacy and user control at the core. Your data stays yours. Your community, your rules."
+    },
+    {
+      id: 2,
+      slug: "desktop-app-released",
+      title: "Desktop App Now Available: Download for Windows and Mac",
+      excerpt: "The Gratonite desktop app is here. Download for Windows or Mac (Apple Silicon & Intel supported). Includes auto-updates and native notifications.",
+      author: "Coodaye",
+      date: "Feb 25, 2026",
+      readTime: "2 min read",
+      category: "Announcement",
+      featured: true,
+      content: "Good news — you can now download the Gratonite desktop app for both Windows and macOS!\n\n**What's included:**\n- Native desktop experience with system tray support\n- Auto-updates so you're always on the latest version\n- Native notifications that work with your OS\n- Better performance than the web version\n\n**Downloads:**\n- Windows: Gratonite-0.1.0.exe\n- macOS Apple Silicon (M1, M2, M3): Gratonite-0.1.0-arm64.dmg\n- macOS Intel: Gratonite-0.1.0-x64.dmg\n\nJust head to our download page and pick your version. No sign-up required to download — you can use the app or stick with the web version. Either way, your account works the same."
+    },
+    {
+      id: 3,
+      slug: "getting-started",
+      title: "Getting Started with Gratonite: Your First Server",
+      excerpt: "A step-by-step walkthrough for creating your first server, setting up channels, inviting friends, and customizing your space on Gratonite.",
+      author: "Coodaye",
+      date: "Feb 22, 2026",
+      readTime: "5 min read",
+      category: "Guide",
+      content: "Welcome to Gratonite! This guide will walk you through setting up your first server.\n\n**Creating Your Server**\n1. Click the + button in the sidebar\n2. Select \"Create Server\"\n3. Give your server a name\n4. Choose an icon (optional)\n\n**Setting Up Channels**\nYour server comes with text and voice channels by default. You can:\n- Rename channels by right-clicking them\n- Create new categories for organization\n- Set channel permissions for different roles\n\n**Inviting Friends**\n1. Click \"Invite Members\" in your server\n2. Copy the invite link\n3. Share it anywhere!\n\n**Customizing Your Space**\n- Set server icon and banner\n- Create custom emojis\n- Set up roles with different permissions"
+    },
+    {
+      id: 4,
+      slug: "gratonites-currency",
+      title: "Introducing Gratonites: Our Virtual Currency System",
+      excerpt: "Earn Gratonites by chatting, logging in daily, and hitting milestones. Spend them in the Shop on profile cosmetics, decorations, and more.",
+      author: "Coodaye",
+      date: "Feb 20, 2026",
+      readTime: "3 min read",
+      category: "Feature"
+    },
+    {
+      id: 5,
+      slug: "voice-video-calls",
+      title: "Voice & Video Calls on Gratonite",
+      excerpt: "Low-latency voice and video calling is live. Jump into voice channels with your server or start private calls in DMs — no third-party apps needed.",
+      author: "Coodaye",
+      date: "Feb 18, 2026",
+      readTime: "3 min read",
+      category: "Feature"
+    },
+    {
+      id: 6,
+      slug: "profile-customization",
+      title: "Customize Your Profile: Banners, Bios, and Cosmetics",
+      excerpt: "Express yourself with custom avatars, profile banners, bios, color themes, animated decorations, and more. Your profile, your rules.",
+      author: "Coodaye",
+      date: "Feb 15, 2026",
+      readTime: "4 min read",
+      category: "Guide"
+    },
+    {
+      id: 7,
+      slug: "gratonite-shop",
+      title: "The Gratonite Shop: What's Available Right Now",
+      excerpt: "Browse avatar decorations, profile effects, nameplates, and animated frames in the Shop. Everything is earnable through Gratonites — no real money required.",
+      author: "Coodaye",
+      date: "Feb 12, 2026",
+      readTime: "3 min read",
+      category: "Feature"
+    },
+    {
+      id: 8,
+      slug: "server-discovery",
+      title: "Server Discovery: Find Your Community",
+      excerpt: "Use the Discover page to browse and join public servers across gaming, art, music, tech, and more. Filter by tags and find your people.",
+      author: "Coodaye",
+      date: "Feb 10, 2026",
+      readTime: "3 min read",
+      category: "Guide"
+    },
+    {
+      id: 9,
+      slug: "beta-roadmap",
+      title: "Gratonite Beta Roadmap: What's Coming Next",
+      excerpt: "A look at what's on deck for Gratonite — keyboard shortcuts, DM redesign, emoji system, leaderboard, bot integrations, and the mobile app.",
+      author: "Coodaye",
+      date: "Feb 08, 2026",
+      readTime: "5 min read",
+      category: "Roadmap"
+    },
+  ];
+
+  const post = posts.find(p => p.slug === slug);
+  
+  if (!post) {
+    return (
+      <div className="min-h-screen pt-32 pb-20 px-6 bg-paper dark:bg-[#0f0a1a]">
+        <div className="max-w-3xl mx-auto text-center">
+          <h1 className="text-4xl font-bold mb-4 dark:text-white">Post Not Found</h1>
+          <p className="text-ink-light dark:text-slate-400 mb-8">The blog post you're looking for doesn't exist.</p>
+          <button onClick={() => navigate('/blog')} className="text-gratonite hover:underline">
+            ← Back to Blog
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="min-h-screen pt-32 pb-20 px-6 bg-paper dark:bg-[#0f0a1a] transition-colors duration-300">
+      <div className="max-w-3xl mx-auto">
+        <button 
+          onClick={() => navigate('/blog')}
+          className="flex items-center gap-2 text-gratonite mb-8 hover:underline"
+        >
+          <ArrowLeft size={20} />
+          Back to Blog
+        </button>
+        
+        <motion.article
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-center gap-4 mb-6">
+            <span className="px-4 py-1.5 rounded-full bg-gratonite text-white text-xs font-bold uppercase tracking-widest">
+              {post.category}
+            </span>
+            <span className="text-ink/40 text-sm font-medium">{post.date}</span>
+            <span className="text-ink/40 text-sm font-medium">{post.readTime}</span>
+          </div>
+          
+          <h1 className="text-4xl md:text-5xl font-bold mb-6 dark:text-white">
+            {post.title}
+          </h1>
+          
+          <div className="flex items-center gap-3 mb-12 pb-12 border-b border-gratonite/10">
+            <div className="w-12 h-12 rounded-full bg-gratonite-purple-soft/40" />
+            <span className="font-bold text-ink/60 dark:text-slate-400">{post.author}</span>
+          </div>
+          
+          <div className="prose prose-lg dark:prose-invert max-w-none">
+            {post.content ? (
+              <div className="text-lg text-ink/70 dark:text-slate-300 leading-relaxed whitespace-pre-line">
+                {post.content}
+              </div>
+            ) : (
+              <div className="text-lg text-ink/50 dark:text-slate-400">
+                {post.excerpt}
+                <p className="mt-4">This post is coming soon. Check back later for updates!</p>
+              </div>
+            )}
+          </div>
+        </motion.article>
       </div>
     </div>
   );
@@ -1333,10 +1673,12 @@ export default function App() {
         <main>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/download" element={<DownloadPage />} />
             <Route path="/login" element={<AuthPage mode="login" />} />
             <Route path="/register" element={<AuthPage mode="register" />} />
             <Route path="/verify" element={<VerifyPage />} />
             <Route path="/blog" element={<BlogPage />} />
+            <Route path="/blog/:slug" element={<BlogPostPage />} />
             <Route path="/discover" element={<DiscoverPage />} />
             <Route path="/support" element={<SupportPage />} />
             <Route path="/safety" element={<SafetyPage />} />
