@@ -190,6 +190,12 @@ export function initThemeV2() {
   applyColorMode();
   listenForSystemColorSchemeChange();
   loadSavedTheme();          // ← restores persisted CSS-var theme on every page load
+  // Restore custom accent override if one was saved
+  const accentOverride = localStorage.getItem('gratonite_accent_override');
+  if (accentOverride && /^#[0-9a-fA-F]{6}$/.test(accentOverride)) {
+    document.documentElement.style.setProperty('--accent', accentOverride);
+    document.documentElement.style.setProperty('--accent-2', accentOverride);
+  }
   applyUiVisualPreferences();
   if (!shouldEnableUiV2Tokens()) return;
   const { theme } = resolveThemeV2(readThemeManifestPreference() ?? undefined);
