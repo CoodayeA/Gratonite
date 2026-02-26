@@ -11,6 +11,33 @@ interface AttachmentPreviewProps {
   compact?: boolean;
 }
 
+function FileTypeIcon({ mimeType, filename }: { mimeType: string; filename: string }) {
+  if (mimeType.startsWith('video/')) {
+    return (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="23 7 16 12 23 17 23 7" />
+        <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+      </svg>
+    );
+  }
+  if (mimeType.startsWith('audio/')) {
+    return (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 18V5l12-2v13" />
+        <circle cx="6" cy="18" r="3" />
+        <circle cx="18" cy="16" r="3" />
+      </svg>
+    );
+  }
+  // Default file icon
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+    </svg>
+  );
+}
+
 export function AttachmentPreview({ attachments, onRemove, onClearAll, compact = false }: AttachmentPreviewProps) {
   if (attachments.length === 0) return null;
 
@@ -36,12 +63,11 @@ export function AttachmentPreview({ attachments, onRemove, onClearAll, compact =
           <div key={att.id} className={`attachment-preview-item ${compact ? 'attachment-preview-item-compact' : ''}`}>
             {att.file.type.startsWith('image/') && att.preview ? (
               <img src={att.preview} alt={att.file.name} className="attachment-preview-thumb" />
+            ) : att.file.type.startsWith('video/') && att.preview ? (
+              <video src={att.preview} className="attachment-preview-thumb" muted />
             ) : (
               <div className="attachment-preview-file">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                </svg>
+                <FileTypeIcon mimeType={att.file.type} filename={att.file.name} />
               </div>
             )}
             {!compact && <span className="attachment-preview-name">{att.file.name}</span>}

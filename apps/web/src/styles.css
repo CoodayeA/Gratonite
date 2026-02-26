@@ -9831,6 +9831,204 @@ button.home-dashboard-tile {
   color: var(--text-faint);
 }
 
+/* ---------- Video Player ---------- */
+
+.attachment-video {
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--stroke);
+  background: rgba(6, 10, 18, 0.5);
+}
+
+.attachment-video-player {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  background: #000;
+}
+
+.attachment-video-filename {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Audio Waveform Player ---------- */
+
+.attachment-audio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(6, 10, 18, 0.5);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-md);
+  min-width: 280px;
+  max-width: 420px;
+}
+
+.attachment-audio-play {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #1a1a2e;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.attachment-audio-play:hover {
+  background: var(--accent-2);
+  transform: scale(1.06);
+}
+
+.attachment-audio-play:active {
+  transform: scale(0.96);
+}
+
+.attachment-audio-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.attachment-audio-waveform {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 32px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.attachment-audio-bar {
+  flex: 1;
+  min-width: 2px;
+  background: var(--stroke);
+  border-radius: 1px;
+  transition: background 0.1s;
+}
+
+.attachment-audio-bar-played {
+  background: var(--accent);
+}
+
+.attachment-audio-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.attachment-audio-time {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.attachment-audio-info {
+  font-size: 11px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* ---------- File Download Card ---------- */
+
+.attachment-file-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(6, 10, 18, 0.5);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+  min-width: 240px;
+  max-width: 360px;
+}
+
+.attachment-file-card:hover {
+  background: rgba(95, 215, 255, 0.04);
+  border-color: var(--stroke-strong);
+  text-decoration: none;
+  color: var(--text);
+}
+
+.attachment-file-card-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--accent);
+}
+
+.attachment-file-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.attachment-file-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.attachment-file-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attachment-file-card-size {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.attachment-file-card-download {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  color: var(--text-faint);
+  transition: color 0.15s, background 0.15s;
+}
+
+.attachment-file-card:hover .attachment-file-card-download {
+  color: var(--accent);
+  background: rgba(212, 175, 55, 0.08);
+}
+
 /* ==========================================================================
    Attachment Preview (pending uploads)
    ========================================================================== */
