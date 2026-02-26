@@ -33,15 +33,8 @@ const styles = {
   section: {
     maxWidth: 720,
   } as React.CSSProperties,
-  heading: {
-    fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
-    fontSize: 20,
-    fontWeight: 700,
-    color: 'var(--text)',
-    marginBottom: 4,
-  } as React.CSSProperties,
   card: {
-    background: 'rgba(8, 12, 20, 0.6)',
+    background: 'var(--bg-float)',
     border: '1px solid var(--stroke)',
     borderRadius: 'var(--radius-lg)',
     padding: 20,
@@ -94,7 +87,7 @@ const styles = {
     padding: 12,
     borderRadius: 'var(--radius-md)',
     border: '1px solid var(--stroke)',
-    background: 'rgba(12, 18, 30, 0.7)',
+    background: 'var(--bg-float)',
   } as React.CSSProperties,
   mediaPreview: {
     display: 'flex',
@@ -225,7 +218,7 @@ const styles = {
   dnsPreview: {
     border: '1px solid var(--stroke)',
     borderRadius: 'var(--radius-md)',
-    background: 'rgba(10, 16, 28, 0.72)',
+    background: 'var(--bg-elevated)',
     padding: 12,
     display: 'grid',
     gap: 6,
@@ -280,7 +273,7 @@ const styles = {
     padding: 0,
   } as React.CSSProperties,
   settingsSelect: {
-    background: 'rgba(6, 10, 18, 0.6)',
+    background: 'var(--bg-float)',
     border: '1px solid var(--stroke)',
     borderRadius: 'var(--radius-md)',
     color: 'var(--text)',
@@ -571,7 +564,27 @@ export function ProfileSection() {
 
   return (
     <section style={styles.section}>
-      <h2 style={styles.heading}>Profile</h2>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+        paddingBottom: 16,
+        borderBottom: '1px solid var(--stroke)',
+        marginBottom: 8,
+      }}>
+        <h2 style={{
+          fontSize: 20,
+          fontWeight: 700,
+          color: 'var(--text)',
+          margin: 0,
+          fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
+        }}>
+          Profile
+        </h2>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
+          Manage your display name, avatar, banner, and profile appearance.
+        </p>
+      </div>
 
       {/* --- Profile Edit Form (from EditProfileModal) --- */}
       <div style={styles.card}>
