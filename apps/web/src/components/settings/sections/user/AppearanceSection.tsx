@@ -38,6 +38,277 @@ import { api } from '@/lib/api';
 import { getErrorMessage } from '@/lib/utils';
 import { useEffect } from 'react';
 
+// ---------------------------------------------------------------------------
+// Design tokens
+// ---------------------------------------------------------------------------
+const T = {
+  bg: '#2c2c3e',
+  bgElevated: '#353348',
+  bgInput: '#25243a',
+  bgSoft: '#413d58',
+  stroke: '#4a4660',
+  accent: '#d4af37',
+  text: '#e8e4e0',
+  textMuted: '#a8a4b8',
+  textFaint: '#6e6a80',
+  textOnGold: '#1a1a2e',
+} as const;
+
+// ---------------------------------------------------------------------------
+// Style objects
+// ---------------------------------------------------------------------------
+const s = {
+  section: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 24,
+  } as React.CSSProperties,
+
+  heading: {
+    fontSize: 13,
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    color: T.textFaint,
+    margin: 0,
+  } as React.CSSProperties,
+
+  card: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 20,
+    background: T.bgElevated,
+    borderRadius: 12,
+    padding: 24,
+    border: `1px solid ${T.stroke}`,
+  } as React.CSSProperties,
+
+  field: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+  } as React.CSSProperties,
+
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: T.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+  } as React.CSSProperties,
+
+  fieldControl: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+  } as React.CSSProperties,
+
+  fieldRow: {
+    display: 'flex',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+  } as React.CSSProperties,
+
+  colorModeBtn: (active: boolean): React.CSSProperties => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '8px 16px',
+    borderRadius: 8,
+    border: active ? `2px solid ${T.accent}` : `1px solid ${T.stroke}`,
+    background: active ? T.bgSoft : T.bgInput,
+    color: active ? T.text : T.textMuted,
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  }),
+
+  select: {
+    appearance: 'none',
+    background: T.bgInput,
+    border: `1px solid ${T.stroke}`,
+    borderRadius: 8,
+    padding: '8px 32px 8px 12px',
+    color: T.text,
+    fontSize: 14,
+    cursor: 'pointer',
+    outline: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23a8a4b8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 12px center',
+  } as React.CSSProperties,
+
+  rangeInput: {
+    width: '100%',
+    maxWidth: 200,
+    accentColor: T.accent,
+    cursor: 'pointer',
+  } as React.CSSProperties,
+
+  rangeValue: {
+    fontSize: 13,
+    color: T.textMuted,
+    minWidth: 40,
+    textAlign: 'right',
+  } as React.CSSProperties,
+
+  toggleLabel: {
+    position: 'relative',
+    display: 'inline-flex',
+    alignItems: 'center',
+    cursor: 'pointer',
+    width: 40,
+    height: 22,
+    flexShrink: 0,
+  } as React.CSSProperties,
+
+  toggleInput: {
+    position: 'absolute',
+    opacity: 0,
+    width: 0,
+    height: 0,
+  } as React.CSSProperties,
+
+  toggleIndicator: (checked: boolean): React.CSSProperties => ({
+    position: 'absolute',
+    inset: 0,
+    borderRadius: 11,
+    background: checked ? T.accent : T.bgSoft,
+    transition: 'background 0.2s ease',
+    // pseudo-elements handled via box-shadow trick for the thumb
+    boxShadow: checked
+      ? `inset 20px 0 0 0 ${T.accent}, inset 0 0 0 0 ${T.accent}`
+      : 'none',
+  }),
+
+  toggleThumb: (checked: boolean): React.CSSProperties => ({
+    position: 'absolute',
+    top: 2,
+    left: checked ? 20 : 2,
+    width: 18,
+    height: 18,
+    borderRadius: '50%',
+    background: checked ? T.textOnGold : T.textMuted,
+    transition: 'left 0.2s ease, background 0.2s ease',
+    pointerEvents: 'none',
+  }),
+
+  note: {
+    fontSize: 12,
+    color: T.textMuted,
+    lineHeight: 1.5,
+    padding: '8px 0',
+    borderTop: `1px solid ${T.stroke}`,
+  } as React.CSSProperties,
+
+  themeEditor: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+    padding: '20px 0 0',
+    borderTop: `1px solid ${T.stroke}`,
+  } as React.CSSProperties,
+
+  themeHeader: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  } as React.CSSProperties,
+
+  themeTitle: {
+    fontSize: 15,
+    fontWeight: 700,
+    color: T.text,
+    margin: 0,
+  } as React.CSSProperties,
+
+  muted: {
+    fontSize: 12,
+    color: T.textMuted,
+    margin: 0,
+  } as React.CSSProperties,
+
+  themePresets: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+    gap: 8,
+  } as React.CSSProperties,
+
+  themePresetBtn: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+    padding: '10px 14px',
+    borderRadius: 8,
+    border: `1px solid ${T.stroke}`,
+    background: T.bgInput,
+    cursor: 'pointer',
+    textAlign: 'left',
+    transition: 'border-color 0.15s ease',
+  } as React.CSSProperties,
+
+  themePresetName: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: T.text,
+  } as React.CSSProperties,
+
+  themePresetDesc: {
+    fontSize: 11,
+    color: T.textMuted,
+  } as React.CSSProperties,
+
+  themeGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+    gap: 12,
+  } as React.CSSProperties,
+
+  themeField: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  } as React.CSSProperties,
+
+  themeLabel: {
+    fontSize: 12,
+    fontWeight: 500,
+    color: T.textMuted,
+  } as React.CSSProperties,
+
+  themeActions: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 8,
+  } as React.CSSProperties,
+
+  themeJson: {
+    width: '100%',
+    minHeight: 120,
+    background: T.bgInput,
+    border: `1px solid ${T.stroke}`,
+    borderRadius: 8,
+    padding: 12,
+    color: T.text,
+    fontSize: 12,
+    fontFamily: 'monospace',
+    resize: 'vertical',
+    outline: 'none',
+  } as React.CSSProperties,
+
+  error: {
+    fontSize: 12,
+    color: '#ff6b6b',
+    padding: '4px 0',
+  } as React.CSSProperties,
+};
+
+// ---------------------------------------------------------------------------
+// Data
+// ---------------------------------------------------------------------------
 const THEME_TOKEN_CONTROLS: Array<{ key: string; label: string; type: 'color' | 'text' }> = [
   { key: 'semantic/action/accent', label: 'Primary Accent', type: 'color' },
   { key: 'semantic/action/accent-2', label: 'Secondary Accent', type: 'color' },
@@ -97,6 +368,9 @@ const THEME_PRESETS_V3: Array<{ name: string; description: string; overrides: Re
   },
 ];
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 export function AppearanceSection() {
   const [colorMode, setColorMode] = useState<UiColorMode>(() => readUiColorModePreference());
   const [fontScale, setFontScaleState] = useState(1);
@@ -334,18 +608,35 @@ export function AppearanceSection() {
     }
   }
 
+  // Helper to render a custom toggle switch
+  function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+    return (
+      <label style={s.toggleLabel}>
+        <input
+          type="checkbox"
+          style={s.toggleInput}
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        <span style={s.toggleIndicator(checked)} />
+        <span style={s.toggleThumb(checked)} />
+      </label>
+    );
+  }
+
   return (
-    <section className="settings-section">
-      <h2 className="settings-shell-section-heading">Appearance</h2>
-      <div className="settings-card">
-        <div className="settings-field">
-          <div className="settings-field-label">Color Mode</div>
-          <div className="settings-field-control settings-field-row">
+    <section style={s.section}>
+      <h2 style={s.heading}>Appearance</h2>
+      <div style={s.card}>
+        {/* Color Mode */}
+        <div style={s.field}>
+          <div style={s.fieldLabel}>Color Mode</div>
+          <div style={s.fieldRow}>
             {(['light', 'dark', 'system'] as const).map((mode) => (
               <button
                 key={mode}
                 type="button"
-                className={`settings-color-mode-btn ${colorMode === mode ? 'active' : ''}`}
+                style={s.colorModeBtn(colorMode === mode)}
                 onClick={() => {
                   setUiColorModePreference(mode);
                   setColorMode(mode);
@@ -388,20 +679,24 @@ export function AppearanceSection() {
             ))}
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Visual Presets</div>
-          <div className="settings-field-control settings-field-row">
+
+        {/* Visual Presets */}
+        <div style={s.field}>
+          <div style={s.fieldLabel}>Visual Presets</div>
+          <div style={s.fieldRow}>
             <Button variant="ghost" onClick={() => handleApplyVisualPreset('balanced')}>Balanced</Button>
             <Button variant="ghost" onClick={() => handleApplyVisualPreset('immersive')}>Immersive</Button>
             <Button variant="ghost" onClick={() => handleApplyVisualPreset('performance')}>Performance</Button>
             <Button variant="ghost" onClick={handleResetVisualPreferences}>Reset Visuals</Button>
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Message Density</div>
-          <div className="settings-field-control">
+
+        {/* Message Density */}
+        <div style={s.field}>
+          <div style={s.fieldLabel}>Message Density</div>
+          <div style={s.fieldControl}>
             <select
-              className="settings-select"
+              style={s.select}
               value={messageDisplay}
               onChange={(event) => setMessageDisplay(event.target.value)}
             >
@@ -410,11 +705,13 @@ export function AppearanceSection() {
             </select>
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Font Scale</div>
-          <div className="settings-field-control">
+
+        {/* Font Scale */}
+        <div style={s.field}>
+          <div style={s.fieldLabel}>Font Scale</div>
+          <div style={s.fieldControl}>
             <input
-              className="settings-range"
+              style={s.rangeInput}
               type="range"
               min="0.8"
               max="1.4"
@@ -422,28 +719,25 @@ export function AppearanceSection() {
               value={fontScale}
               onChange={(event) => setFontScale(Number(event.target.value))}
             />
-            <span className="settings-range-value">{fontScale.toFixed(2)}x</span>
+            <span style={s.rangeValue as React.CSSProperties}>{fontScale.toFixed(2)}x</span>
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Modern UI Preview</div>
-          <div className="settings-field-control">
-            <label className="settings-toggle">
-              <input
-                type="checkbox"
-                checked={uiV2TokensEnabled}
-                onChange={(event) => handleToggleUiV2Tokens(event.target.checked)}
-              />
-              <span className="settings-toggle-indicator" />
-            </label>
-            <span className="settings-range-value">{uiV2TokensEnabled ? 'On' : 'Off'}</span>
+
+        {/* Modern UI Preview */}
+        <div style={s.field}>
+          <div style={s.fieldLabel}>Modern UI Preview</div>
+          <div style={s.fieldControl}>
+            <Toggle checked={uiV2TokensEnabled} onChange={handleToggleUiV2Tokens} />
+            <span style={s.rangeValue as React.CSSProperties}>{uiV2TokensEnabled ? 'On' : 'Off'}</span>
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Glass Mode</div>
-          <div className="settings-field-control">
+
+        {/* Glass Mode */}
+        <div style={s.field}>
+          <div style={s.fieldLabel}>Glass Mode</div>
+          <div style={s.fieldControl}>
             <select
-              className="settings-select"
+              style={s.select}
               value={uiGlassMode}
               onChange={(event) => handleChangeGlassMode(event.target.value as UiGlassMode)}
             >
@@ -453,11 +747,13 @@ export function AppearanceSection() {
             </select>
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Surface Background Mode</div>
-          <div className="settings-field-control">
+
+        {/* Surface Background Mode */}
+        <div style={s.field}>
+          <div style={s.fieldLabel}>Surface Background Mode</div>
+          <div style={s.fieldControl}>
             <select
-              className="settings-select"
+              style={s.select}
               value={uiSurfaceBackgroundMode}
               onChange={(event) => handleChangeSurfaceBackgroundMode(event.target.value as UiSurfaceBackgroundMode)}
             >
@@ -466,11 +762,13 @@ export function AppearanceSection() {
             </select>
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Content Scrim</div>
-          <div className="settings-field-control">
+
+        {/* Content Scrim */}
+        <div style={s.field}>
+          <div style={s.fieldLabel}>Content Scrim</div>
+          <div style={s.fieldControl}>
             <select
-              className="settings-select"
+              style={s.select}
               value={uiContentScrim}
               onChange={(event) => handleChangeContentScrim(event.target.value as UiContentScrim)}
             >
@@ -480,11 +778,13 @@ export function AppearanceSection() {
             </select>
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Portal Background Style</div>
-          <div className="settings-field-control">
+
+        {/* Portal Background Style */}
+        <div style={s.field}>
+          <div style={s.fieldLabel}>Portal Background Style</div>
+          <div style={s.fieldControl}>
             <select
-              className="settings-select"
+              style={s.select}
               value={uiPortalBackgroundStyle}
               onChange={(event) => handleChangeBackgroundStyle('portal', event.target.value as UiBackgroundStyle)}
             >
@@ -495,11 +795,13 @@ export function AppearanceSection() {
             </select>
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Channel Background Style</div>
-          <div className="settings-field-control">
+
+        {/* Channel Background Style */}
+        <div style={s.field}>
+          <div style={s.fieldLabel}>Channel Background Style</div>
+          <div style={s.fieldControl}>
             <select
-              className="settings-select"
+              style={s.select}
               value={uiChannelBackgroundStyle}
               onChange={(event) => handleChangeBackgroundStyle('channel', event.target.value as UiBackgroundStyle)}
             >
@@ -510,11 +812,13 @@ export function AppearanceSection() {
             </select>
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">DM Background Style</div>
-          <div className="settings-field-control">
+
+        {/* DM Background Style */}
+        <div style={s.field}>
+          <div style={s.fieldLabel}>DM Background Style</div>
+          <div style={s.fieldControl}>
             <select
-              className="settings-select"
+              style={s.select}
               value={uiDmBackgroundStyle}
               onChange={(event) => handleChangeBackgroundStyle('dm', event.target.value as UiBackgroundStyle)}
             >
@@ -525,60 +829,54 @@ export function AppearanceSection() {
             </select>
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Low Power Mode</div>
-          <div className="settings-field-control">
-            <label className="settings-toggle">
-              <input
-                type="checkbox"
-                checked={uiLowPower}
-                onChange={(event) => handleToggleLowPower(event.target.checked)}
-              />
-              <span className="settings-toggle-indicator" />
-            </label>
-            <span className="settings-range-value">{uiLowPower ? 'On' : 'Off'}</span>
+
+        {/* Low Power Mode */}
+        <div style={s.field}>
+          <div style={s.fieldLabel}>Low Power Mode</div>
+          <div style={s.fieldControl}>
+            <Toggle checked={uiLowPower} onChange={handleToggleLowPower} />
+            <span style={s.rangeValue as React.CSSProperties}>{uiLowPower ? 'On' : 'Off'}</span>
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Reduced Effects</div>
-          <div className="settings-field-control">
-            <label className="settings-toggle">
-              <input
-                type="checkbox"
-                checked={uiReducedEffects}
-                onChange={(event) => handleToggleReducedEffects(event.target.checked)}
-              />
-              <span className="settings-toggle-indicator" />
-            </label>
-            <span className="settings-range-value">{uiReducedEffects ? 'On' : 'Off'}</span>
+
+        {/* Reduced Effects */}
+        <div style={s.field}>
+          <div style={s.fieldLabel}>Reduced Effects</div>
+          <div style={s.fieldControl}>
+            <Toggle checked={uiReducedEffects} onChange={handleToggleReducedEffects} />
+            <span style={s.rangeValue as React.CSSProperties}>{uiReducedEffects ? 'On' : 'Off'}</span>
           </div>
         </div>
-        <div className="settings-note">
+
+        {/* Note */}
+        <div style={s.note}>
           Background and scrim settings affect message surfaces in portals, DMs, and voice chat panels to preserve readability while keeping custom visual style.
         </div>
-        <div className="settings-theme-editor">
-          <div className="settings-theme-header">
-            <h3 className="settings-theme-title">Theme Studio (v1)</h3>
-            <p className="settings-muted">
+
+        {/* Theme Studio */}
+        <div style={s.themeEditor}>
+          <div style={s.themeHeader}>
+            <h3 style={s.themeTitle}>Theme Studio (v1)</h3>
+            <p style={s.muted}>
               Customize core theme tokens and share by exporting/importing JSON.
             </p>
           </div>
-          <div className="settings-theme-presets">
+          <div style={s.themePresets}>
             {THEME_PRESETS_V3.map((preset) => (
               <button
                 key={preset.name}
                 type="button"
-                className="settings-theme-preset"
+                style={s.themePresetBtn}
                 onClick={() => handleApplyThemePreset(preset)}
               >
-                <span className="settings-theme-preset-name">{preset.name}</span>
-                <span className="settings-theme-preset-desc">{preset.description}</span>
+                <span style={s.themePresetName}>{preset.name}</span>
+                <span style={s.themePresetDesc}>{preset.description}</span>
               </button>
             ))}
           </div>
-          <div className="settings-field">
-            <div className="settings-field-label">Theme Name</div>
-            <div className="settings-field-control">
+          <div style={s.field}>
+            <div style={s.fieldLabel}>Theme Name</div>
+            <div style={s.fieldControl}>
               <Input
                 type="text"
                 value={themeName}
@@ -587,12 +885,12 @@ export function AppearanceSection() {
               />
             </div>
           </div>
-          <div className="settings-theme-grid">
+          <div style={s.themeGrid}>
             {THEME_TOKEN_CONTROLS.map((token) => {
               const value = themeOverrides[token.key] ?? DEFAULT_THEME_V2.tokens[token.key] ?? '';
               return (
-                <label key={token.key} className="settings-theme-field">
-                  <span className="settings-theme-label">{token.label}</span>
+                <label key={token.key} style={s.themeField}>
+                  <span style={s.themeLabel}>{token.label}</span>
                   {token.type === 'color' ? (
                     <input
                       type="color"
@@ -610,7 +908,7 @@ export function AppearanceSection() {
               );
             })}
           </div>
-          <div className="settings-theme-actions">
+          <div style={s.themeActions}>
             <Button type="button" onClick={() => applyThemeManifest(themeOverrides)}>
               Apply
             </Button>
@@ -625,13 +923,13 @@ export function AppearanceSection() {
             </Button>
           </div>
           <textarea
-            className="settings-theme-json"
+            style={s.themeJson}
             value={themeImportValue}
             onChange={(event) => setThemeImportValue(event.target.value)}
             placeholder='Paste a theme JSON payload here, then click "Import".'
             rows={6}
           />
-          {themeError && <div className="settings-error">{themeError}</div>}
+          {themeError && <div style={s.error}>{themeError}</div>}
         </div>
       </div>
     </section>

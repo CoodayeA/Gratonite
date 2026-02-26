@@ -1,9 +1,217 @@
-import { useEffect, useMemo, useState } from 'react';
+import { type CSSProperties, useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useGuildsStore } from '@/stores/guilds.store';
 import { useAuthStore } from '@/stores/auth.store';
 import { getErrorMessage } from '@/lib/utils';
+
+/* ------------------------------------------------------------------ */
+/*  Inline style objects                                               */
+/* ------------------------------------------------------------------ */
+
+const styles = {
+  section: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+  },
+  headerRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  heading: {
+    fontSize: 18,
+    fontWeight: 700,
+    color: '#e8e4e0',
+    margin: 0,
+  },
+  muted: {
+    fontSize: 13,
+    color: '#a8a4b8',
+    margin: 0,
+  },
+  actions: {
+    display: 'flex',
+    gap: 8,
+    flexShrink: 0,
+  },
+  resetBtn: {
+    background: 'transparent',
+    border: '1px solid #4a4660',
+    color: '#a8a4b8',
+    borderRadius: 6,
+    padding: '4px 12px',
+    fontSize: 12,
+    cursor: 'pointer',
+  },
+  error: {
+    background: 'rgba(240,71,71,0.12)',
+    color: '#f04747',
+    border: '1px solid rgba(240,71,71,0.3)',
+    borderRadius: 8,
+    padding: '8px 12px',
+    fontSize: 13,
+  },
+  feedback: {
+    background: 'rgba(212,175,55,0.10)',
+    color: '#d4af37',
+    border: '1px solid rgba(212,175,55,0.25)',
+    borderRadius: 8,
+    padding: '8px 12px',
+    fontSize: 13,
+  },
+  tabRow: {
+    display: 'flex',
+    gap: 8,
+    flexWrap: 'wrap' as const,
+    marginBottom: 12,
+  },
+  tab: {
+    background: '#353348',
+    border: '1px solid #4a4660',
+    color: '#a8a4b8',
+    borderRadius: 16,
+    padding: '5px 14px',
+    fontSize: 13,
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  },
+  tabActive: {
+    background: '#d4af37',
+    border: '1px solid #d4af37',
+    color: '#1a1a2e',
+    borderRadius: 16,
+    padding: '5px 14px',
+    fontSize: 13,
+    cursor: 'pointer',
+    fontWeight: 600,
+  },
+  card: {
+    background: '#25243a',
+    borderRadius: 8,
+    border: '1px solid #4a4660',
+    padding: 16,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: '#e8e4e0',
+    marginBottom: 8,
+  },
+  inputField: {
+    width: '100%',
+    background: '#25243a',
+    border: '1px solid #4a4660',
+    borderRadius: 6,
+    padding: '8px 12px',
+    fontSize: 13,
+    color: '#e8e4e0',
+    outline: 'none',
+    boxSizing: 'border-box' as const,
+  },
+  row: {
+    display: 'flex',
+    gap: 8,
+    alignItems: 'center',
+  },
+  list: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  },
+  listItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '8px 12px',
+    borderRadius: 6,
+    background: '#353348',
+  },
+  memberItem: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: '10px 12px',
+    borderRadius: 6,
+    background: '#353348',
+    flexWrap: 'wrap' as const,
+  },
+  memberMeta: {
+    flex: 1,
+    minWidth: 0,
+  },
+  memberName: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: '#e8e4e0',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+  },
+  memberSubline: {
+    fontSize: 11,
+    color: '#6e6a80',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+    marginTop: 2,
+  },
+  memberActions: {
+    display: 'flex',
+    gap: 6,
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  badge: {
+    fontSize: 11,
+    color: '#a8a4b8',
+    background: '#413d58',
+    borderRadius: 10,
+    padding: '2px 8px',
+    whiteSpace: 'nowrap' as const,
+  },
+  statPill: {
+    fontSize: 12,
+    color: '#a8a4b8',
+    background: '#413d58',
+    borderRadius: 10,
+    padding: '2px 10px',
+    whiteSpace: 'nowrap' as const,
+  },
+  statsRow: {
+    display: 'flex',
+    gap: 8,
+    flexWrap: 'wrap' as const,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  smallBtn: {
+    background: 'transparent',
+    border: '1px solid #4a4660',
+    color: '#a8a4b8',
+    borderRadius: 6,
+    padding: '3px 10px',
+    fontSize: 12,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+  },
+  dangerBtn: {
+    background: 'transparent',
+    border: '1px solid rgba(240,71,71,0.4)',
+    color: '#f04747',
+    borderRadius: 6,
+    padding: '3px 10px',
+    fontSize: 12,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+  },
+};
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
 
 interface MembersSectionProps {
   guildId: string;
@@ -220,18 +428,18 @@ export function MembersSection({ guildId }: MembersSectionProps) {
   }
 
   return (
-    <section className="settings-section">
-      <div className="server-settings-header-row">
+    <section style={styles.section}>
+      <div style={styles.headerRow}>
         <div>
-          <h2 className="settings-shell-section-heading">Members &amp; Moderation</h2>
-          <p className="server-settings-muted">
+          <h2 style={styles.heading}>Members &amp; Moderation</h2>
+          <p style={styles.muted}>
             Kick and ban portal members, and manage the current ban list. Only portal owners can use these actions.
           </p>
         </div>
-        <div className="server-settings-actions">
+        <div style={styles.actions}>
           <button
             type="button"
-            className="btn btn-ghost btn-sm"
+            style={styles.resetBtn}
             onClick={resetView}
             disabled={Boolean(memberActionUserId)}
           >
@@ -240,25 +448,25 @@ export function MembersSection({ guildId }: MembersSectionProps) {
         </div>
       </div>
 
-      {error && <div className="modal-error">{error}</div>}
+      {error && <div style={styles.error}>{error}</div>}
       {memberActionFeedback && (
-        <div className="server-settings-feedback" role="status" aria-live="polite">
+        <div style={styles.feedback} role="status" aria-live="polite">
           {memberActionFeedback}
         </div>
       )}
 
       {/* Panel navigation */}
-      <div className="server-settings-inline-stats" style={{ marginBottom: 12 }}>
+      <div style={styles.tabRow}>
         <button
           type="button"
-          className={`discover-tag ${activePanel === 'members' ? 'active' : ''}`}
+          style={activePanel === 'members' ? styles.tabActive : styles.tab}
           onClick={() => setActivePanel('members')}
         >
           Members ({members.length})
         </button>
         <button
           type="button"
-          className={`discover-tag ${activePanel === 'bans' ? 'active' : ''}`}
+          style={activePanel === 'bans' ? styles.tabActive : styles.tab}
           onClick={() => setActivePanel('bans')}
         >
           Banned ({bans.length})
@@ -267,54 +475,54 @@ export function MembersSection({ guildId }: MembersSectionProps) {
 
       {/* Members panel */}
       {activePanel === 'members' && (
-        <div className="channel-permission-card">
-          <div className="server-settings-inline-stats" style={{ marginBottom: 8 }}>
+        <div style={styles.card}>
+          <div style={styles.statsRow}>
             <button
               type="button"
-              className={`discover-tag ${memberListFilter === 'all' ? 'active' : ''}`}
+              style={memberListFilter === 'all' ? styles.tabActive : styles.tab}
               onClick={() => setMemberListFilter('all')}
             >
               All
             </button>
             <button
               type="button"
-              className={`discover-tag ${memberListFilter === 'moderatable' ? 'active' : ''}`}
+              style={memberListFilter === 'moderatable' ? styles.tabActive : styles.tab}
               onClick={() => setMemberListFilter('moderatable')}
             >
               Moderatable
             </button>
             <button
               type="button"
-              className={`discover-tag ${memberListFilter === 'owners' ? 'active' : ''}`}
+              style={memberListFilter === 'owners' ? styles.tabActive : styles.tab}
               onClick={() => setMemberListFilter('owners')}
             >
               Owners
             </button>
           </div>
-          <div className="channel-permission-row" style={{ marginBottom: 8 }}>
+          <div style={{ ...styles.row, marginBottom: 8 }}>
             <input
-              className="input-field"
+              style={styles.inputField}
               value={memberSearch}
               onChange={(e) => setMemberSearch(e.target.value)}
               placeholder="Search members by name or ID"
             />
           </div>
-          <div className="channel-permission-row" style={{ marginBottom: 8 }}>
+          <div style={{ ...styles.row, marginBottom: 8 }}>
             <input
-              className="input-field"
+              style={styles.inputField}
               value={banReason}
               onChange={(e) => setBanReason(e.target.value)}
               placeholder="Ban reason (optional, applies to next ban action)"
               maxLength={200}
             />
           </div>
-          <div className="server-settings-muted" style={{ marginBottom: 8 }}>
+          <div style={{ ...styles.muted, marginBottom: 8 }}>
             {filteredMembers.length} member{filteredMembers.length === 1 ? '' : 's'} shown
           </div>
 
-          <div className="channel-permission-list">
+          <div style={styles.list}>
             {filteredMembers.length === 0 && (
-              <div className="server-settings-muted">No members match the current search.</div>
+              <div style={styles.muted}>No members match the current search.</div>
             )}
             {filteredMembers.map((member) => {
               const profile = (member as any).user as
@@ -327,10 +535,10 @@ export function MembersSection({ guildId }: MembersSectionProps) {
               const actionsDisabled = isBusy || isSelf || isOwner;
               const disabledReason = isOwner ? 'Owner' : isSelf ? 'You' : '';
               return (
-                <div key={member.userId} className="channel-permission-item server-member-admin-item">
-                  <div className="server-member-admin-meta">
-                    <div className="server-member-admin-name">{displayName}</div>
-                    <div className="server-member-admin-subline">
+                <div key={member.userId} style={styles.memberItem}>
+                  <div style={styles.memberMeta}>
+                    <div style={styles.memberName}>{displayName}</div>
+                    <div style={styles.memberSubline}>
                       ID: {member.userId}
                       {member.nickname ? ` | Nickname: ${member.nickname}` : ''}
                       {Array.isArray(member.roleIds)
@@ -341,10 +549,10 @@ export function MembersSection({ guildId }: MembersSectionProps) {
                       {member.communicationDisabledUntil ? ' | Timed out' : ''}
                     </div>
                   </div>
-                  <div className="server-member-admin-actions">
+                  <div style={styles.memberActions}>
                     <button
                       type="button"
-                      className="channel-permission-remove"
+                      style={styles.smallBtn}
                       onClick={() => copyTextToClipboard(String(member.userId), 'Copied member ID.')}
                       disabled={isBusy}
                       title="Copy member ID"
@@ -353,7 +561,7 @@ export function MembersSection({ guildId }: MembersSectionProps) {
                     </button>
                     <button
                       type="button"
-                      className="channel-permission-remove"
+                      style={styles.smallBtn}
                       onClick={() => handleKickMember(member.userId)}
                       disabled={actionsDisabled}
                       title={isOwner ? 'Cannot moderate the portal owner' : isSelf ? 'Use Leave Portal to leave yourself' : undefined}
@@ -362,7 +570,7 @@ export function MembersSection({ guildId }: MembersSectionProps) {
                     </button>
                     <button
                       type="button"
-                      className="emoji-admin-delete"
+                      style={styles.dangerBtn}
                       onClick={() => handleBanMember(member.userId)}
                       disabled={actionsDisabled}
                       title={isOwner ? 'Cannot moderate the portal owner' : isSelf ? 'Cannot ban your own account' : undefined}
@@ -370,7 +578,7 @@ export function MembersSection({ guildId }: MembersSectionProps) {
                       {isBusy ? 'Working...' : 'Ban'}
                     </button>
                     {disabledReason && (
-                      <span className="channel-permission-badge">{disabledReason}</span>
+                      <span style={styles.badge}>{disabledReason}</span>
                     )}
                   </div>
                 </div>
@@ -382,27 +590,27 @@ export function MembersSection({ guildId }: MembersSectionProps) {
 
       {/* Bans panel */}
       {activePanel === 'bans' && (
-        <div className="channel-permission-card">
-          <div className="channel-permission-title">Banned Users</div>
-          <div className="server-settings-inline-stats" style={{ marginBottom: 8 }}>
+        <div style={styles.card}>
+          <div style={styles.cardTitle}>Banned Users</div>
+          <div style={styles.statsRow}>
             <button
               type="button"
-              className={`discover-tag ${banSort === 'recent' ? 'active' : ''}`}
+              style={banSort === 'recent' ? styles.tabActive : styles.tab}
               onClick={() => setBanSort('recent')}
             >
               Recent
             </button>
             <button
               type="button"
-              className={`discover-tag ${banSort === 'name' ? 'active' : ''}`}
+              style={banSort === 'name' ? styles.tabActive : styles.tab}
               onClick={() => setBanSort('name')}
             >
               Name
             </button>
-            <span className="server-settings-stat-pill">{filteredSortedBans.length} shown</span>
+            <span style={styles.statPill}>{filteredSortedBans.length} shown</span>
             <button
               type="button"
-              className="channel-permission-remove"
+              style={styles.smallBtn}
               onClick={async () => {
                 const ids = filteredSortedBans.map((ban: any) => String(ban.userId)).join('\n');
                 try {
@@ -418,27 +626,26 @@ export function MembersSection({ guildId }: MembersSectionProps) {
             </button>
           </div>
           <input
-            className="input-field"
+            style={{ ...styles.inputField, marginBottom: 8 }}
             value={banSearch}
             onChange={(e) => setBanSearch(e.target.value)}
             placeholder="Search banned users by name, username, ID, or reason"
-            style={{ marginBottom: 8 }}
           />
-          <div className="channel-permission-list">
-            {bans.length === 0 && <div className="server-settings-muted">No bans in this portal.</div>}
+          <div style={styles.list}>
+            {bans.length === 0 && <div style={styles.muted}>No bans in this portal.</div>}
             {bans.length > 0 && filteredSortedBans.length === 0 && (
-              <div className="server-settings-muted">No banned users match the current search.</div>
+              <div style={styles.muted}>No banned users match the current search.</div>
             )}
             {filteredSortedBans.map((ban: any) => {
               const bannedSummary = bannedUserMap.get(String(ban.userId));
               const banKey = `${ban.guildId}:${ban.userId}`;
               return (
-                <div key={banKey} className="channel-permission-item server-member-admin-item">
-                  <div className="server-member-admin-meta">
-                    <div className="server-member-admin-name">
+                <div key={banKey} style={styles.memberItem}>
+                  <div style={styles.memberMeta}>
+                    <div style={styles.memberName}>
                       {bannedSummary?.displayName ?? bannedSummary?.username ?? ban.userId}
                     </div>
-                    <div className="server-member-admin-subline">
+                    <div style={styles.memberSubline}>
                       {bannedSummary?.username ? `@${bannedSummary.username} | ` : ''}
                       ID: {ban.userId}
                       {' | '}
@@ -452,11 +659,11 @@ export function MembersSection({ guildId }: MembersSectionProps) {
                       {ban.createdAt ? ` | ${new Date(ban.createdAt).toLocaleString()}` : ''}
                     </div>
                   </div>
-                  <div className="server-member-admin-actions">
+                  <div style={styles.memberActions}>
                     {String(ban.reason ?? '').length > 96 && (
                       <button
                         type="button"
-                        className="channel-permission-remove"
+                        style={styles.smallBtn}
                         onClick={() => {
                           setExpandedBanReasons((prev) => {
                             const next = new Set(prev);
@@ -472,7 +679,7 @@ export function MembersSection({ guildId }: MembersSectionProps) {
                     )}
                     <button
                       type="button"
-                      className="channel-permission-remove"
+                      style={styles.smallBtn}
                       onClick={() => handleUnbanMember(ban.userId)}
                       disabled={memberActionUserId === ban.userId}
                     >

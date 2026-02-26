@@ -264,8 +264,8 @@ export function VerifyEmailConfirmPage() {
               Congratulations! Your email address has been successfully verified. You can now sign in to your account.
             </p>
 
-            <Link to="/login" style={styles.continueButton}>
-              Continue to Login
+            <Link to="/onboarding/account" style={styles.continueButton}>
+              Continue Setup
             </Link>
           </>
         )}

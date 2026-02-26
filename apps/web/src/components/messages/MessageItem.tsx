@@ -34,6 +34,137 @@ interface MessageItemProps {
   onOpenEmojiPicker: (messageId: string, coords?: { x: number; y: number }) => void;
 }
 
+const styles = {
+  item: {
+    position: 'relative',
+    display: 'grid',
+    gridTemplateColumns: '40px 1fr',
+    gap: 12,
+    padding: '3px 14px',
+    margin: '0 8px',
+    borderRadius: 12,
+    borderWidth: 1, borderStyle: 'solid', borderColor: 'transparent',
+    transition: 'background 0.14s ease, border-color 0.14s ease, transform 0.14s ease',
+  } as React.CSSProperties,
+  itemHover: {
+    background: 'linear-gradient(90deg, rgba(121, 223, 255, 0.04), rgba(138, 123, 255, 0.03))',
+    borderColor: 'rgba(163, 191, 239, 0.08)',
+    transform: 'translateY(-1px)',
+  } as React.CSSProperties,
+  itemNotGrouped: {
+    paddingTop: 8,
+    marginTop: 5,
+  } as React.CSSProperties,
+  itemGrouped: {
+    gridTemplateColumns: '40px 1fr',
+    paddingTop: 1,
+    paddingBottom: 1,
+  } as React.CSSProperties,
+  itemEditing: {
+    background: 'rgba(212, 175, 55, 0.04)',
+  } as React.CSSProperties,
+  timestampInline: {
+    gridColumn: 1,
+    textAlign: 'right',
+    fontSize: 10,
+    color: 'var(--text-faint)',
+    opacity: 0,
+    transition: 'opacity 0.1s ease',
+    paddingTop: 3,
+  } as React.CSSProperties,
+  timestampInlineVisible: {
+    opacity: 1,
+  } as React.CSSProperties,
+  avatarSpriteButton: {
+    marginTop: 2,
+    border: 0,
+    padding: 0,
+    background: 'transparent',
+    cursor: 'pointer',
+  } as React.CSSProperties,
+  body: {
+    minWidth: 0,
+  } as React.CSSProperties,
+  header: {
+    display: 'flex',
+    alignItems: 'baseline',
+    gap: 8,
+    flexWrap: 'wrap',
+  } as React.CSSProperties,
+  author: {
+    fontWeight: 700,
+    fontSize: 14,
+    color: 'var(--text)',
+    cursor: 'pointer',
+  } as React.CSSProperties,
+  timestamp: {
+    fontSize: 11,
+    color: 'var(--text-faint)',
+  } as React.CSSProperties,
+  edited: {
+    fontSize: 10,
+    color: 'var(--text-faint)',
+  } as React.CSSProperties,
+  content: {
+    fontSize: 14,
+    color: 'var(--text)',
+    lineHeight: 1.5,
+    wordWrap: 'break-word',
+    overflowWrap: 'break-word',
+    whiteSpace: 'pre-wrap',
+  } as React.CSSProperties,
+  replyHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    fontSize: 12,
+    color: 'var(--text-faint)',
+    marginBottom: 2,
+    padding: '2px 0',
+  } as React.CSSProperties,
+  replyHeaderSvg: {
+    flexShrink: 0,
+    opacity: 0.6,
+  } as React.CSSProperties,
+  replyAuthor: {
+    fontWeight: 600,
+    color: 'var(--text-muted)',
+  } as React.CSSProperties,
+  replySnippet: {
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    color: 'var(--text-faint)',
+  } as React.CSSProperties,
+  editWrapper: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  } as React.CSSProperties,
+  editInput: {
+    width: '100%',
+    padding: '8px 10px',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--text)',
+    fontFamily: 'inherit',
+    fontSize: 14,
+    outline: 'none',
+    resize: 'none',
+    minHeight: 36,
+    transition: 'border-color 0.15s ease',
+  } as React.CSSProperties,
+  editActions: {
+    display: 'flex',
+    alignItems: 'center',
+  } as React.CSSProperties,
+  editHint: {
+    fontSize: 11,
+    color: 'var(--text-faint)',
+  } as React.CSSProperties,
+};
+
 export function MessageItem({ message, isGrouped, onReply, onOpenEmojiPicker }: MessageItemProps) {
   const author = (message as Message & { author?: { displayName: string; avatarHash: string | null; username?: string; primaryColor?: number | null; accentColor?: number | null } }).author;
   const channel = useChannelsStore((s) => s.channels.get(message.channelId));
@@ -258,11 +389,12 @@ export function MessageItem({ message, isGrouped, onReply, onOpenEmojiPicker }: 
     }
   }
 
-  const messageClasses = [
-    'message-item',
-    isGrouped ? 'message-item-grouped' : '',
-    isEditing ? 'message-item-editing' : '',
-  ].filter(Boolean).join(' ');
+  const itemStyle: React.CSSProperties = {
+    ...styles.item,
+    ...(isGrouped ? styles.itemGrouped : styles.itemNotGrouped),
+    ...(isEditing ? styles.itemEditing : {}),
+    ...(hovering ? styles.itemHover : {}),
+  };
 
   const contextItems = [
     { label: 'Reply', onClick: () => onReply(message) },
@@ -284,32 +416,37 @@ export function MessageItem({ message, isGrouped, onReply, onOpenEmojiPicker }: 
     setProfilePopover({ x: e.clientX, y: e.clientY });
   }
 
+  const timestampInlineStyle: React.CSSProperties = {
+    ...styles.timestampInline,
+    ...(hovering ? styles.timestampInlineVisible : {}),
+  };
+
   if (isGrouped) {
     return (
       <div
-        className={messageClasses}
+        style={itemStyle}
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={() => setHovering(false)}
         onContextMenu={handleContextMenu}
       >
-        <span className="message-timestamp-inline">{formatShortTimestamp(message.createdAt)}</span>
+        <span style={timestampInlineStyle}>{formatShortTimestamp(message.createdAt)}</span>
         <div>
           {isEditing ? (
-            <div className="message-edit-wrapper">
+            <div style={styles.editWrapper}>
               <textarea
                 ref={editRef}
-                className="message-edit-input"
+                style={styles.editInput}
                 value={editContent}
                 onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setEditContent(e.target.value)}
                 onKeyDown={handleEditKeyDown}
                 rows={1}
               />
-              <div className="message-edit-actions">
-                <span className="message-edit-hint">Escape to cancel, Enter to save</span>
+              <div style={styles.editActions}>
+                <span style={styles.editHint}>Escape to cancel, Enter to save</span>
               </div>
             </div>
           ) : (
-            <div className="message-content">
+            <div style={styles.content}>
               <MarkdownText content={message.content ?? ''} mentionLabels={mentionLabels} roleMentionLabels={roleMentionLabels} emojis={emojis} />
             </div>
           )}
@@ -345,7 +482,7 @@ export function MessageItem({ message, isGrouped, onReply, onOpenEmojiPicker }: 
 
   return (
     <div
-      className={messageClasses}
+      style={itemStyle}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       onContextMenu={handleContextMenu}
@@ -353,7 +490,7 @@ export function MessageItem({ message, isGrouped, onReply, onOpenEmojiPicker }: 
       {useSpriteAvatar ? (
         <button
           type="button"
-          className="message-avatar-sprite-button"
+          style={styles.avatarSpriteButton}
           onClick={handleOpenProfile}
           aria-label={`Open profile for ${displayName}`}
         >
@@ -370,19 +507,19 @@ export function MessageItem({ message, isGrouped, onReply, onOpenEmojiPicker }: 
           onClick={handleOpenProfile}
         />
       )}
-      <div className="message-body">
+      <div style={styles.body}>
         {referencedMessage && (
-          <div className="message-reply-header">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div style={styles.replyHeader}>
+            <svg style={styles.replyHeaderSvg} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 17 4 12 9 7" />
               <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
             </svg>
-            <span className="message-reply-author">{referencedResolved?.displayName ?? 'Unknown'}</span>
-            <span className="message-reply-snippet">{referencedMessage.content?.slice(0, 60)}</span>
+            <span style={styles.replyAuthor}>{referencedResolved?.displayName ?? 'Unknown'}</span>
+            <span style={styles.replySnippet}>{referencedMessage.content?.slice(0, 60)}</span>
           </div>
         )}
-        <div className="message-header">
-          <span className="message-author" onClick={handleOpenProfile} role="button" tabIndex={0}>
+        <div style={styles.header}>
+          <span style={styles.author} onClick={handleOpenProfile} role="button" tabIndex={0}>
             <DisplayNameText
               text={displayName}
               userId={message.authorId}
@@ -391,25 +528,25 @@ export function MessageItem({ message, isGrouped, onReply, onOpenEmojiPicker }: 
             />
           </span>
           <ServerTagBadge userId={message.authorId} />
-          <span className="message-timestamp">{formatTimestamp(message.createdAt)}</span>
-          {message.editedTimestamp && <span className="message-edited">(edited)</span>}
+          <span style={styles.timestamp}>{formatTimestamp(message.createdAt)}</span>
+          {message.editedTimestamp && <span style={styles.edited}>(edited)</span>}
         </div>
         {isEditing ? (
-          <div className="message-edit-wrapper">
+          <div style={styles.editWrapper}>
             <textarea
               ref={editRef}
-              className="message-edit-input"
+              style={styles.editInput}
               value={editContent}
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setEditContent(e.target.value)}
               onKeyDown={handleEditKeyDown}
               rows={1}
             />
-            <div className="message-edit-actions">
-              <span className="message-edit-hint">Escape to cancel, Enter to save</span>
+            <div style={styles.editActions}>
+              <span style={styles.editHint}>Escape to cancel, Enter to save</span>
             </div>
           </div>
         ) : (
-          <div className="message-content">
+          <div style={styles.content}>
             <MarkdownText content={message.content ?? ''} mentionLabels={mentionLabels} roleMentionLabels={roleMentionLabels} />
           </div>
         )}
