@@ -42,11 +42,15 @@ const GratoniteDashboard = lazy(() => import('@/pages/GratoniteDashboard').then(
 const LeaderboardPage = lazy(() => import('@/pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
 const AdminShopPage = lazy(() => import('@/pages/AdminShopPage').then((m) => ({ default: m.AdminShopPage })));
 <<<<<<< HEAD
+<<<<<<< HEAD
 const PortalPreviewPage = lazy(() => import('@/pages/PortalPreviewPage').then((m) => ({ default: m.PortalPreviewPage })));
 const AddFriendPage = lazy(() => import('@/pages/AddFriendPage').then((m) => ({ default: m.AddFriendPage })));
 =======
 const CreateEventPage = lazy(() => import('@/pages/CreateEventPage').then((m) => ({ default: m.CreateEventPage })));
 >>>>>>> 9ee4fd6 (feat: US-036 - Web Events Creation Flow wizard)
+=======
+const ShopItemDetailPage = lazy(() => import('@/pages/ShopItemDetailPage').then((m) => ({ default: m.ShopItemDetailPage })));
+>>>>>>> e07d225 (feat: US-040 + US-055 - Onboarding overlay and ShopItemDetail/Appearance redesign)
 
 export function App() {
   const { isLoading, isAuthenticated, login, logout, setLoading } = useAuthStore();
@@ -178,6 +182,7 @@ export function App() {
           <Route path="/onboarding/account" element={<CompleteAccountSetupPage />} />
           <Route path="/discover" element={<DiscoverPage />} />
           <Route path="/shop" element={<ShopPage />} />
+          <Route path="/shop/:itemId" element={<ShopItemDetailPage />} />
           <Route path="/friends" element={<FriendsPage />} />
           <Route path="/gratonite" element={<GratoniteDashboard />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
