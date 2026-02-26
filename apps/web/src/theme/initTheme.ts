@@ -1,5 +1,6 @@
 import { resolveThemeV2, applyThemeV2 } from '@/theme/resolveTheme';
 import type { ThemeManifestV2 } from '@/theme/resolveTheme';
+import { loadSavedTheme } from '@/lib/themes';
 
 // ── Color Mode (Light / Dark / System) ──────────────────────────────────────
 
@@ -188,6 +189,7 @@ export function shouldEnableUiV2Tokens(): boolean {
 export function initThemeV2() {
   applyColorMode();
   listenForSystemColorSchemeChange();
+  loadSavedTheme();          // ← restores persisted CSS-var theme on every page load
   applyUiVisualPreferences();
   if (!shouldEnableUiV2Tokens()) return;
   const { theme } = resolveThemeV2(readThemeManifestPreference() ?? undefined);
