@@ -641,7 +641,7 @@ export function SettingsPage() {
     });
     api.users.updateCustomStatus({
       text: statusInput.trim().slice(0, 100),
-      expiresAt: computeExpiryFromPreset(statusExpiryPreset)?.toISOString() ?? null,
+      expiresAt: (() => { const ts = computeExpiryFromPreset(statusExpiryPreset); return ts != null ? new Date(ts).toISOString() : null; })(),
     }).catch(() => {});
   }
 

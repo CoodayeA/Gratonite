@@ -231,7 +231,7 @@ export function ScheduledMsgsPage() {
     api.channels.getGuildChannels(guildId)
       .then((data) => {
         setChannels(data);
-        if (data.length > 0 && !schedChannelId) {
+        if (data.length > 0 && !schedChannelId && data[0]) {
           setSchedChannelId(data[0].id);
         }
       })

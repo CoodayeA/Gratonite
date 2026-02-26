@@ -451,15 +451,21 @@ export function CreateEventPage() {
         ? toIso(form.scheduledEndDate, form.scheduledEndTime)
         : undefined;
 
+      const entityTypeMap: Record<EntityType, 'STAGE' | 'VOICE' | 'EXTERNAL'> = {
+        stage_instance: 'STAGE',
+        voice: 'VOICE',
+        external: 'EXTERNAL',
+      };
+
       const payload: Parameters<typeof api.events.create>[1] = {
         name: form.name.trim(),
         description: form.description.trim() || undefined,
-        scheduledStartTime: startIso,
-        scheduledEndTime: endIso,
-        entityType: form.entityType,
+        startTime: startIso,
+        endTime: endIso,
+        entityType: entityTypeMap[form.entityType],
         channelId: form.entityType !== 'external' ? form.channelId : undefined,
-        entityMetadata: form.entityType === 'external' && form.location.trim()
-          ? { location: form.location.trim() }
+        location: form.entityType === 'external' && form.location.trim()
+          ? form.location.trim()
           : undefined,
       };
 
@@ -467,7 +473,7 @@ export function CreateEventPage() {
 
       if (event?.id) {
         try {
-          await api.events.rsvp(guildId, event.id);
+          await api.events.markInterested(guildId, event.id);
           setRsvpDone(true);
         } catch {
           // Non-critical

@@ -166,7 +166,7 @@ export function AddFriendPage() {
 
   function handleManualSend() {
     // If there's exactly one search result, send to them
-    if (results.length === 1) {
+    if (results.length === 1 && results[0]) {
       handleSendRequest(results[0]);
     }
   }

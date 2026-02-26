@@ -634,7 +634,7 @@ export function WikiPage() {
       await api.wiki.deletePage(selectedPage.id);
       const updated = await fetchPages();
       const remaining = updated ?? [];
-      setSelectedPage(remaining.length > 0 ? remaining[0] : null);
+      setSelectedPage(remaining.length > 0 ? (remaining[0] ?? null) : null);
     } catch (err) {
       // silently ignore
     }

@@ -1,9 +1,11 @@
+import type React from 'react';
 import type { AvatarSpriteConfig } from '@/lib/avatarStudio';
 
 interface AvatarSpriteProps {
   config: AvatarSpriteConfig;
   size?: number;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 function HairLayer({ style, color }: { style: AvatarSpriteConfig['hairStyle']; color: string }) {
@@ -75,13 +77,14 @@ function AccessoryLayer({ style }: { style: AvatarSpriteConfig['accessoryStyle']
   return null;
 }
 
-export function AvatarSprite({ config, size = 56, className }: AvatarSpriteProps) {
+export function AvatarSprite({ config, size = 56, className, style }: AvatarSpriteProps) {
   return (
     <svg
       viewBox="0 0 100 100"
       width={size}
       height={size}
       className={className}
+      style={style}
       role="img"
       aria-label="2D avatar sprite"
     >

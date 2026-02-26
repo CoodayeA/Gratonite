@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { getInitials } from '@/lib/utils';
 
 interface GuildIconProps {
@@ -7,11 +7,12 @@ interface GuildIconProps {
   guildId?: string;
   size?: number;
   className?: string;
+  style?: React.CSSProperties;
 }
 
-export function GuildIcon({ name, iconHash, guildId, size = 48, className = '' }: GuildIconProps) {
+export function GuildIcon({ name, iconHash, guildId, size = 48, className = '', style }: GuildIconProps) {
   const [imgError, setImgError] = useState(false);
-  const sizeStyle = { width: size, height: size, fontSize: size * 0.35 };
+  const sizeStyle: React.CSSProperties = { width: size, height: size, fontSize: size * 0.35, ...style };
 
   if (iconHash && guildId && !imgError) {
     return (
