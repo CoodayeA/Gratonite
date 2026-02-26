@@ -82,6 +82,8 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash'), // nullable for OAuth-only users
   dateOfBirth: text('date_of_birth'), // encrypted at rest (AES-256-GCM)
   googleId: varchar('google_id', { length: 255 }).unique(),
+  appleId: varchar('apple_id', { length: 255 }).unique(),
+  facebookId: varchar('facebook_id', { length: 255 }).unique(),
   mfaSecret: text('mfa_secret'), // encrypted
   mfaBackupCodes: text('mfa_backup_codes'), // JSON array, hashed with Argon2
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -117,6 +119,7 @@ export const userProfiles = pgTable('user_profiles', {
     .notNull()
     .default([]),
   messageCount: integer('message_count').notNull().default(0),
+  widgets: jsonb('widgets').$type<string[]>().default([]),
 });
 
 // ============================================================================

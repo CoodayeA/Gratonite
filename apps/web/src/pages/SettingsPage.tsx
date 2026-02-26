@@ -639,6 +639,10 @@ export function SettingsPage() {
       statusText: statusInput.trim().slice(0, 100),
       statusExpiresAt: computeExpiryFromPreset(statusExpiryPreset),
     });
+    api.users.updateCustomStatus({
+      text: statusInput.trim().slice(0, 100),
+      expiresAt: computeExpiryFromPreset(statusExpiryPreset)?.toISOString() ?? null,
+    }).catch(() => {});
   }
 
   function updateWidgets(raw: string) {
@@ -652,6 +656,7 @@ export function SettingsPage() {
       ...profileEnhancements,
       widgets,
     });
+    api.users.updateWidgets(widgets).catch(() => {});
   }
 
 

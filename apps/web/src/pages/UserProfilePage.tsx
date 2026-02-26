@@ -407,13 +407,8 @@ export function UserProfilePage() {
       }
     : bannerStyle;
 
-  // Derive badges from real profile data
-  const badges: string[] = [];
-  if (profile?.tier === 'crystalline') badges.push('Crystalline');
-  if (profile?.createdAt) {
-    const joinYear = new Date(profile.createdAt).getFullYear();
-    if (joinYear <= 2024) badges.push('OG');
-  }
+  // Use badges computed by the server
+  const badges: string[] = (profile as any)?.badges ?? [];
 
   // Derive widgets from real profile data (profileEnhancements come from the profile endpoint)
   const widgets: string[] = (profile as any)?.widgets ?? [];
