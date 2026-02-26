@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import React, { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -35,6 +35,93 @@ function buildIssueBody(params: {
     '```',
   ].join('\n');
 }
+
+const styles = {
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+    minWidth: 0,
+  } as React.CSSProperties,
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: 'var(--text-muted)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+  } as React.CSSProperties,
+  textarea: {
+    resize: 'vertical',
+    minHeight: 76,
+    fontFamily: 'inherit',
+    width: '100%',
+    padding: '10px 12px',
+    boxSizing: 'border-box',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--text)',
+    fontSize: 14,
+    outline: 'none',
+  } as React.CSSProperties,
+  textareaSm: {
+    minHeight: 56,
+  } as React.CSSProperties,
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 12,
+  } as React.CSSProperties,
+  gridItem: {
+    display: 'grid',
+    gap: 6,
+  } as React.CSSProperties,
+  context: {
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--stroke)',
+    background: 'rgba(8, 12, 20, 0.55)',
+    padding: '10px 12px',
+  } as React.CSSProperties,
+  contextTitle: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: 'var(--text)',
+    marginBottom: 8,
+  } as React.CSSProperties,
+  contextPre: {
+    margin: 0,
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+    fontSize: 11,
+    lineHeight: 1.45,
+    color: 'var(--text-muted)',
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace",
+    maxHeight: 140,
+    overflow: 'auto',
+  } as React.CSSProperties,
+  status: {
+    borderRadius: 'var(--radius-md)',
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: 'rgba(212, 175, 55, 0.22)',
+    background: 'rgba(212, 175, 55, 0.08)',
+    color: 'var(--text)',
+    padding: '10px 12px',
+    fontSize: 12,
+  } as React.CSSProperties,
+  statusError: {
+    borderColor: 'rgba(255, 107, 107, 0.22)',
+    background: 'rgba(255, 107, 107, 0.08)',
+    color: '#ffd3d3',
+  } as React.CSSProperties,
+  footer: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: 10,
+    padding: '0 24px 20px',
+    flexWrap: 'wrap',
+  } as React.CSSProperties,
+};
 
 export function BugReportModal() {
   const activeModal = useUiStore((s) => s.activeModal);
@@ -158,7 +245,7 @@ export function BugReportModal() {
 
   return (
     <Modal id="bug-report" title="Report Bug" size="lg" onClose={handleClose}>
-      <form className="modal-form" onSubmit={handleSubmit}>
+      <form style={styles.form} onSubmit={handleSubmit}>
         <Input
           label="Title"
           type="text"
@@ -170,10 +257,10 @@ export function BugReportModal() {
           autoFocus
         />
 
-        <label className="input-label" htmlFor="bug-report-summary">What happened?</label>
+        <label style={styles.inputLabel} htmlFor="bug-report-summary">What happened?</label>
         <textarea
           id="bug-report-summary"
-          className="input-field bug-report-textarea"
+          style={styles.textarea}
           value={summary}
           onChange={(event) => setSummary(event.target.value)}
           placeholder="Describe the issue clearly"
@@ -181,32 +268,32 @@ export function BugReportModal() {
           required
         />
 
-        <label className="input-label" htmlFor="bug-report-steps">Steps to reproduce</label>
+        <label style={styles.inputLabel} htmlFor="bug-report-steps">Steps to reproduce</label>
         <textarea
           id="bug-report-steps"
-          className="input-field bug-report-textarea"
+          style={styles.textarea}
           value={steps}
           onChange={(event) => setSteps(event.target.value)}
           placeholder={'1. Go to...\n2. Click...\n3. Observe...'}
           rows={4}
         />
 
-        <div className="bug-report-grid">
-          <div className="bug-report-grid-item">
-            <label className="input-label" htmlFor="bug-report-expected">Expected</label>
+        <div style={styles.grid}>
+          <div style={styles.gridItem}>
+            <label style={styles.inputLabel} htmlFor="bug-report-expected">Expected</label>
             <textarea
               id="bug-report-expected"
-              className="input-field bug-report-textarea bug-report-textarea-sm"
+              style={{ ...styles.textarea, ...styles.textareaSm }}
               value={expected}
               onChange={(event) => setExpected(event.target.value)}
               rows={2}
             />
           </div>
-          <div className="bug-report-grid-item">
-            <label className="input-label" htmlFor="bug-report-actual">Actual</label>
+          <div style={styles.gridItem}>
+            <label style={styles.inputLabel} htmlFor="bug-report-actual">Actual</label>
             <textarea
               id="bug-report-actual"
-              className="input-field bug-report-textarea bug-report-textarea-sm"
+              style={{ ...styles.textarea, ...styles.textareaSm }}
               value={actual}
               onChange={(event) => setActual(event.target.value)}
               rows={2}
@@ -214,30 +301,30 @@ export function BugReportModal() {
           </div>
         </div>
 
-        <div className="bug-report-context">
-          <div className="bug-report-context-title">Auto-captured context</div>
-          <pre className="bug-report-context-pre">{contextText}</pre>
+        <div style={styles.context}>
+          <div style={styles.contextTitle}>Auto-captured context</div>
+          <pre style={styles.contextPre}>{contextText}</pre>
         </div>
 
         {submitState === 'submitted' && (
-          <div className="bug-report-status">
+          <div style={styles.status}>
             Bug report submitted successfully{submittedId ? ` (ID: ${submittedId})` : ''}.
           </div>
         )}
         {submitState === 'failed' && submitError && (
-          <div className="bug-report-status bug-report-status-error">{submitError}</div>
+          <div style={{ ...styles.status, ...styles.statusError }}>{submitError}</div>
         )}
 
         {copyState === 'copied' && (
-          <div className="bug-report-status">Report copied to clipboard and GitHub issue form opened.</div>
+          <div style={styles.status}>Report copied to clipboard and GitHub issue form opened.</div>
         )}
         {copyState === 'failed' && (
-          <div className="bug-report-status bug-report-status-error">
+          <div style={{ ...styles.status, ...styles.statusError }}>
             Could not copy to clipboard, but the GitHub issue form should still open with details.
           </div>
         )}
 
-        <div className="modal-footer">
+        <div style={styles.footer}>
           <Button variant="ghost" type="button" onClick={handleClose}>
             Cancel
           </Button>

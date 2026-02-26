@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, Profiler } from 'react';
+import React, { useEffect, useState, useCallback, Profiler } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useChannelsStore } from '@/stores/channels.store';
@@ -13,11 +13,89 @@ import { PinnedMessagesPanel } from '@/components/messages/PinnedMessagesPanel';
 import { SearchPanel } from '@/components/search/SearchPanel';
 import { ThreadPanel } from '@/components/threads/ThreadPanel';
 import { VoiceChannelView } from '@/components/voice/VoiceChannelView';
+import { StageChannelView } from '@/components/StageChannelView';
 import { api } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { useUiStore } from '@/stores/ui.store';
 import { profileRender } from '@/lib/perf';
 import type { Message } from '@gratonite/types';
+
+/* ---------- styles ---------- */
+
+const styles = {
+  channelPage: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+    minHeight: 0,
+    overflow: 'hidden',
+  } as React.CSSProperties,
+  voicePage: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+    minHeight: 0,
+    overflow: 'hidden',
+    background: 'radial-gradient(circle at 18% 6%, rgba(121, 223, 255, 0.08), transparent 38%), radial-gradient(circle at 86% 10%, rgba(138, 123, 255, 0.1), transparent 42%), radial-gradient(circle at top, rgba(12, 18, 30, 0.9), rgba(6, 10, 18, 1))',
+  } as React.CSSProperties,
+  dmIntro: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    padding: '20px 24px 16px',
+    color: 'var(--text)',
+    borderBottom: '1px solid var(--stroke)',
+    background: 'var(--gold-subtle)',
+    flexShrink: 0,
+  } as React.CSSProperties,
+  dmIntroLastChild: {
+    minWidth: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+  } as React.CSSProperties,
+  dmIntroIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 100,
+    display: 'grid',
+    placeItems: 'center',
+    background: 'var(--bg-purple-velvet)',
+    color: 'var(--text)',
+    fontWeight: 700,
+    fontSize: 16,
+    flexShrink: 0,
+  } as React.CSSProperties,
+  dmIntroTitle: {
+    fontSize: 15,
+    fontWeight: 600,
+    color: 'var(--text)',
+    minWidth: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  } as React.CSSProperties,
+  dmIntroSubtitle: {
+    fontSize: 12,
+    color: 'var(--text-muted)',
+    overflowWrap: 'anywhere',
+  } as React.CSSProperties,
+  dmIntroChips: {
+    display: 'flex',
+    gap: 6,
+    marginTop: 6,
+  } as React.CSSProperties,
+  dmIntroChip: {
+    padding: '2px 8px',
+    borderRadius: 'var(--radius-sm)',
+    fontSize: 10,
+    color: 'var(--text-faint)',
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--stroke)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+  } as React.CSSProperties,
+};
 
 export function ChannelPage() {
   const { channelId } = useParams<{ channelId: string }>();
@@ -86,24 +164,39 @@ export function ChannelPage() {
   if (!channelId) return null;
 
   const dmIntro = isDm ? (
-    <div className="dm-intro">
-      <div className="dm-intro-icon">@</div>
-      <div>
-        <div className="dm-intro-title">{channel?.name ?? 'Direct Message'}</div>
-        <div className="dm-intro-subtitle">
+    <div style={styles.dmIntro}>
+      <div style={styles.dmIntroIcon}>@</div>
+      <div style={styles.dmIntroLastChild}>
+        <div style={styles.dmIntroTitle}>{channel?.name ?? 'Direct Message'}</div>
+        <div style={styles.dmIntroSubtitle}>
           This is the beginning of your direct message history.
         </div>
-        <div className="dm-intro-chips">
-          <span className="dm-intro-chip">Private</span>
-          <span className="dm-intro-chip">Low latency</span>
+        <div style={styles.dmIntroChips}>
+          <span style={styles.dmIntroChip}>Private</span>
+          <span style={styles.dmIntroChip}>Low latency</span>
         </div>
       </div>
     </div>
   ) : null;
 
-  if (channel?.type === 'GUILD_VOICE' || channel?.type === 'GUILD_STAGE_VOICE') {
+  if (channel?.type === 'GUILD_STAGE_VOICE') {
     return (
-      <div className="channel-page channel-page-voice">
+      <div style={styles.voicePage}>
+        <TopBar channelId={channelId} />
+        <StageChannelView channelId={channelId} channelName={channel?.name ?? 'Stage'} />
+        {searchPanelOpen && (
+          <SearchPanel channelId={channelId} />
+        )}
+        {threadPanelOpen && !isDm && (
+          <ThreadPanel channelId={channelId} />
+        )}
+      </div>
+    );
+  }
+
+  if (channel?.type === 'GUILD_VOICE') {
+    return (
+      <div style={styles.voicePage}>
         <TopBar channelId={channelId} />
         <VoiceChannelView channelId={channelId} channelName={channel?.name ?? 'Voice'} />
         {searchPanelOpen && (
@@ -117,7 +210,7 @@ export function ChannelPage() {
   }
 
   return (
-    <div className={`channel-page ${isDm ? 'channel-page-dm' : 'channel-page-guild'}`}>
+    <div style={styles.channelPage}>
       <TopBar channelId={channelId} />
       <Profiler id="MessageList" onRender={profileRender}>
         <MessageList

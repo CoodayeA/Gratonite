@@ -24,7 +24,8 @@ export const registerSchema = z.object({
   displayName: z
     .string()
     .min(1, 'Display name is required')
-    .max(32, 'Display name must be at most 32 characters'),
+    .max(32, 'Display name must be at most 32 characters')
+    .optional(),
   password: z
     .string()
     .min(8, 'Password must be at least 8 characters')
@@ -45,7 +46,8 @@ export const registerSchema = z.object({
         return adjustedAge >= 16;
       },
       { message: 'You must be at least 16 years old to register' },
-    ),
+    )
+    .optional(),
 });
 
 export const loginSchema = z.object({

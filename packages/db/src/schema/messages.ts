@@ -7,6 +7,7 @@ import {
   integer,
   jsonb,
   index,
+  unique,
 } from 'drizzle-orm/pg-core';
 import { bigintString } from './helpers';
 import { users } from './users';
@@ -122,51 +123,91 @@ export const channelPins = pgTable('channel_pins', {
 // Polls
 // ============================================================================
 
-export const polls = pgTable('polls', {
-  id: bigintString('id').primaryKey(),
-  questionText: varchar('question_text', { length: 300 }).notNull(),
-  allowMultiselect: boolean('allow_multiselect').notNull().default(false),
-  expiry: timestamp('expiry', { withTimezone: true }),
-  finalized: boolean('finalized').notNull().default(false),
-});
+export const polls = pgTable(
+  'polls',
+  {
+    id: bigintString('id').primaryKey(),
+    channelId: bigintString('channel_id').notNull(),
+    guildId: bigintString('guild_id'),
+    authorId: bigintString('author_id')
+      .notNull()
+      .references(() => users.id),
+    questionText: varchar('question_text', { length: 300 }).notNull(),
+    allowMultiselect: boolean('allow_multiselect').notNull().default(false),
+    duration: integer('duration'), // hours
+    expiry: timestamp('expiry', { withTimezone: true }),
+    finalized: boolean('finalized').notNull().default(false),
+    totalVoters: integer('total_voters').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_polls_channel_id').on(table.channelId),
+    index('idx_polls_guild_id').on(table.guildId),
+  ],
+);
 
-export const pollAnswers = pgTable('poll_answers', {
-  id: bigintString('id').primaryKey(),
-  pollId: bigintString('poll_id')
-    .notNull()
-    .references(() => polls.id, { onDelete: 'cascade' }),
-  text: varchar('text', { length: 255 }).notNull(),
-  emojiId: bigintString('emoji_id'),
-  emojiName: varchar('emoji_name', { length: 64 }),
-  voteCount: integer('vote_count').notNull().default(0),
-});
+export const pollAnswers = pgTable(
+  'poll_answers',
+  {
+    id: bigintString('id').primaryKey(),
+    pollId: bigintString('poll_id')
+      .notNull()
+      .references(() => polls.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull().default(0),
+    text: varchar('text', { length: 55 }).notNull(),
+    emojiId: bigintString('emoji_id'),
+    emojiName: varchar('emoji_name', { length: 64 }),
+    voteCount: integer('vote_count').notNull().default(0),
+  },
+  (table) => [index('idx_poll_answers_poll_id').on(table.pollId)],
+);
 
-export const pollVotes = pgTable('poll_votes', {
-  pollId: bigintString('poll_id')
-    .notNull()
-    .references(() => polls.id, { onDelete: 'cascade' }),
-  answerId: bigintString('answer_id')
-    .notNull()
-    .references(() => pollAnswers.id, { onDelete: 'cascade' }),
-  userId: bigintString('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-});
+export const pollVotes = pgTable(
+  'poll_votes',
+  {
+    id: bigintString('id').primaryKey(),
+    pollId: bigintString('poll_id')
+      .notNull()
+      .references(() => polls.id, { onDelete: 'cascade' }),
+    answerId: bigintString('answer_id')
+      .notNull()
+      .references(() => pollAnswers.id, { onDelete: 'cascade' }),
+    userId: bigintString('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    votedAt: timestamp('voted_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_poll_votes_poll_id').on(table.pollId),
+    index('idx_poll_votes_user_poll').on(table.userId, table.pollId),
+    unique('uq_poll_votes_user_answer').on(table.userId, table.answerId),
+  ],
+);
 
 // ============================================================================
 // Scheduled messages
 // ============================================================================
 
-export const scheduledMessages = pgTable('scheduled_messages', {
-  id: bigintString('id').primaryKey(),
-  channelId: bigintString('channel_id').notNull(),
-  authorId: bigintString('author_id')
-    .notNull()
-    .references(() => users.id),
-  content: text('content').notNull(),
-  embeds: jsonb('embeds').notNull().default([]),
-  attachments: jsonb('attachments').notNull().default([]),
-  scheduledFor: timestamp('scheduled_for', { withTimezone: true }).notNull(),
-  status: varchar('status', { length: 20 }).notNull().default('pending'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const scheduledMessages = pgTable(
+  'scheduled_messages',
+  {
+    id: bigintString('id').primaryKey(),
+    guildId: bigintString('guild_id').notNull(),
+    channelId: bigintString('channel_id').notNull(),
+    authorId: bigintString('author_id')
+      .notNull()
+      .references(() => users.id),
+    content: text('content').notNull(),
+    embeds: jsonb('embeds').notNull().default([]),
+    attachments: jsonb('attachments').notNull().default([]),
+    scheduledFor: timestamp('scheduled_for', { withTimezone: true }).notNull(),
+    status: varchar('status', { length: 20 }).notNull().default('pending'),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_scheduled_messages_guild_id').on(table.guildId),
+    index('idx_scheduled_messages_channel_id').on(table.channelId),
+    index('idx_scheduled_messages_scheduled_for').on(table.scheduledFor, table.status),
+  ],
+);

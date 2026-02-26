@@ -10,6 +10,7 @@ export interface AuthUser {
   profileEffectId?: string | null;
   nameplateId?: string | null;
   tier: string;
+  isAdmin?: boolean;
   messageCount?: number;
   primaryColor?: string | null;
   accentColor?: string | null;

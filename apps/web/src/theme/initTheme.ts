@@ -1,6 +1,45 @@
 import { resolveThemeV2, applyThemeV2 } from '@/theme/resolveTheme';
 import type { ThemeManifestV2 } from '@/theme/resolveTheme';
 
+// ── Color Mode (Light / Dark / System) ──────────────────────────────────────
+
+export const UI_COLOR_MODE_STORAGE_KEY = 'ui_color_mode_v1';
+export type UiColorMode = 'light' | 'dark' | 'system';
+
+export function readUiColorModePreference(): UiColorMode {
+  const raw = window.localStorage.getItem(UI_COLOR_MODE_STORAGE_KEY);
+  if (raw === 'light' || raw === 'dark' || raw === 'system') return raw;
+  return 'dark'; // default
+}
+
+export function setUiColorModePreference(mode: UiColorMode) {
+  window.localStorage.setItem(UI_COLOR_MODE_STORAGE_KEY, mode);
+}
+
+export function resolveEffectiveColorMode(preference: UiColorMode): 'light' | 'dark' {
+  if (preference === 'system') {
+    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+  return preference;
+}
+
+export function applyColorMode() {
+  const preference = readUiColorModePreference();
+  const effective = resolveEffectiveColorMode(preference);
+  document.documentElement.dataset['colorMode'] = effective;
+}
+
+export function listenForSystemColorSchemeChange() {
+  const mq = window.matchMedia('(prefers-color-scheme: light)');
+  mq.addEventListener('change', () => {
+    if (readUiColorModePreference() === 'system') {
+      applyColorMode();
+    }
+  });
+}
+
+// ── V2 Tokens ───────────────────────────────────────────────────────────────
+
 export const UI_V2_TOKENS_STORAGE_KEY = 'ui_v2_tokens';
 export const UI_V2_THEME_MANIFEST_STORAGE_KEY = 'ui_v2_theme_manifest';
 export const UI_GLASS_MODE_STORAGE_KEY = 'ui_glass_mode_v1';
@@ -147,6 +186,8 @@ export function shouldEnableUiV2Tokens(): boolean {
 }
 
 export function initThemeV2() {
+  applyColorMode();
+  listenForSystemColorSchemeChange();
   applyUiVisualPreferences();
   if (!shouldEnableUiV2Tokens()) return;
   const { theme } = resolveThemeV2(readThemeManifestPreference() ?? undefined);

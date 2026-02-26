@@ -90,6 +90,8 @@ export const guilds = pgTable('guilds', {
     .notNull()
     .default('only_mentions'),
   features: jsonb('features').notNull().default([]),
+  tags: jsonb('tags').notNull().default([]),           // string[] — discovery hashtags
+  categories: jsonb('categories').notNull().default([]), // string[] — up to 3 categories
   discoverable: boolean('discoverable').notNull().default(false),
   memberCount: integer('member_count').notNull().default(0),
   boostCount: integer('boost_count').notNull().default(0),

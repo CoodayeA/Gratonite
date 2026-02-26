@@ -9,6 +9,12 @@ gratonite.chat {
 		Referrer-Policy strict-origin-when-cross-origin
 		X-Frame-Options SAMEORIGIN
 	}
+	@exeFiles path /Gratonite-Setup.exe /Gratonite-Setup-*.exe
+	handle @exeFiles {
+		header Content-Type application/octet-stream
+		header Content-Disposition "attachment; filename=\"Gratonite-Setup.exe\""
+		reverse_proxy web:80
+	}
 	@api path /api /api/*
 	@socketio path /socket.io /socket.io/*
 	handle @api {

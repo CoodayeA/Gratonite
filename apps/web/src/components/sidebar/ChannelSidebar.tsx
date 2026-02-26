@@ -28,6 +28,422 @@ const GROUP_DM = 'GROUP_DM';
 // Stable empty array to avoid creating new references on every selector call
 const EMPTY_IDS: string[] = [];
 
+// ─── Inline style objects ───────────────────────────────────────────────────
+
+const styles = {
+  sidebar: {
+    width: 260,
+    minWidth: 260,
+    background: 'var(--bg-elevated)',
+    borderRight: '1px solid var(--stroke)',
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+    overflow: 'hidden',
+  } as React.CSSProperties,
+
+  header: {
+    borderBottom: '1px solid var(--stroke)',
+    flexShrink: 0,
+  } as React.CSSProperties,
+
+  guildBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    padding: '0 16px',
+    height: 56,
+    fontSize: 16,
+    fontWeight: 600,
+    color: 'var(--text)',
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'background 0.15s ease',
+  } as React.CSSProperties,
+
+  guildBtnStatic: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    padding: '0 16px',
+    height: 56,
+    fontSize: 16,
+    fontWeight: 600,
+    color: 'var(--text)',
+    background: 'transparent',
+    border: 'none',
+    cursor: 'default',
+  } as React.CSSProperties,
+
+  guildName: {
+    margin: 0,
+    fontSize: 16,
+    fontWeight: 600,
+    color: 'var(--text)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  } as React.CSSProperties,
+
+  chevron: {
+    fontSize: 14,
+    color: 'var(--text-muted)',
+    marginLeft: 8,
+    flexShrink: 0,
+  } as React.CSSProperties,
+
+  dropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 8,
+    right: 8,
+    background: 'var(--bg-float)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    padding: '6px 0',
+    zIndex: 50,
+    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+  } as React.CSSProperties,
+
+  dropdownItem: {
+    display: 'block',
+    width: '100%',
+    padding: '8px 12px',
+    fontSize: 13,
+    color: 'var(--text)',
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    textAlign: 'left' as const,
+    transition: 'background 0.15s ease',
+  } as React.CSSProperties,
+
+  dropdownDanger: {
+    display: 'block',
+    width: '100%',
+    padding: '8px 12px',
+    fontSize: 13,
+    color: 'var(--danger)',
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    textAlign: 'left' as const,
+    transition: 'background 0.15s ease',
+  } as React.CSSProperties,
+
+  dropdownDivider: {
+    height: 1,
+    background: 'var(--stroke)',
+    margin: '4px 0',
+  } as React.CSSProperties,
+
+  headerActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    padding: '4px 8px 8px',
+  } as React.CSSProperties,
+
+  headerAction: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '4px 8px',
+    fontSize: 12,
+    color: 'var(--text-muted)',
+    background: 'transparent',
+    border: 'none',
+    borderRadius: 'var(--radius-sm)',
+    cursor: 'pointer',
+    transition: 'background 0.15s ease, color 0.15s ease',
+  } as React.CSSProperties,
+
+  list: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '12px 8px',
+    scrollbarWidth: 'thin',
+    scrollbarColor: 'var(--stroke) transparent',
+  } as React.CSSProperties,
+
+  section: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '8px 8px 4px 8px',
+  } as React.CSSProperties,
+
+  sectionTitle: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    fontSize: 11,
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    color: 'var(--text-faint)',
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    padding: 0,
+  } as React.CSSProperties,
+
+  sectionAdd: {
+    fontSize: 16,
+    color: 'var(--text-faint)',
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '0 4px',
+    lineHeight: 1,
+    transition: 'color 0.15s ease',
+  } as React.CSSProperties,
+
+  channelItem: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '0 8px',
+    height: 34,
+    borderRadius: 'var(--radius-sm)',
+    fontSize: 14,
+    fontWeight: 400,
+    color: 'var(--text-muted)',
+    textDecoration: 'none',
+    cursor: 'pointer',
+    transition: 'background 0.15s ease, color 0.15s ease',
+    gap: 8,
+    flexWrap: 'nowrap',
+    overflow: 'hidden',
+  } as React.CSSProperties,
+
+  channelItemActive: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '0 8px',
+    height: 34,
+    borderRadius: 'var(--radius-sm)',
+    fontSize: 14,
+    fontWeight: 500,
+    color: 'var(--text)',
+    textDecoration: 'none',
+    cursor: 'pointer',
+    background: 'var(--bg-soft)',
+    transition: 'background 0.15s ease, color 0.15s ease',
+    gap: 8,
+    flexWrap: 'nowrap',
+    overflow: 'hidden',
+  } as React.CSSProperties,
+
+  channelIcon: {
+    fontSize: 14,
+    color: 'var(--text-faint)',
+    flexShrink: 0,
+    width: 16,
+    height: 16,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as React.CSSProperties,
+
+  channelIconLock: {
+    display: 'block',
+  } as React.CSSProperties,
+
+  channelLockBadge: {
+    fontSize: 10,
+    marginLeft: 2,
+  } as React.CSSProperties,
+
+  channelName: {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    flex: 1,
+    minWidth: 0,
+  } as React.CSSProperties,
+
+  dragHandle: {
+    cursor: 'grab',
+    color: 'var(--text-faint)',
+    fontSize: 10,
+    marginRight: 2,
+    userSelect: 'none',
+    flexShrink: 0,
+    opacity: 0.4,
+  } as React.CSSProperties,
+
+  unreadBadge: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: 'var(--text-on-gold)',
+    background: 'var(--accent)',
+    borderRadius: 10,
+    padding: '0 6px',
+    minWidth: 20,
+    height: 20,
+    textAlign: 'center',
+    lineHeight: '20px',
+    flexShrink: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as React.CSSProperties,
+
+  category: {
+    marginTop: 4,
+  } as React.CSSProperties,
+
+  categoryHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '12px 8px 4px 8px',
+  } as React.CSSProperties,
+
+  categoryName: {
+    fontSize: 11,
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    color: 'var(--text-faint)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  } as React.CSSProperties,
+
+  categoryAdd: {
+    fontSize: 16,
+    color: 'var(--text-faint)',
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '0 4px',
+    lineHeight: 1,
+    transition: 'color 0.15s ease',
+  } as React.CSSProperties,
+
+  voicePresence: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+    paddingLeft: 24,
+    paddingTop: 2,
+    paddingBottom: 2,
+    width: '100%',
+  } as React.CSSProperties,
+
+  voicePresenceItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    fontSize: 12,
+    color: '#a8a4b8',
+  } as React.CSSProperties,
+
+  voicePresenceDot: {
+    width: 8,
+    height: 8,
+    borderRadius: '50%',
+    background: '#43b581',
+    flexShrink: 0,
+  } as React.CSSProperties,
+
+  voicePresenceName: {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  } as React.CSSProperties,
+
+  voicePresenceMore: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    fontSize: 11,
+    color: '#6e6a80',
+    fontStyle: 'italic',
+  } as React.CSSProperties,
+
+  // DM panel styles
+  dmPanel: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+    width: '100%',
+  } as React.CSSProperties,
+
+  dmPanelHeader: {
+    padding: '20px 20px 16px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+    flexShrink: 0,
+  } as React.CSSProperties,
+
+  dmPanelTitleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  } as React.CSSProperties,
+
+  dmPanelTitle: {
+    margin: 0,
+    fontSize: 18,
+    fontWeight: 600,
+    color: 'var(--text)',
+  } as React.CSSProperties,
+
+  dmPanelAddBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 18,
+    height: 18,
+    background: 'transparent',
+    border: 'none',
+    color: 'var(--accent)',
+    cursor: 'pointer',
+    transition: 'color 0.15s ease',
+    padding: 0,
+  } as React.CSSProperties,
+
+  dmSearchWrapper: {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-sm)',
+    height: 38,
+    gap: 8,
+    padding: '0 12px',
+  } as React.CSSProperties,
+
+  dmSearchIcon: {
+    flexShrink: 0,
+    color: 'var(--text-faint)',
+  } as React.CSSProperties,
+
+  dmList: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '4px 0',
+    scrollbarWidth: 'thin',
+    scrollbarColor: 'var(--stroke) transparent',
+  } as React.CSSProperties,
+
+  dmEmpty: {
+    padding: '24px 20px',
+    textAlign: 'center',
+    color: 'var(--text-faint)',
+    fontSize: 13,
+  } as React.CSSProperties,
+};
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
 function parseOrderId(value: string | null | undefined): bigint {
   if (!value) return 0n;
   try {
@@ -40,17 +456,17 @@ function parseOrderId(value: string | null | undefined): bigint {
 function ChannelIcon({ type, isPrivate }: { type: string | number; isPrivate?: boolean }) {
   if (type === GUILD_VOICE) {
     return (
-      <span className="channel-icon">
+      <span style={styles.channelIcon}>
         🔊
-        {isPrivate && <span className="channel-lock-badge" aria-label="Private" title="Private channel">🔒</span>}
+        {isPrivate && <span style={styles.channelLockBadge} aria-label="Private" title="Private channel">🔒</span>}
       </span>
     );
   }
-  if (type === DM || type === GROUP_DM) return <span className="channel-icon">@</span>;
+  if (type === DM || type === GROUP_DM) return <span style={styles.channelIcon}>@</span>;
   return (
-    <span className="channel-icon">
+    <span style={styles.channelIcon}>
       {isPrivate ? (
-        <svg className="channel-icon-lock" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-label="Private channel" role="img">
+        <svg style={styles.channelIconLock} width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-label="Private channel" role="img">
           <path d="M17 11V7a5 5 0 0 0-10 0v4H5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-2Zm-8-4a3 3 0 1 1 6 0v4H9V7Z"/>
         </svg>
       ) : '#'}
@@ -79,7 +495,7 @@ export function ChannelSidebar() {
   const renderUnreadBadge = (channelId: string) => {
     if (!unreadByChannel.has(channelId)) return null;
     const count = unreadCountByChannel.get(channelId) ?? 1;
-    return <span className="channel-unread-badge">{count > 99 ? '99+' : count}</span>;
+    return <span style={styles.unreadBadge}>{count > 99 ? '99+' : count}</span>;
   };
 
   const isOwner = guild?.ownerId === user?.id;
@@ -377,21 +793,21 @@ export function ChannelSidebar() {
     const states = (voiceStatesByChannel.get(channelId) ?? []) as VoiceState[];
     if (states.length === 0) return null;
     return (
-      <div className="channel-voice-presence" aria-label={`${states.length} people in voice`}>
+      <div style={styles.voicePresence} aria-label={`${states.length} people in voice`}>
         {states.slice(0, 6).map((state) => {
           const userId = String(state.userId);
           const label =
             voiceUserNameById.get(userId) ??
             (userId === user?.id ? 'You' : `User ${userId.slice(-4)}`);
           return (
-            <div key={userId} className="channel-voice-presence-item">
-              <span className="channel-voice-presence-dot" aria-hidden="true" />
-              <span className="channel-voice-presence-name">{label}</span>
+            <div key={userId} style={styles.voicePresenceItem}>
+              <span style={styles.voicePresenceDot} aria-hidden="true" />
+              <span style={styles.voicePresenceName}>{label}</span>
             </div>
           );
         })}
         {states.length > 6 && (
-          <div className="channel-voice-presence-item channel-voice-presence-more">
+          <div style={styles.voicePresenceMore}>
             +{states.length - 6} more
           </div>
         )}
@@ -419,9 +835,7 @@ export function ChannelSidebar() {
           <NavLink
             key={ch.id}
             to={`/guild/${guildId}/channel/${ch.id}`}
-            className={({ isActive }) =>
-              `channel-item ${isActive ? 'channel-item-active' : ''}`
-            }
+            style={({ isActive }) => isActive ? styles.channelItemActive : styles.channelItem}
             draggable
             onDragStart={(event) => {
               event.dataTransfer.setData(
@@ -446,10 +860,22 @@ export function ChannelSidebar() {
               });
             }}
             onClick={() => beginChannelSwitch(ch.id)}
+            onMouseEnter={(e) => {
+              const link = e.currentTarget;
+              if (!link.getAttribute('data-active')) {
+                link.style.background = 'var(--bg-soft)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              const link = e.currentTarget;
+              if (!link.getAttribute('data-active')) {
+                link.style.background = '';
+              }
+            }}
           >
-            <span className="channel-drag-handle" aria-hidden="true">⋮⋮</span>
+            <span style={styles.dragHandle} aria-hidden="true">⋮⋮</span>
             <ChannelIcon type={ch.type} isPrivate={ch.isPrivate} />
-            <span className="channel-name">{ch.name}</span>
+            <span style={styles.channelName}>{ch.name}</span>
             {renderUnreadBadge(ch.id)}
             {section === 'voice' && renderVoicePresence(ch.id)}
           </NavLink>
@@ -460,14 +886,16 @@ export function ChannelSidebar() {
           const categoryOrder = getStoredOrder(getOrderKey(section, cat.id));
           const sortedChildren = sortWithOrder(children, categoryOrder);
           return (
-            <div key={cat.id} className="channel-category">
-              <div className="channel-category-header">
-                <span className="channel-category-name">{cat.name}</span>
+            <div key={cat.id} style={styles.category}>
+              <div style={styles.categoryHeader}>
+                <span style={styles.categoryName}>{cat.name}</span>
                 {guildId && (
                   <button
-                    className="channel-category-add"
+                    style={styles.categoryAdd}
                     onClick={() => openModal('create-channel', { guildId, parentId: cat.id })}
                     title={`Add channel to ${cat.name}`}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-faint)'; }}
                   >
                     +
                   </button>
@@ -477,9 +905,7 @@ export function ChannelSidebar() {
                 <NavLink
                   key={ch.id}
                   to={`/guild/${guildId}/channel/${ch.id}`}
-                  className={({ isActive }) =>
-                    `channel-item ${isActive ? 'channel-item-active' : ''}`
-                  }
+                  style={({ isActive }) => isActive ? styles.channelItemActive : styles.channelItem}
                   draggable
                   onDragStart={(event) => {
                     event.dataTransfer.setData(
@@ -504,10 +930,22 @@ export function ChannelSidebar() {
                     });
                   }}
                   onClick={() => beginChannelSwitch(ch.id)}
+                  onMouseEnter={(e) => {
+                    const link = e.currentTarget;
+                    if (!link.getAttribute('data-active')) {
+                      link.style.background = 'var(--bg-soft)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    const link = e.currentTarget;
+                    if (!link.getAttribute('data-active')) {
+                      link.style.background = '';
+                    }
+                  }}
                 >
-                  <span className="channel-drag-handle" aria-hidden="true">⋮⋮</span>
+                  <span style={styles.dragHandle} aria-hidden="true">⋮⋮</span>
                   <ChannelIcon type={ch.type} isPrivate={ch.isPrivate} />
-                  <span className="channel-name">{ch.name}</span>
+                  <span style={styles.channelName}>{ch.name}</span>
                   {renderUnreadBadge(ch.id)}
                   {section === 'voice' && renderVoicePresence(ch.id)}
                 </NavLink>
@@ -520,53 +958,65 @@ export function ChannelSidebar() {
   }
 
   return (
-    <aside className="channel-sidebar">
-      <div className="channel-sidebar-header" ref={dropdownRef}>
+    <aside style={styles.sidebar}>
+      <div style={styles.header} ref={dropdownRef}>
         {guildId ? (
           <button
-            className="channel-sidebar-guild-btn"
+            style={styles.guildBtn}
             onClick={() => setDropdownOpen(!dropdownOpen)}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-soft)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
           >
-            <h2 className="channel-sidebar-guild-name">{guild?.name ?? 'Gratonite'}</h2>
-            <span className="channel-sidebar-chevron">{dropdownOpen ? '\u25B2' : '\u25BC'}</span>
+            <h2 style={styles.guildName}>{guild?.name ?? 'Gratonite'}</h2>
+            <span style={styles.chevron}>{dropdownOpen ? '\u25B2' : '\u25BC'}</span>
           </button>
         ) : (
-          <div className="channel-sidebar-guild-btn is-static">
-            <h2 className="channel-sidebar-guild-name">Direct Messages</h2>
+          <div style={styles.guildBtnStatic}>
+            <h2 style={styles.guildName}>Direct Messages</h2>
           </div>
         )}
 
         {dropdownOpen && guildId && (
-          <div className="channel-sidebar-dropdown">
+          <div style={styles.dropdown}>
             <button
-              className="dropdown-item"
+              style={styles.dropdownItem}
               onClick={() => { openModal('invite'); setDropdownOpen(false); }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-soft)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
               Invite People
             </button>
             <button
-              className="dropdown-item"
+              style={styles.dropdownItem}
               onClick={() => { openModal('settings', { type: 'server', guildId }); setDropdownOpen(false); }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-soft)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
               Portal Settings
             </button>
             <button
-              className="dropdown-item"
+              style={styles.dropdownItem}
               onClick={() => { openModal('settings', { type: 'server', guildId, initialSection: 'overview' }); setDropdownOpen(false); }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-soft)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
               Portal Profile
             </button>
-            <div className="dropdown-divider" />
+            <div style={styles.dropdownDivider} />
             <button
-              className="dropdown-item dropdown-danger"
+              style={styles.dropdownDanger}
               onClick={() => { openModal('leave-guild'); setDropdownOpen(false); }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-soft)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
               Leave Portal
             </button>
             {isOwner && (
               <button
-                className="dropdown-item dropdown-danger"
+                style={styles.dropdownDanger}
                 onClick={() => { openModal('delete-guild'); setDropdownOpen(false); }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#413d58'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 Delete Portal
               </button>
@@ -574,14 +1024,16 @@ export function ChannelSidebar() {
           </div>
         )}
 
-        <div className="channel-sidebar-header-actions" aria-label="Quick actions">
+        <div style={styles.headerActions} aria-label="Quick actions">
           {guildId ? (
             <>
               <button
                 type="button"
-                className="channel-sidebar-header-action"
+                style={styles.headerAction}
                 onClick={() => openModal('settings', { type: 'server', guildId })}
                 title="Portal settings"
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-soft)'; e.currentTarget.style.color = 'var(--text)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
               >
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
@@ -590,9 +1042,11 @@ export function ChannelSidebar() {
               </button>
               <button
                 type="button"
-                className="channel-sidebar-header-action"
+                style={styles.headerAction}
                 onClick={() => openModal('invite')}
                 title="Invite people"
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-soft)'; e.currentTarget.style.color = 'var(--text)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -606,9 +1060,11 @@ export function ChannelSidebar() {
           ) : (
             <button
               type="button"
-              className="channel-sidebar-header-action"
+              style={styles.headerAction}
               onClick={() => navigate('/settings')}
               title="Open settings"
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#413d58'; e.currentTarget.style.color = '#e8e4e0'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#a8a4b8'; }}
             >
               <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
@@ -619,60 +1075,93 @@ export function ChannelSidebar() {
         </div>
       </div>
 
-      <div className="channel-sidebar-list">
+      <div style={styles.list}>
         {!guildId && (
-          <>
-            <DmSearchBar />
-            <div className="dm-action-buttons">
-              <button
-                type="button"
-                className="dm-action-btn"
-                onClick={() => openModal('add-friend')}
-                title="Add a friend"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="8.5" cy="7" r="4" />
-                  <path d="M20 8v6" />
-                  <path d="M23 11h-6" />
+          <div style={styles.dmPanel}>
+            {/* Header section: Messages title + search + add friend */}
+            <div style={styles.dmPanelHeader}>
+              <div style={styles.dmPanelTitleRow}>
+                <h2 style={styles.dmPanelTitle}>
+                  Messages
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => openModal('add-friend')}
+                  title="Add a friend"
+                  aria-label="Add a friend"
+                  style={styles.dmPanelAddBtn}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '0.8';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="8.5" cy="7" r="4" />
+                    <path d="M20 8v6" />
+                    <path d="M23 11h-6" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Search bar with icon */}
+              <div style={styles.dmSearchWrapper as React.CSSProperties}>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  style={styles.dmSearchIcon as React.CSSProperties}
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35" />
                 </svg>
-                <span>Add Friend</span>
-              </button>
+                <DmSearchBar />
+              </div>
             </div>
 
-            <div className="channel-sidebar-section">
-              <span className="channel-sidebar-section-title">DMs</span>
+            {/* Conversation list (scrollable) */}
+            <div style={styles.dmList as React.CSSProperties}>
+              {dmChannels.length === 0 && (
+                <div style={styles.dmEmpty as React.CSSProperties}>
+                  No direct messages yet.
+                </div>
+              )}
+              {dmChannels.map((ch) => {
+                const meta = dmDirectoryById.get(ch.id);
+                const name = ch.name ?? meta?.name ?? (meta?.otherUserId ? dmUserNameById.get(meta.otherUserId) : null) ?? 'Direct Message';
+                const recipientId = meta?.otherUserId ?? '';
+                const recipientAvatar = meta?.otherUserId ? dmUsers.find(u => u.id === meta.otherUserId)?.avatarHash ?? null : null;
+                return (
+                  <DmListItem
+                    key={ch.id}
+                    channelId={ch.id}
+                    recipientName={name}
+                    recipientAvatar={recipientAvatar}
+                    recipientId={recipientId}
+                    lastMessage={meta?.lastMessageContent}
+                    lastMessageAt={meta?.lastMessageAt}
+                    unreadCount={unreadCountByChannel.get(ch.id)}
+                    channelType={ch.type}
+                  />
+                );
+              })}
             </div>
-            {dmChannels.length === 0 && (
-              <div className="channel-empty">No direct messages yet.</div>
-            )}
-            {dmChannels.map((ch) => {
-              const meta = dmDirectoryById.get(ch.id);
-              const name = ch.name ?? meta?.name ?? (meta?.otherUserId ? dmUserNameById.get(meta.otherUserId) : null) ?? 'Direct Message';
-              const recipientId = meta?.otherUserId ?? '';
-              const recipientAvatar = meta?.otherUserId ? dmUsers.find(u => u.id === meta.otherUserId)?.avatarHash ?? null : null;
-              return (
-                <DmListItem
-                  key={ch.id}
-                  channelId={ch.id}
-                  recipientName={name}
-                  recipientAvatar={recipientAvatar}
-                  recipientId={recipientId}
-                  lastMessage={meta?.lastMessageContent}
-                  lastMessageAt={meta?.lastMessageAt}
-                  unreadCount={unreadCountByChannel.get(ch.id)}
-                  channelType={ch.type}
-                />
-              );
-            })}
-          </>
+          </div>
         )}
 
         {guildId && (
           <>
-            <div className="channel-sidebar-section channel-sidebar-section-toggle">
+            <div style={styles.section}>
               <button
-                className="channel-sidebar-section-title"
+                style={styles.sectionTitle}
                 onClick={() => setTextOpen((prev) => !prev)}
                 type="button"
               >
@@ -680,18 +1169,20 @@ export function ChannelSidebar() {
                 <span>Text Channels</span>
               </button>
               <button
-                className="channel-sidebar-add"
+                style={styles.sectionAdd}
                 onClick={() => openModal('create-channel', { guildId, type: GUILD_TEXT })}
                 title="Create channel"
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-faint)'; }}
               >
                 +
               </button>
             </div>
             {textOpen && renderGuildChannels(guildTextChannelIds, 'text')}
 
-            <div className="channel-sidebar-section channel-sidebar-section-toggle">
+            <div style={styles.section}>
               <button
-                className="channel-sidebar-section-title"
+                style={styles.sectionTitle}
                 onClick={() => setVoiceOpen((prev) => !prev)}
                 type="button"
               >
@@ -699,9 +1190,11 @@ export function ChannelSidebar() {
                 <span>Voice Channels</span>
               </button>
               <button
-                className="channel-sidebar-add"
+                style={styles.sectionAdd}
                 onClick={() => openModal('create-channel', { guildId, type: GUILD_VOICE })}
                 title="Create channel"
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-faint)'; }}
               >
                 +
               </button>

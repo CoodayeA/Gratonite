@@ -65,11 +65,32 @@ export function resolveThemeV2(manifest?: ThemeManifestV2): ResolvedThemeResult 
   };
 }
 
+// Tokens to skip in light mode — let the CSS light theme handle surfaces/text
+const SKIP_IN_LIGHT_MODE = new Set([
+  'semantic/surface/base',
+  'semantic/surface/raised',
+  'semantic/surface/soft',
+  'semantic/surface/float',
+  'semantic/surface/input',
+  'semantic/text/primary',
+  'semantic/text/muted',
+  'semantic/text/faint',
+  'semantic/border/default',
+  'semantic/border/strong',
+  'semantic/status/danger',
+  'semantic/status/danger-bg',
+  'semantic/gradient/primary',
+]);
+
 export function applyThemeV2(theme: ThemeV2) {
   const root = document.documentElement;
   root.dataset['themeV2'] = 'true';
+  const isLight = root.dataset['colorMode'] === 'light';
 
   for (const [tokenKey, tokenValue] of Object.entries(theme.tokens)) {
+    // In light mode, skip dark-specific surface/text tokens so CSS handles them
+    if (isLight && SKIP_IN_LIGHT_MODE.has(tokenKey)) continue;
+
     root.style.setProperty(toCssVarName(tokenKey), tokenValue);
     const legacyVar = LEGACY_VAR_MAP[tokenKey];
     if (legacyVar) {

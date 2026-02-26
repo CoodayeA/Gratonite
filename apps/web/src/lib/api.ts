@@ -164,7 +164,17 @@ async function apiFetch<T>(
     return undefined as T;
   }
 
-  const body = await res.json();
+  let body: unknown;
+  try {
+    body = await res.json();
+  } catch {
+    throw new ApiRequestError(res.status, {
+      code: 'PARSE_ERROR',
+      message: res.ok
+        ? 'Invalid response from server'
+        : `Server error (${res.status}). Is the API running?`,
+    } as ApiError);
+  }
 
   if (!res.ok) {
     throw new ApiRequestError(res.status, body as ApiError);
@@ -366,6 +376,7 @@ export const api = {
       email: string;
       emailVerified: boolean;
       createdAt: string;
+      isAdmin: boolean;
       profile: {
         displayName: string;
         avatarHash: string | null;
@@ -378,7 +389,7 @@ export const api = {
         tier: string;
         previousAvatarHashes: string[];
         messageCount: number;
-      };
+      } | null;
     }>('/users/@me'),
 
     updateProfile: (data: { displayName?: string; bio?: string; pronouns?: string; accentColor?: string; primaryColor?: string }) =>
@@ -491,6 +502,12 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify({ status }),
       }),
+
+    updateCustomStatus: (data: { text: string | null; expiresAt: string | null }) =>
+      apiFetch<void>('/users/@me/status', { method: 'PATCH', body: JSON.stringify(data) }),
+
+    updateWidgets: (widgets: string[]) =>
+      apiFetch<void>('/users/@me/widgets', { method: 'PATCH', body: JSON.stringify({ widgets }) }),
   },
 
   profiles: {
@@ -646,6 +663,8 @@ export const api = {
       apiFetch<void>('/voice/leave', { method: 'POST' }),
     getChannelStates: (channelId: string) =>
       apiFetch<any[]>(`/channels/${channelId}/voice-states`),
+    getGuildVoiceStates: (guildId: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/voice-states`),
     getSoundboard: (guildId: string) =>
       apiFetch<Array<{
         id: string;
@@ -681,6 +700,21 @@ export const api = {
       }),
     deleteSoundboard: (guildId: string, soundId: string) =>
       apiFetch<void>(`/guilds/${guildId}/soundboard/${soundId}`, { method: 'DELETE' }),
+    getStageInstances: (guildId: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/stage-instances`),
+    requestToSpeak: (channelId: string) =>
+      apiFetch<void>(`/channels/${channelId}/voice/request-speak`, { method: 'PUT' }),
+    addSpeaker: (channelId: string, userId: string) =>
+      apiFetch<void>(`/channels/${channelId}/voice/speakers/${userId}`, { method: 'PUT' }),
+    removeSpeaker: (channelId: string, userId: string) =>
+      apiFetch<void>(`/channels/${channelId}/voice/speakers/${userId}`, { method: 'DELETE' }),
+    createStageInstance: (channelId: string, data: { topic: string }) =>
+      apiFetch<any>('/stage-instances', {
+        method: 'POST',
+        body: JSON.stringify({ channelId, ...data }),
+      }),
+    deleteStageInstance: (channelId: string) =>
+      apiFetch<void>(`/stage-instances/${channelId}`, { method: 'DELETE' }),
   },
 
   guilds: {
@@ -691,13 +725,13 @@ export const api = {
     getMembers: (guildId: string, limit = 100) =>
       apiFetch<GuildMember[]>(`/guilds/${guildId}/members?limit=${limit}`),
 
-    create: (data: { name: string; description?: string }) =>
+    create: (data: { name: string; description?: string; tags?: string[]; categories?: string[] }) =>
       apiFetch<Guild>('/guilds', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
 
-    update: (guildId: string, data: { name?: string; description?: string }) =>
+    update: (guildId: string, data: { name?: string; description?: string; tags?: string[]; categories?: string[] }) =>
       apiFetch<Guild>(`/guilds/${guildId}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
@@ -1026,6 +1060,130 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify({ status }),
       }),
+  },
+
+  shop: {
+    getItems: () =>
+      apiFetch<any[]>('/shop/items'),
+
+    getInventory: () =>
+      apiFetch<any[]>('/shop/inventory'),
+
+    purchase: (itemId: string) =>
+      apiFetch<any>('/shop/purchase', {
+        method: 'POST',
+        body: JSON.stringify({ itemId }),
+      }),
+  },
+
+  wiki: {
+    listPages: (channelId: string) =>
+      apiFetch<any[]>(`/channels/${channelId}/wiki`),
+
+    createPage: (channelId: string, data: { title: string; content: string }) =>
+      apiFetch<any>(`/channels/${channelId}/wiki`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    getPage: (pageId: string) =>
+      apiFetch<any>(`/wiki/${pageId}`),
+
+    updatePage: (pageId: string, data: { title?: string; content?: string }) =>
+      apiFetch<any>(`/wiki/${pageId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    deletePage: (pageId: string) =>
+      apiFetch<void>(`/wiki/${pageId}`, { method: 'DELETE' }),
+
+    getRevisions: (pageId: string) =>
+      apiFetch<any[]>(`/wiki/${pageId}/revisions`),
+
+    revertRevision: (pageId: string, revisionId: string) =>
+      apiFetch<any>(`/wiki/${pageId}/revert/${revisionId}`, { method: 'POST' }),
+  },
+
+  events: {
+    list: (guildId: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/scheduled-events`),
+
+    get: (guildId: string, eventId: string) =>
+      apiFetch<any>(`/guilds/${guildId}/scheduled-events/${eventId}`),
+
+    create: (
+      guildId: string,
+      data: {
+        name: string;
+        description?: string;
+        startTime: string;
+        endTime?: string;
+        entityType: 'STAGE' | 'VOICE' | 'EXTERNAL';
+        location?: string;
+        channelId?: string;
+      },
+    ) =>
+      apiFetch<any>(`/guilds/${guildId}/scheduled-events`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    update: (
+      guildId: string,
+      eventId: string,
+      data: { name?: string; description?: string; startTime?: string; endTime?: string; status?: string; location?: string },
+    ) =>
+      apiFetch<any>(`/guilds/${guildId}/scheduled-events/${eventId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    delete: (guildId: string, eventId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/scheduled-events/${eventId}`, { method: 'DELETE' }),
+
+    markInterested: (guildId: string, eventId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/scheduled-events/${eventId}/interested`, { method: 'PUT' }),
+
+    unmarkInterested: (guildId: string, eventId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/scheduled-events/${eventId}/interested`, { method: 'DELETE' }),
+  },
+
+  polls: {
+    list: (channelId: string) =>
+      apiFetch<any[]>(`/channels/${channelId}/polls`),
+    get: (pollId: string) =>
+      apiFetch<any>(`/polls/${pollId}`),
+    create: (channelId: string, data: { question: string; options: string[]; duration?: number; multiselect?: boolean }) =>
+      apiFetch<any>(`/channels/${channelId}/polls`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    vote: (pollId: string, optionIds: string[]) =>
+      apiFetch<void>(`/polls/${pollId}/answers`, {
+        method: 'POST',
+        body: JSON.stringify({ optionIds }),
+      }),
+    removeVote: (pollId: string) =>
+      apiFetch<void>(`/polls/${pollId}/answers/@me`, { method: 'DELETE' }),
+    end: (pollId: string) =>
+      apiFetch<void>(`/polls/${pollId}/expire`, { method: 'POST' }),
+    getVoters: (pollId: string, optionId: string) =>
+      apiFetch<any[]>(`/polls/${pollId}/answers/${optionId}/voters`),
+  },
+
+  scheduledMessages: {
+    list: (guildId: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/scheduled-messages`),
+    create: (guildId: string, data: { channelId: string; content: string; scheduledFor: string }) =>
+      apiFetch<any>(`/guilds/${guildId}/scheduled-messages`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    get: (guildId: string, messageId: string) =>
+      apiFetch<any>(`/guilds/${guildId}/scheduled-messages/${messageId}`),
+    delete: (guildId: string, messageId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/scheduled-messages/${messageId}`, { method: 'DELETE' }),
   },
 
   leaderboard: {

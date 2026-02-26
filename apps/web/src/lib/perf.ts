@@ -17,6 +17,8 @@ export function measure(name: string, start: string, end: string) {
     if (last) {
       console.debug(`[perf] ${name}: ${last.duration.toFixed(1)}ms`);
     }
+  } catch {
+    // Mark may not exist (e.g. React StrictMode double-invoke clears it)
   } finally {
     performance.clearMarks(start);
     performance.clearMarks(end);

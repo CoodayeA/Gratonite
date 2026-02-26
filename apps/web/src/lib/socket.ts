@@ -30,7 +30,7 @@ export function connectSocket(): GratoniteSocket {
   let derivedWsUrl: string | null = null;
   if (!explicitWsUrl && apiBase) {
     try {
-      const apiUrl = new URL(apiBase, typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173');
+      const apiUrl = new URL(apiBase, window.location.origin);
       apiUrl.pathname = '';
       apiUrl.search = '';
       apiUrl.hash = '';
@@ -43,7 +43,7 @@ export function connectSocket(): GratoniteSocket {
   const wsUrl =
     explicitWsUrl ??
     derivedWsUrl ??
-    (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4000');
+    window.location.origin;
 
   socket = io(wsUrl, {
     transports: ['websocket', 'polling'],
@@ -63,16 +63,14 @@ export function connectSocket(): GratoniteSocket {
 
   socket.on('READY', () => {
     startHeartbeat();
-    console.log('[Gateway] Connected and ready');
   });
 
-  socket.on('disconnect', (reason) => {
+  socket.on('disconnect', () => {
     stopHeartbeat();
-    console.log('[Gateway] Disconnected:', reason);
   });
 
-  socket.on('connect_error', (err) => {
-    console.error('[Gateway] Connection error:', err.message);
+  socket.on('connect_error', () => {
+    // Reconnection is handled automatically by socket.io
   });
 
   socket.connect();

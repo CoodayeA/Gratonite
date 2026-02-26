@@ -1,9 +1,217 @@
-import { useEffect, useMemo, useState } from 'react';
+import { type CSSProperties, useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useGuildsStore } from '@/stores/guilds.store';
 import { useAuthStore } from '@/stores/auth.store';
 import { getErrorMessage } from '@/lib/utils';
+
+/* ------------------------------------------------------------------ */
+/*  Inline style objects                                               */
+/* ------------------------------------------------------------------ */
+
+const styles = {
+  section: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+  },
+  headerRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  heading: {
+    fontSize: 18,
+    fontWeight: 700,
+    color: '#e8e4e0',
+    margin: 0,
+  },
+  muted: {
+    fontSize: 13,
+    color: '#a8a4b8',
+    margin: 0,
+  },
+  actions: {
+    display: 'flex',
+    gap: 8,
+    flexShrink: 0,
+  },
+  resetBtn: {
+    background: 'transparent',
+    border: '1px solid #4a4660',
+    color: '#a8a4b8',
+    borderRadius: 6,
+    padding: '4px 12px',
+    fontSize: 12,
+    cursor: 'pointer',
+  },
+  error: {
+    background: 'rgba(240,71,71,0.12)',
+    color: '#f04747',
+    border: '1px solid rgba(240,71,71,0.3)',
+    borderRadius: 8,
+    padding: '8px 12px',
+    fontSize: 13,
+  },
+  feedback: {
+    background: 'rgba(212,175,55,0.10)',
+    color: '#d4af37',
+    border: '1px solid rgba(212,175,55,0.25)',
+    borderRadius: 8,
+    padding: '8px 12px',
+    fontSize: 13,
+  },
+  tabRow: {
+    display: 'flex',
+    gap: 8,
+    flexWrap: 'wrap' as const,
+    marginBottom: 12,
+  },
+  tab: {
+    background: '#353348',
+    border: '1px solid #4a4660',
+    color: '#a8a4b8',
+    borderRadius: 16,
+    padding: '5px 14px',
+    fontSize: 13,
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  },
+  tabActive: {
+    background: '#d4af37',
+    border: '1px solid #d4af37',
+    color: '#1a1a2e',
+    borderRadius: 16,
+    padding: '5px 14px',
+    fontSize: 13,
+    cursor: 'pointer',
+    fontWeight: 600,
+  },
+  card: {
+    background: '#25243a',
+    borderRadius: 8,
+    border: '1px solid #4a4660',
+    padding: 16,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: '#e8e4e0',
+    marginBottom: 8,
+  },
+  inputField: {
+    width: '100%',
+    background: '#25243a',
+    border: '1px solid #4a4660',
+    borderRadius: 6,
+    padding: '8px 12px',
+    fontSize: 13,
+    color: '#e8e4e0',
+    outline: 'none',
+    boxSizing: 'border-box' as const,
+  },
+  row: {
+    display: 'flex',
+    gap: 8,
+    alignItems: 'center',
+  },
+  list: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  },
+  listItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '8px 12px',
+    borderRadius: 6,
+    background: '#353348',
+  },
+  memberItem: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: '10px 12px',
+    borderRadius: 6,
+    background: '#353348',
+    flexWrap: 'wrap' as const,
+  },
+  memberMeta: {
+    flex: 1,
+    minWidth: 0,
+  },
+  memberName: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: '#e8e4e0',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+  },
+  memberSubline: {
+    fontSize: 11,
+    color: '#6e6a80',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+    marginTop: 2,
+  },
+  memberActions: {
+    display: 'flex',
+    gap: 6,
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  badge: {
+    fontSize: 11,
+    color: '#a8a4b8',
+    background: '#413d58',
+    borderRadius: 10,
+    padding: '2px 8px',
+    whiteSpace: 'nowrap' as const,
+  },
+  statPill: {
+    fontSize: 12,
+    color: '#a8a4b8',
+    background: '#413d58',
+    borderRadius: 10,
+    padding: '2px 10px',
+    whiteSpace: 'nowrap' as const,
+  },
+  statsRow: {
+    display: 'flex',
+    gap: 8,
+    flexWrap: 'wrap' as const,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  smallBtn: {
+    background: 'transparent',
+    border: '1px solid #4a4660',
+    color: '#a8a4b8',
+    borderRadius: 6,
+    padding: '3px 10px',
+    fontSize: 12,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+  },
+  dangerBtn: {
+    background: 'transparent',
+    border: '1px solid rgba(240,71,71,0.4)',
+    color: '#f04747',
+    borderRadius: 6,
+    padding: '3px 10px',
+    fontSize: 12,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+  },
+};
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
 
 interface MembersSectionProps {
   guildId: string;
@@ -25,6 +233,7 @@ export function MembersSection({ guildId }: MembersSectionProps) {
   const [banSearch, setBanSearch] = useState('');
   const [banSort, setBanSort] = useState<'recent' | 'name'>('recent');
   const [expandedBanReasons, setExpandedBanReasons] = useState<Set<string>>(new Set());
+  const [activePanel, setActivePanel] = useState<'members' | 'bans'>('members');
 
   const { data: members = [] } = useQuery({
     queryKey: ['members', guildId],
@@ -45,7 +254,7 @@ export function MembersSection({ guildId }: MembersSectionProps) {
   });
 
   const bannedUserIds = useMemo(
-    () => Array.from(new Set((bans as Array<any>).map((ban) => String(ban.userId)).filter(Boolean))),
+    () => Array.from(new Set((Array.isArray(bans) ? bans : []).map((ban: any) => String(ban.userId)).filter(Boolean))),
     [bans],
   );
 
@@ -92,11 +301,13 @@ export function MembersSection({ guildId }: MembersSectionProps) {
     return () => window.clearTimeout(timer);
   }, [memberActionFeedback]);
 
-  const everyoneRole = useMemo(() => roles.find((role) => role.name === '@everyone'), [roles]);
+  const safeRoles = Array.isArray(roles) ? roles : [];
+  const safeMembers = Array.isArray(members) ? members : [];
+  const everyoneRole = useMemo(() => safeRoles.find((role) => role.name === '@everyone'), [safeRoles]);
 
   const filteredMembers = useMemo(() => {
     const q = memberSearch.trim().toLowerCase();
-    let next = members;
+    let next = safeMembers;
     if (memberListFilter === 'owners') {
       next = next.filter((member) => guild?.ownerId && guild.ownerId === member.userId);
     } else if (memberListFilter === 'moderatable') {
@@ -111,7 +322,7 @@ export function MembersSection({ guildId }: MembersSectionProps) {
         member.userId;
       return String(displayName).toLowerCase().includes(q) || String(member.userId).includes(q);
     });
-  }, [members, memberSearch, memberListFilter, guild?.ownerId, currentUserId]);
+  }, [safeMembers, memberSearch, memberListFilter, guild?.ownerId, currentUserId]);
 
   const bannedUserMap = useMemo(() => {
     const map = new Map<string, { username: string; displayName: string }>();
@@ -121,7 +332,7 @@ export function MembersSection({ guildId }: MembersSectionProps) {
 
   const filteredSortedBans = useMemo(() => {
     const q = banSearch.trim().toLowerCase();
-    const rows = [...(bans as Array<any>)].filter((ban) => {
+    const rows = (Array.isArray(bans) ? [...bans] : []).filter((ban: any) => {
       if (!q) return true;
       const summary = bannedUserMap.get(String(ban.userId));
       return (
@@ -217,251 +428,270 @@ export function MembersSection({ guildId }: MembersSectionProps) {
   }
 
   return (
-    <section className="settings-section">
-      <div className="server-settings-header-row">
+    <section style={styles.section}>
+      <div style={styles.headerRow}>
         <div>
-          <h2 className="settings-shell-section-heading">Members &amp; Moderation</h2>
-          <p className="server-settings-muted">
+          <h2 style={styles.heading}>Members &amp; Moderation</h2>
+          <p style={styles.muted}>
             Kick and ban portal members, and manage the current ban list. Only portal owners can use these actions.
           </p>
         </div>
+        <div style={styles.actions}>
+          <button
+            type="button"
+            style={styles.resetBtn}
+            onClick={resetView}
+            disabled={Boolean(memberActionUserId)}
+          >
+            Reset
+          </button>
+        </div>
       </div>
 
-      {error && <div className="modal-error">{error}</div>}
+      {error && <div style={styles.error}>{error}</div>}
+      {memberActionFeedback && (
+        <div style={styles.feedback} role="status" aria-live="polite">
+          {memberActionFeedback}
+        </div>
+      )}
 
-      <div className="channel-permission-card" style={{ marginBottom: 12 }}>
-        <div className="server-settings-header-row" style={{ marginBottom: 8 }}>
-          <div className="channel-permission-title">Member Actions</div>
-          <div className="server-settings-actions">
+      {/* Panel navigation */}
+      <div style={styles.tabRow}>
+        <button
+          type="button"
+          style={activePanel === 'members' ? styles.tabActive : styles.tab}
+          onClick={() => setActivePanel('members')}
+        >
+          Members ({members.length})
+        </button>
+        <button
+          type="button"
+          style={activePanel === 'bans' ? styles.tabActive : styles.tab}
+          onClick={() => setActivePanel('bans')}
+        >
+          Banned ({bans.length})
+        </button>
+      </div>
+
+      {/* Members panel */}
+      {activePanel === 'members' && (
+        <div style={styles.card}>
+          <div style={styles.statsRow}>
             <button
               type="button"
-              className="channel-permission-remove"
-              onClick={resetView}
-              disabled={Boolean(memberActionUserId)}
+              style={memberListFilter === 'all' ? styles.tabActive : styles.tab}
+              onClick={() => setMemberListFilter('all')}
             >
-              Reset Member View
+              All
+            </button>
+            <button
+              type="button"
+              style={memberListFilter === 'moderatable' ? styles.tabActive : styles.tab}
+              onClick={() => setMemberListFilter('moderatable')}
+            >
+              Moderatable
+            </button>
+            <button
+              type="button"
+              style={memberListFilter === 'owners' ? styles.tabActive : styles.tab}
+              onClick={() => setMemberListFilter('owners')}
+            >
+              Owners
             </button>
           </div>
-        </div>
-        <div className="server-settings-inline-stats">
-          <button
-            type="button"
-            className={`discover-tag ${memberListFilter === 'all' ? 'active' : ''}`}
-            onClick={() => setMemberListFilter('all')}
-          >
-            All
-          </button>
-          <button
-            type="button"
-            className={`discover-tag ${memberListFilter === 'moderatable' ? 'active' : ''}`}
-            onClick={() => setMemberListFilter('moderatable')}
-          >
-            Moderatable
-          </button>
-          <button
-            type="button"
-            className={`discover-tag ${memberListFilter === 'owners' ? 'active' : ''}`}
-            onClick={() => setMemberListFilter('owners')}
-          >
-            Owners
-          </button>
-          <span className="server-settings-stat-pill">{bans.length} banned</span>
-        </div>
-        <div className="channel-permission-row" style={{ marginBottom: 8 }}>
-          <input
-            className="input-field"
-            value={memberSearch}
-            onChange={(e) => setMemberSearch(e.target.value)}
-            placeholder="Search members by name or ID"
-          />
-        </div>
-        <div className="channel-permission-row">
-          <input
-            className="input-field"
-            value={banReason}
-            onChange={(e) => setBanReason(e.target.value)}
-            placeholder="Ban reason (optional)"
-            maxLength={200}
-          />
-        </div>
-        <div className="server-settings-muted" style={{ marginTop: 8 }}>
-          {filteredMembers.length} member{filteredMembers.length === 1 ? '' : 's'} shown
-        </div>
-        {memberActionFeedback && (
-          <div className="server-settings-feedback" style={{ marginTop: 4 }} role="status" aria-live="polite">
-            {memberActionFeedback}
+          <div style={{ ...styles.row, marginBottom: 8 }}>
+            <input
+              style={styles.inputField}
+              value={memberSearch}
+              onChange={(e) => setMemberSearch(e.target.value)}
+              placeholder="Search members by name or ID"
+            />
           </div>
-        )}
-      </div>
+          <div style={{ ...styles.row, marginBottom: 8 }}>
+            <input
+              style={styles.inputField}
+              value={banReason}
+              onChange={(e) => setBanReason(e.target.value)}
+              placeholder="Ban reason (optional, applies to next ban action)"
+              maxLength={200}
+            />
+          </div>
+          <div style={{ ...styles.muted, marginBottom: 8 }}>
+            {filteredMembers.length} member{filteredMembers.length === 1 ? '' : 's'} shown
+          </div>
 
-      <div className="channel-permission-list">
-        {filteredMembers.length === 0 && (
-          <div className="server-settings-muted">No members match the current search.</div>
-        )}
-        {filteredMembers.map((member) => {
-          const profile = (member as any).user as
-            | { id?: string; username?: string; displayName?: string; avatarHash?: string | null }
-            | undefined;
-          const displayName = profile?.displayName ?? profile?.username ?? member.nickname ?? member.userId;
-          const isSelf = Boolean(currentUserId && currentUserId === member.userId);
-          const isOwner = Boolean(guild?.ownerId && guild.ownerId === member.userId);
-          const isBusy = memberActionUserId === member.userId;
-          const actionsDisabled = isBusy || isSelf || isOwner;
-          const disabledReason = isOwner ? 'Owner' : isSelf ? 'You' : '';
-          return (
-            <div key={member.userId} className="channel-permission-item server-member-admin-item">
-              <div className="server-member-admin-meta">
-                <div className="server-member-admin-name">{displayName}</div>
-                <div className="server-member-admin-subline">
-                  ID: {member.userId}
-                  {member.nickname ? ` • Nickname: ${member.nickname}` : ''}
-                  {Array.isArray(member.roleIds)
-                    ? ` • Roles: ${Math.max(0, member.roleIds.filter((id) => String(id) !== everyoneRole?.id).length)}`
-                    : ''}
-                  {isOwner ? ' • Owner' : ''}
-                  {isSelf ? ' • You' : ''}
-                  {member.communicationDisabledUntil ? ' • Timed out' : ''}
-                </div>
-              </div>
-              <div className="server-member-admin-actions">
-                <button
-                  type="button"
-                  className="channel-permission-remove"
-                  onClick={() => copyTextToClipboard(String(member.userId), 'Copied member ID.')}
-                  disabled={isBusy}
-                  title="Copy member ID"
-                >
-                  Copy ID
-                </button>
-                <button
-                  type="button"
-                  className="channel-permission-remove"
-                  onClick={() => handleKickMember(member.userId)}
-                  disabled={actionsDisabled}
-                  title={isOwner ? 'Cannot moderate the portal owner' : isSelf ? 'Use Leave Portal to leave yourself' : undefined}
-                >
-                  {isBusy ? 'Working...' : 'Kick'}
-                </button>
-                <button
-                  type="button"
-                  className="emoji-admin-delete"
-                  onClick={() => handleBanMember(member.userId)}
-                  disabled={actionsDisabled}
-                  title={isOwner ? 'Cannot moderate the portal owner' : isSelf ? 'Cannot ban your own account' : undefined}
-                >
-                  {isBusy ? 'Working...' : 'Ban'}
-                </button>
-                {disabledReason && (
-                  <span className="channel-permission-badge">{disabledReason}</span>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="channel-permission-card" style={{ marginTop: 12 }}>
-        <div className="channel-permission-title">Banned Users</div>
-        <div className="server-settings-inline-stats" style={{ marginBottom: 8 }}>
-          <button
-            type="button"
-            className={`discover-tag ${banSort === 'recent' ? 'active' : ''}`}
-            onClick={() => setBanSort('recent')}
-          >
-            Recent
-          </button>
-          <button
-            type="button"
-            className={`discover-tag ${banSort === 'name' ? 'active' : ''}`}
-            onClick={() => setBanSort('name')}
-          >
-            Name
-          </button>
-          <span className="server-settings-stat-pill">{filteredSortedBans.length} shown</span>
-          <button
-            type="button"
-            className="channel-permission-remove"
-            onClick={async () => {
-              const ids = filteredSortedBans.map((ban: any) => String(ban.userId)).join('\n');
-              try {
-                await navigator.clipboard.writeText(ids);
-                setMemberActionFeedback(`Copied ${filteredSortedBans.length} banned user ID${filteredSortedBans.length === 1 ? '' : 's'}.`);
-              } catch {
-                setMemberActionFeedback('Failed to copy banned user IDs.');
-              }
-            }}
-            disabled={filteredSortedBans.length === 0}
-          >
-            Copy IDs
-          </button>
-        </div>
-        <input
-          className="input-field"
-          value={banSearch}
-          onChange={(e) => setBanSearch(e.target.value)}
-          placeholder="Search banned users by name, username, ID, or reason"
-          style={{ marginBottom: 8 }}
-        />
-        <div className="channel-permission-list" style={{ marginTop: 10 }}>
-          {bans.length === 0 && <div className="server-settings-muted">No bans in this portal.</div>}
-          {bans.length > 0 && filteredSortedBans.length === 0 && (
-            <div className="server-settings-muted">No banned users match the current search.</div>
-          )}
-          {filteredSortedBans.map((ban: any) => {
-            const bannedSummary = bannedUserMap.get(String(ban.userId));
-            const banKey = `${ban.guildId}:${ban.userId}`;
-            return (
-              <div key={banKey} className="channel-permission-item server-member-admin-item">
-                <div className="server-member-admin-meta">
-                  <div className="server-member-admin-name">
-                    {bannedSummary?.displayName ?? bannedSummary?.username ?? ban.userId}
+          <div style={styles.list}>
+            {filteredMembers.length === 0 && (
+              <div style={styles.muted}>No members match the current search.</div>
+            )}
+            {filteredMembers.map((member) => {
+              const profile = (member as any).user as
+                | { id?: string; username?: string; displayName?: string; avatarHash?: string | null }
+                | undefined;
+              const displayName = profile?.displayName ?? profile?.username ?? member.nickname ?? member.userId;
+              const isSelf = Boolean(currentUserId && currentUserId === member.userId);
+              const isOwner = Boolean(guild?.ownerId && guild.ownerId === member.userId);
+              const isBusy = memberActionUserId === member.userId;
+              const actionsDisabled = isBusy || isSelf || isOwner;
+              const disabledReason = isOwner ? 'Owner' : isSelf ? 'You' : '';
+              return (
+                <div key={member.userId} style={styles.memberItem}>
+                  <div style={styles.memberMeta}>
+                    <div style={styles.memberName}>{displayName}</div>
+                    <div style={styles.memberSubline}>
+                      ID: {member.userId}
+                      {member.nickname ? ` | Nickname: ${member.nickname}` : ''}
+                      {Array.isArray(member.roleIds)
+                        ? ` | Roles: ${Math.max(0, member.roleIds.filter((id) => String(id) !== everyoneRole?.id).length)}`
+                        : ''}
+                      {isOwner ? ' | Owner' : ''}
+                      {isSelf ? ' | You' : ''}
+                      {member.communicationDisabledUntil ? ' | Timed out' : ''}
+                    </div>
                   </div>
-                  <div className="server-member-admin-subline">
-                    {bannedSummary?.username ? `@${bannedSummary.username} • ` : ''}
-                    ID: {ban.userId}
-                    {' • '}
-                    {(() => {
-                      const reason = String(ban.reason ?? '');
-                      const expanded = expandedBanReasons.has(banKey);
-                      if (!reason) return 'No reason provided';
-                      if (reason.length <= 96 || expanded) return `Reason: ${reason}`;
-                      return `Reason: ${reason.slice(0, 96)}...`;
-                    })()}
-                    {ban.createdAt ? ` • ${new Date(ban.createdAt).toLocaleString()}` : ''}
-                  </div>
-                </div>
-                <div className="server-member-admin-actions">
-                  {String(ban.reason ?? '').length > 96 && (
+                  <div style={styles.memberActions}>
                     <button
                       type="button"
-                      className="channel-permission-remove"
-                      onClick={() => {
-                        setExpandedBanReasons((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(banKey)) next.delete(banKey);
-                          else next.add(banKey);
-                          return next;
-                        });
-                      }}
+                      style={styles.smallBtn}
+                      onClick={() => copyTextToClipboard(String(member.userId), 'Copied member ID.')}
+                      disabled={isBusy}
+                      title="Copy member ID"
+                    >
+                      Copy ID
+                    </button>
+                    <button
+                      type="button"
+                      style={styles.smallBtn}
+                      onClick={() => handleKickMember(member.userId)}
+                      disabled={actionsDisabled}
+                      title={isOwner ? 'Cannot moderate the portal owner' : isSelf ? 'Use Leave Portal to leave yourself' : undefined}
+                    >
+                      {isBusy ? 'Working...' : 'Kick'}
+                    </button>
+                    <button
+                      type="button"
+                      style={styles.dangerBtn}
+                      onClick={() => handleBanMember(member.userId)}
+                      disabled={actionsDisabled}
+                      title={isOwner ? 'Cannot moderate the portal owner' : isSelf ? 'Cannot ban your own account' : undefined}
+                    >
+                      {isBusy ? 'Working...' : 'Ban'}
+                    </button>
+                    {disabledReason && (
+                      <span style={styles.badge}>{disabledReason}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Bans panel */}
+      {activePanel === 'bans' && (
+        <div style={styles.card}>
+          <div style={styles.cardTitle}>Banned Users</div>
+          <div style={styles.statsRow}>
+            <button
+              type="button"
+              style={banSort === 'recent' ? styles.tabActive : styles.tab}
+              onClick={() => setBanSort('recent')}
+            >
+              Recent
+            </button>
+            <button
+              type="button"
+              style={banSort === 'name' ? styles.tabActive : styles.tab}
+              onClick={() => setBanSort('name')}
+            >
+              Name
+            </button>
+            <span style={styles.statPill}>{filteredSortedBans.length} shown</span>
+            <button
+              type="button"
+              style={styles.smallBtn}
+              onClick={async () => {
+                const ids = filteredSortedBans.map((ban: any) => String(ban.userId)).join('\n');
+                try {
+                  await navigator.clipboard.writeText(ids);
+                  setMemberActionFeedback(`Copied ${filteredSortedBans.length} banned user ID${filteredSortedBans.length === 1 ? '' : 's'}.`);
+                } catch {
+                  setMemberActionFeedback('Failed to copy banned user IDs.');
+                }
+              }}
+              disabled={filteredSortedBans.length === 0}
+            >
+              Copy IDs
+            </button>
+          </div>
+          <input
+            style={{ ...styles.inputField, marginBottom: 8 }}
+            value={banSearch}
+            onChange={(e) => setBanSearch(e.target.value)}
+            placeholder="Search banned users by name, username, ID, or reason"
+          />
+          <div style={styles.list}>
+            {bans.length === 0 && <div style={styles.muted}>No bans in this portal.</div>}
+            {bans.length > 0 && filteredSortedBans.length === 0 && (
+              <div style={styles.muted}>No banned users match the current search.</div>
+            )}
+            {filteredSortedBans.map((ban: any) => {
+              const bannedSummary = bannedUserMap.get(String(ban.userId));
+              const banKey = `${ban.guildId}:${ban.userId}`;
+              return (
+                <div key={banKey} style={styles.memberItem}>
+                  <div style={styles.memberMeta}>
+                    <div style={styles.memberName}>
+                      {bannedSummary?.displayName ?? bannedSummary?.username ?? ban.userId}
+                    </div>
+                    <div style={styles.memberSubline}>
+                      {bannedSummary?.username ? `@${bannedSummary.username} | ` : ''}
+                      ID: {ban.userId}
+                      {' | '}
+                      {(() => {
+                        const reason = String(ban.reason ?? '');
+                        const expanded = expandedBanReasons.has(banKey);
+                        if (!reason) return 'No reason provided';
+                        if (reason.length <= 96 || expanded) return `Reason: ${reason}`;
+                        return `Reason: ${reason.slice(0, 96)}...`;
+                      })()}
+                      {ban.createdAt ? ` | ${new Date(ban.createdAt).toLocaleString()}` : ''}
+                    </div>
+                  </div>
+                  <div style={styles.memberActions}>
+                    {String(ban.reason ?? '').length > 96 && (
+                      <button
+                        type="button"
+                        style={styles.smallBtn}
+                        onClick={() => {
+                          setExpandedBanReasons((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(banKey)) next.delete(banKey);
+                            else next.add(banKey);
+                            return next;
+                          });
+                        }}
+                        disabled={memberActionUserId === ban.userId}
+                      >
+                        {expandedBanReasons.has(banKey) ? 'Less' : 'More'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      style={styles.smallBtn}
+                      onClick={() => handleUnbanMember(ban.userId)}
                       disabled={memberActionUserId === ban.userId}
                     >
-                      {expandedBanReasons.has(banKey) ? 'Less' : 'More'}
+                      {memberActionUserId === ban.userId ? 'Working...' : 'Unban'}
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    className="channel-permission-remove"
-                    onClick={() => handleUnbanMember(ban.userId)}
-                    disabled={memberActionUserId === ban.userId}
-                  >
-                    {memberActionUserId === ban.userId ? 'Working...' : 'Unban'}
-                  </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }

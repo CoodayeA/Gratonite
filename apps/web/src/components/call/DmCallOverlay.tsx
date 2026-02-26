@@ -1,8 +1,144 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { RoomEvent, Track, type RemoteTrack, ConnectionQuality, type RemoteParticipant, type Participant } from 'livekit-client';
 import { useCallStore } from '@/stores/call.store';
 import { useChannelsStore } from '@/stores/channels.store';
 import { endDmCall, toggleMute, toggleVideo, toggleScreenShare } from '@/lib/dmCall';
+
+const styles = {
+  overlay: {
+    position: 'fixed',
+    right: 16,
+    bottom: 16,
+    width: 320,
+    zIndex: 220,
+  } as React.CSSProperties,
+
+  card: {
+    background: 'rgba(14, 21, 34, 0.95)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-lg)',
+    padding: 14,
+    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.45)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+  } as React.CSSProperties,
+
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  } as React.CSSProperties,
+
+  title: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: 'var(--text)',
+  } as React.CSSProperties,
+
+  subtitle: {
+    fontSize: 11,
+    color: 'var(--text-muted)',
+    marginTop: 4,
+  } as React.CSSProperties,
+
+  endBtn: {
+    background: 'rgba(255, 107, 107, 0.15)',
+    border: '1px solid rgba(255, 107, 107, 0.35)',
+    color: 'var(--danger)',
+    borderRadius: 999,
+    padding: '6px 12px',
+    fontSize: 12,
+    cursor: 'pointer',
+  } as React.CSSProperties,
+
+  body: {
+    display: 'grid',
+    gap: 8,
+  } as React.CSSProperties,
+
+  grid: {
+    display: 'grid',
+    gap: 8,
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+  } as React.CSSProperties,
+
+  video: {
+    position: 'relative',
+    height: 160,
+    borderRadius: 'var(--radius-md)',
+    overflow: 'hidden',
+    background: 'rgba(0, 0, 0, 0.4)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    display: 'grid',
+    placeItems: 'center',
+    color: 'var(--text-faint)',
+    fontSize: 12,
+  } as React.CSSProperties,
+
+  videoElement: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  } as React.CSSProperties,
+
+  placeholder: {
+    color: 'var(--text-faint)',
+    fontSize: 12,
+  } as React.CSSProperties,
+
+  controls: {
+    display: 'flex',
+    gap: 10,
+  } as React.CSSProperties,
+
+  btn: {
+    flex: 1,
+    padding: '8px 12px',
+    borderRadius: 10,
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    background: 'rgba(255, 255, 255, 0.04)',
+    color: 'var(--text)',
+    fontSize: 12,
+    cursor: 'pointer',
+  } as React.CSSProperties,
+
+  btnActive: {
+    flex: 1,
+    padding: '8px 12px',
+    borderRadius: 10,
+    background: 'rgba(255, 255, 255, 0.04)',
+    color: 'var(--text)',
+    fontSize: 12,
+    cursor: 'pointer',
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: 'rgba(212, 175, 55, 0.5)',
+    boxShadow: '0 0 10px rgba(212, 175, 55, 0.2)',
+  } as React.CSSProperties,
+
+  nameplate: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '4px 8px',
+    background: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 4,
+    fontSize: 13,
+    color: '#fff',
+  } as React.CSSProperties,
+
+  qualityDot: {
+    width: 8,
+    height: 8,
+    borderRadius: '50%',
+    flexShrink: 0,
+  } as React.CSSProperties,
+};
 
 export function DmCallOverlay() {
   const { status, channelId, muted, videoEnabled, screenShareEnabled, error, localVideoTrack, room, outgoingCall } = useCallStore();
@@ -66,7 +202,7 @@ export function DmCallOverlay() {
   }, [room]);
 
   const handlePiP = async () => {
-    const videoEl = document.querySelector('.dm-call-video.is-live video') as HTMLVideoElement | null;
+    const videoEl = document.querySelector('[data-dm-call-live] video') as HTMLVideoElement | null;
     if (!videoEl) return;
     try {
       if (document.pictureInPictureElement) {
@@ -83,30 +219,30 @@ export function DmCallOverlay() {
   if (channel?.type === 'GUILD_VOICE' || channel?.type === 'GUILD_STAGE_VOICE') return null;
 
   return (
-    <div className="dm-call-overlay">
-      <div className="dm-call-card">
-        <div className="dm-call-header">
+    <div style={styles.overlay}>
+      <div style={styles.card}>
+        <div style={styles.header}>
           <div>
-            <div className="dm-call-title">Direct Message Call</div>
-            <div className="dm-call-subtitle">
-              {status === 'connecting' && 'Connecting…'}
+            <div style={styles.title}>Direct Message Call</div>
+            <div style={styles.subtitle}>
+              {status === 'connecting' && 'Connecting\u2026'}
               {status === 'connected' && 'Live'}
               {status === 'error' && (error ?? 'Call failed')}
-              {outgoingCall?.status === 'ringing' && 'Ringing…'}
+              {outgoingCall?.status === 'ringing' && 'Ringing\u2026'}
               {outgoingCall?.status === 'declined' && 'Declined'}
               {outgoingCall?.status === 'timeout' && 'No answer'}
             </div>
           </div>
-          <button className="dm-call-end" onClick={endDmCall}>End</button>
+          <button style={styles.endBtn} onClick={endDmCall}>End</button>
         </div>
 
-        <div className="dm-call-body">
-          <div className="dm-call-grid">
-            <div className={`dm-call-video ${videoEnabled ? 'is-live' : ''}`}>
+        <div style={styles.body}>
+          <div style={styles.grid}>
+            <div style={styles.video} {...(videoEnabled ? { 'data-dm-call-live': true } : {})}>
               {videoEnabled ? (
-                <video ref={videoRef} autoPlay muted playsInline />
+                <video ref={videoRef} autoPlay muted playsInline style={styles.videoElement} />
               ) : (
-                <div className="dm-call-placeholder">Video off</div>
+                <div style={styles.placeholder}>Video off</div>
               )}
             </div>
             {remoteTracks.filter((t) => t.kind === 'video').map((item) => (
@@ -118,17 +254,17 @@ export function DmCallOverlay() {
           </div>
         </div>
 
-        <div className="dm-call-controls">
-          <button className={`dm-call-btn ${muted ? 'is-active' : ''}`} onClick={toggleMute}>
+        <div style={styles.controls}>
+          <button style={muted ? styles.btnActive : styles.btn} onClick={toggleMute}>
             {muted ? 'Unmute' : 'Mute'}
           </button>
-          <button className={`dm-call-btn ${videoEnabled ? 'is-active' : ''}`} onClick={toggleVideo}>
+          <button style={videoEnabled ? styles.btnActive : styles.btn} onClick={toggleVideo}>
             {videoEnabled ? 'Stop Video' : 'Start Video'}
           </button>
-          <button className={`dm-call-btn ${screenShareEnabled ? 'is-active' : ''}`} onClick={toggleScreenShare}>
+          <button style={screenShareEnabled ? styles.btnActive : styles.btn} onClick={toggleScreenShare}>
             {screenShareEnabled ? 'Stop Share' : 'Share Screen'}
           </button>
-          <button className="dm-call-btn" onClick={handlePiP} title="Picture-in-Picture">
+          <button style={styles.btn} onClick={handlePiP} title="Picture-in-Picture">
             PiP
           </button>
         </div>
@@ -156,11 +292,11 @@ function RemoteVideoTile({ track, identity, quality }: { track: RemoteTrack; ide
     : '#888';
 
   return (
-    <div className="dm-call-video is-live">
-      <video ref={ref} autoPlay playsInline />
+    <div style={styles.video} data-dm-call-live>
+      <video ref={ref} autoPlay playsInline style={styles.videoElement} />
       {identity && (
-        <div className="video-nameplate">
-          <span className="quality-dot" style={{ backgroundColor: qualityColor }} />
+        <div style={styles.nameplate}>
+          <span style={{ ...styles.qualityDot, backgroundColor: qualityColor }} />
           <span>{identity}</span>
         </div>
       )}

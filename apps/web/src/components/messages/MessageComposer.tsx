@@ -17,10 +17,187 @@ import { startInteraction, endInteractionAfterPaint } from '@/lib/perf';
 import { EmojiPicker } from '@/components/ui/EmojiPicker';
 import type { Message } from '@gratonite/types';
 
+interface GuildEmoji {
+  id: string;
+  name: string;
+  url: string;
+  animated: boolean;
+}
+
 interface MessageComposerProps {
   channelId: string;
   placeholder?: string;
 }
+
+const styles = {
+  composer: {
+    padding: '0 16px 16px',
+    flexShrink: 0,
+  } as React.CSSProperties,
+  row: {
+    display: 'flex',
+    alignItems: 'flex-end',
+    gap: 8,
+  } as React.CSSProperties,
+  shell: {
+    width: '100%',
+    display: 'grid',
+    minWidth: 0,
+    maxWidth: '100%',
+    gap: 8,
+    padding: 8,
+    background:
+      'linear-gradient(180deg, rgba(121, 223, 255, 0.035), transparent 35%), linear-gradient(320deg, rgba(138, 123, 255, 0.03), transparent 40%), var(--bg-input)',
+    border: '1px solid color-mix(in srgb, var(--stroke) 92%, transparent)',
+    borderRadius: 14,
+    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.025), 0 8px 22px rgba(5, 8, 14, 0.14)',
+    position: 'relative',
+    isolation: 'isolate',
+  } as React.CSSProperties,
+  controls: {
+    display: 'flex',
+    position: 'relative',
+    alignItems: 'flex-end',
+    minWidth: 0,
+    gap: 8,
+    width: '100%',
+    isolation: 'isolate',
+  } as React.CSSProperties,
+  input: {
+    width: '100%',
+    minWidth: 0,
+    padding: '12px 16px',
+    background: 'transparent',
+    border: '1px solid transparent',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--text)',
+    fontFamily: 'inherit',
+    fontSize: 14,
+    outline: 'none',
+    resize: 'none',
+    minHeight: 44,
+    maxHeight: 200,
+    transition: 'border-color var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease)',
+    scrollbarWidth: 'thin',
+  } as React.CSSProperties,
+  mentionMenu: {
+    position: 'absolute',
+    left: 0,
+    right: 72,
+    bottom: 'calc(100% + 8px)',
+    zIndex: 40,
+    display: 'grid',
+    gap: 4,
+    padding: 6,
+    borderRadius: 12,
+    border: '1px solid color-mix(in srgb, var(--stroke) 92%, transparent)',
+    background: 'color-mix(in srgb, var(--bg-float) 96%, transparent)',
+    boxShadow: '0 10px 24px rgba(0, 0, 0, 0.35)',
+    maxHeight: 220,
+    overflowY: 'auto',
+    overscrollBehavior: 'contain',
+  } as React.CSSProperties,
+  mentionItem: {
+    width: '100%',
+    border: 'none',
+    background: 'transparent',
+    color: 'inherit',
+    textAlign: 'left' as const,
+    borderRadius: 10,
+    padding: '8px 10px',
+    display: 'grid',
+    gap: 2,
+    cursor: 'pointer',
+  } as React.CSSProperties,
+  mentionItemActive: {
+    background: 'linear-gradient(90deg, rgba(121, 223, 255, 0.08), rgba(138, 123, 255, 0.05))',
+  } as React.CSSProperties,
+  mentionItemLabel: {
+    color: 'var(--text)',
+    fontSize: 13,
+    fontWeight: 600,
+  } as React.CSSProperties,
+  mentionItemMeta: {
+    color: 'var(--text-faint)',
+    fontSize: 11,
+  } as React.CSSProperties,
+  mentionKind: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    marginLeft: 4,
+    padding: '1px 5px',
+    borderRadius: 999,
+    border: '1px solid rgba(104, 223, 255, 0.2)',
+    background: 'rgba(104, 223, 255, 0.1)',
+  } as React.CSSProperties,
+  emojiMenuItem: {
+    width: '100%',
+    border: 'none',
+    background: 'transparent',
+    color: 'inherit',
+    textAlign: 'left' as const,
+    borderRadius: 10,
+    padding: '8px 10px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    cursor: 'pointer',
+  } as React.CSSProperties,
+  emojiPreview: {
+    width: 24,
+    height: 24,
+    objectFit: 'contain',
+    borderRadius: 4,
+  } as React.CSSProperties,
+  emojiBtn: {
+    display: 'grid',
+    placeItems: 'center',
+    width: 36,
+    height: 36,
+    border: 'none',
+    background: 'transparent',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--muted)',
+    cursor: 'pointer',
+    flexShrink: 0,
+    transition: 'color 0.15s ease, background 0.15s ease',
+  } as React.CSSProperties,
+  emojiBtnHover: {
+    color: 'var(--text)',
+    background: 'rgba(121, 223, 255, 0.08)',
+  } as React.CSSProperties,
+  sendBtn: {
+    flexShrink: 0,
+    minWidth: 72,
+    height: 40,
+    padding: '0 12px',
+    borderRadius: 10,
+    borderWidth: 1, borderStyle: 'solid', borderColor: 'color-mix(in srgb, var(--accent) 35%, var(--stroke))',
+    background: 'color-mix(in srgb, var(--accent) 24%, transparent)',
+    color: 'var(--text)',
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease)',
+    alignSelf: 'flex-end',
+    whiteSpace: 'nowrap',
+  } as React.CSSProperties,
+  sendBtnHover: {
+    background: 'color-mix(in srgb, var(--accent) 38%, transparent)',
+    borderColor: 'color-mix(in srgb, var(--accent) 55%, var(--stroke))',
+    transform: 'translateY(-1px)',
+  } as React.CSSProperties,
+  sendBtnDisabled: {
+    opacity: 0.45,
+    cursor: 'not-allowed',
+    transform: 'none',
+  } as React.CSSProperties,
+  error: {
+    color: 'var(--danger)',
+    fontSize: 12,
+    padding: '4px 0',
+  } as React.CSSProperties,
+};
 
 export function MessageComposer({ channelId, placeholder }: MessageComposerProps) {
   const [content, setContent] = useState('');
@@ -31,6 +208,12 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
   const [mentionRange, setMentionRange] = useState<{ start: number; end: number } | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [emojiAutocompleteOpen, setEmojiAutocompleteOpen] = useState(false);
+  const [emojiQuery, setEmojiQuery] = useState('');
+  const [emojiRange, setEmojiRange] = useState<{ start: number; end: number } | null>(null);
+  const [emojiIndex, setEmojiIndex] = useState(0);
+  const [emojiBtnHovered, setEmojiBtnHovered] = useState(false);
+  const [sendBtnHovered, setSendBtnHovered] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const lastTypingRef = useRef(0);
@@ -50,6 +233,22 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
     enabled: Boolean(guildId),
     staleTime: 60_000,
   });
+
+  const { data: guildEmojis = [] } = useQuery<GuildEmoji[]>({
+    queryKey: ['guild-emojis', guildId],
+    queryFn: () => (guildId ? api.guilds.getEmojis(guildId) : Promise.resolve([])),
+    enabled: Boolean(guildId),
+    staleTime: 300_000,
+  });
+
+  const filteredEmojiCandidates = useMemo(() => {
+    if (!emojiAutocompleteOpen) return [];
+    const q = emojiQuery.trim().toLowerCase();
+    const filtered = q
+      ? guildEmojis.filter((emoji) => emoji.name.toLowerCase().includes(q))
+      : guildEmojis;
+    return filtered.slice(0, 8);
+  }, [emojiAutocompleteOpen, emojiQuery, guildEmojis]);
 
   const baseMentionCandidates = useMemo(() => {
     const seen = new Set<string>();
@@ -172,6 +371,13 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
     setMentionIndex(0);
   }, []);
 
+  const closeEmojiMenu = useCallback(() => {
+    setEmojiAutocompleteOpen(false);
+    setEmojiQuery('');
+    setEmojiRange(null);
+    setEmojiIndex(0);
+  }, []);
+
   const syncMentionState = useCallback((nextValue: string, selectionStart: number | null) => {
     const caret = selectionStart ?? nextValue.length;
     const beforeCaret = nextValue.slice(0, caret);
@@ -188,6 +394,23 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
     setMentionRange({ start: atPos, end: caret });
     setMentionIndex(0);
   }, [closeMentionMenu]);
+
+  const syncEmojiState = useCallback((nextValue: string, selectionStart: number | null) => {
+    const caret = selectionStart ?? nextValue.length;
+    const beforeCaret = nextValue.slice(0, caret);
+    const match = beforeCaret.match(/(?:^|\s):([a-zA-Z0-9_]{0,32})$/);
+    if (!match) {
+      closeEmojiMenu();
+      return;
+    }
+    const raw = match[1] ?? '';
+    const colonPos = beforeCaret.lastIndexOf(':');
+    if (colonPos < 0) return;
+    setEmojiAutocompleteOpen(true);
+    setEmojiQuery(raw);
+    setEmojiRange({ start: colonPos, end: caret });
+    setEmojiIndex(0);
+  }, [closeEmojiMenu]);
 
   // Auto-grow textarea
   const adjustHeight = useCallback(() => {
@@ -215,13 +438,13 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
 
     setContent(normalizedValue);
     syncMentionState(normalizedValue, e.target.selectionStart);
+    syncEmojiState(normalizedValue, e.target.selectionStart);
     adjustHeight();
     if (normalizedValue.trim()) {
       emitTyping();
     }
 
     // iOS virtual keyboards can insert a line break instead of firing a reliable Enter key event.
-    // Treat a trailing newline as an explicit send action for mobile send-key behavior.
     if (endsWithLineBreak && !isComposingRef.current) {
       sendMessage(normalizedValue);
     }
@@ -243,6 +466,22 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
     if (label) {
       emitTyping();
     }
+  }
+
+  function insertEmoji(emoji: GuildEmoji) {
+    const ta = textareaRef.current;
+    const range = emojiRange;
+    if (!ta || !range) return;
+    const shortcode = `:${emoji.name}:`;
+    const next = `${content.slice(0, range.start)}${shortcode} ${content.slice(range.end)}`;
+    const nextCaret = range.start + shortcode.length + 1;
+    setContent(next);
+    closeEmojiMenu();
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.setSelectionRange(nextCaret, nextCaret);
+      adjustHeight();
+    });
   }
 
   function handleFilesSelected(files: File[]) {
@@ -284,7 +523,6 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
       const end = ta.selectionEnd;
       const newContent = content.slice(0, start) + emoji + content.slice(end);
       setContent(newContent);
-      // Move cursor after emoji
       requestAnimationFrame(() => {
         ta.selectionStart = ta.selectionEnd = start + emoji.length;
         ta.focus();
@@ -312,7 +550,7 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
     // Optimistic insert
     if (user) {
       const optimistic: Message & { nonce: string; author?: { id: string; username: string; displayName: string; avatarHash: string | null } } = {
-        id: nonce, // temp ID
+        id: nonce,
         channelId,
         authorId: user.id,
         content: trimmed,
@@ -345,7 +583,6 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
     }
 
     try {
-      // Upload files first if any
       let attachmentIds: string[] | undefined;
       if (filesToUpload.length > 0) {
         const uploadInteraction = startInteraction('attachment_upload', {
@@ -360,7 +597,6 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
           attachmentCount: filesToUpload.length,
         });
         attachmentIds = uploads.map((u) => u.id);
-        // Clean up object URLs
         filesToUpload.forEach((att) => {
           if (att.preview) URL.revokeObjectURL(att.preview);
         });
@@ -381,7 +617,6 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
       const created = await api.messages.send(channelId, body);
       addMessage(created as any);
     } catch (err) {
-      // If send fails, the optimistic message stays but could be marked failed
       console.error('[Composer] Failed to send message:', err);
       setSendError(getErrorMessage(err));
     }
@@ -411,6 +646,29 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
         return;
       }
     }
+    if (emojiAutocompleteOpen && filteredEmojiCandidates.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setEmojiIndex((prev) => (prev + 1) % filteredEmojiCandidates.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setEmojiIndex((prev) => (prev - 1 + filteredEmojiCandidates.length) % filteredEmojiCandidates.length);
+        return;
+      }
+      if (e.key === 'Tab' || e.key === 'Enter') {
+        e.preventDefault();
+        const selected = filteredEmojiCandidates[emojiIndex] ?? filteredEmojiCandidates[0];
+        if (selected) insertEmoji(selected);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeEmojiMenu();
+        return;
+      }
+    }
     if (e.key === 'Enter' && !e.shiftKey && !isComposingRef.current) {
       e.preventDefault();
       sendMessage();
@@ -422,27 +680,33 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
     sendMessage();
   }
 
+  const sendBtnStyle: React.CSSProperties = {
+    ...styles.sendBtn,
+    ...(!canSend ? styles.sendBtnDisabled : {}),
+    ...(sendBtnHovered && canSend ? styles.sendBtnHover : {}),
+  };
+
   return (
-    <div className="message-composer">
+    <div style={styles.composer}>
       {replyingTo && (
         <ReplyPreview
           message={replyingTo}
           onCancel={() => setReplyingTo(channelId, null)}
         />
       )}
-      <form className="message-composer-row" onSubmit={handleSubmit}>
+      <form style={styles.row} onSubmit={handleSubmit}>
         <FileUploadButton onFilesSelected={handleFilesSelected} />
-        <div className="message-composer-shell">
+        <div style={styles.shell}>
           <AttachmentPreview
             attachments={pendingFiles}
             onRemove={handleRemoveFile}
             onClearAll={pendingFiles.length > 1 ? handleClearFiles : undefined}
             compact
           />
-          <div className="message-composer-controls">
+          <div style={styles.controls}>
             <textarea
               ref={textareaRef}
-              className="message-composer-input"
+              style={styles.input}
               placeholder={placeholder ?? `Message #channel`}
               value={content}
               onChange={handleChange}
@@ -453,29 +717,54 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
               onCompositionEnd={() => {
                 isComposingRef.current = false;
               }}
-              onClick={(e) => syncMentionState((e.target as HTMLTextAreaElement).value, (e.target as HTMLTextAreaElement).selectionStart)}
-              onKeyUp={(e) => syncMentionState((e.target as HTMLTextAreaElement).value, (e.target as HTMLTextAreaElement).selectionStart)}
+              onClick={(e) => {
+                syncMentionState((e.target as HTMLTextAreaElement).value, (e.target as HTMLTextAreaElement).selectionStart);
+                syncEmojiState((e.target as HTMLTextAreaElement).value, (e.target as HTMLTextAreaElement).selectionStart);
+              }}
+              onKeyUp={(e) => {
+                syncMentionState((e.target as HTMLTextAreaElement).value, (e.target as HTMLTextAreaElement).selectionStart);
+                syncEmojiState((e.target as HTMLTextAreaElement).value, (e.target as HTMLTextAreaElement).selectionStart);
+              }}
               rows={1}
               maxLength={4000}
               enterKeyHint="send"
             />
             {mentionOpen && filteredMentionCandidates.length > 0 && (
-              <div className="composer-mention-menu" role="listbox" aria-label="Mention suggestions">
+              <div style={styles.mentionMenu} role="listbox" aria-label="Mention suggestions">
                 {filteredMentionCandidates.map((candidate, idx) => (
                   <button
                     key={candidate.id}
                     type="button"
-                    className={`composer-mention-item ${idx === mentionIndex ? 'is-active' : ''}`}
+                    style={{ ...styles.mentionItem, ...(idx === mentionIndex ? styles.mentionItemActive : {}) }}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       insertMention(candidate.insertText, candidate.label);
                     }}
                   >
-                    <span className="composer-mention-item-label">
+                    <span style={styles.mentionItemLabel}>
                       @{candidate.label}
-                      {candidate.kind === 'group' && <span className="composer-mention-kind"> group</span>}
+                      {candidate.kind === 'group' && <span style={styles.mentionKind}> group</span>}
                     </span>
-                    {candidate.secondary && <span className="composer-mention-item-meta">{candidate.secondary}</span>}
+                    {candidate.secondary && <span style={styles.mentionItemMeta}>{candidate.secondary}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+            {emojiAutocompleteOpen && filteredEmojiCandidates.length > 0 && (
+              <div style={styles.mentionMenu} role="listbox" aria-label="Emoji suggestions">
+                {filteredEmojiCandidates.map((emoji, idx) => (
+                  <button
+                    key={emoji.id}
+                    type="button"
+                    style={{ ...styles.emojiMenuItem, ...(idx === emojiIndex ? styles.mentionItemActive : {}) }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      insertEmoji(emoji);
+                    }}
+                  >
+                    <img src={emoji.url} alt={emoji.name} style={styles.emojiPreview} />
+                    <span style={styles.mentionItemLabel}>:{emoji.name}:</span>
+                    {emoji.animated && <span style={styles.mentionKind}> GIF</span>}
                   </button>
                 ))}
               </div>
@@ -483,10 +772,12 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
             <button
               ref={emojiButtonRef}
               type="button"
-              className="message-emoji-btn"
+              style={{ ...styles.emojiBtn, ...(emojiBtnHovered ? styles.emojiBtnHover : {}) }}
               onClick={() => setEmojiOpen((prev) => !prev)}
               aria-label="Emoji"
               title="Emoji"
+              onMouseEnter={() => setEmojiBtnHovered(true)}
+              onMouseLeave={() => setEmojiBtnHovered(false)}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
@@ -497,10 +788,12 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
             </button>
             <button
               type="submit"
-              className="message-send-btn"
+              style={sendBtnStyle}
               disabled={!canSend}
               aria-label="Send message"
               title="Send"
+              onMouseEnter={() => setSendBtnHovered(true)}
+              onMouseLeave={() => setSendBtnHovered(false)}
             >
               Send
             </button>
@@ -513,7 +806,7 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
           </div>
         </div>
       </form>
-      {sendError && <div className="home-error">{sendError}</div>}
+      {sendError && <div style={styles.error}>{sendError}</div>}
     </div>
   );
 }

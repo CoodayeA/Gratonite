@@ -1,9 +1,9 @@
 import { useEffect, useState, type CSSProperties } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { AvatarDecoration, ProfileEffect, Nameplate } from '@gratonite/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { DisplayNameText } from '@/components/ui/DisplayNameText';
+// Input and DisplayNameText removed — no longer used in sidebar layout
 import { useAuthStore } from '@/stores/auth.store';
 import { api, type CommunityShopItem } from '@/lib/api';
 import { getErrorMessage } from '@/lib/utils';
@@ -19,7 +19,7 @@ interface ShopItem {
   id: string;
   name: string;
   description: string;
-  type: 'avatar_decoration' | 'profile_effect' | 'nameplate';
+  type: 'avatar_decoration' | 'profile_effect' | 'nameplate' | 'soundboard_sound';
   category: string;
   price: number;
   assetHash: string | null;
@@ -39,6 +39,7 @@ function nameToHue(name: string): number {
 export function ShopPage() {
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
+  const navigate = useNavigate();
 
   const [tab, setTab] = useState<CosmeticsTab>('decorations');
   const [displayName, setDisplayName] = useState('');
@@ -69,12 +70,12 @@ export function ShopPage() {
   useEffect(() => {
     api.users.getMe()
       .then((me) => {
-        setDisplayName(me.profile.displayName);
-        setAvatarHash(me.profile.avatarHash);
+        setDisplayName(me.profile?.displayName ?? me.username);
+        setAvatarHash(me.profile?.avatarHash ?? null);
         updateUser({
-          avatarDecorationId: me.profile.avatarDecorationId ?? null,
-          profileEffectId: me.profile.profileEffectId ?? null,
-          nameplateId: me.profile.nameplateId ?? null,
+          avatarDecorationId: me.profile?.avatarDecorationId ?? null,
+          profileEffectId: me.profile?.profileEffectId ?? null,
+          nameplateId: me.profile?.nameplateId ?? null,
         });
       })
       .catch(() => undefined);
@@ -136,17 +137,13 @@ export function ShopPage() {
       setShopItemsLoading(true);
       setShopError('');
       try {
-        const [itemsRes, balanceRes, inventoryRes] = await Promise.all([
-          fetch('/api/v1/shop/items', { credentials: 'include' }),
-          fetch('/api/v1/economy/wallet', { credentials: 'include' }),
-          fetch('/api/v1/shop/inventory', { credentials: 'include' }),
+        const [rawItems, wallet, rawInventory] = await Promise.all([
+          api.shop.getItems().catch(() => []),
+          api.economy.getWallet().catch(() => ({ balance: 0 } as any)),
+          api.shop.getInventory().catch(() => []),
         ]);
 
         if (cancelled) return;
-
-        const rawItems = itemsRes.ok ? await itemsRes.json() : [];
-        const wallet = balanceRes.ok ? await balanceRes.json() : { balance: 0 };
-        const rawInventory = inventoryRes.ok ? await inventoryRes.json() : [];
 
         const items = Array.isArray(rawItems) ? rawItems : [];
         const inventory = Array.isArray(rawInventory) ? rawInventory : [];
@@ -245,18 +242,8 @@ export function ShopPage() {
     setPurchasing(itemId);
     setShopError('');
     try {
-      const res = await fetch('/api/v1/shop/purchase', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ itemId }),
-      });
-      
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.code || 'Purchase failed');
-      }
-      
+      await api.shop.purchase(itemId);
+
       // Update owned items and balance
       setOwnedItems((prev) => new Set([...prev, itemId]));
       setShopBalance((prev) => prev - price);
@@ -267,473 +254,831 @@ export function ShopPage() {
     }
   }
 
-  function renderShopCard(item: ShopItem, owned: boolean, canAfford: boolean, hue: number) {
+
+  /* ------------------------------------------------------------------ */
+  /*  Inline styles matching "Desktop — Shop" mockup                     */
+  /* ------------------------------------------------------------------ */
+
+  const S = {
+    /* Root: horizontal flex with sidebar + main */
+    root: {
+      display: 'flex',
+      height: '100%',
+      minHeight: 0,
+      overflow: 'hidden',
+    } as CSSProperties,
+
+    /* Left sidebar (Shop Categories panel) */
+    sidebar: {
+      width: 240,
+      minWidth: 240,
+      background: 'var(--bg-elevated)',
+      padding: 16,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 4,
+      height: '100%',
+      overflowY: 'auto',
+      borderRight: '1px solid var(--stroke)',
+    } as CSSProperties,
+
+    sidebarTitle: {
+      fontSize: 16,
+      fontWeight: 700,
+      color: 'var(--text)',
+      margin: 0,
+      marginBottom: 8,
+    } as CSSProperties,
+
+    catItem: (active: boolean) => ({
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      padding: '8px 12px',
+      borderRadius: 6,
+      border: 'none',
+      cursor: 'pointer',
+      width: '100%',
+      fontSize: 14,
+      fontWeight: active ? 500 : 400,
+      color: active ? 'var(--accent)' : 'var(--text-muted)',
+      background: active ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : 'transparent',
+      transition: 'background .15s, color .15s',
+      textAlign: 'left' as const,
+    }) as CSSProperties,
+
+    catIcon: (active: boolean) => ({
+      width: 16,
+      height: 16,
+      flexShrink: 0,
+      color: active ? 'var(--accent)' : 'var(--text-faint)',
+    }) as CSSProperties,
+
+    /* Main content area */
+    main: {
+      flex: 1,
+      minWidth: 0,
+      padding: '32px 40px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 24,
+      overflowY: 'auto',
+      height: '100%',
+    } as CSSProperties,
+
+    /* Balance banner */
+    balanceBanner: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '16px 24px',
+      borderRadius: 12,
+      background: 'linear-gradient(90deg, color-mix(in srgb, var(--accent) 14%, transparent) 0%, color-mix(in srgb, var(--accent) 3%, transparent) 100%)',
+      border: '1px solid color-mix(in srgb, var(--accent) 25%, transparent)',
+    } as CSSProperties,
+
+    balanceLeft: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+    } as CSSProperties,
+
+    balanceGem: {
+      width: 24,
+      height: 24,
+      color: 'var(--accent)',
+    } as CSSProperties,
+
+    balanceLabel: {
+      fontSize: 12,
+      color: 'var(--text-muted)',
+      margin: 0,
+    } as CSSProperties,
+
+    balanceValue: {
+      fontSize: 18,
+      fontWeight: 700,
+      color: 'var(--accent)',
+      margin: 0,
+    } as CSSProperties,
+
+    buyMoreBtn: {
+      padding: '8px 20px',
+      borderRadius: 8,
+      background: 'var(--accent)',
+      color: 'var(--bg)',
+      border: 'none',
+      fontSize: 13,
+      fontWeight: 600,
+      cursor: 'pointer',
+    } as CSSProperties,
+
+    /* Section header row */
+    sectionHeader: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    } as CSSProperties,
+
+    sectionTitle: {
+      fontSize: 24,
+      fontWeight: 700,
+      color: 'var(--text)',
+      margin: 0,
+    } as CSSProperties,
+
+    balancePill: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      padding: '8px 16px',
+      borderRadius: 10,
+      background: 'color-mix(in srgb, var(--accent) 8%, transparent)',
+      border: '1px solid color-mix(in srgb, var(--accent) 19%, transparent)',
+    } as CSSProperties,
+
+    balancePillIcon: {
+      width: 16,
+      height: 16,
+      color: 'var(--accent)',
+    } as CSSProperties,
+
+    balancePillText: {
+      fontSize: 14,
+      fontWeight: 700,
+      color: 'var(--accent)',
+    } as CSSProperties,
+
+    /* Item grid */
+    itemGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(3, 1fr)',
+      gap: 16,
+    } as CSSProperties,
+
+    /* Card */
+    card: {
+      borderRadius: 10,
+      overflow: 'hidden',
+      background: 'var(--bg-elevated)',
+      border: '1px solid var(--stroke)',
+      display: 'flex',
+      flexDirection: 'column',
+    } as CSSProperties,
+
+    cardPreview: (hue: number) => ({
+      height: 120,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: `linear-gradient(180deg, hsl(${hue} 30% 35%) 0%, hsl(${hue} 20% 22%) 100%)`,
+    }) as CSSProperties,
+
+    cardPreviewIcon: (hue: number) => ({
+      width: 32,
+      height: 32,
+      opacity: 0.5,
+      color: `hsl(${hue} 50% 70%)`,
+    }) as CSSProperties,
+
+    cardBody: {
+      padding: 14,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 8,
+    } as CSSProperties,
+
+    cardName: {
+      fontSize: 14,
+      fontWeight: 600,
+      color: 'var(--text)',
+      margin: 0,
+    } as CSSProperties,
+
+    cardPriceRow: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    } as CSSProperties,
+
+    cardPrice: (canAfford: boolean) => ({
+      fontSize: 13,
+      fontWeight: 600,
+      color: canAfford ? 'var(--accent)' : 'var(--text-faint)',
+    }) as CSSProperties,
+
+    cardBuyBtn: (canAfford: boolean) => ({
+      padding: '5px 12px',
+      borderRadius: 6,
+      border: canAfford ? 'none' : '1px solid color-mix(in srgb, var(--accent) 25%, transparent)',
+      background: canAfford ? 'var(--accent)' : 'var(--bg-elevated)',
+      color: canAfford ? 'var(--bg)' : 'var(--text-muted)',
+      fontSize: 12,
+      fontWeight: 600,
+      cursor: canAfford ? 'pointer' : 'default',
+      opacity: canAfford ? 1 : 0.7,
+    }) as CSSProperties,
+
+    ownedBadge: {
+      padding: '5px 12px',
+      borderRadius: 6,
+      background: 'color-mix(in srgb, var(--accent) 15%, transparent)',
+      color: 'var(--accent)',
+      fontSize: 12,
+      fontWeight: 600,
+      border: 'none',
+      cursor: 'default',
+    } as CSSProperties,
+
+    /* Equip-style cosmetic cards (decorations/effects/nameplates tabs) */
+    equipCard: {
+      borderRadius: 10,
+      overflow: 'hidden',
+      background: 'var(--bg-elevated)',
+      borderWidth: 1,
+      borderStyle: 'solid',
+      borderColor: 'var(--stroke)',
+      display: 'flex',
+      flexDirection: 'column',
+    } as CSSProperties,
+
+    equipCardPreview: (hue: number) => ({
+      height: 120,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: `linear-gradient(180deg, hsl(${hue} 30% 35%) 0%, hsl(${hue} 20% 22%) 100%)`,
+    }) as CSSProperties,
+
+    equipCardBody: {
+      padding: 14,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 8,
+    } as CSSProperties,
+
+    equipCardName: {
+      fontSize: 14,
+      fontWeight: 600,
+      color: 'var(--text)',
+      margin: 0,
+    } as CSSProperties,
+
+    equipCardDesc: {
+      fontSize: 12,
+      color: 'var(--text-muted)',
+      margin: 0,
+    } as CSSProperties,
+
+    /* Creator section */
+    creatorSection: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 20,
+    } as CSSProperties,
+
+    creatorTitle: {
+      fontSize: 18,
+      fontWeight: 600,
+      color: 'var(--text)',
+      margin: 0,
+    } as CSSProperties,
+
+    creatorDesc: {
+      fontSize: 14,
+      color: 'var(--text-muted)',
+      lineHeight: 1.5,
+      margin: 0,
+    } as CSSProperties,
+
+    creatorForm: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 14,
+    } as CSSProperties,
+
+    fieldLabel: {
+      fontSize: 13,
+      fontWeight: 500,
+      color: 'var(--text-muted)',
+      margin: 0,
+    } as CSSProperties,
+
+    fieldSelect: {
+      padding: '10px 14px',
+      borderRadius: 8,
+      background: 'var(--bg-elevated)',
+      border: '1px solid var(--stroke)',
+      color: 'var(--text)',
+      fontSize: 14,
+      width: '100%',
+      outline: 'none',
+    } as CSSProperties,
+
+    fieldInput: {
+      padding: '10px 14px',
+      borderRadius: 8,
+      background: 'var(--bg-elevated)',
+      border: '1px solid var(--stroke)',
+      color: 'var(--text)',
+      fontSize: 14,
+      width: '100%',
+      outline: 'none',
+    } as CSSProperties,
+
+    createDraftBtn: {
+      padding: '10px 0',
+      borderRadius: 8,
+      background: 'var(--accent)',
+      color: 'var(--bg)',
+      border: 'none',
+      fontSize: 14,
+      fontWeight: 600,
+      cursor: 'pointer',
+      width: 160,
+    } as CSSProperties,
+
+    draftsTitle: {
+      fontSize: 16,
+      fontWeight: 600,
+      color: 'var(--text)',
+      margin: 0,
+    } as CSSProperties,
+
+    /* Soundboard */
+    soundPlayBtn: {
+      background: 'none',
+      border: 'none',
+      cursor: 'pointer',
+      fontSize: 18,
+      color: 'var(--accent)',
+      padding: 0,
+    } as CSSProperties,
+
+    /* Error */
+    errorBanner: {
+      padding: '10px 16px',
+      borderRadius: 'var(--radius-sm)',
+      background: 'color-mix(in srgb, var(--danger) 15%, transparent)',
+      color: 'var(--danger)',
+      fontSize: 13,
+    } as CSSProperties,
+
+    loadingText: {
+      color: 'var(--text-muted)',
+      fontSize: 14,
+    } as CSSProperties,
+  };
+
+  /* ---- SVG icon helpers ---- */
+  const GemIcon = ({ style }: { style?: CSSProperties }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, ...style }}>
+      <path d="M6 3h12l4 6-10 13L2 9Z" /><path d="M11 3 8 9l4 13 4-13-3-6" /><path d="M2 9h20" />
+    </svg>
+  );
+
+  const SparklesIcon = ({ style }: { style?: CSSProperties }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, ...style }}>
+      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+      <path d="M5 3v4" /><path d="M19 17v4" /><path d="M3 5h4" /><path d="M17 19h4" />
+    </svg>
+  );
+
+  const RectIcon = ({ style }: { style?: CSSProperties }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, ...style }}>
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+    </svg>
+  );
+
+  const VolumeIcon = ({ style }: { style?: CSSProperties }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, ...style }}>
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+    </svg>
+  );
+
+  const UserIcon = ({ style }: { style?: CSSProperties }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, ...style }}>
+      <circle cx="12" cy="8" r="5" /><path d="M20 21a8 8 0 0 0-16 0" />
+    </svg>
+  );
+
+  const BrushIcon = ({ style }: { style?: CSSProperties }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, ...style }}>
+      <path d="m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08" />
+      <path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02Z" />
+    </svg>
+  );
+
+  /* Map of category icons */
+  const CATEGORIES: { value: CosmeticsTab; label: string; Icon: typeof GemIcon }[] = [
+    { value: 'decorations', label: 'Avatar Decorations', Icon: UserIcon },
+    { value: 'effects', label: 'Profile Effects', Icon: SparklesIcon },
+    { value: 'nameplates', label: 'Nameplates', Icon: RectIcon },
+    { value: 'soundboard', label: 'Soundboard', Icon: VolumeIcon },
+    { value: 'gratonites', label: 'Gratonites Shop', Icon: GemIcon },
+    { value: 'creator', label: 'Creator', Icon: BrushIcon },
+  ];
+
+  /** Preview icon name heuristic for shop item cards */
+  function previewIconForType(type: string): typeof SparklesIcon {
+    if (type === 'avatar_decoration') return UserIcon;
+    if (type === 'profile_effect') return SparklesIcon;
+    if (type === 'nameplate') return RectIcon;
+    if (type === 'soundboard_sound') return VolumeIcon;
+    return GemIcon;
+  }
+
+  /* ---- Render helpers ---- */
+
+  function renderBalanceBanner() {
     return (
-      <article key={item.id} className={`shop-item ${owned ? 'shop-item-owned' : ''}`}>
-        <div className="shop-item-preview">
-          {item.type === 'avatar_decoration' && (
-            item.assetHash ? (
+      <div style={S.balanceBanner}>
+        <div style={S.balanceLeft}>
+          <GemIcon style={S.balanceGem} />
+          <div>
+            <div style={S.balanceLabel}>Your Balance</div>
+            <div style={S.balanceValue}>{shopBalance.toLocaleString()} Gratonites</div>
+          </div>
+        </div>
+        <button type="button" style={S.buyMoreBtn} onClick={() => navigate('/gratonite')}>Buy More</button>
+      </div>
+    );
+  }
+
+  function renderSectionHeader(title: string) {
+    return (
+      <div style={S.sectionHeader}>
+        <h2 style={S.sectionTitle}>{title}</h2>
+        <div style={S.balancePill}>
+          <GemIcon style={S.balancePillIcon} />
+          <span style={S.balancePillText}>{shopBalance.toLocaleString()} G</span>
+        </div>
+      </div>
+    );
+  }
+
+  /** Render a purchasable shop item card (Gratonites Shop / Soundboard) */
+  function renderItemCard(item: ShopItem) {
+    const owned = ownedItems.has(item.id);
+    const canAfford = shopBalance >= item.price;
+    const hue = nameToHue(item.name);
+    const PreviewIcon = previewIconForType(item.type);
+
+    return (
+      <article key={item.id} style={S.card}>
+        <div style={S.cardPreview(hue)}>
+          {item.assetHash ? (
+            item.type === 'avatar_decoration' ? (
               <Avatar name={resolvedDisplayName} hash={resolvedAvatarHash} decorationHash={item.assetHash} userId={user!.id} size={56} />
-            ) : (
-              <div className="shop-preview-ring" style={{ '--ring-hue': hue } as CSSProperties}>
-                <Avatar name={resolvedDisplayName} hash={resolvedAvatarHash} userId={user!.id} size={48} />
-              </div>
-            )
-          )}
-          {item.type === 'profile_effect' && (
-            item.assetHash ? (
-              <div className="shop-effect-preview-small">
-                <img src={`/api/v1/files/${item.assetHash}`} alt="" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4 }} />
-              </div>
-            ) : (
-              <div className="shop-preview-effect" style={{ '--effect-hue': hue } as CSSProperties} />
-            )
-          )}
-          {item.type === 'nameplate' && (
-            item.assetHash ? (
+            ) : item.type === 'profile_effect' ? (
+              <img src={`/api/v1/files/${item.assetHash}`} alt="" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4 }} />
+            ) : item.type === 'nameplate' ? (
               <span className="display-name-nameplate nameplate-from-asset" style={{ '--nameplate-image': `url(/api/v1/files/${item.assetHash})` } as CSSProperties}>{resolvedDisplayName}</span>
-            ) : (
-              <span className="shop-preview-nameplate" style={{ '--np-hue': hue } as CSSProperties}>{resolvedDisplayName}</span>
-            )
+            ) : null
+          ) : (
+            <PreviewIcon style={S.cardPreviewIcon(hue)} />
           )}
         </div>
-        <div className="shop-item-name">{item.name}</div>
-        {item.description && <div className="shop-item-description">{item.description}</div>}
-        <div className="shop-item-price">
-          <span className={`price-tag ${!canAfford && !owned ? 'price-unaffordable' : ''}`}>{item.price.toLocaleString()} G</span>
-          {owned && <span className="owned-badge">Owned</span>}
+        <div style={S.cardBody as CSSProperties}>
+          <div style={S.cardName}>{item.name}</div>
+          <div style={S.cardPriceRow}>
+            <span style={S.cardPrice(canAfford && !owned)}>{item.price.toLocaleString()} G</span>
+            {owned ? (
+              <span style={S.ownedBadge}>Owned</span>
+            ) : (
+              <button
+                type="button"
+                style={S.cardBuyBtn(canAfford)}
+                disabled={!canAfford || purchasing === item.id}
+                onClick={() => handlePurchaseItem(item.id, item.price)}
+              >
+                {purchasing === item.id ? '...' : canAfford ? 'Buy' : 'Buy'}
+              </button>
+            )}
+          </div>
         </div>
-        <Button variant={owned ? 'ghost' : 'primary'} loading={purchasing === item.id} disabled={owned || !canAfford} onClick={() => handlePurchaseItem(item.id, item.price)}>
-          {owned ? 'Owned' : canAfford ? 'Purchase' : 'Too Expensive'}
-        </Button>
+      </article>
+    );
+  }
+
+  /** Render an equip-style cosmetic card (decorations / effects / nameplates tabs) */
+  function renderEquipCard(
+    id: string,
+    name: string,
+    description: string | undefined | null,
+    hue: number,
+    equipped: boolean,
+    loading: boolean,
+    previewNode: React.ReactNode,
+    onToggle: () => void,
+  ) {
+    return (
+      <article key={id} style={{ ...S.equipCard as any, borderColor: equipped ? 'var(--accent)' : undefined } as CSSProperties}>
+        <div style={S.equipCardPreview(hue)}>
+          {previewNode}
+        </div>
+        <div style={S.equipCardBody as CSSProperties}>
+          <div style={S.equipCardName}>{name}</div>
+          {description && <div style={S.equipCardDesc}>{description}</div>}
+          <Button
+            variant={equipped ? 'ghost' : 'primary'}
+            loading={loading}
+            onClick={onToggle}
+          >
+            {equipped ? 'Remove' : 'Equip'}
+          </Button>
+        </div>
       </article>
     );
   }
 
   if (!user) return null;
 
+  /* ================================================================== */
+  /*  Main render – sidebar + content                                    */
+  /* ================================================================== */
+
   return (
-    <div className="shop-page">
-      <header className="shop-hero">
-        <div className="shop-eyebrow">Shop</div>
-        <h1 className="shop-title">Cosmetics &amp; Identity</h1>
-        <p className="shop-subtitle">
-          Gratonite is cosmetic-first. Customize your presence with avatar decorations, profile effects, and nameplates.
-        </p>
-      </header>
+    <div style={S.root}>
+      {/* ---- Left sidebar ---- */}
+      <nav style={S.sidebar as CSSProperties}>
+        <h2 style={S.sidebarTitle}>Shop</h2>
+        {CATEGORIES.map(({ value, label, Icon }) => {
+          const active = tab === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              style={S.catItem(active)}
+              onClick={() => setTab(value)}
+            >
+              <Icon style={S.catIcon(active)} />
+              {label}
+            </button>
+          );
+        })}
+      </nav>
 
-      <div className="shop-tabs" role="tablist">
-        {([
-          ['decorations', 'Avatar Decorations'],
-          ['effects', 'Profile Effects'],
-          ['nameplates', 'Nameplates'],
-          ['soundboard', 'Soundboard'],
-          ['gratonites', 'Gratonites Shop'],
-          ['creator', 'Creator'],
-        ] as const).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            aria-selected={tab === value}
-            className={`shop-tab ${tab === value ? 'shop-tab-active' : ''}`}
-            onClick={() => setTab(value)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* ---- Main content ---- */}
+      <div style={S.main as CSSProperties}>
+        {shopError && <div style={S.errorBanner}>{shopError}</div>}
 
-      {shopError && <div className="settings-error shop-error">{shopError}</div>}
-
-      {tab === 'decorations' && (
-        <section className="shop-section">
-          <div className="shop-section-header">Avatar Decorations</div>
-          <p className="shop-section-desc">Frames and overlays that surround your avatar in chats and profiles.</p>
-          {shopLoading ? (
-            <div className="settings-muted">Loading decorations…</div>
-          ) : avatarDecorations.length === 0 ? (
-            <div className="settings-muted">No decorations available yet.</div>
-          ) : (
-            <div className="shop-grid">
-              {avatarDecorations.map((decoration) => {
-                const equipped = user.avatarDecorationId === decoration.id;
-                const hue = nameToHue(decoration.name);
-                return (
-                  <article key={decoration.id} className={`shop-item ${equipped ? 'shop-item-equipped' : ''}`}>
-                    <div className="shop-item-preview">
-                      {decoration.assetHash ? (
-                        <Avatar
-                          name={resolvedDisplayName}
-                          hash={resolvedAvatarHash}
-                          decorationHash={decoration.assetHash}
-                          userId={user.id}
-                          size={56}
-                        />
-                      ) : (
-                        <div className="shop-preview-ring" style={{ '--ring-hue': hue } as CSSProperties}>
-                          <Avatar name={resolvedDisplayName} hash={resolvedAvatarHash} userId={user.id} size={48} />
-                        </div>
-                      )}
+        {/* ---------- Avatar Decorations tab ---------- */}
+        {tab === 'decorations' && (
+          <>
+            {renderBalanceBanner()}
+            {renderSectionHeader('Avatar Decorations')}
+            {shopLoading ? (
+              <div style={S.loadingText}>Loading decorations...</div>
+            ) : avatarDecorations.length === 0 ? (
+              <div style={S.loadingText}>No decorations available yet.</div>
+            ) : (
+              <div style={S.itemGrid}>
+                {avatarDecorations.map((decoration) => {
+                  const equipped = user.avatarDecorationId === decoration.id;
+                  const hue = nameToHue(decoration.name);
+                  const preview = decoration.assetHash ? (
+                    <Avatar name={resolvedDisplayName} hash={resolvedAvatarHash} decorationHash={decoration.assetHash} userId={user.id} size={56} />
+                  ) : (
+                    <div className="shop-preview-ring" style={{ '--ring-hue': hue } as CSSProperties}>
+                      <Avatar name={resolvedDisplayName} hash={resolvedAvatarHash} userId={user.id} size={48} />
                     </div>
-                    <div className="shop-item-name">{decoration.name}</div>
-                    {decoration.description && (
-                      <div className="shop-item-description">{decoration.description}</div>
-                    )}
-                    <Button
-                      variant={equipped ? 'ghost' : 'primary'}
-                      loading={equipping === 'avatar'}
-                      onClick={() => handleEquipAvatarDecoration(equipped ? null : decoration.id)}
-                    >
-                      {equipped ? 'Remove' : 'Equip'}
-                    </Button>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      )}
-
-      {tab === 'effects' && (
-        <section className="shop-section">
-          <div className="shop-section-header">Profile Effects</div>
-          <p className="shop-section-desc">Animated overlays displayed on your profile card.</p>
-          {shopLoading ? (
-            <div className="settings-muted">Loading effects…</div>
-          ) : profileEffects.length === 0 ? (
-            <div className="settings-muted">No effects available yet.</div>
-          ) : (
-            <div className="shop-grid">
-              {profileEffects.map((effect) => {
-                const equipped = user.profileEffectId === effect.id;
-                const hue = nameToHue(effect.name);
-                return (
-                  <article key={effect.id} className={`shop-item ${equipped ? 'shop-item-equipped' : ''}`}>
-                    <div className="shop-effect-preview">
-                      <div className="shop-effect-card">
-                        <div className="shop-effect-title">
-                          <DisplayNameText
-                            text={resolvedDisplayName}
-                            userId={user.id}
-                            context="profile"
-                          />
-                        </div>
-                        {effect.assetHash ? (
-                          <img src={`/api/v1/files/${effect.assetHash}`} alt="" aria-hidden="true" />
-                        ) : (
-                          <div className="shop-preview-effect" style={{ '--effect-hue': hue, position: 'absolute', inset: 0, width: '100%', height: '100%', borderRadius: 'inherit' } as CSSProperties} />
-                        )}
-                      </div>
-                    </div>
-                    <div className="shop-item-name">{effect.name}</div>
-                    {effect.description && (
-                      <div className="shop-item-description">{effect.description}</div>
-                    )}
-                    <Button
-                      variant={equipped ? 'ghost' : 'primary'}
-                      loading={equipping === 'effect'}
-                      onClick={() => handleEquipProfileEffect(equipped ? null : effect.id)}
-                    >
-                      {equipped ? 'Remove' : 'Equip'}
-                    </Button>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      )}
-
-      {tab === 'nameplates' && (
-        <section className="shop-section">
-          <div className="shop-section-header">Nameplates</div>
-          <p className="shop-section-desc">Custom backgrounds for your display name in chats.</p>
-          {shopLoading ? (
-            <div className="settings-muted">Loading nameplates…</div>
-          ) : nameplates.length === 0 ? (
-            <div className="settings-muted">No nameplates available yet.</div>
-          ) : (
-            <div className="shop-grid">
-              {nameplates.map((nameplate) => {
-                const equipped = user.nameplateId === nameplate.id;
-                const hue = nameToHue(nameplate.name);
-                return (
-                  <article key={nameplate.id} className={`shop-item ${equipped ? 'shop-item-equipped' : ''}`}>
-                    <div className="shop-nameplate-preview">
-                      {nameplate.assetHash ? (
-                        <span
-                          className="display-name-nameplate nameplate-from-asset"
-                          style={{ '--nameplate-image': `url(/api/v1/files/${nameplate.assetHash})` } as CSSProperties}
-                        >
-                          {resolvedDisplayName}
-                        </span>
-                      ) : (
-                        <span className="shop-preview-nameplate" style={{ '--np-hue': hue } as CSSProperties}>
-                          {resolvedDisplayName}
-                        </span>
-                      )}
-                    </div>
-                    <div className="shop-item-name">{nameplate.name}</div>
-                    <div className="shop-item-description">{nameplate.description ?? ''}</div>
-                    <Button
-                      variant={equipped ? 'ghost' : 'primary'}
-                      loading={equipping === 'nameplate'}
-                      onClick={() => handleEquipNameplate(equipped ? null : nameplate.id)}
-                    >
-                      {equipped ? 'Remove' : 'Equip'}
-                    </Button>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      )}
-
-      {tab === 'soundboard' && (
-        <section className="shop-section">
-          <div className="shop-section-header">Soundboard</div>
-          <p className="shop-section-desc">Sound effects you can play in voice channels. Purchase and add to your personal soundboard.</p>
-
-          {/* Balance banner */}
-          <div className="shop-balance-banner">
-            <div className="shop-balance-coin">⬡</div>
-            <div className="shop-balance-info">
-              <div className="shop-balance-amount">{shopBalance.toLocaleString()}</div>
-              <div className="shop-balance-label">Gratonites</div>
-            </div>
-          </div>
-
-          {shopItemsLoading ? (
-            <div className="settings-muted">Loading soundboard items…</div>
-          ) : (
-            <div className="shop-grid">
-              {shopItems
-                .filter((item) => item.type === 'soundboard_sound')
-                .map((item) => {
-                  const owned = ownedItems.has(item.id);
-                  const canAfford = shopBalance >= item.price;
-                  return (
-                    <article key={item.id} className={`shop-item ${item.isFeatured ? 'shop-item-featured' : ''} ${owned ? 'shop-item-owned' : ''}`}>
-                      <div className="shop-sound-preview">
-                        <button
-                          type="button"
-                          className="shop-sound-play-btn"
-                          onClick={() => {
-                            if (item.assetHash) {
-                              const audio = new Audio(`/api/v1/files/${item.assetHash}`);
-                              audio.play().catch(() => {});
-                            }
-                          }}
-                          disabled={!item.assetHash}
-                          title="Preview sound"
-                        >
-                          ▶
-                        </button>
-                        <span className="shop-sound-name">{item.name}</span>
-                        {item.isFeatured && <span className="shop-item-type-badge">⭐</span>}
-                      </div>
-                      <div className="shop-item-description">{item.description}</div>
-                      <div className="shop-item-price">
-                        <span className={`price-tag ${!canAfford && !owned ? 'price-unaffordable' : ''}`}>{item.price.toLocaleString()} G</span>
-                        {owned && <span className="owned-badge">Owned</span>}
-                      </div>
-                      <Button
-                        variant={owned ? 'ghost' : 'primary'}
-                        loading={purchasing === item.id}
-                        disabled={owned || !canAfford}
-                        onClick={() => handlePurchaseItem(item.id, item.price)}
-                      >
-                        {owned ? 'Owned' : canAfford ? 'Purchase' : 'Too Expensive'}
-                      </Button>
-                    </article>
+                  );
+                  return renderEquipCard(
+                    decoration.id, decoration.name, decoration.description, hue, equipped,
+                    equipping === 'avatar', preview,
+                    () => handleEquipAvatarDecoration(equipped ? null : decoration.id),
                   );
                 })}
-              {shopItems.filter((item) => item.type === 'soundboard_sound').length === 0 && (
-                <div className="shop-empty settings-muted">No soundboard items available yet.</div>
-              )}
-            </div>
-          )}
-        </section>
-      )}
+              </div>
+            )}
+          </>
+        )}
 
-      {tab === 'gratonites' && (
-        <section className="shop-section">
-          {/* Balance banner */}
-          <div className="shop-balance-banner">
-            <div className="shop-balance-coin">⬡</div>
-            <div className="shop-balance-info">
-              <div className="shop-balance-amount">{shopBalance.toLocaleString()}</div>
-              <div className="shop-balance-label">Gratonites</div>
-            </div>
-          </div>
+        {/* ---------- Profile Effects tab ---------- */}
+        {tab === 'effects' && (
+          <>
+            {renderBalanceBanner()}
+            {renderSectionHeader('Profile Effects')}
+            {shopLoading ? (
+              <div style={S.loadingText}>Loading effects...</div>
+            ) : profileEffects.length === 0 ? (
+              <div style={S.loadingText}>No effects available yet.</div>
+            ) : (
+              <div style={S.itemGrid}>
+                {profileEffects.map((effect) => {
+                  const equipped = user.profileEffectId === effect.id;
+                  const hue = nameToHue(effect.name);
+                  const preview = effect.assetHash ? (
+                    <img src={`/api/v1/files/${effect.assetHash}`} alt="" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4 }} />
+                  ) : (
+                    <div className="shop-preview-effect" style={{ '--effect-hue': hue, width: 80, height: 60, borderRadius: 4 } as CSSProperties} />
+                  );
+                  return renderEquipCard(
+                    effect.id, effect.name, effect.description, hue, equipped,
+                    equipping === 'effect', preview,
+                    () => handleEquipProfileEffect(equipped ? null : effect.id),
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
 
-          {shopItemsLoading ? (
-            <div className="settings-muted">Loading shop items…</div>
-          ) : shopItems.length === 0 ? (
-            <div className="settings-muted">No items available yet. Check back soon!</div>
-          ) : (
-            <>
-              {/* Featured items */}
-              {shopItems.some((i) => i.isFeatured) && (
-                <div className="shop-featured-section">
-                  <div className="shop-section-header">⭐ Featured</div>
-                  <div className="shop-grid shop-grid-featured">
-                    {shopItems.filter((i) => i.isFeatured).map((item) => {
-                      const owned = ownedItems.has(item.id);
-                      const canAfford = shopBalance >= item.price;
-                      const hue = nameToHue(item.name);
-                      return (
-                        <article key={item.id} className={`shop-item shop-item-featured ${owned ? 'shop-item-owned' : ''}`}>
-                          <div className="shop-item-type-badge">{item.type === 'avatar_decoration' ? '🎭' : item.type === 'profile_effect' ? '✨' : '🏷️'}</div>
-                          <div className="shop-item-preview">
-                            {item.type === 'avatar_decoration' && (
-                              item.assetHash ? (
-                                <Avatar name={resolvedDisplayName} hash={resolvedAvatarHash} decorationHash={item.assetHash} userId={user.id} size={56} />
-                              ) : (
-                                <div className="shop-preview-ring" style={{ '--ring-hue': hue } as CSSProperties}>
-                                  <Avatar name={resolvedDisplayName} hash={resolvedAvatarHash} userId={user.id} size={48} />
-                                </div>
-                              )
-                            )}
-                            {item.type === 'profile_effect' && (
-                              item.assetHash ? (
-                                <div className="shop-effect-preview-small"><img src={`/api/v1/files/${item.assetHash}`} alt="" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4 }} /></div>
-                              ) : (
-                                <div className="shop-preview-effect" style={{ '--effect-hue': hue } as CSSProperties} />
-                              )
-                            )}
-                            {item.type === 'nameplate' && (
-                              item.assetHash ? (
-                                <span className="display-name-nameplate nameplate-from-asset" style={{ '--nameplate-image': `url(/api/v1/files/${item.assetHash})` } as CSSProperties}>{resolvedDisplayName}</span>
-                              ) : (
-                                <span className="shop-preview-nameplate" style={{ '--np-hue': hue } as CSSProperties}>{resolvedDisplayName}</span>
-                              )
+        {/* ---------- Nameplates tab ---------- */}
+        {tab === 'nameplates' && (
+          <>
+            {renderBalanceBanner()}
+            {renderSectionHeader('Nameplates')}
+            {shopLoading ? (
+              <div style={S.loadingText}>Loading nameplates...</div>
+            ) : nameplates.length === 0 ? (
+              <div style={S.loadingText}>No nameplates available yet.</div>
+            ) : (
+              <div style={S.itemGrid}>
+                {nameplates.map((np) => {
+                  const equipped = user.nameplateId === np.id;
+                  const hue = nameToHue(np.name);
+                  const preview = np.assetHash ? (
+                    <span className="display-name-nameplate nameplate-from-asset" style={{ '--nameplate-image': `url(/api/v1/files/${np.assetHash})` } as CSSProperties}>{resolvedDisplayName}</span>
+                  ) : (
+                    <span className="shop-preview-nameplate" style={{ '--np-hue': hue } as CSSProperties}>{resolvedDisplayName}</span>
+                  );
+                  return renderEquipCard(
+                    np.id, np.name, np.description, hue, equipped,
+                    equipping === 'nameplate', preview,
+                    () => handleEquipNameplate(equipped ? null : np.id),
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ---------- Soundboard tab ---------- */}
+        {tab === 'soundboard' && (
+          <>
+            {renderBalanceBanner()}
+            {renderSectionHeader('Soundboard')}
+            {shopItemsLoading ? (
+              <div style={S.loadingText}>Loading soundboard items...</div>
+            ) : (
+              <div style={S.itemGrid}>
+                {shopItems
+                  .filter((item) => item.type === 'soundboard_sound')
+                  .map((item) => {
+                    const owned = ownedItems.has(item.id);
+                    const canAfford = shopBalance >= item.price;
+                    const hue = nameToHue(item.name);
+                    return (
+                      <article key={item.id} style={S.card}>
+                        <div style={S.cardPreview(hue)}>
+                          <button
+                            type="button"
+                            style={S.soundPlayBtn}
+                            onClick={() => {
+                              if (item.assetHash) {
+                                const audio = new Audio(`/api/v1/files/${item.assetHash}`);
+                                audio.play().catch(() => {});
+                              }
+                            }}
+                            disabled={!item.assetHash}
+                            title="Preview sound"
+                          >
+                            &#9654;
+                          </button>
+                        </div>
+                        <div style={S.cardBody as CSSProperties}>
+                          <div style={S.cardName}>{item.name}</div>
+                          {item.description && <div style={S.equipCardDesc}>{item.description}</div>}
+                          <div style={S.cardPriceRow}>
+                            <span style={S.cardPrice(canAfford && !owned)}>{item.price.toLocaleString()} G</span>
+                            {owned ? (
+                              <span style={S.ownedBadge}>Owned</span>
+                            ) : (
+                              <button
+                                type="button"
+                                style={S.cardBuyBtn(canAfford)}
+                                disabled={!canAfford || purchasing === item.id}
+                                onClick={() => handlePurchaseItem(item.id, item.price)}
+                              >
+                                {purchasing === item.id ? '...' : 'Buy'}
+                              </button>
                             )}
                           </div>
-                          <div className="shop-item-name">{item.name}</div>
-                          <div className="shop-item-price">
-                            <span className={`price-tag ${!canAfford && !owned ? 'price-unaffordable' : ''}`}>{item.price.toLocaleString()} G</span>
-                            {owned && <span className="owned-badge">Owned</span>}
+                        </div>
+                      </article>
+                    );
+                  })}
+                {shopItems.filter((item) => item.type === 'soundboard_sound').length === 0 && (
+                  <div style={S.loadingText}>No soundboard items available yet.</div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ---------- Gratonites Shop tab ---------- */}
+        {tab === 'gratonites' && (
+          <>
+            {renderBalanceBanner()}
+            {renderSectionHeader('Cosmetics')}
+            {shopItemsLoading ? (
+              <div style={S.loadingText}>Loading shop items...</div>
+            ) : shopItems.length === 0 ? (
+              <div style={S.loadingText}>No items available yet. Check back soon!</div>
+            ) : (
+              <div style={S.itemGrid}>
+                {shopItems.map((item) => renderItemCard(item))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ---------- Creator tab ---------- */}
+        {tab === 'creator' && (
+          <>
+            {renderBalanceBanner()}
+            {renderSectionHeader('Creator')}
+
+            <div style={S.creatorSection as CSSProperties}>
+              <div style={S.creatorTitle}>Creator Studio</div>
+              <div style={S.creatorDesc}>Design and sell your own cosmetics on the Gratonite marketplace.</div>
+
+              <div style={S.creatorForm as CSSProperties}>
+                <div style={S.fieldLabel}>Type</div>
+                <select
+                  style={S.fieldSelect}
+                  value={communityDraftType}
+                  onChange={(e) => setCommunityDraftType(e.target.value as CommunityShopItem['itemType'])}
+                >
+                  <option value="display_name_style_pack">Display Name Style Pack</option>
+                  <option value="profile_widget_pack">Profile Widget Pack</option>
+                  <option value="server_tag_badge">Portal Tag Badge</option>
+                  <option value="avatar_decoration">Avatar Decoration</option>
+                  <option value="profile_effect">Profile Effect</option>
+                  <option value="nameplate">Nameplate</option>
+                </select>
+
+                <div style={S.fieldLabel}>Name</div>
+                <input
+                  type="text"
+                  style={S.fieldInput}
+                  value={communityDraftName}
+                  onChange={(e) => setCommunityDraftName(e.target.value)}
+                  placeholder="e.g. galactic swirl"
+                />
+
+                <button
+                  type="button"
+                  style={{ ...S.createDraftBtn, opacity: communityDraftName.trim() ? 1 : 0.5 } as CSSProperties}
+                  disabled={!communityDraftName.trim() || communityCreateLoading}
+                  onClick={handleCreateCommunityDraft}
+                >
+                  {communityCreateLoading ? 'Creating...' : 'Create Draft'}
+                </button>
+              </div>
+
+              {communityError && <div style={S.errorBanner}>{communityError}</div>}
+
+              <div style={S.draftsTitle}>Your Drafts</div>
+
+              {communityLoading ? (
+                <div style={S.loadingText}>Loading creator drafts...</div>
+              ) : communityItems.length === 0 ? (
+                <div style={S.loadingText}>No creator drafts yet.</div>
+              ) : (
+                <div style={S.itemGrid}>
+                  {communityItems.slice(0, 8).map((item) => {
+                    const hue = nameToHue(item.name);
+                    return (
+                      <article key={item.id} style={S.card}>
+                        <div style={S.cardPreview(hue)}>
+                          <GemIcon style={S.cardPreviewIcon(hue)} />
+                        </div>
+                        <div style={S.cardBody as CSSProperties}>
+                          <div style={S.cardName}>{item.name}</div>
+                          <div style={S.equipCardDesc}>
+                            {item.itemType.replaceAll('_', ' ')} &middot; {item.status.replaceAll('_', ' ')}
                           </div>
-                          <Button variant={owned ? 'ghost' : 'primary'} loading={purchasing === item.id} disabled={owned || !canAfford} onClick={() => handlePurchaseItem(item.id, item.price)}>
-                            {owned ? 'Owned' : canAfford ? 'Purchase' : 'Too Expensive'}
+                          <Button
+                            variant="ghost"
+                            disabled={item.status === 'pending_review' || item.status === 'published'}
+                            onClick={() => handleSubmitCommunityItem(item.id)}
+                          >
+                            {item.status === 'pending_review' ? 'In Review' : item.status === 'published' ? 'Published' : 'Submit Review'}
                           </Button>
-                        </article>
-                      );
-                    })}
-                  </div>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
-              )}
-
-              {/* Avatar Decorations */}
-              {shopItems.some((i) => i.type === 'avatar_decoration') && (
-                <div className="shop-type-section">
-                  <div className="shop-section-header">🎭 Avatar Decorations</div>
-                  <div className="shop-grid">
-                    {shopItems.filter((i) => i.type === 'avatar_decoration').map((item) => {
-                      const owned = ownedItems.has(item.id);
-                      const canAfford = shopBalance >= item.price;
-                      const hue = nameToHue(item.name);
-                      return renderShopCard(item, owned, canAfford, hue);
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Profile Effects */}
-              {shopItems.some((i) => i.type === 'profile_effect') && (
-                <div className="shop-type-section">
-                  <div className="shop-section-header">✨ Profile Effects</div>
-                  <div className="shop-grid">
-                    {shopItems.filter((i) => i.type === 'profile_effect').map((item) => {
-                      const owned = ownedItems.has(item.id);
-                      const canAfford = shopBalance >= item.price;
-                      const hue = nameToHue(item.name);
-                      return renderShopCard(item, owned, canAfford, hue);
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Nameplates */}
-              {shopItems.some((i) => i.type === 'nameplate') && (
-                <div className="shop-type-section">
-                  <div className="shop-section-header">🏷️ Nameplates</div>
-                  <div className="shop-grid">
-                    {shopItems.filter((i) => i.type === 'nameplate').map((item) => {
-                      const owned = ownedItems.has(item.id);
-                      const canAfford = shopBalance >= item.price;
-                      const hue = nameToHue(item.name);
-                      return renderShopCard(item, owned, canAfford, hue);
-                    })}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </section>
-      )}
-
-      {tab === 'creator' && (
-        <section className="shop-section">
-          <div className="shop-section-header">Community Creator Drafts</div>
-          <p className="shop-section-desc">Create and submit cosmetic items for community review.</p>
-          <div className="settings-field-control settings-field-row">
-            <select
-              className="settings-select"
-              value={communityDraftType}
-              onChange={(e) => setCommunityDraftType(e.target.value as CommunityShopItem['itemType'])}
-            >
-              <option value="display_name_style_pack">Display Name Style Pack</option>
-              <option value="profile_widget_pack">Profile Widget Pack</option>
-              <option value="server_tag_badge">Portal Tag Badge</option>
-              <option value="avatar_decoration">Avatar Decoration</option>
-              <option value="profile_effect">Profile Effect</option>
-              <option value="nameplate">Nameplate</option>
-            </select>
-            <Input
-              type="text"
-              value={communityDraftName}
-              onChange={(e) => setCommunityDraftName(e.target.value)}
-              placeholder="New community item name"
-            />
-            <Button
-              loading={communityCreateLoading}
-              disabled={!communityDraftName.trim()}
-              onClick={handleCreateCommunityDraft}
-            >
-              Create Draft
-            </Button>
-          </div>
-          {communityError && <div className="settings-error">{communityError}</div>}
-          {communityLoading ? (
-            <div className="settings-muted">Loading creator drafts…</div>
-          ) : (
-            <div className="shop-grid">
-              {communityItems.slice(0, 8).map((item) => (
-                <article key={item.id} className="shop-item">
-                  <div className="shop-item-name">{item.name}</div>
-                  <div className="shop-item-description">
-                    {item.itemType.replaceAll('_', ' ')} · {item.status.replaceAll('_', ' ')}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    disabled={item.status === 'pending_review' || item.status === 'published'}
-                    onClick={() => handleSubmitCommunityItem(item.id)}
-                  >
-                    {item.status === 'pending_review' ? 'In Review' : item.status === 'published' ? 'Published' : 'Submit Review'}
-                  </Button>
-                </article>
-              ))}
-              {communityItems.length === 0 && !communityLoading && (
-                <div className="settings-muted">No creator drafts yet.</div>
               )}
             </div>
-          )}
-        </section>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

@@ -176,6 +176,8 @@ export function createGuildsService(ctx: AppContext) {
       id: guildId,
       name: input.name,
       description: input.description ?? null,
+      tags: input.tags ?? [],
+      categories: input.categories ?? [],
       ownerId,
       memberCount: 1,
     });
@@ -260,6 +262,8 @@ export function createGuildsService(ctx: AppContext) {
     if (input.defaultMessageNotifications !== undefined)
       updates.defaultMessageNotifications = input.defaultMessageNotifications;
     if (input.discoverable !== undefined) updates.discoverable = input.discoverable;
+    if (input.tags !== undefined) updates.tags = input.tags;
+    if (input.categories !== undefined) updates.categories = input.categories;
 
     if (Object.keys(updates).length === 0) return null;
 

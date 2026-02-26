@@ -1,8 +1,214 @@
-import { useEffect, useMemo, useState } from 'react';
+import { type CSSProperties, useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
 import { getErrorMessage } from '@/lib/utils';
+
+/* ------------------------------------------------------------------ */
+/*  Inline style objects                                               */
+/* ------------------------------------------------------------------ */
+
+const styles = {
+  section: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+  },
+  headerRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  heading: {
+    fontSize: 18,
+    fontWeight: 700,
+    color: '#e8e4e0',
+    margin: 0,
+  },
+  muted: {
+    fontSize: 13,
+    color: '#a8a4b8',
+    margin: 0,
+  },
+  actions: {
+    display: 'flex',
+    gap: 8,
+    flexShrink: 0,
+  },
+  resetBtn: {
+    background: 'transparent',
+    border: '1px solid #4a4660',
+    color: '#a8a4b8',
+    borderRadius: 6,
+    padding: '4px 12px',
+    fontSize: 12,
+    cursor: 'pointer',
+  },
+  error: {
+    background: 'rgba(240,71,71,0.12)',
+    color: '#f04747',
+    border: '1px solid rgba(240,71,71,0.3)',
+    borderRadius: 8,
+    padding: '8px 12px',
+    fontSize: 13,
+  },
+  feedback: {
+    background: 'rgba(212,175,55,0.10)',
+    color: '#d4af37',
+    border: '1px solid rgba(212,175,55,0.25)',
+    borderRadius: 8,
+    padding: '8px 12px',
+    fontSize: 13,
+  },
+  tabRow: {
+    display: 'flex',
+    gap: 8,
+    flexWrap: 'wrap' as const,
+    marginBottom: 12,
+  },
+  tab: {
+    background: '#353348',
+    border: '1px solid #4a4660',
+    color: '#a8a4b8',
+    borderRadius: 16,
+    padding: '5px 14px',
+    fontSize: 13,
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  },
+  tabActive: {
+    background: '#d4af37',
+    border: '1px solid #d4af37',
+    color: '#1a1a2e',
+    borderRadius: 16,
+    padding: '5px 14px',
+    fontSize: 13,
+    cursor: 'pointer',
+    fontWeight: 600,
+  },
+  card: {
+    background: '#25243a',
+    borderRadius: 8,
+    border: '1px solid #4a4660',
+    padding: 16,
+  },
+  cardInner: {
+    background: 'rgba(0,0,0,0.15)',
+    borderRadius: 8,
+    border: '1px solid #4a4660',
+    padding: 12,
+    marginTop: 10,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: '#e8e4e0',
+    marginBottom: 8,
+  },
+  inputField: {
+    width: '100%',
+    background: '#25243a',
+    border: '1px solid #4a4660',
+    borderRadius: 6,
+    padding: '8px 12px',
+    fontSize: 13,
+    color: '#e8e4e0',
+    outline: 'none',
+    boxSizing: 'border-box' as const,
+  },
+  selectField: {
+    background: '#25243a',
+    border: '1px solid #4a4660',
+    borderRadius: 6,
+    padding: '8px 12px',
+    fontSize: 13,
+    color: '#e8e4e0',
+    outline: 'none',
+    flex: 1,
+  },
+  row: {
+    display: 'flex',
+    gap: 8,
+    alignItems: 'center',
+  },
+  list: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  },
+  listItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '8px 12px',
+    borderRadius: 6,
+    background: '#353348',
+  },
+  roleTarget: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: '#e8e4e0',
+    marginRight: 'auto',
+  },
+  badge: {
+    fontSize: 11,
+    color: '#a8a4b8',
+    background: '#413d58',
+    borderRadius: 10,
+    padding: '2px 8px',
+    whiteSpace: 'nowrap' as const,
+  },
+  statPill: {
+    fontSize: 12,
+    color: '#a8a4b8',
+    background: '#413d58',
+    borderRadius: 10,
+    padding: '2px 10px',
+    whiteSpace: 'nowrap' as const,
+  },
+  smallBtn: {
+    background: 'transparent',
+    border: '1px solid #4a4660',
+    color: '#a8a4b8',
+    borderRadius: 6,
+    padding: '3px 10px',
+    fontSize: 12,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+  },
+  deleteBtn: {
+    background: 'transparent',
+    border: '1px solid rgba(240,71,71,0.4)',
+    color: '#f04747',
+    borderRadius: 6,
+    padding: '3px 10px',
+    fontSize: 12,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+  },
+  toggleLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    margin: 0,
+    fontSize: 12,
+    color: '#a8a4b8',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+  },
+  statsRow: {
+    display: 'flex',
+    gap: 8,
+    flexWrap: 'wrap' as const,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+};
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
 
 interface RolesSectionProps {
   guildId: string;
@@ -24,6 +230,7 @@ export function RolesSection({ guildId }: RolesSectionProps) {
   const [roleListQuickFilter, setRoleListQuickFilter] = useState<'all' | 'custom' | 'mentionable'>('all');
   const [savingRoleMembership, setSavingRoleMembership] = useState(false);
   const [roleMembershipFeedback, setRoleMembershipFeedback] = useState('');
+  const [activeTab, setActiveTab] = useState<'list' | 'assign' | 'create'>('list');
 
   const { data: roles = [] } = useQuery({
     queryKey: ['guild-roles', guildId],
@@ -269,259 +476,310 @@ export function RolesSection({ guildId }: RolesSectionProps) {
   }
 
   return (
-    <section className="settings-section">
-      <h2 className="settings-shell-section-heading">Roles &amp; Groups</h2>
-      <p className="server-settings-muted">
-        Roles power @group mentions. Create a role, make it mentionable, then assign members.
-      </p>
+    <section style={styles.section}>
+      <div style={styles.headerRow}>
+        <div>
+          <h2 style={styles.heading}>Roles &amp; Groups</h2>
+          <p style={styles.muted}>
+            Roles power @group mentions. Create a role, make it mentionable, then assign members.
+          </p>
+        </div>
+        <div style={styles.actions}>
+          <button type="button" style={styles.resetBtn} onClick={resetView}>
+            Reset
+          </button>
+        </div>
+      </div>
 
-      {error && <div className="modal-error">{error}</div>}
+      {error && <div style={styles.error}>{error}</div>}
+      {roleMembershipFeedback && (
+        <div style={styles.feedback} role="status" aria-live="polite">
+          {roleMembershipFeedback}
+        </div>
+      )}
 
-      <div className="server-settings-inline-stats" style={{ marginBottom: 8 }}>
-        <span className="server-settings-stat-pill">Admin workflow tools</span>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={resetView}>
-          Reset Role View
+      {/* Tab navigation */}
+      <div style={styles.tabRow}>
+        <button
+          type="button"
+          style={activeTab === 'list' ? styles.tabActive : styles.tab}
+          onClick={() => setActiveTab('list')}
+        >
+          All Roles ({roleStats.total})
+        </button>
+        <button
+          type="button"
+          style={activeTab === 'assign' ? styles.tabActive : styles.tab}
+          onClick={() => setActiveTab('assign')}
+        >
+          Assign Members
+        </button>
+        <button
+          type="button"
+          style={activeTab === 'create' ? styles.tabActive : styles.tab}
+          onClick={() => setActiveTab('create')}
+        >
+          + Create Role
         </button>
       </div>
 
-      <div className="channel-permission-card" style={{ marginBottom: 12 }}>
-        <div className="channel-permission-title">Create Role</div>
-        <div className="channel-permission-row">
-          <input
-            className="input-field"
-            value={newRoleName}
-            onChange={(e) => setNewRoleName(e.target.value)}
-            placeholder="Ex: raid-team"
-            disabled={creatingRole}
-          />
-          <Button type="button" onClick={handleCreateRole} disabled={!newRoleName.trim() || creatingRole}>
-            {creatingRole ? 'Creating...' : 'Create'}
-          </Button>
-        </div>
-      </div>
-
-      <div className="channel-permission-card" style={{ marginBottom: 12 }}>
-        <div className="channel-permission-title">Assign Members to Roles</div>
-        <input
-          className="input-field"
-          value={rolesMemberSearch}
-          onChange={(e) => setRolesMemberSearch(e.target.value)}
-          placeholder="Filter members"
-          disabled={savingRoleMembership}
-          style={{ marginBottom: 8 }}
-        />
-        <div className="channel-permission-row" style={{ marginBottom: 8 }}>
-          <select
-            className="input-field"
-            value={selectedMemberForRoles}
-            onChange={(e) => setSelectedMemberForRoles(e.target.value)}
-            disabled={savingRoleMembership}
-          >
-            <option value="">Select member</option>
-            {filteredRoleAssignMemberOptions.map((member) => (
-              <option key={member.userId} value={member.userId}>
-                {(member as any).user?.displayName ?? member.nickname ?? member.userId}
-              </option>
-            ))}
-          </select>
-        </div>
-        <input
-          className="input-field"
-          value={assignRoleSearch}
-          onChange={(e) => setAssignRoleSearch(e.target.value)}
-          placeholder="Filter roles"
-          disabled={!selectedMemberForRoles || savingRoleMembership}
-          style={{ marginBottom: 8 }}
-        />
-        <div className="channel-permission-row">
-          <select
-            className="input-field"
-            value={assignRoleId}
-            onChange={(e) => setAssignRoleId(e.target.value)}
-            disabled={!selectedMemberForRoles || savingRoleMembership}
-          >
-            <option value="">Select role</option>
-            {filteredAvailableAssignableRoles.map((role) => (
-              <option key={role.id} value={role.id}>
-                {role.name}
-              </option>
-            ))}
-          </select>
-          <Button
-            type="button"
-            onClick={handleAssignRoleToMember}
-            disabled={!selectedMemberForRoles || !assignRoleId || savingRoleMembership || assignRoleAlreadyPresent}
-          >
-            {assignRoleAlreadyPresent ? 'Already Assigned' : 'Assign'}
-          </Button>
-        </div>
-        {assignRoleAlreadyPresent && (
-          <div className="server-settings-muted" style={{ marginTop: 2 }}>
-            This member already has that role.
-          </div>
-        )}
-        {roleMembershipFeedback && (
-          <div className="server-settings-feedback" style={{ marginTop: 2 }} role="status" aria-live="polite">
-            {roleMembershipFeedback}
-          </div>
-        )}
-        {selectedMemberForRoles && !assignRoleAlreadyPresent && filteredAvailableAssignableRoles.length === 0 && (
-          <div className="server-settings-muted" style={{ marginTop: 2 }}>
-            This member already has all available custom roles.
-          </div>
-        )}
-
-        {selectedMemberForRoles && (
-          <div className="server-settings-inline-stats" style={{ marginTop: 2 }}>
-            <span className="server-settings-stat-pill">Managing: {selectedMemberRoleTargetLabel}</span>
-            <button
-              type="button"
-              className="channel-permission-remove"
-              onClick={() => {
-                setSelectedMemberForRoles('');
-                setAssignRoleId('');
-                setAssignRoleSearch('');
+      {/* Create Role tab */}
+      {activeTab === 'create' && (
+        <div style={{ ...styles.card, marginBottom: 12 }}>
+          <div style={styles.cardTitle}>Create New Role</div>
+          <p style={{ ...styles.muted, marginBottom: 8 }}>
+            New roles are mentionable by default. You can change this after creation.
+          </p>
+          <div style={styles.row}>
+            <input
+              style={styles.inputField}
+              value={newRoleName}
+              onChange={(e) => setNewRoleName(e.target.value)}
+              placeholder="Ex: raid-team"
+              disabled={creatingRole}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreateRole();
               }}
+            />
+            <Button type="button" onClick={handleCreateRole} disabled={!newRoleName.trim() || creatingRole}>
+              {creatingRole ? 'Creating...' : 'Create'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Members tab */}
+      {activeTab === 'assign' && (
+        <div style={{ ...styles.card, marginBottom: 12 }}>
+          <div style={styles.cardTitle}>Assign Members to Roles</div>
+          <p style={{ ...styles.muted, marginBottom: 8 }}>
+            Select a member, then pick a role to assign. Existing roles for the selected member are shown below.
+          </p>
+          <input
+            style={{ ...styles.inputField, marginBottom: 8 }}
+            value={rolesMemberSearch}
+            onChange={(e) => setRolesMemberSearch(e.target.value)}
+            placeholder="Filter members by name or ID"
+            disabled={savingRoleMembership}
+          />
+          <div style={{ ...styles.row, marginBottom: 8 }}>
+            <select
+              style={styles.selectField}
+              value={selectedMemberForRoles}
+              onChange={(e) => setSelectedMemberForRoles(e.target.value)}
               disabled={savingRoleMembership}
             >
-              Clear
-            </button>
-          </div>
-        )}
-
-        {selectedMemberForRoles && (
-          <div className="channel-permission-list" style={{ marginTop: 10 }}>
-            {selectedMemberRoles.filter((role) => role.name !== '@everyone').length === 0 && (
-              <div className="server-settings-muted">This member has no custom roles yet.</div>
-            )}
-            {selectedMemberRoles
-              .filter((role) => role.name !== '@everyone')
-              .map((role) => (
-                <div key={role.id} className="channel-permission-item">
-                  <span className="channel-permission-target">@{role.name}</span>
-                  <button
-                    type="button"
-                    className="channel-permission-remove"
-                    onClick={() => handleRemoveRoleFromMember(role.id)}
-                    disabled={savingRoleMembership}
-                  >
-                    Remove
-                  </button>
-                </div>
+              <option value="">Select member</option>
+              {filteredRoleAssignMemberOptions.map((member) => (
+                <option key={member.userId} value={member.userId}>
+                  {(member as any).user?.displayName ?? member.nickname ?? member.userId}
+                </option>
               ))}
+            </select>
           </div>
-        )}
-      </div>
+          <input
+            style={{ ...styles.inputField, marginBottom: 8 }}
+            value={assignRoleSearch}
+            onChange={(e) => setAssignRoleSearch(e.target.value)}
+            placeholder="Filter roles"
+            disabled={!selectedMemberForRoles || savingRoleMembership}
+          />
+          <div style={styles.row}>
+            <select
+              style={styles.selectField}
+              value={assignRoleId}
+              onChange={(e) => setAssignRoleId(e.target.value)}
+              disabled={!selectedMemberForRoles || savingRoleMembership}
+            >
+              <option value="">Select role</option>
+              {filteredAvailableAssignableRoles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {role.name}
+                </option>
+              ))}
+            </select>
+            <Button
+              type="button"
+              onClick={handleAssignRoleToMember}
+              disabled={!selectedMemberForRoles || !assignRoleId || savingRoleMembership || assignRoleAlreadyPresent}
+            >
+              {assignRoleAlreadyPresent ? 'Already Assigned' : 'Assign'}
+            </Button>
+          </div>
+          {assignRoleAlreadyPresent && (
+            <div style={{ ...styles.muted, marginTop: 2 }}>
+              This member already has that role.
+            </div>
+          )}
+          {selectedMemberForRoles && !assignRoleAlreadyPresent && filteredAvailableAssignableRoles.length === 0 && (
+            <div style={{ ...styles.muted, marginTop: 2 }}>
+              This member already has all available custom roles.
+            </div>
+          )}
 
-      <div className="channel-permission-list">
-        <div className="server-settings-inline-stats">
-          <span className="server-settings-stat-pill">{roleStats.total} total roles</span>
-          <span className="server-settings-stat-pill">{roleStats.custom} custom</span>
-          <span className="server-settings-stat-pill">{roleStats.mentionable} mentionable</span>
+          {selectedMemberForRoles && (
+            <div style={styles.cardInner}>
+              <div style={{ ...styles.statsRow, marginBottom: 6 }}>
+                <span style={styles.statPill}>Managing: {selectedMemberRoleTargetLabel}</span>
+                <button
+                  type="button"
+                  style={styles.smallBtn}
+                  onClick={() => {
+                    setSelectedMemberForRoles('');
+                    setAssignRoleId('');
+                    setAssignRoleSearch('');
+                  }}
+                  disabled={savingRoleMembership}
+                >
+                  Clear
+                </button>
+              </div>
+
+              <div style={styles.list}>
+                {selectedMemberRoles.filter((role) => role.name !== '@everyone').length === 0 && (
+                  <div style={styles.muted}>This member has no custom roles yet.</div>
+                )}
+                {selectedMemberRoles
+                  .filter((role) => role.name !== '@everyone')
+                  .map((role) => (
+                    <div key={role.id} style={styles.listItem}>
+                      <span style={styles.roleTarget}>@{role.name}</span>
+                      <button
+                        type="button"
+                        style={styles.smallBtn}
+                        onClick={() => handleRemoveRoleFromMember(role.id)}
+                        disabled={savingRoleMembership}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
-        <div className="server-settings-inline-stats">
-          <button
-            type="button"
-            className={`discover-tag ${roleListSort === 'alpha' ? 'active' : ''}`}
-            onClick={() => setRoleListSort('alpha')}
-          >
-            A-Z
-          </button>
-          <button
-            type="button"
-            className={`discover-tag ${roleListSort === 'memberCount' ? 'active' : ''}`}
-            onClick={() => setRoleListSort('memberCount')}
-          >
-            Members
-          </button>
-          <button
-            type="button"
-            className={`discover-tag ${roleListSort === 'mentionable' ? 'active' : ''}`}
-            onClick={() => setRoleListSort('mentionable')}
-          >
-            Mentionable
-          </button>
-          <button
-            type="button"
-            className={`discover-tag ${roleListSortDir === 'asc' ? 'active' : ''}`}
-            onClick={() => setRoleListSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-            title={roleListSortDir === 'asc' ? 'Ascending' : 'Descending'}
-          >
-            {roleListSortDir === 'asc' ? 'Asc' : 'Desc'}
-          </button>
-        </div>
-        <div className="server-settings-inline-stats">
-          <button
-            type="button"
-            className={`discover-tag ${roleListQuickFilter === 'all' ? 'active' : ''}`}
-            onClick={() => setRoleListQuickFilter('all')}
-          >
-            All Roles
-          </button>
-          <button
-            type="button"
-            className={`discover-tag ${roleListQuickFilter === 'custom' ? 'active' : ''}`}
-            onClick={() => setRoleListQuickFilter('custom')}
-          >
-            Custom Only
-          </button>
-          <button
-            type="button"
-            className={`discover-tag ${roleListQuickFilter === 'mentionable' ? 'active' : ''}`}
-            onClick={() => setRoleListQuickFilter('mentionable')}
-          >
-            Mentionable Only
-          </button>
-        </div>
-        <input
-          className="input-field"
-          value={roleListSearch}
-          onChange={(e) => setRoleListSearch(e.target.value)}
-          placeholder="Filter roles"
-        />
-        {roles.length === 0 && <div className="server-settings-muted">No roles found.</div>}
-        {roles.length > 0 && filteredRoleList.length === 0 && (
-          <div className="server-settings-muted">No roles match the current filter.</div>
-        )}
-        {sortedRoleList.map((role) => (
-          <div key={role.id} className="channel-permission-item">
-            <span className="channel-permission-target">@{role.name}</span>
-            <span className="channel-permission-badge">
-              {(() => {
-                const count = roleMemberCountByRoleId.get(String(role.id)) ?? 0;
-                if (count > 99) return '99+ members';
-                return `${count} member${count === 1 ? '' : 's'}`;
-              })()}
-            </span>
+      )}
+
+      {/* Role List tab */}
+      {activeTab === 'list' && (
+        <div style={styles.card}>
+          <div style={styles.statsRow}>
+            <span style={styles.statPill}>{roleStats.total} total</span>
+            <span style={styles.statPill}>{roleStats.custom} custom</span>
+            <span style={styles.statPill}>{roleStats.mentionable} mentionable</span>
+          </div>
+
+          {/* Sort controls */}
+          <div style={styles.statsRow}>
             <button
               type="button"
-              className="channel-permission-remove"
-              onClick={() => copyTextToClipboard(String(role.id), 'Copied role ID.')}
-              title="Copy role ID"
+              style={roleListSort === 'alpha' ? styles.tabActive : styles.tab}
+              onClick={() => setRoleListSort('alpha')}
             >
-              Copy ID
+              A-Z
             </button>
-            <label className="channel-private-toggle" style={{ margin: 0, gap: 8 }}>
-              <input
-                type="checkbox"
-                checked={Boolean(role.mentionable)}
-                onChange={(e) => handleToggleRoleMentionable(role.id, e.target.checked)}
-                disabled={role.name === '@everyone'}
-              />
-              <span>Mentionable</span>
-            </label>
-            {role.name !== '@everyone' && (
-              <button
-                type="button"
-                className="channel-permission-remove"
-                onClick={() => handleDeleteRole(role.id)}
-              >
-                Delete
-              </button>
-            )}
+            <button
+              type="button"
+              style={roleListSort === 'memberCount' ? styles.tabActive : styles.tab}
+              onClick={() => setRoleListSort('memberCount')}
+            >
+              Members
+            </button>
+            <button
+              type="button"
+              style={roleListSort === 'mentionable' ? styles.tabActive : styles.tab}
+              onClick={() => setRoleListSort('mentionable')}
+            >
+              Mentionable
+            </button>
+            <button
+              type="button"
+              style={roleListSortDir === 'asc' ? styles.tabActive : styles.tab}
+              onClick={() => setRoleListSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+              title={roleListSortDir === 'asc' ? 'Ascending' : 'Descending'}
+            >
+              {roleListSortDir === 'asc' ? 'Asc' : 'Desc'}
+            </button>
           </div>
-        ))}
-      </div>
+
+          {/* Quick filters */}
+          <div style={styles.statsRow}>
+            <button
+              type="button"
+              style={roleListQuickFilter === 'all' ? styles.tabActive : styles.tab}
+              onClick={() => setRoleListQuickFilter('all')}
+            >
+              All Roles
+            </button>
+            <button
+              type="button"
+              style={roleListQuickFilter === 'custom' ? styles.tabActive : styles.tab}
+              onClick={() => setRoleListQuickFilter('custom')}
+            >
+              Custom Only
+            </button>
+            <button
+              type="button"
+              style={roleListQuickFilter === 'mentionable' ? styles.tabActive : styles.tab}
+              onClick={() => setRoleListQuickFilter('mentionable')}
+            >
+              Mentionable Only
+            </button>
+          </div>
+
+          <input
+            style={{ ...styles.inputField, marginBottom: 8 }}
+            value={roleListSearch}
+            onChange={(e) => setRoleListSearch(e.target.value)}
+            placeholder="Search roles..."
+          />
+
+          <div style={styles.list}>
+            {roles.length === 0 && <div style={styles.muted}>No roles found.</div>}
+            {roles.length > 0 && filteredRoleList.length === 0 && (
+              <div style={styles.muted}>No roles match the current filter.</div>
+            )}
+            {sortedRoleList.map((role) => (
+              <div key={role.id} style={styles.listItem}>
+                <span style={styles.roleTarget}>@{role.name}</span>
+                <span style={styles.badge}>
+                  {(() => {
+                    const count = roleMemberCountByRoleId.get(String(role.id)) ?? 0;
+                    if (count > 99) return '99+ members';
+                    return `${count} member${count === 1 ? '' : 's'}`;
+                  })()}
+                </span>
+                <button
+                  type="button"
+                  style={styles.smallBtn}
+                  onClick={() => copyTextToClipboard(String(role.id), 'Copied role ID.')}
+                  title="Copy role ID"
+                >
+                  Copy ID
+                </button>
+                <label style={styles.toggleLabel}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(role.mentionable)}
+                    onChange={(e) => handleToggleRoleMentionable(role.id, e.target.checked)}
+                    disabled={role.name === '@everyone'}
+                  />
+                  <span>Mentionable</span>
+                </label>
+                {role.name !== '@everyone' && (
+                  <button
+                    type="button"
+                    style={styles.deleteBtn}
+                    onClick={() => handleDeleteRole(role.id)}
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

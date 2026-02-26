@@ -23,6 +23,8 @@ export interface Guild {
   explicitContentFilter: ExplicitContentFilter;
   defaultMessageNotifications: DefaultMessageNotifications;
   features: GuildFeature[];
+  tags: string[];           // discovery hashtags
+  categories: string[];     // up to 3 categories
   discoverable: boolean;
   memberCount: number;
   boostCount: number;
