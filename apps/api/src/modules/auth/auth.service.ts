@@ -178,76 +178,46 @@ export function createAuthService(ctx: AppContext) {
 
   async function register(input: RegisterInput) {
     const userId = generateId();
-
-    // Hash password
     const passwordHash = await hashPassword(input.password);
 
-    // TODO: Encrypt dateOfBirth with AES-256-GCM before storage
-    const encryptedDob = input.dateOfBirth ?? null; // placeholder — will encrypt in production
+    // Auto-generate a unique temp username from the ID prefix.
+    // User will set their real username in the onboarding flow.
+    const tempUsername = `user_${userId.toString().slice(-12)}`;
 
-    const resolvedDisplayName = input.displayName ?? input.username;
-
-    // Insert user
     await ctx.db.insert(users).values({
       id: userId,
-      username: input.username.toLowerCase(),
+      username: tempUsername,
       email: input.email.toLowerCase(),
       emailVerified: false,
       passwordHash,
-      dateOfBirth: encryptedDob,
+      dateOfBirth: null,
     });
 
-    // Insert default profile
     await ctx.db.insert(userProfiles).values({
       userId,
-      displayName: resolvedDisplayName,
+      displayName: tempUsername,
     });
 
-    // Insert default settings
-    await ctx.db.insert(userSettings).values({
-      userId,
-    });
+    await ctx.db.insert(userSettings).values({ userId });
 
-    logger.info({ userId, username: input.username }, 'User registered');
+    logger.info({ userId, tempUsername }, 'User registered (email+password only)');
 
     try {
       const { token } = await createEmailVerificationToken(userId);
       const mailResult = await sendVerificationEmail({
         env: ctx.env,
         toEmail: input.email.toLowerCase(),
-        displayName: resolvedDisplayName,
+        displayName: tempUsername,
         token,
       });
       if (!mailResult.sent) {
-        // Safe fallback during rollout while SMTP may not yet be configured.
         logger.info({ userId, token, reason: mailResult.reason }, 'Email verification token generated (delivery fallback)');
       }
     } catch (err) {
       logger.warn({ err, userId }, 'Failed to create/send email verification token');
     }
 
-    // Generate tokens
-    const accessToken = await generateAccessToken({
-      userId,
-      username: input.username,
-      tier: 'free',
-    });
-
-    const refreshToken = generateRefreshToken();
-    await storeRefreshToken(userId, refreshToken, {});
-
-    return {
-      accessToken,
-      refreshToken,
-      user: {
-        id: userId,
-        username: input.username,
-        email: input.email,
-        displayName: resolvedDisplayName,
-        avatarHash: null,
-        tier: 'free' as const,
-      },
-    };
+    return { email: input.email.toLowerCase() };
   }
 
   // ── Login ───────────────────────────────────────────────────────────────
@@ -548,6 +518,7 @@ export function createAuthService(ctx: AppContext) {
     const tokenHash = hashVerificationToken(rawToken);
     const now = new Date();
 
+    // 1. Look up token row
     const [row] = await ctx.db
       .select()
       .from(emailVerificationTokens)
@@ -559,6 +530,7 @@ export function createAuthService(ctx: AppContext) {
       )
       .limit(1);
 
+    // 2. Check INVALID_TOKEN / TOKEN_EXPIRED
     if (!row) {
       return { error: 'INVALID_TOKEN' as const };
     }
@@ -567,18 +539,67 @@ export function createAuthService(ctx: AppContext) {
       return { error: 'TOKEN_EXPIRED' as const };
     }
 
+    // 3. Look up user + profile (matching login() pattern)
+    const [user] = await ctx.db
+      .select({ id: users.id, username: users.username, disabled: users.disabled, deletedAt: users.deletedAt })
+      .from(users)
+      .where(eq(users.id, row.userId))
+      .limit(1);
+
+    const [profile] = await ctx.db
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, row.userId))
+      .limit(1);
+
+    // 4. Check !user
+    if (!user) {
+      return { error: 'INVALID_TOKEN' as const };
+    }
+
+    // 5. Check account disabled
+    if (user.disabled) {
+      return { error: 'ACCOUNT_DISABLED' as const };
+    }
+
+    // 6. Check account deleted
+    if (user.deletedAt) {
+      return { error: 'ACCOUNT_DELETED' as const };
+    }
+
+    // 7. Stamp usedAt (mark token consumed)
     await ctx.db
       .update(emailVerificationTokens)
       .set({ usedAt: now })
       .where(eq(emailVerificationTokens.id, row.id));
 
+    // 8. Update emailVerified = true
     await ctx.db
       .update(users)
       .set({ emailVerified: true })
       .where(eq(users.id, row.userId));
 
-    logger.info({ userId: row.userId }, 'Email verified');
-    return { ok: true as const, userId: row.userId };
+    // 9. Log after user guard succeeds and tokens are being generated
+    logger.info({ userId: row.userId }, 'Email verified — issuing session tokens');
+
+    // 10. Generate accessToken (using tier from userProfiles)
+    const accessToken = await generateAccessToken({
+      userId: user.id,
+      username: user.username,
+      tier: profile?.tier ?? 'free',
+    });
+
+    // 11. Generate + store refreshToken
+    const refreshToken = generateRefreshToken();
+    await storeRefreshToken(user.id, refreshToken, {});
+
+    // 12. Return
+    return {
+      ok: true as const,
+      userId: user.id,
+      accessToken,
+      refreshToken,
+    };
   }
 
   async function getMfaStatus(userId: string) {
