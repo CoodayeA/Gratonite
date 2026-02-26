@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo, type KeyboardEvent, type ChangeEvent, type FormEvent } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect, type KeyboardEvent, type ChangeEvent, type FormEvent } from 'react';
 import { api } from '@/lib/api';
 import { useMessagesStore } from '@/stores/messages.store';
 import { useAuthStore } from '@/stores/auth.store';
@@ -43,7 +43,18 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
   const addMessage = useMessagesStore((s) => s.addMessage);
   const replyingTo = useMessagesStore((s) => s.replyingTo.get(channelId) ?? null);
   const setReplyingTo = useMessagesStore((s) => s.setReplyingTo);
-  const canSend = content.trim().length > 0 || pendingFiles.length > 0;
+  // Voice message recording state (UI-only, backend recording API not yet available)
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [voiceMessageBlob, setVoiceMessageBlob] = useState<Blob | null>(null);
+  const [voiceMessageUrl, setVoiceMessageUrl] = useState<string | null>(null);
+  const [waveformData, setWaveformData] = useState<number[]>([]);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingTimerRef = useRef<number | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+
+  const canSend = content.trim().length > 0 || pendingFiles.length > 0 || voiceMessageBlob !== null;
   const { data: guildRoles = [] } = useQuery({
     queryKey: ['guilds', guildId, 'roles'],
     queryFn: () => (guildId ? api.guilds.getRoles(guildId) : Promise.resolve([])),
@@ -295,9 +306,119 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
     setEmojiOpen(false);
   }
 
+  // Voice recording handlers
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      const chunks: BlobPart[] = [];
+
+      // Set up audio analysis for waveform
+      const audioContext = new AudioContext();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 64;
+      source.connect(analyser);
+      analyserRef.current = analyser;
+
+      // Animate waveform
+      function updateWaveform() {
+        if (!analyserRef.current) return;
+        const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+        analyserRef.current.getByteFrequencyData(dataArray);
+        const normalized = Array.from(dataArray.slice(0, 24)).map((v) => v / 255);
+        setWaveformData(normalized);
+        animationFrameRef.current = requestAnimationFrame(updateWaveform);
+      }
+      updateWaveform();
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        setVoiceMessageBlob(blob);
+        setVoiceMessageUrl(url);
+        stream.getTracks().forEach((track) => track.stop());
+        audioContext.close();
+        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+        analyserRef.current = null;
+      };
+
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+      setWaveformData([]);
+
+      // Duration timer
+      recordingTimerRef.current = window.setInterval(() => {
+        setRecordingDuration((prev) => prev + 1);
+      }, 1000);
+    } catch {
+      setSendError('Could not access microphone.');
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    mediaRecorderRef.current = null;
+    setIsRecording(false);
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+  }
+
+  function cancelRecording() {
+    stopRecording();
+    if (voiceMessageUrl) URL.revokeObjectURL(voiceMessageUrl);
+    setVoiceMessageBlob(null);
+    setVoiceMessageUrl(null);
+    setWaveformData([]);
+    setRecordingDuration(0);
+  }
+
+  function formatDuration(seconds: number) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  // Cleanup recording on unmount
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      if (voiceMessageUrl) URL.revokeObjectURL(voiceMessageUrl);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function sendMessage(contentOverride?: string) {
     const trimmed = (contentOverride ?? content).trim();
-    if (!trimmed && pendingFiles.length === 0) return;
+    if (!trimmed && pendingFiles.length === 0 && !voiceMessageBlob) return;
+
+    // If there's a voice message, add it to pending files
+    if (voiceMessageBlob) {
+      const voiceFile = new File([voiceMessageBlob], 'voice-message.webm', { type: 'audio/webm' });
+      pendingFiles.push({ id: generateNonce(), file: voiceFile });
+      setVoiceMessageBlob(null);
+      if (voiceMessageUrl) URL.revokeObjectURL(voiceMessageUrl);
+      setVoiceMessageUrl(null);
+      setWaveformData([]);
+      setRecordingDuration(0);
+    }
     setSendError('');
     closeMentionMenu();
 
@@ -439,6 +560,48 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
             onClearAll={pendingFiles.length > 1 ? handleClearFiles : undefined}
             compact
           />
+          {/* Voice message recording/preview */}
+          {(isRecording || voiceMessageUrl) && (
+            <div className="voice-message-preview">
+              {isRecording && (
+                <div className="voice-recording-indicator">
+                  <span className="voice-recording-dot" />
+                  <span className="voice-recording-time">{formatDuration(recordingDuration)}</span>
+                  <div className="voice-waveform">
+                    {waveformData.map((value, i) => (
+                      <div
+                        key={i}
+                        className="voice-waveform-bar"
+                        style={{ height: `${Math.max(4, value * 32)}px` }}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="voice-cancel-btn"
+                    onClick={cancelRecording}
+                    title="Cancel recording"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+              {!isRecording && voiceMessageUrl && (
+                <div className="voice-playback-preview">
+                  <audio src={voiceMessageUrl} controls className="voice-audio-player" />
+                  <span className="voice-recording-time">{formatDuration(recordingDuration)}</span>
+                  <button
+                    type="button"
+                    className="voice-cancel-btn"
+                    onClick={cancelRecording}
+                    title="Discard voice message"
+                  >
+                    Discard
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           <div className="message-composer-controls">
             <textarea
               ref={textareaRef}
@@ -480,6 +643,21 @@ export function MessageComposer({ channelId, placeholder }: MessageComposerProps
                 ))}
               </div>
             )}
+            {/* Voice message record button */}
+            <button
+              type="button"
+              className={`message-emoji-btn ${isRecording ? 'voice-recording-active' : ''}`}
+              onClick={isRecording ? stopRecording : startRecording}
+              aria-label={isRecording ? 'Stop recording' : 'Record voice message'}
+              title={isRecording ? 'Stop recording' : 'Record voice message'}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
+              </svg>
+            </button>
             <button
               ref={emojiButtonRef}
               type="button"

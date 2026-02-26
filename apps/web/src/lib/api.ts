@@ -681,6 +681,35 @@ export const api = {
       }),
     deleteSoundboard: (guildId: string, soundId: string) =>
       apiFetch<void>(`/guilds/${guildId}/soundboard/${soundId}`, { method: 'DELETE' }),
+
+    // Stage instances
+    getStageInstances: (guildId: string) =>
+      apiFetch<Array<{
+        id: string;
+        guildId: string;
+        channelId: string;
+        topic: string;
+        privacyLevel: 'public' | 'guild_only';
+        scheduledEventId: string | null;
+      }>>(`/guilds/${guildId}/stage-instances`),
+    createStageInstance: (guildId: string, data: { channelId: string; topic: string; privacyLevel?: 'public' | 'guild_only' }) =>
+      apiFetch<any>(`/guilds/${guildId}/stage-instances`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    updateStageInstance: (stageId: string, data: { topic?: string; privacyLevel?: 'public' | 'guild_only' }) =>
+      apiFetch<any>(`/stage-instances/${stageId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    deleteStageInstance: (stageId: string) =>
+      apiFetch<void>(`/stage-instances/${stageId}`, { method: 'DELETE' }),
+    requestToSpeak: (stageId: string) =>
+      apiFetch<void>(`/stage-instances/${stageId}/request-to-speak`, { method: 'PUT' }),
+    addSpeaker: (stageId: string, userId: string) =>
+      apiFetch<void>(`/stage-instances/${stageId}/speakers/${userId}`, { method: 'PUT' }),
+    removeSpeaker: (stageId: string, userId: string) =>
+      apiFetch<void>(`/stage-instances/${stageId}/speakers/${userId}`, { method: 'DELETE' }),
   },
 
   guilds: {

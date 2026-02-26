@@ -13,6 +13,7 @@ import { PinnedMessagesPanel } from '@/components/messages/PinnedMessagesPanel';
 import { SearchPanel } from '@/components/search/SearchPanel';
 import { ThreadPanel } from '@/components/threads/ThreadPanel';
 import { VoiceChannelView } from '@/components/voice/VoiceChannelView';
+import { StageChannelView } from '@/components/StageChannelView';
 import { api } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { useUiStore } from '@/stores/ui.store';
@@ -101,7 +102,22 @@ export function ChannelPage() {
     </div>
   ) : null;
 
-  if (channel?.type === 'GUILD_VOICE' || channel?.type === 'GUILD_STAGE_VOICE') {
+  if (channel?.type === 'GUILD_STAGE_VOICE') {
+    return (
+      <div className="channel-page channel-page-voice">
+        <TopBar channelId={channelId} />
+        <StageChannelView channelId={channelId} channelName={channel?.name ?? 'Stage'} />
+        {searchPanelOpen && (
+          <SearchPanel channelId={channelId} />
+        )}
+        {threadPanelOpen && !isDm && (
+          <ThreadPanel channelId={channelId} />
+        )}
+      </div>
+    );
+  }
+
+  if (channel?.type === 'GUILD_VOICE') {
     return (
       <div className="channel-page channel-page-voice">
         <TopBar channelId={channelId} />

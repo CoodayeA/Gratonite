@@ -144,6 +144,7 @@ export function CreateGuildModal() {
   const [templateId, setTemplateId] = useState('gaming');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<'template' | 'details'>('template');
 
   // Discord import state
   const [importMode, setImportMode] = useState(false);
@@ -155,6 +156,8 @@ export function CreateGuildModal() {
   const [importing, setImporting] = useState(false);
   const importFileRef = useRef<HTMLInputElement>(null);
 
+  const selectedTemplate = SERVER_TEMPLATES.find((t) => t.id === templateId) ?? SERVER_TEMPLATES[SERVER_TEMPLATES.length - 1]!;
+
   function handleClose() {
     setName('');
     setDescription('');
@@ -164,6 +167,7 @@ export function CreateGuildModal() {
     setImportMode(false);
     setImportPreview(null);
     setImporting(false);
+    setStep('template');
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -304,7 +308,7 @@ export function CreateGuildModal() {
   }
 
   return (
-    <Modal id="create-guild" title={importMode ? 'Import from Discord' : 'Create a Portal'} onClose={handleClose}>
+    <Modal id="create-guild" title={importMode ? 'Import from Discord' : 'Create a Portal'} onClose={handleClose} size="lg">
       {importMode ? (
         <form onSubmit={handleConfirmImport} className="modal-form">
           {error && <div className="auth-error">{error}</div>}
@@ -375,12 +379,15 @@ export function CreateGuildModal() {
             )}
           </div>
         </form>
-      ) : (
-        <form onSubmit={handleSubmit} className="modal-form">
+      ) : step === 'template' ? (
+        <div className="modal-form">
           {error && <div className="auth-error">{error}</div>}
 
           <div className="create-guild-template-group">
-            <div className="input-label">Template</div>
+            <div className="input-label">Choose a Template</div>
+            <p className="server-settings-muted" style={{ marginBottom: 12 }}>
+              Each template creates organized categories with text and voice channels. Customize freely after creation.
+            </p>
             <div className="create-guild-template-grid">
               {SERVER_TEMPLATES.map((template) => (
                 <button
@@ -395,15 +402,68 @@ export function CreateGuildModal() {
                 </button>
               ))}
             </div>
-            <div className="create-guild-template-hint">
-              Each template creates organized categories with text and voice channels. Customize freely after creation.
+          </div>
+
+          {/* Template preview */}
+          <div className="channel-permission-card" style={{ marginTop: 12 }}>
+            <div className="channel-permission-title">
+              {selectedTemplate.icon} {selectedTemplate.label} Preview
             </div>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <div className="server-settings-muted" style={{ marginBottom: 4, fontWeight: 600 }}>Channels</div>
+                {selectedTemplate.categories.map((cat, i) => (
+                  <div key={i} style={{ marginBottom: 4 }}>
+                    <div style={{ fontWeight: 500, fontSize: 12, opacity: 0.7, textTransform: 'uppercase' }}>{cat.name}</div>
+                    {cat.textChannels.map((ch) => (
+                      <div key={ch} className="server-settings-muted" style={{ paddingLeft: 12 }}># {ch}</div>
+                    ))}
+                    {cat.voiceChannels.map((ch) => (
+                      <div key={ch} className="server-settings-muted" style={{ paddingLeft: 12 }}>#) {ch}</div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+              {selectedTemplate.roles.length > 0 && (
+                <div style={{ flex: 1, minWidth: 120 }}>
+                  <div className="server-settings-muted" style={{ marginBottom: 4, fontWeight: 600 }}>Roles</div>
+                  {selectedTemplate.roles.map((role) => (
+                    <div key={role.name} className="server-settings-stat-pill" style={{ color: role.color, marginBottom: 4 }}>
+                      @{role.name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="modal-footer" style={{ marginTop: 16 }}>
             <button
               type="button"
               className="discord-import-link"
               onClick={() => setImportMode(true)}
             >
               Or import from Discord
+            </button>
+            <div style={{ flex: 1 }} />
+            <Button variant="ghost" type="button" onClick={() => { closeModal(); handleClose(); }}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => setStep('details')}>
+              Next
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="modal-form">
+          {error && <div className="auth-error">{error}</div>}
+
+          <div className="server-settings-inline-stats" style={{ marginBottom: 8 }}>
+            <span className="server-settings-stat-pill">
+              {selectedTemplate.icon} {selectedTemplate.label}
+            </span>
+            <button type="button" className="channel-permission-remove" onClick={() => setStep('template')}>
+              Change Template
             </button>
           </div>
 
@@ -428,11 +488,11 @@ export function CreateGuildModal() {
           />
 
           <div className="modal-footer">
-            <Button variant="ghost" type="button" onClick={() => { closeModal(); handleClose(); }}>
-              Cancel
+            <Button variant="ghost" type="button" onClick={() => setStep('template')}>
+              Back
             </Button>
             <Button type="submit" loading={loading} disabled={!name.trim()}>
-              Create
+              Create Portal
             </Button>
           </div>
         </form>
