@@ -164,7 +164,17 @@ async function apiFetch<T>(
     return undefined as T;
   }
 
-  const body = await res.json();
+  let body: unknown;
+  try {
+    body = await res.json();
+  } catch {
+    throw new ApiRequestError(res.status, {
+      code: 'PARSE_ERROR',
+      message: res.ok
+        ? 'Invalid response from server'
+        : `Server error (${res.status}). Is the API running?`,
+    } as ApiError);
+  }
 
   if (!res.ok) {
     throw new ApiRequestError(res.status, body as ApiError);
