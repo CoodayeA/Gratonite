@@ -12,6 +12,14 @@ import { PermissionFlags, type Channel } from '@gratonite/types';
 const GUILD_TEXT = 'GUILD_TEXT';
 const GUILD_VOICE = 'GUILD_VOICE';
 const GUILD_CATEGORY = 'GUILD_CATEGORY';
+const GUILD_STAGE_VOICE = 'GUILD_STAGE_VOICE';
+
+const CHANNEL_TYPE_OPTIONS = [
+  { value: GUILD_TEXT, label: 'Text', icon: '#', description: 'Send messages, images, and files' },
+  { value: GUILD_VOICE, label: 'Voice', icon: '#)', description: 'Hang out with voice and video' },
+  { value: GUILD_STAGE_VOICE, label: 'Stage', icon: '🎙', description: 'Host events with speakers and audience' },
+  { value: GUILD_CATEGORY, label: 'Category', icon: '📁', description: 'Organize channels into groups' },
+];
 
 export function CreateChannelModal() {
   const activeModal = useUiStore((s) => s.activeModal);
@@ -72,6 +80,8 @@ export function CreateChannelModal() {
     resetForm();
   }
 
+  const isNotCategory = type !== GUILD_CATEGORY;
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!guildId || !name.trim()) return;
@@ -115,33 +125,38 @@ export function CreateChannelModal() {
       <form className="modal-form" onSubmit={handleSubmit}>
         {error && <div className="modal-error">{error}</div>}
 
+        {/* Channel type picker */}
+        <div className="input-group">
+          <label className="input-label">Channel Type</label>
+          <div className="create-guild-template-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+            {CHANNEL_TYPE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={`create-guild-template-card ${type === opt.value ? 'create-guild-template-card-active' : ''}`}
+                onClick={() => setType(opt.value)}
+                style={{ padding: '10px 12px', minHeight: 'auto' }}
+              >
+                <span className="create-guild-template-icon" style={{ fontSize: 18 }}>{opt.icon}</span>
+                <span className="create-guild-template-title" style={{ fontSize: 13 }}>{opt.label}</span>
+                <span className="create-guild-template-description" style={{ fontSize: 11 }}>{opt.description}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <Input
           label="Channel Name"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="general"
+          placeholder={type === GUILD_CATEGORY ? 'Category name' : 'general'}
           maxLength={100}
           required
           autoFocus
         />
 
-        <div className="input-group">
-          <label className="input-label">Channel Type</label>
-          <div className="input-wrapper">
-            <select
-              className="input-field"
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-            >
-              <option value={GUILD_TEXT}>Text</option>
-              <option value={GUILD_VOICE}>Voice</option>
-              <option value={GUILD_CATEGORY}>Category</option>
-            </select>
-          </div>
-        </div>
-
-        {type !== GUILD_CATEGORY && (
+        {isNotCategory && (
           <div className="input-group">
             <label className="input-label">Category</label>
             <div className="input-wrapper">
@@ -159,7 +174,7 @@ export function CreateChannelModal() {
           </div>
         )}
 
-        {type !== GUILD_CATEGORY && (
+        {isNotCategory && (
           <div className="input-group">
             <label className="input-label">Topic</label>
             <div className="input-wrapper">
@@ -175,7 +190,7 @@ export function CreateChannelModal() {
           </div>
         )}
 
-        {type !== GUILD_CATEGORY && (
+        {isNotCategory && (
           <label className="channel-private-toggle">
             <input
               type="checkbox"
@@ -186,7 +201,7 @@ export function CreateChannelModal() {
           </label>
         )}
 
-        {type !== GUILD_CATEGORY && (
+        {isNotCategory && (
           <p className="channel-private-note">
             Only members with explicit permissions can view this channel.
           </p>

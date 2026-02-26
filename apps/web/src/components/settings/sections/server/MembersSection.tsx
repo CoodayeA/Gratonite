@@ -25,6 +25,7 @@ export function MembersSection({ guildId }: MembersSectionProps) {
   const [banSearch, setBanSearch] = useState('');
   const [banSort, setBanSort] = useState<'recent' | 'name'>('recent');
   const [expandedBanReasons, setExpandedBanReasons] = useState<Set<string>>(new Set());
+  const [activePanel, setActivePanel] = useState<'members' | 'bans'>('members');
 
   const { data: members = [] } = useQuery({
     queryKey: ['members', guildId],
@@ -225,243 +226,263 @@ export function MembersSection({ guildId }: MembersSectionProps) {
             Kick and ban portal members, and manage the current ban list. Only portal owners can use these actions.
           </p>
         </div>
+        <div className="server-settings-actions">
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={resetView}
+            disabled={Boolean(memberActionUserId)}
+          >
+            Reset
+          </button>
+        </div>
       </div>
 
       {error && <div className="modal-error">{error}</div>}
+      {memberActionFeedback && (
+        <div className="server-settings-feedback" role="status" aria-live="polite">
+          {memberActionFeedback}
+        </div>
+      )}
 
-      <div className="channel-permission-card" style={{ marginBottom: 12 }}>
-        <div className="server-settings-header-row" style={{ marginBottom: 8 }}>
-          <div className="channel-permission-title">Member Actions</div>
-          <div className="server-settings-actions">
+      {/* Panel navigation */}
+      <div className="server-settings-inline-stats" style={{ marginBottom: 12 }}>
+        <button
+          type="button"
+          className={`discover-tag ${activePanel === 'members' ? 'active' : ''}`}
+          onClick={() => setActivePanel('members')}
+        >
+          Members ({members.length})
+        </button>
+        <button
+          type="button"
+          className={`discover-tag ${activePanel === 'bans' ? 'active' : ''}`}
+          onClick={() => setActivePanel('bans')}
+        >
+          Banned ({bans.length})
+        </button>
+      </div>
+
+      {/* Members panel */}
+      {activePanel === 'members' && (
+        <div className="channel-permission-card">
+          <div className="server-settings-inline-stats" style={{ marginBottom: 8 }}>
             <button
               type="button"
-              className="channel-permission-remove"
-              onClick={resetView}
-              disabled={Boolean(memberActionUserId)}
+              className={`discover-tag ${memberListFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setMemberListFilter('all')}
             >
-              Reset Member View
+              All
+            </button>
+            <button
+              type="button"
+              className={`discover-tag ${memberListFilter === 'moderatable' ? 'active' : ''}`}
+              onClick={() => setMemberListFilter('moderatable')}
+            >
+              Moderatable
+            </button>
+            <button
+              type="button"
+              className={`discover-tag ${memberListFilter === 'owners' ? 'active' : ''}`}
+              onClick={() => setMemberListFilter('owners')}
+            >
+              Owners
             </button>
           </div>
-        </div>
-        <div className="server-settings-inline-stats">
-          <button
-            type="button"
-            className={`discover-tag ${memberListFilter === 'all' ? 'active' : ''}`}
-            onClick={() => setMemberListFilter('all')}
-          >
-            All
-          </button>
-          <button
-            type="button"
-            className={`discover-tag ${memberListFilter === 'moderatable' ? 'active' : ''}`}
-            onClick={() => setMemberListFilter('moderatable')}
-          >
-            Moderatable
-          </button>
-          <button
-            type="button"
-            className={`discover-tag ${memberListFilter === 'owners' ? 'active' : ''}`}
-            onClick={() => setMemberListFilter('owners')}
-          >
-            Owners
-          </button>
-          <span className="server-settings-stat-pill">{bans.length} banned</span>
-        </div>
-        <div className="channel-permission-row" style={{ marginBottom: 8 }}>
-          <input
-            className="input-field"
-            value={memberSearch}
-            onChange={(e) => setMemberSearch(e.target.value)}
-            placeholder="Search members by name or ID"
-          />
-        </div>
-        <div className="channel-permission-row">
-          <input
-            className="input-field"
-            value={banReason}
-            onChange={(e) => setBanReason(e.target.value)}
-            placeholder="Ban reason (optional)"
-            maxLength={200}
-          />
-        </div>
-        <div className="server-settings-muted" style={{ marginTop: 8 }}>
-          {filteredMembers.length} member{filteredMembers.length === 1 ? '' : 's'} shown
-        </div>
-        {memberActionFeedback && (
-          <div className="server-settings-feedback" style={{ marginTop: 4 }} role="status" aria-live="polite">
-            {memberActionFeedback}
+          <div className="channel-permission-row" style={{ marginBottom: 8 }}>
+            <input
+              className="input-field"
+              value={memberSearch}
+              onChange={(e) => setMemberSearch(e.target.value)}
+              placeholder="Search members by name or ID"
+            />
           </div>
-        )}
-      </div>
+          <div className="channel-permission-row" style={{ marginBottom: 8 }}>
+            <input
+              className="input-field"
+              value={banReason}
+              onChange={(e) => setBanReason(e.target.value)}
+              placeholder="Ban reason (optional, applies to next ban action)"
+              maxLength={200}
+            />
+          </div>
+          <div className="server-settings-muted" style={{ marginBottom: 8 }}>
+            {filteredMembers.length} member{filteredMembers.length === 1 ? '' : 's'} shown
+          </div>
 
-      <div className="channel-permission-list">
-        {filteredMembers.length === 0 && (
-          <div className="server-settings-muted">No members match the current search.</div>
-        )}
-        {filteredMembers.map((member) => {
-          const profile = (member as any).user as
-            | { id?: string; username?: string; displayName?: string; avatarHash?: string | null }
-            | undefined;
-          const displayName = profile?.displayName ?? profile?.username ?? member.nickname ?? member.userId;
-          const isSelf = Boolean(currentUserId && currentUserId === member.userId);
-          const isOwner = Boolean(guild?.ownerId && guild.ownerId === member.userId);
-          const isBusy = memberActionUserId === member.userId;
-          const actionsDisabled = isBusy || isSelf || isOwner;
-          const disabledReason = isOwner ? 'Owner' : isSelf ? 'You' : '';
-          return (
-            <div key={member.userId} className="channel-permission-item server-member-admin-item">
-              <div className="server-member-admin-meta">
-                <div className="server-member-admin-name">{displayName}</div>
-                <div className="server-member-admin-subline">
-                  ID: {member.userId}
-                  {member.nickname ? ` • Nickname: ${member.nickname}` : ''}
-                  {Array.isArray(member.roleIds)
-                    ? ` • Roles: ${Math.max(0, member.roleIds.filter((id) => String(id) !== everyoneRole?.id).length)}`
-                    : ''}
-                  {isOwner ? ' • Owner' : ''}
-                  {isSelf ? ' • You' : ''}
-                  {member.communicationDisabledUntil ? ' • Timed out' : ''}
-                </div>
-              </div>
-              <div className="server-member-admin-actions">
-                <button
-                  type="button"
-                  className="channel-permission-remove"
-                  onClick={() => copyTextToClipboard(String(member.userId), 'Copied member ID.')}
-                  disabled={isBusy}
-                  title="Copy member ID"
-                >
-                  Copy ID
-                </button>
-                <button
-                  type="button"
-                  className="channel-permission-remove"
-                  onClick={() => handleKickMember(member.userId)}
-                  disabled={actionsDisabled}
-                  title={isOwner ? 'Cannot moderate the portal owner' : isSelf ? 'Use Leave Portal to leave yourself' : undefined}
-                >
-                  {isBusy ? 'Working...' : 'Kick'}
-                </button>
-                <button
-                  type="button"
-                  className="emoji-admin-delete"
-                  onClick={() => handleBanMember(member.userId)}
-                  disabled={actionsDisabled}
-                  title={isOwner ? 'Cannot moderate the portal owner' : isSelf ? 'Cannot ban your own account' : undefined}
-                >
-                  {isBusy ? 'Working...' : 'Ban'}
-                </button>
-                {disabledReason && (
-                  <span className="channel-permission-badge">{disabledReason}</span>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="channel-permission-card" style={{ marginTop: 12 }}>
-        <div className="channel-permission-title">Banned Users</div>
-        <div className="server-settings-inline-stats" style={{ marginBottom: 8 }}>
-          <button
-            type="button"
-            className={`discover-tag ${banSort === 'recent' ? 'active' : ''}`}
-            onClick={() => setBanSort('recent')}
-          >
-            Recent
-          </button>
-          <button
-            type="button"
-            className={`discover-tag ${banSort === 'name' ? 'active' : ''}`}
-            onClick={() => setBanSort('name')}
-          >
-            Name
-          </button>
-          <span className="server-settings-stat-pill">{filteredSortedBans.length} shown</span>
-          <button
-            type="button"
-            className="channel-permission-remove"
-            onClick={async () => {
-              const ids = filteredSortedBans.map((ban: any) => String(ban.userId)).join('\n');
-              try {
-                await navigator.clipboard.writeText(ids);
-                setMemberActionFeedback(`Copied ${filteredSortedBans.length} banned user ID${filteredSortedBans.length === 1 ? '' : 's'}.`);
-              } catch {
-                setMemberActionFeedback('Failed to copy banned user IDs.');
-              }
-            }}
-            disabled={filteredSortedBans.length === 0}
-          >
-            Copy IDs
-          </button>
-        </div>
-        <input
-          className="input-field"
-          value={banSearch}
-          onChange={(e) => setBanSearch(e.target.value)}
-          placeholder="Search banned users by name, username, ID, or reason"
-          style={{ marginBottom: 8 }}
-        />
-        <div className="channel-permission-list" style={{ marginTop: 10 }}>
-          {bans.length === 0 && <div className="server-settings-muted">No bans in this portal.</div>}
-          {bans.length > 0 && filteredSortedBans.length === 0 && (
-            <div className="server-settings-muted">No banned users match the current search.</div>
-          )}
-          {filteredSortedBans.map((ban: any) => {
-            const bannedSummary = bannedUserMap.get(String(ban.userId));
-            const banKey = `${ban.guildId}:${ban.userId}`;
-            return (
-              <div key={banKey} className="channel-permission-item server-member-admin-item">
-                <div className="server-member-admin-meta">
-                  <div className="server-member-admin-name">
-                    {bannedSummary?.displayName ?? bannedSummary?.username ?? ban.userId}
+          <div className="channel-permission-list">
+            {filteredMembers.length === 0 && (
+              <div className="server-settings-muted">No members match the current search.</div>
+            )}
+            {filteredMembers.map((member) => {
+              const profile = (member as any).user as
+                | { id?: string; username?: string; displayName?: string; avatarHash?: string | null }
+                | undefined;
+              const displayName = profile?.displayName ?? profile?.username ?? member.nickname ?? member.userId;
+              const isSelf = Boolean(currentUserId && currentUserId === member.userId);
+              const isOwner = Boolean(guild?.ownerId && guild.ownerId === member.userId);
+              const isBusy = memberActionUserId === member.userId;
+              const actionsDisabled = isBusy || isSelf || isOwner;
+              const disabledReason = isOwner ? 'Owner' : isSelf ? 'You' : '';
+              return (
+                <div key={member.userId} className="channel-permission-item server-member-admin-item">
+                  <div className="server-member-admin-meta">
+                    <div className="server-member-admin-name">{displayName}</div>
+                    <div className="server-member-admin-subline">
+                      ID: {member.userId}
+                      {member.nickname ? ` | Nickname: ${member.nickname}` : ''}
+                      {Array.isArray(member.roleIds)
+                        ? ` | Roles: ${Math.max(0, member.roleIds.filter((id) => String(id) !== everyoneRole?.id).length)}`
+                        : ''}
+                      {isOwner ? ' | Owner' : ''}
+                      {isSelf ? ' | You' : ''}
+                      {member.communicationDisabledUntil ? ' | Timed out' : ''}
+                    </div>
                   </div>
-                  <div className="server-member-admin-subline">
-                    {bannedSummary?.username ? `@${bannedSummary.username} • ` : ''}
-                    ID: {ban.userId}
-                    {' • '}
-                    {(() => {
-                      const reason = String(ban.reason ?? '');
-                      const expanded = expandedBanReasons.has(banKey);
-                      if (!reason) return 'No reason provided';
-                      if (reason.length <= 96 || expanded) return `Reason: ${reason}`;
-                      return `Reason: ${reason.slice(0, 96)}...`;
-                    })()}
-                    {ban.createdAt ? ` • ${new Date(ban.createdAt).toLocaleString()}` : ''}
-                  </div>
-                </div>
-                <div className="server-member-admin-actions">
-                  {String(ban.reason ?? '').length > 96 && (
+                  <div className="server-member-admin-actions">
                     <button
                       type="button"
                       className="channel-permission-remove"
-                      onClick={() => {
-                        setExpandedBanReasons((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(banKey)) next.delete(banKey);
-                          else next.add(banKey);
-                          return next;
-                        });
-                      }}
+                      onClick={() => copyTextToClipboard(String(member.userId), 'Copied member ID.')}
+                      disabled={isBusy}
+                      title="Copy member ID"
+                    >
+                      Copy ID
+                    </button>
+                    <button
+                      type="button"
+                      className="channel-permission-remove"
+                      onClick={() => handleKickMember(member.userId)}
+                      disabled={actionsDisabled}
+                      title={isOwner ? 'Cannot moderate the portal owner' : isSelf ? 'Use Leave Portal to leave yourself' : undefined}
+                    >
+                      {isBusy ? 'Working...' : 'Kick'}
+                    </button>
+                    <button
+                      type="button"
+                      className="emoji-admin-delete"
+                      onClick={() => handleBanMember(member.userId)}
+                      disabled={actionsDisabled}
+                      title={isOwner ? 'Cannot moderate the portal owner' : isSelf ? 'Cannot ban your own account' : undefined}
+                    >
+                      {isBusy ? 'Working...' : 'Ban'}
+                    </button>
+                    {disabledReason && (
+                      <span className="channel-permission-badge">{disabledReason}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Bans panel */}
+      {activePanel === 'bans' && (
+        <div className="channel-permission-card">
+          <div className="channel-permission-title">Banned Users</div>
+          <div className="server-settings-inline-stats" style={{ marginBottom: 8 }}>
+            <button
+              type="button"
+              className={`discover-tag ${banSort === 'recent' ? 'active' : ''}`}
+              onClick={() => setBanSort('recent')}
+            >
+              Recent
+            </button>
+            <button
+              type="button"
+              className={`discover-tag ${banSort === 'name' ? 'active' : ''}`}
+              onClick={() => setBanSort('name')}
+            >
+              Name
+            </button>
+            <span className="server-settings-stat-pill">{filteredSortedBans.length} shown</span>
+            <button
+              type="button"
+              className="channel-permission-remove"
+              onClick={async () => {
+                const ids = filteredSortedBans.map((ban: any) => String(ban.userId)).join('\n');
+                try {
+                  await navigator.clipboard.writeText(ids);
+                  setMemberActionFeedback(`Copied ${filteredSortedBans.length} banned user ID${filteredSortedBans.length === 1 ? '' : 's'}.`);
+                } catch {
+                  setMemberActionFeedback('Failed to copy banned user IDs.');
+                }
+              }}
+              disabled={filteredSortedBans.length === 0}
+            >
+              Copy IDs
+            </button>
+          </div>
+          <input
+            className="input-field"
+            value={banSearch}
+            onChange={(e) => setBanSearch(e.target.value)}
+            placeholder="Search banned users by name, username, ID, or reason"
+            style={{ marginBottom: 8 }}
+          />
+          <div className="channel-permission-list">
+            {bans.length === 0 && <div className="server-settings-muted">No bans in this portal.</div>}
+            {bans.length > 0 && filteredSortedBans.length === 0 && (
+              <div className="server-settings-muted">No banned users match the current search.</div>
+            )}
+            {filteredSortedBans.map((ban: any) => {
+              const bannedSummary = bannedUserMap.get(String(ban.userId));
+              const banKey = `${ban.guildId}:${ban.userId}`;
+              return (
+                <div key={banKey} className="channel-permission-item server-member-admin-item">
+                  <div className="server-member-admin-meta">
+                    <div className="server-member-admin-name">
+                      {bannedSummary?.displayName ?? bannedSummary?.username ?? ban.userId}
+                    </div>
+                    <div className="server-member-admin-subline">
+                      {bannedSummary?.username ? `@${bannedSummary.username} | ` : ''}
+                      ID: {ban.userId}
+                      {' | '}
+                      {(() => {
+                        const reason = String(ban.reason ?? '');
+                        const expanded = expandedBanReasons.has(banKey);
+                        if (!reason) return 'No reason provided';
+                        if (reason.length <= 96 || expanded) return `Reason: ${reason}`;
+                        return `Reason: ${reason.slice(0, 96)}...`;
+                      })()}
+                      {ban.createdAt ? ` | ${new Date(ban.createdAt).toLocaleString()}` : ''}
+                    </div>
+                  </div>
+                  <div className="server-member-admin-actions">
+                    {String(ban.reason ?? '').length > 96 && (
+                      <button
+                        type="button"
+                        className="channel-permission-remove"
+                        onClick={() => {
+                          setExpandedBanReasons((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(banKey)) next.delete(banKey);
+                            else next.add(banKey);
+                            return next;
+                          });
+                        }}
+                        disabled={memberActionUserId === ban.userId}
+                      >
+                        {expandedBanReasons.has(banKey) ? 'Less' : 'More'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="channel-permission-remove"
+                      onClick={() => handleUnbanMember(ban.userId)}
                       disabled={memberActionUserId === ban.userId}
                     >
-                      {expandedBanReasons.has(banKey) ? 'Less' : 'More'}
+                      {memberActionUserId === ban.userId ? 'Working...' : 'Unban'}
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    className="channel-permission-remove"
-                    onClick={() => handleUnbanMember(ban.userId)}
-                    disabled={memberActionUserId === ban.userId}
-                  >
-                    {memberActionUserId === ban.userId ? 'Working...' : 'Unban'}
-                  </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }

@@ -24,6 +24,7 @@ export function RolesSection({ guildId }: RolesSectionProps) {
   const [roleListQuickFilter, setRoleListQuickFilter] = useState<'all' | 'custom' | 'mentionable'>('all');
   const [savingRoleMembership, setSavingRoleMembership] = useState(false);
   const [roleMembershipFeedback, setRoleMembershipFeedback] = useState('');
+  const [activeTab, setActiveTab] = useState<'list' | 'assign' | 'create'>('list');
 
   const { data: roles = [] } = useQuery({
     queryKey: ['guild-roles', guildId],
@@ -270,258 +271,312 @@ export function RolesSection({ guildId }: RolesSectionProps) {
 
   return (
     <section className="settings-section">
-      <h2 className="settings-shell-section-heading">Roles &amp; Groups</h2>
-      <p className="server-settings-muted">
-        Roles power @group mentions. Create a role, make it mentionable, then assign members.
-      </p>
+      <div className="server-settings-header-row">
+        <div>
+          <h2 className="settings-shell-section-heading">Roles &amp; Groups</h2>
+          <p className="server-settings-muted">
+            Roles power @group mentions. Create a role, make it mentionable, then assign members.
+          </p>
+        </div>
+        <div className="server-settings-actions">
+          <button type="button" className="btn btn-ghost btn-sm" onClick={resetView}>
+            Reset
+          </button>
+        </div>
+      </div>
 
       {error && <div className="modal-error">{error}</div>}
+      {roleMembershipFeedback && (
+        <div className="server-settings-feedback" role="status" aria-live="polite">
+          {roleMembershipFeedback}
+        </div>
+      )}
 
-      <div className="server-settings-inline-stats" style={{ marginBottom: 8 }}>
-        <span className="server-settings-stat-pill">Admin workflow tools</span>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={resetView}>
-          Reset Role View
+      {/* Tab navigation */}
+      <div className="server-settings-inline-stats" style={{ marginBottom: 12 }}>
+        <button
+          type="button"
+          className={`discover-tag ${activeTab === 'list' ? 'active' : ''}`}
+          onClick={() => setActiveTab('list')}
+        >
+          All Roles ({roleStats.total})
+        </button>
+        <button
+          type="button"
+          className={`discover-tag ${activeTab === 'assign' ? 'active' : ''}`}
+          onClick={() => setActiveTab('assign')}
+        >
+          Assign Members
+        </button>
+        <button
+          type="button"
+          className={`discover-tag ${activeTab === 'create' ? 'active' : ''}`}
+          onClick={() => setActiveTab('create')}
+        >
+          + Create Role
         </button>
       </div>
 
-      <div className="channel-permission-card" style={{ marginBottom: 12 }}>
-        <div className="channel-permission-title">Create Role</div>
-        <div className="channel-permission-row">
+      {/* Create Role tab */}
+      {activeTab === 'create' && (
+        <div className="channel-permission-card" style={{ marginBottom: 12 }}>
+          <div className="channel-permission-title">Create New Role</div>
+          <p className="server-settings-muted" style={{ marginBottom: 8 }}>
+            New roles are mentionable by default. You can change this after creation.
+          </p>
+          <div className="channel-permission-row">
+            <input
+              className="input-field"
+              value={newRoleName}
+              onChange={(e) => setNewRoleName(e.target.value)}
+              placeholder="Ex: raid-team"
+              disabled={creatingRole}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreateRole();
+              }}
+            />
+            <Button type="button" onClick={handleCreateRole} disabled={!newRoleName.trim() || creatingRole}>
+              {creatingRole ? 'Creating...' : 'Create'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Members tab */}
+      {activeTab === 'assign' && (
+        <div className="channel-permission-card" style={{ marginBottom: 12 }}>
+          <div className="channel-permission-title">Assign Members to Roles</div>
+          <p className="server-settings-muted" style={{ marginBottom: 8 }}>
+            Select a member, then pick a role to assign. Existing roles for the selected member are shown below.
+          </p>
           <input
             className="input-field"
-            value={newRoleName}
-            onChange={(e) => setNewRoleName(e.target.value)}
-            placeholder="Ex: raid-team"
-            disabled={creatingRole}
-          />
-          <Button type="button" onClick={handleCreateRole} disabled={!newRoleName.trim() || creatingRole}>
-            {creatingRole ? 'Creating...' : 'Create'}
-          </Button>
-        </div>
-      </div>
-
-      <div className="channel-permission-card" style={{ marginBottom: 12 }}>
-        <div className="channel-permission-title">Assign Members to Roles</div>
-        <input
-          className="input-field"
-          value={rolesMemberSearch}
-          onChange={(e) => setRolesMemberSearch(e.target.value)}
-          placeholder="Filter members"
-          disabled={savingRoleMembership}
-          style={{ marginBottom: 8 }}
-        />
-        <div className="channel-permission-row" style={{ marginBottom: 8 }}>
-          <select
-            className="input-field"
-            value={selectedMemberForRoles}
-            onChange={(e) => setSelectedMemberForRoles(e.target.value)}
+            value={rolesMemberSearch}
+            onChange={(e) => setRolesMemberSearch(e.target.value)}
+            placeholder="Filter members by name or ID"
             disabled={savingRoleMembership}
-          >
-            <option value="">Select member</option>
-            {filteredRoleAssignMemberOptions.map((member) => (
-              <option key={member.userId} value={member.userId}>
-                {(member as any).user?.displayName ?? member.nickname ?? member.userId}
-              </option>
-            ))}
-          </select>
-        </div>
-        <input
-          className="input-field"
-          value={assignRoleSearch}
-          onChange={(e) => setAssignRoleSearch(e.target.value)}
-          placeholder="Filter roles"
-          disabled={!selectedMemberForRoles || savingRoleMembership}
-          style={{ marginBottom: 8 }}
-        />
-        <div className="channel-permission-row">
-          <select
-            className="input-field"
-            value={assignRoleId}
-            onChange={(e) => setAssignRoleId(e.target.value)}
-            disabled={!selectedMemberForRoles || savingRoleMembership}
-          >
-            <option value="">Select role</option>
-            {filteredAvailableAssignableRoles.map((role) => (
-              <option key={role.id} value={role.id}>
-                {role.name}
-              </option>
-            ))}
-          </select>
-          <Button
-            type="button"
-            onClick={handleAssignRoleToMember}
-            disabled={!selectedMemberForRoles || !assignRoleId || savingRoleMembership || assignRoleAlreadyPresent}
-          >
-            {assignRoleAlreadyPresent ? 'Already Assigned' : 'Assign'}
-          </Button>
-        </div>
-        {assignRoleAlreadyPresent && (
-          <div className="server-settings-muted" style={{ marginTop: 2 }}>
-            This member already has that role.
-          </div>
-        )}
-        {roleMembershipFeedback && (
-          <div className="server-settings-feedback" style={{ marginTop: 2 }} role="status" aria-live="polite">
-            {roleMembershipFeedback}
-          </div>
-        )}
-        {selectedMemberForRoles && !assignRoleAlreadyPresent && filteredAvailableAssignableRoles.length === 0 && (
-          <div className="server-settings-muted" style={{ marginTop: 2 }}>
-            This member already has all available custom roles.
-          </div>
-        )}
-
-        {selectedMemberForRoles && (
-          <div className="server-settings-inline-stats" style={{ marginTop: 2 }}>
-            <span className="server-settings-stat-pill">Managing: {selectedMemberRoleTargetLabel}</span>
-            <button
-              type="button"
-              className="channel-permission-remove"
-              onClick={() => {
-                setSelectedMemberForRoles('');
-                setAssignRoleId('');
-                setAssignRoleSearch('');
-              }}
+            style={{ marginBottom: 8 }}
+          />
+          <div className="channel-permission-row" style={{ marginBottom: 8 }}>
+            <select
+              className="input-field"
+              value={selectedMemberForRoles}
+              onChange={(e) => setSelectedMemberForRoles(e.target.value)}
               disabled={savingRoleMembership}
             >
-              Clear
+              <option value="">Select member</option>
+              {filteredRoleAssignMemberOptions.map((member) => (
+                <option key={member.userId} value={member.userId}>
+                  {(member as any).user?.displayName ?? member.nickname ?? member.userId}
+                </option>
+              ))}
+            </select>
+          </div>
+          <input
+            className="input-field"
+            value={assignRoleSearch}
+            onChange={(e) => setAssignRoleSearch(e.target.value)}
+            placeholder="Filter roles"
+            disabled={!selectedMemberForRoles || savingRoleMembership}
+            style={{ marginBottom: 8 }}
+          />
+          <div className="channel-permission-row">
+            <select
+              className="input-field"
+              value={assignRoleId}
+              onChange={(e) => setAssignRoleId(e.target.value)}
+              disabled={!selectedMemberForRoles || savingRoleMembership}
+            >
+              <option value="">Select role</option>
+              {filteredAvailableAssignableRoles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {role.name}
+                </option>
+              ))}
+            </select>
+            <Button
+              type="button"
+              onClick={handleAssignRoleToMember}
+              disabled={!selectedMemberForRoles || !assignRoleId || savingRoleMembership || assignRoleAlreadyPresent}
+            >
+              {assignRoleAlreadyPresent ? 'Already Assigned' : 'Assign'}
+            </Button>
+          </div>
+          {assignRoleAlreadyPresent && (
+            <div className="server-settings-muted" style={{ marginTop: 2 }}>
+              This member already has that role.
+            </div>
+          )}
+          {selectedMemberForRoles && !assignRoleAlreadyPresent && filteredAvailableAssignableRoles.length === 0 && (
+            <div className="server-settings-muted" style={{ marginTop: 2 }}>
+              This member already has all available custom roles.
+            </div>
+          )}
+
+          {selectedMemberForRoles && (
+            <div className="channel-permission-card" style={{ marginTop: 10, background: 'rgba(0,0,0,0.15)' }}>
+              <div className="server-settings-inline-stats" style={{ marginBottom: 6 }}>
+                <span className="server-settings-stat-pill">Managing: {selectedMemberRoleTargetLabel}</span>
+                <button
+                  type="button"
+                  className="channel-permission-remove"
+                  onClick={() => {
+                    setSelectedMemberForRoles('');
+                    setAssignRoleId('');
+                    setAssignRoleSearch('');
+                  }}
+                  disabled={savingRoleMembership}
+                >
+                  Clear
+                </button>
+              </div>
+
+              <div className="channel-permission-list">
+                {selectedMemberRoles.filter((role) => role.name !== '@everyone').length === 0 && (
+                  <div className="server-settings-muted">This member has no custom roles yet.</div>
+                )}
+                {selectedMemberRoles
+                  .filter((role) => role.name !== '@everyone')
+                  .map((role) => (
+                    <div key={role.id} className="channel-permission-item">
+                      <span className="channel-permission-target">@{role.name}</span>
+                      <button
+                        type="button"
+                        className="channel-permission-remove"
+                        onClick={() => handleRemoveRoleFromMember(role.id)}
+                        disabled={savingRoleMembership}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Role List tab */}
+      {activeTab === 'list' && (
+        <div className="channel-permission-card">
+          <div className="server-settings-inline-stats" style={{ marginBottom: 8 }}>
+            <span className="server-settings-stat-pill">{roleStats.total} total</span>
+            <span className="server-settings-stat-pill">{roleStats.custom} custom</span>
+            <span className="server-settings-stat-pill">{roleStats.mentionable} mentionable</span>
+          </div>
+
+          {/* Sort controls */}
+          <div className="server-settings-inline-stats" style={{ marginBottom: 8 }}>
+            <button
+              type="button"
+              className={`discover-tag ${roleListSort === 'alpha' ? 'active' : ''}`}
+              onClick={() => setRoleListSort('alpha')}
+            >
+              A-Z
+            </button>
+            <button
+              type="button"
+              className={`discover-tag ${roleListSort === 'memberCount' ? 'active' : ''}`}
+              onClick={() => setRoleListSort('memberCount')}
+            >
+              Members
+            </button>
+            <button
+              type="button"
+              className={`discover-tag ${roleListSort === 'mentionable' ? 'active' : ''}`}
+              onClick={() => setRoleListSort('mentionable')}
+            >
+              Mentionable
+            </button>
+            <button
+              type="button"
+              className={`discover-tag ${roleListSortDir === 'asc' ? 'active' : ''}`}
+              onClick={() => setRoleListSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+              title={roleListSortDir === 'asc' ? 'Ascending' : 'Descending'}
+            >
+              {roleListSortDir === 'asc' ? 'Asc' : 'Desc'}
             </button>
           </div>
-        )}
 
-        {selectedMemberForRoles && (
-          <div className="channel-permission-list" style={{ marginTop: 10 }}>
-            {selectedMemberRoles.filter((role) => role.name !== '@everyone').length === 0 && (
-              <div className="server-settings-muted">This member has no custom roles yet.</div>
+          {/* Quick filters */}
+          <div className="server-settings-inline-stats" style={{ marginBottom: 8 }}>
+            <button
+              type="button"
+              className={`discover-tag ${roleListQuickFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setRoleListQuickFilter('all')}
+            >
+              All Roles
+            </button>
+            <button
+              type="button"
+              className={`discover-tag ${roleListQuickFilter === 'custom' ? 'active' : ''}`}
+              onClick={() => setRoleListQuickFilter('custom')}
+            >
+              Custom Only
+            </button>
+            <button
+              type="button"
+              className={`discover-tag ${roleListQuickFilter === 'mentionable' ? 'active' : ''}`}
+              onClick={() => setRoleListQuickFilter('mentionable')}
+            >
+              Mentionable Only
+            </button>
+          </div>
+
+          <input
+            className="input-field"
+            value={roleListSearch}
+            onChange={(e) => setRoleListSearch(e.target.value)}
+            placeholder="Search roles..."
+            style={{ marginBottom: 8 }}
+          />
+
+          <div className="channel-permission-list">
+            {roles.length === 0 && <div className="server-settings-muted">No roles found.</div>}
+            {roles.length > 0 && filteredRoleList.length === 0 && (
+              <div className="server-settings-muted">No roles match the current filter.</div>
             )}
-            {selectedMemberRoles
-              .filter((role) => role.name !== '@everyone')
-              .map((role) => (
-                <div key={role.id} className="channel-permission-item">
-                  <span className="channel-permission-target">@{role.name}</span>
+            {sortedRoleList.map((role) => (
+              <div key={role.id} className="channel-permission-item">
+                <span className="channel-permission-target">@{role.name}</span>
+                <span className="channel-permission-badge">
+                  {(() => {
+                    const count = roleMemberCountByRoleId.get(String(role.id)) ?? 0;
+                    if (count > 99) return '99+ members';
+                    return `${count} member${count === 1 ? '' : 's'}`;
+                  })()}
+                </span>
+                <button
+                  type="button"
+                  className="channel-permission-remove"
+                  onClick={() => copyTextToClipboard(String(role.id), 'Copied role ID.')}
+                  title="Copy role ID"
+                >
+                  Copy ID
+                </button>
+                <label className="channel-private-toggle" style={{ margin: 0, gap: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(role.mentionable)}
+                    onChange={(e) => handleToggleRoleMentionable(role.id, e.target.checked)}
+                    disabled={role.name === '@everyone'}
+                  />
+                  <span>Mentionable</span>
+                </label>
+                {role.name !== '@everyone' && (
                   <button
                     type="button"
                     className="channel-permission-remove"
-                    onClick={() => handleRemoveRoleFromMember(role.id)}
-                    disabled={savingRoleMembership}
+                    onClick={() => handleDeleteRole(role.id)}
                   >
-                    Remove
+                    Delete
                   </button>
-                </div>
-              ))}
+                )}
+              </div>
+            ))}
           </div>
-        )}
-      </div>
-
-      <div className="channel-permission-list">
-        <div className="server-settings-inline-stats">
-          <span className="server-settings-stat-pill">{roleStats.total} total roles</span>
-          <span className="server-settings-stat-pill">{roleStats.custom} custom</span>
-          <span className="server-settings-stat-pill">{roleStats.mentionable} mentionable</span>
         </div>
-        <div className="server-settings-inline-stats">
-          <button
-            type="button"
-            className={`discover-tag ${roleListSort === 'alpha' ? 'active' : ''}`}
-            onClick={() => setRoleListSort('alpha')}
-          >
-            A-Z
-          </button>
-          <button
-            type="button"
-            className={`discover-tag ${roleListSort === 'memberCount' ? 'active' : ''}`}
-            onClick={() => setRoleListSort('memberCount')}
-          >
-            Members
-          </button>
-          <button
-            type="button"
-            className={`discover-tag ${roleListSort === 'mentionable' ? 'active' : ''}`}
-            onClick={() => setRoleListSort('mentionable')}
-          >
-            Mentionable
-          </button>
-          <button
-            type="button"
-            className={`discover-tag ${roleListSortDir === 'asc' ? 'active' : ''}`}
-            onClick={() => setRoleListSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-            title={roleListSortDir === 'asc' ? 'Ascending' : 'Descending'}
-          >
-            {roleListSortDir === 'asc' ? 'Asc' : 'Desc'}
-          </button>
-        </div>
-        <div className="server-settings-inline-stats">
-          <button
-            type="button"
-            className={`discover-tag ${roleListQuickFilter === 'all' ? 'active' : ''}`}
-            onClick={() => setRoleListQuickFilter('all')}
-          >
-            All Roles
-          </button>
-          <button
-            type="button"
-            className={`discover-tag ${roleListQuickFilter === 'custom' ? 'active' : ''}`}
-            onClick={() => setRoleListQuickFilter('custom')}
-          >
-            Custom Only
-          </button>
-          <button
-            type="button"
-            className={`discover-tag ${roleListQuickFilter === 'mentionable' ? 'active' : ''}`}
-            onClick={() => setRoleListQuickFilter('mentionable')}
-          >
-            Mentionable Only
-          </button>
-        </div>
-        <input
-          className="input-field"
-          value={roleListSearch}
-          onChange={(e) => setRoleListSearch(e.target.value)}
-          placeholder="Filter roles"
-        />
-        {roles.length === 0 && <div className="server-settings-muted">No roles found.</div>}
-        {roles.length > 0 && filteredRoleList.length === 0 && (
-          <div className="server-settings-muted">No roles match the current filter.</div>
-        )}
-        {sortedRoleList.map((role) => (
-          <div key={role.id} className="channel-permission-item">
-            <span className="channel-permission-target">@{role.name}</span>
-            <span className="channel-permission-badge">
-              {(() => {
-                const count = roleMemberCountByRoleId.get(String(role.id)) ?? 0;
-                if (count > 99) return '99+ members';
-                return `${count} member${count === 1 ? '' : 's'}`;
-              })()}
-            </span>
-            <button
-              type="button"
-              className="channel-permission-remove"
-              onClick={() => copyTextToClipboard(String(role.id), 'Copied role ID.')}
-              title="Copy role ID"
-            >
-              Copy ID
-            </button>
-            <label className="channel-private-toggle" style={{ margin: 0, gap: 8 }}>
-              <input
-                type="checkbox"
-                checked={Boolean(role.mentionable)}
-                onChange={(e) => handleToggleRoleMentionable(role.id, e.target.checked)}
-                disabled={role.name === '@everyone'}
-              />
-              <span>Mentionable</span>
-            </label>
-            {role.name !== '@everyone' && (
-              <button
-                type="button"
-                className="channel-permission-remove"
-                onClick={() => handleDeleteRole(role.id)}
-              >
-                Delete
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
+      )}
     </section>
   );
 }

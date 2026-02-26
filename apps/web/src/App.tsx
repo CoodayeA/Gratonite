@@ -43,6 +43,7 @@ const LeaderboardPage = lazy(() => import('@/pages/LeaderboardPage').then((m) =>
 const AdminShopPage = lazy(() => import('@/pages/AdminShopPage').then((m) => ({ default: m.AdminShopPage })));
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 const PortalPreviewPage = lazy(() => import('@/pages/PortalPreviewPage').then((m) => ({ default: m.PortalPreviewPage })));
 const AddFriendPage = lazy(() => import('@/pages/AddFriendPage').then((m) => ({ default: m.AddFriendPage })));
 =======
@@ -51,6 +52,9 @@ const CreateEventPage = lazy(() => import('@/pages/CreateEventPage').then((m) =>
 =======
 const ShopItemDetailPage = lazy(() => import('@/pages/ShopItemDetailPage').then((m) => ({ default: m.ShopItemDetailPage })));
 >>>>>>> e07d225 (feat: US-040 + US-055 - Onboarding overlay and ShopItemDetail/Appearance redesign)
+=======
+const SoundboardPage = lazy(() => import('@/pages/SoundboardPage').then((m) => ({ default: m.SoundboardPage })));
+>>>>>>> 1ab54ce (feat: US-053 + US-054 - Admin and Voice/Soundboard/Stage redesigns)
 
 export function App() {
   const { isLoading, isAuthenticated, login, logout, setLoading } = useAuthStore();
@@ -190,6 +194,7 @@ export function App() {
           <Route path="/portal/:guildId/preview" element={<PortalPreviewPage />} />
           <Route path="/guild/:guildId" element={<GuildPage />}>
             <Route path="channel/:channelId" element={<ChannelPage />} />
+            <Route path="soundboard" element={<SoundboardPage />} />
           </Route>
           <Route path="/guild/:guildId/events/create" element={<CreateEventPage />} />
           <Route path="/dm/:channelId" element={<ChannelPage />} />
