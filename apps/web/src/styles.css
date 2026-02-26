@@ -14347,6 +14347,9 @@ kbd.shortcuts-keys {
 }
 
 .portal-interior-channel-name {
+}
+
+/* ==========================================================================
    Create Event Wizard (US-036)
    ========================================================================== */
 
@@ -14369,6 +14372,9 @@ kbd.shortcuts-keys {
 .create-event-title {
   font-family: var(--font-display);
   font-size: 22px;
+}
+
+/* ==========================================================================
    Onboarding Overlay (US-040)
    ========================================================================== */
 
@@ -14504,6 +14510,8 @@ kbd.shortcuts-keys {
 }
 
 .portal-interior-empty {
+}
+
 /* ── Step content ── */
 
 .create-event-step-content {
@@ -14663,6 +14671,8 @@ kbd.shortcuts-keys {
 }
 
 .portal-preview-banner-img {
+}
+
 /* ── Details step ── */
 
 .create-event-textarea {
@@ -15205,6 +15215,9 @@ kbd.shortcuts-keys {
   height: 28px;
   border-radius: 6px;
   border: none;
+}
+
+/* ==========================================================================
    US-054: Soundboard Page
    ========================================================================== */
 
@@ -15324,6 +15337,9 @@ kbd.shortcuts-keys {
   .add-friend-sidebar {
     width: 100%;
     min-width: 0;
+  }
+}
+
 .create-event-preview-card {
   display: grid;
   gap: 0;
@@ -15400,6 +15416,8 @@ kbd.shortcuts-keys {
   .create-event-step-dot {
     padding: 6px 10px;
   }
+}
+
 .onboarding-description {
   font-size: 0.9rem;
   color: var(--text-muted);
