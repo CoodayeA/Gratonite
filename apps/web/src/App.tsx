@@ -41,8 +41,12 @@ const FriendsPage = lazy(() => import('@/pages/FriendsPage').then((m) => ({ defa
 const GratoniteDashboard = lazy(() => import('@/pages/GratoniteDashboard').then((m) => ({ default: m.GratoniteDashboard })));
 const LeaderboardPage = lazy(() => import('@/pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })));
 const AdminShopPage = lazy(() => import('@/pages/AdminShopPage').then((m) => ({ default: m.AdminShopPage })));
+<<<<<<< HEAD
 const PortalPreviewPage = lazy(() => import('@/pages/PortalPreviewPage').then((m) => ({ default: m.PortalPreviewPage })));
 const AddFriendPage = lazy(() => import('@/pages/AddFriendPage').then((m) => ({ default: m.AddFriendPage })));
+=======
+const CreateEventPage = lazy(() => import('@/pages/CreateEventPage').then((m) => ({ default: m.CreateEventPage })));
+>>>>>>> 9ee4fd6 (feat: US-036 - Web Events Creation Flow wizard)
 
 export function App() {
   const { isLoading, isAuthenticated, login, logout, setLoading } = useAuthStore();
@@ -182,6 +186,7 @@ export function App() {
           <Route path="/guild/:guildId" element={<GuildPage />}>
             <Route path="channel/:channelId" element={<ChannelPage />} />
           </Route>
+          <Route path="/guild/:guildId/events/create" element={<CreateEventPage />} />
           <Route path="/dm/:channelId" element={<ChannelPage />} />
           <Route path="/add-friend" element={<AddFriendPage />} />
           <Route path="/settings" element={<SettingsPage />} />
