@@ -163,48 +163,6 @@ const styles = {
     cursor: 'pointer',
   } as React.CSSProperties,
 
-  divider: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 16,
-  } as React.CSSProperties,
-
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    background: 'var(--stroke)',
-  } as React.CSSProperties,
-
-  dividerText: {
-    fontSize: 12,
-    color: 'var(--text-faint)',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
-  } as React.CSSProperties,
-
-  oauthGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 12,
-  } as React.CSSProperties,
-
-  oauthButton: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    width: '100%',
-    height: 42,
-    background: 'transparent',
-    border: '1px solid var(--stroke)',
-    borderRadius: 6,
-    color: 'var(--text)',
-    fontSize: 14,
-    fontWeight: 500,
-    cursor: 'pointer',
-    transition: 'border-color 0.15s ease',
-  } as React.CSSProperties,
-
   signInRow: {
     textAlign: 'center' as const,
     fontSize: 14,
@@ -630,56 +588,6 @@ export function RegisterPage() {
         >
           Create Account
         </Button>
-
-        {/* Divider */}
-        <div style={styles.divider}>
-          <div style={styles.dividerLine} />
-          <span style={styles.dividerText}>or</span>
-          <div style={styles.dividerLine} />
-        </div>
-
-        {/* OAuth buttons */}
-        <div style={styles.oauthGroup}>
-          <button
-            type="button"
-            style={styles.oauthButton}
-            onClick={() => alert('Coming soon')}
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-              <path
-                d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
-                fill="#4285F4"
-              />
-              <path
-                d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.26c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"
-                fill="#34A853"
-              />
-              <path
-                d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
-                fill="#FBBC05"
-              />
-              <path
-                d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
-                fill="#EA4335"
-              />
-            </svg>
-            Continue with Google
-          </button>
-
-          <button
-            type="button"
-            style={styles.oauthButton}
-            onClick={() => alert('Coming soon')}
-          >
-            <svg width="18" height="14" viewBox="0 0 18 14" aria-hidden="true">
-              <path
-                d="M15.248 1.188A14.72 14.72 0 0011.6 0a.055.055 0 00-.058.028 10.26 10.26 0 00-.453.93 13.584 13.584 0 00-4.078 0 9.42 9.42 0 00-.46-.93A.057.057 0 006.493 0a14.68 14.68 0 00-3.649 1.188.052.052 0 00-.024.02C.412 4.434-.247 7.58.077 10.684a.06.06 0 00.023.041 14.8 14.8 0 004.46 2.254.058.058 0 00.063-.02c.344-.47.65-.964.913-1.484a.056.056 0 00-.031-.078 9.75 9.75 0 01-1.392-.663.057.057 0 01-.006-.094c.094-.07.187-.143.276-.217a.055.055 0 01.058-.008c2.92 1.333 6.08 1.333 8.97 0a.055.055 0 01.058.007c.089.074.183.148.277.218a.057.057 0 01-.005.094c-.444.26-.91.48-1.393.662a.056.056 0 00-.03.08c.268.518.574 1.013.912 1.482a.056.056 0 00.063.022 14.76 14.76 0 004.464-2.254.057.057 0 00.023-.04c.388-4.014-.65-7.132-2.752-10.076a.045.045 0 00-.023-.02zM6.023 8.753c-.872 0-1.59-.8-1.59-1.784 0-.983.704-1.784 1.59-1.784.893 0 1.604.808 1.59 1.784 0 .984-.704 1.784-1.59 1.784zm5.88 0c-.872 0-1.59-.8-1.59-1.784 0-.983.704-1.784 1.59-1.784.893 0 1.604.808 1.59 1.784 0 .984-.697 1.784-1.59 1.784z"
-                fill="#5865F2"
-              />
-            </svg>
-            Continue with Discord
-          </button>
-        </div>
 
         {/* Sign in link */}
         <div style={styles.signInRow}>
