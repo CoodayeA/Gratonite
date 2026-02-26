@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Input } from '@/components/ui/Input';
 import { MfaSettingsCard } from '@/components/settings/MfaSettingsCard';
 import { useAuthStore } from '@/stores/auth.store';
@@ -296,14 +297,14 @@ export function SettingsPage() {
     api.users.getMe()
       .then((me) => {
         setProfile({
-          displayName: me.profile.displayName,
-          avatarHash: me.profile.avatarHash,
-          bannerHash: me.profile.bannerHash,
+          displayName: me.profile?.displayName ?? me.username,
+          avatarHash: me.profile?.avatarHash ?? null,
+          bannerHash: me.profile?.bannerHash ?? null,
         });
         updateUser({
-          avatarDecorationId: me.profile.avatarDecorationId ?? null,
-          profileEffectId: me.profile.profileEffectId ?? null,
-          nameplateId: me.profile.nameplateId ?? null,
+          avatarDecorationId: me.profile?.avatarDecorationId ?? null,
+          profileEffectId: me.profile?.profileEffectId ?? null,
+          nameplateId: me.profile?.nameplateId ?? null,
         });
       })
       .catch(() => undefined);
@@ -686,7 +687,7 @@ export function SettingsPage() {
 
 
   if (!user) return null;
-  const isBugInboxAdmin = user.username === 'ferdinand' || user.username === 'coodaye';
+  const isBugInboxAdmin = !!user.isAdmin;
 
   return (
     <div className="settings-page">
@@ -756,14 +757,21 @@ export function SettingsPage() {
                 />
               )}
               <div className="settings-profile-body">
-                <Avatar
-                  name={profile?.displayName ?? user.displayName}
-                  hash={profile?.avatarHash ?? user.avatarHash}
-                  decorationHash={equippedAvatarDecoration?.assetHash ?? null}
-                  userId={user.id}
-                  size={64}
-                  className="settings-profile-avatar"
-                />
+                <div style={{ position: 'relative', display: 'inline-block' }}>
+                  <Avatar
+                    name={profile?.displayName ?? user.displayName}
+                    hash={profile?.avatarHash ?? user.avatarHash}
+                    decorationHash={equippedAvatarDecoration?.assetHash ?? null}
+                    userId={user.id}
+                    size={64}
+                    className="settings-profile-avatar"
+                  />
+                  {profile === null && (
+                    <div style={{ position: 'absolute', bottom: 0, right: 0, background: '#2c2c3e', borderRadius: '50%', padding: 2 }}>
+                      <LoadingSpinner size={16} />
+                    </div>
+                  )}
+                </div>
                 <div className="settings-profile-info">
                   <div className="settings-profile-name">{profile?.displayName ?? user.displayName}</div>
                   <div className="settings-profile-username">@{user.username}</div>
