@@ -67,54 +67,6 @@ const styles = {
     gap: 14,
   } as React.CSSProperties,
 
-  nameRow: {
-    display: 'flex',
-    gap: 12,
-  } as React.CSSProperties,
-
-  nameField: {
-    flex: 1,
-    minWidth: 0,
-  } as React.CSSProperties,
-
-  dobRow: {
-    display: 'flex',
-    gap: 12,
-  } as React.CSSProperties,
-
-  dobLabel: {
-    fontSize: 12,
-    fontWeight: 500,
-    color: 'var(--text-muted)',
-    marginBottom: 6,
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
-  } as React.CSSProperties,
-
-  select: {
-    flex: 1,
-    height: 48,
-    background: 'var(--frosted-glass)',
-    border: '1px solid var(--stroke)',
-    borderRadius: 6,
-    color: 'var(--text)',
-    fontSize: 14,
-    paddingLeft: 14,
-    paddingRight: 14,
-    outline: 'none',
-    appearance: 'none' as const,
-    WebkitAppearance: 'none' as const,
-    cursor: 'pointer',
-    backgroundImage:
-      'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'8\' viewBox=\'0 0 12 8\'%3E%3Cpath fill=\'%23a8a4b8\' d=\'M1.41.59L6 5.17 10.59.59 12 2l-6 6-6-6z\'/%3E%3C/svg%3E")',
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 14px center',
-  } as React.CSSProperties,
-
-  selectPlaceholder: {
-    color: 'var(--text-faint)',
-  } as React.CSSProperties,
-
   termsRow: {
     display: 'flex',
     alignItems: 'flex-start',
@@ -180,44 +132,32 @@ const styles = {
   } as React.CSSProperties,
 
   error: {
-    background: 'rgba(220, 50, 50, 0.12)',
-    border: '1px solid rgba(220, 50, 50, 0.3)',
-    borderRadius: 6,
+    background: 'color-mix(in srgb, var(--danger) 12%, transparent)',
+    border: '1px solid color-mix(in srgb, var(--danger) 30%, transparent)',
+    borderRadius: 'var(--radius-sm)',
     padding: '10px 14px',
     fontSize: 13,
-    color: '#f87171',
+    color: 'var(--danger)',
     lineHeight: 1.5,
   } as React.CSSProperties,
 
-  dobError: {
-    fontSize: 12,
-    color: '#f87171',
-    marginTop: 4,
+  oauthButton: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 44,
+    borderRadius: 6,
+    border: '1px solid var(--stroke)',
+    background: 'transparent',
+    color: 'var(--text)',
+    fontSize: 14,
+    fontWeight: 500,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
   } as React.CSSProperties,
 } as const;
-
-/* ── Month / Day helpers ───────────────────────────────────────────── */
-
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-function daysInMonth(month: number, year: number): number {
-  if (!month || !year) return 31;
-  return new Date(year, month, 0).getDate();
-}
-
-function buildYearRange(): number[] {
-  const current = new Date().getFullYear();
-  const years: number[] = [];
-  for (let y = current; y >= current - 120; y--) {
-    years.push(y);
-  }
-  return years;
-}
-
-const YEARS = buildYearRange();
 
 /* ── Component ─────────────────────────────────────────────────────── */
 
@@ -226,31 +166,12 @@ export function RegisterPage() {
   const login = useAuthStore((s) => s.login);
 
   // Form fields
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  // DOB dropdowns
-  const [dobMonth, setDobMonth] = useState('');
-  const [dobDay, setDobDay] = useState('');
-  const [dobYear, setDobYear] = useState('');
-
   // Terms
   const [termsAccepted, setTermsAccepted] = useState(false);
-
-  // Derived dateOfBirth string (YYYY-MM-DD)
-  const dateOfBirth =
-    dobYear && dobMonth && dobDay
-      ? `${dobYear}-${dobMonth.padStart(2, '0')}-${dobDay.padStart(2, '0')}`
-      : '';
-
-  // Derived displayName
-  const displayName =
-    firstName && lastName
-      ? `${firstName} ${lastName}`
-      : firstName || lastName || username;
 
   // Username availability
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
@@ -284,27 +205,6 @@ export function RegisterPage() {
     return () => clearTimeout(usernameTimer.current);
   }, [username]);
 
-  // Clamp day when month/year changes
-  useEffect(() => {
-    if (!dobDay) return;
-    const maxDay = daysInMonth(Number(dobMonth), Number(dobYear));
-    if (Number(dobDay) > maxDay) {
-      setDobDay(String(maxDay));
-    }
-  }, [dobMonth, dobYear, dobDay]);
-
-  // Date-of-birth age validation (16+)
-  function validateAge(dob: string): boolean {
-    const birth = new Date(dob);
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age >= 16;
-  }
-
   function getUsernameHint(): string {
     if (usernameChecking) return 'Checking...';
     if (usernameAvailable === true) return 'Username is available!';
@@ -323,18 +223,6 @@ export function RegisterPage() {
       return;
     }
 
-    // DOB completeness check
-    if (!dateOfBirth) {
-      setError('Please enter your complete date of birth.');
-      return;
-    }
-
-    // Client-side validations
-    if (!validateAge(dateOfBirth)) {
-      setError('You must be at least 16 years old to register.');
-      return;
-    }
-
     if (usernameAvailable === false) {
       setError('Please choose a different username.');
       return;
@@ -346,10 +234,8 @@ export function RegisterPage() {
       const res = await api.auth.register({
         email,
         username,
-        displayName: displayName || username,
         password,
-        dateOfBirth,
-      });
+      } as Parameters<typeof api.auth.register>[0]);
 
       setAccessToken(res.accessToken);
 
@@ -359,9 +245,9 @@ export function RegisterPage() {
         id: me.id,
         username: me.username,
         email: me.email,
-        displayName: me.profile.displayName,
-        avatarHash: me.profile.avatarHash,
-        tier: me.profile.tier,
+        displayName: me.profile?.displayName ?? me.username,
+        avatarHash: me.profile?.avatarHash ?? null,
+        tier: me.profile?.tier ?? 'free',
       });
 
       navigate('/', { replace: true });
@@ -374,8 +260,6 @@ export function RegisterPage() {
       setLoading(false);
     }
   }
-
-  const maxDays = daysInMonth(Number(dobMonth), Number(dobYear));
 
   return (
     <div style={styles.page}>
@@ -394,30 +278,6 @@ export function RegisterPage() {
 
         {/* Fields */}
         <div style={styles.fieldsGroup}>
-          {/* Name row */}
-          <div style={styles.nameRow}>
-            <div style={styles.nameField}>
-              <Input
-                label="First Name"
-                type="text"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                error={fieldErrors['displayName']?.[0]}
-                autoComplete="given-name"
-                autoFocus
-              />
-            </div>
-            <div style={styles.nameField}>
-              <Input
-                label="Last Name"
-                type="text"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                autoComplete="family-name"
-              />
-            </div>
-          </div>
-
           {/* Username */}
           <Input
             label="Username"
@@ -434,6 +294,7 @@ export function RegisterPage() {
             }
             required
             autoComplete="username"
+            autoFocus
           />
 
           {/* Email */}
@@ -446,75 +307,6 @@ export function RegisterPage() {
             required
             autoComplete="email"
           />
-
-          {/* Date of Birth row */}
-          <div>
-            <div style={styles.dobLabel}>Date of Birth</div>
-            <div style={styles.dobRow}>
-              <select
-                style={{
-                  ...styles.select,
-                  ...(dobMonth === '' ? styles.selectPlaceholder : {}),
-                }}
-                value={dobMonth}
-                onChange={(e) => setDobMonth(e.target.value)}
-                aria-label="Month"
-                required
-              >
-                <option value="" disabled hidden>
-                  Month
-                </option>
-                {MONTHS.map((name, i) => (
-                  <option key={name} value={String(i + 1)}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                style={{
-                  ...styles.select,
-                  ...(dobDay === '' ? styles.selectPlaceholder : {}),
-                }}
-                value={dobDay}
-                onChange={(e) => setDobDay(e.target.value)}
-                aria-label="Day"
-                required
-              >
-                <option value="" disabled hidden>
-                  Day
-                </option>
-                {Array.from({ length: maxDays }, (_, i) => i + 1).map((d) => (
-                  <option key={d} value={String(d)}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                style={{
-                  ...styles.select,
-                  ...(dobYear === '' ? styles.selectPlaceholder : {}),
-                }}
-                value={dobYear}
-                onChange={(e) => setDobYear(e.target.value)}
-                aria-label="Year"
-                required
-              >
-                <option value="" disabled hidden>
-                  Year
-                </option>
-                {YEARS.map((y) => (
-                  <option key={y} value={String(y)}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {fieldErrors['dateOfBirth']?.[0] && (
-              <div style={styles.dobError}>{fieldErrors['dateOfBirth'][0]}</div>
-            )}
-          </div>
 
           {/* Password */}
           <Input
@@ -588,6 +380,50 @@ export function RegisterPage() {
         >
           Create Account
         </Button>
+
+        {/* Divider */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' } as React.CSSProperties}>
+          <div style={{ flex: 1, height: 1, background: 'var(--stroke)' }} />
+          <span style={{ fontSize: 12, color: 'var(--text-faint)', textTransform: 'uppercase' as const, letterSpacing: 1, fontWeight: 500 }}>or</span>
+          <div style={{ flex: 1, height: 1, background: 'var(--stroke)' }} />
+        </div>
+
+        {/* OAuth buttons */}
+        <div style={{ display: 'flex', gap: 12, width: '100%' } as React.CSSProperties}>
+          <button
+            type="button"
+            onClick={() => { window.location.href = `${import.meta.env.VITE_API_URL ?? '/api/v1'}/auth/google`; }}
+            style={styles.oauthButton}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Google
+          </button>
+          <button
+            type="button"
+            onClick={() => { window.location.href = `${import.meta.env.VITE_API_URL ?? '/api/v1'}/auth/apple`; }}
+            style={styles.oauthButton}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+            </svg>
+            Apple
+          </button>
+          <button
+            type="button"
+            onClick={() => { window.location.href = `${import.meta.env.VITE_API_URL ?? '/api/v1'}/auth/facebook`; }}
+            style={styles.oauthButton}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2" xmlns="http://www.w3.org/2000/svg">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+            Facebook
+          </button>
+        </div>
 
         {/* Sign in link */}
         <div style={styles.signInRow}>

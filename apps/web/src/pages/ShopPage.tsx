@@ -618,9 +618,9 @@ export function ShopPage() {
     /* Error */
     errorBanner: {
       padding: '10px 16px',
-      borderRadius: 8,
-      background: 'color-mix(in srgb, #e53e3e 15%, transparent)',
-      color: '#fc8181',
+      borderRadius: 'var(--radius-sm)',
+      background: 'color-mix(in srgb, var(--danger) 15%, transparent)',
+      color: 'var(--danger)',
       fontSize: 13,
     } as CSSProperties,
 
