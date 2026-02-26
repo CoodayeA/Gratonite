@@ -76,8 +76,18 @@ export function InvitePage() {
     return (
       <div className="invite-page">
         <div className="invite-card">
-          <h2>Invalid Invite</h2>
+          <div className="invite-error-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--danger, #f04747)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="15" y1="9" x2="9" y2="15" />
+              <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+          </div>
+          <h2 className="invite-heading">Invalid Invite</h2>
           <p className="invite-error">{error}</p>
+          <p className="invite-subtext">
+            This invite may have expired, been revoked, or the link may be incorrect.
+          </p>
           <Link to="/">
             <Button variant="ghost">Go Home</Button>
           </Link>
@@ -88,15 +98,21 @@ export function InvitePage() {
 
   if (!invite) return null;
 
+  const expiresLabel = invite.expiresAt
+    ? `Expires ${new Date(invite.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+    : null;
+
   return (
     <div className="invite-page">
       <div className="invite-card">
+        {/* Inviter line */}
         {invite.inviter && (
           <p className="invite-inviter">
             <strong>{invite.inviter.displayName}</strong> invited you to join
           </p>
         )}
 
+        {/* Guild icon */}
         <GuildIcon
           name={invite.guild.name}
           iconHash={invite.guild.iconHash}
@@ -105,20 +121,31 @@ export function InvitePage() {
           className="invite-guild-icon"
         />
 
+        {/* Guild name */}
         <h2 className="invite-guild-name">{invite.guild.name}</h2>
 
+        {/* Description */}
         {invite.guild.description && (
           <p className="invite-description">{invite.guild.description}</p>
         )}
 
+        {/* Stats */}
         <div className="invite-stats">
-          <span className="invite-member-count">
+          <div className="invite-stat-chip">
+            <span className="invite-stat-dot invite-stat-dot--members" />
             {invite.guild.memberCount} {invite.guild.memberCount === 1 ? 'Member' : 'Members'}
-          </span>
+          </div>
+          {expiresLabel && (
+            <div className="invite-stat-chip invite-stat-chip--expiry">
+              {expiresLabel}
+            </div>
+          )}
         </div>
 
+        {/* Error */}
         {error && <p className="invite-error">{error}</p>}
 
+        {/* Actions */}
         {isAuthenticated ? (
           <Button onClick={handleAccept} loading={accepting} className="invite-accept-btn">
             Accept Invite
@@ -126,12 +153,14 @@ export function InvitePage() {
         ) : (
           <div className="invite-auth-prompt">
             <p>You need to log in to accept this invite.</p>
-            <Link to={`/login?redirect=/invite/${code}`}>
-              <Button>Log In</Button>
-            </Link>
-            <Link to={`/register?redirect=/invite/${code}`}>
-              <Button variant="ghost">Register</Button>
-            </Link>
+            <div className="invite-auth-buttons">
+              <Link to={`/login?redirect=/invite/${code}`}>
+                <Button>Log In</Button>
+              </Link>
+              <Link to={`/register?redirect=/invite/${code}`}>
+                <Button variant="ghost">Register</Button>
+              </Link>
+            </div>
           </div>
         )}
       </div>
