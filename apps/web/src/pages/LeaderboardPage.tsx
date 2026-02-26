@@ -283,9 +283,9 @@ export function LeaderboardPage() {
   const rest = showAll ? entries.slice(3) : entries.slice(3, 10);
 
   // Re-order top 3 for podium display: [#2, #1, #3]
-  const podiumOrder = top3.length >= 3
-    ? [top3[1], top3[0], top3[2]]
-    : top3;
+  const podiumOrder = (top3.length >= 3
+    ? [top3[1]!, top3[0]!, top3[2]!]
+    : top3) as NonNullable<typeof top3[number]>[];
 
   // Find current user in the leaderboard
   const myEntry = currentUser ? entries.find((e) => e.userId === currentUser.id) : null;

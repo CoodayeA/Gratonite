@@ -381,8 +381,7 @@ export function StageChannelView({ channelId, channelName }: StageChannelViewPro
     setCreatingStage(true);
     setError('');
     try {
-      await api.voice.createStageInstance(guildId, {
-        channelId,
+      await api.voice.createStageInstance(channelId, {
         topic: newTopic.trim(),
       });
       setNewTopic('');

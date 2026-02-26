@@ -403,7 +403,7 @@ export function QAPage() {
       if (!res.ok) throw new Error('Vote failed');
       setAnswers(prev => ({
         ...prev,
-        [questionId]: prev[questionId].map(a =>
+        [questionId]: (prev[questionId] ?? []).map(a =>
           a.id === answerId ? { ...a, votes: a.votes + direction } : a
         ),
       }));
@@ -424,7 +424,7 @@ export function QAPage() {
       ));
       setAnswers(prev => ({
         ...prev,
-        [questionId]: prev[questionId].map(a =>
+        [questionId]: (prev[questionId] ?? []).map(a =>
           a.id === answerId ? { ...a, isAccepted: true } : { ...a, isAccepted: false }
         ),
       }));

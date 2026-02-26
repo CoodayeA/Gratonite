@@ -356,7 +356,7 @@ export function UserProfilePage() {
 
   const { data: friends, isLoading: friendsLoading } = useQuery({
     queryKey: ['users', 'friends'],
-    queryFn: () => api.users.getFriends(),
+    queryFn: () => api.relationships.getAll(),
   });
 
   const { data: wallet } = useQuery({
@@ -521,7 +521,7 @@ export function UserProfilePage() {
             <div style={nameGroupStyle}>
               <div style={displayNameStyle}>
                 {profile?.displayName ?? 'User'}
-                {profile?.tier && profile.tier !== 'free' && (
+                {(profile as any)?.tier && (profile as any).tier !== 'free' && (
                   <span style={verifiedBadgeStyle} title="Verified">
                     &#10003;
                   </span>
