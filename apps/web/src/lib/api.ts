@@ -1028,6 +1028,46 @@ export const api = {
       }),
   },
 
+  events: {
+    create: (
+      guildId: string,
+      data: {
+        name: string;
+        description?: string;
+        scheduledStartTime: string;
+        scheduledEndTime?: string;
+        entityType: 'stage_instance' | 'voice' | 'external';
+        channelId?: string;
+        entityMetadata?: { location?: string };
+      },
+    ) =>
+      apiFetch<any>(`/guilds/${guildId}/scheduled-events`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    list: (guildId: string, params?: { status?: string; limit?: number }) => {
+      const query = new URLSearchParams();
+      if (params?.status) query.set('status', params.status);
+      if (params?.limit) query.set('limit', String(params.limit));
+      const suffix = query.toString() ? `?${query.toString()}` : '';
+      return apiFetch<any[]>(`/guilds/${guildId}/scheduled-events${suffix}`);
+    },
+
+    get: (guildId: string, eventId: string) =>
+      apiFetch<any>(`/guilds/${guildId}/scheduled-events/${eventId}`),
+
+    rsvp: (guildId: string, eventId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/scheduled-events/${eventId}/users/@me`, {
+        method: 'PUT',
+      }),
+
+    unrsvp: (guildId: string, eventId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/scheduled-events/${eventId}/users/@me`, {
+        method: 'DELETE',
+      }),
+  },
+
   leaderboard: {
     get: (period: 'week' | 'month' | 'all' = 'week') =>
       apiFetch<Array<{

@@ -14132,6 +14132,92 @@ kbd.shortcuts-keys {
 }
 
 .portal-interior-channel-name {
+   Create Event Wizard (US-036)
+   ========================================================================== */
+
+.create-event-page {
+  display: flex;
+  justify-content: center;
+  padding: 32px 16px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.create-event-container {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.create-event-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+/* ── Step indicator (mirrors create-guild pattern) ── */
+
+.create-event-step-indicator {
+  display: flex;
+  gap: 4px;
+}
+
+.create-event-step-dot {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--stroke);
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.create-event-step-dot:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.create-event-step-dot.active {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.create-event-step-dot.done {
+  color: var(--text-muted);
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.create-event-step-num {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.create-event-step-dot.active .create-event-step-num {
+  background: var(--accent);
+  color: #fff;
+}
+
+.create-event-step-dot.done .create-event-step-num {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.create-event-step-label {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -14148,6 +14234,103 @@ kbd.shortcuts-keys {
 }
 
 .portal-interior-empty {
+/* ── Step content ── */
+
+.create-event-step-content {
+  display: grid;
+  gap: 12px;
+}
+
+.create-event-step-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.create-event-step-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* ── Event type grid ── */
+
+.create-event-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.create-event-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--stroke);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.create-event-type-card:hover {
+  border-color: var(--stroke-strong);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.create-event-type-card-active {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--text);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent) inset;
+}
+
+.create-event-type-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.create-event-type-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.create-event-type-desc {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+/* ── Channel section ── */
+
+.create-event-channel-section {
+  display: grid;
+  gap: 4px;
+}
+
+.create-event-channel-section select.input-field {
+  appearance: none;
+  cursor: pointer;
+}
+
+.create-event-channel-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 8px 0;
+}
+
+.create-event-channel-empty {
   font-size: 13px;
   color: var(--text-faint);
   padding: 8px 0;
@@ -14210,6 +14393,29 @@ kbd.shortcuts-keys {
 }
 
 .portal-preview-banner-img {
+/* ── Details step ── */
+
+.create-event-textarea {
+  resize: vertical;
+  min-height: 60px;
+  font-family: var(--font-sans);
+}
+
+.create-event-datetime-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* ── Preview step ── */
+
+.create-event-preview-banner {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  max-height: 160px;
+}
+
+.create-event-preview-banner img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -14774,6 +14980,81 @@ kbd.shortcuts-keys {
   .add-friend-sidebar {
     width: 100%;
     min-width: 0;
+.create-event-preview-card {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-md);
+  background: var(--bg-float);
+  overflow: hidden;
+}
+
+.create-event-preview-row {
+  display: flex;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--stroke) 50%, transparent);
+}
+
+.create-event-preview-row:last-child {
+  border-bottom: none;
+}
+
+.create-event-preview-label {
+  flex-shrink: 0;
+  width: 90px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.create-event-preview-value {
+  font-size: 13px;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.create-event-preview-desc {
+  white-space: pre-wrap;
+}
+
+.create-event-rsvp-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+}
+
+/* ── Footer ── */
+
+.create-event-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+}
+
+/* ── Mobile ── */
+
+@media (max-width: 520px) {
+  .create-event-type-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .create-event-datetime-row {
+    grid-template-columns: 1fr;
+  }
+
+  .create-event-step-indicator {
+    flex-direction: column;
+  }
+
+  .create-event-step-dot {
+    padding: 6px 10px;
   }
 }
 
