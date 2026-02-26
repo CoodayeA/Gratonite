@@ -33,6 +33,8 @@ export function voiceRouter(ctx: AppContext): Router {
   const voiceService = createVoiceService(ctx);
   const guildsService = createGuildsService(ctx);
   const channelsService = createChannelsService(ctx);
+  const messagesService = createMessagesService(ctx);
+  const filesService = createFilesService(ctx);
   const auth = requireAuth(ctx);
 
   // ── Join voice channel ──────────────────────────────────────────────────
@@ -535,6 +537,244 @@ export function voiceRouter(ctx: AppContext): Router {
     );
 
     res.status(204).send();
+  });
+
+  // ── Voice Messages ──────────────────────────────────────────────────────
+
+  /**
+   * POST /channels/:channelId/voice-messages
+   * Upload an audio blob and create a voice message (type 5).
+   */
+  router.post(
+    '/channels/:channelId/voice-messages',
+    auth,
+    voiceMessageUpload.single('audio'),
+    async (req, res) => {
+      const channelId = String(req.params['channelId']);
+      const userId = req.user!.userId;
+
+      if (!req.file) {
+        return res.status(400).json({ code: 'NO_FILE', message: 'No audio file provided' });
+      }
+
+      // Verify channel access
+      const channel = await channelsService.getChannel(channelId);
+      if (!channel) {
+        return res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found' });
+      }
+      if (channel.guildId) {
+        const isMember = await guildsService.isMember(channel.guildId, userId);
+        if (!isMember) return res.status(403).json({ code: 'FORBIDDEN' });
+        const canAccess = await channelsService.canAccessChannel(channelId, userId);
+        if (!canAccess) return res.status(403).json({ code: 'FORBIDDEN' });
+      }
+
+      // Parse optional voice metadata from multipart body fields
+      const durationSecs = req.body.duration_secs != null
+        ? parseInt(req.body.duration_secs, 10)
+        : undefined;
+      const waveform: string | undefined = req.body.waveform ?? undefined;
+
+      // Upload the audio file to object storage
+      let uploadResult;
+      try {
+        uploadResult = await filesService.uploadFile(
+          req.file,
+          {
+            purpose: 'upload',
+            contextId: channelId,
+            spoiler: false,
+            isVoiceMessage: true,
+            durationSecs: !isNaN(durationSecs as number) ? (durationSecs as number) : undefined,
+            waveform,
+          },
+          userId,
+        );
+      } catch (err: any) {
+        if (err.code === 'FILE_TOO_LARGE') {
+          return res.status(413).json({ code: 'FILE_TOO_LARGE', message: 'Audio file exceeds 10 MB limit' });
+        }
+        if (err.code === 'INVALID_FILE_TYPE') {
+          return res.status(415).json({ code: 'INVALID_FILE_TYPE', message: err.message });
+        }
+        throw err;
+      }
+
+      const messageId = generateId();
+      const MESSAGE_TYPE_VOICE = 5;
+      const IS_VOICE_MESSAGE_FLAG = 1 << 13;
+
+      // Insert message + attachment in a transaction
+      const [created] = await ctx.db.transaction(async (tx) => {
+        const [msg] = await tx
+          .insert(messages)
+          .values({
+            id: messageId,
+            channelId,
+            guildId: channel.guildId ?? null,
+            authorId: userId,
+            content: '',
+            type: MESSAGE_TYPE_VOICE,
+            flags: IS_VOICE_MESSAGE_FLAG,
+            mentions: [] as unknown as string[],
+            mentionRoles: [] as unknown as string[],
+            mentionEveryone: false,
+            stickerIds: [] as unknown as string[],
+          })
+          .returning();
+
+        await tx.update(channels).set({ lastMessageId: messageId }).where(eq(channels.id, channelId));
+
+        await tx.insert(messageAttachments).values({
+          id: uploadResult.id,
+          messageId,
+          filename: uploadResult.filename,
+          description: null,
+          contentType: uploadResult.contentType,
+          size: uploadResult.size,
+          url: uploadResult.url,
+          proxyUrl: uploadResult.url,
+          height: uploadResult.height,
+          width: uploadResult.width,
+          durationSecs: uploadResult.durationSecs ?? null,
+          waveform: uploadResult.waveform ?? null,
+          flags: 2, // bit 1 = voice message
+        });
+
+        return [msg];
+      });
+
+      const hydratedMessage = await messagesService.getMessage(messageId);
+
+      // Broadcast via Socket.IO
+      if (channel.guildId) {
+        await emitRoomWithIntent(
+          ctx.io,
+          `guild:${channel.guildId}`,
+          GatewayIntents.GUILD_MESSAGES,
+          'MESSAGE_CREATE',
+          hydratedMessage as any,
+        );
+      } else {
+        await emitRoomWithIntent(
+          ctx.io,
+          `channel:${channelId}`,
+          GatewayIntents.DIRECT_MESSAGES,
+          'MESSAGE_CREATE',
+          hydratedMessage as any,
+        );
+      }
+
+      await ctx.redis.publish(
+        `channel:${channelId}:messages`,
+        JSON.stringify({ type: 'MESSAGE_CREATE', data: hydratedMessage }),
+      );
+
+      return res.status(201).json(hydratedMessage);
+    },
+  );
+
+  /**
+   * GET /channels/:channelId/voice-messages
+   * List voice messages (type 5) for a channel.
+   */
+  router.get('/channels/:channelId/voice-messages', auth, async (req, res) => {
+    const channelId = String(req.params['channelId']);
+    const userId = req.user!.userId;
+
+    const channel = await channelsService.getChannel(channelId);
+    if (!channel) {
+      return res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found' });
+    }
+    if (channel.guildId) {
+      const isMember = await guildsService.isMember(channel.guildId, userId);
+      if (!isMember) return res.status(403).json({ code: 'FORBIDDEN' });
+      const canAccess = await channelsService.canAccessChannel(channelId, userId);
+      if (!canAccess) return res.status(403).json({ code: 'FORBIDDEN' });
+    }
+
+    const limit = Math.min(parseInt(String(req.query['limit'] ?? '50'), 10) || 50, 100);
+    const before: string | undefined = req.query['before'] ? String(req.query['before']) : undefined;
+
+    const MESSAGE_TYPE_VOICE = 5;
+
+    const baseCondition = and(
+      eq(messages.channelId, channelId),
+      eq(messages.type, MESSAGE_TYPE_VOICE),
+      sql`${messages.deletedAt} IS NULL`,
+    );
+
+    const rows = await ctx.db
+      .select()
+      .from(messages)
+      .where(
+        before
+          ? and(baseCondition, sql`${messages.id} < ${before}`)
+          : baseCondition,
+      )
+      .orderBy(desc(messages.id))
+      .limit(limit);
+
+    // Hydrate each message (attachments, author info, etc.)
+    const hydrated = await Promise.all(rows.map((m) => messagesService.getMessage(m.id)));
+    return res.json(hydrated.filter(Boolean));
+  });
+
+  /**
+   * DELETE /channels/:channelId/voice-messages/:messageId
+   * Delete a voice message (owner or guild owner only).
+   */
+  router.delete('/channels/:channelId/voice-messages/:messageId', auth, async (req, res) => {
+    const channelId = String(req.params['channelId']);
+    const messageId = String(req.params['messageId']);
+    const userId = req.user!.userId;
+
+    const channel = await channelsService.getChannel(channelId);
+    if (!channel) {
+      return res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found' });
+    }
+    if (channel.guildId) {
+      const isMember = await guildsService.isMember(channel.guildId, userId);
+      if (!isMember) return res.status(403).json({ code: 'FORBIDDEN' });
+    }
+
+    let isAdmin = false;
+    if (channel.guildId) {
+      const guild = await guildsService.getGuild(channel.guildId);
+      isAdmin = guild?.ownerId === userId;
+    }
+
+    const result = await messagesService.deleteMessage(messageId, userId, isAdmin);
+    if (!result) return res.status(404).json({ code: 'NOT_FOUND' });
+    if (typeof result === 'object' && 'error' in result) {
+      return res.status(403).json({ code: result.error });
+    }
+
+    const deleteEvent = {
+      id: messageId,
+      channelId,
+      guildId: channel.guildId ?? undefined,
+    };
+
+    if (channel.guildId) {
+      await emitRoomWithIntent(
+        ctx.io,
+        `guild:${channel.guildId}`,
+        GatewayIntents.GUILD_MESSAGES,
+        'MESSAGE_DELETE',
+        deleteEvent,
+      );
+    } else {
+      await emitRoomWithIntent(
+        ctx.io,
+        `channel:${channelId}`,
+        GatewayIntents.DIRECT_MESSAGES,
+        'MESSAGE_DELETE',
+        deleteEvent,
+      );
+    }
+
+    return res.status(204).send();
   });
 
   return router;
