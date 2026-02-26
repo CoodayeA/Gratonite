@@ -303,7 +303,7 @@ export interface BetaBugReportInboxItem extends BetaBugReport {
 export const api = {
   auth: {
     register: (data: RegisterRequest) =>
-      apiFetch<AuthResponse>('/auth/register', {
+      apiFetch<{ email: string }>('/auth/register', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
@@ -331,7 +331,7 @@ export const api = {
       }),
 
     confirmEmailVerification: (token: string) =>
-      apiFetch<{ ok: true; message: string }>('/auth/verify-email/confirm', {
+      apiFetch<{ ok: true; message: string; accessToken: string }>('/auth/verify-email/confirm', {
         method: 'POST',
         body: JSON.stringify({ token }),
       }),
