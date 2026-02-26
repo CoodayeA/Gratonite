@@ -1,0 +1,388 @@
+{
+  "project": "Gratonite",
+  "branchName": "ralph/feature-wiring-and-polish",
+  "description": "Wire all missing create/submit flows (Polls, ScheduledMsgs, Q&A, Events, Wiki, Bots, Shop), add missing backend endpoints (mutuals, status, widgets, badges), add loading skeletons + 404 + error boundaries, and align key screens to gratonite.pen mockups.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "PollsPage — Create Poll modal",
+      "description": "As a user, I want to create a poll from PollsPage so that I can gather votes from my community.",
+      "acceptanceCriteria": [
+        "Clicking 'Create Poll' button opens a modal",
+        "Modal form has: question text input (max 300 chars), at least 2 answer option inputs (up to 10, add/remove buttons), allow multiselect toggle, optional duration select (1h / 24h / 7d / No expiry)",
+        "On submit: calls api.polls.create(channelId, { question, answers: [{text}], allowMultiselect, duration }) — channelId from useParams",
+        "On success: closes modal, invalidates polls query so list refreshes",
+        "Submit button disabled while loading; shows error message on failure",
+        "Also fix: PollsPage vote handler must call api.polls.vote(pollId, [answerId]) — verify it uses api.polls.vote not a raw fetch to /vote",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "File: apps/web/src/pages/PollsPage.tsx. api.polls.create is at /channels/:channelId/polls. api.polls.vote is at POST /polls/:pollId/answers."
+    },
+    {
+      "id": "US-002",
+      "title": "ScheduledMsgsPage — Schedule Message form",
+      "description": "As a user, I want to schedule a message to be sent later so that I can plan announcements.",
+      "acceptanceCriteria": [
+        "Clicking 'Schedule Message' button opens a modal",
+        "Modal form has: channel select (populated from api.guilds.getChannels(guildId)), message content textarea (max 4000 chars), date+time picker for scheduled time (must be in the future)",
+        "On submit: calls api.scheduledMessages.create(guildId, { channelId, content, scheduledFor: isoString })",
+        "On success: closes modal, invalidates scheduled messages query so list refreshes",
+        "Submit button disabled while loading; shows inline error on failure",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "File: apps/web/src/pages/ScheduledMsgsPage.tsx. guildId from useParams. api.scheduledMessages.create at POST /guilds/:guildId/scheduled-messages."
+    },
+    {
+      "id": "US-003",
+      "title": "QAPage — Ask Question modal",
+      "description": "As a user, I want to submit a new question on the Q&A page so that others can answer it.",
+      "acceptanceCriteria": [
+        "Clicking 'Ask Question' button opens a modal",
+        "Modal form has: question title input (required, max 300 chars), optional body/details textarea (max 2000 chars)",
+        "On submit: POST to /api/v1/qa/channels/${channelId}/questions with { title, body } — matching the existing raw fetch pattern in the page",
+        "On success: closes modal, refreshes questions list",
+        "Submit button disabled while loading; shows error on failure",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "File: apps/web/src/pages/QAPage.tsx. channelId from useParams. Uses raw fetch (not api.ts) to match existing page pattern."
+    },
+    {
+      "id": "US-004",
+      "title": "EventsPage — Create Event button + RSVP wiring",
+      "description": "As a user, I want to create events and RSVP to them from the Events page.",
+      "acceptanceCriteria": [
+        "Clicking 'Create Event' button navigates to /events/${guildId}/create (CreateEventPage already exists)",
+        "Each event card has an RSVP/Interested toggle button",
+        "Clicking RSVP (not yet interested): calls api.events.setInterested(guildId, eventId) — PUT /guilds/:guildId/scheduled-events/:eventId/interested",
+        "Clicking again (already interested): calls api.events.removeInterested(guildId, eventId) — DELETE same endpoint",
+        "Button shows correct state (interested vs not) based on event data; optimistic UI update on click",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "File: apps/web/src/pages/EventsPage.tsx. api.events.setInterested and removeInterested exist in api.ts at lines 1140/1143."
+    },
+    {
+      "id": "US-005",
+      "title": "WikiPage — Add page handler",
+      "description": "As a user, I want to create new wiki pages so that I can document my community.",
+      "acceptanceCriteria": [
+        "Clicking '+Add page' in sidebar shows an inline title input or small modal",
+        "On submit: calls api.wiki.create(channelId, { title, content: '' })",
+        "New page appears in sidebar page list and becomes the active/selected page",
+        "Empty state shown for new page with 'Start writing...' prompt",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "File: apps/web/src/pages/WikiPage.tsx line 264. api.wiki.create at POST /channels/:channelId/wiki."
+    },
+    {
+      "id": "US-006",
+      "title": "WikiPage — Edit, History, and More handlers",
+      "description": "As a user, I want to edit wiki pages, view revision history, and delete/rename pages.",
+      "acceptanceCriteria": [
+        "Clicking 'Edit' button: toggles page body into a markdown textarea editor pre-filled with current content; 'Save' button calls api.wiki.update(pageId, { title, content }); 'Cancel' reverts to view mode",
+        "Clicking 'History' button: calls api.wiki.getRevisions(pageId), shows a drawer/panel listing revisions with timestamps; clicking a revision shows its content; 'Revert' button calls api.wiki.revert(pageId, revisionId)",
+        "Clicking 'More' button: opens a small dropdown menu with 'Rename' and 'Delete' options",
+        "Rename: shows an inline title input, on confirm calls api.wiki.update(pageId, { title })",
+        "Delete: shows confirmation dialog, on confirm calls api.wiki.delete(pageId), navigates to first remaining page",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "File: apps/web/src/pages/WikiPage.tsx lines 292-294. api.wiki.update, delete, getRevisions, revert all exist in api.ts lines 1087-1099."
+    },
+    {
+      "id": "US-007",
+      "title": "BotsPage — New Application + Configure dialog",
+      "description": "As a developer, I want to create and configure bot applications from the Bots page.",
+      "acceptanceCriteria": [
+        "Clicking 'New Application' opens a modal with: app name input (required), description textarea (optional)",
+        "On submit: POST to /api/v1/bots with { name, description } (raw fetch, matching existing page pattern)",
+        "On success: refreshes bot list",
+        "Each bot in 'My Apps' tab has a 'Configure' button that opens a config modal showing: bot name (editable), description (editable), bot token (masked, with copy button), webhook URL input",
+        "Config modal Save button: PATCH to /api/v1/bots/${botId} with changed fields",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "File: apps/web/src/pages/BotsPage.tsx lines 335, 428-429. Uses raw fetch (not api.ts namespace) matching existing page pattern."
+    },
+    {
+      "id": "US-008",
+      "title": "ShopPage — Buy More Gratonites button",
+      "description": "As a user, I want the 'Buy More' button in the Shop balance banner to take me somewhere to get more currency.",
+      "acceptanceCriteria": [
+        "Clicking 'Buy More' button navigates to /gratonite (GratoniteDashboard) where the economy/rewards hub lives",
+        "Button uses useNavigate() from react-router-dom — no full page reload",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "File: apps/web/src/pages/ShopPage.tsx line 702. Simple navigate fix — no backend needed."
+    },
+    {
+      "id": "US-009",
+      "title": "Backend — Mutual friends/servers endpoint",
+      "description": "As a developer, I need a /relationships/mutuals/:userId endpoint so that FriendsPage and UserProfilePage can show real mutual friends and servers.",
+      "acceptanceCriteria": [
+        "Add GET /relationships/mutuals/:userId endpoint in apps/api/src/modules/relationships/relationships.router.ts (or service)",
+        "Returns { mutualFriends: Array<{id, username, displayName, avatarHash}>, mutualServers: Array<{id, name, iconHash}> }",
+        "mutualFriends: users who have an active 'friend' relationship with BOTH the current user AND the target user",
+        "mutualServers: guild IDs where both the current user and target user are members (join guild_members table)",
+        "Endpoint already present in api.ts at /users/${userId}/mutuals (line 498) — register the actual route handler",
+        "FriendsPage already shows mutual friends section — it will render real data once backend returns it",
+        "UserProfilePage already calls api.users.getMutuals(userId) — will work once backend returns real data",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "api.ts line 496-498 already has the frontend call to /users/:userId/mutuals. Backend needs to implement the handler."
+    },
+    {
+      "id": "US-010",
+      "title": "Backend — Custom status API + SettingsPage wiring",
+      "description": "As a user, I want my custom status to save to the server so it persists across devices.",
+      "acceptanceCriteria": [
+        "Check packages/db/src/schema/users.ts — if statusText and statusExpiresAt columns do not exist, add them (text nullable, timestamptz nullable) — additive migration only",
+        "Add PATCH /users/@me/status endpoint in users router — body: { text: string | null, expiresAt: string | null }",
+        "Endpoint updates the user's statusText and statusExpiresAt in the DB",
+        "Add api.users.updateCustomStatus to apps/web/src/lib/api.ts: apiFetch('/users/@me/status', { method: 'PATCH', body: JSON.stringify(data) })",
+        "In SettingsPage.tsx handleSaveStatus(): after calling saveProfileEnhancementsPrefs, also call api.users.updateCustomStatus({ text: statusInput.trim(), expiresAt })",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "File: apps/api/src/modules/users/users.router.ts, apps/web/src/pages/SettingsPage.tsx line 634."
+    },
+    {
+      "id": "US-011",
+      "title": "Backend — Profile widgets save + UserProfilePage real data",
+      "description": "As a user, I want the profile widgets I set in Settings to actually save and appear on my profile.",
+      "acceptanceCriteria": [
+        "Check packages/db/src/schema/users.ts — if a widgets/profileWidgets JSONB column does not exist, add it (jsonb nullable default null) — additive migration only",
+        "Include widgets in GET /users/:id profile response (return from users service getProfile)",
+        "Add PATCH /users/@me/widgets endpoint — body: { widgets: string[] } — persists to DB",
+        "Add api.users.updateWidgets to apps/web/src/lib/api.ts",
+        "Wire SettingsPage widgets save button (currently calls saveProfileEnhancementsPrefs only) to also call api.users.updateWidgets(widgets)",
+        "UserProfilePage already reads (profile as any)?.widgets ?? [] — will show real data once backend returns it",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "File: apps/api/src/modules/users/users.router.ts, apps/web/src/pages/SettingsPage.tsx, UserProfilePage.tsx line 416."
+    },
+    {
+      "id": "US-012",
+      "title": "Backend — Profile badges computed from real user data",
+      "description": "As a user, I want my profile to show accurate badges based on my account data.",
+      "acceptanceCriteria": [
+        "In GET /users/:id profile response (users service), include a computed badges: string[] field",
+        "Badge logic: 'Crystalline' if tier === 'crystalline'; 'OG' if createdAt year <= 2024; 'Staff' if isAdmin is true for this user",
+        "No new DB columns needed — badges are derived at query time",
+        "UserProfilePage already computes badges from (profile as any).badges — update it to use profile.badges directly (remove the local badges derivation added in previous session)",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "File: apps/api/src/modules/users/users.service.ts (or router). UserProfilePage.tsx lines 409-411."
+    },
+    {
+      "id": "US-013",
+      "title": "Loading skeletons — FriendsPage",
+      "description": "As a user, I want to see loading skeletons while the friends list loads instead of an empty screen.",
+      "acceptanceCriteria": [
+        "Destructure isLoading from the relationships useQuery call",
+        "While isLoading is true: render 6-8 skeleton rows in the friends list — grey pulsing bars for avatar and name",
+        "Use the existing Skeleton component from apps/web/src/components/ui/ if it exists, otherwise create a simple inline pulse with CSS animation",
+        "Once loaded: renders real friend rows as before",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "File: apps/web/src/pages/FriendsPage.tsx lines 51-54. Check apps/web/src/components/ui/Skeleton.tsx exists."
+    },
+    {
+      "id": "US-014",
+      "title": "Loading skeletons — UserProfilePage",
+      "description": "As a user, I want to see loading states on the profile page while sections fetch data.",
+      "acceptanceCriteria": [
+        "While mutuals is loading: show 2-3 skeleton chips in mutual friends and mutual servers sections instead of empty",
+        "While wallet is loading (isOwnProfile): show '— G' with a subtle pulse animation instead of '0 G'",
+        "While friends list is loading: show skeleton rows in left sidebar",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": "File: apps/web/src/pages/UserProfilePage.tsx lines 350-368."
+    },
+    {
+      "id": "US-015",
+      "title": "Loading skeletons — SettingsPage",
+      "description": "As a user, I want a loading indicator in Settings while my profile data is refreshing.",
+      "acceptanceCriteria": [
+        "While profile state is null (API call in progress): show a subtle spinner or skeleton in the account section avatar/display name area",
+        "Auth store values (user.displayName, user.avatarHash) still pre-fill the form fields as fallback — just add a small 'Refreshing...' indicator near the avatar",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 15,
+      "passes": true,
+      "notes": "File: apps/web/src/pages/SettingsPage.tsx line 187."
+    },
+    {
+      "id": "US-016",
+      "title": "404 catch-all route",
+      "description": "As a user, I want a proper 404 page instead of a blank screen when I navigate to an unknown URL.",
+      "acceptanceCriteria": [
+        "Create apps/web/src/pages/NotFoundPage.tsx with on-brand design: charcoal background, large '404' in gold accent, short message ('Page not found'), and a 'Go Home' button using useNavigate to '/'",
+        "Export as named export NotFoundPage",
+        "Add lazy import in App.tsx",
+        "Add <Route path='*' element={<NotFoundPage />} /> as the last route inside the authenticated Routes block",
+        "Navigating to /app/nonexistent-path shows the 404 page",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 16,
+      "passes": true,
+      "notes": "File: apps/web/src/App.tsx, new file apps/web/src/pages/NotFoundPage.tsx."
+    },
+    {
+      "id": "US-017",
+      "title": "React error boundaries",
+      "description": "As a user, I want a friendly error screen instead of a white crash when a component throws.",
+      "acceptanceCriteria": [
+        "Create apps/web/src/components/ErrorBoundary.tsx as a React class component implementing componentDidCatch and getDerivedStateFromError",
+        "Fallback UI: centered panel with 'Something went wrong' message, error details (in dev only), and a 'Reload' button that calls window.location.reload()",
+        "Wrap the authenticated <AppLayout> route in App.tsx with <ErrorBoundary>",
+        "Wrap each major lazy-loaded page group (guild routes, DM routes, settings, shop) in a separate <ErrorBoundary> so one broken page does not crash the app",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": true,
+      "notes": "File: apps/web/src/App.tsx, new file apps/web/src/components/ErrorBoundary.tsx."
+    },
+    {
+      "id": "US-018",
+      "title": "ChannelPage mockup alignment",
+      "description": "As a user, I want the channel/DM message view to look pixel-accurate to the gratonite.pen mockup.",
+      "acceptanceCriteria": [
+        "Open gratonite.pen ChannelPage screen and compare to current live ChannelPage at http://localhost:5173",
+        "Fix: message bubble layout (avatar left, content right, timestamp alignment)",
+        "Fix: reaction row pill sizing and hover states",
+        "Fix: message input bar height, attachment button, emoji button, send button placement",
+        "Fix: system messages (join/leave) styling",
+        "Fix: unread divider line if present in mockup",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 18,
+      "passes": true,
+      "notes": "File: apps/web/src/pages/ChannelPage.tsx. Design source: gratonite.pen ChannelPage screen."
+    },
+    {
+      "id": "US-019",
+      "title": "GuildPage sidebar mockup alignment",
+      "description": "As a user, I want the guild channel list and member sidebar to match the gratonite.pen design.",
+      "acceptanceCriteria": [
+        "Open gratonite.pen GuildPage mockup and compare ChannelSidebar and MemberList",
+        "Fix: category header text size, uppercase, letter-spacing",
+        "Fix: channel item icon, name, unread badge alignment",
+        "Fix: voice channel entry with participant count",
+        "Fix: member list section headers (Online, Offline) and member row: avatar, username, role badge",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 19,
+      "passes": true,
+      "notes": "Files: apps/web/src/components/sidebar/ChannelSidebar.tsx, MemberList component."
+    },
+    {
+      "id": "US-020",
+      "title": "HomePage mockup alignment",
+      "description": "As a user, I want the home/hub page to look exactly like the gratonite.pen mockup.",
+      "acceptanceCriteria": [
+        "Open gratonite.pen HomePage screen and compare to current live /app/",
+        "Fix: hub tile grid layout, card sizing, icon placement, label typography",
+        "Fix: any activity feed or recent servers section spacing",
+        "Fix: quick action buttons (Add Server, Find Friends, etc.) styling",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 20,
+      "passes": true,
+      "notes": "File: apps/web/src/pages/HomePage.tsx."
+    },
+    {
+      "id": "US-021",
+      "title": "UserProfilePage mockup alignment",
+      "description": "As a user, I want my profile page to look exactly like the gratonite.pen mockup.",
+      "acceptanceCriteria": [
+        "Open gratonite.pen UserProfile screen and compare to current live /app/profile/:userId",
+        "Fix: avatar circle size, border, online status dot placement",
+        "Fix: banner image aspect ratio and overlay gradient",
+        "Fix: badges row pill sizing, colors, icons",
+        "Fix: bio section spacing and font",
+        "Fix: widgets pill row styling",
+        "Fix: mutual friends/servers chips layout",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 21,
+      "passes": true,
+      "notes": "File: apps/web/src/pages/UserProfilePage.tsx."
+    },
+    {
+      "id": "US-022",
+      "title": "ShopPage mockup alignment",
+      "description": "As a user, I want the Shop page to look exactly like the gratonite.pen mockup.",
+      "acceptanceCriteria": [
+        "Open gratonite.pen ShopPage screen and compare to current live /app/shop",
+        "Fix: item card grid sizing, image aspect ratio, name/price label placement",
+        "Fix: equip/buy CTA button styling on cards",
+        "Fix: filter/category tab bar alignment",
+        "Fix: balance banner layout and typography",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 22,
+      "passes": true,
+      "notes": "File: apps/web/src/pages/ShopPage.tsx."
+    },
+    {
+      "id": "US-023",
+      "title": "Login + Register pages mockup alignment",
+      "description": "As a new user, I want the login and registration screens to look exactly like the gratonite.pen mockups.",
+      "acceptanceCriteria": [
+        "Open gratonite.pen Login screen and compare to current /app/login",
+        "Fix: card width, padding, logo placement, heading typography",
+        "Fix: input field height, border radius, label positioning",
+        "Fix: Sign In button sizing and gold fill",
+        "Fix: OAuth button row icon + label alignment",
+        "Open gratonite.pen Register screen and apply same audit to /app/register",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 23,
+      "passes": true,
+      "notes": "Files: apps/web/src/pages/auth/LoginPage.tsx, RegisterPage.tsx."
+    }
+  ]
+}

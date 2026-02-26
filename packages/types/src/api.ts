@@ -18,9 +18,9 @@ export interface AccessTokenPayload {
 export interface RegisterRequest {
   email: string;
   username: string;
-  displayName: string;
+  displayName?: string;
   password: string;
-  dateOfBirth: string; // YYYY-MM-DD
+  dateOfBirth?: string; // YYYY-MM-DD
 }
 
 /** Login request */

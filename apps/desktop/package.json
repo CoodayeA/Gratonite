@@ -6,10 +6,14 @@
   "description": "Gratonite desktop app (Electron)",
   "main": "src/main.js",
   "scripts": {
-    "dev": "electron .",
+    "dev": "GRATONITE_DESKTOP_URL=http://localhost:5173/app/ electron .",
+    "build:win": "electron-builder --win --publish never",
+    "build:mac": "electron-builder --mac --publish never",
+    "build:mac:sign": "electron-builder --mac --publish never -c.mac.identity=\"Developer ID Application: Your Name (TEAM_ID)\"",
+    "build:linux": "electron-builder --linux --publish never",
     "build": "electron-builder --publish never",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "dist": "electron-builder --publish always",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "electron-log": "^5.3.0",
@@ -26,22 +30,48 @@
     "asar": true,
     "files": [
       "src/**/*",
-      "renderer/**/*"
+      "renderer/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
     ],
     "directories": {
-      "output": "dist"
-    },
-    "icon": "assets/icon.png",
-    "mac": {
-      "target": ["dmg", "zip"],
-      "icon": "assets/icon.png"
+      "output": "release"
     },
     "win": {
-      "target": ["nsis", "zip"],
-      "icon": "assets/icon.png"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "artifactName": "Gratonite-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Gratonite"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["arm64", "x64"]
+        }
+      ],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.social-networking",
+      "artifactName": "Gratonite-${version}-${arch}.${ext}",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "assets/entitlements.plist",
+      "entitlementsInherit": "assets/entitlements-inherit.plist"
     },
     "linux": {
-      "target": ["AppImage", "deb", "rpm"],
+      "target": ["AppImage"],
       "category": "Network",
       "icon": "assets/icon.png"
     },

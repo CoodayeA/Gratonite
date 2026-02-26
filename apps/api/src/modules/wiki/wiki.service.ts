@@ -120,18 +120,18 @@ export function createWikiService(ctx: AppContext) {
 
     const updates: Record<string, unknown> = {};
     if (input.title !== undefined) {
-      updates.title = input.title;
-      updates.slug = slugify(input.title);
+      updates['title'] = input.title;
+      updates['slug'] = slugify(input.title);
     }
-    if (input.content !== undefined) updates.content = input.content;
-    if (input.pinned !== undefined) updates.pinned = input.pinned;
-    if (input.archived !== undefined) updates.archived = input.archived;
-    if (input.parentPageId !== undefined) updates.parentPageId = input.parentPageId;
-    if (input.position !== undefined) updates.position = input.position;
+    if (input['content'] !== undefined) updates['content'] = input['content'];
+    if (input['pinned'] !== undefined) updates['pinned'] = input['pinned'];
+    if (input['archived'] !== undefined) updates['archived'] = input['archived'];
+    if (input['parentPageId'] !== undefined) updates['parentPageId'] = input['parentPageId'];
+    if (input['position'] !== undefined) updates['position'] = input['position'];
 
-    if (input.content !== undefined || input.title !== undefined) {
-      updates.lastEditorId = editorId;
-      updates.editedAt = new Date();
+    if (input['content'] !== undefined || input.title !== undefined) {
+      updates['lastEditorId'] = editorId;
+      updates['editedAt'] = new Date();
     }
 
     const [updated] = await ctx.db

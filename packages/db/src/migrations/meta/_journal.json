@@ -155,6 +155,13 @@
       "when": 1772280000000,
       "tag": "0021_inventory_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1771980952267,
+      "tag": "0022_amazing_blockbuster",
+      "breakpoints": true
     }
   ]
 }

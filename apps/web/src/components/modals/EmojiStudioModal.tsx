@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -67,6 +67,136 @@ async function transformStaticImage(file: File, zoom: number, rotateDeg: number)
   const filename = file.name.replace(/\.[^/.]+$/, '') + '.png';
   return new File([blob], filename, { type: 'image/png' });
 }
+
+const styles = {
+  root: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 14,
+  } as React.CSSProperties,
+  error: {
+    padding: '10px 14px',
+    background: 'var(--danger-bg)',
+    border: '1px solid rgba(255, 107, 107, 0.25)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--danger)',
+    fontSize: 13,
+  } as React.CSSProperties,
+  grid: {
+    display: 'grid',
+    gap: 14,
+    gridTemplateColumns: '1.15fr 1fr',
+  } as React.CSSProperties,
+  editorPanel: {
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    background: 'rgba(10, 16, 28, 0.66)',
+    padding: 12,
+  } as React.CSSProperties,
+  previewWrap: {
+    minHeight: 220,
+    border: '1px dashed var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    background: 'rgba(6, 10, 20, 0.72)',
+    display: 'grid',
+    placeItems: 'center',
+    overflow: 'hidden',
+  } as React.CSSProperties,
+  preview: {
+    width: 128,
+    height: 128,
+    objectFit: 'contain',
+    transition: 'transform 120ms ease',
+  } as React.CSSProperties,
+  placeholder: {
+    color: 'var(--text-faint)',
+    fontSize: 13,
+  } as React.CSSProperties,
+  controls: {
+    marginTop: 10,
+    display: 'grid',
+    gap: 8,
+  } as React.CSSProperties,
+  control: {
+    display: 'grid',
+    gap: 4,
+    fontSize: 12,
+    color: 'var(--text-muted)',
+  } as React.CSSProperties,
+  rangeInput: {
+    width: '100%',
+  } as React.CSSProperties,
+  formPanel: {
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    background: 'rgba(10, 16, 28, 0.66)',
+    padding: 12,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+  } as React.CSSProperties,
+  inputGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  } as React.CSSProperties,
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: 'var(--text-muted)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+  } as React.CSSProperties,
+  inputWrapper: {
+    position: 'relative',
+  } as React.CSSProperties,
+  selectField: {
+    width: '100%',
+    padding: '10px 12px',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--text)',
+    fontSize: 14,
+    outline: 'none',
+  } as React.CSSProperties,
+  uploadLabel: {
+    alignSelf: 'flex-start',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '8px 16px',
+    background: 'transparent',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--text)',
+    fontSize: 14,
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'background 0.15s ease',
+  } as React.CSSProperties,
+  fileInput: {
+    display: 'none',
+  } as React.CSSProperties,
+  note: {
+    fontSize: 12,
+    color: 'var(--text-faint)',
+  } as React.CSSProperties,
+  meta: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+    fontSize: 12,
+    color: 'var(--text-muted)',
+  } as React.CSSProperties,
+  footer: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: 10,
+    padding: '0 24px 20px',
+    flexWrap: 'wrap',
+  } as React.CSSProperties,
+};
 
 export function EmojiStudioModal() {
   const activeModal = useUiStore((s) => s.activeModal);
@@ -176,27 +306,27 @@ export function EmojiStudioModal() {
 
   return (
     <Modal id="emoji-studio" title="Emoji Studio" size="lg" onClose={() => closeModal()}>
-      <div className="emoji-studio">
-        {error && <div className="modal-error">{error}</div>}
+      <div style={styles.root}>
+        {error && <div style={styles.error}>{error}</div>}
 
-        <div className="emoji-studio-grid">
-          <div className="emoji-studio-editor">
-            <div className="emoji-studio-preview-wrap">
+        <div style={styles.grid}>
+          <div style={styles.editorPanel}>
+            <div style={styles.previewWrap}>
               {previewUrl ? (
                 <img
                   src={previewUrl}
                   alt="Emoji preview"
-                  className="emoji-studio-preview"
                   style={{
+                    ...styles.preview,
                     transform: `scale(${zoom}) rotate(${rotate}deg)`,
                   }}
                 />
               ) : (
-                <div className="emoji-studio-placeholder">Choose a file to preview</div>
+                <div style={styles.placeholder}>Choose a file to preview</div>
               )}
             </div>
-            <div className="emoji-studio-controls">
-              <label className="emoji-studio-control">
+            <div style={styles.controls}>
+              <label style={styles.control}>
                 Zoom
                 <input
                   type="range"
@@ -206,9 +336,10 @@ export function EmojiStudioModal() {
                   value={zoom}
                   onChange={(e) => setZoom(Number(e.target.value))}
                   disabled={!file || file.type === 'image/gif'}
+                  style={styles.rangeInput}
                 />
               </label>
-              <label className="emoji-studio-control">
+              <label style={styles.control}>
                 Rotate
                 <input
                   type="range"
@@ -218,12 +349,13 @@ export function EmojiStudioModal() {
                   value={rotate}
                   onChange={(e) => setRotate(Number(e.target.value))}
                   disabled={!file || file.type === 'image/gif'}
+                  style={styles.rangeInput}
                 />
               </label>
             </div>
           </div>
 
-          <div className="emoji-studio-form">
+          <div style={styles.formPanel}>
             <Input
               label="Emoji Name"
               type="text"
@@ -233,11 +365,11 @@ export function EmojiStudioModal() {
               maxLength={32}
             />
 
-            <div className="input-group">
-              <label className="input-label">Portal</label>
-              <div className="input-wrapper">
+            <div style={styles.inputGroup}>
+              <label style={styles.inputLabel}>Portal</label>
+              <div style={styles.inputWrapper}>
                 <select
-                  className="input-field"
+                  style={styles.selectField}
                   value={guildId}
                   onChange={(e) => setGuildId(e.target.value)}
                 >
@@ -251,22 +383,22 @@ export function EmojiStudioModal() {
               </div>
             </div>
 
-            <label className="btn btn-ghost btn-md emoji-studio-upload">
+            <label style={styles.uploadLabel}>
               Choose File
               <input
                 type="file"
-                className="file-input"
+                style={styles.fileInput}
                 accept="image/png,image/gif,image/webp,image/jpeg"
                 onChange={(e) => handleSelectFile(e.target.files?.[0] ?? null)}
               />
             </label>
 
-            <div className="emoji-studio-note">
+            <div style={styles.note}>
               Supported formats: JPEG, PNG, GIF, WEBP. Static and animated slots are tracked separately (50 each).
             </div>
 
             {fileMeta && (
-              <div className="emoji-studio-meta">
+              <div style={styles.meta}>
                 <div>Type: {fileMeta.animated ? 'Animated (GIF)' : 'Static'}</div>
                 <div>Source size: {fileMeta.width}x{fileMeta.height}</div>
               </div>
@@ -274,7 +406,7 @@ export function EmojiStudioModal() {
           </div>
         </div>
 
-        <div className="modal-footer">
+        <div style={styles.footer}>
           <Button type="button" variant="ghost" onClick={() => closeModal()}>
             Cancel
           </Button>

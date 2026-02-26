@@ -1,0 +1,16 @@
+# iOS build artifacts (EAS regenerates Pods)
+apps/mobile/ios/Pods/
+apps/mobile/ios/build/
+
+# Workspace packages not needed for mobile build
+apps/desktop/
+apps/landing/
+apps/web/dist/
+docker/
+
+# Build artifacts
+*.dmg
+*.exe
+*.ipa
+release/
+.turbo/

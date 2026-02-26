@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Avatar } from './Avatar';
@@ -11,6 +11,134 @@ import { readAvatarStudioPrefs } from '@/lib/avatarStudio';
 import { AvatarSprite } from './AvatarSprite';
 import { api } from '@/lib/api';
 import { Button } from './Button';
+
+/* ── CSS variable design tokens ─────────────────────────────────────── */
+const V = {
+  bgFloat: 'var(--bg-float, #2c2c3e)',
+  stroke: 'var(--stroke, #4a4660)',
+  text: 'var(--text, #e8e4e0)',
+  textMuted: 'var(--text-muted, #a8a4b8)',
+  textFaint: 'var(--text-faint, #6e6a80)',
+  radiusLg: 'var(--radius-lg, 12px)',
+} as const;
+
+/* ── Inline style objects ───────────────────────────────────────────── */
+
+const popoverBase = {
+  position: 'fixed',
+  zIndex: 210,
+  width: 280,
+  background: V.bgFloat,
+  border: `1px solid ${V.stroke}`,
+  borderRadius: V.radiusLg,
+  overflow: 'hidden',
+  boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
+} as React.CSSProperties;
+
+const effectStyle = {
+  position: 'absolute',
+  inset: 0,
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+  opacity: 0.42,
+  pointerEvents: 'none',
+  zIndex: 0,
+} as React.CSSProperties;
+
+const bannerBase = {
+  height: 84,
+  background: 'linear-gradient(120deg, rgba(212, 175, 55, 0.2), rgba(255, 145, 86, 0.12))',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+} as React.CSSProperties;
+
+const bodyStyle = {
+  padding: '14px 16px 16px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+  marginTop: -26,
+  position: 'relative',
+  zIndex: 1,
+} as React.CSSProperties;
+
+const avatarStyle = {
+  border: '2px solid rgba(10, 14, 22, 0.9)',
+} as React.CSSProperties;
+
+const namesStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+} as React.CSSProperties;
+
+const nameStyle = {
+  fontSize: 15,
+  fontWeight: 700,
+  color: V.text,
+} as React.CSSProperties;
+
+const usernameStyle = {
+  fontSize: 12,
+  color: V.textFaint,
+} as React.CSSProperties;
+
+const bioStyle = {
+  fontSize: 12,
+  color: V.textMuted,
+  margin: 0,
+} as React.CSSProperties;
+
+const spriteWrapStyle = {
+  display: 'flex',
+  justifyContent: 'flex-start',
+} as React.CSSProperties;
+
+const spriteStyle = {
+  borderRadius: 12,
+  border: '1px solid rgba(255, 255, 255, 0.12)',
+  background: 'rgba(8, 12, 20, 0.42)',
+} as React.CSSProperties;
+
+const serverTagStyle = {
+  alignSelf: 'flex-start',
+  fontSize: 10,
+  letterSpacing: '0.05em',
+  textTransform: 'uppercase',
+  color: V.text,
+  border: '1px solid rgba(212, 175, 55, 0.35)',
+  background: 'rgba(212, 175, 55, 0.12)',
+  borderRadius: 999,
+  padding: '3px 8px',
+} as React.CSSProperties;
+
+const statusStyle = {
+  fontSize: 12,
+  color: V.textMuted,
+  borderLeft: '2px solid rgba(212, 175, 55, 0.4)',
+  paddingLeft: 8,
+} as React.CSSProperties;
+
+const widgetsStyle = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 6,
+} as React.CSSProperties;
+
+const widgetStyle = {
+  fontSize: 10,
+  color: V.textFaint,
+  border: `1px solid ${V.stroke}`,
+  borderRadius: 999,
+  padding: '3px 8px',
+  background: 'rgba(6, 10, 20, 0.48)',
+} as React.CSSProperties;
+
+const actionsStyle = {
+  display: 'flex',
+  gap: 8,
+  marginTop: 4,
+} as React.CSSProperties;
 
 interface ProfilePopoverProps {
   x: number;
@@ -106,9 +234,9 @@ export function ProfilePopover({
 
   return createPortal(
     <div
-      className="profile-popover"
       ref={popoverRef}
       style={{
+        ...popoverBase,
         top: y,
         left: x,
         '--profile-primary': primaryColor != null
@@ -120,28 +248,27 @@ export function ProfilePopover({
       } as React.CSSProperties}
     >
       <div
-        className="profile-popover-banner"
-        style={bannerHash ? { backgroundImage: `url(/api/v1/files/${bannerHash})` } : undefined}
+        style={bannerHash ? { ...bannerBase, backgroundImage: `url(/api/v1/files/${bannerHash})` } : bannerBase}
       />
       {profileEffectHash && (
         <img
-          className="profile-popover-effect"
+          style={effectStyle}
           src={`/api/v1/files/${profileEffectHash}`}
           alt=""
           aria-hidden="true"
         />
       )}
-      <div className="profile-popover-body">
+      <div style={bodyStyle}>
         <Avatar
           name={displayName}
           hash={avatarHash}
           decorationHash={decorationHash}
           userId={userId}
           size={52}
-          className="profile-popover-avatar"
+          style={avatarStyle}
         />
-        <div className="profile-popover-names">
-          <span className="profile-popover-name">
+        <div style={namesStyle}>
+          <span style={nameStyle}>
             <DisplayNameText
               text={displayName}
               userId={displayNameUserId ?? userId}
@@ -149,25 +276,25 @@ export function ProfilePopover({
               context="profile"
             />
           </span>
-          {username && <span className="profile-popover-username">@{username}</span>}
+          {username && <span style={usernameStyle}>@{username}</span>}
         </div>
         {avatarStudioPrefs?.enabled && (
-          <div className="profile-popover-sprite-wrap">
-            <AvatarSprite config={avatarStudioPrefs.sprite} size={58} className="profile-popover-sprite" />
+          <div style={spriteWrapStyle}>
+            <AvatarSprite config={avatarStudioPrefs.sprite} size={58} style={spriteStyle} />
           </div>
         )}
-        {serverTagGuild && <div className="profile-popover-server-tag">{serverTagGuild.name}</div>}
-        {statusText && <div className="profile-popover-status">{statusText}</div>}
+        {serverTagGuild && <div style={serverTagStyle}>{serverTagGuild.name}</div>}
+        {statusText && <div style={statusStyle}>{statusText}</div>}
         {enhancements && enhancements.widgets.length > 0 && (
-          <div className="profile-popover-widgets">
+          <div style={widgetsStyle}>
             {enhancements.widgets.map((widget) => (
-              <span key={widget} className="profile-popover-widget">{widget}</span>
+              <span key={widget} style={widgetStyle}>{widget}</span>
             ))}
           </div>
         )}
-        {bio && <p className="profile-popover-bio">{bio}</p>}
+        {bio && <p style={bioStyle}>{bio}</p>}
         {currentUserId && currentUserId !== userId && (
-          <div className="profile-popover-actions">
+          <div style={actionsStyle}>
             <Button
               size="sm"
               variant={isBlocked ? 'ghost' : 'danger'}

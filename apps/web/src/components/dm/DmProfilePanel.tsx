@@ -13,17 +13,219 @@ const STATUS_LABELS: Record<string, string> = {
   invisible: 'Offline',
 };
 
+const STATUS_COLORS: Record<string, string> = {
+  online: '#43b581',
+  idle: '#faa61a',
+  dnd: '#f04747',
+  offline: '#747f8d',
+  invisible: '#747f8d',
+};
+
 function formatDate(iso: string | undefined | null): string {
   if (!iso) return 'Unknown';
   const d = new Date(iso);
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+/* ── Style objects ──────────────────────────────────────────────── */
+
+const styles = {
+  panel: {
+    width: 340,
+    minWidth: 340,
+    height: '100%',
+    background: '#353348',
+    borderLeft: '1px solid #4a4660',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    overflowY: 'auto',
+  } as React.CSSProperties,
+
+  banner: {
+    height: 120,
+    background: 'linear-gradient(135deg, #413d58 0%, #2c2c3e 100%)',
+    flexShrink: 0,
+  } as React.CSSProperties,
+
+  identity: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: '0 16px 12px',
+    marginTop: -40,
+  } as React.CSSProperties,
+
+  avatarWrap: {
+    border: '3px solid #d4af37',
+    borderRadius: '50%',
+    padding: 3,
+    background: '#353348',
+    marginBottom: 8,
+  } as React.CSSProperties,
+
+  displayName: {
+    fontSize: 18,
+    fontWeight: 700,
+    color: '#e8e4e0',
+    margin: 0,
+  } as React.CSSProperties,
+
+  username: {
+    fontSize: 13,
+    color: '#a8a4b8',
+    marginTop: 2,
+  } as React.CSSProperties,
+
+  pronouns: {
+    fontSize: 12,
+    color: '#6e6a80',
+    marginTop: 2,
+  } as React.CSSProperties,
+
+  section: {
+    padding: '10px 16px',
+    borderTop: '1px solid #4a4660',
+  } as React.CSSProperties,
+
+  statusRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+  } as React.CSSProperties,
+
+  statusDot: (status: string): React.CSSProperties => ({
+    width: 10,
+    height: 10,
+    borderRadius: '50%',
+    backgroundColor: STATUS_COLORS[status] ?? '#747f8d',
+    flexShrink: 0,
+  }),
+
+  statusText: {
+    fontSize: 13,
+    color: '#a8a4b8',
+  } as React.CSSProperties,
+
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    color: '#6e6a80',
+    margin: '0 0 6px',
+  } as React.CSSProperties,
+
+  sectionValue: {
+    fontSize: 13,
+    color: '#a8a4b8',
+    margin: 0,
+    lineHeight: 1.5,
+  } as React.CSSProperties,
+
+  collapsibleHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    width: '100%',
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    cursor: 'pointer',
+    color: '#6e6a80',
+    fontSize: 11,
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+  } as React.CSSProperties,
+
+  chevron: (expanded: boolean): React.CSSProperties => ({
+    display: 'inline-block',
+    transition: 'transform 0.15s ease',
+    transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+    fontSize: 10,
+  }),
+
+  collapsibleBody: {
+    marginTop: 8,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  } as React.CSSProperties,
+
+  empty: {
+    fontSize: 13,
+    color: '#6e6a80',
+    margin: 0,
+    fontStyle: 'italic',
+  } as React.CSSProperties,
+
+  mutualServerRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '4px 6px',
+    borderRadius: 6,
+    cursor: 'pointer',
+  } as React.CSSProperties,
+
+  mutualServerName: {
+    fontSize: 13,
+    color: '#e8e4e0',
+  } as React.CSSProperties,
+
+  mutualServerNick: {
+    fontSize: 12,
+    color: '#6e6a80',
+    marginLeft: 'auto',
+  } as React.CSSProperties,
+
+  mutualFriendRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '4px 6px',
+    borderRadius: 6,
+    cursor: 'pointer',
+  } as React.CSSProperties,
+
+  mutualFriendName: {
+    fontSize: 13,
+    color: '#e8e4e0',
+  } as React.CSSProperties,
+
+  mutualFriendUsername: {
+    fontSize: 12,
+    color: '#6e6a80',
+    marginLeft: 'auto',
+  } as React.CSSProperties,
+
+  viewFullBtn: {
+    display: 'block',
+    width: 'calc(100% - 32px)',
+    margin: '12px 16px 16px',
+    padding: '10px 0',
+    background: '#d4af37',
+    color: '#1a1a2e',
+    border: 'none',
+    borderRadius: 8,
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: 'pointer',
+    textAlign: 'center',
+    flexShrink: 0,
+  } as React.CSSProperties,
+} as const;
+
+/* ── Component ──────────────────────────────────────────────────── */
+
 export function DmProfilePanel({ userId }: { userId: string }) {
   const open = useUiStore((s) => s.dmInfoPanelOpen);
   const openModal = useUiStore((s) => s.openModal);
   const [serversExpanded, setServersExpanded] = useState(true);
   const [friendsExpanded, setFriendsExpanded] = useState(true);
+  const [hoveredServer, setHoveredServer] = useState<string | null>(null);
+  const [hoveredFriend, setHoveredFriend] = useState<string | null>(null);
 
   const { data: profile } = useQuery({
     queryKey: ['users', 'profile', userId],
@@ -53,17 +255,17 @@ export function DmProfilePanel({ userId }: { userId: string }) {
 
   // Build banner style — use banner image if available, otherwise accent gradient
   const bannerStyle: React.CSSProperties = bannerHash
-    ? { backgroundImage: `url(/api/v1/files/banners/users/${userId}/${bannerHash})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-    : {};
+    ? { ...styles.banner, backgroundImage: `url(/api/v1/files/banners/users/${userId}/${bannerHash})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : styles.banner;
 
   return (
-    <aside className="dm-profile-panel">
+    <aside style={styles.panel}>
       {/* Banner */}
-      <div className="dm-profile-banner" style={bannerStyle} />
+      <div style={bannerStyle} />
 
       {/* Avatar + Identity */}
-      <div className="dm-profile-identity">
-        <div className="dm-profile-avatar-wrap">
+      <div style={styles.identity}>
+        <div style={styles.avatarWrap}>
           <Avatar
             name={profile?.displayName ?? 'User'}
             hash={profile?.avatarHash}
@@ -72,55 +274,63 @@ export function DmProfilePanel({ userId }: { userId: string }) {
             presenceStatus={status}
           />
         </div>
-        <h3 className="dm-profile-display-name">{profile?.displayName ?? 'User'}</h3>
-        <span className="dm-profile-username">@{profile?.username ?? 'unknown'}</span>
+        <h3 style={styles.displayName}>{profile?.displayName ?? 'User'}</h3>
+        <span style={styles.username}>@{profile?.username ?? 'unknown'}</span>
         {profile?.pronouns && (
-          <span className="dm-profile-pronouns">{profile.pronouns}</span>
+          <span style={styles.pronouns}>{profile.pronouns}</span>
         )}
       </div>
 
       {/* Status */}
-      <div className="dm-profile-section">
-        <div className="dm-profile-status-row">
-          <span className={`dm-profile-status-dot dm-profile-status-${status}`} />
-          <span className="dm-profile-status-text">{STATUS_LABELS[status] ?? 'Offline'}</span>
+      <div style={styles.section}>
+        <div style={styles.statusRow}>
+          <span style={styles.statusDot(status)} />
+          <span style={styles.statusText}>{STATUS_LABELS[status] ?? 'Offline'}</span>
         </div>
       </div>
 
       {/* Bio */}
       {profile?.bio && (
-        <div className="dm-profile-section">
-          <h4 className="dm-profile-section-title">About Me</h4>
-          <p className="dm-profile-section-value">{profile.bio}</p>
+        <div style={styles.section}>
+          <h4 style={styles.sectionTitle}>About Me</h4>
+          <p style={styles.sectionValue}>{profile.bio}</p>
         </div>
       )}
 
       {/* Member Since */}
-      <div className="dm-profile-section">
-        <h4 className="dm-profile-section-title">Member Since</h4>
-        <p className="dm-profile-section-value">{formatDate(profile?.createdAt)}</p>
+      <div style={styles.section}>
+        <h4 style={styles.sectionTitle}>Member Since</h4>
+        <p style={styles.sectionValue}>{formatDate(profile?.createdAt)}</p>
       </div>
 
       {/* Mutual Servers */}
-      <div className="dm-profile-section">
+      <div style={styles.section}>
         <button
           type="button"
-          className="dm-profile-collapsible-header"
+          style={styles.collapsibleHeader}
           onClick={() => setServersExpanded((v) => !v)}
         >
-          <span className={`dm-profile-chevron ${serversExpanded ? 'expanded' : ''}`}>&#9656;</span>
+          <span style={styles.chevron(serversExpanded)}>&#9656;</span>
           <span>Mutual Servers ({mutualServers.length})</span>
         </button>
         {serversExpanded && (
-          <div className="dm-profile-collapsible-body">
+          <div style={styles.collapsibleBody}>
             {mutualServers.length === 0 ? (
-              <p className="dm-profile-empty">No mutual servers</p>
+              <p style={styles.empty}>No mutual servers</p>
             ) : (
               mutualServers.map((server) => (
-                <div key={server.id} className="dm-profile-mutual-server-row">
-                  <span className="dm-profile-mutual-server-name">{server.name}</span>
+                <div
+                  key={server.id}
+                  style={{
+                    ...styles.mutualServerRow,
+                    background: hoveredServer === server.id ? '#413d58' : 'transparent',
+                  }}
+                  onMouseEnter={() => setHoveredServer(server.id)}
+                  onMouseLeave={() => setHoveredServer(null)}
+                >
+                  <span style={styles.mutualServerName}>{server.name}</span>
                   {server.nickname && (
-                    <span className="dm-profile-mutual-server-nick">{server.nickname}</span>
+                    <span style={styles.mutualServerNick}>{server.nickname}</span>
                   )}
                 </div>
               ))
@@ -130,30 +340,38 @@ export function DmProfilePanel({ userId }: { userId: string }) {
       </div>
 
       {/* Mutual Friends */}
-      <div className="dm-profile-section">
+      <div style={styles.section}>
         <button
           type="button"
-          className="dm-profile-collapsible-header"
+          style={styles.collapsibleHeader}
           onClick={() => setFriendsExpanded((v) => !v)}
         >
-          <span className={`dm-profile-chevron ${friendsExpanded ? 'expanded' : ''}`}>&#9656;</span>
+          <span style={styles.chevron(friendsExpanded)}>&#9656;</span>
           <span>Mutual Friends ({mutualFriends.length})</span>
         </button>
         {friendsExpanded && (
-          <div className="dm-profile-collapsible-body">
+          <div style={styles.collapsibleBody}>
             {mutualFriends.length === 0 ? (
-              <p className="dm-profile-empty">No mutual friends</p>
+              <p style={styles.empty}>No mutual friends</p>
             ) : (
               mutualFriends.map((friend) => (
-                <div key={friend.id} className="dm-profile-mutual-friend-row">
+                <div
+                  key={friend.id}
+                  style={{
+                    ...styles.mutualFriendRow,
+                    background: hoveredFriend === friend.id ? '#413d58' : 'transparent',
+                  }}
+                  onMouseEnter={() => setHoveredFriend(friend.id)}
+                  onMouseLeave={() => setHoveredFriend(null)}
+                >
                   <Avatar
                     name={friend.displayName}
                     hash={friend.avatarHash}
                     userId={friend.id}
                     size={24}
                   />
-                  <span className="dm-profile-mutual-friend-name">{friend.displayName}</span>
-                  <span className="dm-profile-mutual-friend-username">@{friend.username}</span>
+                  <span style={styles.mutualFriendName}>{friend.displayName}</span>
+                  <span style={styles.mutualFriendUsername}>@{friend.username}</span>
                 </div>
               ))
             )}
@@ -164,7 +382,7 @@ export function DmProfilePanel({ userId }: { userId: string }) {
       {/* View Full Profile */}
       <button
         type="button"
-        className="dm-profile-view-full-btn"
+        style={styles.viewFullBtn}
         onClick={() => openModal('full-profile', { userId })}
       >
         View Full Profile

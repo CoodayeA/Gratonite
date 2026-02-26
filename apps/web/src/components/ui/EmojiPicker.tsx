@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, type CSSProperties } from 'react';
 
 /** Searchable English name for every emoji in EMOJI_CATEGORIES */
 const EMOJI_NAMES: Record<string, string> = {
@@ -237,6 +237,83 @@ const EMOJI_CATEGORIES: { name: string; emojis: string[] }[] = [
   },
 ];
 
+/* ── Inline style objects ─────────────────────────────────── */
+
+const styles = {
+  container: {
+    background: '#353348',
+    borderRadius: 12,
+    border: '1px solid #4a4660',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+    maxHeight: 360,
+    width: 320,
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    zIndex: 1000,
+  } as CSSProperties,
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '8px 8px 0 8px',
+  } as CSSProperties,
+  search: {
+    flex: 1,
+    background: '#25243a',
+    border: 'none',
+    borderRadius: 6,
+    padding: '8px 12px',
+    color: '#e8e4e0',
+    fontSize: 13,
+    outline: 'none',
+  } as CSSProperties,
+  addButton: {
+    background: 'none',
+    border: '1px solid #4a4660',
+    borderRadius: 6,
+    color: '#d4af37',
+    padding: '6px 10px',
+    fontSize: 12,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  } as CSSProperties,
+  grid: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: 8,
+  } as CSSProperties,
+  categoryLabel: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: '#a8a4b8',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    padding: '8px 4px 4px',
+  } as CSSProperties,
+  items: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, 32px)',
+    gap: 2,
+  } as CSSProperties,
+  item: {
+    width: 32,
+    height: 32,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'none',
+    border: 'none',
+    borderRadius: 6,
+    fontSize: 18,
+    cursor: 'pointer',
+    padding: 0,
+  } as CSSProperties,
+  itemHover: {
+    background: '#413d58',
+  } as CSSProperties,
+} as const;
+
 interface EmojiPickerProps {
   onSelect: (emoji: string) => void;
   onClose: () => void;
@@ -247,6 +324,7 @@ interface EmojiPickerProps {
 
 export function EmojiPicker({ onSelect, onClose, x, y, onAddEmoji }: EmojiPickerProps) {
   const [search, setSearch] = useState('');
+  const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const hasPosition = x !== undefined && y !== undefined;
 
@@ -284,25 +362,24 @@ export function EmojiPicker({ onSelect, onClose, x, y, onAddEmoji }: EmojiPicker
     ? allEmojis.filter(e => EMOJI_NAMES[e]?.toLowerCase().includes(search.toLowerCase()))
     : null;
 
-  const pickerStyle = hasPosition
+  const positionStyle: CSSProperties | undefined = hasPosition
     ? {
-      position: 'fixed' as const,
-      left: x,
-      top: y,
-      right: 'auto',
-      bottom: 'auto',
-    }
+        position: 'fixed',
+        left: x,
+        top: y,
+        right: 'auto',
+        bottom: 'auto',
+      }
     : undefined;
 
   return (
     <div
-      className="emoji-picker"
       ref={ref}
-      style={pickerStyle}
+      style={{ ...styles.container, ...positionStyle }}
     >
-      <div className="emoji-picker-header">
+      <div style={styles.header}>
         <input
-          className="emoji-picker-search"
+          style={styles.search}
           placeholder="Search emoji..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -311,7 +388,7 @@ export function EmojiPicker({ onSelect, onClose, x, y, onAddEmoji }: EmojiPicker
         {onAddEmoji && (
           <button
             type="button"
-            className="emoji-picker-add"
+            style={styles.addButton}
             onClick={() => {
               onClose();
               onAddEmoji();
@@ -321,23 +398,47 @@ export function EmojiPicker({ onSelect, onClose, x, y, onAddEmoji }: EmojiPicker
           </button>
         )}
       </div>
-      <div className="emoji-picker-grid">
+      <div style={styles.grid}>
         {filtered ? (
-          filtered.map((emoji, i) => (
-            <button key={i} className="emoji-picker-item" onClick={() => onSelect(emoji)}>
-              {emoji}
-            </button>
-          ))
+          filtered.map((emoji, i) => {
+            const key = `filtered-${i}`;
+            return (
+              <button
+                key={i}
+                style={{
+                  ...styles.item,
+                  ...(hoveredIndex === key ? styles.itemHover : undefined),
+                }}
+                onClick={() => onSelect(emoji)}
+                onMouseEnter={() => setHoveredIndex(key)}
+                onMouseLeave={() => setHoveredIndex(null)}
+              >
+                {emoji}
+              </button>
+            );
+          })
         ) : (
           EMOJI_CATEGORIES.map((cat) => (
             <div key={cat.name}>
-              <div className="emoji-picker-category">{cat.name}</div>
-              <div className="emoji-picker-items">
-                {cat.emojis.map((emoji, i) => (
-                  <button key={i} className="emoji-picker-item" onClick={() => onSelect(emoji)}>
-                    {emoji}
-                  </button>
-                ))}
+              <div style={styles.categoryLabel}>{cat.name}</div>
+              <div style={styles.items}>
+                {cat.emojis.map((emoji, i) => {
+                  const key = `${cat.name}-${i}`;
+                  return (
+                    <button
+                      key={i}
+                      style={{
+                        ...styles.item,
+                        ...(hoveredIndex === key ? styles.itemHover : undefined),
+                      }}
+                      onClick={() => onSelect(emoji)}
+                      onMouseEnter={() => setHoveredIndex(key)}
+                      onMouseLeave={() => setHoveredIndex(null)}
+                    >
+                      {emoji}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))

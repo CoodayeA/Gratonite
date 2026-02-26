@@ -6,7 +6,7 @@ export function AuthLayout() {
       <div className="auth-card">
         <div className="auth-brand">
           <img
-            src="/gratonite-icon.png"
+            src={`${import.meta.env.BASE_URL}gratonite-icon.png`}
             alt="Gratonite"
             className="auth-logo"
             width={48}
