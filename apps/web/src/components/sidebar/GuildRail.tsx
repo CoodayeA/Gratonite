@@ -361,7 +361,11 @@ export function GuildRail() {
         style={{ textDecoration: 'none' }}
       >
         <div style={homeIconStyle}>
-          G
+          <img
+            src={`${import.meta.env.BASE_URL}gratonite-icon.png`}
+            alt="Gratonite Home"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit', display: 'block' }}
+          />
         </div>
       </NavLink>
 
