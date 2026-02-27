@@ -286,9 +286,9 @@ export function FriendsPage() {
 
   function statusColor(status: string): string {
     switch (status) {
-      case 'online':  return '#43b581';
-      case 'idle':    return '#faa61a';
-      case 'dnd':     return '#f04747';
+      case 'online':  return 'var(--status-online)';
+      case 'idle':    return 'var(--status-idle)';
+      case 'dnd':     return 'var(--status-dnd)';
       default:        return V.textFaint;
     }
   }
@@ -361,7 +361,7 @@ export function FriendsPage() {
               onClick={() => navigate('/add-friend')}
               style={{
                 padding: '6px 14px',
-                borderRadius: 6,
+                borderRadius: 'var(--radius-sm)',
                 border: 'none',
                 cursor: 'pointer',
                 fontWeight: 700,
@@ -393,7 +393,7 @@ export function FriendsPage() {
             style={{
               width: '100%',
               padding: '8px 12px',
-              borderRadius: 6,
+              borderRadius: 'var(--radius-sm)',
               border: `1px solid ${V.stroke}`,
               background: V.bgInput,
               color: V.text,
@@ -421,7 +421,7 @@ export function FriendsPage() {
                 onClick={() => setFilter(f.key)}
                 style={{
                   padding: '5px 10px',
-                  borderRadius: 4,
+                  borderRadius: 'var(--radius-sm)',
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: 12,
@@ -439,11 +439,11 @@ export function FriendsPage() {
                 {f.badge !== undefined && (
                   <span
                     style={{
-                      background: '#f04747',
+                      background: 'var(--danger)',
                       color: '#fff',
                       fontSize: 10,
                       fontWeight: 700,
-                      borderRadius: 8,
+                      borderRadius: 'var(--radius-md)',
                       padding: '1px 5px',
                       minWidth: 16,
                       textAlign: 'center',
@@ -523,7 +523,7 @@ export function FriendsPage() {
                     alignItems: 'center',
                     gap: 10,
                     padding: '8px 10px',
-                    borderRadius: 6,
+                    borderRadius: 'var(--radius-sm)',
                     cursor: 'pointer',
                     background: isSelected ? V.bgSoft : 'transparent',
                     transition: 'background 0.15s',
@@ -608,7 +608,7 @@ export function FriendsPage() {
                           title="Accept"
                           style={{
                             ...sidebarActionBtnStyle,
-                            color: '#43b581',
+                            color: 'var(--status-online)',
                           }}
                         >
                           &#x2713;
@@ -619,7 +619,7 @@ export function FriendsPage() {
                           title="Decline"
                           style={{
                             ...sidebarActionBtnStyle,
-                            color: '#f04747',
+                            color: 'var(--danger)',
                           }}
                         >
                           &#x2715;
@@ -633,7 +633,7 @@ export function FriendsPage() {
                         title="Cancel"
                         style={{
                           ...sidebarActionBtnStyle,
-                          color: '#f04747',
+                          color: 'var(--danger)',
                         }}
                       >
                         &#x2715;
@@ -738,7 +738,7 @@ export function FriendsPage() {
                     onClick={() => handleMessage(selectedUser.id)}
                     style={{
                       padding: '8px 18px',
-                      borderRadius: 6,
+                      borderRadius: 'var(--radius-sm)',
                       border: 'none',
                       cursor: 'pointer',
                       fontWeight: 700,
@@ -761,7 +761,7 @@ export function FriendsPage() {
                     disabled={callBusy}
                     style={{
                       padding: '8px 18px',
-                      borderRadius: 6,
+                      borderRadius: 'var(--radius-sm)',
                       border: `1px solid ${V.stroke}`,
                       cursor: 'pointer',
                       fontWeight: 700,
@@ -797,7 +797,7 @@ export function FriendsPage() {
                   maxWidth: 560,
                   background: V.bgElevated,
                   border: `1px solid ${V.stroke}`,
-                  borderRadius: 10,
+                  borderRadius: 'var(--radius-md)',
                   overflow: 'hidden',
                 } as React.CSSProperties}
               >
@@ -1058,7 +1058,7 @@ export function FriendsPage() {
                           disabled={removeFriendMutation.isPending}
                           style={{
                             ...profileActionBtnStyle,
-                            background: '#f04747',
+                            background: 'var(--danger)',
                             color: '#fff',
                           }}
                         >
@@ -1084,7 +1084,7 @@ export function FriendsPage() {
                           disabled={declineMutation.isPending}
                           style={{
                             ...profileActionBtnStyle,
-                            background: '#f04747',
+                            background: 'var(--danger)',
                             color: '#fff',
                           }}
                         >
@@ -1098,7 +1098,7 @@ export function FriendsPage() {
                         disabled={cancelMutation.isPending}
                         style={{
                           ...profileActionBtnStyle,
-                          background: '#f04747',
+                          background: 'var(--danger)',
                           color: '#fff',
                         }}
                       >
@@ -1183,7 +1183,7 @@ export function FriendsPage() {
 const sidebarActionBtnStyle: React.CSSProperties = {
   width: 28,
   height: 28,
-  borderRadius: 4,
+  borderRadius: 'var(--radius-sm)',
   border: 'none',
   cursor: 'pointer',
   display: 'flex',
@@ -1198,7 +1198,7 @@ const sidebarActionBtnStyle: React.CSSProperties = {
 
 const sidebarMessageBtnStyle: React.CSSProperties = {
   height: 26,
-  borderRadius: 4,
+  borderRadius: 'var(--radius-sm)',
   border: '1px solid var(--stroke, #4a4660)',
   cursor: 'pointer',
   display: 'flex',
@@ -1215,7 +1215,7 @@ const sidebarMessageBtnStyle: React.CSSProperties = {
 
 const profileActionBtnStyle: React.CSSProperties = {
   padding: '8px 18px',
-  borderRadius: 6,
+  borderRadius: 'var(--radius-sm)',
   border: 'none',
   cursor: 'pointer',
   fontWeight: 600,
