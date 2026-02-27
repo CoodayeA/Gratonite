@@ -1237,4 +1237,56 @@ export const api = {
     myThemes: () =>
       apiFetch<any[]>('/users/@me/themes'),
   },
+  cosmetics: {
+    // ── Marketplace browse ────────────────────────────────────────────────
+    browse: (params?: { type?: string; limit?: number; offset?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.type) qs.set('type', params.type);
+      if (params?.limit) qs.set('limit', String(params.limit));
+      if (params?.offset) qs.set('offset', String(params.offset));
+      const query = qs.toString();
+      return apiFetch<any[]>(`/cosmetics/marketplace${query ? `?${query}` : ''}`);
+    },
+    // ── Single cosmetic ───────────────────────────────────────────────────
+    get: (cosmeticId: string) =>
+      apiFetch<any>(`/cosmetics/${cosmeticId}`),
+    // ── Creator cosmetics ─────────────────────────────────────────────────
+    listByCreator: (creatorId: string, params?: { limit?: number; offset?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.limit) qs.set('limit', String(params.limit));
+      if (params?.offset) qs.set('offset', String(params.offset));
+      const query = qs.toString();
+      return apiFetch<any[]>(`/cosmetics/creator/${creatorId}${query ? `?${query}` : ''}`);
+    },
+    // ── My cosmetics (creator) ────────────────────────────────────────────
+    listMine: () =>
+      apiFetch<any[]>('/cosmetics/mine'),
+    // ── CRUD ─────────────────────────────────────────────────────────────
+    create: (data: { name: string; description?: string; type: string; previewImageUrl?: string; assetUrl?: string; price?: number }) =>
+      apiFetch<any>('/cosmetics', { method: 'POST', body: JSON.stringify(data) }),
+    update: (cosmeticId: string, data: { name?: string; description?: string; previewImageUrl?: string; assetUrl?: string; price?: number; isPublished?: boolean }) =>
+      apiFetch<any>(`/cosmetics/${cosmeticId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (cosmeticId: string) =>
+      apiFetch<void>(`/cosmetics/${cosmeticId}`, { method: 'DELETE' }),
+    // ── Upload ────────────────────────────────────────────────────────────
+    upload: (formData: FormData) =>
+      apiFetch<{ preview_image_url?: string; asset_url?: string }>('/cosmetics/upload', {
+        method: 'POST',
+        body: formData,
+      }),
+    // ── Purchase ──────────────────────────────────────────────────────────
+    purchase: (cosmeticId: string) =>
+      apiFetch<any>(`/cosmetics/${cosmeticId}/purchase`, { method: 'POST' }),
+    // ── Equip / Unequip ───────────────────────────────────────────────────
+    equip: (cosmeticId: string) =>
+      apiFetch<any>(`/cosmetics/${cosmeticId}/equip`, { method: 'PATCH' }),
+    unequip: (cosmeticId: string) =>
+      apiFetch<void>(`/cosmetics/${cosmeticId}/equip`, { method: 'DELETE' }),
+    // ── Equipped cosmetics ────────────────────────────────────────────────
+    getEquipped: () =>
+      apiFetch<Array<{ type: string; cosmeticId: string; name: string; assetUrl: string | null; previewImageUrl: string | null }>>('/users/@me/equipped-cosmetics'),
+    // ── Creator stats ─────────────────────────────────────────────────────
+    getStats: (cosmeticId: string) =>
+      apiFetch<{ cosmeticId: string; totalSales: number; totalRevenueGratonites: number; createdAt: string; updatedAt: string }>(`/cosmetics/${cosmeticId}/stats`),
+  },
 };
