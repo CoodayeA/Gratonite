@@ -80,6 +80,8 @@ interface AvatarProps extends HTMLAttributes<HTMLElement> {
   name: string;
   hash?: string | null;
   decorationHash?: string | null;
+  /** Full URL override for decoration (cosmetics system) — takes priority over decorationHash */
+  decorationUrl?: string | null;
   userId?: string;
   size?: number;
   className?: string;
@@ -90,6 +92,7 @@ export function Avatar({
   name,
   hash,
   decorationHash,
+  decorationUrl,
   userId,
   size = 36,
   className = '',
@@ -97,13 +100,15 @@ export function Avatar({
   style: externalStyle,
   ...props
 }: AvatarProps) {
+  // Resolve decoration source: full URL takes priority over hash
+  const resolvedDecorationSrc = decorationUrl ?? (decorationHash ? `/api/v1/files/${decorationHash}` : null);
   const sizeStyle = { width: size, height: size, fontSize: size * 0.4 };
 
   const presenceBadge = presenceStatus && presenceStatus !== 'offline' ? (
     <span
       style={{
         ...avatarPresenceBadgeBase,
-        background: presenceColors[presenceStatus] ?? presenceColors.offline,
+        background: presenceColors[presenceStatus] ?? presenceColors['offline'],
       }}
       aria-hidden="true"
     />
@@ -111,27 +116,27 @@ export function Avatar({
 
   const avatarContent = hash && userId ? (
     <img
-      style={decorationHash
+      style={resolvedDecorationSrc
         ? { ...avatarBase, ...avatarInDecoratedStyle }
         : { ...avatarBase, ...sizeStyle, ...externalStyle }
       }
       src={`/api/v1/files/${hash}`}
       alt={name}
-      {...(decorationHash ? {} : props)}
+      {...(resolvedDecorationSrc ? {} : props)}
     />
   ) : (
     <div
-      style={decorationHash
+      style={resolvedDecorationSrc
         ? { ...avatarFallbackBase, ...avatarInDecoratedStyle }
         : { ...avatarFallbackBase, ...sizeStyle, ...externalStyle }
       }
-      {...(decorationHash ? {} : props)}
+      {...(resolvedDecorationSrc ? {} : props)}
     >
       {getInitials(name, 1)}
     </div>
   );
 
-  if (decorationHash) {
+  if (resolvedDecorationSrc) {
     return (
       <span
         style={{ ...avatarDecoratedStyle, ...sizeStyle, ...externalStyle }}
@@ -139,7 +144,7 @@ export function Avatar({
       >
         {avatarContent}
         <img
-          src={`/api/v1/files/${decorationHash}`}
+          src={resolvedDecorationSrc}
           alt=""
           style={avatarDecorationOverlayStyle}
           aria-hidden="true"

@@ -8,6 +8,7 @@ import { useChannelsStore } from '@/stores/channels.store';
 import { useMessagesStore } from '@/stores/messages.store';
 import { onDeepLink, onNavigate } from '@/lib/desktop';
 import { useUnreadBadge } from '@/hooks/useUnreadBadge';
+import { useCosmeticsStore } from '@/stores/cosmetics.store';
 
 import { RequireAuth } from '@/components/guards/RequireAuth';
 import { RequireGuest } from '@/components/guards/RequireGuest';
@@ -71,10 +72,13 @@ const ThemeMakerPage = lazy(() => import('@/pages/ThemeMakerPage').then((m) => (
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
 const CreatorDashboardPage = lazy(() => import('@/pages/CreatorDashboardPage').then((m) => ({ default: m.CreatorDashboardPage })));
 const CosmeticsMarketplacePage = lazy(() => import('@/pages/CosmeticsMarketplacePage').then((m) => ({ default: m.CosmeticsMarketplacePage })));
+const CosmeticsInventoryPage = lazy(() => import('@/pages/CosmeticsInventoryPage').then((m) => ({ default: m.CosmeticsInventoryPage })));
+const CreatorShopPage = lazy(() => import('@/pages/CreatorShopPage').then((m) => ({ default: m.CreatorShopPage })));
 
 export function App() {
   const { isLoading, isAuthenticated, login, logout, setLoading } = useAuthStore();
   const navigate = useNavigate();
+  const loadEquipped = useCosmeticsStore((s) => s.loadEquipped);
   useUnreadBadge();
 
   // Silent token refresh on app mount
@@ -166,6 +170,10 @@ export function App() {
     measure('app_ready', 'app_start', 'app_ready');
   }, [isLoading]);
 
+  useEffect(() => {
+    if (isAuthenticated) loadEquipped();
+  }, [isAuthenticated, loadEquipped]);
+
   if (isLoading) {
     return <LoadingScreen />;
   }
@@ -247,7 +255,9 @@ export function App() {
 
           {/* Creator Marketplace */}
           <Route path="/cosmetics" element={<CosmeticsMarketplacePage />} />
+          <Route path="/cosmetics/inventory" element={<CosmeticsInventoryPage />} />
           <Route path="/creator/dashboard" element={<CreatorDashboardPage />} />
+          <Route path="/creator/:creatorId" element={<CreatorShopPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
