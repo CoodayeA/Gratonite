@@ -66,7 +66,7 @@ const s = {
   } as React.CSSProperties,
 
   select: {
-    background: 'rgba(6, 10, 18, 0.6)',
+    background: 'var(--bg-float)',
     border: '1px solid var(--stroke)',
     borderRadius: 'var(--radius-md)',
     color: 'var(--text)',
@@ -76,11 +76,11 @@ const s = {
   } as React.CSSProperties,
 
   error: {
-    border: '1px solid color-mix(in srgb, #ff6b6b 28%, transparent)',
-    background: 'color-mix(in srgb, #ff6b6b 8%, transparent)',
-    color: '#ffd2d2',
+    border: '1px solid color-mix(in srgb, var(--danger) 28%, transparent)',
+    background: 'var(--danger-bg)',
+    color: 'var(--text)',
     padding: '0.75rem 0.9rem',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
   } as React.CSSProperties,
 
   list: {
@@ -91,7 +91,7 @@ const s = {
   card: {
     border: '1px solid var(--stroke)',
     background: 'color-mix(in srgb, var(--surface-2) 92%, transparent)',
-    borderRadius: 16,
+    borderRadius: 'var(--radius-lg)',
     padding: '0.95rem',
     display: 'grid',
     gap: '0.75rem',
@@ -154,7 +154,7 @@ const s = {
     margin: 0,
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-word',
-    borderRadius: 10,
+    borderRadius: 'var(--radius-md)',
     border: '1px solid var(--stroke)',
     background: 'color-mix(in srgb, var(--surface-3) 86%, transparent)',
     padding: '0.6rem',
