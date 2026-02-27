@@ -28,7 +28,7 @@ const styles = {
     animation: 'modalOverlayIn 0.15s ease',
   } as React.CSSProperties,
   content: {
-    background: 'linear-gradient(165deg, rgba(18, 24, 39, 0.96), rgba(14, 20, 33, 0.96))',
+    background: 'var(--bg-elevated)',
     border: '1px solid var(--stroke)',
     borderRadius: 'var(--radius-xl)',
     boxShadow: '0 16px 48px rgba(0, 0, 0, 0.4)',
