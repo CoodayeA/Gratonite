@@ -59,7 +59,6 @@ const PortalPreviewPage = lazy(() => import('@/pages/PortalPreviewPage').then((m
 const UserProfilePage = lazy(() => import('@/pages/UserProfilePage').then((m) => ({ default: m.UserProfilePage })));
 const ShopItemDetailPage = lazy(() => import('@/pages/ShopItemDetailPage').then((m) => ({ default: m.ShopItemDetailPage })));
 const AddFriendPage = lazy(() => import('@/pages/AddFriendPage').then((m) => ({ default: m.AddFriendPage })));
-const OAuthCallbackPage = lazy(() => import('@/pages/auth/OAuthCallbackPage').then((m) => ({ default: m.OAuthCallbackPage })));
 const SoundboardPage = lazy(() => import('@/pages/SoundboardPage').then((m) => ({ default: m.SoundboardPage })));
 const CreateEventPage = lazy(() => import('@/pages/CreateEventPage').then((m) => ({ default: m.CreateEventPage })));
 const GratoniteGuysLabPage = lazy(() => import('@/pages/GratoniteGuysLabPage').then((m) => ({ default: m.GratoniteGuysLabPage })));
@@ -68,6 +67,7 @@ const EventDetailPage = lazy(() => import('@/pages/EventDetailPage').then((m) =>
 const VoiceMessagesPage = lazy(() => import('@/pages/VoiceMessagesPage').then((m) => ({ default: m.VoiceMessagesPage })));
 const CreateBotPage = lazy(() => import('@/pages/CreateBotPage').then((m) => ({ default: m.CreateBotPage })));
 const MultiScreenSharePage = lazy(() => import('@/pages/MultiScreenSharePage').then((m) => ({ default: m.MultiScreenSharePage })));
+const ThemeMakerPage = lazy(() => import('@/pages/ThemeMakerPage').then((m) => ({ default: m.ThemeMakerPage })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
 
 export function App() {
@@ -188,9 +188,6 @@ export function App() {
           <Route path="/verify-email/pending" element={<VerifyEmailPendingPage />} />
         </Route>
 
-        {/* OAuth callback — captures token from URL fragment */}
-        <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
-
         {/* Invite page (works for both guest and auth) */}
         <Route path="/invite/:code" element={<InvitePage />} />
 
@@ -227,6 +224,8 @@ export function App() {
           <Route path="/analytics/:guildId" element={<RequireAdmin><AnalyticsPage /></RequireAdmin>} />
           <Route path="/bots" element={<BotsPage />} />
           <Route path="/themes" element={<ThemesPage />} />
+          <Route path="/themes/create" element={<ThemeMakerPage />} />
+          <Route path="/themes/:id/edit" element={<ThemeMakerPage />} />
           <Route path="/polls" element={<PollsPage />} />
           <Route path="/qa/:guildId/:channelId" element={<QAPage />} />
           <Route path="/scheduled-messages/:guildId" element={<ScheduledMsgsPage />} />
