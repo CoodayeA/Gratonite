@@ -8,6 +8,7 @@ import {
   getCurrentThemeId,
 } from '@/lib/themes';
 import { ThemeCard } from '@/components/ui/ThemeCard';
+import { SearchInput } from '@/components/ui/SearchInput';
 
 // ─── Discover portals type ──────────────────────────────────────────────────
 
@@ -277,16 +278,7 @@ export function DiscoverPage() {
     hero: { display: 'flex', flexDirection: 'column' as const, gap: 8, alignItems: 'center', textAlign: 'center' as const } as React.CSSProperties,
     heroTitle: { margin: 0, fontSize: 32, fontWeight: 700, color: 'var(--text)' } as React.CSSProperties,
     heroSub: { margin: 0, fontSize: 15, color: 'var(--text-muted)' } as React.CSSProperties,
-    searchWrap: {
-      display: 'flex', alignItems: 'center', gap: 10,
-      width: '100%', maxWidth: 560, height: 48, padding: '0 18px',
-      borderRadius: 12, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
-      fontSize: 14, color: 'var(--text-faint)',
-    } as React.CSSProperties,
-    searchInput: {
-      flex: 1, border: 'none', background: 'transparent',
-      color: 'var(--text)', fontSize: 14, outline: 'none',
-    } as React.CSSProperties,
+
     tagsRow: { display: 'flex', gap: 8, flexWrap: 'wrap' as const, justifyContent: 'center' } as React.CSSProperties,
     tagPill: (active: boolean): React.CSSProperties => ({
       padding: '6px 16px', borderRadius: 100, fontSize: 13, fontWeight: active ? 600 : 400,
@@ -337,23 +329,15 @@ export function DiscoverPage() {
           <div style={s.hero}>
             <h1 style={s.heroTitle}>{heading.title}</h1>
             <p style={s.heroSub}>{heading.subtitle}</p>
-            <div style={s.searchWrap}>
-              <span style={{ fontSize: 15 }}>🔍</span>
-              <input
-                ref={searchRef}
-                type="search"
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder={heading.placeholder}
-                style={s.searchInput}
-              />
-              {query && (
-                <button type="button" onClick={() => setQuery('')}
-                  style={{ border: 'none', background: 'none', color: 'var(--text-faint)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>
-                  ×
-                </button>
-              )}
-            </div>
+            <SearchInput
+              ref={searchRef}
+              size="large"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder={heading.placeholder}
+              onClear={() => setQuery('')}
+              style={{ maxWidth: 560 }}
+            />
           </div>
 
           {/* Tags */}
