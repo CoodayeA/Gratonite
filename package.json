@@ -18,7 +18,7 @@
     ]
   },
   "scripts": {
-    "dev": "pnpm -r --parallel --if-present run dev",
+    "dev": "pnpm -r --parallel --if-present --ignore-scripts --no-bail --filter '!@gratonite/desktop' run dev",
     "build": "pnpm --filter @gratonite/web build",
     "lint": "echo \"Lint is not configured yet\"",
     "typecheck": "pnpm --filter @gratonite/types typecheck && pnpm --filter @gratonite/profile-resolver typecheck && pnpm --filter @gratonite/web typecheck",
