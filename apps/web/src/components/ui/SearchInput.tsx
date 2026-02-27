@@ -1,0 +1,74 @@
+// apps/web/src/components/ui/SearchInput.tsx
+import { forwardRef, type InputHTMLAttributes } from 'react';
+
+interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'size'> {
+  /** 'compact' (36px) for sidebars, 'large' (44px) for page-level search */
+  size?: 'compact' | 'large';
+  /** Called when the clear button is clicked */
+  onClear?: () => void;
+}
+
+const base = {
+  display: 'flex',
+  alignItems: 'center',
+  width: '100%',
+  background: 'var(--bg-input)',
+  border: '1px solid var(--stroke)',
+  borderRadius: 'var(--radius-md)',
+  color: 'var(--text)',
+  transition: 'border-color 0.15s ease',
+} as const;
+
+const sizes = {
+  compact: { height: 36, padding: '0 12px', fontSize: 13, gap: 8 },
+  large:   { height: 44, padding: '0 16px', fontSize: 14, gap: 10 },
+} as const;
+
+export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
+  ({ size = 'compact', value, onClear, style, ...props }, ref) => {
+    const sz = sizes[size];
+    const hasValue = value !== undefined && value !== '';
+
+    return (
+      <div style={{ ...base, height: sz.height, padding: sz.padding, gap: sz.gap, ...style }}>
+        <span style={{ fontSize: sz.fontSize, color: 'var(--text-faint)', flexShrink: 0, lineHeight: 1 }}>🔍</span>
+        <input
+          ref={ref}
+          type="search"
+          value={value}
+          style={{
+            flex: 1,
+            border: 'none',
+            background: 'transparent',
+            color: 'var(--text)',
+            fontSize: sz.fontSize,
+            outline: 'none',
+            fontFamily: 'inherit',
+          }}
+          {...props}
+        />
+        {hasValue && onClear && (
+          <button
+            type="button"
+            onClick={onClear}
+            style={{
+              border: 'none',
+              background: 'none',
+              color: 'var(--text-faint)',
+              cursor: 'pointer',
+              fontSize: 16,
+              lineHeight: 1,
+              padding: 0,
+              flexShrink: 0,
+            }}
+            aria-label="Clear search"
+          >
+            ×
+          </button>
+        )}
+      </div>
+    );
+  },
+);
+
+SearchInput.displayName = 'SearchInput';
