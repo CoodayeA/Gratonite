@@ -59,6 +59,7 @@
   --success: #4a8a5a;
   --success-text: #6aea8a;
   --danger-wine: #6a2a3a;
+
   /* Status colours (not theme-overridable — semantic meaning) */
   --status-online: #43b581;
   --status-idle: #faa61a;
@@ -66,7 +67,7 @@
   --status-offline: var(--text-faint);
 
   /* Semantic feedback */
-  --warning: #faa61a;
+  --warning: var(--status-idle);
   --warning-bg: rgba(250, 166, 26, 0.12);
 
   /* Motion */
