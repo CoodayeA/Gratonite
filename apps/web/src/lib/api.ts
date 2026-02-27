@@ -720,6 +720,17 @@ export const api = {
   guilds: {
     getMine: () => apiFetch<Guild[]>('/guilds/@me'),
 
+    discover: () => apiFetch<Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      iconHash: string | null;
+      bannerHash: string | null;
+      memberCount: number;
+      tags: string[];
+      categories: string[];
+    }>>('/guilds/discover'),
+
     get: (guildId: string) => apiFetch<Guild>(`/guilds/${guildId}`),
 
     getMembers: (guildId: string, limit = 100) =>
@@ -1198,5 +1209,32 @@ export const api = {
         gratonitesEarned: number;
         memberSince: string;
       }>>(`/leaderboard?period=${period}`),
+  },
+  themes: {
+    browse: (params?: { q?: string; tag?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.q) qs.set('q', params.q);
+      if (params?.tag) qs.set('tag', params.tag);
+      const query = qs.toString();
+      return apiFetch<any[]>(`/themes${query ? `?${query}` : ''}`);
+    },
+    get: (themeId: string) =>
+      apiFetch<any>(`/themes/${themeId}`),
+    create: (data: { name: string; description?: string; tags?: string[]; vars: Record<string, string> }) =>
+      apiFetch<any>('/themes', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (themeId: string, data: { name?: string; description?: string; tags?: string[]; vars?: Record<string, string> }) =>
+      apiFetch<any>(`/themes/${themeId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    publish: (themeId: string) =>
+      apiFetch<void>(`/themes/${themeId}/publish`, { method: 'POST' }),
+    delete: (themeId: string) =>
+      apiFetch<void>(`/themes/${themeId}`, { method: 'DELETE' }),
+    myThemes: () =>
+      apiFetch<any[]>('/users/@me/themes'),
   },
 };
