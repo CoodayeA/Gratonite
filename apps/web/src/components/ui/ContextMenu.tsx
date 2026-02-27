@@ -19,9 +19,9 @@ interface ContextMenuProps {
 const styles = {
   container: {
     position: 'fixed',
-    background: '#353348',
-    borderRadius: 8,
-    border: '1px solid #4a4660',
+    background: 'var(--bg-elevated)',
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--stroke)',
     boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
     minWidth: 180,
     padding: '4px 0',
@@ -34,7 +34,7 @@ const styles = {
     alignItems: 'center',
     padding: '8px 12px',
     fontSize: 13,
-    color: '#e8e4e0',
+    color: 'var(--text)',
     background: 'none',
     border: 'none',
     cursor: 'pointer',
@@ -43,16 +43,16 @@ const styles = {
     outline: 'none',
   } as CSSProperties,
   itemHover: {
-    background: '#413d58',
+    background: 'var(--bg-soft)',
   } as CSSProperties,
   itemDanger: {
-    color: '#f04747',
+    color: 'var(--danger)',
   } as CSSProperties,
   icon: {
     width: 16,
     height: 16,
     marginRight: 8,
-    color: '#a8a4b8',
+    color: 'var(--text-muted)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
