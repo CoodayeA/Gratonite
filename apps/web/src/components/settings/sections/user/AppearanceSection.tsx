@@ -292,9 +292,29 @@ export function AppearanceSection() {
             />
           ))}
         </div>
-        <Link to="/app/discover?tab=themes" style={s['browseLink']}>
-          Explore more themes →
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <Link to="/discover?tab=themes" style={s['browseLink']}>
+            Explore more themes →
+          </Link>
+          <Link
+            to="/themes/create"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              height: 30,
+              padding: '0 12px',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--accent)',
+              color: '#1a1a2e',
+              fontSize: 12,
+              fontWeight: 600,
+              textDecoration: 'none',
+            }}
+          >
+            + Create Theme
+          </Link>
+        </div>
       </div>
 
       {/* ── Accent colour ───────────────────────────────────────────────── */}

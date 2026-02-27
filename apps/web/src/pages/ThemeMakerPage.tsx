@@ -79,10 +79,11 @@ export function ThemeMakerPage() {
   const [saving, setSaving] = useState(false);
   const [saveLabel, setSaveLabel] = useState('Save Draft');
   const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState('');
 
   // Try-it-on state
   const [previewing, setPreviewing] = useState(false);
-  const prevApplied = useRef<Record<string, string> | null>(null);
+  const prevApplied = useRef<Theme | null>(null);
 
   // Load existing theme if editing
   useEffect(() => {
@@ -118,7 +119,7 @@ export function ThemeMakerPage() {
     vars,
   };
 
-  async function handleSave() {
+  async function handleSave(): Promise<boolean> {
     setSaving(true);
     try {
       const payload = {
@@ -136,9 +137,11 @@ export function ThemeMakerPage() {
       }
       setSaveLabel('Saved ✓');
       setTimeout(() => setSaveLabel('Save Draft'), 2000);
+      return true;
     } catch {
       setSaveLabel('Error — try again');
       setTimeout(() => setSaveLabel('Save Draft'), 3000);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -150,45 +153,52 @@ export function ThemeMakerPage() {
       'This will make your theme visible to everyone on Discover. You can unpublish it at any time.',
     );
     if (!confirmed) return;
+    setPublishError('');
     setPublishing(true);
     try {
       if (!savedIdRef.current) {
-        await handleSave();
+        const ok = await handleSave();
+        if (!ok) {
+          setPublishError('Save failed — check your connection and try again.');
+          return;
+        }
       }
       if (!savedIdRef.current) return;
       await api.themes.publish(savedIdRef.current);
       navigate('/discover?tab=themes');
     } catch {
-      // silent — leave user on page
+      setPublishError('Publish failed — try again.');
     } finally {
       setPublishing(false);
     }
   }
 
   function handleTryOn() {
-    // Snapshot current CSS var values directly from the DOM
     const root = document.documentElement;
     const VARS: (keyof ThemeVars)[] = [
       '--bg', '--bg-elevated', '--bg-soft', '--bg-float', '--bg-input',
       '--stroke', '--accent', '--accent-2', '--text', '--text-muted', '--text-faint',
     ];
-    const snapshot: Record<string, string> = {};
+    const snapshotVars = {} as ThemeVars;
     for (const v of VARS) {
-      snapshot[v] = getComputedStyle(root).getPropertyValue(v).trim()
+      snapshotVars[v] = getComputedStyle(root).getPropertyValue(v).trim()
         || root.style.getPropertyValue(v).trim();
     }
-    prevApplied.current = snapshot;
+    prevApplied.current = {
+      id: getCurrentThemeId() ?? 'snapshot',
+      name: 'Previous Theme',
+      description: '',
+      author: '',
+      version: '1.0.0',
+      tags: [],
+      vars: snapshotVars,
+    };
     applyTheme(wipTheme);
     setPreviewing(true);
   }
 
   function handleUndoPreview() {
-    if (prevApplied.current) {
-      const root = document.documentElement;
-      for (const [key, value] of Object.entries(prevApplied.current)) {
-        root.style.setProperty(key, value);
-      }
-    }
+    if (prevApplied.current) applyTheme(prevApplied.current);
     setPreviewing(false);
   }
 
@@ -372,6 +382,9 @@ export function ThemeMakerPage() {
               {publishing ? 'Publishing...' : 'Publish to Discover →'}
             </button>
           </div>
+          {publishError && (
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--danger)' }}>{publishError}</p>
+          )}
         </div>
 
         {/* Right column — live preview */}

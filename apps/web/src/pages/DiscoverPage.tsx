@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '@/lib/api';
 import {
   type Theme,
@@ -387,7 +387,30 @@ export function DiscoverPage() {
           {/* Themes tab */}
           {tab === 'themes' && (
             <>
-              <h2 style={s.sectionLabel}>{filteredThemes.length} {filteredThemes.length === 1 ? 'Theme' : 'Themes'}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <h2 style={s.sectionLabel}>
+                  {filteredThemes.length} {filteredThemes.length === 1 ? 'Theme' : 'Themes'}
+                </h2>
+                <Link
+                  to="/themes/create"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    height: 32,
+                    padding: '0 14px',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--accent)',
+                    color: '#1a1a2e',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    flexShrink: 0,
+                  }}
+                >
+                  + Create Theme
+                </Link>
+              </div>
               {filteredThemes.length === 0 ? (
                 <EmptyState
                   icon="🎨"
