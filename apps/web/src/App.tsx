@@ -69,6 +69,8 @@ const CreateBotPage = lazy(() => import('@/pages/CreateBotPage').then((m) => ({ 
 const MultiScreenSharePage = lazy(() => import('@/pages/MultiScreenSharePage').then((m) => ({ default: m.MultiScreenSharePage })));
 const ThemeMakerPage = lazy(() => import('@/pages/ThemeMakerPage').then((m) => ({ default: m.ThemeMakerPage })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
+const CreatorDashboardPage = lazy(() => import('@/pages/CreatorDashboardPage').then((m) => ({ default: m.CreatorDashboardPage })));
+const CosmeticsMarketplacePage = lazy(() => import('@/pages/CosmeticsMarketplacePage').then((m) => ({ default: m.CosmeticsMarketplacePage })));
 
 export function App() {
   const { isLoading, isAuthenticated, login, logout, setLoading } = useAuthStore();
@@ -242,6 +244,10 @@ export function App() {
           <Route path="/create-bot/:guildId" element={<CreateBotPage />} />
           <Route path="/screen-share/:guildId/:channelId" element={<MultiScreenSharePage />} />
           <Route path="/gratonite-guys-lab" element={<GratoniteGuysLabPage />} />
+
+          {/* Creator Marketplace */}
+          <Route path="/cosmetics" element={<CosmeticsMarketplacePage />} />
+          <Route path="/creator/dashboard" element={<CreatorDashboardPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
