@@ -31,7 +31,7 @@ const styles = {
   } as React.CSSProperties,
   success: {
     padding: '8px 12px',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     background: 'rgba(20, 184, 166, 0.12)',
     border: '1px solid rgba(20, 184, 166, 0.3)',
     color: 'var(--text)',
@@ -56,7 +56,7 @@ const styles = {
     alignItems: 'center',
     gap: 10,
     padding: '8px 10px',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: 'none',
     background: 'none',
     color: 'var(--text)',

@@ -250,7 +250,7 @@ export function AddFriendPage() {
                 }}
                 style={{
                   padding: '6px 12px',
-                  borderRadius: 4,
+                  borderRadius: 'var(--radius-sm)',
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: 13,
@@ -321,7 +321,7 @@ export function AddFriendPage() {
                 style={{
                   flex: 1,
                   padding: '10px 14px',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   border: `1px solid ${V.stroke}`,
                   background: V.bgInput,
                   color: V.text,
@@ -335,7 +335,7 @@ export function AddFriendPage() {
                 disabled={results.length !== 1 || sendingTo !== null}
                 style={{
                   padding: '10px 22px',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   border: 'none',
                   cursor: results.length === 1 ? 'pointer' : 'default',
                   fontWeight: 700,
@@ -363,7 +363,7 @@ export function AddFriendPage() {
               <div
                 style={{
                   padding: '10px 14px',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   background: '#f0474720',
                   color: '#f04747',
                   fontSize: 13,
@@ -377,7 +377,7 @@ export function AddFriendPage() {
               <div
                 style={{
                   padding: '10px 14px',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   background: '#43b58120',
                   color: '#43b581',
                   fontSize: 13,
@@ -422,7 +422,7 @@ export function AddFriendPage() {
                       alignItems: 'center',
                       gap: 12,
                       padding: '10px 12px',
-                      borderRadius: 6,
+                      borderRadius: 'var(--radius-sm)',
                       marginBottom: 4,
                       background: V.bgElevated,
                       border: `1px solid ${V.stroke}`,
@@ -456,7 +456,7 @@ export function AddFriendPage() {
                       disabled={sendingTo !== null}
                       style={{
                         padding: '6px 14px',
-                        borderRadius: 6,
+                        borderRadius: 'var(--radius-sm)',
                         border: 'none',
                         cursor: sendingTo === u.id ? 'default' : 'pointer',
                         fontWeight: 600,
@@ -536,7 +536,7 @@ export function AddFriendPage() {
                       onClick={() => handleRecentClick(term)}
                       style={{
                         padding: '6px 14px',
-                        borderRadius: 16,
+                        borderRadius: 'var(--radius-lg)',
                         border: `1px solid ${V.stroke}`,
                         background: V.bgElevated,
                         color: V.textMuted,
@@ -580,7 +580,7 @@ export function AddFriendPage() {
                   gap: 20,
                   alignItems: 'flex-start',
                   padding: 20,
-                  borderRadius: 8,
+                  borderRadius: 'var(--radius-md)',
                   background: V.bgElevated,
                   border: `1px solid ${V.stroke}`,
                 } as React.CSSProperties}
@@ -616,7 +616,7 @@ export function AddFriendPage() {
                       alignItems: 'center',
                       gap: 10,
                       padding: '8px 12px',
-                      borderRadius: 6,
+                      borderRadius: 'var(--radius-sm)',
                       background: V.bgInput,
                       border: `1px solid ${V.stroke}`,
                     } as React.CSSProperties}
@@ -637,7 +637,7 @@ export function AddFriendPage() {
                       onClick={handleCopyShareLink}
                       style={{
                         padding: '4px 12px',
-                        borderRadius: 4,
+                        borderRadius: 'var(--radius-sm)',
                         border: `1px solid ${V.stroke}`,
                         background: 'transparent',
                         color: V.textMuted,
@@ -738,7 +738,7 @@ export function AddFriendPage() {
                           alignItems: 'center',
                           gap: 10,
                           padding: '8px 8px',
-                          borderRadius: 6,
+                          borderRadius: 'var(--radius-sm)',
                           marginBottom: 4,
                         } as React.CSSProperties}
                       >
@@ -772,7 +772,7 @@ export function AddFriendPage() {
                             disabled={acceptMutation.isPending}
                             style={{
                               padding: '4px 10px',
-                              borderRadius: 4,
+                              borderRadius: 'var(--radius-sm)',
                               border: 'none',
                               cursor: 'pointer',
                               fontWeight: 600,
@@ -790,7 +790,7 @@ export function AddFriendPage() {
                             disabled={declineMutation.isPending}
                             style={{
                               padding: '4px 10px',
-                              borderRadius: 4,
+                              borderRadius: 'var(--radius-sm)',
                               border: 'none',
                               cursor: 'pointer',
                               fontWeight: 600,
@@ -834,7 +834,7 @@ export function AddFriendPage() {
                           alignItems: 'center',
                           gap: 10,
                           padding: '8px 8px',
-                          borderRadius: 6,
+                          borderRadius: 'var(--radius-sm)',
                           marginBottom: 4,
                         } as React.CSSProperties}
                       >
@@ -867,7 +867,7 @@ export function AddFriendPage() {
                             color: V.textFaint,
                             fontWeight: 600,
                             padding: '4px 10px',
-                            borderRadius: 4,
+                            borderRadius: 'var(--radius-sm)',
                             background: V.bgSoft,
                           } as React.CSSProperties}
                         >
@@ -888,7 +888,7 @@ export function AddFriendPage() {
                 style={{
                   width: '100%',
                   padding: '10px 0',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   border: `1px solid ${V.stroke}`,
                   background: 'transparent',
                   color: V.textMuted,

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/format';
@@ -105,7 +106,7 @@ const s = {
     flexDirection: 'column',
     gap: 12,
     padding: '28px 32px',
-    borderRadius: 16,
+    borderRadius: 'var(--radius-lg)',
     background: 'linear-gradient(180deg, rgba(212,175,55,0.15) 0%, rgba(212,175,55,0.03) 100%)',
     border: '1px solid rgba(212,175,55,0.25)',
   } as React.CSSProperties,
@@ -151,7 +152,7 @@ const s = {
     flexDirection: 'column',
     gap: 16,
     padding: '24px 28px',
-    borderRadius: 16,
+    borderRadius: 'var(--radius-lg)',
     background: 'var(--bg-elevated)',
     border: '1px solid var(--stroke)',
   } as React.CSSProperties,
@@ -178,7 +179,7 @@ const s = {
   progressTrack: {
     width: '100%',
     height: 10,
-    borderRadius: 100,
+    borderRadius: 'var(--radius-pill)',
     background: '#25243a',
     position: 'relative',
     overflow: 'hidden',
@@ -186,7 +187,7 @@ const s = {
 
   progressFill: {
     height: '100%',
-    borderRadius: 100,
+    borderRadius: 'var(--radius-pill)',
     background: 'linear-gradient(90deg, #d4af37, #e8c547)',
     position: 'absolute',
     left: 0,
@@ -216,7 +217,7 @@ const s = {
     justifyContent: 'center',
     width: '100%',
     height: 40,
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     background: 'var(--accent)',
     color: '#1a1a2e',
     fontSize: 13,
@@ -231,7 +232,7 @@ const s = {
     justifyContent: 'center',
     width: '100%',
     height: 40,
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     background: 'var(--text-faint)',
     color: '#1a1a2e',
     fontSize: 13,
@@ -290,7 +291,7 @@ const s = {
   mileProgressTrack: {
     width: '100%',
     height: 6,
-    borderRadius: 100,
+    borderRadius: 'var(--radius-pill)',
     background: '#25243a',
     position: 'relative',
     overflow: 'hidden',
@@ -299,7 +300,7 @@ const s = {
   mileProgressFill: (completed: boolean, pct: number) =>
     ({
       height: '100%',
-      borderRadius: 100,
+      borderRadius: 'var(--radius-pill)',
       background: completed ? '#6aea8a' : 'var(--accent)',
       position: 'absolute',
       left: 0,
@@ -321,7 +322,7 @@ const s = {
     alignItems: 'center',
     gap: 8,
     padding: '16px 12px',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     background: 'var(--bg-elevated, #353348)',
     border: '1px solid var(--stroke)',
     cursor: 'pointer',
@@ -349,7 +350,7 @@ const s = {
     display: 'flex',
     flexDirection: 'column',
     gap: 0,
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     background: 'var(--bg-elevated, #353348)',
     border: '1px solid var(--stroke)',
     overflow: 'hidden',
@@ -427,7 +428,7 @@ const s = {
     alignItems: 'center',
     gap: 10,
     padding: '20px 18px',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     background: 'var(--bg-elevated)',
     border: '1px solid var(--stroke)',
   } as React.CSSProperties,
@@ -462,7 +463,7 @@ const s = {
     flexDirection: 'column',
     gap: 16,
     padding: '20px 24px',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     background: 'var(--bg-elevated)',
     border: '1px solid var(--stroke)',
   } as React.CSSProperties,
@@ -491,7 +492,7 @@ const s = {
     ({
       width: 32,
       height: 32,
-      borderRadius: 8,
+      borderRadius: 'var(--radius-md)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -598,7 +599,7 @@ function DailyRewardsCard() {
   return (
     <div style={s.dailyCard}>
       <h3 style={s.dailyTitle}>Daily Rewards</h3>
-      <span style={s.dailyDesc}>Claim your daily Gratonite bonus</span>
+      <span style={s.dailyDesc}>Claim your Gratonite bonus (refreshes every 2 hours)</span>
       <div style={s.dailyProgressWrap}>
         <div style={s.progressTrack}>
           <div style={{ ...s.progressFill, width: `${pct}%` }} />
@@ -609,12 +610,24 @@ function DailyRewardsCard() {
         </div>
       </div>
       <button
-        style={claimMutation.isPending ? s.claimBtnDisabled : s.claimBtn}
-        disabled={claimMutation.isPending}
+        style={claimMutation.isPending || claimMutation.isSuccess ? s.claimBtnDisabled : s.claimBtn}
+        disabled={claimMutation.isPending || claimMutation.isSuccess}
         onClick={() => claimMutation.mutate()}
+        type="button"
       >
-        {claimMutation.isPending ? 'Claiming...' : "Claim Today's Reward"}
+        {claimMutation.isPending
+          ? 'Claiming...'
+          : claimMutation.isSuccess
+          ? '\u2713 Claimed!'
+          : "Claim Today's Reward"}
       </button>
+      {claimMutation.isError && (
+        <span style={{ fontSize: 12, color: 'var(--danger, #e85a6e)', textAlign: 'center' as const }}>
+          {(claimMutation.error as any)?.message?.includes('too soon') || (claimMutation.error as any)?.code === 'TOO_SOON'
+            ? 'Already claimed \u2014 check back in 2 hours'
+            : 'Reward already claimed or unavailable'}
+        </span>
+      )}
     </div>
   );
 }
@@ -737,6 +750,8 @@ function HistorySection({ entries }: { entries: CurrencyLedgerEntry[] }) {
 // ---------------------------------------------------------------------------
 
 export function GratoniteDashboard() {
+  const [quickNotice, setQuickNotice] = useState<string | null>(null);
+
   const {
     data: wallet,
     isLoading: walletLoading,
@@ -804,22 +819,40 @@ export function GratoniteDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div style={s.quickActionsRow}>
-        {([
-          { icon: '\u{1F4E4}', label: 'Send' },
-          { icon: '\u{1F4E5}', label: 'Receive' },
-          { icon: '\uD83D\uDED2', label: 'Buy' },
-          { icon: '\uD83D\uDCCB', label: 'History' },
-        ] as const).map((action) => (
-          <button
-            key={action.label}
-            type="button"
-            style={{ ...s.quickActionCard, border: 'none' } as React.CSSProperties}
-          >
-            <div style={s.quickActionIcon}>{action.icon}</div>
-            <span style={s.quickActionLabel}>{action.label}</span>
-          </button>
-        ))}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={s.quickActionsRow}>
+          {([
+            { icon: '\u{1F4E4}', label: 'Send', onClick: () => setQuickNotice('Send Gratonite \u2014 coming soon!') },
+            { icon: '\u{1F4E5}', label: 'Receive', onClick: () => setQuickNotice('Receive Gratonite \u2014 coming soon!') },
+            { icon: '\uD83D\uDED2', label: 'Buy', onClick: () => setQuickNotice('Buy Gratonite \u2014 coming soon!') },
+            { icon: '\uD83D\uDCCB', label: 'History', onClick: () => {
+              setQuickNotice(null);
+              document.getElementById('tx-history')?.scrollIntoView({ behavior: 'smooth' });
+            }},
+          ] as const).map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              style={{ ...s.quickActionCard, border: 'none' } as React.CSSProperties}
+              onClick={action.onClick}
+            >
+              <div style={s.quickActionIcon}>{action.icon}</div>
+              <span style={s.quickActionLabel}>{action.label}</span>
+            </button>
+          ))}
+        </div>
+        {quickNotice && (
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' as const, padding: '4px 0' }}>
+            {quickNotice}
+            <button
+              type="button"
+              onClick={() => setQuickNotice(null)}
+              style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-faint)', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              &times;
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Recent Transactions (unified) */}
@@ -856,7 +889,9 @@ export function GratoniteDashboard() {
       <WaysToEarn />
 
       {/* Earn / Spend History */}
-      <HistorySection entries={ledger} />
+      <div id="tx-history">
+        <HistorySection entries={ledger} />
+      </div>
     </div>
   );
 }

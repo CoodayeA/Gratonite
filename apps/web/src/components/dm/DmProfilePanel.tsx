@@ -165,7 +165,7 @@ const styles = {
     alignItems: 'center',
     gap: 8,
     padding: '4px 6px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     cursor: 'pointer',
   } as React.CSSProperties,
 
@@ -185,7 +185,7 @@ const styles = {
     alignItems: 'center',
     gap: 8,
     padding: '4px 6px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     cursor: 'pointer',
   } as React.CSSProperties,
 
@@ -208,7 +208,7 @@ const styles = {
     background: '#d4af37',
     color: '#1a1a2e',
     border: 'none',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     fontSize: 14,
     fontWeight: 600,
     cursor: 'pointer',

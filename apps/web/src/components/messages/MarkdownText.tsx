@@ -88,7 +88,7 @@ const styles = {
   } as React.CSSProperties,
   inlineCode: {
     padding: '1px 5px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     border: '1px solid var(--stroke)',
     background: 'rgba(6, 10, 18, 0.7)',
     fontSize: '0.92em',
@@ -112,7 +112,7 @@ const styles = {
     display: 'inline-flex',
     alignItems: 'center',
     padding: '1px 5px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     border: '1px solid rgba(104, 223, 255, 0.28)',
     background: 'rgba(104, 223, 255, 0.12)',
     color: '#b8f3ff',

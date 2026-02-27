@@ -7,7 +7,7 @@ import { formatGuyDisplayName, getRarityMeta } from '@/lib/gratoniteguys';
 const styles = {
   shell: {
     border: '1px solid color-mix(in srgb, var(--stroke) 88%, transparent)',
-    borderRadius: 18,
+    borderRadius: 'var(--radius-xl)',
     background: 'rgba(10, 16, 28, 0.48)',
     padding: 14,
     display: 'grid',
@@ -47,7 +47,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'start',
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     borderWidth: 1,
     borderStyle: 'solid',
     borderColor: 'rgba(121, 223, 255, 0.24)',
@@ -71,7 +71,7 @@ const styles = {
   } as React.CSSProperties,
   panel: {
     border: '1px solid color-mix(in srgb, var(--stroke) 88%, transparent)',
-    borderRadius: 14,
+    borderRadius: 'var(--radius-lg)',
     background: 'rgba(255,255,255,0.02)',
     padding: 12,
     display: 'grid',
@@ -88,7 +88,7 @@ const styles = {
   } as React.CSSProperties,
   currency: {
     border: '1px solid rgba(255,255,255,0.06)',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     padding: 10,
     background: 'rgba(255,255,255,0.02)',
     display: 'grid',
@@ -123,7 +123,7 @@ const styles = {
     fontSize: 13,
   } as React.CSSProperties,
   openBtn: {
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     border: '1px solid rgba(121, 223, 255, 0.26)',
     background: 'linear-gradient(180deg, rgba(121,223,255,0.1), rgba(138,123,255,0.06)), rgba(10, 16, 28, 0.72)',
     color: 'var(--text)',
@@ -143,7 +143,7 @@ const styles = {
   } as React.CSSProperties,
   revealCard: {
     border: '1px solid color-mix(in srgb, var(--stroke) 88%, transparent)',
-    borderRadius: 16,
+    borderRadius: 'var(--radius-lg)',
     padding: 12,
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02), 0 8px 24px rgba(0,0,0,0.18)',
     display: 'grid',
@@ -158,7 +158,7 @@ const styles = {
   revealSymbol: {
     width: 48,
     height: 48,
-    borderRadius: 14,
+    borderRadius: 'var(--radius-lg)',
     display: 'grid',
     placeItems: 'center',
     fontSize: 18,
@@ -183,7 +183,7 @@ const styles = {
     fontSize: 11,
   } as React.CSSProperties,
   statusPill: {
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     padding: '5px 8px',
     borderWidth: 1,
     borderStyle: 'solid',
@@ -222,7 +222,7 @@ const styles = {
   empty: {
     minHeight: 140,
     border: '1px dashed rgba(255,255,255,0.08)',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     background: 'rgba(255,255,255,0.015)',
     display: 'grid',
     alignContent: 'center',
@@ -259,7 +259,7 @@ const styles = {
   recentDot: {
     width: 8,
     height: 8,
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
   } as React.CSSProperties,
   recentLabel: {
     minWidth: 0,

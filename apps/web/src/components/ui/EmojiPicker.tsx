@@ -242,7 +242,7 @@ const EMOJI_CATEGORIES: { name: string; emojis: string[] }[] = [
 const styles = {
   container: {
     background: '#353348',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     border: '1px solid #4a4660',
     boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
     maxHeight: 360,
@@ -262,7 +262,7 @@ const styles = {
     flex: 1,
     background: '#25243a',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     padding: '8px 12px',
     color: '#e8e4e0',
     fontSize: 13,
@@ -271,7 +271,7 @@ const styles = {
   addButton: {
     background: 'none',
     border: '1px solid #4a4660',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     color: '#d4af37',
     padding: '6px 10px',
     fontSize: 12,
@@ -304,7 +304,7 @@ const styles = {
     justifyContent: 'center',
     background: 'none',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     fontSize: 18,
     cursor: 'pointer',
     padding: 0,

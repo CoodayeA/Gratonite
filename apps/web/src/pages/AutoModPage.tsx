@@ -62,7 +62,7 @@ const s = {
   createBtn: {
     padding: '10px 20px',
     border: 'none',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     background: '#d4af37',
     color: '#1a1a2e',
     fontSize: 14,
@@ -72,7 +72,7 @@ const s = {
   error: {
     background: 'rgba(232, 90, 110, 0.1)',
     border: '1px solid rgba(232, 90, 110, 0.3)',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     padding: '12px 16px',
     marginBottom: 16,
     color: '#e85a6e',
@@ -103,12 +103,12 @@ const s = {
   },
   ruleCard: {
     background: '#25243a',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     padding: 16,
   },
   ruleCardDisabled: {
     background: '#25243a',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     padding: 16,
     opacity: 0.6,
   },
@@ -136,7 +136,7 @@ const s = {
     cursor: 'pointer',
     inset: 0,
     background: '#4a4660',
-    borderRadius: 22,
+    borderRadius: 'var(--radius-xl)',
     transition: 'background 0.2s',
   },
   toggleSliderOn: {
@@ -144,7 +144,7 @@ const s = {
     cursor: 'pointer',
     inset: 0,
     background: '#d4af37',
-    borderRadius: 22,
+    borderRadius: 'var(--radius-xl)',
     transition: 'background 0.2s',
   },
   toggleKnobOff: {
@@ -193,7 +193,7 @@ const s = {
   editBtn: {
     padding: '6px 14px',
     border: '1px solid #4a4660',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'transparent',
     color: '#a8a4b8',
     fontSize: 12,
@@ -202,7 +202,7 @@ const s = {
   deleteBtn: {
     padding: '6px 14px',
     border: '1px solid rgba(232, 90, 110, 0.3)',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'transparent',
     color: '#e85a6e',
     fontSize: 12,
@@ -230,7 +230,7 @@ const s = {
   },
   infoBox: {
     background: '#25243a',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     padding: 16,
     marginTop: 24,
     borderLeft: '3px solid #d4af37',
@@ -259,7 +259,7 @@ const s = {
   },
   modalDialog: {
     background: '#353348',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     padding: 24,
     width: 480,
     maxWidth: '90vw',
@@ -300,7 +300,7 @@ const s = {
   formInput: {
     padding: '10px 12px',
     border: '1px solid #4a4660',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: '#25243a',
     color: '#e8e4e0',
     fontSize: 14,
@@ -309,7 +309,7 @@ const s = {
   formSelect: {
     padding: '10px 12px',
     border: '1px solid #4a4660',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: '#25243a',
     color: '#e8e4e0',
     fontSize: 14,
@@ -336,7 +336,7 @@ const s = {
   saveBtn: {
     padding: '10px 20px',
     border: 'none',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     background: '#d4af37',
     color: '#1a1a2e',
     fontSize: 14,
@@ -346,7 +346,7 @@ const s = {
   cancelBtn: {
     padding: '10px 20px',
     border: '1px solid #4a4660',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     background: 'transparent',
     color: '#a8a4b8',
     fontSize: 14,

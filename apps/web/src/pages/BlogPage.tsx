@@ -125,7 +125,7 @@ const s = {
     gap: 12,
     padding: '10px 14px',
     border: `1px solid ${borderSubtle}`,
-    borderRadius: 16,
+    borderRadius: 'var(--radius-lg)',
     background: 'linear-gradient(180deg, rgba(12, 17, 31, 0.78), rgba(10, 15, 28, 0.64))',
     backdropFilter: 'blur(16px) saturate(115%)',
     boxShadow: '0 10px 28px rgba(0, 0, 0, 0.2)',
@@ -136,7 +136,7 @@ const s = {
     width: 48,
     height: 48,
     objectFit: 'contain',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     boxShadow: '0 0 22px rgba(212, 175, 55, 0.12)',
   } as React.CSSProperties,
   brandText: { display: 'flex', flexDirection: 'column', lineHeight: 1.05 } as React.CSSProperties,
@@ -208,7 +208,7 @@ const s = {
     display: 'grid',
     gap: 10,
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 'var(--radius-lg)',
     border: `1px solid ${borderBlog}`,
     background: `linear-gradient(180deg, rgba(24, 31, 51, 0.84), rgba(15, 20, 35, 0.88)),
       radial-gradient(circle at 10% 0%, rgba(92, 216, 255, 0.12), transparent 55%)`,
@@ -229,7 +229,7 @@ const s = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '3px 8px',
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     border: '1px solid rgba(212, 175, 55, 0.25)',
     background: 'rgba(212, 175, 55, 0.08)',
     color: '#b9f3ff',
@@ -251,7 +251,7 @@ const s = {
   guideArticle: {
     scrollMarginTop: 84,
     padding: '18px 18px 16px',
-    borderRadius: 16,
+    borderRadius: 'var(--radius-lg)',
     border: `1px solid ${borderBlog12}`,
     background: 'rgba(16, 22, 36, 0.74)',
     boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.02)',
@@ -271,7 +271,7 @@ const s = {
 
   sectionPanel: {
     border: `1px solid ${borderSubtle}`,
-    borderRadius: 20,
+    borderRadius: 'var(--radius-xl)',
     background: 'linear-gradient(180deg, rgba(11, 16, 30, 0.68), rgba(9, 13, 24, 0.6))',
     backdropFilter: 'blur(16px) saturate(110%)',
     boxShadow: '0 16px 42px rgba(0, 0, 0, 0.22)',
@@ -283,7 +283,7 @@ const s = {
     gridTemplateColumns: '1.1fr auto',
     gap: 20,
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: 'var(--radius-lg)',
     border: `1px solid ${borderSubtle12}`,
     background: `radial-gradient(420px 200px at 15% 10%, rgba(103, 223, 255, 0.08), transparent 75%),
       radial-gradient(380px 220px at 90% 20%, rgba(178, 109, 255, 0.08), transparent 75%),
@@ -303,7 +303,7 @@ const s = {
   finalActions: { display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' } as React.CSSProperties,
 
   btnPrimary: {
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     padding: '12px 16px',
     fontWeight: 700,
     textDecoration: 'none',
@@ -313,7 +313,7 @@ const s = {
   } as React.CSSProperties,
 
   btnSecondary: {
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     padding: '12px 16px',
     fontWeight: 700,
     textDecoration: 'none',

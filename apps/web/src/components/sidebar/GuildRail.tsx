@@ -186,7 +186,7 @@ const unreadBadgeStyle = {
   right: -4,
   minWidth: 18,
   height: 18,
-  borderRadius: 999,
+  borderRadius: 'var(--radius-pill)',
   padding: '0 5px',
   display: 'grid',
   placeItems: 'center',
@@ -221,7 +221,7 @@ const voiceTooltipStyle = {
   maxWidth: 220,
   background: 'var(--bg-secondary, #1a1f2e)',
   border: '1px solid var(--border, rgba(255, 255, 255, 0.08))',
-  borderRadius: 8,
+  borderRadius: 'var(--radius-md)',
   padding: '8px 10px',
   zIndex: 9999,
   pointerEvents: 'none',
@@ -265,7 +265,7 @@ const voiceTooltipCountStyle = {
   fontWeight: 600,
   color: '#2ecc71',
   background: 'rgba(46, 204, 113, 0.12)',
-  borderRadius: 8,
+  borderRadius: 'var(--radius-md)',
   padding: '1px 6px',
 } as React.CSSProperties;
 

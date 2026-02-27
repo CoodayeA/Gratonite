@@ -54,7 +54,7 @@ const s = {
   createBtn: {
     padding: '10px 20px',
     border: 'none',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     background: '#d4af37',
     color: '#1a1a2e',
     fontSize: 14,
@@ -65,7 +65,7 @@ const s = {
     display: 'flex',
     gap: 4,
     background: '#25243a',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     padding: 4,
     marginBottom: 20,
     width: 'fit-content',
@@ -73,7 +73,7 @@ const s = {
   filterBtn: {
     padding: '8px 16px',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'transparent',
     color: '#a8a4b8',
     fontSize: 13,
@@ -83,7 +83,7 @@ const s = {
   filterBtnActive: {
     padding: '8px 16px',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: '#413d58',
     color: '#e8e4e0',
     fontSize: 13,
@@ -93,7 +93,7 @@ const s = {
   error: {
     background: 'rgba(232, 90, 110, 0.1)',
     border: '1px solid rgba(232, 90, 110, 0.3)',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     padding: '12px 16px',
     marginBottom: 16,
     color: '#e85a6e',
@@ -124,7 +124,7 @@ const s = {
   },
   card: {
     background: '#25243a',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     padding: 12,
     display: 'flex',
     alignItems: 'center',
@@ -171,7 +171,7 @@ const s = {
   cancelBtn: {
     padding: '6px 12px',
     border: '1px solid #4a4660',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'transparent',
     color: '#a8a4b8',
     fontSize: 12,
@@ -180,7 +180,7 @@ const s = {
   deleteBtn: {
     padding: '6px 12px',
     border: '1px solid rgba(232, 90, 110, 0.3)',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'transparent',
     color: '#e85a6e',
     fontSize: 12,
@@ -424,7 +424,7 @@ export function ScheduledMsgsPage() {
             style={{
               background: '#2c2c3e',
               border: '1px solid #4a4660',
-              borderRadius: 12,
+              borderRadius: 'var(--radius-lg)',
               padding: 24,
               maxWidth: 480,
               width: '100%',
@@ -437,7 +437,7 @@ export function ScheduledMsgsPage() {
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#e8e4e0' }}>Schedule Message</h2>
 
             {schedError && (
-              <div style={{ padding: '8px 12px', background: 'rgba(232,90,110,0.15)', color: '#e85a6e', borderRadius: 6, fontSize: 13 }}>
+              <div style={{ padding: '8px 12px', background: 'rgba(232,90,110,0.15)', color: '#e85a6e', borderRadius: 'var(--radius-sm)', fontSize: 13 }}>
                 {schedError}
               </div>
             )}
@@ -452,7 +452,7 @@ export function ScheduledMsgsPage() {
                   onChange={(e) => setSchedChannelId(e.target.value)}
                   style={{
                     padding: '8px 12px',
-                    borderRadius: 6,
+                    borderRadius: 'var(--radius-sm)',
                     border: '1px solid #4a4660',
                     background: '#25243a',
                     color: '#e8e4e0',
@@ -480,7 +480,7 @@ export function ScheduledMsgsPage() {
                 placeholder="Write your message..."
                 style={{
                   padding: '8px 12px',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   border: '1px solid #4a4660',
                   background: '#25243a',
                   color: '#e8e4e0',
@@ -501,7 +501,7 @@ export function ScheduledMsgsPage() {
                 onChange={(e) => setSchedTime(e.target.value)}
                 style={{
                   padding: '8px 12px',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   border: '1px solid #4a4660',
                   background: '#25243a',
                   color: '#e8e4e0',
@@ -517,7 +517,7 @@ export function ScheduledMsgsPage() {
                 onClick={() => setShowScheduleModal(false)}
                 style={{
                   padding: '8px 18px',
-                  borderRadius: 8,
+                  borderRadius: 'var(--radius-md)',
                   border: '1px solid #4a4660',
                   background: 'transparent',
                   color: '#a8a4b8',
@@ -532,7 +532,7 @@ export function ScheduledMsgsPage() {
                 disabled={scheduling}
                 style={{
                   padding: '8px 18px',
-                  borderRadius: 8,
+                  borderRadius: 'var(--radius-md)',
                   border: 'none',
                   background: '#d4af37',
                   color: '#1a1a2e',

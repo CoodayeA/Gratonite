@@ -545,7 +545,7 @@ export function NotificationsPage() {
                 type="button"
                 style={{
                   border: `1px solid ${T.stroke}`,
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   background: 'transparent',
                   color: T.textMuted,
                   fontSize: 12,
@@ -563,7 +563,7 @@ export function NotificationsPage() {
               type="button"
               style={{
                 border: `1px solid ${T.stroke}`,
-                borderRadius: 6,
+                borderRadius: 'var(--radius-sm)',
                 background: 'transparent',
                 color: T.textMuted,
                 fontSize: 12,
@@ -630,7 +630,7 @@ export function NotificationsPage() {
                     background: T.accent,
                     color: T.textOnGold,
                     border: 'none',
-                    borderRadius: 6,
+                    borderRadius: 'var(--radius-sm)',
                     padding: '8px 16px',
                     fontSize: 13,
                     fontWeight: 600,
@@ -648,7 +648,7 @@ export function NotificationsPage() {
                     background: 'transparent',
                     color: T.textMuted,
                     border: `1px solid ${T.stroke}`,
-                    borderRadius: 6,
+                    borderRadius: 'var(--radius-sm)',
                     padding: '8px 16px',
                     fontSize: 13,
                     cursor: isWorking ? 'not-allowed' : 'pointer',
@@ -669,7 +669,7 @@ export function NotificationsPage() {
                     background: T.accent,
                     color: T.textOnGold,
                     border: 'none',
-                    borderRadius: 6,
+                    borderRadius: 'var(--radius-sm)',
                     padding: '8px 16px',
                     fontSize: 13,
                     fontWeight: 600,
@@ -751,7 +751,7 @@ export function NotificationsPage() {
                   fontWeight: 700,
                   background: 'rgba(212,175,55,0.18)',
                   color: T.accent,
-                  borderRadius: 9999,
+                  borderRadius: 'var(--radius-pill)',
                   padding: '2px 7px',
                   minWidth: 20,
                   textAlign: 'center',
@@ -768,7 +768,7 @@ export function NotificationsPage() {
               style={{
                 background: 'none',
                 border: `1px solid ${T.stroke}`,
-                borderRadius: 6,
+                borderRadius: 'var(--radius-sm)',
                 color: T.textMuted,
                 fontSize: 12,
                 padding: '3px 9px',
@@ -783,7 +783,7 @@ export function NotificationsPage() {
               style={{
                 background: 'none',
                 border: `1px solid ${T.stroke}`,
-                borderRadius: 6,
+                borderRadius: 'var(--radius-sm)',
                 color: T.textMuted,
                 fontSize: 12,
                 padding: '3px 9px',
@@ -814,7 +814,7 @@ export function NotificationsPage() {
                 style={{
                   flex: 1,
                   border: 'none',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   padding: '6px 4px',
                   fontSize: 12,
                   fontWeight: isActive ? 600 : 400,

@@ -22,7 +22,7 @@ const STATUS_OPTIONS: Array<{ value: UserStatus; label: string; emoji: string; c
 const styles = {
   container: {
     background: '#353348',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: '1px solid #4a4660',
     padding: 8,
     minWidth: 200,
@@ -47,7 +47,7 @@ const styles = {
     alignItems: 'center',
     gap: 10,
     padding: '8px 8px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'none',
     border: 'none',
     cursor: 'pointer',
@@ -67,10 +67,6 @@ const styles = {
     height: 12,
     borderRadius: '50%',
     flexShrink: 0,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 8,
   } as CSSProperties,
   label: {
     flex: 1,
@@ -92,7 +88,7 @@ const styles = {
     alignItems: 'center',
     gap: 8,
     padding: '8px 8px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'none',
     border: 'none',
     cursor: 'pointer',
@@ -173,9 +169,7 @@ export function StatusPicker({ currentStatus, onStatusChange, isOpen, onClose }:
             >
               <span
                 style={{ ...styles.indicator, backgroundColor: option.color }}
-              >
-                {option.emoji}
-              </span>
+              />
               <span style={styles.label}>{option.label}</span>
               {isActive && (
                 <span style={styles.check}>{'\u2713'}</span>

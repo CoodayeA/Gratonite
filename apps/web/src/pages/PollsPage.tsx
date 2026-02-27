@@ -63,7 +63,7 @@ const styles = {
   },
   createBtn: {
     padding: '8px 20px',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: 'none',
     background: '#d4af37',
     color: '#1a1a2e',
@@ -79,7 +79,7 @@ const styles = {
   },
   filterBtn: {
     padding: '6px 14px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     borderWidth: 1,
     borderStyle: 'solid',
     borderColor: '#4a4660',
@@ -130,7 +130,7 @@ const styles = {
   card: {
     padding: 16,
     background: '#25243a',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: '1px solid #4a4660',
   },
   cardHeader: {
@@ -148,7 +148,7 @@ const styles = {
   },
   statusActive: {
     padding: '3px 10px',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     fontSize: 11,
     fontWeight: 600,
     textTransform: 'uppercase' as const,
@@ -158,7 +158,7 @@ const styles = {
   },
   statusClosed: {
     padding: '3px 10px',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     fontSize: 11,
     fontWeight: 600,
     textTransform: 'uppercase' as const,
@@ -177,7 +177,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '10px 14px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     border: '1px solid #4a4660',
     background: '#353348',
     cursor: 'pointer',
@@ -197,7 +197,7 @@ const styles = {
     top: 0,
     bottom: 0,
     background: 'rgba(212, 175, 55, 0.15)',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     transition: 'width 0.3s ease',
   },
   optionBarWinning: {
@@ -448,7 +448,7 @@ export function PollsPage() {
             style={{
               background: '#2c2c3e',
               border: '1px solid #4a4660',
-              borderRadius: 12,
+              borderRadius: 'var(--radius-lg)',
               padding: 24,
               maxWidth: 480,
               width: '100%',
@@ -461,7 +461,7 @@ export function PollsPage() {
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#e8e4e0' }}>Create Poll</h2>
 
             {createError && (
-              <div style={{ padding: '8px 12px', background: 'rgba(232,90,110,0.15)', color: '#e85a6e', borderRadius: 6, fontSize: 13 }}>
+              <div style={{ padding: '8px 12px', background: 'rgba(232,90,110,0.15)', color: '#e85a6e', borderRadius: 'var(--radius-sm)', fontSize: 13 }}>
                 {createError}
               </div>
             )}
@@ -475,7 +475,7 @@ export function PollsPage() {
                 placeholder="Ask a question..."
                 style={{
                   padding: '8px 12px',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   border: '1px solid #4a4660',
                   background: '#25243a',
                   color: '#e8e4e0',
@@ -501,7 +501,7 @@ export function PollsPage() {
                     style={{
                       flex: 1,
                       padding: '8px 12px',
-                      borderRadius: 6,
+                      borderRadius: 'var(--radius-sm)',
                       border: '1px solid #4a4660',
                       background: '#25243a',
                       color: '#e8e4e0',
@@ -515,7 +515,7 @@ export function PollsPage() {
                       style={{
                         padding: '0 10px',
                         border: '1px solid #4a4660',
-                        borderRadius: 6,
+                        borderRadius: 'var(--radius-sm)',
                         background: 'transparent',
                         color: '#e85a6e',
                         cursor: 'pointer',
@@ -533,7 +533,7 @@ export function PollsPage() {
                   style={{
                     padding: '6px 12px',
                     border: '1px dashed #4a4660',
-                    borderRadius: 6,
+                    borderRadius: 'var(--radius-sm)',
                     background: 'transparent',
                     color: '#a8a4b8',
                     cursor: 'pointer',
@@ -566,7 +566,7 @@ export function PollsPage() {
                 onChange={(e) => setDuration(e.target.value === '' ? undefined : Number(e.target.value))}
                 style={{
                   padding: '8px 12px',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   border: '1px solid #4a4660',
                   background: '#25243a',
                   color: '#e8e4e0',
@@ -586,7 +586,7 @@ export function PollsPage() {
                 onClick={() => setShowCreateModal(false)}
                 style={{
                   padding: '8px 18px',
-                  borderRadius: 8,
+                  borderRadius: 'var(--radius-md)',
                   border: '1px solid #4a4660',
                   background: 'transparent',
                   color: '#a8a4b8',
@@ -601,7 +601,7 @@ export function PollsPage() {
                 disabled={creating}
                 style={{
                   padding: '8px 18px',
-                  borderRadius: 8,
+                  borderRadius: 'var(--radius-md)',
                   border: 'none',
                   background: '#d4af37',
                   color: '#1a1a2e',

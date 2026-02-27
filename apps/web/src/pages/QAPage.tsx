@@ -71,7 +71,7 @@ const styles = {
   },
   askBtn: {
     padding: '8px 20px',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: 'none',
     background: '#d4af37',
     color: '#1a1a2e',
@@ -92,7 +92,7 @@ const styles = {
   },
   filterBtn: {
     padding: '6px 14px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     borderWidth: 1,
     borderStyle: 'solid',
     borderColor: '#4a4660',
@@ -110,7 +110,7 @@ const styles = {
   sort: {},
   sortSelect: {
     padding: '6px 12px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     border: '1px solid #4a4660',
     background: '#25243a',
     color: '#e8e4e0',
@@ -156,7 +156,7 @@ const styles = {
     gap: 16,
     padding: 16,
     background: '#25243a',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: '1px solid #4a4660',
   },
   votes: {
@@ -173,7 +173,7 @@ const styles = {
     fontSize: 16,
     cursor: 'pointer',
     padding: '2px 6px',
-    borderRadius: 4,
+    borderRadius: 'var(--radius-sm)',
     transition: 'color 0.15s',
   },
   voteCount: {
@@ -233,7 +233,7 @@ const styles = {
     maxWidth: 680,
     maxHeight: '80vh',
     background: '#353348',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     border: '1px solid #4a4660',
     display: 'flex',
     flexDirection: 'column',
@@ -246,7 +246,7 @@ const styles = {
     right: 12,
     width: 32,
     height: 32,
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     border: 'none',
     background: 'transparent',
     color: '#a8a4b8',
@@ -289,7 +289,7 @@ const styles = {
     gap: 12,
     padding: 12,
     background: '#25243a',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     marginBottom: 8,
     borderWidth: 1,
     borderStyle: 'solid',
@@ -315,7 +315,7 @@ const styles = {
   },
   acceptBtn: {
     padding: '4px 12px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     border: '1px solid #4a4660',
     background: 'transparent',
     color: '#a8a4b8',
@@ -624,7 +624,7 @@ export function QAPage() {
             style={{
               background: '#2c2c3e',
               border: '1px solid #4a4660',
-              borderRadius: 12,
+              borderRadius: 'var(--radius-lg)',
               padding: 24,
               maxWidth: 480,
               width: '100%',
@@ -637,7 +637,7 @@ export function QAPage() {
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#e8e4e0' }}>Ask a Question</h2>
 
             {askError && (
-              <div style={{ padding: '8px 12px', background: 'rgba(232,90,110,0.15)', color: '#e85a6e', borderRadius: 6, fontSize: 13 }}>
+              <div style={{ padding: '8px 12px', background: 'rgba(232,90,110,0.15)', color: '#e85a6e', borderRadius: 'var(--radius-sm)', fontSize: 13 }}>
                 {askError}
               </div>
             )}
@@ -652,7 +652,7 @@ export function QAPage() {
                 required
                 style={{
                   padding: '8px 12px',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   border: '1px solid #4a4660',
                   background: '#25243a',
                   color: '#e8e4e0',
@@ -671,7 +671,7 @@ export function QAPage() {
                 placeholder="Provide more details about your question..."
                 style={{
                   padding: '8px 12px',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   border: '1px solid #4a4660',
                   background: '#25243a',
                   color: '#e8e4e0',
@@ -688,7 +688,7 @@ export function QAPage() {
                 onClick={() => setShowAskModal(false)}
                 style={{
                   padding: '8px 18px',
-                  borderRadius: 8,
+                  borderRadius: 'var(--radius-md)',
                   border: '1px solid #4a4660',
                   background: 'transparent',
                   color: '#a8a4b8',
@@ -703,7 +703,7 @@ export function QAPage() {
                 disabled={asking}
                 style={{
                   padding: '8px 18px',
-                  borderRadius: 8,
+                  borderRadius: 'var(--radius-md)',
                   border: 'none',
                   background: '#d4af37',
                   color: '#1a1a2e',

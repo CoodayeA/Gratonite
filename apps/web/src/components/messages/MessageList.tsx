@@ -51,7 +51,7 @@ const styles = {
     color: 'var(--text-faint)',
     border: '1px solid rgba(163, 191, 239, 0.1)',
     background: 'rgba(255, 255, 255, 0.015)',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     margin: '0 16px 10px',
   } as React.CSSProperties,
   empty: {

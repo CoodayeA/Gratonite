@@ -47,7 +47,7 @@ function PortalCard({ guild }: { guild: DiscoverGuild }) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column',
-      borderRadius: 12, overflow: 'hidden',
+      borderRadius: 'var(--radius-lg)', overflow: 'hidden',
       background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
       cursor: 'pointer', transition: 'border-color 140ms',
     }}>
@@ -82,7 +82,7 @@ function PortalCard({ guild }: { guild: DiscoverGuild }) {
           <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{guild.name}</span>
           <span style={{
             fontSize: 11, fontWeight: 600, color: 'var(--accent)',
-            background: 'rgba(212,175,55,0.15)', padding: '2px 8px', borderRadius: 100, whiteSpace: 'nowrap',
+            background: 'rgba(212,175,55,0.15)', padding: '2px 8px', borderRadius: 'var(--radius-pill)', whiteSpace: 'nowrap',
           }}>
             {formatMemberCount(guild.memberCount)} members
           </span>
@@ -95,7 +95,7 @@ function PortalCard({ guild }: { guild: DiscoverGuild }) {
         {guild.tags.length > 0 && (
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {guild.tags.slice(0, 3).map(t => (
-              <span key={t} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 100, background: 'var(--bg-soft)', color: 'var(--text-faint)' }}>
+              <span key={t} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--radius-pill)', background: 'var(--bg-soft)', color: 'var(--text-faint)' }}>
                 #{t}
               </span>
             ))}
@@ -106,7 +106,7 @@ function PortalCard({ guild }: { guild: DiscoverGuild }) {
           type="button"
           disabled
           style={{
-            marginTop: 'auto', height: 34, borderRadius: 8,
+            marginTop: 'auto', height: 34, borderRadius: 'var(--radius-md)',
             background: 'var(--bg-soft)', color: 'var(--text-faint)',
             fontSize: 13, fontWeight: 600, border: '1px solid var(--stroke)',
             cursor: 'not-allowed', opacity: 0.6,
@@ -132,7 +132,7 @@ function EmptyState({ icon, title, sub, onReset }: EmptyStateProps) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      gap: 12, padding: '64px 32px', borderRadius: 14, border: '1px solid var(--stroke)',
+      gap: 12, padding: '64px 32px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)',
       color: 'var(--text-muted)', textAlign: 'center',
     }}>
       <span style={{ fontSize: 40 }}>{icon}</span>
@@ -140,7 +140,7 @@ function EmptyState({ icon, title, sub, onReset }: EmptyStateProps) {
       <span style={{ fontSize: 13 }}>{sub}</span>
       {onReset && (
         <button type="button" onClick={onReset}
-          style={{ marginTop: 4, border: '1px solid var(--stroke)', background: 'rgba(255,255,255,0.04)', color: 'var(--text)', borderRadius: 999, padding: '6px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+          style={{ marginTop: 4, border: '1px solid var(--stroke)', background: 'rgba(255,255,255,0.04)', color: 'var(--text)', borderRadius: 'var(--radius-pill)', padding: '6px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
           Reset filters
         </button>
       )}
@@ -260,7 +260,7 @@ export function DiscoverPage() {
     sidebarTitle: { margin: '0 0 16px 8px', fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: 0.2 } as React.CSSProperties,
     navItem: (active: boolean): React.CSSProperties => ({
       display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
-      borderRadius: 8, fontSize: 14, fontWeight: active ? 600 : 400,
+      borderRadius: 'var(--radius-md)', fontSize: 14, fontWeight: active ? 600 : 400,
       color: active ? 'var(--accent)' : 'var(--text-muted)',
       background: active ? 'rgba(212,175,55,0.1)' : 'transparent',
       border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' as const,
@@ -281,7 +281,7 @@ export function DiscoverPage() {
 
     tagsRow: { display: 'flex', gap: 8, flexWrap: 'wrap' as const, justifyContent: 'center' } as React.CSSProperties,
     tagPill: (active: boolean): React.CSSProperties => ({
-      padding: '6px 16px', borderRadius: 100, fontSize: 13, fontWeight: active ? 600 : 400,
+      padding: '6px 16px', borderRadius: 'var(--radius-pill)', fontSize: 13, fontWeight: active ? 600 : 400,
       background: active ? 'var(--accent)' : 'var(--bg-elevated)',
       color: active ? '#1a1a2e' : 'var(--text-muted)',
       border: active ? 'none' : '1px solid var(--stroke)',
@@ -361,7 +361,7 @@ export function DiscoverPage() {
               {portalsLoading ? (
                 <div style={{ ...s.grid4 }}>
                   {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} style={{ height: 220, borderRadius: 12, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', opacity: 0.5 }} />
+                    <div key={i} style={{ height: 220, borderRadius: 'var(--radius-lg)', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', opacity: 0.5 }} />
                   ))}
                 </div>
               ) : filteredPortals.length === 0 ? (

@@ -42,7 +42,7 @@ const styles = {
     gap: 12,
     padding: '3px 14px',
     margin: '0 8px',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     borderWidth: 1, borderStyle: 'solid', borderColor: 'transparent',
     transition: 'background 0.14s ease, border-color 0.14s ease, transform 0.14s ease',
   } as React.CSSProperties,

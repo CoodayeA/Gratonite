@@ -23,7 +23,7 @@ const styles = {
   } as React.CSSProperties,
   picker: {
     background: 'var(--bg-elevated, #353348)',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     width: 480,
     maxHeight: '70vh',
     display: 'flex',
@@ -49,7 +49,7 @@ const styles = {
     fontSize: 16,
     cursor: 'pointer',
     padding: '4px 8px',
-    borderRadius: 4,
+    borderRadius: 'var(--radius-sm)',
   } as React.CSSProperties,
   closeBtnHover: {
     background: 'none',
@@ -58,7 +58,7 @@ const styles = {
     fontSize: 16,
     cursor: 'pointer',
     padding: '4px 8px',
-    borderRadius: 4,
+    borderRadius: 'var(--radius-sm)',
   } as React.CSSProperties,
   cropContainer: {
     padding: 16,
@@ -75,7 +75,7 @@ const styles = {
   cropPreviewImg: {
     width: '100%',
     height: 'auto',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
   } as React.CSSProperties,
   cropOverlay: {
     position: 'absolute',

@@ -95,7 +95,7 @@ const spriteWrapStyle = {
 } as React.CSSProperties;
 
 const spriteStyle = {
-  borderRadius: 12,
+  borderRadius: 'var(--radius-lg)',
   border: '1px solid rgba(255, 255, 255, 0.12)',
   background: 'rgba(8, 12, 20, 0.42)',
 } as React.CSSProperties;
@@ -108,7 +108,7 @@ const serverTagStyle = {
   color: V.text,
   border: '1px solid rgba(212, 175, 55, 0.35)',
   background: 'rgba(212, 175, 55, 0.12)',
-  borderRadius: 999,
+  borderRadius: 'var(--radius-pill)',
   padding: '3px 8px',
 } as React.CSSProperties;
 
@@ -129,7 +129,7 @@ const widgetStyle = {
   fontSize: 10,
   color: V.textFaint,
   border: `1px solid ${V.stroke}`,
-  borderRadius: 999,
+  borderRadius: 'var(--radius-pill)',
   padding: '3px 8px',
   background: 'rgba(6, 10, 20, 0.48)',
 } as React.CSSProperties;

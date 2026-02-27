@@ -41,7 +41,7 @@ const S = {
   },
   sidebarEvent: {
     padding: '10px 12px',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     marginBottom: 4,
     cursor: 'pointer',
     background: 'var(--bg-soft)',
@@ -79,7 +79,7 @@ const S = {
     background: 'var(--gold-subtle)',
     border: '1px solid var(--border-gold)',
     color: 'var(--accent)',
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     padding: '3px 10px',
     fontSize: 11,
     fontWeight: 700,
@@ -153,7 +153,7 @@ const S = {
   rsvpBtnGold: {
     flex: 1,
     height: 42,
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     background: 'var(--accent)',
     color: 'var(--text-on-gold)',
     border: 'none',
@@ -164,7 +164,7 @@ const S = {
   rsvpBtnGhost: {
     flex: 1,
     height: 42,
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     background: 'var(--bg-elevated)',
     color: 'var(--text)',
     border: '1px solid var(--stroke)',

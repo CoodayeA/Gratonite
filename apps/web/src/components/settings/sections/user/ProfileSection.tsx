@@ -267,7 +267,7 @@ const styles = {
   dnsColorInput: {
     width: 44,
     height: 30,
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: '1px solid var(--stroke)',
     background: 'transparent',
     padding: 0,

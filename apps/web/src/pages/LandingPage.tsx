@@ -95,7 +95,7 @@ const s = {
     gap: 12,
     padding: '10px 14px',
     border: `1px solid ${borderSubtle}`,
-    borderRadius: 16,
+    borderRadius: 'var(--radius-lg)',
     background: 'linear-gradient(180deg, rgba(12, 17, 31, 0.78), rgba(10, 15, 28, 0.64))',
     backdropFilter: 'blur(16px) saturate(115%)',
     boxShadow: '0 10px 28px rgba(0, 0, 0, 0.2)',
@@ -107,7 +107,7 @@ const s = {
     width: 48,
     height: 48,
     objectFit: 'contain',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     boxShadow: '0 0 22px rgba(212, 175, 55, 0.12)',
   } as React.CSSProperties,
 
@@ -161,7 +161,7 @@ const s = {
 
   heroCopy: {
     border: `1px solid ${borderSubtle}`,
-    borderRadius: 20,
+    borderRadius: 'var(--radius-xl)',
     background: glassBg,
     backdropFilter: 'blur(20px) saturate(115%)',
     boxShadow: '0 18px 48px rgba(0, 0, 0, 0.28)',
@@ -191,7 +191,7 @@ const s = {
   ctaRow: { display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 6 } as React.CSSProperties,
 
   btnPrimary: {
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     padding: '12px 16px',
     fontWeight: 700,
     textDecoration: 'none',
@@ -202,7 +202,7 @@ const s = {
   } as React.CSSProperties,
 
   btnSecondary: {
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     padding: '12px 16px',
     fontWeight: 700,
     textDecoration: 'none',
@@ -221,7 +221,7 @@ const s = {
   } as React.CSSProperties,
 
   stat: {
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     border: `1px solid ${borderSubtle12}`,
     background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.015))',
     padding: 12,
@@ -239,7 +239,7 @@ const s = {
 
   previewShell: {
     border: `1px solid ${borderSubtle}`,
-    borderRadius: 20,
+    borderRadius: 'var(--radius-xl)',
     background: glassBg,
     backdropFilter: 'blur(20px) saturate(115%)',
     boxShadow: '0 18px 48px rgba(0, 0, 0, 0.28)',
@@ -271,7 +271,7 @@ const s = {
   } as React.CSSProperties,
 
   filterPill: {
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     padding: '6px 10px',
     fontSize: '0.75rem',
     color: 'var(--text-muted)',
@@ -280,7 +280,7 @@ const s = {
   } as React.CSSProperties,
 
   filterPillActive: {
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     padding: '6px 10px',
     fontSize: '0.75rem',
     color: 'var(--text)',
@@ -291,7 +291,7 @@ const s = {
   } as React.CSSProperties,
 
   previewSearch: {
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     padding: '6px 10px',
     fontSize: '0.75rem',
     color: 'var(--text-muted)',
@@ -310,7 +310,7 @@ const s = {
   } as React.CSSProperties,
 
   portalCard: {
-    borderRadius: 14,
+    borderRadius: 'var(--radius-lg)',
     border: `1px solid ${borderSubtle}`,
     background: `linear-gradient(180deg, ${thinGlassBg}, ${thinGlassBg015})`,
     overflow: 'hidden',
@@ -330,7 +330,7 @@ const s = {
   } as React.CSSProperties,
 
   portalChip: {
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     padding: '5px 8px',
     fontSize: '0.7rem',
     fontWeight: 700,
@@ -380,7 +380,7 @@ const s = {
 
   sectionPanel: {
     border: `1px solid ${borderSubtle}`,
-    borderRadius: 20,
+    borderRadius: 'var(--radius-xl)',
     background: 'linear-gradient(180deg, rgba(11, 16, 30, 0.68), rgba(9, 13, 24, 0.6))',
     backdropFilter: 'blur(16px) saturate(110%)',
     boxShadow: '0 16px 42px rgba(0, 0, 0, 0.22)',
@@ -413,7 +413,7 @@ const s = {
 
   featureCard: {
     position: 'relative',
-    borderRadius: 14,
+    borderRadius: 'var(--radius-lg)',
     border: `1px solid ${borderSubtle12}`,
     background: thinGlassBg,
     padding: 14,
@@ -423,7 +423,7 @@ const s = {
   featureLine: {
     width: 48,
     height: 2,
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     background: 'linear-gradient(90deg, #67dfff, #6b8dff, #b26dff)',
     marginBottom: 10,
     opacity: 0.8,
@@ -439,7 +439,7 @@ const s = {
   } as React.CSSProperties,
 
   roadmapCopy: {
-    borderRadius: 14,
+    borderRadius: 'var(--radius-lg)',
     border: `1px solid ${borderSubtle12}`,
     background: thinGlassBg,
     padding: 16,
@@ -482,7 +482,7 @@ const s = {
   } as React.CSSProperties,
 
   roadmapPanel: {
-    borderRadius: 14,
+    borderRadius: 'var(--radius-lg)',
     border: `1px solid ${borderSubtle12}`,
     background: thinGlassBg,
     padding: 16,
@@ -502,7 +502,7 @@ const s = {
     display: 'grid',
     gridTemplateColumns: '44px 1fr',
     gap: 10,
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     borderWidth: 1,
     borderStyle: 'solid',
     borderColor: `${borderSubtle10}`,
@@ -541,7 +541,7 @@ const s = {
     gridTemplateColumns: '1.1fr auto',
     gap: 20,
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: 'var(--radius-lg)',
     border: `1px solid ${borderSubtle12}`,
     background: `radial-gradient(420px 200px at 15% 10%, rgba(103, 223, 255, 0.08), transparent 75%),
       radial-gradient(380px 220px at 90% 20%, rgba(178, 109, 255, 0.08), transparent 75%),
@@ -563,7 +563,7 @@ const s = {
   footer: {
     padding: 18,
     border: `1px solid ${borderSubtle12}`,
-    borderRadius: 18,
+    borderRadius: 'var(--radius-xl)',
     background: 'linear-gradient(180deg, rgba(10, 14, 26, 0.64), rgba(8, 12, 22, 0.56))',
     backdropFilter: 'blur(14px) saturate(110%)',
     boxShadow: '0 12px 36px rgba(0, 0, 0, 0.18)',
@@ -584,7 +584,7 @@ const s = {
     borderWidth: 1,
     borderStyle: 'solid',
     borderColor: `${borderSubtle10}`,
-    borderRadius: 14,
+    borderRadius: 'var(--radius-lg)',
     background: thinGlassBg,
     padding: 14,
   } as React.CSSProperties,
@@ -592,7 +592,7 @@ const s = {
   footerLogo: {
     width: 80,
     height: 80,
-    borderRadius: 18,
+    borderRadius: 'var(--radius-xl)',
     objectFit: 'contain',
     boxShadow: '0 0 20px rgba(103, 144, 255, 0.12)',
   } as React.CSSProperties,
@@ -610,7 +610,7 @@ const s = {
     display: 'grid',
     alignContent: 'start',
     gap: 8,
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     borderWidth: 1,
     borderStyle: 'solid',
     borderColor: `${borderSubtle10}`,

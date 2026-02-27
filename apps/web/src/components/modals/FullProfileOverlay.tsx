@@ -213,7 +213,7 @@ const styles = {
     width: '100%',
     padding: '8px 10px',
     border: 'none',
-    borderRadius: 4,
+    borderRadius: 'var(--radius-sm)',
     background: 'transparent',
     color: 'var(--text-primary, #f2f3f5)',
     fontSize: 14,

@@ -57,7 +57,7 @@ const styles = {
   dmIntroIcon: {
     width: 40,
     height: 40,
-    borderRadius: 100,
+    borderRadius: 'var(--radius-pill)',
     display: 'grid',
     placeItems: 'center',
     background: 'var(--bg-purple-velvet)',

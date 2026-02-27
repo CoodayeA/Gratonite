@@ -116,7 +116,7 @@ const s = {
   gemFrame: {
     width: 64,
     height: 64,
-    borderRadius: 16,
+    borderRadius: 'var(--radius-lg)',
     background: 'rgba(212, 175, 55, 0.12)',
     display: 'flex',
     alignItems: 'center',

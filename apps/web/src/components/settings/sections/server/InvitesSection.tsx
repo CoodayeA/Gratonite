@@ -73,7 +73,7 @@ const styles = {
     color: 'var(--text-muted)',
     border: '1px solid var(--stroke)',
     background: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     padding: '4px 8px',
     fontFamily: 'monospace',
     userSelect: 'all',

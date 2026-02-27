@@ -118,7 +118,7 @@ const s: Record<string, React.CSSProperties> = {
   accentSwatch: {
     width: 32,
     height: 32,
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: '1px solid var(--stroke)',
     cursor: 'pointer',
     flexShrink: 0,
@@ -133,7 +133,7 @@ const s: Record<string, React.CSSProperties> = {
     color: 'var(--text-faint)',
     background: 'none',
     border: '1px solid var(--stroke)',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     padding: '4px 10px',
     cursor: 'pointer',
     whiteSpace: 'nowrap' as const,
@@ -155,7 +155,7 @@ const s: Record<string, React.CSSProperties> = {
 function modePill(active: boolean): React.CSSProperties {
   return {
     padding: '5px 14px',
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     fontSize: 13,
     fontWeight: active ? 600 : 400,
     border: `1px solid ${active ? 'var(--accent)' : 'var(--stroke)'}`,
@@ -178,7 +178,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
         position: 'relative',
         width: 40,
         height: 22,
-        borderRadius: 11,
+        borderRadius: 'var(--radius-lg)',
         border: 'none',
         background: checked ? 'var(--accent)' : 'var(--bg-soft)',
         cursor: 'pointer',

@@ -37,7 +37,7 @@ const styles = {
 
   card: {
     background: '#353348',
-    borderRadius: 16,
+    borderRadius: 'var(--radius-lg)',
     padding: 40,
     maxWidth: 420,
     width: '100%',
@@ -94,7 +94,7 @@ const styles = {
     color: '#a8a4b8',
     background: '#25243a',
     padding: '5px 12px',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
   } as React.CSSProperties,
 
   statDotMembers: {
@@ -125,7 +125,7 @@ const styles = {
     background: '#d4af37',
     color: '#1a1a2e',
     border: 'none',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     fontSize: 15,
     fontWeight: 600,
     cursor: 'pointer',

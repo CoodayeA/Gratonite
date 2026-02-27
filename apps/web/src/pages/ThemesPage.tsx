@@ -53,7 +53,7 @@ const s = {
   createBtn: {
     padding: '10px 20px',
     border: 'none',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     background: '#d4af37',
     color: '#1a1a2e',
     fontSize: 14,
@@ -64,7 +64,7 @@ const s = {
     display: 'flex',
     gap: 4,
     background: '#25243a',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     padding: 4,
     marginBottom: 20,
     width: 'fit-content',
@@ -72,7 +72,7 @@ const s = {
   tab: {
     padding: '8px 20px',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'transparent',
     color: '#a8a4b8',
     fontSize: 14,
@@ -82,7 +82,7 @@ const s = {
   tabActive: {
     padding: '8px 20px',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: '#413d58',
     color: '#e8e4e0',
     fontSize: 14,
@@ -93,7 +93,7 @@ const s = {
     display: 'flex',
     gap: 4,
     background: '#25243a',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     padding: 4,
     marginBottom: 20,
     width: 'fit-content',
@@ -101,7 +101,7 @@ const s = {
   filterBtn: {
     padding: '6px 14px',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'transparent',
     color: '#a8a4b8',
     fontSize: 13,
@@ -111,7 +111,7 @@ const s = {
   filterBtnActive: {
     padding: '6px 14px',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: '#413d58',
     color: '#e8e4e0',
     fontSize: 13,
@@ -121,7 +121,7 @@ const s = {
   error: {
     background: 'rgba(232, 90, 110, 0.1)',
     border: '1px solid rgba(232, 90, 110, 0.3)',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     padding: '12px 16px',
     marginBottom: 16,
     color: '#e85a6e',
@@ -153,7 +153,7 @@ const s = {
   },
   themeCard: {
     background: '#25243a',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
@@ -162,7 +162,7 @@ const s = {
   },
   themeCardInstalled: {
     background: '#25243a',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
@@ -217,7 +217,7 @@ const s = {
   },
   themeTag: {
     padding: '2px 8px',
-    borderRadius: 4,
+    borderRadius: 'var(--radius-sm)',
     background: '#413d58',
     color: '#a8a4b8',
     fontSize: 11,
@@ -232,7 +232,7 @@ const s = {
   },
   builtIn: {
     padding: '2px 6px',
-    borderRadius: 4,
+    borderRadius: 'var(--radius-sm)',
     background: 'rgba(212, 175, 55, 0.15)',
     color: '#d4af37',
     fontSize: 10,
@@ -247,7 +247,7 @@ const s = {
   installBtn: {
     padding: '7px 14px',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: '#d4af37',
     color: '#1a1a2e',
     fontSize: 12,
@@ -258,7 +258,7 @@ const s = {
   uninstallBtn: {
     padding: '7px 14px',
     border: '1px solid rgba(232, 90, 110, 0.3)',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'transparent',
     color: '#e85a6e',
     fontSize: 12,
@@ -268,7 +268,7 @@ const s = {
   previewBtn: {
     padding: '7px 14px',
     border: '1px solid #4a4660',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'transparent',
     color: '#a8a4b8',
     fontSize: 12,
@@ -281,7 +281,7 @@ const s = {
   },
   installedCard: {
     background: '#25243a',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     padding: 16,
     display: 'flex',
     alignItems: 'center',
@@ -290,7 +290,7 @@ const s = {
   previewSm: {
     width: 64,
     height: 48,
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: '#353348',
     backgroundSize: 'cover',
     backgroundPosition: 'center',
@@ -318,7 +318,7 @@ const s = {
   applyBtn: {
     padding: '7px 14px',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: '#d4af37',
     color: '#1a1a2e',
     fontSize: 12,
@@ -347,7 +347,7 @@ const s = {
   },
   createOption: {
     background: '#25243a',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     padding: 24,
     textAlign: 'center',
     display: 'flex',
@@ -369,7 +369,7 @@ const s = {
   createOptionBtn: {
     padding: '8px 20px',
     border: '1px solid #4a4660',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'transparent',
     color: '#e8e4e0',
     fontSize: 13,

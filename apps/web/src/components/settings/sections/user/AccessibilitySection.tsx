@@ -47,7 +47,7 @@ const styles = {
   toggleIndicator: {
     width: 38,
     height: 20,
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     background: 'rgba(255, 255, 255, 0.15)',
     border: '1px solid var(--stroke)',
     position: 'relative',
@@ -56,7 +56,7 @@ const styles = {
   toggleIndicatorChecked: {
     width: 38,
     height: 20,
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     background: 'rgba(212, 175, 55, 0.35)',
     border: '1px solid rgba(212, 175, 55, 0.5)',
     position: 'relative',
