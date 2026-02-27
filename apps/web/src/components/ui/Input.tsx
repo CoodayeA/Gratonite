@@ -52,8 +52,8 @@ const inputFieldBase = {
 const inputFieldFocused = {
   ...inputFieldBase,
   borderColor: V.accent,
-  boxShadow: '0 0 0 2px rgba(212, 175, 55, 0.22)',
-  background: 'rgba(8, 14, 26, 0.88)',
+  boxShadow: '0 0 0 2px var(--gold-subtle, rgba(212, 175, 55, 0.19))',
+  background: 'var(--bg-float)',
 } as React.CSSProperties;
 
 const inputFieldError = {
