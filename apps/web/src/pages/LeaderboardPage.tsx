@@ -68,7 +68,7 @@ const styles = {
   filterPill: (active: boolean) =>
     ({
       padding: '6px 18px',
-      borderRadius: 20,
+      borderRadius: 'var(--radius-xl)',
       border: active ? '1.5px solid var(--accent)' : '1.5px solid var(--stroke)',
       background: active ? 'var(--accent)' : 'transparent',
       color: active ? 'var(--text-on-gold, #1a1625)' : 'var(--text-muted)',
@@ -94,9 +94,9 @@ const styles = {
       flexDirection: 'column',
       alignItems: 'center',
       padding: isFirst ? '28px 28px 24px' : '22px 24px 20px',
-      borderRadius: 16,
+      borderRadius: 'var(--radius-lg)',
       background: 'var(--bg-elevated, #353348)',
-      border: isFirst ? '1px solid rgba(212,175,55,0.35)' : '1px solid var(--stroke)',
+      border: isFirst ? '1px solid var(--border-gold)' : '1px solid var(--stroke)',
       width: isFirst ? 200 : 170,
       position: 'relative',
       marginBottom: isFirst ? 16 : 0,
@@ -160,7 +160,7 @@ const styles = {
 
   /* Table */
   tableWrapper: {
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     overflow: 'hidden',
     border: '1px solid var(--stroke)',
     background: 'var(--bg-elevated, #353348)',
@@ -239,9 +239,9 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '14px 20px',
-    borderRadius: 10,
-    background: 'rgba(212,175,55,0.1)',
-    border: '1px solid rgba(212,175,55,0.3)',
+    borderRadius: 'var(--radius-md)',
+    background: 'var(--gold-glow)',
+    border: '1px solid var(--border-gold)',
     marginTop: 8,
   } as React.CSSProperties,
 
