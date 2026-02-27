@@ -8,6 +8,7 @@ import { usePresenceStore } from '@/stores/presence.store';
 import { startOutgoingCall } from '@/lib/dmCall';
 import { useCallStore } from '@/stores/call.store';
 import { SkeletonAvatar, Skeleton } from '@/components/ui/Skeleton';
+import { SearchInput } from '@/components/ui/SearchInput';
 
 type FilterTab = 'all' | 'online' | 'pending' | 'blocked';
 
@@ -385,22 +386,12 @@ export function FriendsPage() {
           </div>
 
           {/* Search bar */}
-          <input
-            type="text"
-            placeholder="Search friends..."
+          <SearchInput
+            size="compact"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              borderRadius: 'var(--radius-sm)',
-              border: `1px solid ${V.stroke}`,
-              background: V.bgInput,
-              color: V.text,
-              fontSize: 13,
-              outline: 'none',
-              boxSizing: 'border-box',
-            } as React.CSSProperties}
+            placeholder="Search friends..."
+            onClear={() => setSearchQuery('')}
           />
         </div>
 
