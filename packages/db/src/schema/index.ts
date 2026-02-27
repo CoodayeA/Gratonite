@@ -11,3 +11,4 @@ export * from './voice';
 export * from './bots';
 export * from './gratonites';
 export * from './shop';
+export * from './cosmetics';

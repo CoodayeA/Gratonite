@@ -1,388 +1,341 @@
 {
   "project": "Gratonite",
-  "branchName": "ralph/feature-wiring-and-polish",
-  "description": "Wire all missing create/submit flows (Polls, ScheduledMsgs, Q&A, Events, Wiki, Bots, Shop), add missing backend endpoints (mutuals, status, widgets, badges), add loading skeletons + 404 + error boundaries, and align key screens to gratonite.pen mockups.",
+  "branchName": "ralph/creator-marketplace",
+  "description": "Creator Marketplace — Enable users to create and sell cosmetics (avatar decorations, effects, nameplates, soundboard) with full upload, browse, purchase, and application flow.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "PollsPage — Create Poll modal",
-      "description": "As a user, I want to create a poll from PollsPage so that I can gather votes from my community.",
+      "title": "Database schema — Cosmetics tables and enums",
+      "description": "As a developer, I need database tables to store cosmetics, purchases, and creator analytics.",
       "acceptanceCriteria": [
-        "Clicking 'Create Poll' button opens a modal",
-        "Modal form has: question text input (max 300 chars), at least 2 answer option inputs (up to 10, add/remove buttons), allow multiselect toggle, optional duration select (1h / 24h / 7d / No expiry)",
-        "On submit: calls api.polls.create(channelId, { question, answers: [{text}], allowMultiselect, duration }) — channelId from useParams",
-        "On success: closes modal, invalidates polls query so list refreshes",
-        "Submit button disabled while loading; shows error message on failure",
-        "Also fix: PollsPage vote handler must call api.polls.vote(pollId, [answerId]) — verify it uses api.polls.vote not a raw fetch to /vote",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Add cosmetic_type enum: 'avatar_decoration' | 'effect' | 'nameplate' | 'soundboard'",
+        "Add cosmetics table: { id (uuid), creator_id (uuid FK users), name (text), description (text), type (cosmetic_type), preview_image_url (text), asset_url (text), price (integer cents), created_at, updated_at, is_published (boolean default false) }",
+        "Add cosmetic_purchases table: { id (uuid), user_id (uuid FK users), cosmetic_id (uuid FK cosmetics), purchased_at (timestamptz), is_equipped (boolean default false) }",
+        "Add database indexes on creator_id, type, is_published for query performance",
+        "Generate migration files and run successfully with no errors",
+        "Typecheck passes"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "File: apps/web/src/pages/PollsPage.tsx. api.polls.create is at /channels/:channelId/polls. api.polls.vote is at POST /polls/:pollId/answers."
+      "passes": false,
+      "notes": "Files: packages/db/src/schema/cosmetics.ts (new), apps/api/src/modules/db/migrations/"
     },
     {
       "id": "US-002",
-      "title": "ScheduledMsgsPage — Schedule Message form",
-      "description": "As a user, I want to schedule a message to be sent later so that I can plan announcements.",
+      "title": "Backend — Cosmetics CRUD endpoints",
+      "description": "As a developer, I need backend APIs to create, list, update, and delete cosmetics.",
       "acceptanceCriteria": [
-        "Clicking 'Schedule Message' button opens a modal",
-        "Modal form has: channel select (populated from api.guilds.getChannels(guildId)), message content textarea (max 4000 chars), date+time picker for scheduled time (must be in the future)",
-        "On submit: calls api.scheduledMessages.create(guildId, { channelId, content, scheduledFor: isoString })",
-        "On success: closes modal, invalidates scheduled messages query so list refreshes",
-        "Submit button disabled while loading; shows inline error on failure",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Add POST /cosmetics endpoint: creates a draft cosmetic for the authenticated creator — body: { name, description, type, preview_image_url?, asset_url? } — returns cosmetic with is_published: false",
+        "Add GET /cosmetics/:id endpoint: returns cosmetic details including preview image and asset URLs",
+        "Add PATCH /cosmetics/:id endpoint: authenticated creator can update name, description, preview_image_url, asset_url, price, is_published — creator_id must match or 403",
+        "Add DELETE /cosmetics/:id endpoint: authenticated creator can delete unpublished cosmetics only — must own the cosmetic or 403",
+        "Add GET /cosmetics/creator/:creatorId endpoint: returns all published cosmetics by creator with pagination — used by marketplace browse",
+        "Add GET /users/@me/cosmetics endpoint: returns authenticated user's draft and published cosmetics",
+        "Typecheck passes"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "File: apps/web/src/pages/ScheduledMsgsPage.tsx. guildId from useParams. api.scheduledMessages.create at POST /guilds/:guildId/scheduled-messages."
+      "passes": false,
+      "notes": "Files: apps/api/src/modules/cosmetics/cosmetics.router.ts (new), apps/api/src/modules/cosmetics/cosmetics.service.ts (new)"
     },
     {
       "id": "US-003",
-      "title": "QAPage — Ask Question modal",
-      "description": "As a user, I want to submit a new question on the Q&A page so that others can answer it.",
+      "title": "Backend — Cosmetics purchase and equip endpoints",
+      "description": "As a developer, I need purchase and equip endpoints to handle cosmetic transactions.",
       "acceptanceCriteria": [
-        "Clicking 'Ask Question' button opens a modal",
-        "Modal form has: question title input (required, max 300 chars), optional body/details textarea (max 2000 chars)",
-        "On submit: POST to /api/v1/qa/channels/${channelId}/questions with { title, body } — matching the existing raw fetch pattern in the page",
-        "On success: closes modal, refreshes questions list",
-        "Submit button disabled while loading; shows error on failure",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Add POST /cosmetics/:id/purchase endpoint: authenticated user purchases a cosmetic — deducts price from wallet, creates cosmetic_purchases record with is_equipped: false, returns success or insufficient_balance error",
+        "Add PATCH /cosmetics/:id/equip endpoint: authenticated user equips a cosmetic they own — sets is_equipped: true on their purchase record, can only equip one per type (e.g. one avatar_decoration at a time)",
+        "Add DELETE /cosmetics/:id/equip endpoint: unequips a cosmetic — sets is_equipped: false",
+        "Add GET /users/@me/equipped-cosmetics endpoint: returns array of currently equipped cosmetics by type { type, cosmetic_id, asset_url }",
+        "Wallet deduction is atomic — purchase fails entirely if wallet deduction fails",
+        "Typecheck passes"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "File: apps/web/src/pages/QAPage.tsx. channelId from useParams. Uses raw fetch (not api.ts) to match existing page pattern."
+      "passes": false,
+      "notes": "Files: apps/api/src/modules/cosmetics/cosmetics.service.ts, apps/api/src/modules/wallet/wallet.service.ts (modify)"
     },
     {
       "id": "US-004",
-      "title": "EventsPage — Create Event button + RSVP wiring",
-      "description": "As a user, I want to create events and RSVP to them from the Events page.",
+      "title": "Backend — Cosmetics image upload handler",
+      "description": "As a developer, I need to handle image uploads for cosmetics (preview and assets).",
       "acceptanceCriteria": [
-        "Clicking 'Create Event' button navigates to /events/${guildId}/create (CreateEventPage already exists)",
-        "Each event card has an RSVP/Interested toggle button",
-        "Clicking RSVP (not yet interested): calls api.events.setInterested(guildId, eventId) — PUT /guilds/:guildId/scheduled-events/:eventId/interested",
-        "Clicking again (already interested): calls api.events.removeInterested(guildId, eventId) — DELETE same endpoint",
-        "Button shows correct state (interested vs not) based on event data; optimistic UI update on click",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Add POST /cosmetics/upload endpoint: multipart/form-data handler for preview_image and asset_image uploads — uses MinIO S3 to store files",
+        "Returns { preview_image_url, asset_url } — full URLs to the uploaded files",
+        "File size limits: 10MB for preview, 50MB for asset",
+        "Supported formats: PNG, JPEG for preview; PNG for asset (transparency support)",
+        "Files stored in MinIO with path structure: cosmetics/{cosmetic_id}/{timestamp}-{filename}",
+        "Typecheck passes"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "File: apps/web/src/pages/EventsPage.tsx. api.events.setInterested and removeInterested exist in api.ts at lines 1140/1143."
+      "passes": false,
+      "notes": "Files: apps/api/src/modules/cosmetics/cosmetics.router.ts (add upload handler), use existing MinIO config"
     },
     {
       "id": "US-005",
-      "title": "WikiPage — Add page handler",
-      "description": "As a user, I want to create new wiki pages so that I can document my community.",
+      "title": "Frontend API client — Cosmetics namespace",
+      "description": "As a frontend developer, I need API methods to call cosmetics endpoints.",
       "acceptanceCriteria": [
-        "Clicking '+Add page' in sidebar shows an inline title input or small modal",
-        "On submit: calls api.wiki.create(channelId, { title, content: '' })",
-        "New page appears in sidebar page list and becomes the active/selected page",
-        "Empty state shown for new page with 'Start writing...' prompt",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Add api.cosmetics namespace in apps/web/src/lib/api.ts with methods: create, get, update, delete, listByCreator, listMyCosm etics, purchase, equip, unequip, getEquipped, upload",
+        "upload method: FormData POST to /cosmetics/upload, returns { preview_image_url, asset_url }",
+        "All methods use apiFetch with proper error handling",
+        "Purchase method revalidates user wallet after success",
+        "Typecheck passes"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "File: apps/web/src/pages/WikiPage.tsx line 264. api.wiki.create at POST /channels/:channelId/wiki."
+      "passes": false,
+      "notes": "File: apps/web/src/lib/api.ts"
     },
     {
       "id": "US-006",
-      "title": "WikiPage — Edit, History, and More handlers",
-      "description": "As a user, I want to edit wiki pages, view revision history, and delete/rename pages.",
+      "title": "Frontend — Creator Dashboard page structure",
+      "description": "As a creator, I want a dashboard to manage my cosmetics.",
       "acceptanceCriteria": [
-        "Clicking 'Edit' button: toggles page body into a markdown textarea editor pre-filled with current content; 'Save' button calls api.wiki.update(pageId, { title, content }); 'Cancel' reverts to view mode",
-        "Clicking 'History' button: calls api.wiki.getRevisions(pageId), shows a drawer/panel listing revisions with timestamps; clicking a revision shows its content; 'Revert' button calls api.wiki.revert(pageId, revisionId)",
-        "Clicking 'More' button: opens a small dropdown menu with 'Rename' and 'Delete' options",
-        "Rename: shows an inline title input, on confirm calls api.wiki.update(pageId, { title })",
-        "Delete: shows confirmation dialog, on confirm calls api.wiki.delete(pageId), navigates to first remaining page",
+        "Create apps/web/src/pages/CreatorDashboardPage.tsx with two-tab layout: 'My Cosmetics' (draft + published) and 'Analytics'",
+        "My Cosmetics tab shows cards in grid: [Thumbnail] Name Type | Price | [Edit] [Delete] [Publish/Unpublish] [Stats]",
+        "+ Create New Cosmetic button opens a modal or navigates to /creator/cosmetics/new",
+        "Cosmetics list shows draft items first (grey badge 'Draft'), then published items",
+        "Filters: All Types, Avatar Decorations, Effects, Nameplates, Soundboard",
+        "Add route /creator/dashboard in App.tsx",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": true,
-      "notes": "File: apps/web/src/pages/WikiPage.tsx lines 292-294. api.wiki.update, delete, getRevisions, revert all exist in api.ts lines 1087-1099."
+      "passes": false,
+      "notes": "File: apps/web/src/pages/CreatorDashboardPage.tsx (new), update App.tsx routes"
     },
     {
       "id": "US-007",
-      "title": "BotsPage — New Application + Configure dialog",
-      "description": "As a developer, I want to create and configure bot applications from the Bots page.",
+      "title": "Frontend — Create/Edit Cosmetic form",
+      "description": "As a creator, I want to upload and configure a cosmetic.",
       "acceptanceCriteria": [
-        "Clicking 'New Application' opens a modal with: app name input (required), description textarea (optional)",
-        "On submit: POST to /api/v1/bots with { name, description } (raw fetch, matching existing page pattern)",
-        "On success: refreshes bot list",
-        "Each bot in 'My Apps' tab has a 'Configure' button that opens a config modal showing: bot name (editable), description (editable), bot token (masked, with copy button), webhook URL input",
-        "Config modal Save button: PATCH to /api/v1/bots/${botId} with changed fields",
+        "Create apps/web/src/components/cosmetics/CosmeticForm.tsx reusable component (mode: 'create' | 'edit')",
+        "Form fields: Name (required, max 100), Description (optional, max 1000), Type dropdown (required), Price input (cents, optional for draft), Preview Image upload (drag/drop or file picker), Asset upload (drag/drop or file picker)",
+        "On file drop/select: shows preview thumbnail for images; shows file size + format validation inline",
+        "On Name blur: auto-generates URL-safe slug (used internally if needed)",
+        "Save as Draft button: saves without preview/asset URLs, allows later upload",
+        "Save & Publish button: requires all fields + preview + asset; uploads images to MinIO, then saves cosmetic as is_published: true",
+        "Success toast: 'Cosmetic published!' or 'Draft saved'",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
-      "passes": true,
-      "notes": "File: apps/web/src/pages/BotsPage.tsx lines 335, 428-429. Uses raw fetch (not api.ts namespace) matching existing page pattern."
+      "passes": false,
+      "notes": "File: apps/web/src/components/cosmetics/CosmeticForm.tsx (new)"
     },
     {
       "id": "US-008",
-      "title": "ShopPage — Buy More Gratonites button",
-      "description": "As a user, I want the 'Buy More' button in the Shop balance banner to take me somewhere to get more currency.",
+      "title": "Frontend — Cosmetics Marketplace browse page",
+      "description": "As a user, I want to browse cosmetics from all creators.",
       "acceptanceCriteria": [
-        "Clicking 'Buy More' button navigates to /gratonite (GratoniteDashboard) where the economy/rewards hub lives",
-        "Button uses useNavigate() from react-router-dom — no full page reload",
+        "Create apps/web/src/pages/CosmeticsMarketplacePage.tsx",
+        "Grid of cosmetic cards: [Preview Image] Name Creator | Price | [View] or [Buy] or [Equipped] (based on ownership/equip state)",
+        "Filter bar: Type dropdown (All, Avatar Decorations, Effects, Nameplates, Soundboard), Sort dropdown (Newest, Most Popular, Price: Low→High, Price: High→Low)",
+        "Search bar: filters by cosmetic name",
+        "Pagination or infinite scroll loading",
+        "Creator avatar chip on each card with creator name link to /profile/:creatorId",
+        "Clicking card opens detail modal or navigates to /cosmetics/:id",
+        "Add route /cosmetics in App.tsx",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 8,
-      "passes": true,
-      "notes": "File: apps/web/src/pages/ShopPage.tsx line 702. Simple navigate fix — no backend needed."
+      "passes": false,
+      "notes": "File: apps/web/src/pages/CosmeticsMarketplacePage.tsx (new), update App.tsx routes"
     },
     {
       "id": "US-009",
-      "title": "Backend — Mutual friends/servers endpoint",
-      "description": "As a developer, I need a /relationships/mutuals/:userId endpoint so that FriendsPage and UserProfilePage can show real mutual friends and servers.",
+      "title": "Frontend — Cosmetic detail modal / page",
+      "description": "As a user, I want to see full details of a cosmetic before buying.",
       "acceptanceCriteria": [
-        "Add GET /relationships/mutuals/:userId endpoint in apps/api/src/modules/relationships/relationships.router.ts (or service)",
-        "Returns { mutualFriends: Array<{id, username, displayName, avatarHash}>, mutualServers: Array<{id, name, iconHash}> }",
-        "mutualFriends: users who have an active 'friend' relationship with BOTH the current user AND the target user",
-        "mutualServers: guild IDs where both the current user and target user are members (join guild_members table)",
-        "Endpoint already present in api.ts at /users/${userId}/mutuals (line 498) — register the actual route handler",
-        "FriendsPage already shows mutual friends section — it will render real data once backend returns it",
-        "UserProfilePage already calls api.users.getMutuals(userId) — will work once backend returns real data",
-        "Typecheck passes"
+        "Create apps/web/src/components/cosmetics/CosmeticDetailModal.tsx or page variant",
+        "Shows: large preview image, name, creator (clickable to profile), type badge, description, price in Gratonites",
+        "Preview section: if available, show asset in a themed preview (small mockup of avatar with decoration, or effect animation, etc.)",
+        "Call-to-action: [Buy Now] if user doesn't own it, [Equip] if owned but not equipped, [Unequip] if equipped, [Go to Creator] link to creator profile",
+        "Creator info section: creator name, cosmetics count, total sales count",
+        "Related cosmetics: show 3-4 other cosmetics by same creator or same type",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 9,
-      "passes": true,
-      "notes": "api.ts line 496-498 already has the frontend call to /users/:userId/mutuals. Backend needs to implement the handler."
+      "passes": false,
+      "notes": "File: apps/web/src/components/cosmetics/CosmeticDetailModal.tsx (new)"
     },
     {
       "id": "US-010",
-      "title": "Backend — Custom status API + SettingsPage wiring",
-      "description": "As a user, I want my custom status to save to the server so it persists across devices.",
+      "title": "Frontend — Purchase flow and confirmation",
+      "description": "As a user, I want to purchase a cosmetic with confirmation and balance check.",
       "acceptanceCriteria": [
-        "Check packages/db/src/schema/users.ts — if statusText and statusExpiresAt columns do not exist, add them (text nullable, timestamptz nullable) — additive migration only",
-        "Add PATCH /users/@me/status endpoint in users router — body: { text: string | null, expiresAt: string | null }",
-        "Endpoint updates the user's statusText and statusExpiresAt in the DB",
-        "Add api.users.updateCustomStatus to apps/web/src/lib/api.ts: apiFetch('/users/@me/status', { method: 'PATCH', body: JSON.stringify(data) })",
-        "In SettingsPage.tsx handleSaveStatus(): after calling saveProfileEnhancementsPrefs, also call api.users.updateCustomStatus({ text: statusInput.trim(), expiresAt })",
-        "Typecheck passes"
+        "Clicking [Buy Now] shows a purchase confirmation modal: cosmetic preview + name + price + current wallet balance + [Confirm Purchase] [Cancel]",
+        "On Confirm: calls api.cosmetics.purchase(cosmeticId)",
+        "Success: toast 'Cosmetic added to your collection!', modal closes, card updates to [Equip] state",
+        "Insufficient balance: shows error modal 'Not enough Gratonites. Upgrade your balance?' with link to /gratonite",
+        "Purchase is instant and atomic — wallet + cosmetic_purchases table both update or neither",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 10,
-      "passes": true,
-      "notes": "File: apps/api/src/modules/users/users.router.ts, apps/web/src/pages/SettingsPage.tsx line 634."
+      "passes": false,
+      "notes": "File: apps/web/src/components/cosmetics/PurchaseConfirmModal.tsx (new)"
     },
     {
       "id": "US-011",
-      "title": "Backend — Profile widgets save + UserProfilePage real data",
-      "description": "As a user, I want the profile widgets I set in Settings to actually save and appear on my profile.",
+      "title": "Frontend — Equip/Unequip cosmetics",
+      "description": "As a user, I want to equip cosmetics to my profile.",
       "acceptanceCriteria": [
-        "Check packages/db/src/schema/users.ts — if a widgets/profileWidgets JSONB column does not exist, add it (jsonb nullable default null) — additive migration only",
-        "Include widgets in GET /users/:id profile response (return from users service getProfile)",
-        "Add PATCH /users/@me/widgets endpoint — body: { widgets: string[] } — persists to DB",
-        "Add api.users.updateWidgets to apps/web/src/lib/api.ts",
-        "Wire SettingsPage widgets save button (currently calls saveProfileEnhancementsPrefs only) to also call api.users.updateWidgets(widgets)",
-        "UserProfilePage already reads (profile as any)?.widgets ?? [] — will show real data once backend returns it",
-        "Typecheck passes"
+        "In Cosmetics Marketplace or inventory: [Equip] button calls api.cosmetics.equip(cosmeticId)",
+        "On success: button changes to [Equipped], toast 'Cosmetic equipped!'",
+        "Clicking [Equipped]: shows [Unequip] option; unequip call removes the equipped state",
+        "One cosmetic per type at a time — if user tries to equip a second avatar_decoration, previous one auto-unequips with notification",
+        "Equipped cosmetics are also visible in user inventory page (/cosmetics/inventory)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 11,
-      "passes": true,
-      "notes": "File: apps/api/src/modules/users/users.router.ts, apps/web/src/pages/SettingsPage.tsx, UserProfilePage.tsx line 416."
+      "passes": false,
+      "notes": "File: apps/web/src/pages/CosmeticsInventoryPage.tsx (new) — shows user's owned cosmetics"
     },
     {
       "id": "US-012",
-      "title": "Backend — Profile badges computed from real user data",
-      "description": "As a user, I want my profile to show accurate badges based on my account data.",
+      "title": "Frontend — User cosmetics inventory page",
+      "description": "As a user, I want to see all my owned cosmetics in one place.",
       "acceptanceCriteria": [
-        "In GET /users/:id profile response (users service), include a computed badges: string[] field",
-        "Badge logic: 'Crystalline' if tier === 'crystalline'; 'OG' if createdAt year <= 2024; 'Staff' if isAdmin is true for this user",
-        "No new DB columns needed — badges are derived at query time",
-        "UserProfilePage already computes badges from (profile as any).badges — update it to use profile.badges directly (remove the local badges derivation added in previous session)",
-        "Typecheck passes"
+        "Create apps/web/src/pages/CosmeticsInventoryPage.tsx",
+        "Grid of cosmetic cards: [Preview] Name Type | [Equip] or [Equipped] or [Unequip] based on state",
+        "Filter by Type (All, Avatar Decorations, Effects, Nameplates, Soundboard)",
+        "Section at top: 'Equipped Cosmetics' showing currently active items by type",
+        "Add route /cosmetics/inventory in App.tsx",
+        "Link from user profile or settings to view own inventory",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 12,
-      "passes": true,
-      "notes": "File: apps/api/src/modules/users/users.service.ts (or router). UserProfilePage.tsx lines 409-411."
+      "passes": false,
+      "notes": "File: apps/web/src/pages/CosmeticsInventoryPage.tsx (new)"
     },
     {
       "id": "US-013",
-      "title": "Loading skeletons — FriendsPage",
-      "description": "As a user, I want to see loading skeletons while the friends list loads instead of an empty screen.",
+      "title": "Frontend — Apply cosmetics to avatar rendering",
+      "description": "As a user, I want to see my equipped cosmetics on my avatar.",
       "acceptanceCriteria": [
-        "Destructure isLoading from the relationships useQuery call",
-        "While isLoading is true: render 6-8 skeleton rows in the friends list — grey pulsing bars for avatar and name",
-        "Use the existing Skeleton component from apps/web/src/components/ui/ if it exists, otherwise create a simple inline pulse with CSS animation",
-        "Once loaded: renders real friend rows as before",
+        "Modify avatar rendering component (likely in UserCard, UserProfilePage, etc.) to fetch equipped cosmetics via api.cosmetics.getEquipped()",
+        "Avatar decorations: render as CSS overlay layers with position/scale based on cosmetic metadata",
+        "Effects: apply CSS animations or SVG filters from cosmetic asset",
+        "Nameplates: render as styled label above/below avatar",
+        "Soundboard: store reference but defer actual sound playback to later (US-014)",
+        "Cosmetics render in correct z-order and don't break layout",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 13,
-      "passes": true,
-      "notes": "File: apps/web/src/pages/FriendsPage.tsx lines 51-54. Check apps/web/src/components/ui/Skeleton.tsx exists."
+      "passes": false,
+      "notes": "File: apps/web/src/components/Avatar.tsx (modify), apps/web/src/components/UserCard.tsx (modify)"
     },
     {
       "id": "US-014",
-      "title": "Loading skeletons — UserProfilePage",
-      "description": "As a user, I want to see loading states on the profile page while sections fetch data.",
+      "title": "Frontend — Cosmetics context store",
+      "description": "As a developer, I need state management for equipped cosmetics.",
       "acceptanceCriteria": [
-        "While mutuals is loading: show 2-3 skeleton chips in mutual friends and mutual servers sections instead of empty",
-        "While wallet is loading (isOwnProfile): show '— G' with a subtle pulse animation instead of '0 G'",
-        "While friends list is loading: show skeleton rows in left sidebar",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Create apps/web/src/stores/cosmeticsStore.ts using Zustand with: equippedCosmetics: Cosmetic[], loadEquipped(), equip(cosmeticId), unequip(cosmeticId)",
+        "Initialize on app load or user login by fetching api.cosmetics.getEquipped()",
+        "Store is shared globally so avatars across the app can render consistent cosmetics",
+        "Update store on purchase/equip/unequip actions so UI is in sync",
+        "Typecheck passes"
       ],
       "priority": 14,
-      "passes": true,
-      "notes": "File: apps/web/src/pages/UserProfilePage.tsx lines 350-368."
+      "passes": false,
+      "notes": "File: apps/web/src/stores/cosmeticsStore.ts (new)"
     },
     {
       "id": "US-015",
-      "title": "Loading skeletons — SettingsPage",
-      "description": "As a user, I want a loading indicator in Settings while my profile data is refreshing.",
+      "title": "Backend — Creator analytics — Sales count",
+      "description": "As a creator, I want to see how many times my cosmetics sold.",
       "acceptanceCriteria": [
-        "While profile state is null (API call in progress): show a subtle spinner or skeleton in the account section avatar/display name area",
-        "Auth store values (user.displayName, user.avatarHash) still pre-fill the form fields as fallback — just add a small 'Refreshing...' indicator near the avatar",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Add GET /cosmetics/:id/stats endpoint: returns { total_sales, total_revenue_gratonites, created_at, updated_at }",
+        "Queries cosmetic_purchases table for cosmetic_id and counts rows",
+        "Creator can only view stats for their own cosmetics (check creator_id or 403)",
+        "Stats are cached in cosmetics row or computed on query (no separate analytics table for now)",
+        "Typecheck passes"
       ],
       "priority": 15,
-      "passes": true,
-      "notes": "File: apps/web/src/pages/SettingsPage.tsx line 187."
+      "passes": false,
+      "notes": "File: apps/api/src/modules/cosmetics/cosmetics.service.ts (add getStats method)"
     },
     {
       "id": "US-016",
-      "title": "404 catch-all route",
-      "description": "As a user, I want a proper 404 page instead of a blank screen when I navigate to an unknown URL.",
+      "title": "Frontend — Creator Dashboard Analytics tab",
+      "description": "As a creator, I want to see sales and revenue analytics.",
       "acceptanceCriteria": [
-        "Create apps/web/src/pages/NotFoundPage.tsx with on-brand design: charcoal background, large '404' in gold accent, short message ('Page not found'), and a 'Go Home' button using useNavigate to '/'",
-        "Export as named export NotFoundPage",
-        "Add lazy import in App.tsx",
-        "Add <Route path='*' element={<NotFoundPage />} /> as the last route inside the authenticated Routes block",
-        "Navigating to /app/nonexistent-path shows the 404 page",
+        "In CreatorDashboardPage Analytics tab: list all creator's cosmetics with columns: Name | Type | Sales | Revenue (Gratonites) | Avg Price",
+        "Each row is clickable to show detail: cosmetic preview, total sales count, cumulative revenue, sales trend graph (if data exists)",
+        "Summary card at top: Total Sales, Total Revenue, Avg Price per Cosmetic, Most Popular Cosmetic",
+        "Fetch stats via api.cosmetics.getStats(cosmeticId) for each cosmetic",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 16,
-      "passes": true,
-      "notes": "File: apps/web/src/App.tsx, new file apps/web/src/pages/NotFoundPage.tsx."
+      "passes": false,
+      "notes": "File: apps/web/src/pages/CreatorDashboardPage.tsx (add Analytics tab)"
     },
     {
       "id": "US-017",
-      "title": "React error boundaries",
-      "description": "As a user, I want a friendly error screen instead of a white crash when a component throws.",
+      "title": "Frontend — Creator profile cosmetics showcase",
+      "description": "As a user visiting a creator's profile, I want to see their published cosmetics.",
       "acceptanceCriteria": [
-        "Create apps/web/src/components/ErrorBoundary.tsx as a React class component implementing componentDidCatch and getDerivedStateFromError",
-        "Fallback UI: centered panel with 'Something went wrong' message, error details (in dev only), and a 'Reload' button that calls window.location.reload()",
-        "Wrap the authenticated <AppLayout> route in App.tsx with <ErrorBoundary>",
-        "Wrap each major lazy-loaded page group (guild routes, DM routes, settings, shop) in a separate <ErrorBoundary> so one broken page does not crash the app",
-        "Typecheck passes"
+        "In UserProfilePage: if user is a creator, add a 'Cosmetics' section showing their published cosmetics grid",
+        "Click cosmetic card to open detail modal (reuse CosmeticDetailModal from US-009)",
+        "Show total cosmetics count and total sales count in creator bio section",
+        "Link '[View All Cosmetics]' goes to /creator/:creatorId/cosmetics (dedicated creator shop page)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 17,
-      "passes": true,
-      "notes": "File: apps/web/src/App.tsx, new file apps/web/src/components/ErrorBoundary.tsx."
+      "passes": false,
+      "notes": "File: apps/web/src/pages/UserProfilePage.tsx (modify)"
     },
     {
       "id": "US-018",
-      "title": "ChannelPage mockup alignment",
-      "description": "As a user, I want the channel/DM message view to look pixel-accurate to the gratonite.pen mockup.",
+      "title": "Frontend — Dedicated creator shop page",
+      "description": "As a user, I want to browse all cosmetics from a specific creator.",
       "acceptanceCriteria": [
-        "Open gratonite.pen ChannelPage screen and compare to current live ChannelPage at http://localhost:5173",
-        "Fix: message bubble layout (avatar left, content right, timestamp alignment)",
-        "Fix: reaction row pill sizing and hover states",
-        "Fix: message input bar height, attachment button, emoji button, send button placement",
-        "Fix: system messages (join/leave) styling",
-        "Fix: unread divider line if present in mockup",
+        "Create apps/web/src/pages/CreatorShopPage.tsx with route /creator/:creatorId/cosmetics",
+        "Shows creator header: avatar, name, 'Follow'/'Unfollow' button, cosmetics count, sales count, bio snippet",
+        "Grid of creator's published cosmetics below",
+        "Filters: Type, Sort by",
+        "Empty state if creator has no published cosmetics",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 18,
-      "passes": true,
-      "notes": "File: apps/web/src/pages/ChannelPage.tsx. Design source: gratonite.pen ChannelPage screen."
+      "passes": false,
+      "notes": "File: apps/web/src/pages/CreatorShopPage.tsx (new), update App.tsx routes"
     },
     {
       "id": "US-019",
-      "title": "GuildPage sidebar mockup alignment",
-      "description": "As a user, I want the guild channel list and member sidebar to match the gratonite.pen design.",
+      "title": "Integration — Add cosmetics link to main nav",
+      "description": "As a user, I want to access the cosmetics marketplace from the main navigation.",
       "acceptanceCriteria": [
-        "Open gratonite.pen GuildPage mockup and compare ChannelSidebar and MemberList",
-        "Fix: category header text size, uppercase, letter-spacing",
-        "Fix: channel item icon, name, unread badge alignment",
-        "Fix: voice channel entry with participant count",
-        "Fix: member list section headers (Online, Offline) and member row: avatar, username, role badge",
+        "Add 'Cosmetics' or 'Shop' link in main navigation menu (icon rail or sidebar)",
+        "Link points to /cosmetics (CosmeticsMarketplacePage)",
+        "Icon: shopping bag or similar cosmetics-related icon",
+        "Active state highlights when user is on cosmetics routes",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 19,
-      "passes": true,
-      "notes": "Files: apps/web/src/components/sidebar/ChannelSidebar.tsx, MemberList component."
+      "passes": false,
+      "notes": "File: apps/web/src/components/Navigation.tsx or IconRail.tsx (modify)"
     },
     {
       "id": "US-020",
-      "title": "HomePage mockup alignment",
-      "description": "As a user, I want the home/hub page to look exactly like the gratonite.pen mockup.",
+      "title": "Testing — Cosmetics purchase flow e2e",
+      "description": "As a QA engineer, I want to verify the full cosmetic purchase and equip flow works.",
       "acceptanceCriteria": [
-        "Open gratonite.pen HomePage screen and compare to current live /app/",
-        "Fix: hub tile grid layout, card sizing, icon placement, label typography",
-        "Fix: any activity feed or recent servers section spacing",
-        "Fix: quick action buttons (Add Server, Find Friends, etc.) styling",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Create test file: apps/web/src/pages/CosmeticsMarketplacePage.test.tsx or e2e test",
+        "Test scenario: (1) User navigates to /cosmetics, (2) Clicks cosmetic card, (3) Clicks [Buy Now], (4) Confirms purchase, (5) Card updates to [Equip], (6) User navigates to inventory, (7) Cosmetic appears in list, (8) Click [Equip], (9) Cosmetic shows as equipped, (10) Avatar reflects cosmetic visually",
+        "All assertions should pass",
+        "Tests pass"
       ],
       "priority": 20,
-      "passes": true,
-      "notes": "File: apps/web/src/pages/HomePage.tsx."
-    },
-    {
-      "id": "US-021",
-      "title": "UserProfilePage mockup alignment",
-      "description": "As a user, I want my profile page to look exactly like the gratonite.pen mockup.",
-      "acceptanceCriteria": [
-        "Open gratonite.pen UserProfile screen and compare to current live /app/profile/:userId",
-        "Fix: avatar circle size, border, online status dot placement",
-        "Fix: banner image aspect ratio and overlay gradient",
-        "Fix: badges row pill sizing, colors, icons",
-        "Fix: bio section spacing and font",
-        "Fix: widgets pill row styling",
-        "Fix: mutual friends/servers chips layout",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 21,
-      "passes": true,
-      "notes": "File: apps/web/src/pages/UserProfilePage.tsx."
-    },
-    {
-      "id": "US-022",
-      "title": "ShopPage mockup alignment",
-      "description": "As a user, I want the Shop page to look exactly like the gratonite.pen mockup.",
-      "acceptanceCriteria": [
-        "Open gratonite.pen ShopPage screen and compare to current live /app/shop",
-        "Fix: item card grid sizing, image aspect ratio, name/price label placement",
-        "Fix: equip/buy CTA button styling on cards",
-        "Fix: filter/category tab bar alignment",
-        "Fix: balance banner layout and typography",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 22,
-      "passes": true,
-      "notes": "File: apps/web/src/pages/ShopPage.tsx."
-    },
-    {
-      "id": "US-023",
-      "title": "Login + Register pages mockup alignment",
-      "description": "As a new user, I want the login and registration screens to look exactly like the gratonite.pen mockups.",
-      "acceptanceCriteria": [
-        "Open gratonite.pen Login screen and compare to current /app/login",
-        "Fix: card width, padding, logo placement, heading typography",
-        "Fix: input field height, border radius, label positioning",
-        "Fix: Sign In button sizing and gold fill",
-        "Fix: OAuth button row icon + label alignment",
-        "Open gratonite.pen Register screen and apply same audit to /app/register",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 23,
-      "passes": true,
-      "notes": "Files: apps/web/src/pages/auth/LoginPage.tsx, RegisterPage.tsx."
+      "passes": false,
+      "notes": "File: apps/web/src/pages/CosmeticsMarketplacePage.test.tsx (new)"
     }
   ]
 }
