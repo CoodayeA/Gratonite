@@ -20,8 +20,8 @@ const base = {
 } as const;
 
 const sizes = {
-  compact: { height: 36, padding: '0 12px', fontSize: 13, gap: 8 },
-  large:   { height: 44, padding: '0 16px', fontSize: 14, gap: 10 },
+  compact: { height: 36, padding: '0 12px', fontSize: 13, gap: 8, iconSize: 14 },
+  large:   { height: 44, padding: '0 16px', fontSize: 14, gap: 10, iconSize: 16 },
 } as const;
 
 export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
@@ -31,7 +31,17 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
 
     return (
       <div style={{ ...base, height: sz.height, padding: sz.padding, gap: sz.gap, ...style }}>
-        <span style={{ fontSize: sz.fontSize, color: 'var(--text-faint)', flexShrink: 0, lineHeight: 1 }}>🔍</span>
+        <svg
+          width={sz.iconSize}
+          height={sz.iconSize}
+          viewBox="0 0 16 16"
+          fill="none"
+          style={{ flexShrink: 0, color: 'var(--text-faint)' }}
+          aria-hidden
+        >
+          <circle cx="6.5" cy="6.5" r="4" stroke="currentColor" strokeWidth="1.5" />
+          <line x1="9.5" y1="9.5" x2="13" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
         <input
           ref={ref}
           type="search"
