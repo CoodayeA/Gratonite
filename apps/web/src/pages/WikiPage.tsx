@@ -85,7 +85,7 @@ const styles = {
   addBtn: {
     width: 28,
     height: 28,
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     border: 'none',
     background: '#d4af37',
     color: '#1a1a2e',
@@ -119,7 +119,7 @@ const styles = {
     width: '100%',
     padding: '8px 12px',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'transparent',
     color: '#a8a4b8',
     fontSize: 14,
@@ -161,7 +161,7 @@ const styles = {
   } as CSSProperties,
   actionBtn: {
     padding: '6px 14px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     border: '1px solid #4a4660',
     background: 'transparent',
     color: '#a8a4b8',
@@ -171,7 +171,7 @@ const styles = {
   } as CSSProperties,
   actionBtnPrimary: {
     padding: '6px 14px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     border: 'none',
     background: '#d4af37',
     color: '#1a1a2e',
@@ -216,7 +216,7 @@ const styles = {
   createBtn: {
     marginTop: 8,
     padding: '10px 24px',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: 'none',
     background: '#d4af37',
     color: '#1a1a2e',
@@ -234,7 +234,7 @@ const styles = {
   addPageInput: {
     width: '100%',
     padding: '6px 8px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     border: '1px solid #4a4660',
     background: '#2c2c3e',
     color: '#e8e4e0',
@@ -249,7 +249,7 @@ const styles = {
   smallBtn: {
     flex: 1,
     padding: '4px 8px',
-    borderRadius: 5,
+    borderRadius: 'var(--radius-sm)',
     border: '1px solid #4a4660',
     background: 'transparent',
     color: '#a8a4b8',
@@ -259,7 +259,7 @@ const styles = {
   smallBtnPrimary: {
     flex: 1,
     padding: '4px 8px',
-    borderRadius: 5,
+    borderRadius: 'var(--radius-sm)',
     border: 'none',
     background: '#d4af37',
     color: '#1a1a2e',
@@ -339,7 +339,7 @@ const styles = {
   } as CSSProperties,
   revisionItem: {
     padding: '10px 12px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: '#2c2c3e',
     cursor: 'pointer',
     border: '1px solid transparent',
@@ -385,7 +385,7 @@ const styles = {
     marginTop: 4,
     background: '#353348',
     border: '1px solid #4a4660',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     minWidth: 140,
     zIndex: 20,
     overflow: 'hidden',
@@ -416,7 +416,7 @@ const styles = {
   renameInput: {
     width: '100%',
     padding: '6px 8px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     border: '1px solid #d4af37',
     background: '#2c2c3e',
     color: '#e8e4e0',

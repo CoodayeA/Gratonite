@@ -36,7 +36,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '6px 8px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     transition: 'background 0.15s',
   } as React.CSSProperties,
   rowHover: {
@@ -56,7 +56,7 @@ const styles = {
     color: 'var(--text-primary)',
     background: 'var(--bg-elevated)',
     border: '1px solid var(--stroke-strong)',
-    borderRadius: 5,
+    borderRadius: 'var(--radius-sm)',
     padding: '3px 8px',
     minWidth: 24,
     textAlign: 'center',

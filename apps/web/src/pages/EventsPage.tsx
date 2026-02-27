@@ -69,7 +69,7 @@ const styles = {
   },
   createBtn: {
     padding: '8px 20px',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: 'none',
     background: '#d4af37',
     color: '#1a1a2e',
@@ -85,7 +85,7 @@ const styles = {
   },
   filterBtn: {
     padding: '6px 14px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     borderWidth: 1,
     borderStyle: 'solid',
     borderColor: '#4a4660',
@@ -131,7 +131,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     background: '#25243a',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: '1px solid #4a4660',
     overflow: 'hidden',
   },
@@ -179,7 +179,7 @@ const styles = {
   },
   rsvpBtn: {
     padding: '8px 20px',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: 'none',
     background: '#d4af37',
     color: '#1a1a2e',
@@ -189,7 +189,7 @@ const styles = {
   },
   rsvpBtnActive: {
     padding: '8px 20px',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: '1px solid #d4af37',
     background: 'rgba(212,175,55,0.15)',
     color: '#d4af37',
@@ -202,7 +202,7 @@ const styles = {
 const getStatusStyle = (status: string): CSSProperties => {
   const base: CSSProperties = {
     padding: '3px 10px',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     fontSize: 11,
     fontWeight: 600,
     textTransform: 'uppercase',

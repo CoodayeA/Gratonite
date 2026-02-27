@@ -165,7 +165,7 @@ const S = {
     padding: '10px 12px',
     background: 'var(--bg-input)',
     border: '1px solid var(--stroke)',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     color: 'var(--text)',
     fontSize: 14,
     fontFamily: 'inherit',
@@ -191,7 +191,7 @@ const S = {
   },
   interestPill: {
     padding: '6px 16px',
-    borderRadius: 20,
+    borderRadius: 'var(--radius-xl)',
     fontSize: 13,
     fontWeight: 500,
     cursor: 'pointer' as const,
@@ -213,7 +213,7 @@ const S = {
   submitButton: {
     width: '100%',
     height: 48,
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     fontSize: 15,
     fontWeight: 600,
     backgroundColor: 'var(--accent)',

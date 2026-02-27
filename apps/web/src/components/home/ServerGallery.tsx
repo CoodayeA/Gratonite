@@ -97,7 +97,7 @@ const styles = {
   } as React.CSSProperties,
   searchInput: {
     height: 34,
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     border: '1px solid var(--stroke)',
     background: 'rgba(10, 16, 28, 0.58)',
     color: 'var(--text)',
@@ -107,7 +107,7 @@ const styles = {
   } as React.CSSProperties,
   sortSelect: {
     height: 34,
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     border: '1px solid var(--stroke)',
     background: 'rgba(10, 16, 28, 0.58)',
     color: 'var(--text)',
@@ -117,7 +117,7 @@ const styles = {
   } as React.CSSProperties,
   segmented: {
     display: 'inline-flex',
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     border: '1px solid var(--stroke)',
     background: 'rgba(10, 16, 28, 0.58)',
     overflow: 'hidden',
@@ -141,7 +141,7 @@ const styles = {
     borderWidth: 1,
     borderStyle: 'solid',
     borderColor: 'var(--stroke)',
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     background: 'rgba(10, 16, 28, 0.58)',
     color: 'var(--text-muted)',
     fontSize: 11,
@@ -175,7 +175,7 @@ const styles = {
     borderColor: 'rgba(163, 191, 239, 0.12)',
     background: 'rgba(10, 16, 28, 0.44)',
     color: 'var(--text-muted)',
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     padding: '5px 10px',
     fontSize: 11,
     fontWeight: 600,
@@ -227,7 +227,7 @@ const styles = {
   } as React.CSSProperties,
   card: {
     position: 'relative',
-    borderRadius: 18,
+    borderRadius: 'var(--radius-xl)',
     overflow: 'hidden',
     borderWidth: 1,
     borderStyle: 'solid',
@@ -251,7 +251,7 @@ const styles = {
   cardBorder: {
     position: 'absolute',
     inset: -1,
-    borderRadius: 19,
+    borderRadius: 'var(--radius-xl)',
     zIndex: 0,
     pointerEvents: 'none',
     background: 'linear-gradient(135deg, rgba(121, 223, 255, 0.08), transparent 40%, rgba(138, 123, 255, 0.1))',
@@ -272,7 +272,7 @@ const styles = {
     left: 10,
     width: 26,
     height: 26,
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     borderWidth: 1,
     borderStyle: 'solid',
     borderColor: 'rgba(255, 255, 255, 0.22)',
@@ -352,7 +352,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '4px 8px',
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     fontSize: 10,
     fontWeight: 700,
     letterSpacing: '0.05em',
@@ -388,7 +388,7 @@ const styles = {
     zIndex: 2,
     top: 10,
     right: 10,
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     padding: '4px 8px',
     fontSize: 10,
     fontWeight: 700,
@@ -427,7 +427,7 @@ const styles = {
   } as React.CSSProperties,
   featuredBadge: {
     flexShrink: 0,
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     border: '1px solid rgba(255, 215, 125, 0.28)',
     background: 'rgba(255, 215, 125, 0.08)',
     color: '#ffd98d',
@@ -496,7 +496,7 @@ const styles = {
   hoverCta: {
     alignSelf: 'flex-start',
     padding: '6px 10px',
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     border: '1px solid rgba(121, 223, 255, 0.38)',
     background: 'rgba(121, 223, 255, 0.12)',
     color: 'var(--text)',
@@ -852,7 +852,7 @@ export function ServerGallery({ onOpenDirectMessages }: ServerGalleryProps) {
                     iconHash={guild.iconHash}
                     size={compact ? 42 : 56}
                     style={{
-                      borderRadius: 14,
+                      borderRadius: 'var(--radius-lg)',
                       border: '2px solid rgba(255, 255, 255, 0.22)',
                       boxShadow: '0 8px 20px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
                     }}

@@ -63,7 +63,7 @@ const avatarPresenceBadgeBase = {
   bottom: -1,
   width: 11,
   height: 11,
-  borderRadius: 999,
+  borderRadius: 'var(--radius-pill)',
   border: '2px solid rgba(8, 12, 20, 0.95)',
   boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.06)',
 } as React.CSSProperties;

@@ -58,7 +58,7 @@ const styles = {
     marginTop: 16,
     padding: 16,
     background: 'var(--surface-1)',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
   } as React.CSSProperties,
   streakItem: {
     display: 'flex',
@@ -119,13 +119,13 @@ const styles = {
   milestone: {
     padding: 12,
     background: 'var(--surface-1)',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: '2px solid transparent',
   } as React.CSSProperties,
   milestoneCompleted: {
     padding: 12,
     background: 'rgba(34, 197, 94, 0.1)',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: '2px solid #22c55e',
     color: '#22c55e',
   } as React.CSSProperties,

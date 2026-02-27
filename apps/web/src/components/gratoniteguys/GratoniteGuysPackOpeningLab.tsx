@@ -16,7 +16,7 @@ function buildPrototypeSrcDoc(html: string) {
 const styles = {
   shell: {
     border: '1px solid color-mix(in srgb, var(--stroke) 88%, transparent)',
-    borderRadius: 18,
+    borderRadius: 'var(--radius-xl)',
     background: 'rgba(10, 16, 28, 0.48)',
     display: 'grid',
     gap: 12,
@@ -56,7 +56,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'start',
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     border: '1px solid rgba(121, 223, 255, 0.24)',
     background: 'rgba(121, 223, 255, 0.08)',
     color: 'var(--text)',
@@ -69,7 +69,7 @@ const styles = {
   } as React.CSSProperties,
   frameWrap: {
     minHeight: 720,
-    borderRadius: 14,
+    borderRadius: 'var(--radius-lg)',
     overflow: 'hidden',
     border: '1px solid color-mix(in srgb, var(--stroke) 88%, transparent)',
     background: 'rgba(5, 8, 14, 0.8)',

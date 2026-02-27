@@ -295,7 +295,7 @@ export function ShopPage() {
       alignItems: 'center',
       gap: 10,
       padding: '8px 12px',
-      borderRadius: 6,
+      borderRadius: 'var(--radius-sm)',
       border: 'none',
       cursor: 'pointer',
       width: '100%',
@@ -332,7 +332,7 @@ export function ShopPage() {
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: '16px 24px',
-      borderRadius: 12,
+      borderRadius: 'var(--radius-lg)',
       background: 'linear-gradient(90deg, color-mix(in srgb, var(--accent) 14%, transparent) 0%, color-mix(in srgb, var(--accent) 3%, transparent) 100%)',
       border: '1px solid color-mix(in srgb, var(--accent) 25%, transparent)',
     } as CSSProperties,
@@ -364,7 +364,7 @@ export function ShopPage() {
 
     buyMoreBtn: {
       padding: '8px 20px',
-      borderRadius: 8,
+      borderRadius: 'var(--radius-md)',
       background: 'var(--accent)',
       color: 'var(--bg)',
       border: 'none',
@@ -469,7 +469,7 @@ export function ShopPage() {
 
     cardBuyBtn: (canAfford: boolean) => ({
       padding: '5px 12px',
-      borderRadius: 6,
+      borderRadius: 'var(--radius-sm)',
       border: canAfford ? 'none' : '1px solid color-mix(in srgb, var(--accent) 25%, transparent)',
       background: canAfford ? 'var(--accent)' : 'var(--bg-elevated)',
       color: canAfford ? 'var(--bg)' : 'var(--text-muted)',
@@ -481,7 +481,7 @@ export function ShopPage() {
 
     ownedBadge: {
       padding: '5px 12px',
-      borderRadius: 6,
+      borderRadius: 'var(--radius-sm)',
       background: 'color-mix(in srgb, var(--accent) 15%, transparent)',
       color: 'var(--accent)',
       fontSize: 12,
@@ -566,7 +566,7 @@ export function ShopPage() {
 
     fieldSelect: {
       padding: '10px 14px',
-      borderRadius: 8,
+      borderRadius: 'var(--radius-md)',
       background: 'var(--bg-elevated)',
       border: '1px solid var(--stroke)',
       color: 'var(--text)',
@@ -577,7 +577,7 @@ export function ShopPage() {
 
     fieldInput: {
       padding: '10px 14px',
-      borderRadius: 8,
+      borderRadius: 'var(--radius-md)',
       background: 'var(--bg-elevated)',
       border: '1px solid var(--stroke)',
       color: 'var(--text)',
@@ -588,7 +588,7 @@ export function ShopPage() {
 
     createDraftBtn: {
       padding: '10px 0',
-      borderRadius: 8,
+      borderRadius: 'var(--radius-md)',
       background: 'var(--accent)',
       color: 'var(--bg)',
       border: 'none',
@@ -732,7 +732,7 @@ export function ShopPage() {
             item.type === 'avatar_decoration' ? (
               <Avatar name={resolvedDisplayName} hash={resolvedAvatarHash} decorationHash={item.assetHash} userId={user!.id} size={56} />
             ) : item.type === 'profile_effect' ? (
-              <img src={`/api/v1/files/${item.assetHash}`} alt="" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4 }} />
+              <img src={`/api/v1/files/${item.assetHash}`} alt="" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
             ) : item.type === 'nameplate' ? (
               <span className="display-name-nameplate nameplate-from-asset" style={{ '--nameplate-image': `url(/api/v1/files/${item.assetHash})` } as CSSProperties}>{resolvedDisplayName}</span>
             ) : null
@@ -871,9 +871,9 @@ export function ShopPage() {
                   const equipped = user.profileEffectId === effect.id;
                   const hue = nameToHue(effect.name);
                   const preview = effect.assetHash ? (
-                    <img src={`/api/v1/files/${effect.assetHash}`} alt="" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4 }} />
+                    <img src={`/api/v1/files/${effect.assetHash}`} alt="" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
                   ) : (
-                    <div className="shop-preview-effect" style={{ '--effect-hue': hue, width: 80, height: 60, borderRadius: 4 } as CSSProperties} />
+                    <div className="shop-preview-effect" style={{ '--effect-hue': hue, width: 80, height: 60, borderRadius: 'var(--radius-sm)' } as CSSProperties} />
                   );
                   return renderEquipCard(
                     effect.id, effect.name, effect.description, hue, equipped,

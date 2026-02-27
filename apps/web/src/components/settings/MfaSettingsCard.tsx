@@ -76,7 +76,7 @@ const styles = {
   setupCard: {
     marginTop: 12,
     border: '1px solid color-mix(in srgb, var(--stroke) 88%, transparent)',
-    borderRadius: 14,
+    borderRadius: 'var(--radius-lg)',
     padding: 12,
     display: 'grid',
     gap: 12,
@@ -86,7 +86,7 @@ const styles = {
   setupQrWrap: {
     width: 220,
     maxWidth: '100%',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     overflow: 'hidden',
     background: '#fff',
     padding: 8,
@@ -95,7 +95,7 @@ const styles = {
     display: 'block',
     width: '100%',
     height: 'auto',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
   } as React.CSSProperties,
   setupMeta: {
     display: 'grid',
@@ -110,7 +110,7 @@ const styles = {
   } as React.CSSProperties,
   actionCard: {
     border: '1px solid color-mix(in srgb, var(--stroke) 88%, transparent)',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     padding: 12,
     background: 'rgba(255, 255, 255, 0.02)',
     display: 'grid',

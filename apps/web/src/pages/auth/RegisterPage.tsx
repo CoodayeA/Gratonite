@@ -64,7 +64,7 @@ const styles = {
       width: 18,
       height: 18,
       minWidth: 18,
-      borderRadius: 4,
+      borderRadius: 'var(--radius-sm)',
       border: `1px solid ${checked ? 'var(--accent)' : 'var(--stroke)'}`,
       background: checked ? 'var(--accent)' : 'transparent',
       display: 'flex',
@@ -91,7 +91,7 @@ const styles = {
   submitButton: {
     width: '100%',
     height: 48,
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'var(--accent)',
     color: 'var(--text-on-gold)',
     fontSize: 15,

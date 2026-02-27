@@ -19,7 +19,7 @@ const styles = {
   } as React.CSSProperties,
   picker: {
     background: 'var(--bg-elevated, #353348)',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg)',
     width: 480,
     maxHeight: '70vh',
     display: 'flex',
@@ -45,7 +45,7 @@ const styles = {
     fontSize: 16,
     cursor: 'pointer',
     padding: '4px 8px',
-    borderRadius: 4,
+    borderRadius: 'var(--radius-sm)',
   } as React.CSSProperties,
   closeBtnHover: {
     background: 'none',
@@ -54,7 +54,7 @@ const styles = {
     fontSize: 16,
     cursor: 'pointer',
     padding: '4px 8px',
-    borderRadius: 4,
+    borderRadius: 'var(--radius-sm)',
   } as React.CSSProperties,
   grid: {
     display: 'grid',
@@ -65,7 +65,7 @@ const styles = {
   } as React.CSSProperties,
   cosmeticItem: {
     aspectRatio: '1',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     borderWidth: 2,
     borderStyle: 'solid',
     borderColor: 'transparent',
@@ -79,7 +79,7 @@ const styles = {
   } as React.CSSProperties,
   cosmeticItemSelected: {
     aspectRatio: '1',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     borderWidth: 2,
     borderStyle: 'solid',
     borderColor: 'var(--accent, #d4af37)',
@@ -131,7 +131,7 @@ const styles = {
     background: 'var(--accent, #d4af37)',
     color: 'var(--text-on-gold, #1a1a2e)',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     padding: '8px 16px',
     fontWeight: 600,
     cursor: 'pointer',
@@ -140,7 +140,7 @@ const styles = {
     background: 'none',
     color: 'var(--text-muted, #a8a4b8)',
     border: '1px solid var(--stroke, #4a4660)',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     padding: '8px 16px',
     cursor: 'pointer',
   } as React.CSSProperties,

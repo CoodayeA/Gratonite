@@ -143,7 +143,7 @@ const styles = {
     fontSize: 13,
     padding: '8px 12px',
     background: 'rgba(240, 71, 71, 0.1)',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
   } as CSSProperties,
   inputLabel: {
     fontSize: 12,
@@ -174,7 +174,7 @@ const styles = {
     borderWidth: 2,
     borderStyle: 'solid',
     borderColor: '#4a4660',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     cursor: 'pointer',
     textAlign: 'center',
     transition: 'border-color 0.15s, background 0.15s',
@@ -200,7 +200,7 @@ const styles = {
   previewCard: {
     background: '#353348',
     border: '1px solid #4a4660',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     padding: 16,
     marginTop: 12,
   } as CSSProperties,
@@ -303,7 +303,7 @@ const styles = {
   importPreview: {
     background: '#25243a',
     border: '1px solid #4a4660',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     padding: 12,
   } as CSSProperties,
   importCategoryName: {

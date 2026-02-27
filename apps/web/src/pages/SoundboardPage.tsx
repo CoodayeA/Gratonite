@@ -155,7 +155,7 @@ const s = {
     color: 'var(--text-muted)',
     border: '1px solid var(--stroke)',
     background: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     padding: '4px 8px',
   } as React.CSSProperties,
 
@@ -247,7 +247,7 @@ const s = {
     border: '1px solid var(--stroke)',
     background: 'rgba(255, 255, 255, 0.04)',
     color: 'var(--text)',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     padding: '4px 8px',
     fontSize: 12,
     flexShrink: 0,

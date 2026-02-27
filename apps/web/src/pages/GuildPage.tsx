@@ -99,7 +99,7 @@ const styles = {
   guildIconWrap: {
     width: 48,
     height: 48,
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     background: V.accent,
     display: 'flex',
     alignItems: 'center',
@@ -143,7 +143,7 @@ const styles = {
     gap: 6,
     height: 36,
     padding: '0 16px',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     background: V.accent,
     color: V.textOnGold,
     fontSize: 13,
@@ -159,7 +159,7 @@ const styles = {
     justifyContent: 'center',
     width: 36,
     height: 36,
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     background: 'transparent',
     border: `1px solid ${V.stroke}`,
     color: V.textMuted,
@@ -197,7 +197,7 @@ const styles = {
     alignItems: 'center',
     gap: 8,
     padding: '10px 14px',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     textDecoration: 'none',
     color: V.textMuted,
     fontSize: 14,
@@ -228,7 +228,7 @@ const styles = {
     flexDirection: 'column',
     gap: 8,
     padding: '12px 14px',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
   } as React.CSSProperties,
 
   voiceHeader: {
@@ -265,7 +265,7 @@ const styles = {
     gap: 4,
     height: 22,
     padding: '0 8px',
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     background: V.goldSubtle,
   } as React.CSSProperties,
 
