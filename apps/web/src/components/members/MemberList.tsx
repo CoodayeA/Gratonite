@@ -190,7 +190,7 @@ export function MemberList() {
           );
           const userId = member.userId ?? member.user?.id;
           const presenceStatus = (userId ? presenceMap.get(String(userId))?.status : undefined) ?? 'offline';
-          const presenceColor = PRESENCE_COLORS[presenceStatus] ?? PRESENCE_COLORS.offline;
+          const presenceColor = PRESENCE_COLORS[presenceStatus] ?? PRESENCE_COLORS['offline'];
 
           return (
             <div
