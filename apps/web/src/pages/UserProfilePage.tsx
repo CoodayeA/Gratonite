@@ -369,6 +369,12 @@ export function UserProfilePage() {
     enabled: isOwnProfile,
   });
 
+  const { data: creatorCosmetics } = useQuery({
+    queryKey: ['cosmetics', 'creator', userId],
+    queryFn: () => api.cosmetics.listByCreator(userId),
+    enabled: !!userId,
+  });
+
   if (profileLoading) {
     return (
       <div style={loadingWrapStyle}>
@@ -587,6 +593,40 @@ export function UserProfilePage() {
               ))}
             </div>
           </div>
+
+          {/* Creator Cosmetics Showcase */}
+          {Array.isArray(creatorCosmetics) && (creatorCosmetics as any[]).length > 0 && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={sectionTitleStyle}>Creations</div>
+                <a
+                  href={`/creator/${userId}`}
+                  style={{ fontSize: 12, color: 'var(--accent, #d4af37)', textDecoration: 'none' }}
+                >
+                  View all →
+                </a>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+                {(creatorCosmetics as any[]).slice(0, 4).map((c: any) => (
+                  <div
+                    key={c.id}
+                    title={c.name}
+                    style={{
+                      width: 52, height: 52, borderRadius: 8,
+                      background: '#0d0b1a', overflow: 'hidden',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                    }}
+                  >
+                    {c.previewImageUrl
+                      ? <img src={c.previewImageUrl} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'contain' as const }} />
+                      : <span style={{ fontSize: 22 }}>🎨</span>
+                    }
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Profile Widgets */}
           <div>
