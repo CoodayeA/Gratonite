@@ -9,11 +9,11 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { SkeletonAvatar, Skeleton } from '@/components/ui/Skeleton';
 
 const STATUS_COLORS: Record<PresenceStatus, string> = {
-  online: '#23a55a',
-  idle: '#f0b232',
-  dnd: '#f23f43',
-  invisible: '#6e6a80',
-  offline: '#6e6a80',
+  online: 'var(--status-online)',
+  idle: 'var(--status-idle)',
+  dnd: 'var(--status-dnd)',
+  invisible: 'var(--status-offline)',
+  offline: 'var(--status-offline)',
 };
 
 function formatJoinDate(iso: string | undefined | null): string {
@@ -224,8 +224,8 @@ const statLabelStyle: React.CSSProperties = {
 };
 
 const balanceCardStyle: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #d4af37 0%, #b8962e 100%)',
-  borderRadius: 12,
+  background: 'var(--gradient-accent)',
+  borderRadius: 'var(--radius-lg)',
   padding: '20px 24px',
   display: 'flex',
   alignItems: 'center',
@@ -235,12 +235,12 @@ const balanceCardStyle: React.CSSProperties = {
 const balanceAmountStyle: React.CSSProperties = {
   fontSize: 28,
   fontWeight: 700,
-  color: '#1a1a2e',
+  color: 'var(--text-on-gold)',
 };
 
 const balanceLabelStyle: React.CSSProperties = {
   fontSize: 12,
-  color: '#1a1a2e',
+  color: 'var(--text-on-gold)',
   opacity: 0.7,
   textTransform: 'uppercase',
   fontWeight: 600,
@@ -283,7 +283,7 @@ const widgetsRowStyle: React.CSSProperties = {
 
 const widgetPillStyle: React.CSSProperties = {
   padding: '6px 14px',
-  borderRadius: 20,
+  borderRadius: 'var(--radius-xl)',
   fontSize: 12,
   fontWeight: 600,
   color: 'var(--text)',
@@ -569,9 +569,9 @@ export function UserProfilePage() {
                   {wallet ? wallet.balance.toLocaleString() + ' G' : '— G'}
                 </div>
               </div>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="#1a1a2e" opacity={0.5}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="var(--text-on-gold)" opacity={0.5}>
                 <circle cx="12" cy="12" r="10" />
-                <text x="12" y="16" textAnchor="middle" fontSize="10" fill="#d4af37" fontWeight="bold">G</text>
+                <text x="12" y="16" textAnchor="middle" fontSize="10" fill="var(--accent)" fontWeight="bold">G</text>
               </svg>
             </div>
           )}
