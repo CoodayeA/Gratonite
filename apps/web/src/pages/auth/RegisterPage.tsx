@@ -135,6 +135,7 @@ export function RegisterPage() {
 
   // Form fields
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
   // Terms
@@ -159,7 +160,7 @@ export function RegisterPage() {
     setLoading(true);
 
     try {
-      await api.auth.register({ email, password });
+      await api.auth.register({ email, username, password });
       navigate(`/verify-email/pending?email=${encodeURIComponent(email)}`, { replace: true });
     } catch (err) {
       if (err instanceof ApiRequestError && err.details) {
@@ -202,6 +203,19 @@ export function RegisterPage() {
             required
             autoComplete="email"
             autoFocus
+          />
+
+          {/* Username */}
+          <Input
+            label="Username"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            error={fieldErrors['username']?.[0]}
+            required
+            autoComplete="username"
+            minLength={2}
+            maxLength={32}
           />
 
           {/* Password */}

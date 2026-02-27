@@ -147,7 +147,7 @@ export function GroupMembersPanel({ channelId }: { channelId: string }) {
       <div style={styles.list}>
         {members.map((member) => {
           const status: PresenceStatus = presenceMap.get(member.id) ?? 'offline';
-          const dotColor = STATUS_COLORS[status] ?? STATUS_COLORS.offline;
+          const dotColor = STATUS_COLORS[status] ?? STATUS_COLORS['offline'];
           return (
             <button
               key={member.id}
