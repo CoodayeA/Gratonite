@@ -73,7 +73,7 @@ const s = {
   periodBtn: {
     padding: '8px 16px',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'transparent',
     color: 'var(--text-muted)',
     fontSize: 13,
@@ -84,7 +84,7 @@ const s = {
   periodBtnActive: {
     padding: '8px 16px',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'var(--bg-soft)',
     color: 'var(--text)',
     fontSize: 13,
