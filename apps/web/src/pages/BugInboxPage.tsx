@@ -117,7 +117,7 @@ const s = {
   } as React.CSSProperties,
 
   status: {
-    borderRadius: 999,
+    borderRadius: 'var(--radius-pill)',
     padding: '0.2rem 0.65rem',
     fontSize: '0.78rem',
     textTransform: 'capitalize',
