@@ -1,10 +1,169 @@
-import { useState, useRef, useEffect, type FormEvent, type KeyboardEvent } from 'react';
+import React, { useState, useRef, useEffect, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api, setAccessToken, ApiRequestError } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
 import { getErrorMessage } from '@/lib/utils';
+
+/* ---------- styles ---------- */
+
+const S = {
+  authForm: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 28,
+  } as React.CSSProperties,
+  logoWrap: {
+    display: 'flex',
+    justifyContent: 'center',
+  } as React.CSSProperties,
+  headingWrap: {
+    textAlign: 'center',
+  } as React.CSSProperties,
+  heading: {
+    fontSize: 28,
+    fontWeight: 600,
+    color: 'var(--text)',
+    marginBottom: 8,
+    margin: 0,
+  } as React.CSSProperties,
+  subheading: {
+    fontSize: 14,
+    color: 'var(--text-muted)',
+    margin: 0,
+  } as React.CSSProperties,
+  authError: {
+    padding: '10px 14px',
+    background: 'var(--danger-bg)',
+    border: '1px solid rgba(255, 107, 107, 0.25)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--danger)',
+    fontSize: 13,
+  } as React.CSSProperties,
+  fieldsGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+  } as React.CSSProperties,
+  forgotRow: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+  } as React.CSSProperties,
+  forgotLink: {
+    fontSize: 13,
+    color: 'var(--accent)',
+    fontWeight: 500,
+    textDecoration: 'none',
+  } as React.CSSProperties,
+  submitBtn: {
+    background: 'var(--accent)',
+    color: 'var(--text-on-gold)',
+    height: 48,
+    borderRadius: 'var(--radius-sm)',
+    fontSize: 15,
+    fontWeight: 600,
+    border: 'none',
+    width: '100%',
+  } as React.CSSProperties,
+  signupText: {
+    textAlign: 'center',
+    fontSize: 14,
+    color: 'var(--text-faint)',
+    margin: 0,
+  } as React.CSSProperties,
+  signupLink: {
+    color: 'var(--accent)',
+    fontWeight: 500,
+  } as React.CSSProperties,
+  verifyText: {
+    textAlign: 'center',
+    fontSize: 13,
+    color: 'var(--text-muted)',
+    margin: 0,
+  } as React.CSSProperties,
+  verifyLink: {
+    color: 'var(--accent)',
+  } as React.CSSProperties,
+  mfaOverlay: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0, 0, 0, 0.48)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+  } as React.CSSProperties,
+  mfaForm: {
+    width: 420,
+    maxWidth: '90vw',
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 10,
+    padding: 48,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 24,
+  } as React.CSSProperties,
+  mfaIconWrap: {
+    display: 'flex',
+    justifyContent: 'center',
+  } as React.CSSProperties,
+  mfaIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    background: 'var(--gold-subtle)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as React.CSSProperties,
+  mfaHeadingWrap: {
+    textAlign: 'center',
+  } as React.CSSProperties,
+  mfaHeading: {
+    fontSize: 20,
+    fontWeight: 600,
+    color: 'var(--text)',
+    margin: 0,
+    marginBottom: 8,
+  } as React.CSSProperties,
+  mfaSubheading: {
+    fontSize: 14,
+    color: 'var(--text-muted)',
+    margin: 0,
+  } as React.CSSProperties,
+  mfaDigitsRow: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: 8,
+  } as React.CSSProperties,
+  mfaDigitInput: {
+    width: 48,
+    height: 56,
+    textAlign: 'center',
+    fontSize: 24,
+    fontWeight: 600,
+    color: 'var(--text)',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    outline: 'none',
+    caretColor: 'var(--accent)',
+  } as React.CSSProperties,
+  mfaToggle: {
+    textAlign: 'center',
+  } as React.CSSProperties,
+  mfaToggleBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--accent)',
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: 'pointer',
+    padding: 0,
+  } as React.CSSProperties,
+};
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -89,9 +248,9 @@ export function LoginPage() {
         id: me.id,
         username: me.username,
         email: me.email,
-        displayName: me.profile.displayName,
-        avatarHash: me.profile.avatarHash,
-        tier: me.profile.tier,
+        displayName: me.profile?.displayName ?? me.username,
+        avatarHash: me.profile?.avatarHash ?? null,
+        tier: me.profile?.tier ?? 'free',
       });
 
       navigate(from, { replace: true });
@@ -122,46 +281,31 @@ export function LoginPage() {
 
   return (
     <>
-      <form className="auth-form" onSubmit={handleSubmit} style={{ gap: '28px' }}>
+      <form style={S.authForm} onSubmit={handleSubmit}>
         {/* Logo */}
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 10,
-              background: 'var(--accent)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 28,
-              fontWeight: 700,
-              color: 'var(--text-on-gold)',
-              userSelect: 'none',
-            }}
-          >
-            G
-          </div>
+        <div style={S.logoWrap}>
+          <img
+            src={`${import.meta.env.BASE_URL}gratonite-icon.png`}
+            alt="Gratonite"
+            style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover' }}
+          />
         </div>
 
         {/* Heading */}
-        <div style={{ textAlign: 'center' }}>
-          <h2
-            className="auth-heading"
-            style={{ fontSize: 28, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}
-          >
+        <div style={S.headingWrap}>
+          <h2 style={S.heading}>
             Welcome Back
           </h2>
-          <p className="auth-subheading" style={{ fontSize: 14, color: 'var(--text-muted)' }}>
+          <p style={S.subheading}>
             Sign in to your Gratonite account
           </p>
         </div>
 
         {/* Error */}
-        {error && !mfaRequired && <div className="auth-error">{error}</div>}
+        {error && !mfaRequired && <div style={S.authError}>{error}</div>}
 
         {/* Fields */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={S.fieldsGroup}>
           <Input
             label="Email or Username"
             type="text"
@@ -181,15 +325,10 @@ export function LoginPage() {
             autoComplete="current-password"
           />
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={S.forgotRow}>
             <Link
               to="/forgot-password"
-              style={{
-                fontSize: 13,
-                color: 'var(--accent)',
-                fontWeight: 500,
-                textDecoration: 'none',
-              }}
+              style={S.forgotLink}
             >
               Forgot password?
             </Link>
@@ -200,37 +339,24 @@ export function LoginPage() {
         <Button
           type="submit"
           loading={loading}
-          className="auth-submit"
-          style={{
-            background: 'var(--accent)',
-            color: 'var(--text-on-gold)',
-            height: 48,
-            borderRadius: 6,
-            fontSize: 15,
-            fontWeight: 600,
-            border: 'none',
-            width: '100%',
-          }}
+          style={S.submitBtn}
         >
           Sign In
         </Button>
 
         {/* Sign up link */}
-        <p
-          className="auth-link"
-          style={{ textAlign: 'center', fontSize: 14, color: 'var(--text-faint)' }}
-        >
+        <p style={S.signupText}>
           Don&apos;t have an account?{' '}
-          <Link to="/register" style={{ color: 'var(--accent)', fontWeight: 500 }}>
+          <Link to="/register" style={S.signupLink}>
             Sign up
           </Link>
         </p>
 
         {showVerifyLink && (
-          <p className="auth-link" style={{ textAlign: 'center' }}>
+          <p style={S.verifyText}>
             <Link
               to={`/verify-email/pending?email=${encodeURIComponent(loginField.includes('@') ? loginField : '')}`}
-              style={{ color: 'var(--accent)' }}
+              style={S.verifyLink}
             >
               Resend verification email
             </Link>
@@ -241,15 +367,7 @@ export function LoginPage() {
       {/* MFA Overlay */}
       {mfaRequired && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.48)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
+          style={S.mfaOverlay}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setMfaRequired(false);
@@ -262,32 +380,12 @@ export function LoginPage() {
         >
           <form
             onSubmit={handleMfaSubmit}
-            style={{
-              width: 420,
-              maxWidth: '90vw',
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--stroke)',
-              borderRadius: 10,
-              padding: 48,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 24,
-            }}
+            style={S.mfaForm}
             onClick={(e) => e.stopPropagation()}
           >
             {/* MFA Icon */}
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <div
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 10,
-                  background: 'var(--gold-subtle)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
+            <div style={S.mfaIconWrap}>
+              <div style={S.mfaIcon}>
                 <svg
                   width="24"
                   height="24"
@@ -305,19 +403,11 @@ export function LoginPage() {
             </div>
 
             {/* MFA Heading */}
-            <div style={{ textAlign: 'center' }}>
-              <h3
-                style={{
-                  fontSize: 20,
-                  fontWeight: 600,
-                  color: 'var(--text)',
-                  margin: 0,
-                  marginBottom: 8,
-                }}
-              >
+            <div style={S.mfaHeadingWrap}>
+              <h3 style={S.mfaHeading}>
                 Two-Factor Authentication
               </h3>
-              <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: 0 }}>
+              <p style={S.mfaSubheading}>
                 {mfaMode === 'totp'
                   ? 'Enter the 6-digit code from your authenticator app'
                   : 'Enter one of your backup codes'}
@@ -325,17 +415,11 @@ export function LoginPage() {
             </div>
 
             {/* Error in MFA modal */}
-            {error && <div className="auth-error">{error}</div>}
+            {error && <div style={S.authError}>{error}</div>}
 
             {/* TOTP digit inputs */}
             {mfaMode === 'totp' ? (
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  gap: 8,
-                }}
-              >
+              <div style={S.mfaDigitsRow}>
                 {mfaDigits.map((digit, i) => (
                   <input
                     key={i}
@@ -350,19 +434,7 @@ export function LoginPage() {
                     onChange={(e) => handleDigitChange(i, e.target.value)}
                     onKeyDown={(e) => handleDigitKeyDown(i, e)}
                     onPaste={i === 0 ? handleDigitPaste : undefined}
-                    style={{
-                      width: 48,
-                      height: 56,
-                      textAlign: 'center',
-                      fontSize: 24,
-                      fontWeight: 600,
-                      color: 'var(--text)',
-                      background: 'var(--bg-input)',
-                      border: '1px solid var(--stroke)',
-                      borderRadius: 8,
-                      outline: 'none',
-                      caretColor: 'var(--accent)',
-                    }}
+                    style={S.mfaDigitInput}
                     onFocus={(e) => {
                       e.target.style.borderColor = 'var(--accent)';
                     }}
@@ -387,22 +459,13 @@ export function LoginPage() {
             <Button
               type="submit"
               loading={loading}
-              style={{
-                background: 'var(--accent)',
-                color: 'var(--text-on-gold)',
-                height: 48,
-                borderRadius: 6,
-                fontSize: 15,
-                fontWeight: 600,
-                border: 'none',
-                width: '100%',
-              }}
+              style={S.submitBtn}
             >
               Verify
             </Button>
 
             {/* Toggle MFA mode link */}
-            <div style={{ textAlign: 'center' }}>
+            <div style={S.mfaToggle}>
               <button
                 type="button"
                 onClick={() => {
@@ -413,15 +476,7 @@ export function LoginPage() {
                     setMfaDigits(['', '', '', '', '', '']);
                   }
                 }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--accent)',
-                  fontSize: 13,
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  padding: 0,
-                }}
+                style={S.mfaToggleBtn}
               >
                 {mfaMode === 'totp' ? 'Use backup code instead' : 'Use authenticator app instead'}
               </button>

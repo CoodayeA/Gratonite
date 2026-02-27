@@ -1,228 +1,225 @@
-import { useEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useGuildsStore } from '@/stores/guilds.store';
-import { shouldEnableUiV2Tokens } from '@/theme/initTheme';
-import { ServerGallery } from '@/components/home/ServerGallery';
+import { useNavigate } from 'react-router-dom';
 import { useUiStore } from '@/stores/ui.store';
 import { useAuthStore } from '@/stores/auth.store';
 import { Avatar } from '@/components/ui/Avatar';
 
-/* ── CSS variable tokens ─────────────────────────────────────────── */
-const vars = {
-  bg:          '#2c2c3e',
-  bgElevated:  '#353348',
-  bgSoft:      '#413d58',
-  stroke:      '#4a4660',
-  accent:      '#d4af37',
-  text:        '#e8e4e0',
-  textMuted:   '#a8a4b8',
-  textFaint:   '#6e6a80',
-  textOnGold:  '#1a1a2e',
-  goldSubtle:  '#d4af3730',
-} as const;
+/* ── Tile definitions (from gratonite.pen Home Screen Desktop N12TG) ── */
 
-/* ── SVG icon paths per tile ─────────────────────────────────────── */
-const tileIcons = {
-  create: (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={vars.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" y1="8" x2="12" y2="16" />
-      <line x1="8" y1="12" x2="16" y2="12" />
-    </svg>
-  ),
-  compass: (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={vars.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill={vars.accent} stroke="none" />
-    </svg>
-  ),
-  chat: (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={vars.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  ),
-  message: (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={vars.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-    </svg>
-  ),
-  heart: (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={vars.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  ),
-  gear: (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={vars.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1.08z" />
-    </svg>
-  ),
-};
-
-/* ── Gem brand icon (top of brand section) ───────────────────────── */
-function GemIcon() {
-  return (
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={vars.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="12 2 2 7 12 22 22 7" fill={vars.goldSubtle} stroke={vars.accent} />
-      <polyline points="2 7 12 12 22 7" />
-      <line x1="12" y1="12" x2="12" y2="22" />
-    </svg>
-  );
-}
-
-/* ── Shared styles ───────────────────────────────────────────────── */
-const styles = {
-  page: {
-    background: vars.bg,
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column' as const,
+const tiles = [
+  {
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+    label: 'Create a Group\nor Server',
+    desc: 'Start your own community',
+    action: 'create-guild' as const,
   },
+  {
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+      </svg>
+    ),
+    label: 'Discover\nGratonite',
+    desc: 'Explore public portals',
+    route: '/discover',
+  },
+  {
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+      </svg>
+    ),
+    label: 'Join Gratonite\nLounge',
+    desc: 'Chat with the community',
+    route: '/discover',
+  },
+  {
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        <path d="M12 7v2" />
+        <path d="M12 13h.01" />
+      </svg>
+    ),
+    label: 'Give Feedback or\nReport a Bug',
+    desc: 'Help us improve',
+    action: 'bug-report' as const,
+  },
+  {
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+      </svg>
+    ),
+    label: 'Donate to\nGratonite',
+    desc: 'Support development',
+    route: '/shop',
+  },
+  {
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+    ),
+    label: 'Open\nSettings',
+    desc: 'Customize your experience',
+    action: 'settings' as const,
+  },
+] as const;
+
+/* ── Styles (matching gratonite.pen Home Screen Desktop exactly) ─────── */
+
+const s = {
+  page: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+    overflow: 'auto',
+    background: 'var(--bg, #2c2c3e)',
+  } as React.CSSProperties,
+
   topBar: {
-    height: 56,
-    background: vars.bgElevated,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'flex-end',
+    height: 56,
     padding: '0 24px',
     flexShrink: 0,
-  },
+  } as React.CSSProperties,
+
   mainArea: {
-    flex: 1,
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '0 40px',
+    flex: 1,
     gap: 48,
-  },
-  brandSection: {
+    padding: '0 40px',
+    minHeight: 0,
+  } as React.CSSProperties,
+
+  brandWrap: {
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     alignItems: 'center',
     gap: 12,
-  },
+  } as React.CSSProperties,
+
   gemFrame: {
     width: 64,
     height: 64,
-    background: vars.goldSubtle,
-    borderRadius: 16,
+    borderRadius: 'var(--radius-lg)',
+    background: 'rgba(212, 175, 55, 0.12)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-  },
+  } as React.CSSProperties,
+
   brandTitle: {
-    color: vars.text,
     fontSize: 36,
     fontWeight: 700,
+    color: 'var(--text, #e8e4e0)',
     letterSpacing: -0.5,
     margin: 0,
     lineHeight: 1.2,
-  },
-  brandSubtitle: {
-    color: vars.textMuted,
+  } as React.CSSProperties,
+
+  brandSub: {
     fontSize: 16,
+    color: 'var(--text-muted, #a8a4b8)',
     margin: 0,
-    textAlign: 'center' as const,
-  },
+    textAlign: 'center',
+  } as React.CSSProperties,
+
   tileGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: 20,
-    width: '100%',
-    maxWidth: 820,
-  },
-  tile: {
-    background: vars.bgSoft,
-    border: `1px solid ${vars.stroke}`,
-    borderRadius: 16,
-    padding: '24px 20px',
     display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 10,
+    flexDirection: 'column',
+    gap: 20,
+  } as React.CSSProperties,
+
+  tileRow: {
+    display: 'flex',
+    gap: 20,
+    justifyContent: 'center',
+  } as React.CSSProperties,
+
+  tile: {
+    width: 220,
+    height: 180,
+    padding: 24,
+    borderRadius: 10,
+    background: 'var(--bg-elevated, #353348)',
+    border: '1px solid var(--stroke, #4a4660)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
     cursor: 'pointer',
-    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-    textAlign: 'left' as const,
-    color: 'inherit',
+    transition: 'border-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease',
     textDecoration: 'none',
     outline: 'none',
-  },
-  tileIconFrame: {
-    width: 44,
-    height: 44,
-    background: vars.goldSubtle,
-    borderRadius: 12,
+    color: 'inherit',
+    fontFamily: 'inherit',
+  } as React.CSSProperties,
+
+  tileIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: '50%',
+    background: 'rgba(212, 175, 55, 0.12)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
-  },
-  tileEyebrow: {
-    fontSize: 11,
-    fontWeight: 700,
-    textTransform: 'uppercase' as const,
-    letterSpacing: 1,
-    color: vars.accent,
-  },
-  tileMeta: {
-    fontSize: 12,
-    color: vars.textFaint,
-  },
-  tileTitle: {
-    fontSize: 16,
+    color: 'var(--accent, #d4af37)',
+    flexShrink: 0,
+  } as React.CSSProperties,
+
+  tileLabel: {
+    fontSize: 14,
     fontWeight: 600,
-    color: vars.text,
-  },
+    color: 'var(--text, #e8e4e0)',
+    textAlign: 'center',
+    lineHeight: 1.4,
+    whiteSpace: 'pre-line',
+    margin: 0,
+  } as React.CSSProperties,
+
   tileDesc: {
-    fontSize: 13,
-    color: vars.textMuted,
-    lineHeight: 1.5,
-  },
-} as const;
+    fontSize: 12,
+    color: 'var(--text-muted, #a8a4b8)',
+    textAlign: 'center',
+    margin: 0,
+  } as React.CSSProperties,
+};
 
-/* ── Tile hover helpers ──────────────────────────────────────────── */
-function tileHoverProps() {
-  return {
-    onMouseEnter: (e: React.MouseEvent<HTMLElement>) => {
-      e.currentTarget.style.transform = 'translateY(-2px)';
-      e.currentTarget.style.boxShadow = `0 8px 24px rgba(0,0,0,0.35)`;
-    },
-    onMouseLeave: (e: React.MouseEvent<HTMLElement>) => {
-      e.currentTarget.style.transform = '';
-      e.currentTarget.style.boxShadow = '';
-    },
-  };
-}
+/* ── Component ───────────────────────────────────────────────────────── */
 
-/* ── Component ───────────────────────────────────────────────────── */
 export function HomePage() {
-  const uiV2TokensEnabled = shouldEnableUiV2Tokens();
-  const guildCount = useGuildsStore((s) => s.guildOrder.length);
   const navigate = useNavigate();
-  const location = useLocation();
-  const openModal = useUiStore((s) => s.openModal);
-  const portalsAnchorRef = useRef<HTMLDivElement | null>(null);
   const user = useAuthStore((s) => s.user);
+  const openModal = useUiStore((s) => s.openModal);
 
-  function handleOpenDirectMessagesHub() {
-    navigate('/notifications');
+  function handleTile(tile: (typeof tiles)[number]) {
+    if ('route' in tile && tile.route) {
+      navigate(tile.route);
+    } else if ('action' in tile && tile.action) {
+      openModal(tile.action);
+    }
   }
 
-  useEffect(() => {
-    if (!location.hash) return;
-    const target = location.hash === '#portals' ? portalsAnchorRef.current : null;
-    if (!target) return;
-    window.setTimeout(() => {
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 40);
-  }, [location.hash]);
-
-  const displayName = user?.displayName ?? 'there';
-
   return (
-    <div className="home-page" style={styles.page}>
-      {/* ── Top bar ──────────────────────────────────────────────── */}
-      <div style={styles.topBar}>
+    <div style={s.page}>
+      {/* Top bar with avatar */}
+      <div style={s.topBar}>
         {user && (
           <Avatar
             name={user.displayName}
@@ -233,129 +230,50 @@ export function HomePage() {
         )}
       </div>
 
-      <div
-        className={`home-content ${uiV2TokensEnabled ? 'home-content-v2' : ''}`}
-        style={styles.mainArea}
-      >
-        <div id="portals" ref={portalsAnchorRef} className="home-anchor-target" />
-        {uiV2TokensEnabled && <ServerGallery onOpenDirectMessages={handleOpenDirectMessagesHub} />}
-
-        {/* ── Brand section ────────────────────────────────────── */}
-        <div style={styles.brandSection}>
-          <div style={styles.gemFrame}>
-            <GemIcon />
+      {/* Main centered content */}
+      <div style={s.mainArea}>
+        {/* Brand section */}
+        <div style={s.brandWrap}>
+          <div style={s.gemFrame}>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--accent, #d4af37)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="12 2 2 7 12 22 22 7" fill="rgba(212,175,55,0.18)" stroke="var(--accent, #d4af37)" />
+              <polyline points="2 7 12 12 22 7" />
+              <line x1="12" y1="12" x2="12" y2="22" />
+            </svg>
           </div>
-          <h1 style={styles.brandTitle}>Gratonite</h1>
-          <p style={styles.brandSubtitle}>
-            Welcome back, {displayName}. What would you like to do?
-          </p>
+          <h1 style={s.brandTitle}>Gratonite</h1>
+          <p style={s.brandSub}>Welcome back. What would you like to do?</p>
         </div>
 
-        {/* ── Tile grid (6 tiles, 3 columns x 2 rows) ─────────── */}
-        <section style={styles.tileGrid} aria-label="Quick actions">
-          {/* Tile 1 — Create a Portal */}
-          <button
-            type="button"
-            className="home-dashboard-tile"
-            style={styles.tile}
-            onClick={() => openModal('create-guild')}
-            {...tileHoverProps()}
-          >
-            <div style={styles.tileIconFrame}>{tileIcons.create}</div>
-            <span style={styles.tileEyebrow}>Create</span>
-            <span style={styles.tileMeta}>{guildCount} portals active</span>
-            <span style={styles.tileTitle}>Create a Portal</span>
-            <span style={styles.tileDesc}>
-              Start a new community with starter channels and an invite link.
-            </span>
-          </button>
-
-          {/* Tile 2 — Discover */}
-          <button
-            type="button"
-            className="home-dashboard-tile"
-            style={styles.tile}
-            onClick={() => navigate('/discover')}
-            {...tileHoverProps()}
-          >
-            <div style={styles.tileIconFrame}>{tileIcons.compass}</div>
-            <span style={styles.tileEyebrow}>Discover</span>
-            <span style={styles.tileMeta}>Portals &bull; Bots &bull; Themes</span>
-            <span style={styles.tileTitle}>Find Portals</span>
-            <span style={styles.tileDesc}>
-              Browse communities, bots, and themes in a streaming-style grid.
-            </span>
-          </button>
-
-          {/* Tile 3 — Gratonite Lounge */}
-          <button
-            type="button"
-            className="home-dashboard-tile"
-            style={styles.tile}
-            onClick={() => navigate('/blog')}
-            {...tileHoverProps()}
-          >
-            <div style={styles.tileIconFrame}>{tileIcons.chat}</div>
-            <span style={styles.tileEyebrow}>Guide</span>
-            <span style={styles.tileMeta}>Navigation + feature guides</span>
-            <span style={styles.tileTitle}>Gratonite Lounge</span>
-            <span style={styles.tileDesc}>
-              Use the blog/guides hub for onboarding and product help while the official lounge is prepared.
-            </span>
-          </button>
-
-          {/* Tile 4 — Give Feedback */}
-          <button
-            type="button"
-            className="home-dashboard-tile"
-            style={styles.tile}
-            onClick={() => openModal('bug-report', { route: '/', channelLabel: 'Home' })}
-            {...tileHoverProps()}
-          >
-            <div style={styles.tileIconFrame}>{tileIcons.message}</div>
-            <span style={styles.tileEyebrow}>Feedback</span>
-            <span style={styles.tileMeta}>Internal bug inbox connected</span>
-            <span style={styles.tileTitle}>Give Feedback</span>
-            <span style={styles.tileDesc}>
-              Send a bug report or product note directly to the internal bug inbox.
-            </span>
-          </button>
-
-          {/* Tile 5 — Donate */}
-          <a
-            className="home-dashboard-tile"
-            style={styles.tile}
-            href="https://gratonite.chat/blog"
-            target="_blank"
-            rel="noreferrer"
-            {...tileHoverProps()}
-          >
-            <div style={styles.tileIconFrame}>{tileIcons.heart}</div>
-            <span style={styles.tileEyebrow}>Support</span>
-            <span style={styles.tileMeta}>Payments not live yet</span>
-            <span style={styles.tileTitle}>Donate</span>
-            <span style={styles.tileDesc}>
-              Donation flow placeholder. Link currently routes to project info until payment setup is added.
-            </span>
-          </a>
-
-          {/* Tile 6 — Open Settings */}
-          <button
-            type="button"
-            className="home-dashboard-tile"
-            style={styles.tile}
-            onClick={() => navigate('/settings')}
-            {...tileHoverProps()}
-          >
-            <div style={styles.tileIconFrame}>{tileIcons.gear}</div>
-            <span style={styles.tileEyebrow}>Settings</span>
-            <span style={styles.tileMeta}>Appearance &bull; Security &bull; Notifications</span>
-            <span style={styles.tileTitle}>Open Settings</span>
-            <span style={styles.tileDesc}>
-              Manage profile, notifications, appearance, status, and accessibility controls.
-            </span>
-          </button>
-        </section>
+        {/* Action tile grid — 2 rows × 3 columns */}
+        <div style={s.tileGrid}>
+          {[tiles.slice(0, 3), tiles.slice(3, 6)].map((row, ri) => (
+            <div key={ri} style={s.tileRow}>
+              {row.map((tile, ci) => (
+                <button
+                  key={ri * 3 + ci}
+                  type="button"
+                  style={s.tile}
+                  onClick={() => handleTile(tile)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--accent, #d4af37)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--stroke, #4a4660)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <div style={s.tileIconWrap}>{tile.icon}</div>
+                  <p style={s.tileLabel}>{tile.label}</p>
+                  <p style={s.tileDesc}>{tile.desc}</p>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

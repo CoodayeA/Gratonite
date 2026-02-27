@@ -27,6 +27,99 @@ const LIST_RE = /^[-*]\s+(.+)$/;
 const QUOTE_RE = /^>\s?(.*)$/;
 const CODE_FENCE_RE = /^```([a-zA-Z0-9_-]+)?\s*$/;
 
+const styles = {
+  content: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  } as React.CSSProperties,
+  paragraph: {
+    margin: 0,
+  } as React.CSSProperties,
+  h1: {
+    margin: 0,
+    lineHeight: 1.3,
+    color: 'var(--text)',
+    fontSize: 20,
+    fontWeight: 700,
+  } as React.CSSProperties,
+  h2: {
+    margin: 0,
+    lineHeight: 1.3,
+    color: 'var(--text)',
+    fontSize: 17,
+    fontWeight: 700,
+  } as React.CSSProperties,
+  h3: {
+    margin: 0,
+    lineHeight: 1.3,
+    color: 'var(--text)',
+    fontSize: 15,
+    fontWeight: 700,
+  } as React.CSSProperties,
+  list: {
+    margin: 0,
+    paddingLeft: 18,
+    display: 'grid',
+    gap: 4,
+  } as React.CSSProperties,
+  listItem: {
+    margin: 0,
+  } as React.CSSProperties,
+  quote: {
+    margin: 0,
+    padding: '6px 10px',
+    borderLeft: '3px solid rgba(212, 175, 55, 0.45)',
+    background: 'rgba(212, 175, 55, 0.08)',
+    borderRadius: '0 8px 8px 0',
+    color: 'var(--text-muted)',
+  } as React.CSSProperties,
+  codeblock: {
+    margin: 0,
+    padding: '10px 12px',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    background: 'rgba(6, 10, 18, 0.78)',
+    color: '#d7e6ff',
+    overflowX: 'auto',
+    fontSize: 12,
+    lineHeight: 1.5,
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace",
+  } as React.CSSProperties,
+  inlineCode: {
+    padding: '1px 5px',
+    borderRadius: 'var(--radius-sm)',
+    border: '1px solid var(--stroke)',
+    background: 'rgba(6, 10, 18, 0.7)',
+    fontSize: '0.92em',
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace",
+  } as React.CSSProperties,
+  customEmoji: {
+    display: 'inline-block',
+    verticalAlign: 'middle',
+    width: '1.5em',
+    height: '1.5em',
+    objectFit: 'contain',
+    margin: '0 2px',
+  } as React.CSSProperties,
+  link: {
+    color: 'var(--accent)',
+    textDecoration: 'underline',
+    textDecorationThickness: '1px',
+    textUnderlineOffset: '2px',
+  } as React.CSSProperties,
+  roleMention: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '1px 5px',
+    borderRadius: 'var(--radius-sm)',
+    border: '1px solid rgba(104, 223, 255, 0.28)',
+    background: 'rgba(104, 223, 255, 0.12)',
+    color: '#b8f3ff',
+    fontWeight: 600,
+  } as React.CSSProperties,
+};
+
 function isBlockBoundary(line: string): boolean {
   return (
     CODE_FENCE_RE.test(line)
@@ -147,7 +240,7 @@ function renderInline(
     }
     if (m[1] !== undefined) {
       out.push(
-        <code key={`code-${m.index}`} className="markdown-inline-code">
+        <code key={`code-${m.index}`} style={styles.inlineCode}>
           {m[1]}
         </code>,
       );
@@ -160,7 +253,7 @@ function renderInline(
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="markdown-link"
+          style={styles.link}
         >
           {label}
         </a>,
@@ -175,7 +268,7 @@ function renderInline(
       const roleId = m[5];
       const label = roleMentionLabels[roleId] ?? `group-${roleId.slice(-4)}`;
       out.push(
-        <span key={`role-mention-${m.index}`} className="markdown-mention markdown-role-mention" data-role-id={roleId}>
+        <span key={`role-mention-${m.index}`} style={styles.roleMention} data-role-id={roleId}>
           @{label}
         </span>,
       );
@@ -188,7 +281,7 @@ function renderInline(
             key={`emoji-${m.index}`}
             src={emoji.url}
             alt={`:${emoji.name}:`}
-            className="markdown-custom-emoji"
+            style={styles.customEmoji}
             title={`:${emoji.name}:`}
           />,
         );
@@ -224,25 +317,25 @@ export function MarkdownText({ content, mentionLabels = {}, roleMentionLabels = 
   const blocks = parseBlocks(content);
 
   return (
-    <div className="markdown-content">
+    <div style={styles.content}>
       {blocks.map((block, idx) => {
         if (block.type === 'heading') {
           if (block.level === 1) {
             return (
-              <h1 key={idx} className="markdown-h1">
+              <h1 key={idx} style={styles.h1}>
                 {renderInline(block.text, mentionLabels, roleMentionLabels, emojis)}
               </h1>
             );
           }
           if (block.level === 2) {
             return (
-              <h2 key={idx} className="markdown-h2">
+              <h2 key={idx} style={styles.h2}>
                 {renderInline(block.text, mentionLabels, roleMentionLabels, emojis)}
               </h2>
             );
           }
           return (
-            <h3 key={idx} className="markdown-h3">
+            <h3 key={idx} style={styles.h3}>
               {renderInline(block.text, mentionLabels, roleMentionLabels, emojis)}
             </h3>
           );
@@ -250,9 +343,9 @@ export function MarkdownText({ content, mentionLabels = {}, roleMentionLabels = 
 
         if (block.type === 'list') {
           return (
-            <ul key={idx} className="markdown-list">
+            <ul key={idx} style={styles.list}>
               {block.items.map((item, itemIdx) => (
-                <li key={itemIdx}>{renderInline(item, mentionLabels, roleMentionLabels, emojis)}</li>
+                <li key={itemIdx} style={styles.listItem}>{renderInline(item, mentionLabels, roleMentionLabels, emojis)}</li>
               ))}
             </ul>
           );
@@ -260,7 +353,7 @@ export function MarkdownText({ content, mentionLabels = {}, roleMentionLabels = 
 
         if (block.type === 'blockquote') {
           return (
-            <blockquote key={idx} className="markdown-quote">
+            <blockquote key={idx} style={styles.quote}>
               {renderLinesWithBreaks(block.lines, mentionLabels, roleMentionLabels, emojis)}
             </blockquote>
           );
@@ -268,14 +361,14 @@ export function MarkdownText({ content, mentionLabels = {}, roleMentionLabels = 
 
         if (block.type === 'codeblock') {
           return (
-            <pre key={idx} className="markdown-codeblock">
+            <pre key={idx} style={styles.codeblock}>
               <code data-language={block.language}>{block.code}</code>
             </pre>
           );
         }
 
         return (
-          <p key={idx} className="markdown-paragraph">
+          <p key={idx} style={styles.paragraph}>
             {renderLinesWithBreaks(block.lines, mentionLabels, roleMentionLabels, emojis)}
           </p>
         );

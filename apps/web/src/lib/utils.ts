@@ -52,7 +52,8 @@ export function formatTypingText(usernames: string[]): string {
  * "Arclight Guild" -> "AG"
  * "general" -> "G"
  */
-export function getInitials(name: string, maxLength = 2): string {
+export function getInitials(name: string | null | undefined, maxLength = 2): string {
+  if (!name) return '?';
   return name
     .split(/\s+/)
     .filter(Boolean)

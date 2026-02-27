@@ -1,3 +1,5 @@
+// apps/web/src/components/settings/ServerSettingsNav.tsx
+
 interface ServerSettingsNavProps {
   activeSection: string;
   onSelect: (section: string) => void;
@@ -8,9 +10,17 @@ const NAV_ITEMS = [
   { id: 'members', label: 'Members' },
   { id: 'roles', label: 'Roles' },
   { id: 'channels', label: 'Channels' },
-  { id: 'emoji', label: 'Emoji' },
   { id: 'invites', label: 'Invites' },
+  { id: 'emoji', label: 'Emoji' },
   { id: 'moderation', label: 'Moderation' },
+  { id: 'appearance', label: 'Appearance' },
+  { id: 'soundboard', label: 'Soundboard' },
+  { id: 'analytics', label: 'Analytics' },
+  { id: 'automod', label: 'AutoMod' },
+  { id: 'bots', label: 'Bots' },
+  { id: 'wiki', label: 'Wiki' },
+  { id: 'events', label: 'Events' },
+  { id: 'scheduled-messages', label: 'Scheduled Messages' },
 ] as const;
 
 export function ServerSettingsNav({ activeSection, onSelect }: ServerSettingsNavProps) {

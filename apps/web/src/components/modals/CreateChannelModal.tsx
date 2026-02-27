@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -17,9 +17,120 @@ const GUILD_STAGE_VOICE = 'GUILD_STAGE_VOICE';
 const CHANNEL_TYPE_OPTIONS = [
   { value: GUILD_TEXT, label: 'Text', icon: '#', description: 'Send messages, images, and files' },
   { value: GUILD_VOICE, label: 'Voice', icon: '#)', description: 'Hang out with voice and video' },
-  { value: GUILD_STAGE_VOICE, label: 'Stage', icon: '🎙', description: 'Host events with speakers and audience' },
-  { value: GUILD_CATEGORY, label: 'Category', icon: '📁', description: 'Organize channels into groups' },
+  { value: GUILD_STAGE_VOICE, label: 'Stage', icon: '\u{1F399}', description: 'Host events with speakers and audience' },
+  { value: GUILD_CATEGORY, label: 'Category', icon: '\u{1F4C1}', description: 'Organize channels into groups' },
 ];
+
+const styles = {
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+  } as CSSProperties,
+  error: {
+    color: '#f04747',
+    fontSize: 13,
+    padding: '8px 12px',
+    background: 'rgba(240, 71, 71, 0.1)',
+    borderRadius: 'var(--radius-sm)',
+  } as CSSProperties,
+  inputGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  } as CSSProperties,
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: '#a8a4b8',
+    textTransform: 'uppercase',
+    letterSpacing: '0.02em',
+  } as CSSProperties,
+  typeGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: 8,
+  } as CSSProperties,
+  typeCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 4,
+    padding: '10px 12px',
+    minHeight: 'auto',
+    background: '#25243a',
+    borderWidth: 2,
+    borderStyle: 'solid',
+    borderColor: '#4a4660',
+    borderRadius: 'var(--radius-md)',
+    cursor: 'pointer',
+    textAlign: 'center',
+    transition: 'border-color 0.15s, background 0.15s',
+  } as CSSProperties,
+  typeCardActive: {
+    borderColor: '#d4af37',
+    background: 'rgba(212, 175, 55, 0.08)',
+  } as CSSProperties,
+  typeIcon: {
+    fontSize: 18,
+    lineHeight: 1,
+  } as CSSProperties,
+  typeTitle: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: '#e8e4e0',
+  } as CSSProperties,
+  typeDescription: {
+    fontSize: 11,
+    color: '#a8a4b8',
+    lineHeight: 1.3,
+  } as CSSProperties,
+  selectField: {
+    width: '100%',
+    padding: '10px 12px',
+    fontSize: 14,
+    color: '#e8e4e0',
+    background: '#25243a',
+    border: '1px solid #4a4660',
+    borderRadius: 'var(--radius-sm)',
+    outline: 'none',
+    appearance: 'none',
+    cursor: 'pointer',
+  } as CSSProperties,
+  textareaField: {
+    width: '100%',
+    padding: '10px 12px',
+    fontSize: 14,
+    color: '#e8e4e0',
+    background: '#25243a',
+    border: '1px solid #4a4660',
+    borderRadius: 'var(--radius-sm)',
+    outline: 'none',
+    resize: 'vertical',
+    fontFamily: 'inherit',
+    lineHeight: 1.4,
+  } as CSSProperties,
+  privateToggle: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    fontSize: 14,
+    color: '#e8e4e0',
+    cursor: 'pointer',
+  } as CSSProperties,
+  privateNote: {
+    fontSize: 12,
+    color: '#6e6a80',
+    margin: 0,
+    marginTop: -8,
+  } as CSSProperties,
+  footer: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'flex-end',
+  } as CSSProperties,
+};
 
 export function CreateChannelModal() {
   const activeModal = useUiStore((s) => s.activeModal);
@@ -122,24 +233,26 @@ export function CreateChannelModal() {
 
   return (
     <Modal id="create-channel" title="Create Channel" onClose={resetForm} size="sm">
-      <form className="modal-form" onSubmit={handleSubmit}>
-        {error && <div className="modal-error">{error}</div>}
+      <form style={styles.form} onSubmit={handleSubmit}>
+        {error && <div style={styles.error}>{error}</div>}
 
         {/* Channel type picker */}
-        <div className="input-group">
-          <label className="input-label">Channel Type</label>
-          <div className="create-guild-template-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+        <div style={styles.inputGroup}>
+          <label style={styles.inputLabel}>Channel Type</label>
+          <div style={styles.typeGrid}>
             {CHANNEL_TYPE_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
-                className={`create-guild-template-card ${type === opt.value ? 'create-guild-template-card-active' : ''}`}
+                style={{
+                  ...styles.typeCard,
+                  ...(type === opt.value ? styles.typeCardActive : {}),
+                }}
                 onClick={() => setType(opt.value)}
-                style={{ padding: '10px 12px', minHeight: 'auto' }}
               >
-                <span className="create-guild-template-icon" style={{ fontSize: 18 }}>{opt.icon}</span>
-                <span className="create-guild-template-title" style={{ fontSize: 13 }}>{opt.label}</span>
-                <span className="create-guild-template-description" style={{ fontSize: 11 }}>{opt.description}</span>
+                <span style={styles.typeIcon}>{opt.icon}</span>
+                <span style={styles.typeTitle}>{opt.label}</span>
+                <span style={styles.typeDescription}>{opt.description}</span>
               </button>
             ))}
           </div>
@@ -157,41 +270,37 @@ export function CreateChannelModal() {
         />
 
         {isNotCategory && (
-          <div className="input-group">
-            <label className="input-label">Category</label>
-            <div className="input-wrapper">
-              <select
-                className="input-field"
-                value={parentId}
-                onChange={(e) => setParentId(e.target.value)}
-              >
-                <option value="">No Category</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
-            </div>
+          <div style={styles.inputGroup}>
+            <label style={styles.inputLabel}>Category</label>
+            <select
+              style={styles.selectField}
+              value={parentId}
+              onChange={(e) => setParentId(e.target.value)}
+            >
+              <option value="">No Category</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
           </div>
         )}
 
         {isNotCategory && (
-          <div className="input-group">
-            <label className="input-label">Topic</label>
-            <div className="input-wrapper">
-              <textarea
-                className="input-field channel-topic-input"
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                placeholder="What is this channel for?"
-                maxLength={1024}
-                rows={3}
-              />
-            </div>
+          <div style={styles.inputGroup}>
+            <label style={styles.inputLabel}>Topic</label>
+            <textarea
+              style={styles.textareaField}
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder="What is this channel for?"
+              maxLength={1024}
+              rows={3}
+            />
           </div>
         )}
 
         {isNotCategory && (
-          <label className="channel-private-toggle">
+          <label style={styles.privateToggle}>
             <input
               type="checkbox"
               checked={isPrivate}
@@ -202,12 +311,12 @@ export function CreateChannelModal() {
         )}
 
         {isNotCategory && (
-          <p className="channel-private-note">
+          <p style={styles.privateNote}>
             Only members with explicit permissions can view this channel.
           </p>
         )}
 
-        <div className="modal-footer">
+        <div style={styles.footer}>
           <Button variant="ghost" type="button" onClick={handleClose}>Cancel</Button>
           <Button type="submit" loading={loading} disabled={!name.trim() || !guildId}>Create</Button>
         </div>

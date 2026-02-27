@@ -48,6 +48,9 @@ import { isOriginAllowed, parseAllowedOrigins } from './lib/cors-origins.js';
 import { createLatencyAlerts } from './lib/latency-alerts.js';
 import { bugReportsRouter } from './modules/bug-reports/bug-reports.router.js';
 import { leaderboardRouter } from './modules/leaderboard/leaderboard.router.js';
+import { pollsRouter } from './modules/polls/polls.router.js';
+import { scheduledMessagesRouter } from './modules/scheduled-messages/scheduled-messages.router.js';
+import { cosmeticsRouter } from './modules/cosmetics/cosmetics.router.js';
 import { dailyLoginMiddleware } from './middleware/daily-login.js';
 
 // ============================================================================
@@ -220,6 +223,9 @@ async function main() {
   app.use('/api/v1', profilesRouter(ctx));
   app.use('/api/v1', bugReportsRouter(ctx));
   app.use('/api/v1', leaderboardRouter(ctx));
+  app.use('/api/v1', pollsRouter(ctx));
+  app.use('/api/v1', scheduledMessagesRouter(ctx));
+  app.use('/api/v1', cosmeticsRouter(ctx));
 
   // ── 404 handler ────────────────────────────────────────────────────────
   app.use((_req, res) => {

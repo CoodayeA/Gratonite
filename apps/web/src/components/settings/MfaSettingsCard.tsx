@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
@@ -11,6 +11,134 @@ interface MfaStatus {
 }
 
 const CODE_RE = /^\d{6}$/;
+
+const styles = {
+  card: {
+    background: 'rgba(8, 12, 20, 0.6)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-lg)',
+    padding: 20,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+  } as React.CSSProperties,
+  field: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  } as React.CSSProperties,
+  fieldLabel: {
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    color: 'var(--text-faint)',
+  } as React.CSSProperties,
+  fieldValue: {
+    fontSize: 14,
+    color: 'var(--text)',
+  } as React.CSSProperties,
+  fieldGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: 12,
+  } as React.CSSProperties,
+  fieldControl: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+  } as React.CSSProperties,
+  fieldRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    flexWrap: 'wrap',
+  } as React.CSSProperties,
+  inlineNote: {
+    fontSize: 12,
+    color: 'var(--text-muted)',
+  } as React.CSSProperties,
+  authError: {
+    padding: '10px 14px',
+    background: 'var(--danger-bg)',
+    border: '1px solid rgba(255, 107, 107, 0.25)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--danger)',
+    fontSize: 13,
+  } as React.CSSProperties,
+  authSuccess: {
+    padding: '10px 14px',
+    background: 'rgba(61, 214, 140, 0.09)',
+    border: '1px solid rgba(61, 214, 140, 0.22)',
+    borderRadius: 'var(--radius-md)',
+    color: '#89f0bb',
+    fontSize: 13,
+  } as React.CSSProperties,
+  setupCard: {
+    marginTop: 12,
+    border: '1px solid color-mix(in srgb, var(--stroke) 88%, transparent)',
+    borderRadius: 'var(--radius-lg)',
+    padding: 12,
+    display: 'grid',
+    gap: 12,
+    gridTemplateColumns: 'auto 1fr',
+    background: 'rgba(255, 255, 255, 0.02)',
+  } as React.CSSProperties,
+  setupQrWrap: {
+    width: 220,
+    maxWidth: '100%',
+    borderRadius: 'var(--radius-lg)',
+    overflow: 'hidden',
+    background: '#fff',
+    padding: 8,
+  } as React.CSSProperties,
+  setupQr: {
+    display: 'block',
+    width: '100%',
+    height: 'auto',
+    borderRadius: 'var(--radius-md)',
+  } as React.CSSProperties,
+  setupMeta: {
+    display: 'grid',
+    gap: 10,
+    alignContent: 'start',
+  } as React.CSSProperties,
+  actionsGrid: {
+    marginTop: 12,
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: 12,
+  } as React.CSSProperties,
+  actionCard: {
+    border: '1px solid color-mix(in srgb, var(--stroke) 88%, transparent)',
+    borderRadius: 'var(--radius-lg)',
+    padding: 12,
+    background: 'rgba(255, 255, 255, 0.02)',
+    display: 'grid',
+    gap: 10,
+    alignContent: 'start',
+  } as React.CSSProperties,
+  backupCodes: {
+    marginTop: 12,
+    display: 'grid',
+    gap: 8,
+  } as React.CSSProperties,
+  backupGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
+    gap: 8,
+  } as React.CSSProperties,
+  backupCode: {
+    display: 'inline-flex',
+    justifyContent: 'center',
+    padding: '8px 10px',
+    borderRadius: 10,
+    border: '1px solid color-mix(in srgb, var(--stroke) 88%, transparent)',
+    background: 'rgba(8, 12, 22, 0.42)',
+    color: 'var(--text)',
+    fontSize: 12,
+    letterSpacing: '0.04em',
+  } as React.CSSProperties,
+};
 
 export function MfaSettingsCard() {
   const [status, setStatus] = useState<MfaStatus | null>(null);
@@ -117,33 +245,33 @@ export function MfaSettingsCard() {
   }
 
   return (
-    <div className="settings-card">
-      <div className="settings-field">
-        <div className="settings-field-label">Two-Factor Authentication (MFA)</div>
-        <div className="settings-field-value">
+    <div style={styles.card}>
+      <div style={styles.field}>
+        <div style={styles.fieldLabel}>Two-Factor Authentication (MFA)</div>
+        <div style={styles.fieldValue}>
           Protect your account with a one-time code from an authenticator app.
         </div>
       </div>
 
-      {loadingStatus ? <div className="settings-inline-note">Loading MFA status...</div> : null}
-      {error ? <div className="auth-error">{error}</div> : null}
-      {success ? <div className="auth-success">{success}</div> : null}
+      {loadingStatus ? <div style={styles.inlineNote}>Loading MFA status...</div> : null}
+      {error ? <div style={styles.authError}>{error}</div> : null}
+      {success ? <div style={styles.authSuccess}>{success}</div> : null}
 
       {status && (
-        <div className="settings-field-grid">
-          <div className="settings-field">
-            <div className="settings-field-label">Status</div>
-            <div className="settings-field-value">{status.enabled ? 'Enabled' : 'Disabled'}</div>
+        <div style={styles.fieldGrid}>
+          <div style={styles.field}>
+            <div style={styles.fieldLabel}>Status</div>
+            <div style={styles.fieldValue}>{status.enabled ? 'Enabled' : 'Disabled'}</div>
           </div>
-          <div className="settings-field">
-            <div className="settings-field-label">Backup Codes</div>
-            <div className="settings-field-value">{status.backupCodeCount}</div>
+          <div style={styles.field}>
+            <div style={styles.fieldLabel}>Backup Codes</div>
+            <div style={styles.fieldValue}>{status.backupCodeCount}</div>
           </div>
         </div>
       )}
 
       {!status?.enabled && (
-        <div className="settings-field-control settings-field-row">
+        <div style={styles.fieldRow}>
           <Button onClick={handleStartSetup} loading={setupLoading}>
             Start MFA Setup
           </Button>
@@ -151,12 +279,12 @@ export function MfaSettingsCard() {
       )}
 
       {setup && !status?.enabled && (
-        <div className="mfa-setup-card">
-          <div className="mfa-setup-qr-wrap">
-            <img src={setup.qrCodeDataUrl} alt="MFA QR code" className="mfa-setup-qr" />
+        <div style={styles.setupCard}>
+          <div style={styles.setupQrWrap}>
+            <img src={setup.qrCodeDataUrl} alt="MFA QR code" style={styles.setupQr} />
           </div>
-          <div className="mfa-setup-meta">
-            <div className="settings-inline-note">
+          <div style={styles.setupMeta}>
+            <div style={styles.inlineNote}>
               Expires in about {Math.floor(setup.expiresInSeconds / 60)} minutes.
             </div>
             <Input label="Manual Key" type="text" value={setup.secret} readOnly />
@@ -168,7 +296,7 @@ export function MfaSettingsCard() {
               onChange={(e) => setSetupCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               hint="Enter the code from your authenticator app to enable MFA."
             />
-            <div className="settings-field-control settings-field-row">
+            <div style={styles.fieldRow}>
               <Button onClick={handleEnable} disabled={!validSetupCode}>
                 Enable MFA
               </Button>
@@ -178,9 +306,9 @@ export function MfaSettingsCard() {
       )}
 
       {status?.enabled && (
-        <div className="mfa-actions-grid">
-          <div className="mfa-action-card">
-            <div className="settings-inline-note">Disable MFA (requires current 6-digit code)</div>
+        <div style={styles.actionsGrid}>
+          <div style={styles.actionCard}>
+            <div style={styles.inlineNote}>Disable MFA (requires current 6-digit code)</div>
             <Input
               label="6-digit code"
               type="text"
@@ -193,8 +321,8 @@ export function MfaSettingsCard() {
             </Button>
           </div>
 
-          <div className="mfa-action-card">
-            <div className="settings-inline-note">Regenerate backup codes (invalidates previous codes)</div>
+          <div style={styles.actionCard}>
+            <div style={styles.inlineNote}>Regenerate backup codes (invalidates previous codes)</div>
             <Input
               label="6-digit code"
               type="text"
@@ -210,11 +338,11 @@ export function MfaSettingsCard() {
       )}
 
       {backupCodes && backupCodes.length > 0 && (
-        <div className="mfa-backup-codes">
-          <div className="settings-field-label">Backup Codes (save these now)</div>
-          <div className="mfa-backup-grid">
+        <div style={styles.backupCodes}>
+          <div style={styles.fieldLabel}>Backup Codes (save these now)</div>
+          <div style={styles.backupGrid}>
             {backupCodes.map((code) => (
-              <code key={code} className="mfa-backup-code">
+              <code key={code} style={styles.backupCode}>
                 {code}
               </code>
             ))}

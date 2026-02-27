@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useMatch, useNavigate } from 'react-router-dom';
 import { useGuildsStore } from '@/stores/guilds.store';
@@ -27,7 +27,7 @@ const V = {
 
 /* ── Shared inline style objects ──────────────────────────────────────── */
 
-const railStyle: React.CSSProperties = {
+const railStyle = {
   width: 72,
   background: V.railBg,
   display: 'flex',
@@ -37,9 +37,9 @@ const railStyle: React.CSSProperties = {
   padding: '16px 0',
   boxSizing: 'border-box',
   overflow: 'hidden',
-};
+} as React.CSSProperties;
 
-const iconBaseStyle: React.CSSProperties = {
+const iconBaseStyle = {
   width: 48,
   height: 48,
   borderRadius: 10,
@@ -50,9 +50,9 @@ const iconBaseStyle: React.CSSProperties = {
   position: 'relative',
   flexShrink: 0,
   transition: 'background 0.15s ease, border-radius 0.15s ease',
-};
+} as React.CSSProperties;
 
-const homeIconStyle: React.CSSProperties = {
+const homeIconStyle = {
   ...iconBaseStyle,
   background: V.accent,
   color: V.textOnGold,
@@ -60,50 +60,50 @@ const homeIconStyle: React.CSSProperties = {
   fontSize: 22,
   fontFamily: 'inherit',
   letterSpacing: '-0.5px',
-};
+} as React.CSSProperties;
 
-const dividerStyle: React.CSSProperties = {
+const dividerStyle = {
   width: 32,
   height: 2,
   background: V.stroke,
   borderRadius: 1,
   flexShrink: 0,
-};
+} as React.CSSProperties;
 
-const serverIconStyle: React.CSSProperties = {
+const serverIconStyle = {
   ...iconBaseStyle,
   background: V.bgElevated,
   color: V.text,
-};
+} as React.CSSProperties;
 
-const serverIconActiveStyle: React.CSSProperties = {
+const serverIconActiveStyle = {
   ...iconBaseStyle,
   background: V.bgSoft,
   color: V.text,
-};
+} as React.CSSProperties;
 
-const addButtonStyle: React.CSSProperties = {
+const addButtonStyle = {
   ...iconBaseStyle,
   background: 'transparent',
   border: `1px solid ${V.stroke}`,
   color: V.textMuted,
   fontSize: 22,
   fontWeight: 300,
-};
+} as React.CSSProperties;
 
-const discoverButtonStyle: React.CSSProperties = {
+const discoverButtonStyle = {
   ...iconBaseStyle,
   background: 'transparent',
   color: V.textMuted,
-};
+} as React.CSSProperties;
 
-const utilityButtonStyle: React.CSSProperties = {
+const utilityButtonStyle = {
   ...iconBaseStyle,
   background: 'transparent',
   color: V.textMuted,
-};
+} as React.CSSProperties;
 
-const guildListStyle: React.CSSProperties = {
+const guildListStyle = {
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
@@ -115,18 +115,18 @@ const guildListStyle: React.CSSProperties = {
   minHeight: 0,
   width: '100%',
   scrollbarWidth: 'none',
-};
+} as React.CSSProperties;
 
-const guildItemWrapperStyle: React.CSSProperties = {
+const guildItemWrapperStyle = {
   position: 'relative',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   width: '100%',
-};
+} as React.CSSProperties;
 
 /* Active indicator pill (gold, left side) */
-const activeIndicatorStyle: React.CSSProperties = {
+const activeIndicatorStyle = {
   position: 'absolute',
   left: 0,
   top: '50%',
@@ -135,39 +135,145 @@ const activeIndicatorStyle: React.CSSProperties = {
   height: 32,
   borderRadius: '0 4px 4px 0',
   background: V.accent,
-};
+} as React.CSSProperties;
 
 /* Hover indicator (smaller) */
-const hoverIndicatorStyle: React.CSSProperties = {
+const hoverIndicatorStyle = {
   ...activeIndicatorStyle,
   height: 20,
   opacity: 0,
   transition: 'opacity 0.15s ease, height 0.15s ease',
-};
+} as React.CSSProperties;
 
 /* Unread dot indicator (left side, white pill) */
-const unreadIndicatorStyle: React.CSSProperties = {
+const unreadIndicatorStyle = {
   ...activeIndicatorStyle,
   height: 8,
   background: V.text,
-};
+} as React.CSSProperties;
 
-const profileSlotStyle: React.CSSProperties = {
-  width: 48,
-  flexShrink: 0,
-};
+const profileSlotStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '100%',
+  position: 'relative',
+  zIndex: 20,
+  overflow: 'visible',
+} as React.CSSProperties;
 
-const spacerStyle: React.CSSProperties = {
+const spacerStyle = {
   flexGrow: 1,
-};
+} as React.CSSProperties;
 
-const footerStyle: React.CSSProperties = {
+const footerStyle = {
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   gap: 8,
+  paddingBottom: 4,
+  marginTop: 8,
+  width: '100%',
+  position: 'relative',
+  zIndex: 5,
   flexShrink: 0,
-};
+} as React.CSSProperties;
+
+/* Badge / tooltip inline styles */
+const unreadBadgeStyle = {
+  position: 'absolute',
+  top: -4,
+  right: -4,
+  minWidth: 18,
+  height: 18,
+  borderRadius: 'var(--radius-pill)',
+  padding: '0 5px',
+  display: 'grid',
+  placeItems: 'center',
+  background: 'rgba(212, 175, 55, 0.18)',
+  border: '1px solid rgba(212, 175, 55, 0.4)',
+  color: V.text,
+  fontSize: 10,
+  fontWeight: 700,
+  lineHeight: 1,
+  pointerEvents: 'none',
+  zIndex: 2,
+} as React.CSSProperties;
+
+const voiceBadgeStyle = {
+  position: 'absolute',
+  bottom: -2,
+  right: -2,
+  width: 20,
+  height: 20,
+  borderRadius: '50%',
+  display: 'grid',
+  placeItems: 'center',
+  background: 'rgba(46, 204, 113, 0.2)',
+  border: '2px solid rgba(46, 204, 113, 0.6)',
+  color: '#2ecc71',
+  pointerEvents: 'none',
+  zIndex: 2,
+} as React.CSSProperties;
+
+const voiceTooltipStyle = {
+  minWidth: 160,
+  maxWidth: 220,
+  background: 'var(--bg-secondary, #1a1f2e)',
+  border: '1px solid var(--border, rgba(255, 255, 255, 0.08))',
+  borderRadius: 'var(--radius-md)',
+  padding: '8px 10px',
+  zIndex: 9999,
+  pointerEvents: 'none',
+  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
+} as React.CSSProperties;
+
+const voiceTooltipTitleStyle = {
+  fontSize: 11,
+  fontWeight: 700,
+  color: '#2ecc71',
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em',
+  marginBottom: 6,
+} as React.CSSProperties;
+
+const voiceTooltipChannelStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  padding: '3px 0',
+  fontSize: 12,
+  color: 'var(--text-secondary, rgba(255, 255, 255, 0.65))',
+} as React.CSSProperties;
+
+const voiceTooltipIconStyle = {
+  fontSize: 11,
+  flexShrink: 0,
+} as React.CSSProperties;
+
+const voiceTooltipNameStyle = {
+  flex: 1,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  color: 'var(--text, rgba(255, 255, 255, 0.9))',
+} as React.CSSProperties;
+
+const voiceTooltipCountStyle = {
+  flexShrink: 0,
+  fontSize: 11,
+  fontWeight: 600,
+  color: '#2ecc71',
+  background: 'rgba(46, 204, 113, 0.12)',
+  borderRadius: 'var(--radius-md)',
+  padding: '1px 6px',
+} as React.CSSProperties;
+
+const settingsIconOverride = {
+  ...utilityButtonStyle,
+  borderColor: 'rgba(138, 123, 255, 0.22)',
+  background: 'linear-gradient(180deg, rgba(138,123,255,0.08), rgba(121,223,255,0.05)), rgba(10, 16, 28, 0.58)',
+} as React.CSSProperties;
 
 export function GuildRail() {
   // Triggers data fetch + syncs to store
@@ -254,21 +360,25 @@ export function GuildRail() {
         title={!isGuildContext ? 'Toggle DM sidebar' : 'Direct Messages'}
         style={{ textDecoration: 'none' }}
       >
-        <div className="guild-rail-icon guild-rail-home-icon" style={homeIconStyle}>
-          G
+        <div style={homeIconStyle}>
+          <img
+            src={`${import.meta.env.BASE_URL}gratonite-icon.png`}
+            alt="Gratonite Home"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit', display: 'block' }}
+          />
         </div>
       </NavLink>
 
       {/* ── 2. Divider ───────────────────────────────────────────────── */}
-      <div className="guild-rail-divider" style={dividerStyle} />
+      <div style={dividerStyle} />
 
       {/* ── Profile slot (preserved) ─────────────────────────────────── */}
-      <div className="guild-rail-profile-slot" style={profileSlotStyle} title="Profile and status">
+      <div style={profileSlotStyle} title="Profile and status">
         <UserBar compact />
       </div>
 
       {/* ── 3. Server icons (scrollable guild list) ──────────────────── */}
-      <div className="guild-rail-list" style={guildListStyle}>
+      <div style={guildListStyle}>
         {guildOrder.map((id) => {
           const guild = guilds.get(id);
           if (!guild) return null;
@@ -320,12 +430,12 @@ export function GuildRail() {
                   {/* Server icon */}
                   <div style={isActive ? serverIconActiveStyle : serverIconStyle}>
                     {guildUnread > 0 && (
-                      <span className="guild-rail-unread-badge" aria-label={`${guildUnread} unread in ${guild.name}`}>
+                      <span style={unreadBadgeStyle} aria-label={`${guildUnread} unread in ${guild.name}`}>
                         {guildUnread > 99 ? '99+' : guildUnread}
                       </span>
                     )}
                     {hasVoice && (
-                      <span className="guild-rail-voice-badge" aria-label={`${totalVoiceUsers} in voice`} title="">
+                      <span style={voiceBadgeStyle} aria-label={`${totalVoiceUsers} in voice`} title="">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
                           <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
@@ -347,7 +457,7 @@ export function GuildRail() {
       </div>
 
       {/* ── 4. Divider 2 ─────────────────────────────────────────────── */}
-      <div className="guild-rail-divider" style={dividerStyle} />
+      <div style={dividerStyle} />
 
       {/* ── 5. Add Server button (+) ─────────────────────────────────── */}
       <button
@@ -384,14 +494,25 @@ export function GuildRail() {
         </div>
       </NavLink>
 
+      {/* ── Cosmetics Marketplace ────────────────────────────────────── */}
+      <NavLink to="/cosmetics" className="guild-rail-item guild-rail-utility" title="Cosmetics Marketplace" style={{ textDecoration: 'none' }}>
+        <div style={utilityButtonStyle} aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" />
+            <path d="M2 17l10 5 10-5" />
+            <path d="M2 12l10 5 10-5" />
+          </svg>
+        </div>
+      </NavLink>
+
       {/* ── Spacer ───────────────────────────────────────────────────── */}
       <div style={spacerStyle} />
 
       {/* ── Bottom divider ───────────────────────────────────────────── */}
-      <div className="guild-rail-divider guild-rail-divider-bottom" style={dividerStyle} />
+      <div style={{ ...dividerStyle, marginTop: 10, flexShrink: 0 }} />
 
       {/* ── Footer (notifications + settings) ────────────────────────── */}
-      <div className="guild-rail-footer" style={footerStyle}>
+      <div style={footerStyle}>
         <NavLink to="/notifications" className="guild-rail-item guild-rail-utility" title="Notifications" style={{ textDecoration: 'none' }}>
           <div style={utilityButtonStyle} aria-hidden="true">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -401,7 +522,7 @@ export function GuildRail() {
           </div>
         </NavLink>
         <NavLink to="/settings" className="guild-rail-item guild-rail-utility" title="Settings" style={{ textDecoration: 'none' }}>
-          <div style={utilityButtonStyle} className="guild-rail-settings-icon" aria-hidden="true">
+          <div style={settingsIconOverride} aria-hidden="true">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
             </svg>
@@ -412,20 +533,20 @@ export function GuildRail() {
       {/* ── Voice tooltip rendered via portal to avoid overflow:hidden clipping ── */}
       {tooltipGuild && tooltipVoiceChannels && tooltipVoiceChannels.length > 0 && createPortal(
         <div
-          className="guild-rail-voice-tooltip"
           style={{
+            ...voiceTooltipStyle,
             position: 'fixed',
             left: tooltipGuild.rect.right + 12,
             top: tooltipGuild.rect.top + tooltipGuild.rect.height / 2,
             transform: 'translateY(-50%)',
           }}
         >
-          <div className="guild-rail-voice-tooltip-title">Voice Active</div>
+          <div style={voiceTooltipTitleStyle}>Voice Active</div>
           {tooltipVoiceChannels.map((vc) => (
-            <div key={vc.channelId} className="guild-rail-voice-tooltip-channel">
-              <span className="guild-rail-voice-tooltip-icon">🔊</span>
-              <span className="guild-rail-voice-tooltip-name">{vc.channelName}</span>
-              <span className="guild-rail-voice-tooltip-count">{vc.userCount}</span>
+            <div key={vc.channelId} style={voiceTooltipChannelStyle}>
+              <span style={voiceTooltipIconStyle}>🔊</span>
+              <span style={voiceTooltipNameStyle}>{vc.channelName}</span>
+              <span style={voiceTooltipCountStyle}>{vc.userCount}</span>
             </div>
           ))}
         </div>,

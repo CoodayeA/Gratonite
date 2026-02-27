@@ -3,9 +3,10 @@ import { createHash } from 'crypto';
 import multer from 'multer';
 import sharp from 'sharp';
 import { eq, ilike, or, and } from 'drizzle-orm';
-import { users, userProfiles, userSettings, relationships, guildMembers, guilds } from '@gratonite/db';
+import { users, userProfiles, userSettings, userCustomStatus, relationships, guildMembers, guilds } from '@gratonite/db';
 import { inArray } from 'drizzle-orm';
 import { createDndService } from './dnd.service.js';
+import { createAdminService } from '../admin/admin.service.js';
 import type { AppContext } from '../../lib/context.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { logger } from '../../lib/logger.js';
@@ -25,6 +26,7 @@ const bannerUpload = multer({
 export function usersRouter(ctx: AppContext): Router {
   const router = Router();
   const auth = requireAuth(ctx);
+  const adminService = createAdminService(ctx);
   const allowedPresenceStatuses = new Set(['online', 'idle', 'dnd', 'invisible']);
 
   // ── GET /api/v1/users (batch summary) ─────────────────────────────────
@@ -145,6 +147,7 @@ export function usersRouter(ctx: AppContext): Router {
         email: user.email,
         emailVerified: user.emailVerified,
         createdAt: user.createdAt.toISOString(),
+        isAdmin: adminService.isAdmin(user.username),
         profile: profile
           ? {
               displayName: profile.displayName,
@@ -648,6 +651,8 @@ export function usersRouter(ctx: AppContext): Router {
           accentColor: userProfiles.accentColor,
           primaryColor: userProfiles.primaryColor,
           messageCount: userProfiles.messageCount,
+          tier: userProfiles.tier,
+          widgets: userProfiles.widgets,
         })
         .from(users)
         .leftJoin(userProfiles, eq(userProfiles.userId, users.id))
@@ -657,6 +662,12 @@ export function usersRouter(ctx: AppContext): Router {
       if (!row) {
         return res.status(404).json({ code: 'USER_NOT_FOUND', message: 'User not found' });
       }
+
+      // Compute badges
+      const badges: string[] = [];
+      if (row.tier === 'crystalline') badges.push('Crystalline');
+      if (new Date(row.createdAt).getFullYear() <= 2024) badges.push('OG');
+      if (adminService.isAdmin(row.username)) badges.push('Staff');
 
       res.json({
         id: row.id.toString(),
@@ -670,9 +681,54 @@ export function usersRouter(ctx: AppContext): Router {
         primaryColor: row.primaryColor,
         messageCount: row.messageCount ?? 0,
         createdAt: row.createdAt.toISOString(),
+        tier: row.tier,
+        widgets: row.widgets ?? [],
+        badges,
       });
     } catch (err) {
       logger.error({ err }, 'Error fetching user profile');
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An error occurred' });
+    }
+  });
+
+  // ── PATCH /api/v1/users/@me/status ──────────────────────────────────
+  router.patch('/@me/status', auth, async (req, res) => {
+    try {
+      const userId = req.user!.userId;
+      const text: string | null = typeof req.body?.text === 'string' ? req.body.text.slice(0, 128) : null;
+      const expiresAt: Date | null = req.body?.expiresAt ? new Date(req.body.expiresAt) : null;
+
+      await ctx.db
+        .insert(userCustomStatus)
+        .values({ userId, text, expiresAt })
+        .onConflictDoUpdate({
+          target: userCustomStatus.userId,
+          set: { text, expiresAt },
+        });
+
+      res.json({ success: true });
+    } catch (err) {
+      logger.error({ err }, 'Error updating custom status');
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An error occurred' });
+    }
+  });
+
+  // ── PATCH /api/v1/users/@me/widgets ─────────────────────────────────
+  router.patch('/@me/widgets', auth, async (req, res) => {
+    try {
+      const userId = req.user!.userId;
+      const widgets = Array.isArray(req.body?.widgets)
+        ? (req.body.widgets as unknown[]).filter((w): w is string => typeof w === 'string').slice(0, 8)
+        : [];
+
+      await ctx.db
+        .update(userProfiles)
+        .set({ widgets })
+        .where(eq(userProfiles.userId, userId));
+
+      res.json({ success: true });
+    } catch (err) {
+      logger.error({ err }, 'Error updating widgets');
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An error occurred' });
     }
   });

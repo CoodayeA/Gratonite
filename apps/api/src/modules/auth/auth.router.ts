@@ -43,41 +43,12 @@ export function authRouter(ctx: AppContext): Router {
         return;
       }
 
-      // Check username availability
-      const isAvailable = await authService.checkUsernameAvailability(parsed.data.username);
-      if (!isAvailable) {
-        res.status(409).json({
-          code: 'USERNAME_TAKEN',
-          message: 'This username is already taken',
-        });
-        return;
-      }
-
       const result = await authService.register(parsed.data);
 
-      // Set refresh token as HttpOnly cookie
-      res.cookie('refreshToken', result.refreshToken, {
-        httpOnly: true,
-        secure: ctx.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        path: '/api/v1/auth',
-      });
-
-      res.status(201).json({
-        accessToken: result.accessToken,
-        user: result.user,
-      });
+      res.status(201).json({ email: result.email });
     } catch (err: unknown) {
       // Handle unique constraint violations
       if (err instanceof Error && err.message.includes('unique')) {
-        if (err.message.includes('username')) {
-          res.status(409).json({
-            code: 'USERNAME_TAKEN',
-            message: 'This username is already taken',
-          });
-          return;
-        }
         if (err.message.includes('email')) {
           res.status(409).json({
             code: 'EMAIL_TAKEN',
@@ -271,7 +242,7 @@ export function authRouter(ctx: AppContext): Router {
       }
 
       const result = await authService.confirmEmailVerificationToken(parsed.data.token);
-      if ('error' in result) {
+      if (result.error) {
         const code = result.error === 'TOKEN_EXPIRED' ? 410 : 400;
         res.status(code).json({
           code: result.error,
@@ -280,8 +251,17 @@ export function authRouter(ctx: AppContext): Router {
         return;
       }
 
+      res.cookie('refreshToken', result.refreshToken, {
+        httpOnly: true,
+        secure: ctx.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: '/api/v1/auth',
+      });
+
       res.json({
         ok: true,
+        accessToken: result.accessToken,
         message: 'Email verified successfully',
       });
     } catch (err) {

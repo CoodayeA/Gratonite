@@ -42,6 +42,24 @@ const envSchema = z.object({
     .url()
     .default('http://localhost:4000/api/v1/auth/google/callback'),
 
+  // Apple OAuth
+  APPLE_CLIENT_ID: z.string().optional(), // Service ID (e.g. com.gratonite.web)
+  APPLE_TEAM_ID: z.string().optional(),
+  APPLE_KEY_ID: z.string().optional(),
+  APPLE_PRIVATE_KEY: z.string().optional(), // PEM contents (newlines as \n)
+  APPLE_CALLBACK_URL: z
+    .string()
+    .url()
+    .default('http://localhost:4000/api/v1/auth/apple/callback'),
+
+  // Facebook OAuth
+  FACEBOOK_APP_ID: z.string().optional(),
+  FACEBOOK_APP_SECRET: z.string().optional(),
+  FACEBOOK_CALLBACK_URL: z
+    .string()
+    .url()
+    .default('http://localhost:4000/api/v1/auth/facebook/callback'),
+
   // App URLs / Email delivery
   APP_ORIGIN: z.string().default('http://localhost:5173'),
   SMTP_HOST: z.string().optional(),

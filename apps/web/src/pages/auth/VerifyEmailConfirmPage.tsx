@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { api } from '@/lib/api';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { api, setAccessToken } from '@/lib/api';
 import { getErrorMessage } from '@/lib/utils';
+import { useAuthStore } from '@/stores/auth.store';
 
 /* ── Spinner keyframes (injected once) ─────────────────────────────── */
 
@@ -148,7 +149,7 @@ const styles = {
     justifyContent: 'center',
     width: 220,
     height: 44,
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'var(--accent)',
     color: 'var(--text-on-gold)',
     fontSize: 15,
@@ -165,7 +166,7 @@ const styles = {
     justifyContent: 'center',
     width: 220,
     height: 44,
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     background: 'transparent',
     color: 'var(--accent)',
     fontSize: 15,
@@ -192,6 +193,9 @@ export function VerifyEmailConfirmPage() {
   const [state, setState] = useState<VerifyState>('loading');
   const [message, setMessage] = useState('Verifying your email...');
 
+  const navigate = useNavigate();
+  const login = useAuthStore((s) => s.login);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -205,8 +209,17 @@ export function VerifyEmailConfirmPage() {
       try {
         const res = await api.auth.confirmEmailVerification(token);
         if (cancelled) return;
-        setState('success');
-        setMessage(res.message);
+        setAccessToken(res.accessToken);
+        const me = await api.users.getMe();
+        login({
+          id: me.id,
+          username: me.username,
+          email: me.email,
+          displayName: me.profile?.displayName ?? me.username,
+          avatarHash: me.profile?.avatarHash ?? null,
+          tier: me.profile?.tier ?? 'free',
+        });
+        navigate('/onboarding/account', { replace: true });
       } catch (err) {
         if (cancelled) return;
         setState('error');
@@ -263,10 +276,6 @@ export function VerifyEmailConfirmPage() {
             <p style={styles.description}>
               Congratulations! Your email address has been successfully verified. You can now sign in to your account.
             </p>
-
-            <Link to="/login" style={styles.continueButton}>
-              Continue to Login
-            </Link>
           </>
         )}
 

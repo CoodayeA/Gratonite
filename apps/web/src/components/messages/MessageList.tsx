@@ -22,6 +22,58 @@ interface MessageListProps {
 
 const EMPTY_MESSAGES: Message[] = [];
 
+const styles = {
+  list: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '14px 0 18px',
+    scrollBehavior: 'smooth',
+    scrollbarWidth: 'thin',
+    scrollbarColor: 'var(--stroke) transparent',
+  } as React.CSSProperties,
+  loading: {
+    display: 'grid',
+    placeItems: 'center',
+    flex: 1,
+    padding: 40,
+    color: 'var(--text-muted)',
+    fontSize: 14,
+  } as React.CSSProperties,
+  loader: {
+    display: 'flex',
+    justifyContent: 'center',
+    padding: 12,
+  } as React.CSSProperties,
+  beginning: {
+    textAlign: 'center',
+    padding: 16,
+    fontSize: 13,
+    color: 'var(--text-faint)',
+    border: '1px solid rgba(163, 191, 239, 0.1)',
+    background: 'rgba(255, 255, 255, 0.015)',
+    borderRadius: 'var(--radius-lg)',
+    margin: '0 16px 10px',
+  } as React.CSSProperties,
+  empty: {
+    display: 'grid',
+    placeItems: 'center',
+    flex: 1,
+    padding: 40,
+    color: 'var(--text-muted)',
+    fontSize: 14,
+  } as React.CSSProperties,
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: 600,
+    color: 'var(--text)',
+  } as React.CSSProperties,
+  emptySubtitle: {
+    marginTop: 6,
+    fontSize: 12,
+    color: 'var(--text-muted)',
+  } as React.CSSProperties,
+};
+
 export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onReply, onOpenEmojiPicker, hideIntroEmpty }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -111,31 +163,31 @@ export function MessageList({ channelId, emptyTitle, emptySubtitle, intro, onRep
 
   if (isLoading) {
     return (
-      <div className="message-list-loading">
+      <div style={styles.loading}>
         <LoadingSpinner size={32} />
       </div>
     );
   }
 
   return (
-    <div className="message-list" ref={containerRef} onScroll={handleScroll}>
+    <div style={styles.list} ref={containerRef} onScroll={handleScroll}>
       {!hideIntroEmpty && intro}
       {isFetchingNextPage && (
-        <div className="message-list-loader">
+        <div style={styles.loader}>
           <LoadingSpinner size={20} />
         </div>
       )}
 
       {!hasMore && visibleMessages.length > 0 && (
-        <div className="message-list-beginning">
+        <div style={styles.beginning}>
           This is the beginning of the conversation.
         </div>
       )}
 
       {visibleMessages.length === 0 && !isLoading && !hideIntroEmpty && (
-        <div className="message-list-empty">
-          <div className="message-list-empty-title">{emptyTitle ?? 'No messages yet.'}</div>
-          <div className="message-list-empty-subtitle">
+        <div style={styles.empty}>
+          <div style={styles.emptyTitle}>{emptyTitle ?? 'No messages yet.'}</div>
+          <div style={styles.emptySubtitle}>
             {emptySubtitle ?? 'Say something to get the conversation started.'}
           </div>
         </div>

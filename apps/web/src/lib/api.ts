@@ -303,7 +303,7 @@ export interface BetaBugReportInboxItem extends BetaBugReport {
 export const api = {
   auth: {
     register: (data: RegisterRequest) =>
-      apiFetch<AuthResponse>('/auth/register', {
+      apiFetch<{ email: string }>('/auth/register', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
@@ -331,7 +331,7 @@ export const api = {
       }),
 
     confirmEmailVerification: (token: string) =>
-      apiFetch<{ ok: true; message: string }>('/auth/verify-email/confirm', {
+      apiFetch<{ ok: true; message: string; accessToken: string }>('/auth/verify-email/confirm', {
         method: 'POST',
         body: JSON.stringify({ token }),
       }),
@@ -376,6 +376,7 @@ export const api = {
       email: string;
       emailVerified: boolean;
       createdAt: string;
+      isAdmin: boolean;
       profile: {
         displayName: string;
         avatarHash: string | null;
@@ -388,7 +389,7 @@ export const api = {
         tier: string;
         previousAvatarHashes: string[];
         messageCount: number;
-      };
+      } | null;
     }>('/users/@me'),
 
     updateProfile: (data: { displayName?: string; bio?: string; pronouns?: string; accentColor?: string; primaryColor?: string }) =>
@@ -501,6 +502,12 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify({ status }),
       }),
+
+    updateCustomStatus: (data: { text: string | null; expiresAt: string | null }) =>
+      apiFetch<void>('/users/@me/status', { method: 'PATCH', body: JSON.stringify(data) }),
+
+    updateWidgets: (widgets: string[]) =>
+      apiFetch<void>('/users/@me/widgets', { method: 'PATCH', body: JSON.stringify({ widgets }) }),
   },
 
   profiles: {
@@ -693,10 +700,36 @@ export const api = {
       }),
     deleteSoundboard: (guildId: string, soundId: string) =>
       apiFetch<void>(`/guilds/${guildId}/soundboard/${soundId}`, { method: 'DELETE' }),
+    getStageInstances: (guildId: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/stage-instances`),
+    requestToSpeak: (channelId: string) =>
+      apiFetch<void>(`/channels/${channelId}/voice/request-speak`, { method: 'PUT' }),
+    addSpeaker: (channelId: string, userId: string) =>
+      apiFetch<void>(`/channels/${channelId}/voice/speakers/${userId}`, { method: 'PUT' }),
+    removeSpeaker: (channelId: string, userId: string) =>
+      apiFetch<void>(`/channels/${channelId}/voice/speakers/${userId}`, { method: 'DELETE' }),
+    createStageInstance: (channelId: string, data: { topic: string }) =>
+      apiFetch<any>('/stage-instances', {
+        method: 'POST',
+        body: JSON.stringify({ channelId, ...data }),
+      }),
+    deleteStageInstance: (channelId: string) =>
+      apiFetch<void>(`/stage-instances/${channelId}`, { method: 'DELETE' }),
   },
 
   guilds: {
     getMine: () => apiFetch<Guild[]>('/guilds/@me'),
+
+    discover: () => apiFetch<Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      iconHash: string | null;
+      bannerHash: string | null;
+      memberCount: number;
+      tags: string[];
+      categories: string[];
+    }>>('/guilds/discover'),
 
     get: (guildId: string) => apiFetch<Guild>(`/guilds/${guildId}`),
 
@@ -1083,6 +1116,87 @@ export const api = {
       apiFetch<any>(`/wiki/${pageId}/revert/${revisionId}`, { method: 'POST' }),
   },
 
+  events: {
+    list: (guildId: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/scheduled-events`),
+
+    get: (guildId: string, eventId: string) =>
+      apiFetch<any>(`/guilds/${guildId}/scheduled-events/${eventId}`),
+
+    create: (
+      guildId: string,
+      data: {
+        name: string;
+        description?: string;
+        startTime: string;
+        endTime?: string;
+        entityType: 'STAGE' | 'VOICE' | 'EXTERNAL';
+        location?: string;
+        channelId?: string;
+      },
+    ) =>
+      apiFetch<any>(`/guilds/${guildId}/scheduled-events`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    update: (
+      guildId: string,
+      eventId: string,
+      data: { name?: string; description?: string; startTime?: string; endTime?: string; status?: string; location?: string },
+    ) =>
+      apiFetch<any>(`/guilds/${guildId}/scheduled-events/${eventId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    delete: (guildId: string, eventId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/scheduled-events/${eventId}`, { method: 'DELETE' }),
+
+    markInterested: (guildId: string, eventId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/scheduled-events/${eventId}/interested`, { method: 'PUT' }),
+
+    unmarkInterested: (guildId: string, eventId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/scheduled-events/${eventId}/interested`, { method: 'DELETE' }),
+  },
+
+  polls: {
+    list: (channelId: string) =>
+      apiFetch<any[]>(`/channels/${channelId}/polls`),
+    get: (pollId: string) =>
+      apiFetch<any>(`/polls/${pollId}`),
+    create: (channelId: string, data: { question: string; options: string[]; duration?: number; multiselect?: boolean }) =>
+      apiFetch<any>(`/channels/${channelId}/polls`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    vote: (pollId: string, optionIds: string[]) =>
+      apiFetch<void>(`/polls/${pollId}/answers`, {
+        method: 'POST',
+        body: JSON.stringify({ optionIds }),
+      }),
+    removeVote: (pollId: string) =>
+      apiFetch<void>(`/polls/${pollId}/answers/@me`, { method: 'DELETE' }),
+    end: (pollId: string) =>
+      apiFetch<void>(`/polls/${pollId}/expire`, { method: 'POST' }),
+    getVoters: (pollId: string, optionId: string) =>
+      apiFetch<any[]>(`/polls/${pollId}/answers/${optionId}/voters`),
+  },
+
+  scheduledMessages: {
+    list: (guildId: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/scheduled-messages`),
+    create: (guildId: string, data: { channelId: string; content: string; scheduledFor: string }) =>
+      apiFetch<any>(`/guilds/${guildId}/scheduled-messages`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    get: (guildId: string, messageId: string) =>
+      apiFetch<any>(`/guilds/${guildId}/scheduled-messages/${messageId}`),
+    delete: (guildId: string, messageId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/scheduled-messages/${messageId}`, { method: 'DELETE' }),
+  },
+
   leaderboard: {
     get: (period: 'week' | 'month' | 'all' = 'week') =>
       apiFetch<Array<{
@@ -1095,5 +1209,84 @@ export const api = {
         gratonitesEarned: number;
         memberSince: string;
       }>>(`/leaderboard?period=${period}`),
+  },
+  themes: {
+    browse: (params?: { q?: string; tag?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.q) qs.set('q', params.q);
+      if (params?.tag) qs.set('tag', params.tag);
+      const query = qs.toString();
+      return apiFetch<any[]>(`/themes${query ? `?${query}` : ''}`);
+    },
+    get: (themeId: string) =>
+      apiFetch<any>(`/themes/${themeId}`),
+    create: (data: { name: string; description?: string; tags?: string[]; vars: Record<string, string> }) =>
+      apiFetch<any>('/themes', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (themeId: string, data: { name?: string; description?: string; tags?: string[]; vars?: Record<string, string> }) =>
+      apiFetch<any>(`/themes/${themeId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    publish: (themeId: string) =>
+      apiFetch<void>(`/themes/${themeId}/publish`, { method: 'POST' }),
+    delete: (themeId: string) =>
+      apiFetch<void>(`/themes/${themeId}`, { method: 'DELETE' }),
+    myThemes: () =>
+      apiFetch<any[]>('/users/@me/themes'),
+  },
+  cosmetics: {
+    // ── Marketplace browse ────────────────────────────────────────────────
+    browse: (params?: { type?: string; limit?: number; offset?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.type) qs.set('type', params.type);
+      if (params?.limit) qs.set('limit', String(params.limit));
+      if (params?.offset) qs.set('offset', String(params.offset));
+      const query = qs.toString();
+      return apiFetch<any[]>(`/cosmetics/marketplace${query ? `?${query}` : ''}`);
+    },
+    // ── Single cosmetic ───────────────────────────────────────────────────
+    get: (cosmeticId: string) =>
+      apiFetch<any>(`/cosmetics/${cosmeticId}`),
+    // ── Creator cosmetics ─────────────────────────────────────────────────
+    listByCreator: (creatorId: string, params?: { limit?: number; offset?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.limit) qs.set('limit', String(params.limit));
+      if (params?.offset) qs.set('offset', String(params.offset));
+      const query = qs.toString();
+      return apiFetch<any[]>(`/cosmetics/creator/${creatorId}${query ? `?${query}` : ''}`);
+    },
+    // ── My cosmetics (creator) ────────────────────────────────────────────
+    listMine: () =>
+      apiFetch<any[]>('/cosmetics/mine'),
+    // ── CRUD ─────────────────────────────────────────────────────────────
+    create: (data: { name: string; description?: string; type: string; previewImageUrl?: string; assetUrl?: string; price?: number }) =>
+      apiFetch<any>('/cosmetics', { method: 'POST', body: JSON.stringify(data) }),
+    update: (cosmeticId: string, data: { name?: string; description?: string; previewImageUrl?: string; assetUrl?: string; price?: number; isPublished?: boolean }) =>
+      apiFetch<any>(`/cosmetics/${cosmeticId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (cosmeticId: string) =>
+      apiFetch<void>(`/cosmetics/${cosmeticId}`, { method: 'DELETE' }),
+    // ── Upload ────────────────────────────────────────────────────────────
+    upload: (formData: FormData) =>
+      apiFetch<{ preview_image_url?: string; asset_url?: string }>('/cosmetics/upload', {
+        method: 'POST',
+        body: formData,
+      }),
+    // ── Purchase ──────────────────────────────────────────────────────────
+    purchase: (cosmeticId: string) =>
+      apiFetch<any>(`/cosmetics/${cosmeticId}/purchase`, { method: 'POST' }),
+    // ── Equip / Unequip ───────────────────────────────────────────────────
+    equip: (cosmeticId: string) =>
+      apiFetch<any>(`/cosmetics/${cosmeticId}/equip`, { method: 'PATCH' }),
+    unequip: (cosmeticId: string) =>
+      apiFetch<void>(`/cosmetics/${cosmeticId}/equip`, { method: 'DELETE' }),
+    // ── Equipped cosmetics ────────────────────────────────────────────────
+    getEquipped: () =>
+      apiFetch<Array<{ type: string; cosmeticId: string; name: string; assetUrl: string | null; previewImageUrl: string | null }>>('/users/@me/equipped-cosmetics'),
+    // ── Creator stats ─────────────────────────────────────────────────────
+    getStats: (cosmeticId: string) =>
+      apiFetch<{ cosmeticId: string; totalSales: number; totalRevenueGratonites: number; createdAt: string; updatedAt: string }>(`/cosmetics/${cosmeticId}/stats`),
   },
 };

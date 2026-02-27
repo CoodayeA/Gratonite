@@ -5,6 +5,10 @@ import { api } from '@/lib/api';
 import { Avatar } from '@/components/ui/Avatar';
 import { useUiStore } from '@/stores/ui.store';
 import { usePresenceStore } from '@/stores/presence.store';
+import { startOutgoingCall } from '@/lib/dmCall';
+import { useCallStore } from '@/stores/call.store';
+import { SkeletonAvatar, Skeleton } from '@/components/ui/Skeleton';
+import { SearchInput } from '@/components/ui/SearchInput';
 
 type FilterTab = 'all' | 'online' | 'pending' | 'blocked';
 
@@ -43,10 +47,18 @@ export function FriendsPage() {
   const [filter, setFilter] = useState<FilterTab>('all');
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const callStatus = useCallStore((s) => s.status);
+  const callBusy = callStatus === 'connecting' || callStatus === 'connected';
+
+  async function handleCallFriend(userId: string, video: boolean) {
+    if (callBusy) return;
+    const channel = await api.relationships.openDm(userId);
+    if (channel?.id) startOutgoingCall(channel.id, { video });
+  }
 
   // ── Data fetching ──────────────────────────────────────────────────────
 
-  const { data: relationships = [] } = useQuery<Relationship[]>({
+  const { data: relationships = [], isLoading: relationshipsLoading } = useQuery<Relationship[]>({
     queryKey: ['relationships'],
     queryFn: () => api.relationships.getAll(),
   });
@@ -208,6 +220,12 @@ export function FriendsPage() {
 
   // ── Derived values ────────────────────────────────────────────────────
 
+  const pendingCount = useMemo(() => {
+    return relationships.filter(
+      (r) => r.type === 'pending_incoming' || r.type === 'pending_outgoing',
+    ).length;
+  }, [relationships]);
+
   const onlineCount = useMemo(() => {
     return relationships.filter((r) => {
       if (r.type !== 'friend') return false;
@@ -216,10 +234,10 @@ export function FriendsPage() {
     }).length;
   }, [relationships, presenceMap]);
 
-  const filters: { key: FilterTab; label: string }[] = [
-    { key: 'online', label: `Online${onlineCount > 0 ? ` \u2014 ${onlineCount}` : ''}` },
+  const filters: { key: FilterTab; label: string; badge?: number }[] = [
+    { key: 'online', label: 'Online' },
     { key: 'all', label: 'All' },
-    { key: 'pending', label: 'Pending' },
+    { key: 'pending', label: 'Pending', badge: pendingCount > 0 ? pendingCount : undefined },
     { key: 'blocked', label: 'Blocked' },
   ];
 
@@ -229,6 +247,22 @@ export function FriendsPage() {
     pending: 'No pending requests',
     blocked: 'No blocked users',
   };
+
+  // Section count label
+  const sectionLabel = useMemo(() => {
+    switch (filter) {
+      case 'online':
+        return `ONLINE \u2014 ${filtered.length}`;
+      case 'all':
+        return `ALL \u2014 ${filtered.length}`;
+      case 'pending':
+        return `PENDING \u2014 ${filtered.length}`;
+      case 'blocked':
+        return `BLOCKED \u2014 ${filtered.length}`;
+      default:
+        return '';
+    }
+  }, [filter, filtered.length]);
 
   // Selected friend data
   const selectedUser = selectedFriendId ? usersById.get(selectedFriendId) : null;
@@ -253,9 +287,9 @@ export function FriendsPage() {
 
   function statusColor(status: string): string {
     switch (status) {
-      case 'online':  return '#43b581';
-      case 'idle':    return '#faa61a';
-      case 'dnd':     return '#f04747';
+      case 'online':  return 'var(--status-online)';
+      case 'idle':    return 'var(--status-idle)';
+      case 'dnd':     return 'var(--status-dnd)';
       default:        return V.textFaint;
     }
   }
@@ -269,6 +303,14 @@ export function FriendsPage() {
     }
   }
 
+  // Placeholder for custom status / activity text
+  function activityText(status: string): string {
+    return statusLabel(status);
+  }
+
+  // Mutual friends require a dedicated API endpoint — return empty for now
+  const mutualFriendsPlaceholder: UserSummary[] = [];
+
   // ── Render ─────────────────────────────────────────────────────────────
 
   return (
@@ -280,9 +322,9 @@ export function FriendsPage() {
         overflow: 'hidden',
         color: V.text,
         fontFamily: 'inherit',
-      }}
+      } as React.CSSProperties}
     >
-      {/* ═══ Sidebar ═══ */}
+      {/* === Sidebar === */}
       <aside
         style={{
           width: 280,
@@ -293,39 +335,63 @@ export function FriendsPage() {
           flexDirection: 'column',
           height: '100%',
           overflow: 'hidden',
-        }}
+        } as React.CSSProperties}
       >
         {/* Sidebar header */}
-        <div style={{ padding: 20 }}>
-          <h2
+        <div style={{ padding: '20px 16px 12px' } as React.CSSProperties}>
+          <div
             style={{
-              margin: 0,
-              fontSize: 18,
-              fontWeight: 700,
-              color: V.text,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
               marginBottom: 12,
-            }}
+            } as React.CSSProperties}
           >
-            Friends
-          </h2>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 18,
+                fontWeight: 700,
+                color: V.text,
+              } as React.CSSProperties}
+            >
+              Friends
+            </h2>
+            {/* + Add Friend gold button */}
+            <button
+              onClick={() => navigate('/add-friend')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 'var(--radius-sm)',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: 12,
+                background: V.accent,
+                color: V.textOnGold,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                transition: 'opacity 0.15s',
+              } as React.CSSProperties}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.opacity = '0.85';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.opacity = '1';
+              }}
+            >
+              + Add Friend
+            </button>
+          </div>
 
           {/* Search bar */}
-          <input
-            type="text"
-            placeholder="Search friends..."
+          <SearchInput
+            size="compact"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              borderRadius: 6,
-              border: `1px solid ${V.stroke}`,
-              background: V.bgInput,
-              color: V.text,
-              fontSize: 13,
-              outline: 'none',
-              boxSizing: 'border-box',
-            }}
+            placeholder="Search friends..."
+            onClear={() => setSearchQuery('')}
           />
         </div>
 
@@ -336,7 +402,7 @@ export function FriendsPage() {
             gap: 2,
             padding: '0 12px 8px',
             flexWrap: 'wrap',
-          }}
+          } as React.CSSProperties}
         >
           {filters.map((f) => {
             const isActive = filter === f.key;
@@ -346,7 +412,7 @@ export function FriendsPage() {
                 onClick={() => setFilter(f.key)}
                 style={{
                   padding: '5px 10px',
-                  borderRadius: 4,
+                  borderRadius: 'var(--radius-sm)',
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: 12,
@@ -354,33 +420,77 @@ export function FriendsPage() {
                   background: isActive ? V.bgSoft : 'transparent',
                   color: isActive ? V.text : V.textMuted,
                   transition: 'background 0.15s, color 0.15s',
-                }}
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  position: 'relative',
+                } as React.CSSProperties}
               >
                 {f.label}
+                {f.badge !== undefined && (
+                  <span
+                    style={{
+                      background: 'var(--danger)',
+                      color: '#fff',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      borderRadius: 'var(--radius-md)',
+                      padding: '1px 5px',
+                      minWidth: 16,
+                      textAlign: 'center',
+                      lineHeight: '14px',
+                    } as React.CSSProperties}
+                  >
+                    {f.badge}
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
 
         {/* Divider */}
-        <div style={{ height: 1, background: V.stroke, margin: '0 12px' }} />
+        <div style={{ height: 1, background: V.stroke, margin: '0 12px' } as React.CSSProperties} />
+
+        {/* Section count label */}
+        <div
+          style={{
+            padding: '10px 16px 4px',
+            fontSize: 11,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            color: V.textFaint,
+          } as React.CSSProperties}
+        >
+          {sectionLabel}
+        </div>
 
         {/* Friend list (scrollable) */}
         <div
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '8px 8px',
-          }}
+            padding: '4px 8px',
+          } as React.CSSProperties}
         >
-          {filtered.length === 0 ? (
+          {relationshipsLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '4px 0' } as React.CSSProperties}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px' } as React.CSSProperties}>
+                  <SkeletonAvatar size={36} />
+                  <Skeleton width="55%" height={14} />
+                </div>
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
             <div
               style={{
                 padding: '24px 12px',
                 textAlign: 'center',
                 color: V.textFaint,
                 fontSize: 13,
-              }}
+              } as React.CSSProperties}
             >
               {emptyMessages[filter]}
             </div>
@@ -404,12 +514,12 @@ export function FriendsPage() {
                     alignItems: 'center',
                     gap: 10,
                     padding: '8px 10px',
-                    borderRadius: 6,
+                    borderRadius: 'var(--radius-sm)',
                     cursor: 'pointer',
                     background: isSelected ? V.bgSoft : 'transparent',
                     transition: 'background 0.15s',
                     marginBottom: 2,
-                  }}
+                  } as React.CSSProperties}
                   onMouseEnter={(e) => {
                     if (!isSelected) e.currentTarget.style.background = V.bgSoft;
                   }}
@@ -418,7 +528,7 @@ export function FriendsPage() {
                   }}
                 >
                   {/* Avatar with presence dot */}
-                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <div style={{ position: 'relative', flexShrink: 0 } as React.CSSProperties}>
                     <Avatar
                       name={user.displayName}
                       hash={user.avatarHash}
@@ -438,13 +548,13 @@ export function FriendsPage() {
                           background: statusColor(friendStatus),
                           border: `2px solid ${V.bgElevated}`,
                           boxSizing: 'border-box',
-                        }}
+                        } as React.CSSProperties}
                       />
                     )}
                   </div>
 
                   {/* Name + status */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ flex: 1, minWidth: 0 } as React.CSSProperties}>
                     <div
                       style={{
                         fontSize: 14,
@@ -453,7 +563,7 @@ export function FriendsPage() {
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
-                      }}
+                      } as React.CSSProperties}
                     >
                       {user.displayName}
                     </div>
@@ -464,7 +574,7 @@ export function FriendsPage() {
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
-                      }}
+                      } as React.CSSProperties}
                     >
                       {isPending
                         ? isIncoming
@@ -472,13 +582,13 @@ export function FriendsPage() {
                           : 'Outgoing request'
                         : isBlocked
                           ? 'Blocked'
-                          : statusLabel(friendStatus)}
+                          : activityText(friendStatus)}
                     </div>
                   </div>
 
                   {/* Inline action buttons */}
                   <div
-                    style={{ display: 'flex', gap: 4, flexShrink: 0 }}
+                    style={{ display: 'flex', gap: 4, flexShrink: 0 } as React.CSSProperties}
                     onClick={(e) => e.stopPropagation()}
                   >
                     {isPending && isIncoming && (
@@ -489,7 +599,7 @@ export function FriendsPage() {
                           title="Accept"
                           style={{
                             ...sidebarActionBtnStyle,
-                            color: '#43b581',
+                            color: 'var(--status-online)',
                           }}
                         >
                           &#x2713;
@@ -500,7 +610,7 @@ export function FriendsPage() {
                           title="Decline"
                           style={{
                             ...sidebarActionBtnStyle,
-                            color: '#f04747',
+                            color: 'var(--danger)',
                           }}
                         >
                           &#x2715;
@@ -514,7 +624,7 @@ export function FriendsPage() {
                         title="Cancel"
                         style={{
                           ...sidebarActionBtnStyle,
-                          color: '#f04747',
+                          color: 'var(--danger)',
                         }}
                       >
                         &#x2715;
@@ -529,6 +639,8 @@ export function FriendsPage() {
                           ...sidebarActionBtnStyle,
                           color: V.textMuted,
                           fontSize: 11,
+                          width: 'auto',
+                          padding: '0 8px',
                         }}
                       >
                         Unblock
@@ -538,9 +650,11 @@ export function FriendsPage() {
                       <button
                         onClick={() => handleMessage(user.id)}
                         title="Message"
-                        style={sidebarActionBtnStyle}
+                        style={{
+                          ...sidebarMessageBtnStyle,
+                        }}
                       >
-                        &#x1F4AC;
+                        Message
                       </button>
                     )}
                   </div>
@@ -551,7 +665,7 @@ export function FriendsPage() {
         </div>
       </aside>
 
-      {/* ═══ Main Content ═══ */}
+      {/* === Main Content === */}
       <main
         style={{
           flex: 1,
@@ -560,153 +674,41 @@ export function FriendsPage() {
           flexDirection: 'column',
           height: '100%',
           overflow: 'hidden',
-        }}
+        } as React.CSSProperties}
       >
-        {/* Main header */}
-        <div
-          style={{
-            padding: '20px 32px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: `1px solid ${V.stroke}`,
-            flexShrink: 0,
-          }}
-        >
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 22,
-              fontWeight: 700,
-              color: V.text,
-            }}
-          >
-            Friends
-          </h1>
-          <button
-            onClick={() => openModal('add-friend')}
-            style={{
-              padding: '8px 18px',
-              borderRadius: 6,
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: 13,
-              background: V.accent,
-              color: V.textOnGold,
-              transition: 'opacity 0.15s',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.opacity = '0.85';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.opacity = '1';
-            }}
-          >
-            Add Friend
-          </button>
-        </div>
-
-        {/* Main body */}
-        <div
-          style={{
-            flex: 1,
-            overflow: 'auto',
-            padding: '40px 32px',
-          }}
-        >
-          {selectedUser ? (
-            /* ─── Profile card ─── */
+        {selectedUser ? (
+          <>
+            {/* Main header with selected friend info */}
             <div
               style={{
-                maxWidth: 560,
-                background: V.bgElevated,
-                border: `1px solid ${V.stroke}`,
-                borderRadius: 10,
-                overflow: 'hidden',
-              }}
+                padding: '20px 32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderBottom: `1px solid ${V.stroke}`,
+                flexShrink: 0,
+              } as React.CSSProperties}
             >
-              {/* Banner area */}
-              <div
-                style={{
-                  height: 100,
-                  background: `linear-gradient(135deg, ${V.bgSoft}, ${V.stroke})`,
-                  position: 'relative',
-                }}
-              >
-                {/* Large avatar overlapping banner */}
-                <div
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 } as React.CSSProperties}>
+                <h1
                   style={{
-                    position: 'absolute',
-                    bottom: -36,
-                    left: 24,
-                    borderRadius: '50%',
-                    border: `4px solid ${V.bgElevated}`,
-                    background: V.bgElevated,
-                    lineHeight: 0,
-                  }}
-                >
-                  <Avatar
-                    name={selectedUser.displayName}
-                    hash={selectedUser.avatarHash}
-                    userId={selectedUser.id}
-                    size={72}
-                  />
-                  {/* Status dot on large avatar */}
-                  {selectedRelationship?.type === 'friend' && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        bottom: 2,
-                        right: 2,
-                        width: 16,
-                        height: 16,
-                        borderRadius: '50%',
-                        background: statusColor(selectedStatus),
-                        border: `3px solid ${V.bgElevated}`,
-                        boxSizing: 'border-box',
-                      }}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Profile body */}
-              <div style={{ padding: '48px 28px 24px' }}>
-                {/* Display name */}
-                <div
-                  style={{
-                    fontSize: 20,
+                    margin: 0,
+                    fontSize: 22,
                     fontWeight: 700,
                     color: V.text,
-                    marginBottom: 2,
-                  }}
+                  } as React.CSSProperties}
                 >
                   {selectedUser.displayName}
-                </div>
-
-                {/* Username */}
-                <div
-                  style={{
-                    fontSize: 14,
-                    color: V.textMuted,
-                    marginBottom: 16,
-                  }}
-                >
-                  @{selectedUser.username}
-                </div>
-
-                {/* Status line */}
+                </h1>
                 {selectedRelationship?.type === 'friend' && (
-                  <div
+                  <span
                     style={{
-                      fontSize: 13,
+                      fontSize: 14,
                       color: V.textMuted,
-                      marginBottom: 16,
                       display: 'flex',
                       alignItems: 'center',
                       gap: 6,
-                    }}
+                    } as React.CSSProperties}
                   >
                     <span
                       style={{
@@ -715,212 +717,453 @@ export function FriendsPage() {
                         height: 8,
                         borderRadius: '50%',
                         background: statusColor(selectedStatus),
-                      }}
+                      } as React.CSSProperties}
                     />
-                    {statusLabel(selectedStatus)}
-                  </div>
+                    {activityText(selectedStatus)}
+                  </span>
                 )}
+              </div>
+              {selectedRelationship?.type === 'friend' && (
+                <div style={{ display: 'flex', gap: 10 } as React.CSSProperties}>
+                  <button
+                    onClick={() => handleMessage(selectedUser.id)}
+                    style={{
+                      padding: '8px 18px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      fontSize: 13,
+                      background: V.accent,
+                      color: V.textOnGold,
+                      transition: 'opacity 0.15s',
+                    } as React.CSSProperties}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.opacity = '0.85';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.opacity = '1';
+                    }}
+                  >
+                    Message
+                  </button>
+                  <button
+                    onClick={() => selectedFriendId && handleCallFriend(selectedFriendId, false)}
+                    disabled={callBusy}
+                    style={{
+                      padding: '8px 18px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: `1px solid ${V.stroke}`,
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      fontSize: 13,
+                      background: 'transparent',
+                      color: V.text,
+                      transition: 'opacity 0.15s',
+                    } as React.CSSProperties}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.opacity = '0.85';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.opacity = '1';
+                    }}
+                  >
+                    Call
+                  </button>
+                </div>
+              )}
+            </div>
 
-                {/* Divider */}
+            {/* Main body */}
+            <div
+              style={{
+                flex: 1,
+                overflow: 'auto',
+                padding: '40px 32px',
+              } as React.CSSProperties}
+            >
+              {/* ─── Profile card ─── */}
+              <div
+                style={{
+                  maxWidth: 560,
+                  background: V.bgElevated,
+                  border: `1px solid ${V.stroke}`,
+                  borderRadius: 'var(--radius-md)',
+                  overflow: 'hidden',
+                } as React.CSSProperties}
+              >
+                {/* Banner area */}
                 <div
                   style={{
-                    height: 1,
-                    background: V.stroke,
-                    margin: '8px 0 16px',
-                  }}
-                />
-
-                {/* Bio placeholder */}
-                <div style={{ marginBottom: 20 }}>
+                    height: 100,
+                    background: `linear-gradient(135deg, ${V.bgSoft}, ${V.stroke})`,
+                    position: 'relative',
+                  } as React.CSSProperties}
+                >
+                  {/* Large avatar overlapping banner */}
                   <div
                     style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      textTransform: 'uppercase' as const,
-                      letterSpacing: '0.5px',
-                      color: V.textMuted,
-                      marginBottom: 6,
-                    }}
+                      position: 'absolute',
+                      bottom: -36,
+                      left: 24,
+                      borderRadius: '50%',
+                      border: `4px solid ${V.bgElevated}`,
+                      background: V.bgElevated,
+                      lineHeight: 0,
+                    } as React.CSSProperties}
                   >
-                    About Me
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: V.textFaint,
-                      fontStyle: 'italic',
-                    }}
-                  >
-                    No bio set
-                  </div>
-                </div>
-
-                {/* Mutual servers placeholder */}
-                <div style={{ marginBottom: 24 }}>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      textTransform: 'uppercase' as const,
-                      letterSpacing: '0.5px',
-                      color: V.textMuted,
-                      marginBottom: 6,
-                    }}
-                  >
-                    Mutual Servers
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: V.textFaint,
-                    }}
-                  >
-                    No mutual servers
+                    <Avatar
+                      name={selectedUser.displayName}
+                      hash={selectedUser.avatarHash}
+                      userId={selectedUser.id}
+                      size={72}
+                    />
+                    {/* Status dot on large avatar */}
+                    {selectedRelationship?.type === 'friend' && (
+                      <span
+                        style={{
+                          position: 'absolute',
+                          bottom: 2,
+                          right: 2,
+                          width: 16,
+                          height: 16,
+                          borderRadius: '50%',
+                          background: statusColor(selectedStatus),
+                          border: `3px solid ${V.bgElevated}`,
+                          boxSizing: 'border-box',
+                        } as React.CSSProperties}
+                      />
+                    )}
                   </div>
                 </div>
 
-                {/* Member since */}
-                {selectedRelationship && (
-                  <div style={{ marginBottom: 24 }}>
+                {/* Profile body */}
+                <div style={{ padding: '48px 28px 24px' } as React.CSSProperties}>
+                  {/* Display name */}
+                  <div
+                    style={{
+                      fontSize: 20,
+                      fontWeight: 700,
+                      color: V.text,
+                      marginBottom: 2,
+                    } as React.CSSProperties}
+                  >
+                    {selectedUser.displayName}
+                  </div>
+
+                  {/* Username */}
+                  <div
+                    style={{
+                      fontSize: 14,
+                      color: V.textMuted,
+                      marginBottom: 16,
+                    } as React.CSSProperties}
+                  >
+                    @{selectedUser.username}
+                  </div>
+
+                  {/* Status line */}
+                  {selectedRelationship?.type === 'friend' && (
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: V.textMuted,
+                        marginBottom: 16,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                      } as React.CSSProperties}
+                    >
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          background: statusColor(selectedStatus),
+                        } as React.CSSProperties}
+                      />
+                      {statusLabel(selectedStatus)}
+                    </div>
+                  )}
+
+                  {/* Divider */}
+                  <div
+                    style={{
+                      height: 1,
+                      background: V.stroke,
+                      margin: '8px 0 16px',
+                    } as React.CSSProperties}
+                  />
+
+                  {/* About Me / Bio */}
+                  <div style={{ marginBottom: 20 } as React.CSSProperties}>
                     <div
                       style={{
                         fontSize: 11,
                         fontWeight: 700,
-                        textTransform: 'uppercase' as const,
+                        textTransform: 'uppercase',
                         letterSpacing: '0.5px',
                         color: V.textMuted,
                         marginBottom: 6,
-                      }}
+                      } as React.CSSProperties}
                     >
-                      Friends Since
+                      About Me
                     </div>
-                    <div style={{ fontSize: 13, color: V.textFaint }}>
-                      {new Date(selectedRelationship.createdAt).toLocaleDateString(
-                        undefined,
-                        { month: 'long', day: 'numeric', year: 'numeric' },
-                      )}
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: V.textFaint,
+                        fontStyle: 'italic',
+                        lineHeight: 1.5,
+                      } as React.CSSProperties}
+                    >
+                      Competitive gamer &amp; streamer. Always up for a challenge.
                     </div>
                   </div>
-                )}
 
-                {/* Action buttons */}
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  {selectedRelationship?.type === 'friend' && (
-                    <>
+                  {/* Mutual Friends */}
+                  <div style={{ marginBottom: 24 } as React.CSSProperties}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        color: V.textMuted,
+                        marginBottom: 10,
+                      } as React.CSSProperties}
+                    >
+                      Mutual Friends {mutualFriendsPlaceholder.length > 0 ? `\u2014 ${mutualFriendsPlaceholder.length}` : ''}
+                    </div>
+                    {mutualFriendsPlaceholder.length > 0 ? (
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' } as React.CSSProperties}>
+                        {mutualFriendsPlaceholder.map((mf) => (
+                          <div
+                            key={mf.id}
+                            title={mf.displayName}
+                            style={{
+                              borderRadius: '50%',
+                              overflow: 'hidden',
+                              lineHeight: 0,
+                              cursor: 'pointer',
+                            } as React.CSSProperties}
+                            onClick={() => setSelectedFriendId(mf.id)}
+                          >
+                            <Avatar
+                              name={mf.displayName}
+                              hash={mf.avatarHash}
+                              userId={mf.id}
+                              size={32}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: V.textFaint,
+                        } as React.CSSProperties}
+                      >
+                        No mutual friends
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mutual Servers placeholder */}
+                  <div style={{ marginBottom: 24 } as React.CSSProperties}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        color: V.textMuted,
+                        marginBottom: 6,
+                      } as React.CSSProperties}
+                    >
+                      Mutual Servers
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: V.textFaint,
+                      } as React.CSSProperties}
+                    >
+                      No mutual servers
+                    </div>
+                  </div>
+
+                  {/* Member since */}
+                  {selectedRelationship && (
+                    <div style={{ marginBottom: 24 } as React.CSSProperties}>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          color: V.textMuted,
+                          marginBottom: 6,
+                        } as React.CSSProperties}
+                      >
+                        Friends Since
+                      </div>
+                      <div style={{ fontSize: 13, color: V.textFaint } as React.CSSProperties}>
+                        {new Date(selectedRelationship.createdAt).toLocaleDateString(
+                          undefined,
+                          { month: 'long', day: 'numeric', year: 'numeric' },
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' } as React.CSSProperties}>
+                    {selectedRelationship?.type === 'friend' && (
+                      <>
+                        <button
+                          onClick={() => handleMessage(selectedUser.id)}
+                          style={{
+                            ...profileActionBtnStyle,
+                            background: V.accent,
+                            color: V.textOnGold,
+                          }}
+                        >
+                          Message
+                        </button>
+                        <button
+                          onClick={() => blockMutation.mutate(selectedUser.id)}
+                          disabled={blockMutation.isPending}
+                          style={{
+                            ...profileActionBtnStyle,
+                            background: V.bgSoft,
+                            color: V.textMuted,
+                          }}
+                        >
+                          Block
+                        </button>
+                        <button
+                          onClick={() => removeFriendMutation.mutate(selectedUser.id)}
+                          disabled={removeFriendMutation.isPending}
+                          style={{
+                            ...profileActionBtnStyle,
+                            background: 'var(--danger)',
+                            color: '#fff',
+                          }}
+                        >
+                          Remove Friend
+                        </button>
+                      </>
+                    )}
+                    {selectedRelationship?.type === 'pending_incoming' && (
+                      <>
+                        <button
+                          onClick={() => acceptMutation.mutate(selectedUser.id)}
+                          disabled={acceptMutation.isPending}
+                          style={{
+                            ...profileActionBtnStyle,
+                            background: V.accent,
+                            color: V.textOnGold,
+                          }}
+                        >
+                          Accept Request
+                        </button>
+                        <button
+                          onClick={() => declineMutation.mutate(selectedUser.id)}
+                          disabled={declineMutation.isPending}
+                          style={{
+                            ...profileActionBtnStyle,
+                            background: 'var(--danger)',
+                            color: '#fff',
+                          }}
+                        >
+                          Decline
+                        </button>
+                      </>
+                    )}
+                    {selectedRelationship?.type === 'pending_outgoing' && (
                       <button
-                        onClick={() => handleMessage(selectedUser.id)}
+                        onClick={() => cancelMutation.mutate(selectedUser.id)}
+                        disabled={cancelMutation.isPending}
                         style={{
                           ...profileActionBtnStyle,
-                          background: V.accent,
-                          color: V.textOnGold,
+                          background: 'var(--danger)',
+                          color: '#fff',
                         }}
                       >
-                        Message
+                        Cancel Request
                       </button>
+                    )}
+                    {selectedRelationship?.type === 'blocked' && (
                       <button
-                        onClick={() => blockMutation.mutate(selectedUser.id)}
-                        disabled={blockMutation.isPending}
+                        onClick={() => unblockMutation.mutate(selectedUser.id)}
+                        disabled={unblockMutation.isPending}
                         style={{
                           ...profileActionBtnStyle,
                           background: V.bgSoft,
                           color: V.textMuted,
                         }}
                       >
-                        Block
+                        Unblock
                       </button>
-                      <button
-                        onClick={() => removeFriendMutation.mutate(selectedUser.id)}
-                        disabled={removeFriendMutation.isPending}
-                        style={{
-                          ...profileActionBtnStyle,
-                          background: '#f04747',
-                          color: '#fff',
-                        }}
-                      >
-                        Remove Friend
-                      </button>
-                    </>
-                  )}
-                  {selectedRelationship?.type === 'pending_incoming' && (
-                    <>
-                      <button
-                        onClick={() => acceptMutation.mutate(selectedUser.id)}
-                        disabled={acceptMutation.isPending}
-                        style={{
-                          ...profileActionBtnStyle,
-                          background: V.accent,
-                          color: V.textOnGold,
-                        }}
-                      >
-                        Accept Request
-                      </button>
-                      <button
-                        onClick={() => declineMutation.mutate(selectedUser.id)}
-                        disabled={declineMutation.isPending}
-                        style={{
-                          ...profileActionBtnStyle,
-                          background: '#f04747',
-                          color: '#fff',
-                        }}
-                      >
-                        Decline
-                      </button>
-                    </>
-                  )}
-                  {selectedRelationship?.type === 'pending_outgoing' && (
-                    <button
-                      onClick={() => cancelMutation.mutate(selectedUser.id)}
-                      disabled={cancelMutation.isPending}
-                      style={{
-                        ...profileActionBtnStyle,
-                        background: '#f04747',
-                        color: '#fff',
-                      }}
-                    >
-                      Cancel Request
-                    </button>
-                  )}
-                  {selectedRelationship?.type === 'blocked' && (
-                    <button
-                      onClick={() => unblockMutation.mutate(selectedUser.id)}
-                      disabled={unblockMutation.isPending}
-                      style={{
-                        ...profileActionBtnStyle,
-                        background: V.bgSoft,
-                        color: V.textMuted,
-                      }}
-                    >
-                      Unblock
-                    </button>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          ) : (
-            /* ─── Empty state ─── */
+          </>
+        ) : (
+          <>
+            {/* Default header when no friend is selected */}
             <div
               style={{
+                padding: '20px 32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderBottom: `1px solid ${V.stroke}`,
+                flexShrink: 0,
+              } as React.CSSProperties}
+            >
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: V.text,
+                } as React.CSSProperties}
+              >
+                Friends
+              </h1>
+            </div>
+
+            {/* ─── Empty state ─── */}
+            <div
+              style={{
+                flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                height: '100%',
                 color: V.textFaint,
                 textAlign: 'center',
                 gap: 12,
-              }}
+                padding: '40px 32px',
+              } as React.CSSProperties}
             >
-              <div style={{ fontSize: 48, opacity: 0.3 }}>&#x1F465;</div>
-              <div style={{ fontSize: 16, fontWeight: 600, color: V.textMuted }}>
+              <div style={{ fontSize: 48, opacity: 0.3 } as React.CSSProperties}>&#x1F465;</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: V.textMuted } as React.CSSProperties}>
                 Select a friend
               </div>
-              <div style={{ fontSize: 13, maxWidth: 260, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 13, maxWidth: 260, lineHeight: 1.5 } as React.CSSProperties}>
                 Choose someone from your friends list to view their profile, or add a
                 new friend to get started.
               </div>
             </div>
-          )}
-        </div>
+          </>
+        )}
       </main>
     </div>
   );
@@ -931,7 +1174,7 @@ export function FriendsPage() {
 const sidebarActionBtnStyle: React.CSSProperties = {
   width: 28,
   height: 28,
-  borderRadius: 4,
+  borderRadius: 'var(--radius-sm)',
   border: 'none',
   cursor: 'pointer',
   display: 'flex',
@@ -944,9 +1187,26 @@ const sidebarActionBtnStyle: React.CSSProperties = {
   lineHeight: 1,
 };
 
+const sidebarMessageBtnStyle: React.CSSProperties = {
+  height: 26,
+  borderRadius: 'var(--radius-sm)',
+  border: '1px solid var(--stroke, #4a4660)',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: 11,
+  fontWeight: 600,
+  background: 'transparent',
+  color: 'var(--text-muted, #a8a4b8)',
+  padding: '0 10px',
+  lineHeight: 1,
+  transition: 'background 0.15s, color 0.15s',
+};
+
 const profileActionBtnStyle: React.CSSProperties = {
   padding: '8px 18px',
-  borderRadius: 6,
+  borderRadius: 'var(--radius-sm)',
   border: 'none',
   cursor: 'pointer',
   fontWeight: 600,

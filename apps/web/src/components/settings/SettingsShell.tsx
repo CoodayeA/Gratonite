@@ -26,6 +26,14 @@ import { ChannelsSection } from './sections/server/ChannelsSection';
 import { EmojiSection } from './sections/server/EmojiSection';
 import { InvitesSection } from './sections/server/InvitesSection';
 import { ModerationSection } from './sections/server/ModerationSection';
+import { AnalyticsSection } from './sections/server/AnalyticsSection';
+import { AutoModSection } from './sections/server/AutoModSection';
+import { BotsSection } from './sections/server/BotsSection';
+import { WikiSection } from './sections/server/WikiSection';
+import { EventsSection } from './sections/server/EventsSection';
+import { ScheduledMessagesSection } from './sections/server/ScheduledMessagesSection';
+import { SoundboardSection } from './sections/server/SoundboardSection';
+import { ServerAppearanceSection } from './sections/server/ServerAppearanceSection';
 
 export function SettingsShell() {
   const navigate = useNavigate();
@@ -132,6 +140,14 @@ export function SettingsShell() {
               {activeSection === 'emoji' && <EmojiSection guildId={guildId} />}
               {activeSection === 'invites' && <InvitesSection guildId={guildId} />}
               {activeSection === 'moderation' && <ModerationSection guildId={guildId} />}
+              {activeSection === 'analytics' && <AnalyticsSection guildId={guildId} />}
+              {activeSection === 'automod' && <AutoModSection guildId={guildId} />}
+              {activeSection === 'bots' && <BotsSection guildId={guildId} />}
+              {activeSection === 'wiki' && <WikiSection guildId={guildId} />}
+              {activeSection === 'events' && <EventsSection guildId={guildId} />}
+              {activeSection === 'scheduled-messages' && <ScheduledMessagesSection guildId={guildId} />}
+              {activeSection === 'soundboard' && <SoundboardSection guildId={guildId} />}
+              {activeSection === 'appearance' && <ServerAppearanceSection guildId={guildId} />}
             </>
           )}
         </div>

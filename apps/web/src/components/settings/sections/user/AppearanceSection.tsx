@@ -1,637 +1,414 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+// apps/web/src/components/settings/sections/user/AppearanceSection.tsx
+import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  BUILT_IN_THEMES,
+  applyTheme,
+  getCurrentThemeId,
+  type Theme,
+} from '@/lib/themes';
+import { ThemeCard } from '@/components/ui/ThemeCard';
 import {
   applyUiVisualPreferences,
-  clearThemeManifestPreference,
-  readThemeManifestPreference,
-  readUiGlassModePreference,
-  readUiSurfaceBackgroundModePreference,
-  readUiContentScrimPreference,
-  readUiBackgroundStylePreference,
-  readUiLowPowerPreference,
-  readUiReducedEffectsPreference,
-  UI_PORTAL_BACKGROUND_STYLE_STORAGE_KEY,
-  UI_CHANNEL_BACKGROUND_STYLE_STORAGE_KEY,
-  UI_DM_BACKGROUND_STYLE_STORAGE_KEY,
-  setUiGlassModePreference,
-  setUiBackgroundStylePreference,
-  setUiSurfaceBackgroundModePreference,
-  setUiContentScrimPreference,
-  setUiLowPowerPreference,
-  setUiReducedEffectsPreference,
-  setThemeManifestPreference,
-  setUiV2TokensPreference,
-  shouldEnableUiV2Tokens,
   readUiColorModePreference,
   setUiColorModePreference,
   applyColorMode,
+  readUiGlassModePreference,
+  setUiGlassModePreference,
+  readUiLowPowerPreference,
+  setUiLowPowerPreference,
+  readUiReducedEffectsPreference,
+  setUiReducedEffectsPreference,
   type UiColorMode,
   type UiGlassMode,
-  type UiSurfaceBackgroundMode,
-  type UiContentScrim,
-  type UiBackgroundStyle,
 } from '@/theme/initTheme';
-import { applyThemeV2, resolveThemeV2 } from '@/theme/resolveTheme';
-import { DEFAULT_THEME_V2 } from '@/theme/tokens-v2';
-import { api } from '@/lib/api';
-import { getErrorMessage } from '@/lib/utils';
-import { useEffect } from 'react';
 
-const THEME_TOKEN_CONTROLS: Array<{ key: string; label: string; type: 'color' | 'text' }> = [
-  { key: 'semantic/action/accent', label: 'Primary Accent', type: 'color' },
-  { key: 'semantic/action/accent-2', label: 'Secondary Accent', type: 'color' },
-  { key: 'semantic/surface/base', label: 'Base Surface', type: 'color' },
-  { key: 'semantic/text/primary', label: 'Primary Text', type: 'color' },
-  { key: 'semantic/gradient/accent', label: 'Accent Gradient', type: 'text' },
-];
+// ─── Styles (CSS vars only — no hardcoded hex) ────────────────────────────
 
-const THEME_PRESETS_V3: Array<{ name: string; description: string; overrides: Record<string, string> }> = [
-  {
-    name: 'Ice',
-    description: 'Lighter cyan/ice glass',
-    overrides: {
-      'semantic/surface/base': '#10182a',
-      'semantic/surface/raised': 'rgba(27, 39, 61, 0.84)',
-      'semantic/surface/soft': 'rgba(37, 52, 79, 0.82)',
-      'semantic/action/accent': '#7ad8ff',
-      'semantic/action/accent-2': '#a3c7ff',
-      'semantic/gradient/accent': 'linear-gradient(135deg, #7ad8ff, #a3c7ff 55%, #d3ebff)',
-    },
+const s: Record<string, React.CSSProperties> = {
+  section: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 32,
   },
-  {
-    name: 'Cyberpunk',
-    description: 'Indigo + cyan neon glass',
-    overrides: {
-      'semantic/surface/base': '#12162b',
-      'semantic/surface/raised': 'rgba(25, 30, 58, 0.84)',
-      'semantic/surface/soft': 'rgba(35, 42, 74, 0.82)',
-      'semantic/action/accent': '#7a5cff',
-      'semantic/action/accent-2': '#2ee6ff',
-      'semantic/gradient/accent': 'linear-gradient(135deg, #7a5cff, #2ee6ff 58%, #a88aff)',
-    },
+  header: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+    paddingBottom: 16,
+    borderBottom: '1px solid var(--stroke)',
   },
-  {
-    name: 'Ember',
-    description: 'Warm orange + gold glass',
-    overrides: {
-      'semantic/surface/base': '#1a1411',
-      'semantic/surface/raised': 'rgba(42, 26, 20, 0.84)',
-      'semantic/surface/soft': 'rgba(55, 34, 25, 0.82)',
-      'semantic/action/accent': '#ff7a45',
-      'semantic/action/accent-2': '#ffd36b',
-      'semantic/gradient/accent': 'linear-gradient(135deg, #ff7a45, #ffd36b)',
-    },
+  title: {
+    fontSize: 20,
+    fontWeight: 700,
+    color: 'var(--text)',
+    margin: 0,
+    fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
   },
-  {
-    name: 'Toxic',
-    description: 'Green neon community theme',
-    overrides: {
-      'semantic/surface/base': '#0f1510',
-      'semantic/surface/raised': 'rgba(18, 33, 22, 0.84)',
-      'semantic/surface/soft': 'rgba(27, 45, 31, 0.82)',
-      'semantic/action/accent': '#2dff9f',
-      'semantic/action/accent-2': '#b8ff62',
-      'semantic/gradient/accent': 'linear-gradient(135deg, #2dff9f, #b8ff62)',
-    },
+  subtitle: {
+    fontSize: 13,
+    color: 'var(--text-muted)',
+    margin: 0,
   },
-];
+  group: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+  },
+  groupLabel: {
+    fontSize: 11,
+    fontWeight: 700,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.06em',
+    color: 'var(--text-faint)',
+    margin: 0,
+  },
+  card: {
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 10,
+    padding: '16px 20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+  },
+  row: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  rowLabel: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+    flex: 1,
+  },
+  rowLabelText: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: 'var(--text)',
+  },
+  rowLabelDesc: {
+    fontSize: 12,
+    color: 'var(--text-muted)',
+  },
+  // Theme grid
+  themeGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+    gap: 12,
+  },
+  browseLink: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    fontSize: 13,
+    color: 'var(--accent)',
+    textDecoration: 'none',
+    fontWeight: 500,
+  },
+  // Accent picker row
+  accentRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap' as const,
+  },
+  accentSwatch: {
+    width: 32,
+    height: 32,
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--stroke)',
+    cursor: 'pointer',
+    flexShrink: 0,
+  },
+  accentLabel: {
+    fontSize: 13,
+    color: 'var(--text-muted)',
+    flex: 1,
+  },
+  resetBtn: {
+    fontSize: 12,
+    color: 'var(--text-faint)',
+    background: 'none',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-sm)',
+    padding: '4px 10px',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+  },
+  // Toggle
+  toggleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  // Color mode pills
+  modePills: {
+    display: 'flex',
+    gap: 6,
+  },
+};
+
+function modePill(active: boolean): React.CSSProperties {
+  return {
+    padding: '5px 14px',
+    borderRadius: 'var(--radius-pill)',
+    fontSize: 13,
+    fontWeight: active ? 600 : 400,
+    border: `1px solid ${active ? 'var(--accent)' : 'var(--stroke)'}`,
+    background: active ? 'rgba(212,175,55,0.12)' : 'transparent',
+    color: active ? 'var(--accent)' : 'var(--text-muted)',
+    cursor: 'pointer',
+  };
+}
+
+// ─── Toggle component ─────────────────────────────────────────────────────
+
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      style={{
+        position: 'relative',
+        width: 40,
+        height: 22,
+        borderRadius: 'var(--radius-lg)',
+        border: 'none',
+        background: checked ? 'var(--accent)' : 'var(--bg-soft)',
+        cursor: 'pointer',
+        flexShrink: 0,
+        transition: 'background 0.2s',
+      }}
+    >
+      <span style={{
+        position: 'absolute',
+        top: 2,
+        left: checked ? 20 : 2,
+        width: 18,
+        height: 18,
+        borderRadius: '50%',
+        background: checked ? 'var(--bg-float)' : 'var(--text-muted)',
+        transition: 'left 0.2s',
+      }} />
+    </button>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────
 
 export function AppearanceSection() {
-  const [colorMode, setColorMode] = useState<UiColorMode>(() => readUiColorModePreference());
-  const [fontScale, setFontScaleState] = useState(1);
-  const [messageDisplay, setMessageDisplayState] = useState('cozy');
-  const [uiV2TokensEnabled, setUiV2TokensEnabled] = useState(() => shouldEnableUiV2Tokens());
-  const [uiGlassMode, setUiGlassMode] = useState<UiGlassMode>(() => readUiGlassModePreference());
-  const [uiSurfaceBackgroundMode, setUiSurfaceBackgroundMode] = useState<UiSurfaceBackgroundMode>(
-    () => readUiSurfaceBackgroundModePreference(),
-  );
-  const [uiContentScrim, setUiContentScrim] = useState<UiContentScrim>(() => readUiContentScrimPreference());
-  const [uiLowPower, setUiLowPower] = useState(() => readUiLowPowerPreference());
-  const [uiReducedEffects, setUiReducedEffects] = useState(() => readUiReducedEffectsPreference());
-  const [uiPortalBackgroundStyle, setUiPortalBackgroundStyle] = useState<UiBackgroundStyle>(
-    () => readUiBackgroundStylePreference(UI_PORTAL_BACKGROUND_STYLE_STORAGE_KEY),
-  );
-  const [uiChannelBackgroundStyle, setUiChannelBackgroundStyle] = useState<UiBackgroundStyle>(
-    () => readUiBackgroundStylePreference(UI_CHANNEL_BACKGROUND_STYLE_STORAGE_KEY),
-  );
-  const [uiDmBackgroundStyle, setUiDmBackgroundStyle] = useState<UiBackgroundStyle>(
-    () => readUiBackgroundStylePreference(UI_DM_BACKGROUND_STYLE_STORAGE_KEY),
-  );
-  const [themeName, setThemeName] = useState(() => readThemeManifestPreference()?.name ?? DEFAULT_THEME_V2.name);
-  const [themeOverrides, setThemeOverrides] = useState<Record<string, string>>(
-    () => readThemeManifestPreference()?.overrides ?? {},
-  );
-  const [themeImportValue, setThemeImportValue] = useState('');
-  const [themeError, setThemeError] = useState('');
+  const [appliedId, setAppliedId] = useState<string | null>(getCurrentThemeId);
+  const [colorMode, setColorModeState] = useState<UiColorMode>(readUiColorModePreference);
+  const [glassMode, setGlassModeState] = useState<UiGlassMode>(readUiGlassModePreference);
+  const [lowPower, setLowPowerState] = useState<boolean>(readUiLowPowerPreference);
+  const [reducedEffects, setReducedEffectsState] = useState<boolean>(readUiReducedEffectsPreference);
+  // Custom accent override (persisted separately from the full theme)
+  const [customAccent, setCustomAccent] = useState<string>(() => {
+    return localStorage.getItem('gratonite_accent_override') ?? '';
+  });
 
+  // Re-read applied theme id whenever the section mounts (user may have
+  // applied a theme from the Discover page in a different tab)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      api.users.updateSettings({ fontScale, messageDisplay, theme: 'dark' }).catch(() => undefined);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [fontScale, messageDisplay]);
+    setAppliedId(getCurrentThemeId());
+  }, []);
 
-  function setFontScale(value: number) {
-    setFontScaleState(value);
-  }
+  const handleApplyTheme = useCallback((theme: Theme) => {
+    applyTheme(theme);
+    setAppliedId(theme.id);
+    // Clear any accent override so the theme's native accent shows
+    setCustomAccent('');
+    localStorage.removeItem('gratonite_accent_override');
+  }, []);
 
-  function setMessageDisplay(value: string) {
-    setMessageDisplayState(value);
-  }
-
-  function handleToggleUiV2Tokens(nextEnabled: boolean) {
-    setUiV2TokensPreference(nextEnabled);
-    setUiV2TokensEnabled(nextEnabled);
-    window.location.reload();
-  }
-
-  function handleChangeGlassMode(nextMode: UiGlassMode) {
-    setUiGlassModePreference(nextMode);
-    setUiGlassMode(nextMode);
-    applyUiVisualPreferences();
-  }
-
-  function handleToggleLowPower(enabled: boolean) {
-    setUiLowPowerPreference(enabled);
-    setUiLowPower(enabled);
-    applyUiVisualPreferences();
-  }
-
-  function handleToggleReducedEffects(enabled: boolean) {
-    setUiReducedEffectsPreference(enabled);
-    setUiReducedEffects(enabled);
-    applyUiVisualPreferences();
-  }
-
-  function handleChangeSurfaceBackgroundMode(mode: UiSurfaceBackgroundMode) {
-    setUiSurfaceBackgroundModePreference(mode);
-    setUiSurfaceBackgroundMode(mode);
-    applyUiVisualPreferences();
-  }
-
-  function handleChangeContentScrim(mode: UiContentScrim) {
-    setUiContentScrimPreference(mode);
-    setUiContentScrim(mode);
-    applyUiVisualPreferences();
-  }
-
-  function handleChangeBackgroundStyle(scope: 'portal' | 'channel' | 'dm', mode: UiBackgroundStyle) {
-    const key =
-      scope === 'portal'
-        ? UI_PORTAL_BACKGROUND_STYLE_STORAGE_KEY
-        : scope === 'channel'
-          ? UI_CHANNEL_BACKGROUND_STYLE_STORAGE_KEY
-          : UI_DM_BACKGROUND_STYLE_STORAGE_KEY;
-    setUiBackgroundStylePreference(key, mode);
-    if (scope === 'portal') setUiPortalBackgroundStyle(mode);
-    if (scope === 'channel') setUiChannelBackgroundStyle(mode);
-    if (scope === 'dm') setUiDmBackgroundStyle(mode);
-    applyUiVisualPreferences();
-  }
-
-  function handleResetVisualPreferences() {
-    setUiGlassModePreference('subtle');
-    setUiSurfaceBackgroundModePreference('contained');
-    setUiContentScrimPreference('balanced');
-    setUiBackgroundStylePreference(UI_PORTAL_BACKGROUND_STYLE_STORAGE_KEY, 'auto');
-    setUiBackgroundStylePreference(UI_CHANNEL_BACKGROUND_STYLE_STORAGE_KEY, 'auto');
-    setUiBackgroundStylePreference(UI_DM_BACKGROUND_STYLE_STORAGE_KEY, 'auto');
-    setUiLowPowerPreference(false);
-    setUiReducedEffectsPreference(false);
-    setUiGlassMode('subtle');
-    setUiSurfaceBackgroundMode('contained');
-    setUiContentScrim('balanced');
-    setUiPortalBackgroundStyle('auto');
-    setUiChannelBackgroundStyle('auto');
-    setUiDmBackgroundStyle('auto');
-    setUiLowPower(false);
-    setUiReducedEffects(false);
-    applyUiVisualPreferences();
-  }
-
-  function handleApplyVisualPreset(preset: 'balanced' | 'immersive' | 'performance') {
-    if (preset === 'balanced') {
-      handleResetVisualPreferences();
-      return;
-    }
-    if (preset === 'immersive') {
-      setUiGlassModePreference('full');
-      setUiSurfaceBackgroundModePreference('full');
-      setUiContentScrimPreference('soft');
-      setUiLowPowerPreference(false);
-      setUiReducedEffectsPreference(false);
-      setUiBackgroundStylePreference(UI_PORTAL_BACKGROUND_STYLE_STORAGE_KEY, 'aurora');
-      setUiBackgroundStylePreference(UI_CHANNEL_BACKGROUND_STYLE_STORAGE_KEY, 'mesh');
-      setUiBackgroundStylePreference(UI_DM_BACKGROUND_STYLE_STORAGE_KEY, 'aurora');
-      setUiGlassMode('full');
-      setUiSurfaceBackgroundMode('full');
-      setUiContentScrim('soft');
-      setUiLowPower(false);
-      setUiReducedEffects(false);
-      setUiPortalBackgroundStyle('aurora');
-      setUiChannelBackgroundStyle('mesh');
-      setUiDmBackgroundStyle('aurora');
-      applyUiVisualPreferences();
-      return;
-    }
-    setUiGlassModePreference('off');
-    setUiSurfaceBackgroundModePreference('contained');
-    setUiContentScrimPreference('strong');
-    setUiLowPowerPreference(true);
-    setUiReducedEffectsPreference(true);
-    setUiBackgroundStylePreference(UI_PORTAL_BACKGROUND_STYLE_STORAGE_KEY, 'minimal');
-    setUiBackgroundStylePreference(UI_CHANNEL_BACKGROUND_STYLE_STORAGE_KEY, 'minimal');
-    setUiBackgroundStylePreference(UI_DM_BACKGROUND_STYLE_STORAGE_KEY, 'minimal');
-    setUiGlassMode('off');
-    setUiSurfaceBackgroundMode('contained');
-    setUiContentScrim('strong');
-    setUiLowPower(true);
-    setUiReducedEffects(true);
-    setUiPortalBackgroundStyle('minimal');
-    setUiChannelBackgroundStyle('minimal');
-    setUiDmBackgroundStyle('minimal');
-    applyUiVisualPreferences();
-  }
-
-  function applyThemeManifest(overrides: Record<string, string>, name = themeName) {
-    const manifest = { version: DEFAULT_THEME_V2.version, name, overrides };
-    const { theme } = resolveThemeV2(manifest);
-    setThemeManifestPreference(manifest);
-    applyThemeV2(theme);
-  }
-
-  function handleThemeOverrideChange(tokenKey: string, value: string) {
-    const nextOverrides = { ...themeOverrides, [tokenKey]: value };
-    setThemeOverrides(nextOverrides);
-    setThemeError('');
-    if (uiV2TokensEnabled) {
-      applyThemeManifest(nextOverrides);
-    }
-  }
-
-  function handleApplyThemePreset(preset: (typeof THEME_PRESETS_V3)[number]) {
-    const nextOverrides = { ...themeOverrides, ...preset.overrides };
-    setThemeName(preset.name);
-    setThemeOverrides(nextOverrides);
-    setThemeError('');
-    if (uiV2TokensEnabled) {
-      applyThemeManifest(nextOverrides, preset.name);
-    } else {
-      setThemeManifestPreference({
-        version: DEFAULT_THEME_V2.version,
-        name: preset.name,
-        overrides: nextOverrides,
-      });
-    }
-  }
-
-  function handleResetTheme() {
-    setThemeName(DEFAULT_THEME_V2.name);
-    setThemeOverrides({});
-    setThemeImportValue('');
-    setThemeError('');
-    clearThemeManifestPreference();
-    if (uiV2TokensEnabled) {
-      applyThemeV2(DEFAULT_THEME_V2);
-    }
-  }
-
-  async function handleExportTheme() {
-    const payload = {
-      version: DEFAULT_THEME_V2.version,
-      name: themeName.trim() || DEFAULT_THEME_V2.name,
-      overrides: themeOverrides,
-    };
-    const serialized = JSON.stringify(payload, null, 2);
-    await navigator.clipboard.writeText(serialized);
-    setThemeImportValue(serialized);
-  }
-
-  function handleImportTheme() {
-    setThemeError('');
+  function handleAccentChange(value: string) {
+    setCustomAccent(value);
+    const root = document.documentElement;
+    root.style.setProperty('--accent', value);
+    root.style.setProperty('--accent-2', value);
     try {
-      const parsed = JSON.parse(themeImportValue) as {
-        version?: string;
-        name?: string;
-        overrides?: Record<string, string>;
-      };
-      const nextName = (parsed.name ?? DEFAULT_THEME_V2.name).trim() || DEFAULT_THEME_V2.name;
-      const nextOverrides = parsed.overrides ?? {};
-      setThemeName(nextName);
-      setThemeOverrides(nextOverrides);
-      if (uiV2TokensEnabled) {
-        applyThemeManifest(nextOverrides, nextName);
-      } else {
-        setThemeManifestPreference({
-          version: parsed.version ?? DEFAULT_THEME_V2.version,
-          name: nextName,
-          overrides: nextOverrides,
-        });
-      }
-    } catch (err) {
-      setThemeError(getErrorMessage(err));
+      localStorage.setItem('gratonite_accent_override', value);
+    } catch {}
+  }
+
+  function handleResetAccent() {
+    setCustomAccent('');
+    localStorage.removeItem('gratonite_accent_override');
+    // Restore the active theme's accent
+    const active = BUILT_IN_THEMES.find(t => t.id === appliedId);
+    if (active) {
+      document.documentElement.style.setProperty('--accent', active.vars['--accent']);
+      document.documentElement.style.setProperty('--accent-2', active.vars['--accent-2']);
     }
+  }
+
+  function handleColorMode(mode: UiColorMode) {
+    setColorModeState(mode);
+    setUiColorModePreference(mode);
+    applyColorMode();
+  }
+
+  function handleGlassMode(mode: UiGlassMode) {
+    setGlassModeState(mode);
+    setUiGlassModePreference(mode);
+    applyUiVisualPreferences();
+  }
+
+  function handleLowPower(val: boolean) {
+    setLowPowerState(val);
+    setUiLowPowerPreference(val);
+    applyUiVisualPreferences();
+  }
+
+  function handleReducedEffects(val: boolean) {
+    setReducedEffectsState(val);
+    setUiReducedEffectsPreference(val);
+    applyUiVisualPreferences();
   }
 
   return (
-    <section className="settings-section">
-      <h2 className="settings-shell-section-heading">Appearance</h2>
-      <div className="settings-card">
-        <div className="settings-field">
-          <div className="settings-field-label">Color Mode</div>
-          <div className="settings-field-control settings-field-row">
-            {(['light', 'dark', 'system'] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                className={`settings-color-mode-btn ${colorMode === mode ? 'active' : ''}`}
-                onClick={() => {
-                  setUiColorModePreference(mode);
-                  setColorMode(mode);
-                  applyColorMode();
-                  // Re-apply V2 tokens to respect light/dark token filtering
-                  if (shouldEnableUiV2Tokens()) {
-                    const { theme } = resolveThemeV2(readThemeManifestPreference() ?? undefined);
-                    applyThemeV2(theme);
-                  }
-                  api.users.updateSettings({ theme: mode }).catch(() => undefined);
-                }}
-              >
-                {mode === 'light' && (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="5" />
-                    <line x1="12" y1="1" x2="12" y2="3" />
-                    <line x1="12" y1="21" x2="12" y2="23" />
-                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                    <line x1="1" y1="12" x2="3" y2="12" />
-                    <line x1="21" y1="12" x2="23" y2="12" />
-                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-                  </svg>
-                )}
-                {mode === 'dark' && (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                  </svg>
-                )}
-                {mode === 'system' && (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                    <line x1="8" y1="21" x2="16" y2="21" />
-                    <line x1="12" y1="17" x2="12" y2="21" />
-                  </svg>
-                )}
-                <span>{mode.charAt(0).toUpperCase() + mode.slice(1)}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Visual Presets</div>
-          <div className="settings-field-control settings-field-row">
-            <Button variant="ghost" onClick={() => handleApplyVisualPreset('balanced')}>Balanced</Button>
-            <Button variant="ghost" onClick={() => handleApplyVisualPreset('immersive')}>Immersive</Button>
-            <Button variant="ghost" onClick={() => handleApplyVisualPreset('performance')}>Performance</Button>
-            <Button variant="ghost" onClick={handleResetVisualPreferences}>Reset Visuals</Button>
-          </div>
-        </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Message Density</div>
-          <div className="settings-field-control">
-            <select
-              className="settings-select"
-              value={messageDisplay}
-              onChange={(event) => setMessageDisplay(event.target.value)}
-            >
-              <option value="cozy">Cozy</option>
-              <option value="compact">Compact</option>
-            </select>
-          </div>
-        </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Font Scale</div>
-          <div className="settings-field-control">
-            <input
-              className="settings-range"
-              type="range"
-              min="0.8"
-              max="1.4"
-              step="0.05"
-              value={fontScale}
-              onChange={(event) => setFontScale(Number(event.target.value))}
+    <section style={s['section']}>
+      <div style={s['header']}>
+        <h2 style={s['title']}>Appearance</h2>
+        <p style={s['subtitle']}>Customise how Gratonite looks for you.</p>
+      </div>
+
+      {/* ── Theme ───────────────────────────────────────────────────────── */}
+      <div style={s['group']}>
+        <h3 style={s['groupLabel']}>Theme</h3>
+        <div style={s['themeGrid']}>
+          {BUILT_IN_THEMES.map(theme => (
+            <ThemeCard
+              key={theme.id}
+              theme={theme}
+              appliedId={appliedId}
+              onApply={handleApplyTheme}
             />
-            <span className="settings-range-value">{fontScale.toFixed(2)}x</span>
-          </div>
+          ))}
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Modern UI Preview</div>
-          <div className="settings-field-control">
-            <label className="settings-toggle">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <Link to="/discover?tab=themes" style={s['browseLink']}>
+            Explore more themes →
+          </Link>
+          <Link
+            to="/themes/create"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              height: 30,
+              padding: '0 12px',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--accent)',
+              color: '#1a1a2e',
+              fontSize: 12,
+              fontWeight: 600,
+              textDecoration: 'none',
+            }}
+          >
+            + Create Theme
+          </Link>
+        </div>
+      </div>
+
+      {/* ── Accent colour ───────────────────────────────────────────────── */}
+      <div style={s['group']}>
+        <h3 style={s['groupLabel']}>Accent Colour</h3>
+        <div style={s['card']}>
+          <div style={s['row']}>
+            <div style={s['rowLabel']}>
+              <span style={s['rowLabelText']}>Custom accent</span>
+              <span style={s['rowLabelDesc']}>
+                Override the accent colour on top of the selected theme.
+              </span>
+            </div>
+            <div style={s['accentRow']}>
               <input
-                type="checkbox"
-                checked={uiV2TokensEnabled}
-                onChange={(event) => handleToggleUiV2Tokens(event.target.checked)}
+                type="color"
+                value={customAccent || '#d4af37'}
+                onChange={e => handleAccentChange(e.target.value)}
+                style={s['accentSwatch']}
+                title="Pick accent colour"
               />
-              <span className="settings-toggle-indicator" />
-            </label>
-            <span className="settings-range-value">{uiV2TokensEnabled ? 'On' : 'Off'}</span>
-          </div>
-        </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Glass Mode</div>
-          <div className="settings-field-control">
-            <select
-              className="settings-select"
-              value={uiGlassMode}
-              onChange={(event) => handleChangeGlassMode(event.target.value as UiGlassMode)}
-            >
-              <option value="off">Off</option>
-              <option value="subtle">Subtle</option>
-              <option value="full">Full</option>
-            </select>
-          </div>
-        </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Surface Background Mode</div>
-          <div className="settings-field-control">
-            <select
-              className="settings-select"
-              value={uiSurfaceBackgroundMode}
-              onChange={(event) => handleChangeSurfaceBackgroundMode(event.target.value as UiSurfaceBackgroundMode)}
-            >
-              <option value="contained">Contained</option>
-              <option value="full">Full Surface</option>
-            </select>
-          </div>
-        </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Content Scrim</div>
-          <div className="settings-field-control">
-            <select
-              className="settings-select"
-              value={uiContentScrim}
-              onChange={(event) => handleChangeContentScrim(event.target.value as UiContentScrim)}
-            >
-              <option value="soft">Soft</option>
-              <option value="balanced">Balanced</option>
-              <option value="strong">Strong</option>
-            </select>
-          </div>
-        </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Portal Background Style</div>
-          <div className="settings-field-control">
-            <select
-              className="settings-select"
-              value={uiPortalBackgroundStyle}
-              onChange={(event) => handleChangeBackgroundStyle('portal', event.target.value as UiBackgroundStyle)}
-            >
-              <option value="auto">Auto</option>
-              <option value="aurora">Aurora</option>
-              <option value="mesh">Mesh</option>
-              <option value="minimal">Minimal</option>
-            </select>
-          </div>
-        </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Channel Background Style</div>
-          <div className="settings-field-control">
-            <select
-              className="settings-select"
-              value={uiChannelBackgroundStyle}
-              onChange={(event) => handleChangeBackgroundStyle('channel', event.target.value as UiBackgroundStyle)}
-            >
-              <option value="auto">Auto</option>
-              <option value="aurora">Aurora</option>
-              <option value="mesh">Mesh</option>
-              <option value="minimal">Minimal</option>
-            </select>
-          </div>
-        </div>
-        <div className="settings-field">
-          <div className="settings-field-label">DM Background Style</div>
-          <div className="settings-field-control">
-            <select
-              className="settings-select"
-              value={uiDmBackgroundStyle}
-              onChange={(event) => handleChangeBackgroundStyle('dm', event.target.value as UiBackgroundStyle)}
-            >
-              <option value="auto">Auto</option>
-              <option value="aurora">Aurora</option>
-              <option value="mesh">Mesh</option>
-              <option value="minimal">Minimal</option>
-            </select>
-          </div>
-        </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Low Power Mode</div>
-          <div className="settings-field-control">
-            <label className="settings-toggle">
-              <input
-                type="checkbox"
-                checked={uiLowPower}
-                onChange={(event) => handleToggleLowPower(event.target.checked)}
-              />
-              <span className="settings-toggle-indicator" />
-            </label>
-            <span className="settings-range-value">{uiLowPower ? 'On' : 'Off'}</span>
-          </div>
-        </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Reduced Effects</div>
-          <div className="settings-field-control">
-            <label className="settings-toggle">
-              <input
-                type="checkbox"
-                checked={uiReducedEffects}
-                onChange={(event) => handleToggleReducedEffects(event.target.checked)}
-              />
-              <span className="settings-toggle-indicator" />
-            </label>
-            <span className="settings-range-value">{uiReducedEffects ? 'On' : 'Off'}</span>
-          </div>
-        </div>
-        <div className="settings-note">
-          Background and scrim settings affect message surfaces in portals, DMs, and voice chat panels to preserve readability while keeping custom visual style.
-        </div>
-        <div className="settings-theme-editor">
-          <div className="settings-theme-header">
-            <h3 className="settings-theme-title">Theme Studio (v1)</h3>
-            <p className="settings-muted">
-              Customize core theme tokens and share by exporting/importing JSON.
-            </p>
-          </div>
-          <div className="settings-theme-presets">
-            {THEME_PRESETS_V3.map((preset) => (
-              <button
-                key={preset.name}
-                type="button"
-                className="settings-theme-preset"
-                onClick={() => handleApplyThemePreset(preset)}
-              >
-                <span className="settings-theme-preset-name">{preset.name}</span>
-                <span className="settings-theme-preset-desc">{preset.description}</span>
-              </button>
-            ))}
-          </div>
-          <div className="settings-field">
-            <div className="settings-field-label">Theme Name</div>
-            <div className="settings-field-control">
-              <Input
-                type="text"
-                value={themeName}
-                onChange={(event) => setThemeName(event.target.value)}
-                placeholder="My Theme"
-              />
+              {customAccent && (
+                <button type="button" style={s['resetBtn']} onClick={handleResetAccent}>
+                  Reset
+                </button>
+              )}
             </div>
           </div>
-          <div className="settings-theme-grid">
-            {THEME_TOKEN_CONTROLS.map((token) => {
-              const value = themeOverrides[token.key] ?? DEFAULT_THEME_V2.tokens[token.key] ?? '';
-              return (
-                <label key={token.key} className="settings-theme-field">
-                  <span className="settings-theme-label">{token.label}</span>
-                  {token.type === 'color' ? (
-                    <input
-                      type="color"
-                      value={value}
-                      onChange={(event) => handleThemeOverrideChange(token.key, event.target.value)}
-                    />
-                  ) : (
-                    <Input
-                      type="text"
-                      value={value}
-                      onChange={(event) => handleThemeOverrideChange(token.key, event.target.value)}
-                    />
-                  )}
-                </label>
-              );
-            })}
+        </div>
+      </div>
+
+      {/* ── Colour mode ────────────────────────────────────────────────── */}
+      <div style={s['group']}>
+        <h3 style={s['groupLabel']}>Colour Mode</h3>
+        <div style={s['card']}>
+          <div style={s['row']}>
+            <div style={s['rowLabel']}>
+              <span style={s['rowLabelText']}>Mode</span>
+              <span style={s['rowLabelDesc']}>Light, dark, or follow system preference.</span>
+            </div>
+            <div style={s['modePills']}>
+              {(['light', 'dark', 'system'] as UiColorMode[]).map(m => (
+                <button
+                  key={m}
+                  type="button"
+                  style={modePill(colorMode === m)}
+                  onClick={() => handleColorMode(m)}
+                >
+                  {m.charAt(0).toUpperCase() + m.slice(1)}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="settings-theme-actions">
-            <Button type="button" onClick={() => applyThemeManifest(themeOverrides)}>
-              Apply
-            </Button>
-            <Button type="button" variant="ghost" onClick={handleExportTheme}>
-              Export
-            </Button>
-            <Button type="button" variant="ghost" onClick={handleImportTheme}>
-              Import
-            </Button>
-            <Button type="button" variant="ghost" onClick={handleResetTheme}>
-              Reset
-            </Button>
+        </div>
+      </div>
+
+      {/* ── Visual effects ──────────────────────────────────────────────── */}
+      <div style={s['group']}>
+        <h3 style={s['groupLabel']}>Visual Effects</h3>
+        <div style={s['card']}>
+          <div style={s['toggleRow']}>
+            <div style={s['rowLabel']}>
+              <span style={s['rowLabelText']}>Glass surfaces</span>
+              <span style={s['rowLabelDesc']}>Frosted glass effect on panels and sidebars.</span>
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {(['off', 'subtle', 'full'] as UiGlassMode[]).map(m => (
+                <button
+                  key={m}
+                  type="button"
+                  style={modePill(glassMode === m)}
+                  onClick={() => handleGlassMode(m)}
+                >
+                  {m.charAt(0).toUpperCase() + m.slice(1)}
+                </button>
+              ))}
+            </div>
           </div>
-          <textarea
-            className="settings-theme-json"
-            value={themeImportValue}
-            onChange={(event) => setThemeImportValue(event.target.value)}
-            placeholder='Paste a theme JSON payload here, then click "Import".'
-            rows={6}
-          />
-          {themeError && <div className="settings-error">{themeError}</div>}
+
+          <div style={s['toggleRow']}>
+            <div style={s['rowLabel']}>
+              <span style={s['rowLabelText']}>Reduced effects</span>
+              <span style={s['rowLabelDesc']}>Disable animations and blur effects.</span>
+            </div>
+            <Toggle checked={reducedEffects} onChange={handleReducedEffects} />
+          </div>
+
+          <div style={s['toggleRow']}>
+            <div style={s['rowLabel']}>
+              <span style={s['rowLabelText']}>Low power mode</span>
+              <span style={s['rowLabelDesc']}>Reduces background rendering for battery life.</span>
+            </div>
+            <Toggle checked={lowPower} onChange={handleLowPower} />
+          </div>
         </div>
       </div>
     </section>

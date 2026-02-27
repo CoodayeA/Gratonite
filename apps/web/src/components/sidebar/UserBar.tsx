@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
@@ -21,6 +21,232 @@ import { usePresenceStore, type PresenceStatus } from '@/stores/presence.store';
 import { readPresencePreference, savePresencePreference, type PresencePreference } from '@/lib/presencePrefs';
 import { getSocket } from '@/lib/socket';
 
+/* ── CSS variable design tokens ─────────────────────────────────────── */
+const V = {
+  bg: 'var(--bg, #2c2c3e)',
+  bgElevated: 'var(--bg-elevated, #353348)',
+  bgInput: 'var(--bg-input, #25243a)',
+  stroke: 'var(--stroke, #4a4660)',
+  accent: 'var(--accent, #d4af37)',
+  text: 'var(--text, #e8e4e0)',
+  textMuted: 'var(--text-muted, #a8a4b8)',
+  textFaint: 'var(--text-faint, #6e6a80)',
+  textOnGold: 'var(--text-on-gold, #1a1a2e)',
+} as const;
+
+/* ── Inline style objects ───────────────────────────────────────────── */
+
+const userBarBase = {
+  position: 'relative',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: '8px 10px',
+  borderTop: `1px solid ${V.stroke}`,
+  background: 'rgba(8, 12, 20, 0.6)',
+  flexShrink: 0,
+} as React.CSSProperties;
+
+const userBarCompact = {
+  ...userBarBase,
+  width: 48,
+  minWidth: 48,
+  height: 48,
+  padding: 0,
+  borderTop: 0,
+  background: 'transparent',
+  justifyContent: 'center',
+  overflow: 'visible',
+} as React.CSSProperties;
+
+const compactTriggerBase = {
+  width: 48,
+  height: 48,
+  display: 'grid',
+  placeItems: 'center',
+  background: 'none',
+  border: 'none',
+  borderRadius: '50%',
+  cursor: 'pointer',
+  transition: 'background 0.15s ease',
+} as React.CSSProperties;
+
+const avatarStatusWrap = {
+  position: 'relative',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
+} as React.CSSProperties;
+
+const userBarInfo = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  minWidth: 0,
+  flex: 1,
+} as React.CSSProperties;
+
+const userBarNames = {
+  display: 'flex',
+  flexDirection: 'column',
+  minWidth: 0,
+} as React.CSSProperties;
+
+const userBarDisplayname = {
+  fontSize: 13,
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  lineHeight: 1.2,
+} as React.CSSProperties;
+
+const userBarStatus = {
+  display: 'block',
+  maxWidth: 170,
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  fontSize: 10,
+  color: V.textFaint,
+} as React.CSSProperties;
+
+const userBarPresenceLabel = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  fontSize: 11,
+  color: V.textFaint,
+} as React.CSSProperties;
+
+const userBarUsername = {
+  fontSize: 11,
+  color: V.textFaint,
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  lineHeight: 1.2,
+} as React.CSSProperties;
+
+const userBarBalance = {
+  fontSize: 11,
+  color: V.textFaint,
+  display: 'flex',
+  alignItems: 'center',
+  whiteSpace: 'nowrap',
+  marginTop: 2,
+  fontWeight: 500,
+  transition: 'color 0.15s ease',
+} as React.CSSProperties;
+
+const userBarActions = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 4,
+} as React.CSSProperties;
+
+const userBarSettingsBase = {
+  background: 'none',
+  border: 'none',
+  color: V.textMuted,
+  cursor: 'pointer',
+  padding: 4,
+  borderRadius: 'var(--radius-sm)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  transition: 'background 0.15s ease, color 0.15s ease',
+} as React.CSSProperties;
+
+const menuBase = {
+  position: 'absolute',
+  bottom: 'calc(100% + 4px)',
+  left: 8,
+  right: 8,
+  zIndex: 100,
+  background: 'rgb(9, 13, 22)',
+  border: '1px solid rgba(74, 70, 96, 0.9)',
+  borderRadius: 'var(--radius-md)',
+  padding: 6,
+  boxShadow: '0 18px 36px rgba(0, 0, 0, 0.56), 0 0 0 1px rgba(255,255,255,0.02) inset',
+} as React.CSSProperties;
+
+const menuCompact = {
+  position: 'fixed',
+  left: 0,
+  right: 'auto',
+  top: 0,
+  bottom: 'auto',
+  width: 240,
+  minWidth: 240,
+  zIndex: 2000,
+  background: '#080c14',
+  border: '1px solid rgba(166, 186, 230, 0.16)',
+  borderRadius: 'var(--radius-md)',
+  padding: 6,
+  boxShadow: '0 22px 42px rgba(0, 0, 0, 0.62), 0 0 0 1px rgba(255,255,255,0.025) inset',
+} as React.CSSProperties;
+
+const menuItemBase = {
+  display: 'block',
+  width: '100%',
+  padding: '8px 10px',
+  background: 'none',
+  border: 'none',
+  borderRadius: 'var(--radius-sm)',
+  color: V.textMuted,
+  fontSize: 13,
+  fontFamily: 'inherit',
+  textAlign: 'left',
+  cursor: 'pointer',
+  transition: 'all 0.1s ease',
+} as React.CSSProperties;
+
+const menuGroupLabel = {
+  fontSize: 11,
+  color: V.textFaint,
+  textTransform: 'uppercase',
+  letterSpacing: '0.06em',
+  margin: '4px 8px 6px',
+} as React.CSSProperties;
+
+const presenceGrid = {
+  display: 'grid',
+  gap: 4,
+  marginBottom: 4,
+} as React.CSSProperties;
+
+const presenceItemStyle = {
+  ...menuItemBase,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+} as React.CSSProperties;
+
+const presenceItemActive = {
+  ...presenceItemStyle,
+  background: 'rgba(212, 175, 55, 0.1)',
+  color: V.text,
+} as React.CSSProperties;
+
+const menuDivider = {
+  height: 1,
+  background: V.stroke,
+  margin: '4px 6px',
+} as React.CSSProperties;
+
+const menuDangerBase = {
+  ...menuItemBase,
+  color: 'var(--danger, #ff6b6b)',
+} as React.CSSProperties;
+
+const spriteStyle = {
+  borderRadius: 10,
+  border: '1px solid rgba(255, 255, 255, 0.18)',
+  background: 'rgba(8, 12, 20, 0.42)',
+} as React.CSSProperties;
+
 export function UserBar({ compact = false }: { compact?: boolean }) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -38,6 +264,12 @@ export function UserBar({ compact = false }: { compact?: boolean }) {
   const member = useMembersStore((s) =>
     currentGuildId ? s.membersByGuild.get(currentGuildId)?.get(user?.id ?? '') : undefined,
   );
+
+  // Hover states
+  const [hoveredMenuItem, setHoveredMenuItem] = useState<string | null>(null);
+  const [hoveredSettings, setHoveredSettings] = useState<number | null>(null);
+  const [hoveredBalance, setHoveredBalance] = useState(false);
+  const [hoveredCompactTrigger, setHoveredCompactTrigger] = useState(false);
 
   // Fetch Gratonites balance
   const { data: balanceData } = useQuery({
@@ -166,11 +398,15 @@ export function UserBar({ compact = false }: { compact?: boolean }) {
   const menuContent = menuOpen ? (
     <div
       ref={menuRef}
-      className={`user-bar-menu ${compact ? 'user-bar-menu-compact' : ''}`}
-      style={compact && compactMenuPos ? { top: compactMenuPos.top, left: compactMenuPos.left } : undefined}
+      style={compact && compactMenuPos
+        ? { ...menuCompact, top: compactMenuPos.top, left: compactMenuPos.left }
+        : menuBase
+      }
     >
           <button
-            className="user-bar-menu-item"
+            style={hoveredMenuItem === 'edit-profile' ? { ...menuItemBase, background: 'rgba(212, 175, 55, 0.08)', color: V.text } : menuItemBase}
+            onMouseEnter={() => setHoveredMenuItem('edit-profile')}
+            onMouseLeave={() => setHoveredMenuItem(null)}
             onClick={() => {
               openModal('settings', { type: 'user', initialSection: 'profile' });
               setMenuOpen(false);
@@ -179,7 +415,9 @@ export function UserBar({ compact = false }: { compact?: boolean }) {
             Edit Profile
           </button>
           <button
-            className="user-bar-menu-item"
+            style={hoveredMenuItem === 'friends' ? { ...menuItemBase, background: 'rgba(212, 175, 55, 0.08)', color: V.text } : menuItemBase}
+            onMouseEnter={() => setHoveredMenuItem('friends')}
+            onMouseLeave={() => setHoveredMenuItem(null)}
             onClick={() => {
               navigate('/');
               setMenuOpen(false);
@@ -187,8 +425,8 @@ export function UserBar({ compact = false }: { compact?: boolean }) {
           >
             Friends & DMs
           </button>
-          <div className="user-bar-menu-group-label">Status</div>
-          <div className="user-bar-presence-grid">
+          <div style={menuGroupLabel}>Status</div>
+          <div style={presenceGrid}>
             {([
               ['online', 'Online'],
               ['idle', 'Away'],
@@ -197,7 +435,15 @@ export function UserBar({ compact = false }: { compact?: boolean }) {
             ] as const).map(([value, label]) => (
               <button
                 key={value}
-                className={`user-bar-menu-item user-bar-presence-item ${selectedPresence === value ? 'is-active' : ''}`}
+                style={
+                  selectedPresence === value
+                    ? presenceItemActive
+                    : hoveredMenuItem === `presence-${value}`
+                      ? { ...presenceItemStyle, background: 'rgba(212, 175, 55, 0.08)', color: V.text }
+                      : presenceItemStyle
+                }
+                onMouseEnter={() => setHoveredMenuItem(`presence-${value}`)}
+                onMouseLeave={() => setHoveredMenuItem(null)}
                 onClick={() => {
                   applyPresence(value);
                   setMenuOpen(false);
@@ -208,33 +454,40 @@ export function UserBar({ compact = false }: { compact?: boolean }) {
               </button>
             ))}
           </div>
-          <div className="user-bar-menu-divider" />
-          <button className="user-bar-menu-item user-bar-menu-danger" onClick={handleLogout}>
+          <div style={menuDivider} />
+          <button
+            style={hoveredMenuItem === 'logout' ? { ...menuDangerBase, background: 'var(--danger-bg, rgba(255,107,107,0.1))' } : menuDangerBase}
+            onMouseEnter={() => setHoveredMenuItem('logout')}
+            onMouseLeave={() => setHoveredMenuItem(null)}
+            onClick={handleLogout}
+          >
             Log Out
           </button>
         </div>
   ) : null;
 
   return (
-    <div className={`user-bar ${compact ? 'user-bar-compact' : ''}`} ref={rootRef}>
+    <div style={compact ? userBarCompact : userBarBase} ref={rootRef}>
       {compact ? (menuContent && typeof document !== 'undefined' ? createPortal(menuContent, document.body) : null) : menuContent}
 
       {compact ? (
         <button
           ref={compactTriggerRef}
-          className="user-bar-compact-trigger"
+          style={hoveredCompactTrigger ? { ...compactTriggerBase, background: 'rgba(255, 255, 255, 0.06)' } : compactTriggerBase}
+          onMouseEnter={() => setHoveredCompactTrigger(true)}
+          onMouseLeave={() => setHoveredCompactTrigger(false)}
           onClick={() => setMenuOpen((prev) => !prev)}
           title="Profile and status"
           aria-label="Profile and status"
         >
           {avatarStudioPrefs.enabled ? (
-            <span className="avatar-status-wrap">
-              <AvatarSprite config={avatarStudioPrefs.sprite} size={34} className="user-bar-sprite" />
+            <span style={avatarStatusWrap}>
+              <AvatarSprite config={avatarStudioPrefs.sprite} size={34} style={spriteStyle} />
               <span className={`avatar-presence-badge presence-${visiblePresenceBadge}`} />
             </span>
           ) : (
             <Avatar
-              name={resolved?.displayName ?? user.displayName}
+              name={resolved?.displayName ?? user.displayName ?? user.username}
               hash={resolved?.avatarHash ?? user.avatarHash ?? null}
               decorationHash={avatarDecorationHash}
               userId={user.id}
@@ -244,15 +497,15 @@ export function UserBar({ compact = false }: { compact?: boolean }) {
           )}
         </button>
       ) : (
-      <div className="user-bar-info">
+      <div style={userBarInfo}>
         {avatarStudioPrefs.enabled ? (
-          <span className="avatar-status-wrap">
-            <AvatarSprite config={avatarStudioPrefs.sprite} size={34} className="user-bar-sprite" />
+          <span style={avatarStatusWrap}>
+            <AvatarSprite config={avatarStudioPrefs.sprite} size={34} style={spriteStyle} />
             <span className={`avatar-presence-badge presence-${visiblePresenceBadge}`} />
           </span>
         ) : (
           <Avatar
-            name={resolved?.displayName ?? user.displayName}
+            name={resolved?.displayName ?? user.displayName ?? user.username}
             hash={resolved?.avatarHash ?? user.avatarHash ?? null}
             decorationHash={avatarDecorationHash}
             userId={user.id}
@@ -260,8 +513,8 @@ export function UserBar({ compact = false }: { compact?: boolean }) {
             presenceStatus={visiblePresenceBadge}
           />
         )}
-        <div className="user-bar-names">
-          <span className="user-bar-displayname">
+        <div style={userBarNames}>
+          <span style={userBarDisplayname}>
             <DisplayNameText
               text={resolved?.displayName ?? user.displayName}
               userId={user.id}
@@ -269,8 +522,8 @@ export function UserBar({ compact = false }: { compact?: boolean }) {
               context={currentGuildId ? 'server' : 'profile'}
             />
           </span>
-          {statusText && <span className="user-bar-status" title={statusText}>💭 {statusText}</span>}
-          <span className="user-bar-presence-label">
+          {statusText && <span style={userBarStatus} title={statusText}>💭 {statusText}</span>}
+          <span style={userBarPresenceLabel}>
             <span className={`presence-dot presence-${effectivePresence}`} />
             {effectivePresence === 'idle'
               ? 'Away'
@@ -282,9 +535,14 @@ export function UserBar({ compact = false }: { compact?: boolean }) {
                     ? 'Offline'
                     : 'Online'}
           </span>
-          <span className="user-bar-username">@{user.username}</span>
+          <span style={userBarUsername}>@{user.username}</span>
           {balanceData && (
-            <span className="user-bar-balance" title="Gratonites Currency">
+            <span
+              style={hoveredBalance ? { ...userBarBalance, color: V.textMuted } : userBarBalance}
+              onMouseEnter={() => setHoveredBalance(true)}
+              onMouseLeave={() => setHoveredBalance(false)}
+              title="Gratonites Currency"
+            >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: '4px', color: '#fbbf24' }}>
                 <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2"/>
                 <text x="12" y="16" textAnchor="middle" fontSize="12" fill="currentColor">G</text>
@@ -296,9 +554,11 @@ export function UserBar({ compact = false }: { compact?: boolean }) {
       </div>
       )}
       {!compact && (
-      <div className="user-bar-actions">
+      <div style={userBarActions}>
         <button
-          className="user-bar-settings"
+          style={hoveredSettings === 0 ? { ...userBarSettingsBase, background: 'rgba(255, 255, 255, 0.06)', color: V.text } : userBarSettingsBase}
+          onMouseEnter={() => setHoveredSettings(0)}
+          onMouseLeave={() => setHoveredSettings(null)}
           onClick={() => navigate('/settings')}
           title="Settings"
           aria-label="Settings"
@@ -308,7 +568,9 @@ export function UserBar({ compact = false }: { compact?: boolean }) {
           </svg>
         </button>
         <button
-          className="user-bar-settings"
+          style={hoveredSettings === 1 ? { ...userBarSettingsBase, background: 'rgba(255, 255, 255, 0.06)', color: V.text } : userBarSettingsBase}
+          onMouseEnter={() => setHoveredSettings(1)}
+          onMouseLeave={() => setHoveredSettings(null)}
           onClick={() => setMenuOpen((prev) => !prev)}
           title="User menu"
           aria-label="User menu"

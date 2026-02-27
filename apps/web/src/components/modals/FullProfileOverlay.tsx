@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -14,6 +14,224 @@ function formatDate(iso: string | undefined | null): string {
   return d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
 }
 
+const styles = {
+  backdrop: {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 1050,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(0, 0, 0, 0.6)',
+    animation: 'full-profile-fade-in 0.15s ease',
+  } as React.CSSProperties,
+  overlay: {
+    position: 'relative',
+    width: '100%',
+    maxWidth: 600,
+    maxHeight: '90vh',
+    overflowY: 'auto',
+    background: 'var(--bg-elevated, #1e1f22)',
+    borderRadius: 'var(--radius-lg, 12px)',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.45)',
+    animation: 'full-profile-slide-up 0.2s ease',
+  } as React.CSSProperties,
+  closeBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 2,
+    width: 32,
+    height: 32,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(0, 0, 0, 0.4)',
+    border: 'none',
+    borderRadius: '50%',
+    color: '#fff',
+    fontSize: 20,
+    lineHeight: 1,
+    cursor: 'pointer',
+    transition: 'background 0.15s ease',
+  } as React.CSSProperties,
+  closeBtnHover: {
+    background: 'rgba(0, 0, 0, 0.6)',
+  } as React.CSSProperties,
+  banner: {
+    width: '100%',
+    height: 180,
+    background: 'linear-gradient(135deg, var(--gratonite-purple, #5a4a7a) 0%, var(--gratonite-gold, #d4af37) 100%)',
+    borderRadius: 'var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  } as React.CSSProperties,
+  body: {
+    padding: '0 24px 24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+  } as React.CSSProperties,
+  header: {
+    display: 'flex',
+    alignItems: 'flex-end',
+    gap: 16,
+    marginTop: -40,
+  } as React.CSSProperties,
+  avatarWrap: {
+    flexShrink: 0,
+    borderRadius: '50%',
+    border: '4px solid var(--bg-elevated, #1e1f22)',
+    background: 'var(--bg-elevated, #1e1f22)',
+    lineHeight: 0,
+  } as React.CSSProperties,
+  names: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+    paddingBottom: 4,
+    minWidth: 0,
+  } as React.CSSProperties,
+  displayName: {
+    margin: 0,
+    fontSize: 22,
+    fontWeight: 700,
+    color: 'var(--text-primary, #f2f3f5)',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  } as React.CSSProperties,
+  username: {
+    fontSize: 14,
+    color: 'var(--text-muted, #949ba4)',
+  } as React.CSSProperties,
+  pronouns: {
+    fontSize: 13,
+    color: 'var(--text-muted, #949ba4)',
+  } as React.CSSProperties,
+  bio: {
+    fontSize: 14,
+    lineHeight: 1.5,
+    color: 'var(--text-primary, #f2f3f5)',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+  } as React.CSSProperties,
+  bioP: {
+    margin: 0,
+  } as React.CSSProperties,
+  statsRow: {
+    display: 'flex',
+    gap: 24,
+    flexWrap: 'wrap',
+  } as React.CSSProperties,
+  stat: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+  } as React.CSSProperties,
+  statLabel: {
+    fontSize: 11,
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.02em',
+    color: 'var(--text-muted, #949ba4)',
+  } as React.CSSProperties,
+  statValue: {
+    fontSize: 14,
+    color: 'var(--text-primary, #f2f3f5)',
+  } as React.CSSProperties,
+  actions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  } as React.CSSProperties,
+  actionBtn: {
+    padding: '8px 16px',
+    border: 'none',
+    borderRadius: 'var(--radius-md, 8px)',
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'background 0.15s ease, opacity 0.15s ease',
+    whiteSpace: 'nowrap',
+  } as React.CSSProperties,
+  actionMessage: {
+    background: 'var(--gratonite-gold, #d4af37)',
+    color: 'var(--text-on-gold, #1a1a2e)',
+  } as React.CSSProperties,
+  actionMessageHover: {
+    background: 'var(--gratonite-gold-bright, #e8c547)',
+  } as React.CSSProperties,
+  actionAddFriend: {
+    background: 'rgba(255, 255, 255, 0.08)',
+    color: 'var(--text-primary, #f2f3f5)',
+  } as React.CSSProperties,
+  actionAddFriendHover: {
+    background: 'rgba(255, 255, 255, 0.14)',
+  } as React.CSSProperties,
+  actionRemoveFriend: {
+    background: 'rgba(255, 255, 255, 0.08)',
+    color: 'var(--text-primary, #f2f3f5)',
+  } as React.CSSProperties,
+  actionRemoveFriendHover: {
+    background: 'rgba(255, 255, 255, 0.14)',
+  } as React.CSSProperties,
+  actionMore: {
+    width: 36,
+    height: 36,
+    padding: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(255, 255, 255, 0.08)',
+    color: 'var(--text-primary, #f2f3f5)',
+    fontSize: 20,
+    borderRadius: 'var(--radius-md, 8px)',
+  } as React.CSSProperties,
+  actionMoreHover: {
+    background: 'rgba(255, 255, 255, 0.14)',
+  } as React.CSSProperties,
+  moreWrap: {
+    position: 'relative',
+  } as React.CSSProperties,
+  moreMenu: {
+    position: 'absolute',
+    bottom: 'calc(100% + 6px)',
+    right: 0,
+    minWidth: 160,
+    padding: 6,
+    background: 'var(--bg-secondary, #111214)',
+    borderRadius: 'var(--radius-md, 8px)',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
+    zIndex: 10,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+  } as React.CSSProperties,
+  moreItem: {
+    width: '100%',
+    padding: '8px 10px',
+    border: 'none',
+    borderRadius: 'var(--radius-sm)',
+    background: 'transparent',
+    color: 'var(--text-primary, #f2f3f5)',
+    fontSize: 14,
+    textAlign: 'left',
+    cursor: 'pointer',
+    transition: 'background 0.1s ease',
+  } as React.CSSProperties,
+  moreItemHover: {
+    background: 'rgba(255, 255, 255, 0.06)',
+  } as React.CSSProperties,
+  moreDanger: {
+    color: 'var(--danger, #f23f43)',
+  } as React.CSSProperties,
+  moreDangerHover: {
+    background: 'rgba(242, 63, 67, 0.12)',
+  } as React.CSSProperties,
+};
+
 export function FullProfileOverlay() {
   const modalData = useUiStore((s) => s.modalData);
   const closeModal = useUiStore((s) => s.closeModal);
@@ -23,6 +241,14 @@ export function FullProfileOverlay() {
   const userId = (modalData?.['userId'] as string) ?? '';
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  // Hover states
+  const [closeHover, setCloseHover] = useState(false);
+  const [messageHover, setMessageHover] = useState(false);
+  const [friendHover, setFriendHover] = useState(false);
+  const [moreHover, setMoreHover] = useState(false);
+  const [blockHover, setBlockHover] = useState(false);
+  const [copyIdHover, setCopyIdHover] = useState(false);
 
   // Close on Escape key
   useEffect(() => {
@@ -85,7 +311,7 @@ export function FullProfileOverlay() {
     return rel.type; // 'friend' | 'blocked' | 'pending_incoming' | 'pending_outgoing'
   }, [relationships, userId]);
 
-  const bannerStyle: React.CSSProperties = profile?.bannerHash
+  const bannerExtraStyle: React.CSSProperties = profile?.bannerHash
     ? {
         backgroundImage: `url(/api/v1/files/banners/users/${userId}/${profile.bannerHash})`,
         backgroundSize: 'cover',
@@ -166,10 +392,15 @@ export function FullProfileOverlay() {
     addFriendMutation.isPending ||
     removeFriendMutation.isPending;
 
+  const friendBaseStyle =
+    relationshipStatus === 'friend' ? styles.actionRemoveFriend : styles.actionAddFriend;
+  const friendHoverStyle =
+    relationshipStatus === 'friend' ? styles.actionRemoveFriendHover : styles.actionAddFriendHover;
+
   return createPortal(
-    <div className="full-profile-backdrop" onClick={closeModal}>
+    <div style={styles.backdrop} onClick={closeModal}>
       <div
-        className="full-profile-overlay"
+        style={styles.overlay}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="Full profile"
@@ -177,20 +408,25 @@ export function FullProfileOverlay() {
         {/* Close button */}
         <button
           type="button"
-          className="full-profile-close"
+          style={{
+            ...styles.closeBtn,
+            ...(closeHover ? styles.closeBtnHover : {}),
+          }}
           onClick={closeModal}
+          onMouseEnter={() => setCloseHover(true)}
+          onMouseLeave={() => setCloseHover(false)}
           aria-label="Close"
         >
           &times;
         </button>
 
         {/* Banner */}
-        <div className="full-profile-banner" style={bannerStyle} />
+        <div style={{ ...styles.banner, ...bannerExtraStyle }} />
 
         {/* Avatar + Names */}
-        <div className="full-profile-body">
-          <div className="full-profile-header">
-            <div className="full-profile-avatar-wrap">
+        <div style={styles.body}>
+          <div style={styles.header}>
+            <div style={styles.avatarWrap}>
               <Avatar
                 name={profile?.displayName ?? 'User'}
                 hash={profile?.avatarHash}
@@ -199,49 +435,55 @@ export function FullProfileOverlay() {
                 presenceStatus={status}
               />
             </div>
-            <div className="full-profile-names">
-              <h2 className="full-profile-display-name">
+            <div style={styles.names}>
+              <h2 style={styles.displayName}>
                 {profile?.displayName ?? 'User'}
               </h2>
-              <span className="full-profile-username">
+              <span style={styles.username}>
                 @{profile?.username ?? 'unknown'}
               </span>
               {profile?.pronouns && (
-                <span className="full-profile-pronouns">{profile.pronouns}</span>
+                <span style={styles.pronouns}>{profile.pronouns}</span>
               )}
             </div>
           </div>
 
           {/* Bio */}
           {profile?.bio && (
-            <div className="full-profile-bio">
-              <p>{profile.bio}</p>
+            <div style={styles.bio}>
+              <p style={styles.bioP}>{profile.bio}</p>
             </div>
           )}
 
           {/* Stats */}
-          <div className="full-profile-stats">
-            <div className="full-profile-stat">
-              <span className="full-profile-stat-label">Member Since</span>
-              <span className="full-profile-stat-value">{formatDate(profile?.createdAt)}</span>
+          <div style={styles.statsRow}>
+            <div style={styles.stat}>
+              <span style={styles.statLabel}>Member Since</span>
+              <span style={styles.statValue}>{formatDate(profile?.createdAt)}</span>
             </div>
-            <div className="full-profile-stat">
-              <span className="full-profile-stat-label">Mutual Friends</span>
-              <span className="full-profile-stat-value">{mutualFriendCount}</span>
+            <div style={styles.stat}>
+              <span style={styles.statLabel}>Mutual Friends</span>
+              <span style={styles.statValue}>{mutualFriendCount}</span>
             </div>
-            <div className="full-profile-stat">
-              <span className="full-profile-stat-label">Mutual Servers</span>
-              <span className="full-profile-stat-value">{mutualServerCount}</span>
+            <div style={styles.stat}>
+              <span style={styles.statLabel}>Mutual Servers</span>
+              <span style={styles.statValue}>{mutualServerCount}</span>
             </div>
           </div>
 
           {/* Actions */}
           {!isSelf && (
-            <div className="full-profile-actions">
+            <div style={styles.actions}>
               <button
                 type="button"
-                className="full-profile-action-btn full-profile-action-message"
+                style={{
+                  ...styles.actionBtn,
+                  ...styles.actionMessage,
+                  ...(messageHover ? styles.actionMessageHover : {}),
+                }}
                 onClick={handleMessage}
+                onMouseEnter={() => setMessageHover(true)}
+                onMouseLeave={() => setMessageHover(false)}
                 disabled={openDmMutation.isPending}
               >
                 {openDmMutation.isPending ? 'Opening...' : 'Message'}
@@ -249,40 +491,59 @@ export function FullProfileOverlay() {
 
               <button
                 type="button"
-                className={`full-profile-action-btn ${
-                  relationshipStatus === 'friend'
-                    ? 'full-profile-action-remove-friend'
-                    : 'full-profile-action-add-friend'
-                }`}
+                style={{
+                  ...styles.actionBtn,
+                  ...friendBaseStyle,
+                  ...(friendHover ? friendHoverStyle : {}),
+                }}
                 onClick={handleFriendAction}
+                onMouseEnter={() => setFriendHover(true)}
+                onMouseLeave={() => setFriendHover(false)}
                 disabled={friendButtonDisabled}
               >
                 {friendButtonLabel}
               </button>
 
-              <div className="full-profile-more-wrap" ref={moreMenuRef}>
+              <div style={styles.moreWrap} ref={moreMenuRef}>
                 <button
                   type="button"
-                  className="full-profile-action-btn full-profile-action-more"
+                  style={{
+                    ...styles.actionBtn,
+                    ...styles.actionMore,
+                    ...(moreHover ? styles.actionMoreHover : {}),
+                  }}
                   onClick={() => setMoreMenuOpen((v) => !v)}
+                  onMouseEnter={() => setMoreHover(true)}
+                  onMouseLeave={() => setMoreHover(false)}
                   aria-label="More actions"
                 >
                   &#x22EF;
                 </button>
                 {moreMenuOpen && (
-                  <div className="full-profile-more-menu">
+                  <div style={styles.moreMenu}>
                     <button
                       type="button"
-                      className="full-profile-more-item full-profile-more-danger"
+                      style={{
+                        ...styles.moreItem,
+                        ...styles.moreDanger,
+                        ...(blockHover ? styles.moreDangerHover : {}),
+                      }}
                       onClick={handleBlock}
+                      onMouseEnter={() => setBlockHover(true)}
+                      onMouseLeave={() => setBlockHover(false)}
                       disabled={blockMutation.isPending}
                     >
                       {blockMutation.isPending ? 'Blocking...' : 'Block'}
                     </button>
                     <button
                       type="button"
-                      className="full-profile-more-item"
+                      style={{
+                        ...styles.moreItem,
+                        ...(copyIdHover ? styles.moreItemHover : {}),
+                      }}
                       onClick={handleCopyUserId}
+                      onMouseEnter={() => setCopyIdHover(true)}
+                      onMouseLeave={() => setCopyIdHover(false)}
                     >
                       Copy User ID
                     </button>

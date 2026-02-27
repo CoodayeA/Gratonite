@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
@@ -18,6 +18,214 @@ function addFlag(value: string, flag: bigint) {
 function removeFlag(value: string, flag: bigint) {
   return (BigInt(value) & ~flag).toString();
 }
+
+const styles = {
+  section: {
+    maxWidth: 720,
+  } as React.CSSProperties,
+  heading: {
+    fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
+    fontSize: 20,
+    fontWeight: 700,
+    color: 'var(--text)',
+    marginBottom: 4,
+  } as React.CSSProperties,
+  muted: {
+    fontSize: 13,
+    color: 'var(--text-muted)',
+  } as React.CSSProperties,
+  modalError: {
+    padding: '10px 14px',
+    background: 'var(--danger-bg)',
+    border: '1px solid rgba(255, 107, 107, 0.25)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--danger)',
+    fontSize: 13,
+  } as React.CSSProperties,
+  inlineStats: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 8,
+  } as React.CSSProperties,
+  statPill: {
+    fontSize: 11,
+    color: 'var(--text-muted)',
+    border: '1px solid var(--stroke)',
+    background: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 'var(--radius-pill)',
+    padding: '4px 8px',
+  } as React.CSSProperties,
+  inputGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  } as React.CSSProperties,
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    color: 'var(--text-muted)',
+  } as React.CSSProperties,
+  inputWrapper: {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+  } as React.CSSProperties,
+  inputField: {
+    width: '100%',
+    padding: '10px 14px',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--text)',
+    fontFamily: 'inherit',
+    fontSize: 14,
+    outline: 'none',
+    transition: 'border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease',
+  } as React.CSSProperties,
+  privateToggle: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    fontSize: 13,
+    color: 'var(--text)',
+  } as React.CSSProperties,
+  privateToggleInput: {
+    width: 14,
+    height: 14,
+  } as React.CSSProperties,
+  permissionGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 10,
+  } as React.CSSProperties,
+  permissionCard: {
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    background: 'rgba(10, 16, 28, 0.66)',
+    padding: 10,
+    display: 'grid',
+    gap: 8,
+  } as React.CSSProperties,
+  permissionTitle: {
+    fontSize: 12,
+    color: 'var(--text-muted)',
+  } as React.CSSProperties,
+  permissionRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr auto',
+    gap: 8,
+    minWidth: 0,
+  } as React.CSSProperties,
+  permissionList: {
+    display: 'grid',
+    gap: 8,
+  } as React.CSSProperties,
+  permissionItem: {
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-sm)',
+    background: 'rgba(6, 10, 20, 0.55)',
+    padding: '8px 10px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    minWidth: 0,
+    flexWrap: 'wrap',
+  } as React.CSSProperties,
+  permissionTarget: {
+    fontSize: 13,
+    color: 'var(--text)',
+    flex: 1,
+    minWidth: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  } as React.CSSProperties,
+  permissionBadge: {
+    fontSize: 11,
+    borderRadius: 'var(--radius-pill)',
+    padding: '3px 7px',
+    border: '1px solid var(--stroke)',
+  } as React.CSSProperties,
+  badgeAllow: {
+    fontSize: 11,
+    borderRadius: 'var(--radius-pill)',
+    padding: '3px 7px',
+    color: '#9be8b6',
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: 'rgba(155, 232, 182, 0.45)',
+    background: 'rgba(155, 232, 182, 0.14)',
+  } as React.CSSProperties,
+  badgeDeny: {
+    fontSize: 11,
+    borderRadius: 'var(--radius-pill)',
+    padding: '3px 7px',
+    color: '#ffb0b0',
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: 'rgba(255, 125, 125, 0.45)',
+    background: 'rgba(255, 125, 125, 0.12)',
+  } as React.CSSProperties,
+  permissionRemove: {
+    border: '1px solid var(--stroke)',
+    background: 'rgba(255, 255, 255, 0.04)',
+    color: 'var(--text)',
+    borderRadius: 'var(--radius-md)',
+    padding: '4px 8px',
+    fontSize: 12,
+    flexShrink: 0,
+    cursor: 'pointer',
+  } as React.CSSProperties,
+  permissionRemoveRight: {
+    border: '1px solid var(--stroke)',
+    background: 'rgba(255, 255, 255, 0.04)',
+    color: 'var(--text)',
+    borderRadius: 'var(--radius-md)',
+    padding: '4px 8px',
+    fontSize: 12,
+    flexShrink: 0,
+    marginLeft: 'auto',
+    cursor: 'pointer',
+  } as React.CSSProperties,
+  feedback: {
+    fontSize: 12,
+    color: 'var(--text-muted)',
+    border: '1px solid color-mix(in srgb, var(--stroke) 88%, transparent)',
+    borderRadius: 10,
+    background: 'rgba(255, 255, 255, 0.02)',
+    padding: '6px 8px',
+    lineHeight: 1.35,
+  } as React.CSSProperties,
+  actions: {
+    display: 'flex',
+    gap: 8,
+    flexWrap: 'wrap',
+  } as React.CSSProperties,
+  discoverTag: {
+    border: '1px solid color-mix(in srgb, var(--stroke) 88%, transparent)',
+    background: 'rgba(8, 12, 22, 0.34)',
+    color: 'var(--text-muted)',
+    borderRadius: 'var(--radius-pill)',
+    padding: '5px 9px',
+    fontSize: 11,
+    fontWeight: 600,
+    cursor: 'pointer',
+  } as React.CSSProperties,
+  discoverTagActive: {
+    color: 'var(--text)',
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: 'rgba(121, 223, 255, 0.24)',
+    background: 'rgba(121, 223, 255, 0.08)',
+    borderRadius: 'var(--radius-pill)',
+    padding: '5px 9px',
+    fontSize: 11,
+    fontWeight: 600,
+    cursor: 'pointer',
+  } as React.CSSProperties,
+};
 
 interface ChannelsSectionProps {
   guildId: string;
@@ -427,54 +635,54 @@ export function ChannelsSection({ guildId }: ChannelsSectionProps) {
   }
 
   return (
-    <section className="settings-section">
-      <h2 className="settings-shell-section-heading">Channel Permissions</h2>
-      <p className="server-settings-muted">
+    <section style={styles.section}>
+      <h2 style={styles.heading}>Channel Permissions</h2>
+      <p style={styles.muted}>
         Configure private access and visibility overrides for each channel.
       </p>
 
-      {error && <div className="modal-error">{error}</div>}
+      {error && <div style={styles.modalError}>{error}</div>}
 
-      <div className="server-settings-inline-stats" style={{ marginBottom: 8 }}>
-        <span className="server-settings-stat-pill">Admin workflow tools</span>
+      <div style={{ ...styles.inlineStats, marginBottom: 8 }}>
+        <span style={styles.statPill}>Admin workflow tools</span>
         <button type="button" className="btn btn-ghost btn-sm" onClick={resetView}>
           Reset Filters
         </button>
       </div>
 
-      <div className="input-group">
-        <label className="input-label">Channel</label>
+      <div style={styles.inputGroup}>
+        <label style={styles.inputLabel}>Channel</label>
         <input
-          className="input-field"
+          style={{ ...styles.inputField, marginBottom: 8 }}
           value={channelSearch}
           onChange={(e) => setChannelSearch(e.target.value)}
           placeholder="Filter channels"
-          style={{ marginBottom: 8 }}
         />
-        <div className="input-wrapper">
+        <div style={styles.inputWrapper}>
           <select
-            className="input-field"
+            style={styles.inputField}
             value={selectedChannelId}
             onChange={(e) => setSelectedChannelId(e.target.value)}
           >
             <option value="">Select a channel</option>
             {filteredConfigurableChannels.map((channel) => (
               <option key={channel.id} value={channel.id}>
-                {channel.type === 'GUILD_VOICE' ? '🔊' : '#'} {channel.name}
+                {channel.type === 'GUILD_VOICE' ? '\uD83D\uDD0A' : '#'} {channel.name}
               </option>
             ))}
           </select>
         </div>
         {configurableChannels.length > 0 && filteredConfigurableChannels.length === 0 && (
-          <div className="server-settings-muted">No channels match the current filter.</div>
+          <div style={styles.muted}>No channels match the current filter.</div>
         )}
       </div>
 
       {selectedChannelId && (
         <>
-          <label className="channel-private-toggle">
+          <label style={styles.privateToggle}>
             <input
               type="checkbox"
+              style={styles.privateToggleInput}
               checked={isPrivateChannel}
               onChange={(e) => handlePrivateToggle(e.target.checked)}
               disabled={!everyoneRole || savingPermissions}
@@ -482,20 +690,19 @@ export function ChannelsSection({ guildId }: ChannelsSectionProps) {
             <span>Private channel (deny @everyone view)</span>
           </label>
 
-          <div className="channel-permission-grid">
-            <div className="channel-permission-card">
-              <div className="channel-permission-title">Grant Role Access</div>
+          <div style={styles.permissionGrid}>
+            <div style={styles.permissionCard}>
+              <div style={styles.permissionTitle}>Grant Role Access</div>
               <input
-                className="input-field"
+                style={{ ...styles.inputField, marginBottom: 8 }}
                 value={channelRoleSearch}
                 onChange={(e) => setChannelRoleSearch(e.target.value)}
                 placeholder="Filter roles"
                 disabled={savingPermissions}
-                style={{ marginBottom: 8 }}
               />
-              <div className="channel-permission-row">
+              <div style={styles.permissionRow}>
                 <select
-                  className="input-field"
+                  style={styles.inputField}
                   value={selectedRoleId}
                   onChange={(e) => setSelectedRoleId(e.target.value)}
                   disabled={savingPermissions}
@@ -516,29 +723,28 @@ export function ChannelsSection({ guildId }: ChannelsSectionProps) {
                 </Button>
               </div>
               {selectedRoleOverrideState === 'deny' && (
-                <div className="server-settings-muted">This role is currently hidden and will be switched to visible.</div>
+                <div style={styles.muted}>This role is currently hidden and will be switched to visible.</div>
               )}
               {selectedRoleOverrideState === 'allow' && selectedRoleId && (
-                <div className="server-settings-muted">This role already has visible access.</div>
+                <div style={styles.muted}>This role already has visible access.</div>
               )}
               {!selectedRoleId && filteredChannelRoleOptions.length > 0 && filteredGrantableChannelRoleOptions.length === 0 && (
-                <div className="server-settings-muted">All matching roles already have visible access.</div>
+                <div style={styles.muted}>All matching roles already have visible access.</div>
               )}
             </div>
 
-            <div className="channel-permission-card">
-              <div className="channel-permission-title">Grant Member Access</div>
+            <div style={styles.permissionCard}>
+              <div style={styles.permissionTitle}>Grant Member Access</div>
               <input
-                className="input-field"
+                style={{ ...styles.inputField, marginBottom: 8 }}
                 value={channelMemberSearch}
                 onChange={(e) => setChannelMemberSearch(e.target.value)}
                 placeholder="Filter members"
                 disabled={savingPermissions}
-                style={{ marginBottom: 8 }}
               />
-              <div className="channel-permission-row">
+              <div style={styles.permissionRow}>
                 <select
-                  className="input-field"
+                  style={styles.inputField}
                   value={selectedUserId}
                   onChange={(e) => setSelectedUserId(e.target.value)}
                   disabled={savingPermissions}
@@ -559,89 +765,89 @@ export function ChannelsSection({ guildId }: ChannelsSectionProps) {
                 </Button>
               </div>
               {selectedUserOverrideState === 'deny' && (
-                <div className="server-settings-muted">This member is currently hidden and will be switched to visible.</div>
+                <div style={styles.muted}>This member is currently hidden and will be switched to visible.</div>
               )}
               {selectedUserOverrideState === 'allow' && selectedUserId && (
-                <div className="server-settings-muted">This member already has visible access.</div>
+                <div style={styles.muted}>This member already has visible access.</div>
               )}
               {!selectedUserId && filteredChannelMemberOptions.length > 0 && filteredGrantableChannelMemberOptions.length === 0 && (
-                <div className="server-settings-muted">All matching members already have visible access.</div>
+                <div style={styles.muted}>All matching members already have visible access.</div>
               )}
             </div>
           </div>
 
-          <div className="channel-permission-list">
-            <div className="server-settings-inline-stats">
-              <span className="server-settings-stat-pill">{channelOverrideStats.total} overrides</span>
-              <span className="server-settings-stat-pill">{channelOverrideStats.allow} visible</span>
-              <span className="server-settings-stat-pill">{channelOverrideStats.deny} hidden</span>
-              <span className="server-settings-stat-pill">{visibleChannelOverrideCount} shown</span>
-              <span className="server-settings-stat-pill">Roles: {channelOverrideGroupedStats.roleAllow}/{channelOverrideGroupedStats.roleDeny}</span>
-              <span className="server-settings-stat-pill">Members: {channelOverrideGroupedStats.userAllow}/{channelOverrideGroupedStats.userDeny}</span>
-              <span className="server-settings-stat-pill">{grantableRoleCount} grantable roles</span>
-              <span className="server-settings-stat-pill">{grantableMemberCount} grantable members</span>
+          <div style={styles.permissionList}>
+            <div style={styles.inlineStats}>
+              <span style={styles.statPill}>{channelOverrideStats.total} overrides</span>
+              <span style={styles.statPill}>{channelOverrideStats.allow} visible</span>
+              <span style={styles.statPill}>{channelOverrideStats.deny} hidden</span>
+              <span style={styles.statPill}>{visibleChannelOverrideCount} shown</span>
+              <span style={styles.statPill}>Roles: {channelOverrideGroupedStats.roleAllow}/{channelOverrideGroupedStats.roleDeny}</span>
+              <span style={styles.statPill}>Members: {channelOverrideGroupedStats.userAllow}/{channelOverrideGroupedStats.userDeny}</span>
+              <span style={styles.statPill}>{grantableRoleCount} grantable roles</span>
+              <span style={styles.statPill}>{grantableMemberCount} grantable members</span>
             </div>
             {channelPermissionFeedback && (
-              <div className="server-settings-feedback" role="status" aria-live="polite">
+              <div style={styles.feedback} role="status" aria-live="polite">
                 {channelPermissionFeedback}
               </div>
             )}
-            <div className="server-settings-inline-stats">
+            <div style={styles.inlineStats}>
               <button
                 type="button"
-                className={`discover-tag ${channelOverrideTypeFilter === 'all' ? 'active' : ''}`}
+                style={channelOverrideTypeFilter === 'all' ? styles.discoverTagActive : styles.discoverTag}
                 onClick={() => setChannelOverrideTypeFilter('all')}
               >
                 All Targets
               </button>
               <button
                 type="button"
-                className={`discover-tag ${channelOverrideTypeFilter === 'role' ? 'active' : ''}`}
+                style={channelOverrideTypeFilter === 'role' ? styles.discoverTagActive : styles.discoverTag}
                 onClick={() => setChannelOverrideTypeFilter('role')}
               >
                 Roles
               </button>
               <button
                 type="button"
-                className={`discover-tag ${channelOverrideTypeFilter === 'user' ? 'active' : ''}`}
+                style={channelOverrideTypeFilter === 'user' ? styles.discoverTagActive : styles.discoverTag}
                 onClick={() => setChannelOverrideTypeFilter('user')}
               >
                 Members
               </button>
               <button
                 type="button"
-                className={`discover-tag ${channelOverrideVisibilityFilter === 'all' ? 'active' : ''}`}
+                style={channelOverrideVisibilityFilter === 'all' ? styles.discoverTagActive : styles.discoverTag}
                 onClick={() => setChannelOverrideVisibilityFilter('all')}
               >
                 All States
               </button>
               <button
                 type="button"
-                className={`discover-tag ${channelOverrideVisibilityFilter === 'allow' ? 'active' : ''}`}
+                style={channelOverrideVisibilityFilter === 'allow' ? styles.discoverTagActive : styles.discoverTag}
                 onClick={() => setChannelOverrideVisibilityFilter('allow')}
               >
                 Visible
               </button>
               <button
                 type="button"
-                className={`discover-tag ${channelOverrideVisibilityFilter === 'deny' ? 'active' : ''}`}
+                style={channelOverrideVisibilityFilter === 'deny' ? styles.discoverTagActive : styles.discoverTag}
                 onClick={() => setChannelOverrideVisibilityFilter('deny')}
               >
                 Hidden
               </button>
             </div>
             <input
-              className="input-field"
+              style={styles.inputField}
               value={channelOverrideSearch}
               onChange={(e) => setChannelOverrideSearch(e.target.value)}
               placeholder="Filter overrides by role/member"
               disabled={savingPermissions}
             />
             {channelGrantEntries.length > 0 && (
-              <div className="server-settings-actions">
+              <div style={styles.actions}>
                 <button
                   type="button"
-                  className="channel-permission-remove"
+                  style={styles.permissionRemove}
                   onClick={handleClearChannelOverrides}
                   disabled={savingPermissions || sortedChannelGrantEntries.length === 0}
                 >
@@ -649,7 +855,7 @@ export function ChannelsSection({ guildId }: ChannelsSectionProps) {
                 </button>
                 <button
                   type="button"
-                  className="channel-permission-remove"
+                  style={styles.permissionRemove}
                   onClick={handleClearAllChannelOverrides}
                   disabled={savingPermissions || channelGrantEntries.length === 0}
                 >
@@ -658,10 +864,10 @@ export function ChannelsSection({ guildId }: ChannelsSectionProps) {
               </div>
             )}
             {channelGrantEntries.length === 0 && (
-              <div className="server-settings-muted">No visibility overrides set for this channel.</div>
+              <div style={styles.muted}>No visibility overrides set for this channel.</div>
             )}
             {channelGrantEntries.length > 0 && sortedChannelGrantEntries.length === 0 && (
-              <div className="server-settings-muted">No overrides match the current filter.</div>
+              <div style={styles.muted}>No overrides match the current filter.</div>
             )}
             {sortedChannelGrantEntries.map((override) => {
               const isAllow = hasFlag(override.allow, VIEW_CHANNEL_FLAG);
@@ -672,19 +878,19 @@ export function ChannelsSection({ guildId }: ChannelsSectionProps) {
                     members.find((member) => member.userId === override.targetId)?.nickname ??
                     override.targetId;
               return (
-                <div key={override.id} className="channel-permission-item">
-                  <span className="channel-permission-target">
+                <div key={override.id} style={styles.permissionItem}>
+                  <span style={styles.permissionTarget}>
                     {override.targetType === 'role' ? '@' : ''}{label}
                   </span>
-                  <span className="channel-permission-badge">
+                  <span style={styles.permissionBadge}>
                     {override.targetType === 'role' ? 'Role' : 'Member'}
                   </span>
-                  <span className={`channel-permission-badge ${isAllow ? 'is-allow' : 'is-deny'}`}>
+                  <span style={isAllow ? styles.badgeAllow : styles.badgeDeny}>
                     {isAllow ? 'Can View' : 'Hidden'}
                   </span>
                   <button
                     type="button"
-                    className="channel-permission-remove"
+                    style={styles.permissionRemoveRight}
                     onClick={() => copyTextToClipboard(String(override.targetId), 'Copied target ID.')}
                     disabled={savingPermissions}
                     title="Copy target ID"
@@ -693,7 +899,7 @@ export function ChannelsSection({ guildId }: ChannelsSectionProps) {
                   </button>
                   <button
                     type="button"
-                    className="channel-permission-remove"
+                    style={styles.permissionRemove}
                     onClick={() => removeOverride(override.targetId)}
                     disabled={savingPermissions}
                   >

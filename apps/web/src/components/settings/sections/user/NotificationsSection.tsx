@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
@@ -28,6 +28,116 @@ const DAYS = [
   { label: 'Fri', bit: 5 },
   { label: 'Sat', bit: 6 },
 ];
+
+const styles = {
+  section: {
+    maxWidth: 720,
+  } as React.CSSProperties,
+  card: {
+    background: 'var(--bg-float)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-lg)',
+    padding: 20,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+  } as React.CSSProperties,
+  subsectionTitle: {
+    margin: '0 0 12px',
+    fontSize: 14,
+    fontWeight: 700,
+    color: 'var(--text)',
+  } as React.CSSProperties,
+  field: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  } as React.CSSProperties,
+  fieldLabel: {
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    color: 'var(--text-faint)',
+  } as React.CSSProperties,
+  fieldControl: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+  } as React.CSSProperties,
+  fieldRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    flexWrap: 'wrap',
+  } as React.CSSProperties,
+  fieldRowWrap: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    flexWrap: 'wrap',
+  } as React.CSSProperties,
+  toggle: {
+    position: 'relative',
+    display: 'inline-flex',
+    alignItems: 'center',
+  } as React.CSSProperties,
+  toggleInput: {
+    display: 'none',
+  } as React.CSSProperties,
+  range: {
+    flex: 1,
+  } as React.CSSProperties,
+  rangeValue: {
+    fontSize: 12,
+    color: 'var(--text-muted)',
+    minWidth: 48,
+  } as React.CSSProperties,
+  muted: {
+    color: 'var(--text-muted)',
+    fontSize: 14,
+  } as React.CSSProperties,
+  fieldSeparator: {
+    fontSize: 12,
+    color: 'var(--text-faint)',
+  } as React.CSSProperties,
+  days: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 6,
+  } as React.CSSProperties,
+  day: {
+    background: 'var(--bg-float)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-pill)',
+    padding: '4px 10px',
+    fontSize: 12,
+    color: 'var(--text-muted)',
+    cursor: 'pointer',
+    transition: 'background 0.12s ease, color 0.12s ease, border-color 0.12s ease',
+  } as React.CSSProperties,
+  dayActive: {
+    background: 'rgba(212, 175, 55, 0.18)',
+    border: '1px solid rgba(212, 175, 55, 0.45)',
+    borderRadius: 'var(--radius-pill)',
+    padding: '4px 10px',
+    fontSize: 12,
+    color: 'var(--text)',
+    cursor: 'pointer',
+    transition: 'background 0.12s ease, color 0.12s ease, border-color 0.12s ease',
+  } as React.CSSProperties,
+  error: {
+    padding: '10px 14px',
+    background: 'var(--danger-bg)',
+    border: '1px solid rgba(255, 107, 107, 0.25)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--danger)',
+    fontSize: 13,
+  } as React.CSSProperties,
+  footer: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+  } as React.CSSProperties,
+};
 
 export function NotificationsSection() {
   const [soundPrefs, setSoundPrefs] = useState<NotificationSoundPrefs>(DEFAULT_NOTIFICATION_SOUND_PREFS);
@@ -107,16 +217,37 @@ export function NotificationsSection() {
   }
 
   return (
-    <section className="settings-section">
-      <h2 className="settings-shell-section-heading">Notifications</h2>
-      <div className="settings-card">
-        <h3 className="settings-subsection-title">Sound Alerts</h3>
-        <div className="settings-field">
-          <div className="settings-field-label">Enable sounds</div>
-          <div className="settings-field-control">
-            <label className="settings-toggle">
+    <section style={styles.section}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+        paddingBottom: 16,
+        borderBottom: '1px solid var(--stroke)',
+        marginBottom: 8,
+      }}>
+        <h2 style={{
+          fontSize: 20,
+          fontWeight: 700,
+          color: 'var(--text)',
+          margin: 0,
+          fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
+        }}>
+          Notifications
+        </h2>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
+          Configure sound alerts, soundboard preferences, and your Do Not Disturb schedule.
+        </p>
+      </div>
+      <div style={styles.card}>
+        <h3 style={styles.subsectionTitle}>Sound Alerts</h3>
+        <div style={styles.field}>
+          <div style={styles.fieldLabel}>Enable sounds</div>
+          <div style={styles.fieldControl}>
+            <label style={styles.toggle}>
               <input
                 type="checkbox"
+                style={styles.toggleInput}
                 checked={soundPrefs.enabled}
                 onChange={(event) =>
                   handleUpdateSoundPrefs((current) => ({ ...current, enabled: event.target.checked }))
@@ -124,14 +255,14 @@ export function NotificationsSection() {
               />
               <span className="settings-toggle-indicator" />
             </label>
-            <span className="settings-range-value">{soundPrefs.enabled ? 'On' : 'Off'}</span>
+            <span style={styles.rangeValue}>{soundPrefs.enabled ? 'On' : 'Off'}</span>
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Volume</div>
-          <div className="settings-field-control settings-field-row">
+        <div style={styles.field}>
+          <div style={styles.fieldLabel}>Volume</div>
+          <div style={styles.fieldRow}>
             <input
-              className="settings-range"
+              style={styles.range}
               type="range"
               min={0}
               max={100}
@@ -141,7 +272,7 @@ export function NotificationsSection() {
                 handleUpdateSoundPrefs((current) => ({ ...current, volume: Number(event.target.value) }))
               }
             />
-            <span className="settings-range-value">{soundPrefs.volume}%</span>
+            <span style={styles.rangeValue}>{soundPrefs.volume}%</span>
           </div>
         </div>
         {(
@@ -155,12 +286,13 @@ export function NotificationsSection() {
             ['call-end', 'Call End', 'call-end'],
           ] as Array<[SoundName, string, SoundName]>
         ).map(([key, label, previewName]) => (
-          <div className="settings-field" key={key}>
-            <div className="settings-field-label">{label}</div>
-            <div className="settings-field-control settings-field-row settings-field-row-wrap">
-              <label className="settings-toggle">
+          <div style={styles.field} key={key}>
+            <div style={styles.fieldLabel}>{label}</div>
+            <div style={styles.fieldRowWrap}>
+              <label style={styles.toggle}>
                 <input
                   type="checkbox"
+                  style={styles.toggleInput}
                   checked={soundPrefs.sounds[key]}
                   onChange={(event) =>
                     handleUpdateSoundPrefs((current) => ({
@@ -182,18 +314,19 @@ export function NotificationsSection() {
             </div>
           </div>
         ))}
-        <p className="settings-muted">
+        <p style={styles.muted}>
           Sound alerts apply in the web app. Per-device settings are stored locally in your browser.
         </p>
       </div>
-      <div className="settings-card">
-        <h3 className="settings-subsection-title">Voice Soundboard</h3>
-        <div className="settings-field">
-          <div className="settings-field-label">Hear soundboard clips</div>
-          <div className="settings-field-control">
-            <label className="settings-toggle">
+      <div style={styles.card}>
+        <h3 style={styles.subsectionTitle}>Voice Soundboard</h3>
+        <div style={styles.field}>
+          <div style={styles.fieldLabel}>Hear soundboard clips</div>
+          <div style={styles.fieldControl}>
+            <label style={styles.toggle}>
               <input
                 type="checkbox"
+                style={styles.toggleInput}
                 checked={soundboardPrefs.enabled}
                 onChange={(event) =>
                   handleUpdateSoundboardPrefs((current) => ({ ...current, enabled: event.target.checked }))
@@ -201,14 +334,14 @@ export function NotificationsSection() {
               />
               <span className="settings-toggle-indicator" />
             </label>
-            <span className="settings-range-value">{soundboardPrefs.enabled ? 'On' : 'Off'}</span>
+            <span style={styles.rangeValue}>{soundboardPrefs.enabled ? 'On' : 'Off'}</span>
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Soundboard volume</div>
-          <div className="settings-field-control settings-field-row">
+        <div style={styles.field}>
+          <div style={styles.fieldLabel}>Soundboard volume</div>
+          <div style={styles.fieldRow}>
             <input
-              className="settings-range"
+              style={styles.range}
               type="range"
               min={0}
               max={100}
@@ -218,15 +351,16 @@ export function NotificationsSection() {
                 handleUpdateSoundboardPrefs((current) => ({ ...current, volume: Number(event.target.value) }))
               }
             />
-            <span className="settings-range-value">{soundboardPrefs.volume}%</span>
+            <span style={styles.rangeValue}>{soundboardPrefs.volume}%</span>
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Entrance sounds</div>
-          <div className="settings-field-control">
-            <label className="settings-toggle">
+        <div style={styles.field}>
+          <div style={styles.fieldLabel}>Entrance sounds</div>
+          <div style={styles.fieldControl}>
+            <label style={styles.toggle}>
               <input
                 type="checkbox"
+                style={styles.toggleInput}
                 checked={soundboardPrefs.entranceEnabled}
                 onChange={(event) =>
                   handleUpdateSoundboardPrefs((current) => ({
@@ -237,24 +371,25 @@ export function NotificationsSection() {
               />
               <span className="settings-toggle-indicator" />
             </label>
-            <span className="settings-range-value">
+            <span style={styles.rangeValue}>
               {soundboardPrefs.entranceEnabled ? 'Enabled' : 'Disabled'}
             </span>
           </div>
         </div>
-        <p className="settings-muted">
+        <p style={styles.muted}>
           Choose entrance sounds from the Soundboard panel while connected to a server voice channel.
         </p>
       </div>
-      <div className="settings-card">
-        <h3 className="settings-subsection-title">Do Not Disturb Schedule</h3>
-        {dndError && <div className="settings-error">{dndError}</div>}
-        <div className="settings-field">
-          <div className="settings-field-label">Do Not Disturb</div>
-          <div className="settings-field-control">
-            <label className="settings-toggle">
+      <div style={styles.card}>
+        <h3 style={styles.subsectionTitle}>Do Not Disturb Schedule</h3>
+        {dndError && <div style={styles.error}>{dndError}</div>}
+        <div style={styles.field}>
+          <div style={styles.fieldLabel}>Do Not Disturb</div>
+          <div style={styles.fieldControl}>
+            <label style={styles.toggle}>
               <input
                 type="checkbox"
+                style={styles.toggleInput}
                 checked={dndEnabled}
                 onChange={(event) => setDndEnabled(event.target.checked)}
               />
@@ -262,15 +397,15 @@ export function NotificationsSection() {
             </label>
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Schedule</div>
-          <div className="settings-field-control settings-field-row">
+        <div style={styles.field}>
+          <div style={styles.fieldLabel}>Schedule</div>
+          <div style={styles.fieldRow}>
             <Input
               type="time"
               value={dndStart}
               onChange={(event) => setDndStart(event.target.value)}
             />
-            <span className="settings-field-separator">to</span>
+            <span style={styles.fieldSeparator}>to</span>
             <Input
               type="time"
               value={dndEnd}
@@ -278,9 +413,9 @@ export function NotificationsSection() {
             />
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Timezone</div>
-          <div className="settings-field-control">
+        <div style={styles.field}>
+          <div style={styles.fieldLabel}>Timezone</div>
+          <div style={styles.fieldControl}>
             <Input
               type="text"
               value={dndTimezone}
@@ -289,13 +424,13 @@ export function NotificationsSection() {
             />
           </div>
         </div>
-        <div className="settings-field">
-          <div className="settings-field-label">Days</div>
-          <div className="settings-field-control settings-days">
+        <div style={styles.field}>
+          <div style={styles.fieldLabel}>Days</div>
+          <div style={styles.days}>
             {DAYS.map((day) => (
               <button
                 key={day.label}
-                className={`settings-day ${dndDays & (1 << day.bit) ? 'settings-day-active' : ''}`}
+                style={dndDays & (1 << day.bit) ? styles.dayActive : styles.day}
                 onClick={() => toggleDay(day.bit)}
                 type="button"
               >
@@ -304,7 +439,7 @@ export function NotificationsSection() {
             ))}
           </div>
         </div>
-        <div className="settings-footer">
+        <div style={styles.footer}>
           <Button onClick={handleSaveDnd} loading={savingDnd}>
             Save Schedule
           </Button>

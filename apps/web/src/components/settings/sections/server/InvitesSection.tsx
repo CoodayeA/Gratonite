@@ -1,8 +1,98 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
 import { getErrorMessage } from '@/lib/utils';
+
+const styles = {
+  section: {
+    maxWidth: 720,
+  } as React.CSSProperties,
+  heading: {
+    fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
+    fontSize: 20,
+    fontWeight: 700,
+    color: 'var(--text)',
+    marginBottom: 4,
+  } as React.CSSProperties,
+  muted: {
+    fontSize: 13,
+    color: 'var(--text-muted)',
+  } as React.CSSProperties,
+  modalError: {
+    padding: '10px 14px',
+    background: 'var(--danger-bg)',
+    border: '1px solid rgba(255, 107, 107, 0.25)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--danger)',
+    fontSize: 13,
+  } as React.CSSProperties,
+  permissionCard: {
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    background: 'rgba(10, 16, 28, 0.66)',
+    padding: 10,
+    display: 'grid',
+    gap: 8,
+  } as React.CSSProperties,
+  permissionTitle: {
+    fontSize: 12,
+    color: 'var(--text-muted)',
+  } as React.CSSProperties,
+  inputGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  } as React.CSSProperties,
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    color: 'var(--text-muted)',
+  } as React.CSSProperties,
+  inputField: {
+    width: '100%',
+    padding: '10px 14px',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--stroke)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--text)',
+    fontFamily: 'inherit',
+    fontSize: 14,
+    outline: 'none',
+    transition: 'border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease',
+  } as React.CSSProperties,
+  inlineStats: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 8,
+  } as React.CSSProperties,
+  statPill: {
+    fontSize: 11,
+    color: 'var(--text-muted)',
+    border: '1px solid var(--stroke)',
+    background: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 'var(--radius-pill)',
+    padding: '4px 8px',
+    fontFamily: 'monospace',
+    userSelect: 'all',
+  } as React.CSSProperties,
+  actions: {
+    display: 'flex',
+    gap: 8,
+    flexWrap: 'wrap',
+  } as React.CSSProperties,
+  feedback: {
+    fontSize: 12,
+    color: 'var(--text-muted)',
+    border: '1px solid color-mix(in srgb, var(--stroke) 88%, transparent)',
+    borderRadius: 10,
+    background: 'rgba(255, 255, 255, 0.02)',
+    padding: '6px 8px',
+    lineHeight: 1.35,
+  } as React.CSSProperties,
+};
 
 interface InvitesSectionProps {
   guildId: string;
@@ -51,18 +141,18 @@ export function InvitesSection({ guildId }: InvitesSectionProps) {
   }
 
   return (
-    <section className="settings-section">
-      <h2 className="settings-shell-section-heading">Invites</h2>
-      <p className="server-settings-muted">Generate an invite link for this portal.</p>
+    <section style={styles.section}>
+      <h2 style={styles.heading}>Invites</h2>
+      <p style={styles.muted}>Generate an invite link for this portal.</p>
 
-      {error && <div className="modal-error">{error}</div>}
+      {error && <div style={styles.modalError}>{error}</div>}
 
-      <div className="channel-permission-card" style={{ marginBottom: 12 }}>
-        <div className="channel-permission-title">Create Invite Link</div>
-        <div className="input-group" style={{ marginBottom: 8 }}>
-          <label className="input-label">Channel</label>
+      <div style={{ ...styles.permissionCard, marginBottom: 12 }}>
+        <div style={styles.permissionTitle}>Create Invite Link</div>
+        <div style={{ ...styles.inputGroup, marginBottom: 8 }}>
+          <label style={styles.inputLabel}>Channel</label>
           <select
-            className="input-field"
+            style={styles.inputField}
             value={channelId}
             onChange={(e) => setChannelId(e.target.value)}
             disabled={generating}
@@ -81,20 +171,20 @@ export function InvitesSection({ guildId }: InvitesSectionProps) {
       </div>
 
       {generatedCode && (
-        <div className="channel-permission-card">
-          <div className="channel-permission-title">Invite Link</div>
-          <div className="server-settings-inline-stats" style={{ marginBottom: 8 }}>
-            <code className="server-settings-stat-pill" style={{ fontFamily: 'monospace', userSelect: 'all' }}>
+        <div style={styles.permissionCard}>
+          <div style={styles.permissionTitle}>Invite Link</div>
+          <div style={{ ...styles.inlineStats, marginBottom: 8 }}>
+            <code style={styles.statPill}>
               {window.location.origin}/invite/{generatedCode}
             </code>
           </div>
-          <div className="server-settings-actions">
+          <div style={styles.actions}>
             <Button variant="ghost" onClick={handleCopyInvite}>
               Copy Link
             </Button>
           </div>
           {copyFeedback && (
-            <div className="server-settings-feedback" role="status" aria-live="polite">
+            <div style={styles.feedback} role="status" aria-live="polite">
               {copyFeedback}
             </div>
           )}
@@ -102,7 +192,7 @@ export function InvitesSection({ guildId }: InvitesSectionProps) {
       )}
 
       {textChannels.length === 0 && (
-        <div className="server-settings-muted">No text channels available. Create a text channel first.</div>
+        <div style={styles.muted}>No text channels available. Create a text channel first.</div>
       )}
     </section>
   );

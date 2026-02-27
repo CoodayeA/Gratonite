@@ -1,4 +1,4 @@
-import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useState, useEffect, useRef, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 export interface ContextMenuItem {
   label: string;
@@ -14,12 +14,59 @@ interface ContextMenuProps {
   onClose: () => void;
 }
 
+/* ── Inline style objects ─────────────────────────────────── */
+
+const styles = {
+  container: {
+    position: 'fixed',
+    background: 'var(--bg-elevated)',
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--stroke)',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+    minWidth: 180,
+    padding: '4px 0',
+    zIndex: 1000,
+    display: 'flex',
+    flexDirection: 'column',
+  } as CSSProperties,
+  item: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '8px 12px',
+    fontSize: 13,
+    color: 'var(--text)',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    width: '100%',
+    textAlign: 'left',
+    outline: 'none',
+  } as CSSProperties,
+  itemHover: {
+    background: 'var(--bg-soft)',
+  } as CSSProperties,
+  itemDanger: {
+    color: 'var(--danger)',
+  } as CSSProperties,
+  icon: {
+    width: 16,
+    height: 16,
+    marginRight: 8,
+    color: 'var(--text-muted)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  } as CSSProperties,
+} as const;
+
 export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    const firstItem = menuRef.current?.querySelector<HTMLButtonElement>('.context-menu-item');
-    firstItem?.focus();
+    const btns = menuRef.current?.querySelectorAll<HTMLButtonElement>('button');
+    btns?.[0]?.focus();
   }, []);
 
   useEffect(() => {
@@ -54,7 +101,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   function handleMenuKeyDown(e: ReactKeyboardEvent<HTMLDivElement>) {
     if (!menuRef.current) return;
     const elements = Array.from(
-      menuRef.current.querySelectorAll<HTMLButtonElement>('.context-menu-item'),
+      menuRef.current.querySelectorAll<HTMLButtonElement>('button'),
     );
     if (elements.length === 0) return;
 
@@ -88,20 +135,25 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
 
   return (
     <div
-      className="context-menu"
       ref={menuRef}
-      style={{ top: y, left: x }}
+      style={{ ...styles.container, top: y, left: x }}
       role="menu"
       onKeyDown={handleMenuKeyDown}
     >
       {items.map((item, i) => (
         <button
           key={i}
-          className={`context-menu-item ${item.danger ? 'context-menu-item-danger' : ''}`}
+          style={{
+            ...styles.item,
+            ...(item.danger ? styles.itemDanger : undefined),
+            ...(hoveredIndex === i ? styles.itemHover : undefined),
+          }}
           onClick={() => { item.onClick(); onClose(); }}
+          onMouseEnter={() => setHoveredIndex(i)}
+          onMouseLeave={() => setHoveredIndex(null)}
           role="menuitem"
         >
-          {item.icon && <span className="context-menu-icon">{item.icon}</span>}
+          {item.icon && <span style={styles.icon}>{item.icon}</span>}
           {item.label}
         </button>
       ))}
