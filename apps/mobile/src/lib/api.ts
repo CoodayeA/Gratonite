@@ -36,7 +36,7 @@ import type {
 // For local dev, use your machine's LAN IP (not localhost) so the phone can reach it.
 // In production, this should be https://api.gratonite.chat
 const API_BASE = __DEV__
-  ? 'http://192.168.1.100:4000/api/v1'  // Change to your LAN IP
+  ? 'http://192.168.68.103:4000/api/v1'  // Change to your LAN IP
   : 'https://api.gratonite.chat/api/v1';
 
 export { API_BASE };

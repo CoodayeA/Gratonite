@@ -10,7 +10,9 @@ let socket: Socket | null = null;
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
 // Derive the socket URL from API_BASE (strip /api/v1)
-const SOCKET_URL = API_BASE.replace(/\/api\/v1$/, '');
+const SOCKET_URL = __DEV__
+  ? 'http://192.168.68.103:4000'
+  : 'https://api.gratonite.chat';
 
 export function connectSocket(): Socket {
   if (socket?.connected) return socket;

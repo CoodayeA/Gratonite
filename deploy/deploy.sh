@@ -66,7 +66,7 @@ docker compose -f docker-compose.production.yml up -d --force-recreate api web
 
 # Run any new database migrations
 echo "Running database migrations..."
-docker exec gratonite-api sh -c "cd /app && npx drizzle-kit migrate" || true
+docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js"
 
 # Check container status
 docker compose -f docker-compose.production.yml ps
