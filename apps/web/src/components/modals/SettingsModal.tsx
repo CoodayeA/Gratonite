@@ -384,6 +384,7 @@ const SettingsModal = ({
             if (s?.compactMode !== undefined) setCompactMode(s.compactMode);
             if (s?.accentColor) setAccentColor(s.accentColor);
             if (s?.reducedMotion !== undefined) setReducedEffects(s.reducedMotion);
+            if (s?.lowPower !== undefined) setLowPower(s.lowPower);
             if (s?.soundVolume !== undefined) {
                 setSoundVolumeState(s.soundVolume);
                 setSoundVolume(s.soundVolume);
@@ -405,8 +406,8 @@ const SettingsModal = ({
     // Persist theme settings to backend whenever they change
     useEffect(() => {
         if (!settingsLoadedRef.current) return;
-        saveSettingsToApi({ theme, colorMode, fontFamily, fontSize, glassMode, buttonShape, highContrast, compactMode, accentColor, reducedMotion: reducedEffects });
-    }, [theme, colorMode, fontFamily, fontSize, glassMode, buttonShape, highContrast, compactMode, accentColor, reducedEffects, saveSettingsToApi]);
+        saveSettingsToApi({ theme, colorMode, fontFamily, fontSize, glassMode, buttonShape, highContrast, compactMode, accentColor, reducedMotion: reducedEffects, lowPower });
+    }, [theme, colorMode, fontFamily, fontSize, glassMode, buttonShape, highContrast, compactMode, accentColor, reducedEffects, lowPower, saveSettingsToApi]);
 
     const persistedAvatarUrl = ctxUser.avatarHash ? `${API_BASE}/files/${ctxUser.avatarHash}` : null;
     const persistedBannerUrl = ctxUser.bannerHash ? `${API_BASE}/files/${ctxUser.bannerHash}` : null;
@@ -442,6 +443,8 @@ const SettingsModal = ({
             localStorage.setItem('gratonite-nameplate-style', style);
         } catch { /* no-op */ }
         window.dispatchEvent(new CustomEvent('gratonite:nameplate-updated', { detail: { style } }));
+        // Persist to API so it shows in other users' messages
+        api.users.updateProfile({ nameplateStyle: style }).catch(() => {});
         addToast({ title: 'Display style applied', description: `${style === 'none' ? 'Default' : style} style is now active.`, variant: 'success' });
     };
 

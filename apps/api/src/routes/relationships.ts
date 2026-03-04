@@ -40,6 +40,7 @@ import { reports } from '../db/schema/reports';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { createNotification } from '../lib/notifications';
+import { getIO } from '../lib/socket-io';
 
 export const relationshipsRouter = Router();
 
@@ -729,6 +730,13 @@ relationshipsRouter.post(
         body: `${senderName} sent you a friend request.`,
         data: { senderId: userId, senderName },
       });
+
+      // Emit real-time socket event so the target's Friends page updates instantly
+      try {
+        getIO().to(`user:${targetUserId}`).emit('FRIEND_REQUEST_RECEIVED', {
+          from: { userId, username: requester?.username || '', displayName: requester?.displayName || '' },
+        });
+      } catch { /* socket may not be initialised in tests */ }
 
       res.status(201).json({ code: 'OK', message: 'Friend request sent' });
     } catch (err) {

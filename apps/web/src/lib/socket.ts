@@ -41,6 +41,7 @@ export interface MessageCreatePayload {
     username: string;
     displayName: string;
     avatarHash: string | null;
+    nameplateStyle?: string | null;
   } | null;
 }
 

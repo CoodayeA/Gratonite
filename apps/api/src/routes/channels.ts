@@ -33,6 +33,7 @@ import { validate } from '../middleware/validate';
 import { requireMember } from './guilds';
 import { hasPermission, hasChannelPermission } from './roles';
 import { logAuditEvent, AuditActionTypes } from '../lib/audit';
+import { getIO } from '../lib/socket-io';
 
 export const channelsRouter = Router();
 
@@ -480,6 +481,18 @@ channelsRouter.patch(
       if (topic !== undefined) changes.topic = topic;
       if (isNsfw !== undefined) changes.isNsfw = isNsfw;
       logAuditEvent(channel.guildId, req.userId!, AuditActionTypes.CHANNEL_UPDATE, channelId, 'CHANNEL', changes);
+
+      // Broadcast background update to all members in the channel
+      if (backgroundUrl !== undefined || backgroundType !== undefined) {
+        try {
+          const room = channel.guildId ? `guild:${channel.guildId}` : `channel:${channelId}`;
+          getIO().to(room).emit('CHANNEL_BACKGROUND_UPDATED', {
+            channelId,
+            backgroundUrl: updated.backgroundUrl ?? null,
+            backgroundType: updated.backgroundType ?? null,
+          });
+        } catch { /* socket may not be initialised in tests */ }
+      }
 
       res.status(200).json(updated);
     } catch (err) {

@@ -77,6 +77,8 @@ type Message = {
     replyToContent?: string;
     attachments?: Attachment[];
     authorRoleColor?: string;
+    authorAvatarHash?: string | null;
+    authorNameplateStyle?: string | null;
 };
 
 import ThreadPanel from '../../components/chat/ThreadPanel';
@@ -200,6 +202,7 @@ const MemoizedMessageItem = memo(({
                             <Avatar
                                 userId={msg.authorId || String(msg.id)}
                                 displayName={msg.author}
+                                avatarHash={msg.authorAvatarHash}
                                 frame={isCurrentUserMessage ? currentUserAvatarFrame : 'none'}
                                 size={40}
                                 style={{
@@ -234,7 +237,7 @@ const MemoizedMessageItem = memo(({
                     {!isGrouped && (
                         <div className="msg-header">
                             <span
-                                className={`msg-author ${msg.system ? 'system' : ''} ${isCurrentUserMessage && currentUserNameplateStyle && currentUserNameplateStyle !== 'none' ? `nameplate-${currentUserNameplateStyle}` : ''}`}
+                                className={`msg-author ${msg.system ? 'system' : ''} ${msg.authorNameplateStyle && msg.authorNameplateStyle !== 'none' ? `nameplate-${msg.authorNameplateStyle}` : (isCurrentUserMessage && currentUserNameplateStyle && currentUserNameplateStyle !== 'none' ? `nameplate-${currentUserNameplateStyle}` : '')}`}
                                 onClick={(e) => { if (!msg.system) onProfileClick?.({ user: msg.author, userId: msg.authorId || '', x: e.clientX, y: e.clientY }); }}
                                 style={{ cursor: msg.system ? 'default' : 'pointer', color: msg.authorRoleColor || undefined }}
                             >
@@ -858,6 +861,8 @@ const ChannelChat = () => {
             replyToId: m.replyToId || undefined,
             attachments: Array.isArray(m.attachments) && m.attachments.length > 0 ? m.attachments : undefined,
             authorRoleColor: m.authorId ? roleColorCacheRef.current.get(m.authorId) : undefined,
+            authorAvatarHash: m.author?.avatarHash ?? null,
+            authorNameplateStyle: (m.author as any)?.nameplateStyle ?? null,
         };
     };
 
@@ -1082,6 +1087,23 @@ const ChannelChat = () => {
         return () => { socketLeaveChannel(channelId); };
     }, [channelId]);
 
+    // Listen for channel background updates from other users/admins
+    useEffect(() => {
+        if (!channelId) return;
+        const socket = getSocket();
+        if (!socket) return;
+        const handler = (data: { channelId: string; backgroundUrl: string | null; backgroundType: string | null }) => {
+            if (data.channelId !== channelId) return;
+            if (data.backgroundUrl) {
+                setBgMedia({ url: data.backgroundUrl, type: data.backgroundType || 'image' });
+            } else {
+                setBgMedia(null);
+            }
+        };
+        socket.on('CHANNEL_BACKGROUND_UPDATED', handler);
+        return () => { socket.off('CHANNEL_BACKGROUND_UPDATED', handler); };
+    }, [channelId, setBgMedia]);
+
     // Socket listener for real-time messages (create, update, delete)
     useEffect(() => {
         if (!channelId) return;
@@ -1120,6 +1142,8 @@ const ChannelChat = () => {
                 replyToContent,
                 attachments: Array.isArray((data as any).attachments) && (data as any).attachments.length > 0 ? (data as any).attachments : undefined,
                 authorRoleColor: data.authorId ? roleColorCacheRef.current.get(data.authorId) : undefined,
+                authorAvatarHash: (data as any).author?.avatarHash ?? null,
+                authorNameplateStyle: (data as any).author?.nameplateStyle ?? null,
             }]);
             playSound('messageReceive');
         });

@@ -4454,3 +4454,109 @@ button:active:not(:disabled) {
     opacity: 1;
     transform: none;
 }
+
+/* ============================================================
+   GLASS MODE — applied via data-glass-mode attribute on <html>
+   ============================================================ */
+
+/* Subtle: light frosted glass on panels and sidebars */
+[data-glass-mode="subtle"] .glass-panel,
+[data-glass-mode="subtle"] .guild-rail,
+[data-glass-mode="subtle"] .channels-sidebar,
+[data-glass-mode="subtle"] .dm-sidebar {
+    background: rgba(var(--bg-sidebar-rgb, 20, 20, 30), 0.7) !important;
+    backdrop-filter: blur(12px) saturate(1.2) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(1.2) !important;
+}
+
+/* Full: strong frosted glass on all major surfaces */
+[data-glass-mode="full"] .glass-panel,
+[data-glass-mode="full"] .guild-rail,
+[data-glass-mode="full"] .channels-sidebar,
+[data-glass-mode="full"] .dm-sidebar {
+    background: rgba(var(--bg-sidebar-rgb, 20, 20, 30), 0.45) !important;
+    backdrop-filter: blur(24px) saturate(1.6) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(1.6) !important;
+}
+
+/* Full: modals and overlays also get glass treatment */
+[data-glass-mode="full"] .modal-content,
+[data-glass-mode="full"] [class*="modal-inner"],
+[data-glass-mode="full"] [class*="menu-panel"] {
+    background: rgba(var(--bg-elevated-rgb, 30, 30, 44), 0.6) !important;
+    backdrop-filter: blur(20px) saturate(1.4) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(1.4) !important;
+}
+
+/* Off: ensure no extra blur */
+[data-glass-mode="off"] .glass-panel,
+[data-glass-mode="off"] .guild-rail,
+[data-glass-mode="off"] .channels-sidebar,
+[data-glass-mode="off"] .dm-sidebar {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* ============================================================
+   REDUCED EFFECTS — .reduced-effects class on <html>
+   (also supports legacy [data-reduced-effects="true"] attribute)
+   ============================================================ */
+
+.reduced-effects *,
+[data-reduced-effects="true"] * {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
+}
+
+.reduced-effects .skeleton-box::after,
+[data-reduced-effects="true"] .skeleton-box::after {
+    animation: none;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.reduced-effects .hover-lift:hover,
+[data-reduced-effects="true"] .hover-lift:hover {
+    transform: none;
+}
+
+.reduced-effects .modal-overlay,
+.reduced-effects .modal-overlay > div,
+[data-reduced-effects="true"] .modal-overlay,
+[data-reduced-effects="true"] .modal-overlay > div {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+}
+
+/* ============================================================
+   LOW POWER MODE — .low-power class on <html>
+   ============================================================ */
+
+/* Stop all animations to save CPU */
+.low-power *,
+.low-power *::before,
+.low-power *::after {
+    animation: none !important;
+    transition: none !important;
+}
+
+/* Hide video backgrounds */
+.low-power video,
+.low-power [class*="bg-video"] {
+    display: none !important;
+}
+
+/* Pause animated avatars */
+.low-power .avatar-animated,
+.low-power [class*="animated-avatar"] {
+    animation-play-state: paused !important;
+}
+
+/* Reduce backdrop-filter cost */
+.low-power .glass-panel,
+.low-power [class*="glass"],
+.low-power [class*="backdrop"] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}

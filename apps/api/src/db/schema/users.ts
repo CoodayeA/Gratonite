@@ -125,6 +125,9 @@ export const users = pgTable('users', {
   /** Whether the user has completed onboarding. */
   onboardingCompleted: boolean('onboarding_completed').notNull().default(false),
 
+  /** Name style displayed on messages (rainbow, fire, ice, gold, glitch, none). */
+  nameplateStyle: text('nameplate_style').default('none'),
+
   /** User interests from onboarding, stored as JSON array of strings. */
   interests: text('interests'),
 

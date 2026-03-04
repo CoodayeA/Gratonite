@@ -146,7 +146,7 @@ async function resolveChannel(
  */
 function formatMessage(
   msg: typeof messages.$inferSelect,
-  author: Pick<typeof users.$inferSelect, 'id' | 'username' | 'displayName' | 'avatarHash'> | null,
+  author: Pick<typeof users.$inferSelect, 'id' | 'username' | 'displayName' | 'avatarHash' | 'nameplateStyle'> | null,
 ) {
   return {
     id: msg.id,
@@ -164,6 +164,7 @@ function formatMessage(
           username: author.username,
           displayName: author.displayName,
           avatarHash: author.avatarHash,
+          nameplateStyle: author.nameplateStyle ?? 'none',
         }
       : null,
   };
@@ -256,6 +257,7 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
         authorUsername: users.username,
         authorDisplayName: users.displayName,
         authorAvatarHash: users.avatarHash,
+        authorNameplateStyle: users.nameplateStyle,
       })
       .from(messages)
       .leftJoin(users, eq(users.id, messages.authorId))
@@ -283,6 +285,7 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
             username: row.authorUsername,
             displayName: row.authorDisplayName,
             avatarHash: row.authorAvatarHash,
+            nameplateStyle: row.authorNameplateStyle ?? 'none',
           }
         : null,
     }));
@@ -402,6 +405,7 @@ messagesRouter.post(
           username: users.username,
           displayName: users.displayName,
           avatarHash: users.avatarHash,
+          nameplateStyle: users.nameplateStyle,
         })
         .from(users)
         .where(eq(users.id, req.userId!))
@@ -568,6 +572,7 @@ messagesRouter.patch(
           username: users.username,
           displayName: users.displayName,
           avatarHash: users.avatarHash,
+          nameplateStyle: users.nameplateStyle,
         })
         .from(users)
         .where(eq(users.id, req.userId!))

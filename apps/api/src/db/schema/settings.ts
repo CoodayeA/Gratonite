@@ -18,6 +18,7 @@ export const userSettings = pgTable('user_settings', {
   soundVolume: integer('sound_volume').notNull().default(50),
   soundPack: varchar('sound_pack', { length: 50 }).notNull().default('default'),
   reducedMotion: boolean('reduced_motion').notNull().default(false),
+  lowPower: boolean('low_power').notNull().default(false),
   highContrast: boolean('high_contrast').notNull().default(false),
   compactMode: boolean('compact_mode').notNull().default(false),
   accentColor: varchar('accent_color', { length: 20 }),

@@ -14,7 +14,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AccessToken } from 'livekit-server-sdk';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
 import { db } from '../db/index';
 import { channels, dmChannelMembers } from '../db/schema/channels';
@@ -345,6 +345,28 @@ voiceStatesRouter.get(
     }
 
     const states = await getVoiceStates(channelId);
+
+    // Enrich any states missing displayName/username by looking them up from DB
+    const staleIds = states
+      .filter(s => !s.displayName || s.displayName === 'Unknown')
+      .map(s => s.userId);
+
+    if (staleIds.length > 0) {
+      const dbUsers = await db
+        .select({ id: users.id, username: users.username, displayName: users.displayName })
+        .from(users)
+        .where(inArray(users.id, staleIds));
+      const userMap = new Map(dbUsers.map(u => [u.id, u]));
+      for (const state of states) {
+        if (staleIds.includes(state.userId)) {
+          const u = userMap.get(state.userId);
+          if (u) {
+            state.displayName = u.displayName || u.username || 'Unknown';
+            state.username = u.username || 'unknown';
+          }
+        }
+      }
+    }
 
     res.json(states);
   }),

@@ -97,6 +97,7 @@ function safeProfile(user: typeof users.$inferSelect) {
       bannerHash: user.bannerHash ?? null,
       bio: user.bio ?? null,
       pronouns: user.pronouns ?? null,
+      nameplateStyle: user.nameplateStyle ?? 'none',
       avatarDecorationId: null,
       profileEffectId: null,
       nameplateId: null,
@@ -147,6 +148,7 @@ const patchMeSchema = z.object({
   customStatus: z.string().max(128).nullable().optional(),
   onboardingCompleted: z.boolean().optional(),
   interests: z.array(z.string()).nullable().optional(),
+  nameplateStyle: z.enum(['none', 'rainbow', 'fire', 'ice', 'gold', 'glitch']).optional(),
 });
 
 /**
@@ -254,7 +256,7 @@ usersRouter.patch(
   requireAuth,
   validate(patchMeSchema),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const { displayName, bio, pronouns, customStatus, onboardingCompleted, interests } = req.body as z.infer<typeof patchMeSchema>;
+    const { displayName, bio, pronouns, customStatus, onboardingCompleted, interests, nameplateStyle } = req.body as z.infer<typeof patchMeSchema>;
 
     // Build update payload — only include explicitly provided fields.
     const updateData: Partial<typeof users.$inferInsert> = { updatedAt: new Date() };
@@ -264,6 +266,7 @@ usersRouter.patch(
     if (customStatus !== undefined) updateData.customStatus = customStatus;
     if (onboardingCompleted !== undefined) updateData.onboardingCompleted = onboardingCompleted;
     if (interests !== undefined) updateData.interests = interests ? JSON.stringify(interests) : null;
+    if (nameplateStyle !== undefined) updateData.nameplateStyle = nameplateStyle;
 
     const [updated] = await db
       .update(users)

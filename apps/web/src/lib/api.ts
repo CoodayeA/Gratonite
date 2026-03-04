@@ -667,7 +667,7 @@ export const api = {
       return meRequestPromise;
     },
 
-    updateProfile: (data: { displayName?: string; bio?: string; pronouns?: string; accentColor?: string; primaryColor?: string; onboardingCompleted?: boolean; interests?: string[] | null }) =>
+    updateProfile: (data: { displayName?: string; bio?: string; pronouns?: string; accentColor?: string; primaryColor?: string; onboardingCompleted?: boolean; interests?: string[] | null; nameplateStyle?: string }) =>
       apiFetch<any>('/users/@me', {
         method: 'PATCH',
         body: JSON.stringify(data),

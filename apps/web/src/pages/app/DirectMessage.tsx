@@ -56,6 +56,8 @@ type Message = {
     forwarded?: boolean;
     forwardedFrom?: string;
     attachments?: MessageAttachment[];
+    authorAvatarHash?: string | null;
+    authorNameplateStyle?: string | null;
 };
 
 // Video element component for rendering participant video
@@ -474,7 +476,8 @@ const DirectMessage = () => {
             author: authorName,
             system: false,
             avatar: authorName.charAt(0).toUpperCase(),
-
+            authorAvatarHash: m.author?.avatarHash ?? null,
+            authorNameplateStyle: (m.author as any)?.nameplateStyle ?? null,
             time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             content: m.content || '',
             edited: m.edited ?? false,
@@ -586,7 +589,8 @@ const DirectMessage = () => {
                 author: authorName,
                 system: false,
                 avatar: authorName.charAt(0).toUpperCase(),
-    
+                authorAvatarHash: (data as any).author?.avatarHash ?? null,
+                authorNameplateStyle: (data as any).author?.nameplateStyle ?? null,
                 time: new Date(data.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 content: data.content || '',
                 edited: data.edited,
@@ -1253,12 +1257,13 @@ const DirectMessage = () => {
                                     <Avatar
                                         userId={msg.authorId || String(msg.id)}
                                         displayName={msg.author}
+                                        avatarHash={msg.authorAvatarHash}
                                         frame={isCurrentUserMessage ? currentFrame : 'none'}
                                         size={40}
                                     />
                                     <div className="msg-content">
                                         <div className="msg-header">
-                                            <span className={`msg-author ${isCurrentUserMessage && currentNameplate !== 'none' ? `nameplate-${currentNameplate}` : ''}`}>{msg.author}</span>
+                                            <span className={`msg-author ${msg.authorNameplateStyle && msg.authorNameplateStyle !== 'none' ? `nameplate-${msg.authorNameplateStyle}` : (isCurrentUserMessage && currentNameplate !== 'none' ? `nameplate-${currentNameplate}` : '')}`}>{msg.author}</span>
                                             <span className="msg-timestamp">{msg.time}</span>
                                         </div>
                                         <div className="msg-body">

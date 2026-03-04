@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { getSocket } from '../../lib/socket';
 import { useNavigate } from 'react-router-dom';
 import { Search, UserPlus, MoreVertical, MessageSquare, X, UserMinus, VolumeX, Flag, Phone, Video, User } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
@@ -91,6 +92,15 @@ const Friends = () => {
     }, []);
 
     useEffect(() => { fetchRelationships(); }, [fetchRelationships]);
+
+    // Listen for incoming friend requests in real-time
+    useEffect(() => {
+        const socket = getSocket();
+        if (!socket) return;
+        const handler = () => { fetchRelationships(); };
+        socket.on('FRIEND_REQUEST_RECEIVED', handler);
+        return () => { socket.off('FRIEND_REQUEST_RECEIVED', handler); };
+    }, [fetchRelationships]);
 
     const handleAddFriend = async () => {
         if (!addFriendInput.trim()) return;
