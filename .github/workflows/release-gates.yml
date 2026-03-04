@@ -1,0 +1,37 @@
+name: release-gates
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: apps/web/package-lock.json
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install web deps
+        run: npm --prefix apps/web ci
+
+      - name: Install api deps
+        run: pnpm --dir apps/api install --frozen-lockfile
+
+      - name: Web lint (zero warnings)
+        run: npm --prefix apps/web run lint
+
+      - name: API lint (zero warnings)
+        run: pnpm --dir apps/api run lint
+
+      - name: Release verification
+        run: npm run verify:release:all

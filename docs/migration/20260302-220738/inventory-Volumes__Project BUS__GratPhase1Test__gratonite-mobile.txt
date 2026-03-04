@@ -1,0 +1,5 @@
+source=/Volumes/Project BUS/GratPhase1Test/gratonite-mobile
+timestamp=2026-03-03T03:07:45Z
+bytes=365363200
+files=31313
+dirs=4762

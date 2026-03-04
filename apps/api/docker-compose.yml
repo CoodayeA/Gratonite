@@ -1,0 +1,58 @@
+# Local dev infrastructure for gratonite-api
+# Postgres on port 5433 (avoids conflicts with system postgres)
+# Redis on default port 6379
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: gratonite
+      POSTGRES_USER: gratonite
+      POSTGRES_PASSWORD: gratonite
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gratonite"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  livekit:
+    image: livekit/livekit-server:latest
+    command:
+      - --config-body
+      - |
+        port: 7880
+        rtc:
+          tcp_port: 7881
+          udp_port: 7882
+          use_external_ip: false
+          node_ip: 127.0.0.1
+        turn:
+          enabled: true
+          udp_port: 3478
+      - --dev
+      - --bind
+      - 0.0.0.0
+    ports:
+      - "7880:7880"   # HTTP/WS
+      - "7881:7881"   # RTC/TCP
+      - "7882:7882/udp" # RTC/UDP
+      - "3478:3478/udp" # TURN/UDP
+    environment:
+      LIVEKIT_KEYS: "devkey: secret"
+
+volumes:
+  pgdata:

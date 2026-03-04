@@ -1,0 +1,43 @@
+{
+  "$schema": "./rb-003-closure-checklist.schema.json",
+  "id": "RB-003",
+  "generatedAt": "2026-03-03T13:59:30Z",
+  "status": "PASS",
+  "criteria": {
+    "contractDomainsImplementedVerifiedTestCovered": {
+      "status": "PASS",
+      "evidence": [
+        "docs/migration/20260302-220738/final-release-certification.log",
+        "docs/migration/20260302-220738/endpoint-matrix-core-auth-guild-chat-voice-routes-evidence.log",
+        "docs/migration/20260302-220738/endpoint-matrix-discover-join-flow-evidence.log",
+        "docs/migration/20260302-220738/endpoint-matrix-message-requests-evidence.log",
+        "docs/migration/20260302-220738/endpoint-matrix-admin-team-audit-bot-moderation-evidence.log",
+        "docs/migration/20260302-220738/endpoint-matrix-bot-store-lifecycle-evidence.log",
+        "docs/migration/20260302-220738/endpoint-matrix-bot-builder-publish-linkage-evidence.log",
+        "docs/migration/20260302-220738/endpoint-matrix-marketplace-purchase-create-evidence.log",
+        "docs/migration/20260302-220738/endpoint-matrix-dm-call-voice-entry-reliability-evidence.log",
+        "docs/migration/20260302-220738/endpoint-matrix-route-normalization-navigation-entry-points-evidence.log",
+        "docs/migration/20260302-220738/endpoint-matrix-voice-channel-type-compatibility-evidence.log",
+        "docs/migration/20260302-220738/endpoint-matrix-avatar-parity-top-left-vs-bottom-left-evidence.log",
+        "docs/migration/20260302-220738/endpoint-matrix-bot-lifecycle-marketplace-full-persistence-evidence.log"
+      ],
+      "notes": "All endpoint matrix domains returned PASS with explicit contract/integration checks and negative-path checks in evidence logs."
+    },
+    "runtimeBackendCanonical4000": {
+      "status": "PASS",
+      "evidence": [
+        "docs/migration/20260302-220738/final-release-certification.log"
+      ],
+      "notes": "Frontend runtime target is canonical localhost:4000 and live capabilities probe succeeded."
+    },
+    "routeAliasAndChannelNormalizationRegression": {
+      "status": "PASS",
+      "evidence": [
+        "docs/migration/20260302-220738/endpoint-matrix-route-normalization-navigation-entry-points-evidence.log",
+        "docs/migration/20260302-220738/endpoint-matrix-dm-call-voice-entry-reliability-evidence.log",
+        "docs/migration/20260302-220738/endpoint-matrix-voice-channel-type-compatibility-evidence.log"
+      ],
+      "notes": "Legacy route redirects, canonical DM channel-id resolution, and voice type normalization checks all passed."
+    }
+  }
+}

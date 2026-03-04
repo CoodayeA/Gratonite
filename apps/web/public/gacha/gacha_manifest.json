@@ -1,0 +1,3124 @@
+[
+  {
+    "id": "frankenstein",
+    "name": "Frankie Bolts",
+    "file": "frankenstein_sprite.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "mummy",
+    "name": "Dusty Wraps",
+    "file": "mummy_sprite.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "skeleton",
+    "name": "Bonesy",
+    "file": "skeleton_sprite.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "swamp_monster",
+    "name": "Swamp Monster",
+    "file": "swampmonster_sprite.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "werewolf",
+    "name": "Fang",
+    "file": "werewolf_sprite.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "witch",
+    "name": "Wanda Brew",
+    "file": "witch_sprite.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "laguna_(black)",
+    "name": "Laguna (Black)",
+    "file": "jackalune_laguna_black.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "laguna_(blue)",
+    "name": "Laguna (Blue)",
+    "file": "jackalune_laguna_blue.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "laguna_(brown)",
+    "name": "Laguna (Brown)",
+    "file": "jackalune_laguna_brown.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "laguna_(cool)",
+    "name": "Laguna (Cool)",
+    "file": "jackalune_laguna_cool.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "laguna_(gray)",
+    "name": "Laguna (Gray)",
+    "file": "jackalune_laguna_gray.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "laguna_(green)",
+    "name": "Laguna (Green)",
+    "file": "jackalune_laguna_green.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "laguna_(neutral)",
+    "name": "Laguna (Neutral)",
+    "file": "jackalune_laguna_neutral.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "laguna_(orange)",
+    "name": "Laguna (Orange)",
+    "file": "jackalune_laguna_orange.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "laguna_(pink)",
+    "name": "Laguna (Pink)",
+    "file": "jackalune_laguna_pink.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "laguna_(purple)",
+    "name": "Laguna (Purple)",
+    "file": "jackalune_laguna_purple.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "laguna_(rainbow)",
+    "name": "Laguna (Rainbow)",
+    "file": "jackalune_laguna_rainbow.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "laguna_(red)",
+    "name": "Laguna (Red)",
+    "file": "jackalune_laguna_red.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "laguna_(spicy)",
+    "name": "Laguna (Spicy)",
+    "file": "jackalune_laguna_spicy.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "laguna_(teal)",
+    "name": "Laguna (Teal)",
+    "file": "jackalune_laguna_teal.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "laguna_(white)",
+    "name": "Laguna (White)",
+    "file": "jackalune_laguna_white.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "laguna_(yellow)",
+    "name": "Laguna (Yellow)",
+    "file": "jackalune_laguna_yellow.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "nimblithe_(aurora)",
+    "name": "Nimblithe (Aurora)",
+    "file": "jackalune_nimblithe_aurora.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "nimblithe_(black)",
+    "name": "Nimblithe (Black)",
+    "file": "jackalune_nimblithe_black.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "nimblithe_(blue)",
+    "name": "Nimblithe (Blue)",
+    "file": "jackalune_nimblithe_blue.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "nimblithe_(brown)",
+    "name": "Nimblithe (Brown)",
+    "file": "jackalune_nimblithe_brown.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "nimblithe_(gray)",
+    "name": "Nimblithe (Gray)",
+    "file": "jackalune_nimblithe_gray.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "nimblithe_(green)",
+    "name": "Nimblithe (Green)",
+    "file": "jackalune_nimblithe_green.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "nimblithe_(orange)",
+    "name": "Nimblithe (Orange)",
+    "file": "jackalune_nimblithe_orange.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "nimblithe_(overcast)",
+    "name": "Nimblithe (Overcast)",
+    "file": "jackalune_nimblithe_overcast.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "nimblithe_(pink)",
+    "name": "Nimblithe (Pink)",
+    "file": "jackalune_nimblithe_pink.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "nimblithe_(purple)",
+    "name": "Nimblithe (Purple)",
+    "file": "jackalune_nimblithe_purple.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "nimblithe_(rainbow)",
+    "name": "Nimblithe (Rainbow)",
+    "file": "jackalune_nimblithe_rainbow.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "nimblithe_(red)",
+    "name": "Nimblithe (Red)",
+    "file": "jackalune_nimblithe_red.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "nimblithe_(sunrise)",
+    "name": "Nimblithe (Sunrise)",
+    "file": "jackalune_nimblithe_sunrise.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "nimblithe_(teal)",
+    "name": "Nimblithe (Teal)",
+    "file": "jackalune_nimblithe_teal.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "nimblithe_(white)",
+    "name": "Nimblithe (White)",
+    "file": "jackalune_nimblithe_white.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "nimblithe_(yellow)",
+    "name": "Nimblithe (Yellow)",
+    "file": "jackalune_nimblithe_yellow.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "flyte_(black)",
+    "name": "Flyte (Black)",
+    "file": "jackalune_flyte_black.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "flyte_(blue)",
+    "name": "Flyte (Blue)",
+    "file": "jackalune_flyte_blue.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "flyte_(brown)",
+    "name": "Flyte (Brown)",
+    "file": "jackalune_flyte_brown.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "flyte_(cool)",
+    "name": "Flyte (Cool)",
+    "file": "jackalune_flyte_cool.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "flyte_(gray)",
+    "name": "Flyte (Gray)",
+    "file": "jackalune_flyte_gray.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "flyte_(green)",
+    "name": "Flyte (Green)",
+    "file": "jackalune_flyte_green.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "flyte_(neutral)",
+    "name": "Flyte (Neutral)",
+    "file": "jackalune_flyte_neutral.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "flyte_(orange)",
+    "name": "Flyte (Orange)",
+    "file": "jackalune_flyte_orange.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "flyte_(pink)",
+    "name": "Flyte (Pink)",
+    "file": "jackalune_flyte_pink.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "flyte_(purple)",
+    "name": "Flyte (Purple)",
+    "file": "jackalune_flyte_purple.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "flyte_(rainbow)",
+    "name": "Flyte (Rainbow)",
+    "file": "jackalune_flyte_rainbow.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "flyte_(red)",
+    "name": "Flyte (Red)",
+    "file": "jackalune_flyte_red.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "flyte_(spicy)",
+    "name": "Flyte (Spicy)",
+    "file": "jackalune_flyte_spicy.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "flyte_(teal)",
+    "name": "Flyte (Teal)",
+    "file": "jackalune_flyte_teal.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "flyte_(white)",
+    "name": "Flyte (White)",
+    "file": "jackalune_flyte_white.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "flyte_(yellow)",
+    "name": "Flyte (Yellow)",
+    "file": "jackalune_flyte_yellow.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "igalyph_(black)",
+    "name": "Igalyph (Black)",
+    "file": "jackalune_igalyph_black.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "igalyph_(blue)",
+    "name": "Igalyph (Blue)",
+    "file": "jackalune_igalyph_blue.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "igalyph_(brown)",
+    "name": "Igalyph (Brown)",
+    "file": "jackalune_igalyph_brown.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "igalyph_(cool)",
+    "name": "Igalyph (Cool)",
+    "file": "jackalune_igalyph_cool.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "igalyph_(gray)",
+    "name": "Igalyph (Gray)",
+    "file": "jackalune_igalyph_gray.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "igalyph_(green)",
+    "name": "Igalyph (Green)",
+    "file": "jackalune_igalyph_green.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "igalyph_(neutral)",
+    "name": "Igalyph (Neutral)",
+    "file": "jackalune_igalyph_neutral.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "igalyph_(orange)",
+    "name": "Igalyph (Orange)",
+    "file": "jackalune_igalyph_orange.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "igalyph_(pink)",
+    "name": "Igalyph (Pink)",
+    "file": "jackalune_igalyph_pink.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "igalyph_(purple)",
+    "name": "Igalyph (Purple)",
+    "file": "jackalune_igalyph_purple.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "igalyph_(rainbow)",
+    "name": "Igalyph (Rainbow)",
+    "file": "jackalune_igalyph_rainbow.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "igalyph_(red)",
+    "name": "Igalyph (Red)",
+    "file": "jackalune_igalyph_red.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "igalyph_(spicy)",
+    "name": "Igalyph (Spicy)",
+    "file": "jackalune_igalyph_spicy.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "igalyph_(teal)",
+    "name": "Igalyph (Teal)",
+    "file": "jackalune_igalyph_teal.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "igalyph_(white)",
+    "name": "Igalyph (White)",
+    "file": "jackalune_igalyph_white.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "igalyph_(yellow)",
+    "name": "Igalyph (Yellow)",
+    "file": "jackalune_igalyph_yellow.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "gryfon_(black)",
+    "name": "Gryfon (Black)",
+    "file": "jackalune_gryfon_black.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "gryfon_(blue)",
+    "name": "Gryfon (Blue)",
+    "file": "jackalune_gryfon_blue.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "gryfon_(brown)",
+    "name": "Gryfon (Brown)",
+    "file": "jackalune_gryfon_brown.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "gryfon_(cool)",
+    "name": "Gryfon (Cool)",
+    "file": "jackalune_gryfon_cool.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "gryfon_(gray)",
+    "name": "Gryfon (Gray)",
+    "file": "jackalune_gryfon_gray.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "gryfon_(green)",
+    "name": "Gryfon (Green)",
+    "file": "jackalune_gryfon_green.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "gryfon_(neutral)",
+    "name": "Gryfon (Neutral)",
+    "file": "jackalune_gryfon_neutral.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "gryfon_(orange)",
+    "name": "Gryfon (Orange)",
+    "file": "jackalune_gryfon_orange.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "gryfon_(pink)",
+    "name": "Gryfon (Pink)",
+    "file": "jackalune_gryfon_pink.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "gryfon_(purple)",
+    "name": "Gryfon (Purple)",
+    "file": "jackalune_gryfon_purple.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "gryfon_(rainbow)",
+    "name": "Gryfon (Rainbow)",
+    "file": "jackalune_gryfon_rainbow.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "gryfon_(red)",
+    "name": "Gryfon (Red)",
+    "file": "jackalune_gryfon_red.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "gryfon_(spicy)",
+    "name": "Gryfon (Spicy)",
+    "file": "jackalune_gryfon_spicy.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "gryfon_(teal)",
+    "name": "Gryfon (Teal)",
+    "file": "jackalune_gryfon_teal.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "gryfon_(white)",
+    "name": "Gryfon (White)",
+    "file": "jackalune_gryfon_white.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "gryfon_(yellow)",
+    "name": "Gryfon (Yellow)",
+    "file": "jackalune_gryfon_yellow.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "wolfren_(black)",
+    "name": "Wolfren (Black)",
+    "file": "jackalune_wolfren_black.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "wolfren_(blue)",
+    "name": "Wolfren (Blue)",
+    "file": "jackalune_wolfren_blue.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "wolfren_(brown)",
+    "name": "Wolfren (Brown)",
+    "file": "jackalune_wolfren_brown.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "wolfren_(cool)",
+    "name": "Wolfren (Cool)",
+    "file": "jackalune_wolfren_cool.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "wolfren_(gray)",
+    "name": "Wolfren (Gray)",
+    "file": "jackalune_wolfren_gray.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "wolfren_(green)",
+    "name": "Wolfren (Green)",
+    "file": "jackalune_wolfren_green.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "wolfren_(neutral)",
+    "name": "Wolfren (Neutral)",
+    "file": "jackalune_wolfren_neutral.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "wolfren_(orange)",
+    "name": "Wolfren (Orange)",
+    "file": "jackalune_wolfren_orange.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "wolfren_(pink)",
+    "name": "Wolfren (Pink)",
+    "file": "jackalune_wolfren_pink.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "wolfren_(purple)",
+    "name": "Wolfren (Purple)",
+    "file": "jackalune_wolfren_purple.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "wolfren_(rainbow)",
+    "name": "Wolfren (Rainbow)",
+    "file": "jackalune_wolfren_rainbow.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "wolfren_(red)",
+    "name": "Wolfren (Red)",
+    "file": "jackalune_wolfren_red.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "wolfren_(sketchy)",
+    "name": "Wolfren (Sketchy)",
+    "file": "jackalune_wolfren_sketchy.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "wolfren_(spicy)",
+    "name": "Wolfren (Spicy)",
+    "file": "jackalune_wolfren_spicy.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "wolfren_(teal)",
+    "name": "Wolfren (Teal)",
+    "file": "jackalune_wolfren_teal.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "wolfren_(white)",
+    "name": "Wolfren (White)",
+    "file": "jackalune_wolfren_white.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "wolfren_(yellow)",
+    "name": "Wolfren (Yellow)",
+    "file": "jackalune_wolfren_yellow.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "hemoglobin",
+    "name": "Hemoglobin",
+    "file": "viral_hemoglobin.gif",
+    "rarity": "legendary",
+    "animated": true
+  },
+  {
+    "id": "giardia",
+    "name": "Giardia",
+    "file": "viral_giardia.gif",
+    "rarity": "legendary",
+    "animated": true
+  },
+  {
+    "id": "virophage",
+    "name": "Virophage",
+    "file": "viral_virophage.gif",
+    "rarity": "legendary",
+    "animated": true
+  },
+  {
+    "id": "umber_hulk",
+    "name": "Umber Hulk",
+    "file": "monster_umber_hulk.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "jelly_cube",
+    "name": "Jelly Cube",
+    "file": "monster_jelly_cube.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "ettercap",
+    "name": "Ettercap",
+    "file": "monster_ettercap.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "mimic",
+    "name": "Mimic",
+    "file": "monster_mimic1.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "manticore",
+    "name": "Manticore",
+    "file": "monster_manticore2.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "chimera",
+    "name": "Chimera",
+    "file": "monster_chimera.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "owlbear",
+    "name": "Owlbear",
+    "file": "monster_owlbear1.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "carrion_crawler",
+    "name": "Carrion Crawler",
+    "file": "monster_carrion_crawler.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "rogue_1",
+    "name": "Pip",
+    "file": "rogue_1.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_2",
+    "name": "Twig",
+    "file": "rogue_2.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_3",
+    "name": "Brix",
+    "file": "rogue_3.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_4",
+    "name": "Clank",
+    "file": "rogue_4.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_5",
+    "name": "Daze",
+    "file": "rogue_5.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogue_6",
+    "name": "Ember",
+    "file": "rogue_6.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_7",
+    "name": "Flint",
+    "file": "rogue_7.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_8",
+    "name": "Gust",
+    "file": "rogue_8.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_9",
+    "name": "Haze",
+    "file": "rogue_9.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_10",
+    "name": "Ink",
+    "file": "rogue_10.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogue_11",
+    "name": "Jolt",
+    "file": "rogue_11.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_12",
+    "name": "Kite",
+    "file": "rogue_12.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_13",
+    "name": "Latch",
+    "file": "rogue_13.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_14",
+    "name": "Mist",
+    "file": "rogue_14.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_15",
+    "name": "Nix",
+    "file": "rogue_15.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogue_16",
+    "name": "Orin",
+    "file": "rogue_16.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_17",
+    "name": "Pyre",
+    "file": "rogue_17.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_18",
+    "name": "Quill",
+    "file": "rogue_18.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_19",
+    "name": "Rust",
+    "file": "rogue_19.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_20",
+    "name": "Soot",
+    "file": "rogue_20.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogue_21",
+    "name": "Thorn",
+    "file": "rogue_21.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_22",
+    "name": "Umbre",
+    "file": "rogue_22.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_23",
+    "name": "Vex",
+    "file": "rogue_23.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_24",
+    "name": "Wisp",
+    "file": "rogue_24.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_25",
+    "name": "Xen",
+    "file": "rogue_25.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogue_26",
+    "name": "Yaw",
+    "file": "rogue_26.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_27",
+    "name": "Zeal",
+    "file": "rogue_27.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_28",
+    "name": "Ash",
+    "file": "rogue_28.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_29",
+    "name": "Blip",
+    "file": "rogue_29.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_30",
+    "name": "Coil",
+    "file": "rogue_30.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogue_31",
+    "name": "Dart",
+    "file": "rogue_31.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_32",
+    "name": "Edge",
+    "file": "rogue_32.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_33",
+    "name": "Fizz",
+    "file": "rogue_33.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_34",
+    "name": "Grim",
+    "file": "rogue_34.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_35",
+    "name": "Hook",
+    "file": "rogue_35.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogue_36",
+    "name": "Iris",
+    "file": "rogue_36.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_37",
+    "name": "Jinx",
+    "file": "rogue_37.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_38",
+    "name": "Krup",
+    "file": "rogue_38.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_39",
+    "name": "Lore",
+    "file": "rogue_39.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "rogue_40",
+    "name": "Maze",
+    "file": "rogue_40.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_1",
+    "name": "Gnash",
+    "file": "rogues_monster_1.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_2",
+    "name": "Creep",
+    "file": "rogues_monster_2.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_3",
+    "name": "Snarl",
+    "file": "rogues_monster_3.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_4",
+    "name": "Plop",
+    "file": "rogues_monster_4.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_5",
+    "name": "Grub",
+    "file": "rogues_monster_5.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_6",
+    "name": "Murgle",
+    "file": "rogues_monster_6.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_7",
+    "name": "Spite",
+    "file": "rogues_monster_7.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_8",
+    "name": "Fwump",
+    "file": "rogues_monster_8.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_9",
+    "name": "Blarg",
+    "file": "rogues_monster_9.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_10",
+    "name": "Skrag",
+    "file": "rogues_monster_10.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_11",
+    "name": "Lurk",
+    "file": "rogues_monster_11.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_12",
+    "name": "Blot",
+    "file": "rogues_monster_12.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_13",
+    "name": "Yuck",
+    "file": "rogues_monster_13.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_14",
+    "name": "Splat",
+    "file": "rogues_monster_14.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_15",
+    "name": "Retch",
+    "file": "rogues_monster_15.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_16",
+    "name": "Squirm",
+    "file": "rogues_monster_16.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_17",
+    "name": "Goom",
+    "file": "rogues_monster_17.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_18",
+    "name": "Ooze",
+    "file": "rogues_monster_18.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_19",
+    "name": "Thud",
+    "file": "rogues_monster_19.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_20",
+    "name": "Cringe",
+    "file": "rogues_monster_20.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_21",
+    "name": "Vork",
+    "file": "rogues_monster_21.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_22",
+    "name": "Slurp",
+    "file": "rogues_monster_22.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_23",
+    "name": "Grak",
+    "file": "rogues_monster_23.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_24",
+    "name": "Bloop",
+    "file": "rogues_monster_24.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_25",
+    "name": "Drool",
+    "file": "rogues_monster_25.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_26",
+    "name": "Plork",
+    "file": "rogues_monster_26.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_27",
+    "name": "Smudge",
+    "file": "rogues_monster_27.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_28",
+    "name": "Yurp",
+    "file": "rogues_monster_28.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_29",
+    "name": "Blargh",
+    "file": "rogues_monster_29.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_30",
+    "name": "Klog",
+    "file": "rogues_monster_30.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_31",
+    "name": "Munch",
+    "file": "rogues_monster_31.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_32",
+    "name": "Sniff",
+    "file": "rogues_monster_32.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_33",
+    "name": "Groan",
+    "file": "rogues_monster_33.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_34",
+    "name": "Burble",
+    "file": "rogues_monster_34.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_35",
+    "name": "Squelch",
+    "file": "rogues_monster_35.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_36",
+    "name": "Glop",
+    "file": "rogues_monster_36.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_37",
+    "name": "Wretch",
+    "file": "rogues_monster_37.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_38",
+    "name": "Slosh",
+    "file": "rogues_monster_38.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_39",
+    "name": "Gunk",
+    "file": "rogues_monster_39.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_40",
+    "name": "Phlegm",
+    "file": "rogues_monster_40.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_41",
+    "name": "Shlorp",
+    "file": "rogues_monster_41.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_42",
+    "name": "Crubb",
+    "file": "rogues_monster_42.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_43",
+    "name": "Mangle",
+    "file": "rogues_monster_43.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_44",
+    "name": "Slunk",
+    "file": "rogues_monster_44.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_45",
+    "name": "Boggle",
+    "file": "rogues_monster_45.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_46",
+    "name": "Yarg",
+    "file": "rogues_monster_46.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_47",
+    "name": "Frumple",
+    "file": "rogues_monster_47.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_48",
+    "name": "Dreg",
+    "file": "rogues_monster_48.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_49",
+    "name": "Splotch",
+    "file": "rogues_monster_49.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_50",
+    "name": "Gnarl",
+    "file": "rogues_monster_50.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_51",
+    "name": "Mumble",
+    "file": "rogues_monster_51.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_52",
+    "name": "Spackle",
+    "file": "rogues_monster_52.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_53",
+    "name": "Wump",
+    "file": "rogues_monster_53.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_54",
+    "name": "Skag",
+    "file": "rogues_monster_54.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_55",
+    "name": "Blorf",
+    "file": "rogues_monster_55.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_56",
+    "name": "Churn",
+    "file": "rogues_monster_56.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_57",
+    "name": "Snurk",
+    "file": "rogues_monster_57.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_58",
+    "name": "Glurk",
+    "file": "rogues_monster_58.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_59",
+    "name": "Gloop",
+    "file": "rogues_monster_59.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_60",
+    "name": "Thwump",
+    "file": "rogues_monster_60.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_61",
+    "name": "Yibble",
+    "file": "rogues_monster_61.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_62",
+    "name": "Splork",
+    "file": "rogues_monster_62.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_63",
+    "name": "Lurgle",
+    "file": "rogues_monster_63.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "rogues_monster_64",
+    "name": "Zork",
+    "file": "rogues_monster_64.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "animal_1",
+    "name": "Nibble",
+    "file": "animal_1.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_2",
+    "name": "Scurry",
+    "file": "animal_2.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_3",
+    "name": "Floof",
+    "file": "animal_3.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_4",
+    "name": "Pounce",
+    "file": "animal_4.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_5",
+    "name": "Wiggle",
+    "file": "animal_5.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_6",
+    "name": "Snoot",
+    "file": "animal_6.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_7",
+    "name": "Pawsy",
+    "file": "animal_7.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_8",
+    "name": "Fluffy",
+    "file": "animal_8.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_9",
+    "name": "Tumble",
+    "file": "animal_9.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_10",
+    "name": "Biscuit",
+    "file": "animal_10.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "animal_11",
+    "name": "Chomper",
+    "file": "animal_11.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_12",
+    "name": "Nuzzle",
+    "file": "animal_12.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_13",
+    "name": "Fuzz",
+    "file": "animal_13.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_14",
+    "name": "Bounce",
+    "file": "animal_14.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_15",
+    "name": "Doodle",
+    "file": "animal_15.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_16",
+    "name": "Pudge",
+    "file": "animal_16.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_17",
+    "name": "Mochi",
+    "file": "animal_17.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_18",
+    "name": "Pip",
+    "file": "animal_18.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_19",
+    "name": "Squeak",
+    "file": "animal_19.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_20",
+    "name": "Wriggles",
+    "file": "animal_20.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "animal_21",
+    "name": "Beanie",
+    "file": "animal_21.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_22",
+    "name": "Dumpling",
+    "file": "animal_22.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_23",
+    "name": "Pebble",
+    "file": "animal_23.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_24",
+    "name": "Sprout",
+    "file": "animal_24.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_25",
+    "name": "Tater",
+    "file": "animal_25.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_26",
+    "name": "Noodle",
+    "file": "animal_26.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_27",
+    "name": "Clover",
+    "file": "animal_27.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_28",
+    "name": "Bumble",
+    "file": "animal_28.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_29",
+    "name": "Zigzag",
+    "file": "animal_29.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_30",
+    "name": "Snicker",
+    "file": "animal_30.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "animal_31",
+    "name": "Whimsy",
+    "file": "animal_31.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_32",
+    "name": "Pickle",
+    "file": "animal_32.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_33",
+    "name": "Cobble",
+    "file": "animal_33.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_34",
+    "name": "Twitch",
+    "file": "animal_34.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_35",
+    "name": "Dangle",
+    "file": "animal_35.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_36",
+    "name": "Flopsy",
+    "file": "animal_36.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_37",
+    "name": "Muffin",
+    "file": "animal_37.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_38",
+    "name": "Ruffles",
+    "file": "animal_38.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_39",
+    "name": "Tizzy",
+    "file": "animal_39.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_40",
+    "name": "Wobble",
+    "file": "animal_40.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "animal_41",
+    "name": "Jelly",
+    "file": "animal_41.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_42",
+    "name": "Dimple",
+    "file": "animal_42.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_43",
+    "name": "Giggles",
+    "file": "animal_43.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_44",
+    "name": "Puffin",
+    "file": "animal_44.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_45",
+    "name": "Scamp",
+    "file": "animal_45.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_46",
+    "name": "Tofu",
+    "file": "animal_46.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_47",
+    "name": "Bloop",
+    "file": "animal_47.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_48",
+    "name": "Pipsqueak",
+    "file": "animal_48.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_49",
+    "name": "Gnarly",
+    "file": "animal_49.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_50",
+    "name": "Crumpet",
+    "file": "animal_50.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "animal_51",
+    "name": "Freckle",
+    "file": "animal_51.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_52",
+    "name": "Whimble",
+    "file": "animal_52.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_53",
+    "name": "Doodad",
+    "file": "animal_53.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_54",
+    "name": "Binky",
+    "file": "animal_54.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_55",
+    "name": "Speckle",
+    "file": "animal_55.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_56",
+    "name": "Rolo",
+    "file": "animal_56.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_57",
+    "name": "Tuffet",
+    "file": "animal_57.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_58",
+    "name": "Niblet",
+    "file": "animal_58.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_59",
+    "name": "Whumple",
+    "file": "animal_59.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_60",
+    "name": "Snuggle",
+    "file": "animal_60.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "animal_61",
+    "name": "Button",
+    "file": "animal_61.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_62",
+    "name": "Paws",
+    "file": "animal_62.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_63",
+    "name": "Yodel",
+    "file": "animal_63.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_64",
+    "name": "Bork",
+    "file": "animal_64.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_65",
+    "name": "Scruff",
+    "file": "animal_65.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_66",
+    "name": "Waggle",
+    "file": "animal_66.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_67",
+    "name": "Blip",
+    "file": "animal_67.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_68",
+    "name": "Gremlin",
+    "file": "animal_68.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_69",
+    "name": "Mocha",
+    "file": "animal_69.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_70",
+    "name": "Biscotti",
+    "file": "animal_70.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "animal_71",
+    "name": "Prim",
+    "file": "animal_71.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_72",
+    "name": "Bramble",
+    "file": "animal_72.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_73",
+    "name": "Clumsy",
+    "file": "animal_73.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_74",
+    "name": "Dotty",
+    "file": "animal_74.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_75",
+    "name": "Fumble",
+    "file": "animal_75.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_76",
+    "name": "Daffy",
+    "file": "animal_76.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_77",
+    "name": "Gloop",
+    "file": "animal_77.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_78",
+    "name": "Tuffy",
+    "file": "animal_78.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_79",
+    "name": "Zoomie",
+    "file": "animal_79.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_80",
+    "name": "Snortle",
+    "file": "animal_80.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "animal_81",
+    "name": "Ruffian",
+    "file": "animal_81.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_82",
+    "name": "Goober",
+    "file": "animal_82.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_83",
+    "name": "Churble",
+    "file": "animal_83.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_84",
+    "name": "Squabble",
+    "file": "animal_84.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_85",
+    "name": "Puddles",
+    "file": "animal_85.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_86",
+    "name": "Nibble",
+    "file": "animal_86.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "animal_87",
+    "name": "Scurry",
+    "file": "animal_87.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "arctic_fox",
+    "name": "Arctic Fox",
+    "file": "woodland_arctic_fox.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "deer",
+    "name": "Deer",
+    "file": "woodland_deer.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "bunny",
+    "name": "Bunny",
+    "file": "woodland_bunny.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "squirrel",
+    "name": "Squirrel",
+    "file": "woodland_squirrel.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "soldier",
+    "name": "Soldier",
+    "file": "tinyrpg_soldier.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "orc",
+    "name": "Orc",
+    "file": "tinyrpg_orc.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "retro_bear_1",
+    "name": "Grizzwald",
+    "file": "retro_bear_1.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "retro_bear_2",
+    "name": "Grizzwald",
+    "file": "retro_bear_2.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "retro_bear_3",
+    "name": "Grizzwald",
+    "file": "retro_bear_3.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "retro_bear_4",
+    "name": "Grizzwald",
+    "file": "retro_bear_4.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "retro_bear_5",
+    "name": "Grizzwald",
+    "file": "retro_bear_5.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "retro_bear_6",
+    "name": "Grizzwald",
+    "file": "retro_bear_6.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "retro_bear_7",
+    "name": "Grizzwald",
+    "file": "retro_bear_7.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "retro_wolf_1",
+    "name": "Shadow",
+    "file": "retro_wolf_1.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "retro_wolf_2",
+    "name": "Shadow",
+    "file": "retro_wolf_2.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "retro_wolf_3",
+    "name": "Shadow",
+    "file": "retro_wolf_3.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "retro_wolf_4",
+    "name": "Shadow",
+    "file": "retro_wolf_4.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "retro_wolf_5",
+    "name": "Shadow",
+    "file": "retro_wolf_5.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "retro_wolf_6",
+    "name": "Shadow",
+    "file": "retro_wolf_6.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "retro_wolf_7",
+    "name": "Shadow",
+    "file": "retro_wolf_7.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "retro_beatle_1",
+    "name": "Buzzer",
+    "file": "retro_beatle_1.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "retro_beatle_2",
+    "name": "Buzzer",
+    "file": "retro_beatle_2.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "retro_beatle_3",
+    "name": "Buzzer",
+    "file": "retro_beatle_3.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "retro_beatle_4",
+    "name": "Buzzer",
+    "file": "retro_beatle_4.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "retro_beatle_5",
+    "name": "Buzzer",
+    "file": "retro_beatle_5.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "retro_beatle_6",
+    "name": "Buzzer",
+    "file": "retro_beatle_6.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "retro_beatle_7",
+    "name": "Buzzer",
+    "file": "retro_beatle_7.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "retro_snake_1",
+    "name": "Slithers",
+    "file": "retro_snake_1.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "retro_snake_2",
+    "name": "Slithers",
+    "file": "retro_snake_2.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "retro_snake_3",
+    "name": "Slithers",
+    "file": "retro_snake_3.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "retro_snake_4",
+    "name": "Slithers",
+    "file": "retro_snake_4.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "monster_dragon_1",
+    "name": "Drake",
+    "file": "monster_dragon_1.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "monster_dragon_2",
+    "name": "Drake",
+    "file": "monster_dragon_2.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "monster_dragon_3",
+    "name": "Drake",
+    "file": "monster_dragon_3.png",
+    "rarity": "legendary",
+    "animated": false
+  },
+  {
+    "id": "monster_gnome_1",
+    "name": "Gnorman",
+    "file": "monster_gnome_1.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "monster_gnome_2",
+    "name": "Gnorman",
+    "file": "monster_gnome_2.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "monster_troll_1",
+    "name": "Thrug",
+    "file": "monster_troll_1.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "monster_troll_2",
+    "name": "Thrug",
+    "file": "monster_troll_2.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "alien_without",
+    "name": "Alien (Without)",
+    "file": "alien_outlined.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "alien_with",
+    "name": "Alien (With)",
+    "file": "alien_outlined.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "fox",
+    "name": "Fox",
+    "file": "woodland_fox.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "wolf",
+    "name": "Wolf",
+    "file": "woodland_wolf.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "squirrel_alt",
+    "name": "Squirrel (Alt)",
+    "file": "woodland_squirrel_alt.png",
+    "rarity": "common",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_1",
+    "name": "Soldier Pose 1",
+    "file": "tinyrpg_soldier_pose_1.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_2",
+    "name": "Soldier Pose 2",
+    "file": "tinyrpg_soldier_pose_2.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_3",
+    "name": "Soldier Pose 3",
+    "file": "tinyrpg_soldier_pose_3.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_4",
+    "name": "Soldier Pose 4",
+    "file": "tinyrpg_soldier_pose_4.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_5",
+    "name": "Soldier Pose 5",
+    "file": "tinyrpg_soldier_pose_5.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_6",
+    "name": "Soldier Pose 6",
+    "file": "tinyrpg_soldier_pose_6.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_7",
+    "name": "Soldier Pose 7",
+    "file": "tinyrpg_soldier_pose_7.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_8",
+    "name": "Soldier Pose 8",
+    "file": "tinyrpg_soldier_pose_8.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_9",
+    "name": "Soldier Pose 9",
+    "file": "tinyrpg_soldier_pose_9.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_10",
+    "name": "Soldier Pose 10",
+    "file": "tinyrpg_soldier_pose_10.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_11",
+    "name": "Soldier Pose 11",
+    "file": "tinyrpg_soldier_pose_11.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_12",
+    "name": "Soldier Pose 12",
+    "file": "tinyrpg_soldier_pose_12.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_13",
+    "name": "Soldier Pose 13",
+    "file": "tinyrpg_soldier_pose_13.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_14",
+    "name": "Soldier Pose 14",
+    "file": "tinyrpg_soldier_pose_14.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_15",
+    "name": "Soldier Pose 15",
+    "file": "tinyrpg_soldier_pose_15.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_16",
+    "name": "Soldier Pose 16",
+    "file": "tinyrpg_soldier_pose_16.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_17",
+    "name": "Soldier Pose 17",
+    "file": "tinyrpg_soldier_pose_17.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_18",
+    "name": "Soldier Pose 18",
+    "file": "tinyrpg_soldier_pose_18.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_19",
+    "name": "Soldier Pose 19",
+    "file": "tinyrpg_soldier_pose_19.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_20",
+    "name": "Soldier Pose 20",
+    "file": "tinyrpg_soldier_pose_20.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_21",
+    "name": "Soldier Pose 21",
+    "file": "tinyrpg_soldier_pose_21.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_22",
+    "name": "Soldier Pose 22",
+    "file": "tinyrpg_soldier_pose_22.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_23",
+    "name": "Soldier Pose 23",
+    "file": "tinyrpg_soldier_pose_23.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_24",
+    "name": "Soldier Pose 24",
+    "file": "tinyrpg_soldier_pose_24.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_25",
+    "name": "Soldier Pose 25",
+    "file": "tinyrpg_soldier_pose_25.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_26",
+    "name": "Soldier Pose 26",
+    "file": "tinyrpg_soldier_pose_26.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_27",
+    "name": "Soldier Pose 27",
+    "file": "tinyrpg_soldier_pose_27.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_28",
+    "name": "Soldier Pose 28",
+    "file": "tinyrpg_soldier_pose_28.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_29",
+    "name": "Soldier Pose 29",
+    "file": "tinyrpg_soldier_pose_29.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_30",
+    "name": "Soldier Pose 30",
+    "file": "tinyrpg_soldier_pose_30.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_31",
+    "name": "Soldier Pose 31",
+    "file": "tinyrpg_soldier_pose_31.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_32",
+    "name": "Soldier Pose 32",
+    "file": "tinyrpg_soldier_pose_32.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_33",
+    "name": "Soldier Pose 33",
+    "file": "tinyrpg_soldier_pose_33.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_34",
+    "name": "Soldier Pose 34",
+    "file": "tinyrpg_soldier_pose_34.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_35",
+    "name": "Soldier Pose 35",
+    "file": "tinyrpg_soldier_pose_35.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_36",
+    "name": "Soldier Pose 36",
+    "file": "tinyrpg_soldier_pose_36.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_37",
+    "name": "Soldier Pose 37",
+    "file": "tinyrpg_soldier_pose_37.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_38",
+    "name": "Soldier Pose 38",
+    "file": "tinyrpg_soldier_pose_38.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_39",
+    "name": "Soldier Pose 39",
+    "file": "tinyrpg_soldier_pose_39.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_40",
+    "name": "Soldier Pose 40",
+    "file": "tinyrpg_soldier_pose_40.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_41",
+    "name": "Soldier Pose 41",
+    "file": "tinyrpg_soldier_pose_41.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_42",
+    "name": "Soldier Pose 42",
+    "file": "tinyrpg_soldier_pose_42.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "soldier_pose_43",
+    "name": "Soldier Pose 43",
+    "file": "tinyrpg_soldier_pose_43.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_1",
+    "name": "Orc Pose 1",
+    "file": "tinyrpg_orc_pose_1.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_2",
+    "name": "Orc Pose 2",
+    "file": "tinyrpg_orc_pose_2.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_3",
+    "name": "Orc Pose 3",
+    "file": "tinyrpg_orc_pose_3.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_4",
+    "name": "Orc Pose 4",
+    "file": "tinyrpg_orc_pose_4.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_5",
+    "name": "Orc Pose 5",
+    "file": "tinyrpg_orc_pose_5.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_6",
+    "name": "Orc Pose 6",
+    "file": "tinyrpg_orc_pose_6.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_7",
+    "name": "Orc Pose 7",
+    "file": "tinyrpg_orc_pose_7.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_8",
+    "name": "Orc Pose 8",
+    "file": "tinyrpg_orc_pose_8.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_9",
+    "name": "Orc Pose 9",
+    "file": "tinyrpg_orc_pose_9.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_10",
+    "name": "Orc Pose 10",
+    "file": "tinyrpg_orc_pose_10.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_11",
+    "name": "Orc Pose 11",
+    "file": "tinyrpg_orc_pose_11.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_12",
+    "name": "Orc Pose 12",
+    "file": "tinyrpg_orc_pose_12.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_13",
+    "name": "Orc Pose 13",
+    "file": "tinyrpg_orc_pose_13.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_14",
+    "name": "Orc Pose 14",
+    "file": "tinyrpg_orc_pose_14.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_15",
+    "name": "Orc Pose 15",
+    "file": "tinyrpg_orc_pose_15.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_16",
+    "name": "Orc Pose 16",
+    "file": "tinyrpg_orc_pose_16.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_17",
+    "name": "Orc Pose 17",
+    "file": "tinyrpg_orc_pose_17.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_18",
+    "name": "Orc Pose 18",
+    "file": "tinyrpg_orc_pose_18.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_19",
+    "name": "Orc Pose 19",
+    "file": "tinyrpg_orc_pose_19.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_20",
+    "name": "Orc Pose 20",
+    "file": "tinyrpg_orc_pose_20.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_21",
+    "name": "Orc Pose 21",
+    "file": "tinyrpg_orc_pose_21.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_22",
+    "name": "Orc Pose 22",
+    "file": "tinyrpg_orc_pose_22.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_23",
+    "name": "Orc Pose 23",
+    "file": "tinyrpg_orc_pose_23.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_24",
+    "name": "Orc Pose 24",
+    "file": "tinyrpg_orc_pose_24.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_25",
+    "name": "Orc Pose 25",
+    "file": "tinyrpg_orc_pose_25.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_26",
+    "name": "Orc Pose 26",
+    "file": "tinyrpg_orc_pose_26.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_27",
+    "name": "Orc Pose 27",
+    "file": "tinyrpg_orc_pose_27.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_28",
+    "name": "Orc Pose 28",
+    "file": "tinyrpg_orc_pose_28.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_29",
+    "name": "Orc Pose 29",
+    "file": "tinyrpg_orc_pose_29.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_30",
+    "name": "Orc Pose 30",
+    "file": "tinyrpg_orc_pose_30.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_31",
+    "name": "Orc Pose 31",
+    "file": "tinyrpg_orc_pose_31.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_32",
+    "name": "Orc Pose 32",
+    "file": "tinyrpg_orc_pose_32.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_33",
+    "name": "Orc Pose 33",
+    "file": "tinyrpg_orc_pose_33.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "orc_pose_34",
+    "name": "Orc Pose 34",
+    "file": "tinyrpg_orc_pose_34.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "retro_bear_attack",
+    "name": "Grizzwald (Raging)",
+    "file": "retro_bear_attack.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "retro_snake_attack",
+    "name": "Slithers (Striking)",
+    "file": "retro_snake_attack.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "retro_wolf_attack",
+    "name": "Shadow (Pouncing)",
+    "file": "retro_wolf_attack.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "cute_monkey",
+    "name": "Banango",
+    "file": "cute_monkey.gif",
+    "rarity": "legendary",
+    "animated": true
+  },
+  {
+    "id": "cute_monkey_portrait",
+    "name": "Banango (Portrait)",
+    "file": "cute_monkey_portrait.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "cute_monkey_hq",
+    "name": "Banango (Rare)",
+    "file": "cute_monkey_hq.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "cute_monkey_pixel",
+    "name": "Banango (Pixel)",
+    "file": "cute_monkey_pixel.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "cute_owl",
+    "name": "Hootsworth",
+    "file": "cute_owl.gif",
+    "rarity": "legendary",
+    "animated": true
+  },
+  {
+    "id": "cute_owl_portrait",
+    "name": "Hootsworth (Portrait)",
+    "file": "cute_owl_portrait.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "cute_owl_hq",
+    "name": "Hootsworth (Rare)",
+    "file": "cute_owl_hq.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "cute_owl_pixel",
+    "name": "Hootsworth (Pixel)",
+    "file": "cute_owl_pixel.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "cute_porcupine",
+    "name": "Quillbert",
+    "file": "cute_porcupine.gif",
+    "rarity": "legendary",
+    "animated": true
+  },
+  {
+    "id": "cute_porcupine_portrait",
+    "name": "Quillbert (Portrait)",
+    "file": "cute_porcupine_portrait.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "cute_porcupine_hq",
+    "name": "Quillbert (Rare)",
+    "file": "cute_porcupine_hq.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "cute_porcupine_pixel",
+    "name": "Quillbert (Pixel)",
+    "file": "cute_porcupine_pixel.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "cute_rabbit",
+    "name": "Jumpkin",
+    "file": "cute_rabbit.gif",
+    "rarity": "legendary",
+    "animated": true
+  },
+  {
+    "id": "cute_rabbit_portrait",
+    "name": "Jumpkin (Portrait)",
+    "file": "cute_rabbit_portrait.png",
+    "rarity": "epic",
+    "animated": false
+  },
+  {
+    "id": "cute_rabbit_hq",
+    "name": "Jumpkin (Rare)",
+    "file": "cute_rabbit_hq.png",
+    "rarity": "rare",
+    "animated": false
+  },
+  {
+    "id": "cute_rabbit_pixel",
+    "name": "Jumpkin (Pixel)",
+    "file": "cute_rabbit_pixel.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "cat_shadowpaw",
+    "name": "Shadowpaw",
+    "file": "cat_shadowpaw.png",
+    "rarity": "uncommon",
+    "animated": false
+  },
+  {
+    "id": "cat_marmalade",
+    "name": "Marmalade",
+    "file": "cat_marmalade.png",
+    "rarity": "common",
+    "animated": false
+  }
+]

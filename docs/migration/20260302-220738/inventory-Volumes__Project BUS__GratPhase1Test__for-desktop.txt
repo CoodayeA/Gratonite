@@ -1,0 +1,5 @@
+source=/Volumes/Project BUS/GratPhase1Test/for-desktop
+timestamp=2026-03-03T03:08:06Z
+bytes=890503168
+files=5971
+dirs=1830

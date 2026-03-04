@@ -1,0 +1,5 @@
+source=/Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder
+timestamp=2026-03-03T03:08:55Z
+bytes=5016625152
+files=90456
+dirs=16762

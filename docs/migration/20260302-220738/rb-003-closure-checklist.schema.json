@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rb-003-closure-checklist.schema.json",
+  "title": "RB-003 Closure Checklist",
+  "type": "object",
+  "required": [
+    "id",
+    "generatedAt",
+    "status",
+    "criteria"
+  ],
+  "properties": {
+    "id": { "type": "string", "const": "RB-003" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "status": { "type": "string", "enum": ["PASS", "FAIL"] },
+    "criteria": {
+      "type": "object",
+      "required": [
+        "contractDomainsImplementedVerifiedTestCovered",
+        "runtimeBackendCanonical4000",
+        "routeAliasAndChannelNormalizationRegression"
+      ],
+      "properties": {
+        "contractDomainsImplementedVerifiedTestCovered": { "$ref": "#/$defs/criterion" },
+        "runtimeBackendCanonical4000": { "$ref": "#/$defs/criterion" },
+        "routeAliasAndChannelNormalizationRegression": { "$ref": "#/$defs/criterion" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "criterion": {
+      "type": "object",
+      "required": ["status", "evidence"],
+      "properties": {
+        "status": { "type": "string", "enum": ["PASS", "FAIL"] },
+        "evidence": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

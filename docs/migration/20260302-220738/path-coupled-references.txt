@@ -1,0 +1,8 @@
+[scan] timestamp=2026-03-03T03:11:30Z
+[scan] patterns: /Users/ferdinand/.gemini/antigravity/scratch/gratonite-web-desktop | /Volumes/Project BUS/GratPhase1Test | /Users/ferdinand/Desktop/GratoniteFinal.md
+
+/Users/ferdinand/Desktop/GratoniteFinal.md:7:| **Frontend** | `/Users/ferdinand/.gemini/antigravity/scratch/gratonite-web-desktop/webapp/` |
+/Users/ferdinand/Desktop/GratoniteFinal.md:8:| **Backend** | `/Volumes/Project BUS/GratPhase1Test/gratonite-api/` |
+/Users/ferdinand/Desktop/GratoniteFinal.md:501:cd "/Volumes/Project BUS/GratPhase1Test/gratonite-api"
+/Users/ferdinand/Desktop/GratoniteFinal.md:505:cd "/Volumes/Project BUS/GratPhase1Test/gratonite-api"
+/Users/ferdinand/Desktop/GratoniteFinal.md:509:cd "/Users/ferdinand/.gemini/antigravity/scratch/gratonite-web-desktop/webapp"

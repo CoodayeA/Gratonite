@@ -1,0 +1,11 @@
+/Users/ferdinand/.gemini/antigravity/scratch/gratonite-web-desktop/webapp
+/Volumes/Project BUS/GratPhase1Test/gratonite-api
+/Volumes/Project BUS/GratPhase1Test/gratonite-desktop
+/Volumes/Project BUS/GratPhase1Test/gratonite-mobile
+/Volumes/Project BUS/GratPhase1Test/for-web
+/Volumes/Project BUS/GratPhase1Test/for-desktop
+/Volumes/Project BUS/GratPhase1Test/for-ios
+/Volumes/Project BUS/GratPhase1Test/for-android
+/Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder
+/Users/ferdinand/.gemini/antigravity/scratch/gratonite-web-desktop/website
+/Users/ferdinand/.gemini/antigravity/scratch/gratonite-web-desktop/website-old

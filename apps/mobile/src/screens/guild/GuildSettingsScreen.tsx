@@ -1,0 +1,258 @@
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  ScrollView,
+  Share,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { guilds as guildsApi, invites as invitesApi } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { colors, spacing, fontSize, borderRadius } from '../../lib/theme';
+import type { Guild } from '../../types';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { AppStackParamList } from '../../navigation/types';
+
+type Props = NativeStackScreenProps<AppStackParamList, 'GuildSettings'>;
+
+export default function GuildSettingsScreen({ route, navigation }: Props) {
+  const { guildId, guildName } = route.params;
+  const { user } = useAuth();
+  const [guild, setGuild] = useState<Guild | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [creatingInvite, setCreatingInvite] = useState(false);
+
+  const fetchGuild = useCallback(async () => {
+    try {
+      const data = await guildsApi.get(guildId);
+      setGuild(data);
+    } catch (err: any) {
+      if (err.status !== 401) {
+        Alert.alert('Error', 'Failed to load server info');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [guildId]);
+
+  useEffect(() => {
+    fetchGuild();
+  }, [fetchGuild]);
+
+  const handleLeaveServer = () => {
+    Alert.alert(
+      'Leave Server',
+      `Are you sure you want to leave ${guildName}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await guildsApi.leave(guildId);
+              // Navigate back to guild list
+              navigation.popToTop();
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Failed to leave server');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleCreateInvite = async () => {
+    setCreatingInvite(true);
+    try {
+      const invite = await invitesApi.create(guildId, { expiresIn: 86400 }); // 24h expiry
+      const inviteUrl = `https://gratonite.chat/invite/${invite.code}`;
+      await Share.share({
+        message: `Join ${guildName} on Gratonite! ${inviteUrl}`,
+      });
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to create invite');
+    } finally {
+      setCreatingInvite(false);
+    }
+  };
+
+  const handleViewMembers = () => {
+    navigation.navigate('GuildMemberList', { guildId, guildName });
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.accentPrimary} />
+      </View>
+    );
+  }
+
+  const isOwner = guild?.ownerId === user?.id;
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Guild info header */}
+      <View style={styles.guildHeader}>
+        <View style={styles.guildIcon}>
+          <Text style={styles.guildIconText}>
+            {(guild?.name ?? guildName).charAt(0).toUpperCase()}
+          </Text>
+        </View>
+        <Text style={styles.guildName}>{guild?.name ?? guildName}</Text>
+        {guild?.description ? (
+          <Text style={styles.guildDescription}>{guild.description}</Text>
+        ) : null}
+        <View style={styles.statsRow}>
+          <View style={styles.stat}>
+            <Ionicons name="people-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.statText}>{guild?.memberCount ?? 0} members</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Actions */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>ACTIONS</Text>
+
+        <TouchableOpacity style={styles.actionRow} onPress={handleViewMembers}>
+          <Ionicons name="people-outline" size={22} color={colors.textSecondary} />
+          <Text style={styles.actionText}>Member List</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionRow}
+          onPress={handleCreateInvite}
+          disabled={creatingInvite}
+        >
+          <Ionicons name="link-outline" size={22} color={colors.textSecondary} />
+          <Text style={styles.actionText}>
+            {creatingInvite ? 'Creating Invite...' : 'Create Invite'}
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Danger zone */}
+      {!isOwner && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>DANGER ZONE</Text>
+          <TouchableOpacity style={styles.dangerRow} onPress={handleLeaveServer}>
+            <Ionicons name="log-out-outline" size={22} color={colors.error} />
+            <Text style={styles.dangerText}>Leave Server</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.bgPrimary,
+  },
+  content: {
+    paddingBottom: spacing.xxxl,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: colors.bgPrimary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  guildHeader: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  guildIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.accentPrimary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  guildIconText: {
+    color: colors.white,
+    fontSize: fontSize.xxxl,
+    fontWeight: '700',
+  },
+  guildName: {
+    color: colors.textPrimary,
+    fontSize: fontSize.xxl,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  guildDescription: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    marginTop: spacing.md,
+    gap: spacing.lg,
+  },
+  stat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  statText: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+  },
+  section: {
+    marginTop: spacing.xl,
+  },
+  sectionTitle: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    fontSize: fontSize.xs,
+    fontWeight: '700',
+    color: colors.textMuted,
+    letterSpacing: 1,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    gap: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  actionText: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontSize: fontSize.md,
+    fontWeight: '500',
+  },
+  dangerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    gap: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  dangerText: {
+    flex: 1,
+    color: colors.error,
+    fontSize: fontSize.md,
+    fontWeight: '500',
+  },
+});

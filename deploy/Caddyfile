@@ -1,0 +1,14 @@
+# Main landing page (keep existing)
+gratonite.chat {
+    reverse_proxy gratonite-web-1:80
+}
+
+# API subdomain
+api.gratonite.chat {
+    reverse_proxy gratonite-api:4000
+}
+
+# App subdomain
+app.gratonite.chat {
+    reverse_proxy gratonite-web:80
+}

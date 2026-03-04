@@ -1,0 +1,48 @@
+{
+  "name": "gratonite-desktop",
+  "version": "1.0.0",
+  "description": "Gratonite Desktop — Electron wrapper for the Gratonite web app",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "build": "electron-builder --mac --win --linux"
+  },
+  "build": {
+    "appId": "chat.gratonite.desktop",
+    "productName": "Gratonite",
+    "files": [
+      "main.js",
+      "preload.js",
+      "assets/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.social-networking",
+      "target": ["dmg", "zip"],
+      "icon": "assets/icon.icns"
+    },
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Network;Chat",
+      "icon": "assets/icon.png"
+    },
+    "publish": {
+      "provider": "generic",
+      "url": "https://releases.gratonite.chat"
+    }
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}

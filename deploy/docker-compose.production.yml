@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: gratonite-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gratonite
+      POSTGRES_USER: gratonite
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gratonite-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gratonite"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: gratonite-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - gratonite-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  api:
+    image: node:20-alpine
+    container_name: gratonite-api
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm install -g pnpm && pnpm install --prod && node dist/index.js"
+    environment:
+      DATABASE_URL: postgresql://gratonite:${DB_PASSWORD}@postgres:5432/gratonite
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM}
+      APP_URL: https://app.gratonite.chat
+      CORS_ORIGIN: https://app.gratonite.chat
+      PORT: 4000
+      LIVEKIT_URL: ${LIVEKIT_URL}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+    volumes:
+      - ./api:/app
+      - api_uploads:/app/uploads
+    networks:
+      - gratonite-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Web App
+  web:
+    image: nginx:alpine
+    container_name: gratonite-web
+    restart: unless-stopped
+    volumes:
+      - ./web/dist:/usr/share/nginx/html:ro
+      - ./web/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - gratonite-network
+    depends_on:
+      - api
+
+  # Caddy Reverse Proxy (integrates with existing setup)
+  caddy:
+    image: caddy:2.11-alpine
+    container_name: gratonite-caddy-new
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - gratonite-network
+    depends_on:
+      - web
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:
+  api_uploads:
+  caddy_data:
+  caddy_config:
+
+networks:
+  gratonite-network:
+    driver: bridge

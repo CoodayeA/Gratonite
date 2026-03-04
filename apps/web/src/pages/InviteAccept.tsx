@@ -1,0 +1,471 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Users, LogIn, AlertCircle, ArrowLeft } from 'lucide-react';
+import { api, getAccessToken } from '../lib/api';
+import { getDeterministicGradient } from '../utils/colors';
+
+interface InviteGuild {
+    id: string;
+    name: string;
+    iconHash: string | null;
+    memberCount: number;
+    description: string | null;
+}
+
+interface InviteInviter {
+    id: string;
+    username: string;
+    displayName: string;
+    avatarHash: string | null;
+}
+
+interface InviteData {
+    code: string;
+    guild: InviteGuild;
+    inviter?: InviteInviter;
+    expiresAt: string | null;
+    uses: number;
+    maxUses: number | null;
+}
+
+type PageState =
+    | { kind: 'loading' }
+    | { kind: 'ready'; invite: InviteData }
+    | { kind: 'joining'; invite: InviteData }
+    | { kind: 'joined'; guildId: string }
+    | { kind: 'error'; message: string };
+
+export default function InviteAccept() {
+    const { code } = useParams<{ code: string }>();
+    const navigate = useNavigate();
+    const [state, setState] = useState<PageState>({ kind: 'loading' });
+    const isLoggedIn = !!getAccessToken();
+
+    useEffect(() => {
+        if (!code) {
+            setState({ kind: 'error', message: 'No invite code provided.' });
+            return;
+        }
+
+        let cancelled = false;
+        api.invites.get(code).then(data => {
+            if (!cancelled) setState({ kind: 'ready', invite: data as InviteData });
+        }).catch((err: any) => {
+            if (!cancelled) {
+                const msg = err?.message || err?.code || 'This invite is invalid or has expired.';
+                setState({ kind: 'error', message: msg });
+            }
+        });
+
+        return () => { cancelled = true; };
+    }, [code]);
+
+    const handleJoin = async () => {
+        if (!code) return;
+
+        if (!isLoggedIn) {
+            navigate(`/login?redirect=/invite/${code}`);
+            return;
+        }
+
+        const currentInvite = state.kind === 'ready' ? state.invite : null;
+        if (!currentInvite) return;
+
+        setState({ kind: 'joining', invite: currentInvite });
+        try {
+            const guild = await api.invites.accept(code);
+            setState({ kind: 'joined', guildId: guild.id });
+            setTimeout(() => navigate(`/guild/${guild.id}`), 1200);
+        } catch (err: any) {
+            const msg = err?.message || 'Failed to join server. Please try again.';
+            setState({ kind: 'error', message: msg });
+        }
+    };
+
+    return (
+        <div style={{
+            minHeight: '100vh',
+            background: 'var(--bg-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+        }}>
+            <div style={{
+                width: '100%',
+                maxWidth: '480px',
+            }}>
+                {/* Back link */}
+                <button
+                    onClick={() => navigate('/')}
+                    style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        marginBottom: '16px',
+                        padding: 0,
+                    }}
+                >
+                    <ArrowLeft size={16} />
+                    Back to home
+                </button>
+
+                {/* Card */}
+                <div style={{
+                    background: 'var(--bg-elevated)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--stroke)',
+                    overflow: 'hidden',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                }}>
+                    {state.kind === 'loading' && <LoadingState />}
+                    {state.kind === 'error' && <ErrorState message={state.message} onBack={() => navigate('/')} />}
+                    {state.kind === 'ready' && (
+                        <InvitePreview
+                            invite={state.invite}
+                            isLoggedIn={isLoggedIn}
+                            onJoin={handleJoin}
+                        />
+                    )}
+                    {state.kind === 'joining' && (
+                        <InvitePreview
+                            invite={state.invite}
+                            isLoggedIn={isLoggedIn}
+                            onJoin={handleJoin}
+                            joining
+                        />
+                    )}
+                    {state.kind === 'joined' && <JoinedState />}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function LoadingState() {
+    return (
+        <div style={{
+            padding: '64px 32px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+        }}>
+            <div style={{
+                width: '40px',
+                height: '40px',
+                border: '3px solid var(--stroke)',
+                borderTopColor: 'var(--accent-primary)',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite',
+            }} />
+            <span style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+                Loading invite...
+            </span>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+    );
+}
+
+function ErrorState({ message, onBack }: { message: string; onBack: () => void }) {
+    return (
+        <div style={{
+            padding: '48px 32px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+            textAlign: 'center',
+        }}>
+            <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: 'rgba(239, 68, 68, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+            }}>
+                <AlertCircle size={28} color="#ef4444" />
+            </div>
+            <div>
+                <h2 style={{
+                    fontSize: '20px',
+                    fontWeight: 700,
+                    fontFamily: 'var(--font-display)',
+                    color: 'var(--text-primary)',
+                    margin: '0 0 8px',
+                }}>
+                    Invalid Invite
+                </h2>
+                <p style={{
+                    fontSize: '14px',
+                    color: 'var(--text-secondary)',
+                    margin: 0,
+                    lineHeight: 1.5,
+                }}>
+                    {message}
+                </p>
+            </div>
+            <button
+                onClick={onBack}
+                style={{
+                    marginTop: '8px',
+                    padding: '10px 24px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--stroke)',
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                }}
+            >
+                Go Home
+            </button>
+        </div>
+    );
+}
+
+function InvitePreview({
+    invite,
+    isLoggedIn,
+    onJoin,
+    joining = false,
+}: {
+    invite: InviteData;
+    isLoggedIn: boolean;
+    onJoin: () => void;
+    joining?: boolean;
+}) {
+
+    const { guild, inviter } = invite;
+    const gradient = getDeterministicGradient(guild.id);
+
+    return (
+        <>
+            {/* Banner / gradient */}
+            <div style={{
+                height: '120px',
+                background: gradient,
+                position: 'relative',
+            }}>
+                {inviter && (
+                    <div style={{
+                        position: 'absolute',
+                        top: '12px',
+                        left: '16px',
+                        background: 'rgba(0,0,0,0.55)',
+                        borderRadius: '20px',
+                        padding: '4px 12px',
+                        fontSize: '12px',
+                        color: 'rgba(255,255,255,0.9)',
+                        backdropFilter: 'blur(4px)',
+                    }}>
+                        Invited by <strong>{inviter.displayName || inviter.username}</strong>
+                    </div>
+                )}
+            </div>
+
+            {/* Guild icon */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                marginTop: '-36px',
+                position: 'relative',
+                zIndex: 1,
+            }}>
+                <div style={{
+                    width: '72px',
+                    height: '72px',
+                    borderRadius: '20px',
+                    background: guild.iconHash
+                        ? `url(/api/guilds/${guild.id}/icon) center/cover`
+                        : gradient,
+                    border: '4px solid var(--bg-elevated)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '28px',
+                    fontWeight: 700,
+                    fontFamily: 'var(--font-display)',
+                    color: 'white',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                }}>
+                    {!guild.iconHash && guild.name.charAt(0).toUpperCase()}
+                </div>
+            </div>
+
+            {/* Content */}
+            <div style={{
+                padding: '16px 32px 32px',
+                textAlign: 'center',
+            }}>
+                <p style={{
+                    fontSize: '13px',
+                    color: 'var(--text-muted)',
+                    margin: '0 0 4px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    fontWeight: 600,
+                }}>
+                    You've been invited to join
+                </p>
+
+                <h1 style={{
+                    fontSize: '24px',
+                    fontWeight: 700,
+                    fontFamily: 'var(--font-display)',
+                    color: 'var(--text-primary)',
+                    margin: '0 0 8px',
+                }}>
+                    {guild.name}
+                </h1>
+
+                {guild.description && (
+                    <p style={{
+                        fontSize: '14px',
+                        color: 'var(--text-secondary)',
+                        margin: '0 0 16px',
+                        lineHeight: 1.5,
+                    }}>
+                        {guild.description}
+                    </p>
+                )}
+
+                {/* Member count */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    marginBottom: '24px',
+                }}>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        color: 'var(--text-muted)',
+                        fontSize: '14px',
+                    }}>
+                        <Users size={16} />
+                        <span>
+                            <strong style={{ color: 'var(--text-secondary)' }}>
+                                {guild.memberCount.toLocaleString()}
+                            </strong>{' '}
+                            {guild.memberCount === 1 ? 'member' : 'members'}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Action button */}
+                <button
+                    onClick={onJoin}
+                    disabled={joining}
+                    style={{
+                        width: '100%',
+                        padding: '12px 24px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: 'none',
+                        background: 'var(--accent-primary)',
+                        color: 'white',
+                        fontSize: '15px',
+                        fontWeight: 700,
+                        cursor: joining ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        opacity: joining ? 0.7 : 1,
+                        transition: 'opacity 0.15s',
+                    }}
+                >
+                    {joining ? (
+                        <>
+                            <div style={{
+                                width: '16px',
+                                height: '16px',
+                                border: '2px solid rgba(255,255,255,0.3)',
+                                borderTopColor: 'white',
+                                borderRadius: '50%',
+                                animation: 'spin 0.8s linear infinite',
+                            }} />
+                            Joining...
+                        </>
+                    ) : isLoggedIn ? (
+                        <>
+                            <LogIn size={18} />
+                            Join Server
+                        </>
+                    ) : (
+                        <>
+                            <LogIn size={18} />
+                            Log in to Join
+                        </>
+                    )}
+                </button>
+
+                {!isLoggedIn && (
+                    <p style={{
+                        fontSize: '12px',
+                        color: 'var(--text-muted)',
+                        marginTop: '12px',
+                    }}>
+                        You need an account to join this server.
+                    </p>
+                )}
+            </div>
+
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </>
+    );
+}
+
+function JoinedState() {
+    return (
+        <div style={{
+            padding: '48px 32px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+            textAlign: 'center',
+        }}>
+            <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: 'rgba(34, 197, 94, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '28px',
+            }}>
+                &#10003;
+            </div>
+            <div>
+                <h2 style={{
+                    fontSize: '20px',
+                    fontWeight: 700,
+                    fontFamily: 'var(--font-display)',
+                    color: 'var(--text-primary)',
+                    margin: '0 0 8px',
+                }}>
+                    Welcome!
+                </h2>
+                <p style={{
+                    fontSize: '14px',
+                    color: 'var(--text-secondary)',
+                    margin: 0,
+                }}>
+                    You've joined the server. Redirecting...
+                </p>
+            </div>
+        </div>
+    );
+}

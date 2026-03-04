@@ -1,0 +1,351 @@
+/**
+ * routes/voice.ts — Voice channel endpoints using LiveKit.
+ *
+ * Mounted at /api/v1/voice by src/routes/index.ts.
+ *
+ * Endpoints:
+ *   POST /join   — Join a voice channel, returns LiveKit token + endpoint
+ *   POST /leave  — Leave the current voice channel
+ *
+ * Additional channel-scoped endpoints (mounted separately in routes/index.ts):
+ *   GET /channels/:channelId/voice-states — List users in a voice channel
+ */
+
+import { Router, Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
+import { AccessToken } from 'livekit-server-sdk';
+import { and, eq } from 'drizzle-orm';
+
+import { db } from '../db/index';
+import { channels, dmChannelMembers } from '../db/schema/channels';
+import { users } from '../db/schema/users';
+import { Permissions } from '../db/schema/roles';
+import { requireAuth } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { getIO } from '../lib/socket-io';
+import { hasChannelPermission } from './roles';
+import { redis } from '../lib/redis';
+
+export const voiceRouter = Router();
+
+/**
+ * Separate router for the channel-scoped voice-states endpoint.
+ * Mounted at /api/v1/channels/:channelId in routes/index.ts.
+ */
+export const voiceStatesRouter = Router({ mergeParams: true });
+
+/**
+ * asyncHandler — Wraps an async route handler so that rejected promises are
+ * forwarded to Express's error middleware via next(err).
+ */
+const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<void>) =>
+  (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+
+// ---------------------------------------------------------------------------
+// LiveKit env var validation
+// ---------------------------------------------------------------------------
+const LIVEKIT_ENABLED = !!(process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET);
+if (!LIVEKIT_ENABLED) {
+  console.warn('[voice] WARNING: LIVEKIT_API_KEY and/or LIVEKIT_API_SECRET are not set. Voice features will be disabled.');
+}
+if (!process.env.LIVEKIT_URL) {
+  console.warn('[voice] WARNING: LIVEKIT_URL is not set, falling back to ws://localhost:7880. Set LIVEKIT_URL in production.');
+}
+
+// ---------------------------------------------------------------------------
+// Redis helpers for voice-state tracking
+// ---------------------------------------------------------------------------
+
+/**
+ * Voice state stored per user in a voice channel.
+ */
+interface VoiceStateEntry {
+  userId: string;
+  username: string;
+  displayName: string;
+  channelId: string;
+  selfMute: boolean;
+  selfDeaf: boolean;
+  joinedAt: string;
+}
+
+const VOICE_STATE_PREFIX = 'voice:channel:';
+const VOICE_USER_PREFIX = 'voice:user:';
+
+/**
+ * Record a user joining a voice channel.
+ */
+async function addVoiceState(entry: VoiceStateEntry): Promise<void> {
+  const key = `${VOICE_STATE_PREFIX}${entry.channelId}`;
+  const userKey = `${VOICE_USER_PREFIX}${entry.userId}`;
+  // Store the state as a hash field keyed by userId
+  await redis.hset(key, entry.userId, JSON.stringify(entry));
+  // Also store which channel this user is in (for quick lookup / leave)
+  await redis.set(userKey, entry.channelId, 'EX', 86400); // 24h TTL safety net
+}
+
+/**
+ * Remove a user from their current voice channel.
+ */
+async function removeVoiceState(userId: string): Promise<string | null> {
+  const userKey = `${VOICE_USER_PREFIX}${userId}`;
+  const channelId = await redis.get(userKey);
+  if (channelId) {
+    const key = `${VOICE_STATE_PREFIX}${channelId}`;
+    await redis.hdel(key, userId);
+    await redis.del(userKey);
+  }
+  return channelId;
+}
+
+/**
+ * Get all voice states for a channel.
+ */
+async function getVoiceStates(channelId: string): Promise<VoiceStateEntry[]> {
+  const key = `${VOICE_STATE_PREFIX}${channelId}`;
+  const raw = await redis.hgetall(key);
+  return Object.values(raw).map((v) => JSON.parse(v) as VoiceStateEntry);
+}
+
+function normalizeChannelType(type: string | null | undefined): string {
+  return String(type ?? '').trim().toUpperCase().replace(/-/g, '_');
+}
+
+function isVoiceCapableType(type: string | null | undefined): boolean {
+  const normalized = normalizeChannelType(type);
+  return (
+    normalized === 'GUILD_VOICE' ||
+    normalized === 'VOICE' ||
+    normalized === 'GUILD_STAGE_VOICE' ||
+    normalized === 'STAGE' ||
+    normalized === 'STAGE_VOICE' ||
+    normalized === 'DM' ||
+    normalized === 'GROUP_DM'
+  );
+}
+
+function isDmLikeType(type: string | null | undefined): boolean {
+  const normalized = normalizeChannelType(type);
+  return normalized === 'DM' || normalized === 'GROUP_DM';
+}
+
+// ---------------------------------------------------------------------------
+// POST /join — Join a voice channel
+// ---------------------------------------------------------------------------
+
+const joinSchema = z.object({
+  channelId: z.string().uuid(),
+  selfMute: z.boolean().optional(),
+  selfDeaf: z.boolean().optional(),
+});
+
+voiceRouter.post(
+  '/join',
+  requireAuth,
+  validate(joinSchema),
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { channelId, selfMute, selfDeaf } = req.body;
+    const userId = req.userId!;
+
+    // Verify the channel exists and is a voice channel
+    const [channel] = await db
+      .select()
+      .from(channels)
+      .where(eq(channels.id, channelId))
+      .limit(1);
+
+    if (!channel) {
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found' });
+      return;
+    }
+
+    if (!isVoiceCapableType(channel.type)) {
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'Channel is not a voice channel' });
+      return;
+    }
+
+    // Check CONNECT permission for guild voice channels
+    if (channel.guildId) {
+      const canConnect = await hasChannelPermission(userId, channel.guildId, channelId, Permissions.CONNECT);
+      if (!canConnect) {
+        res.status(403).json({ code: 'FORBIDDEN', message: 'Missing CONNECT permission for this voice channel' });
+        return;
+      }
+    }
+
+    // Ensure user is a participant for DM/GROUP_DM voice joins
+    if (!channel.guildId && isDmLikeType(channel.type)) {
+      const [membership] = await db
+        .select({ id: dmChannelMembers.id })
+        .from(dmChannelMembers)
+        .where(and(
+          eq(dmChannelMembers.channelId, channelId),
+          eq(dmChannelMembers.userId, userId),
+        ))
+        .limit(1);
+
+      if (!membership) {
+        res.status(403).json({ code: 'FORBIDDEN', message: 'You are not a member of this direct message channel' });
+        return;
+      }
+    }
+
+    // Get user info for participant name
+    const [user] = await db
+      .select({ username: users.username, displayName: users.displayName })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const participantName = user?.displayName || user?.username || 'Unknown';
+
+    // Room name is the channel ID
+    const roomName = channelId;
+
+    // Validate LiveKit is configured before attempting to create a token
+    if (!LIVEKIT_ENABLED) {
+      res.status(503).json({ code: 'SERVICE_UNAVAILABLE', message: 'Voice features are not configured on this server' });
+      return;
+    }
+
+    // Create LiveKit access token
+    const apiKey = process.env.LIVEKIT_API_KEY!;
+    const apiSecret = process.env.LIVEKIT_API_SECRET!;
+
+    const at = new AccessToken(apiKey, apiSecret, {
+      identity: userId,
+      name: participantName,
+    });
+
+    at.addGrant({
+      room: roomName,
+      roomJoin: true,
+      canPublish: true,
+      canSubscribe: true,
+      canPublishData: true,
+    });
+
+    const token = await at.toJwt();
+
+    // The WebSocket URL for the frontend to connect
+    const endpoint = process.env.LIVEKIT_URL || 'ws://localhost:7880';
+
+    // Track voice state in Redis
+    const voiceState: VoiceStateEntry = {
+      userId,
+      username: user?.username || 'unknown',
+      displayName: participantName,
+      channelId,
+      selfMute: selfMute ?? false,
+      selfDeaf: selfDeaf ?? false,
+      joinedAt: new Date().toISOString(),
+    };
+
+    // Remove from any previous channel first
+    await removeVoiceState(userId);
+    await addVoiceState(voiceState);
+
+    // Broadcast VOICE_STATE_UPDATE so other clients can play join sounds / update UI
+    try {
+      const io = getIO();
+      const room = channel.guildId ? `guild:${channel.guildId}` : `channel:${channelId}`;
+      io.to(room).emit('VOICE_STATE_UPDATE', {
+        type: 'join',
+        userId,
+        username: user?.username || 'unknown',
+        displayName: participantName,
+        channelId,
+        selfMute: selfMute ?? false,
+        selfDeaf: selfDeaf ?? false,
+      });
+    } catch {
+      // Socket.io may not be initialised in tests
+    }
+
+    res.json({
+      token,
+      endpoint,
+      voiceState: {
+        channelId,
+        userId,
+        selfMute: selfMute ?? false,
+        selfDeaf: selfDeaf ?? false,
+        sessionId: roomName,
+      },
+    });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// POST /leave — Leave the current voice channel
+// ---------------------------------------------------------------------------
+
+voiceRouter.post(
+  '/leave',
+  requireAuth,
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const userId = req.userId!;
+
+    // Remove voice state from Redis and get the channel they were in
+    const channelId = await removeVoiceState(userId);
+
+    if (channelId) {
+      // Look up channel to determine which room to broadcast to
+      try {
+        const [channel] = await db
+          .select({ guildId: channels.guildId })
+          .from(channels)
+          .where(eq(channels.id, channelId))
+          .limit(1);
+
+        const io = getIO();
+        const room = channel?.guildId ? `guild:${channel.guildId}` : `channel:${channelId}`;
+        io.to(room).emit('VOICE_STATE_UPDATE', {
+          type: 'leave',
+          userId,
+          channelId,
+        });
+      } catch {
+        // Socket.io may not be initialised in tests
+      }
+    }
+
+    res.json({ ok: true });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// GET /voice-states — List users currently in a voice channel
+// ---------------------------------------------------------------------------
+// Mounted at /api/v1/channels/:channelId/voice-states via voiceStatesRouter
+
+voiceStatesRouter.get(
+  '/voice-states',
+  requireAuth,
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const channelId = req.params.channelId as string;
+
+    if (!channelId) {
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'Missing channelId' });
+      return;
+    }
+
+    // Verify the channel exists
+    const [channel] = await db
+      .select()
+      .from(channels)
+      .where(eq(channels.id, channelId))
+      .limit(1);
+
+    if (!channel) {
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found' });
+      return;
+    }
+
+    const states = await getVoiceStates(channelId);
+
+    res.json(states);
+  }),
+);

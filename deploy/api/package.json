@@ -1,0 +1,63 @@
+{
+  "name": "gratonite-api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "nodemon",
+    "build": "tsc",
+    "lint": "eslint src --max-warnings=0",
+    "start": "node dist/index.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:doctor": "tsx src/scripts/db-doctor.ts",
+    "create:test-user": "tsx src/scripts/create-test-user.ts",
+    "seed:catalog": "tsx src/scripts/seed-catalog.ts",
+    "seed:discover-starter": "tsx src/scripts/seed-discover-starter.ts",
+    "gate:data": "tsx src/scripts/gate-data.ts",
+    "test:guild-get-contract": "JWT_SECRET=0123456789abcdef0123456789abcdef JWT_REFRESH_SECRET=fedcba9876543210fedcba9876543210 tsx src/scripts/test-guild-get-contract.ts",
+    "db:studio": "drizzle-kit studio",
+    "guard:placeholders": "node ../../tools/placeholder-guard.mjs",
+    "verify:prod": "pnpm run build && pnpm run lint && pnpm run guard:placeholders",
+    "verify:release": "pnpm run build && pnpm run guard:placeholders && pnpm run gate:data && pnpm run test:guild-get-contract && pnpm run lint"
+  },
+  "dependencies": {
+    "argon2": "^0.44.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "drizzle-orm": "^0.45.1",
+    "express": "^5.2.1",
+    "ioredis": "^5.10.0",
+    "jsonwebtoken": "^9.0.3",
+    "livekit-server-sdk": "^2.15.0",
+    "multer": "^2.1.0",
+    "nodemailer": "^8.0.1",
+    "pg": "^8.19.0",
+    "socket.io": "^4.8.3",
+    "zod": "^4.3.6"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "argon2",
+      "esbuild"
+    ]
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^25.3.3",
+    "@types/nodemailer": "^7.0.11",
+    "@types/pg": "^8.18.0",
+    "eslint": "^9.39.1",
+    "globals": "^16.4.0",
+    "drizzle-kit": "^0.31.9",
+    "nodemon": "^3.1.14",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.2"
+  }
+}
