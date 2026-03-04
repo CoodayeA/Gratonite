@@ -553,14 +553,16 @@ relationshipsRouter.post(
         return;
       }
 
-      // Verify friendship.
+      // Verify friendship (check both directions).
       const [friendship] = await db
         .select({ id: relationships.id })
         .from(relationships)
         .where(
           and(
-            eq(relationships.requesterId, userId),
-            eq(relationships.addresseeId, targetUserId),
+            or(
+              and(eq(relationships.requesterId, userId), eq(relationships.addresseeId, targetUserId)),
+              and(eq(relationships.requesterId, targetUserId), eq(relationships.addresseeId, userId)),
+            ),
             eq(relationships.type, 'FRIEND'),
           ),
         )
@@ -722,14 +724,18 @@ relationshipsRouter.post(
 
       const senderName = requester?.displayName || requester?.username || 'Someone';
 
-      // Notify the target user about the friend request
-      await createNotification({
-        userId: targetUserId,
-        type: 'friend_request',
-        title: 'New Friend Request',
-        body: `${senderName} sent you a friend request.`,
-        data: { senderId: userId, senderName },
-      });
+      // Notify the target user about the friend request (non-fatal)
+      try {
+        await createNotification({
+          userId: targetUserId,
+          type: 'friend_request',
+          title: 'New Friend Request',
+          body: `${senderName} sent you a friend request.`,
+          data: { senderId: userId, senderName },
+        });
+      } catch {
+        console.warn('[relationships] failed to create notification for friend request, continuing');
+      }
 
       // Emit real-time socket event so the target's Friends page updates instantly
       try {

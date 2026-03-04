@@ -343,7 +343,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         const username = typeof state?.username === 'string' ? state.username : '';
         const displayName = typeof state?.displayName === 'string' && state.displayName.trim()
             ? state.displayName
-            : (username || 'Unknown');
+            : (username || userId.slice(0, 8));
         return {
             userId,
             username,

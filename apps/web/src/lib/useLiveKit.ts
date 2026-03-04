@@ -21,6 +21,15 @@ import { api } from './api';
 setLogLevel('error', LoggerNames.Engine);
 setLogLevel('error', LoggerNames.PCTransport);
 
+export type StreamQuality = 'low' | 'medium' | 'high' | 'source';
+
+const QUALITY_PRESETS: Record<StreamQuality, { maxBitrate: number; maxFramerate: number } | undefined> = {
+  low:    { maxBitrate: 500_000,   maxFramerate: 15 },
+  medium: { maxBitrate: 1_500_000, maxFramerate: 30 },
+  high:   { maxBitrate: 4_000_000, maxFramerate: 60 },
+  source: undefined,
+};
+
 // Participant info with real-time state
 export interface LiveKitParticipant {
   id: string;
@@ -69,6 +78,10 @@ export interface UseLiveKitReturn {
   selectedAudioInputId: string | null;
   selectedVideoInputId: string | null;
   
+  // Stream quality
+  streamQuality: StreamQuality;
+  setStreamQuality: (quality: StreamQuality) => void;
+
   // Actions
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
@@ -105,6 +118,9 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
   const [isDeafened, setIsDeafened] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+
+  // Stream quality
+  const [streamQuality, setStreamQuality] = useState<StreamQuality>('medium');
 
   // Participants
   const [participants, setParticipants] = useState<LiveKitParticipant[]>([]);
@@ -515,22 +531,30 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
     if (!room?.localParticipant) return;
 
     const newCameraOn = !isCameraOn;
+    const preset = QUALITY_PRESETS[streamQuality];
+    const opts: Record<string, unknown> = {};
+    if (preset) {
+      opts.videoEncoding = {
+        maxBitrate: preset.maxBitrate,
+        maxFramerate: preset.maxFramerate,
+      };
+    }
     try {
-      await room.localParticipant.setCameraEnabled(newCameraOn);
+      await room.localParticipant.setCameraEnabled(newCameraOn, newCameraOn ? opts : undefined);
     } catch (err) {
       if (newCameraOn && isDeviceNotFoundError(err)) {
         const fallbackDeviceId = await getFirstMediaDeviceId('videoinput');
         if (!fallbackDeviceId) {
           throw new Error('No camera device found. Connect a camera and retry.');
         }
-        await room.localParticipant.setCameraEnabled(true, { deviceId: fallbackDeviceId });
+        await room.localParticipant.setCameraEnabled(true, { deviceId: fallbackDeviceId, ...opts });
       } else {
         throw err;
       }
     }
     setIsCameraOn(newCameraOn);
     updateParticipants();
-  }, [isCameraOn, updateParticipants, isDeviceNotFoundError, getFirstMediaDeviceId]);
+  }, [isCameraOn, updateParticipants, isDeviceNotFoundError, getFirstMediaDeviceId, streamQuality]);
 
   // Start screen share
   const startScreenShare = useCallback(async () => {
@@ -538,13 +562,21 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
     if (!room?.localParticipant) return;
 
     try {
-      await room.localParticipant.setScreenShareEnabled(true);
+      const preset = QUALITY_PRESETS[streamQuality];
+      const opts: Record<string, unknown> = {};
+      if (preset) {
+        opts.screenShareEncoding = {
+          maxBitrate: preset.maxBitrate,
+          maxFramerate: preset.maxFramerate,
+        };
+      }
+      await room.localParticipant.setScreenShareEnabled(true, opts);
       setIsScreenSharing(true);
       updateParticipants();
     } catch (err) {
       console.error('[LiveKit] Failed to start screen share:', err);
     }
-  }, [updateParticipants]);
+  }, [updateParticipants, streamQuality]);
 
   // Stop screen share
   const stopScreenShare = useCallback(async () => {
@@ -629,6 +661,8 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
     isDeafened,
     isCameraOn,
     isScreenSharing,
+    streamQuality,
+    setStreamQuality,
     participants,
     localParticipant,
     audioInputDevices,

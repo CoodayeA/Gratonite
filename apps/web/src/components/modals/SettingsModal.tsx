@@ -390,6 +390,15 @@ const SettingsModal = ({
                 setSoundVolume(s.soundVolume);
             }
         }).catch(() => { /* settings may not exist yet */ });
+
+        // Auto-sync nameplateStyle: if DB has no value but localStorage does, push it to the API
+        const localNameplate = localStorage.getItem('gratonite-nameplate-style');
+        if (localNameplate && localNameplate !== 'none') {
+            const dbNameplate = userProfile?.nameplateStyle;
+            if (!dbNameplate || dbNameplate === 'none' || dbNameplate === '') {
+                api.users.updateProfile({ nameplateStyle: localNameplate }).catch(() => {});
+            }
+        }
     }, []);
 
     // Debounced settings save

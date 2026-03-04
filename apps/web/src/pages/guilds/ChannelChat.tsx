@@ -19,7 +19,7 @@ import UserProfilePopover from '../../components/ui/UserProfilePopover';
 import { playSound } from '../../utils/SoundManager';
 import { api, API_BASE } from '../../lib/api';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
-import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onChannelPinsUpdate, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type ChannelPinsUpdatePayload } from '../../lib/socket';
+import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onChannelPinsUpdate, onSocketReconnect, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type ChannelPinsUpdatePayload } from '../../lib/socket';
 import Avatar from '../../components/ui/Avatar';
 
 type MediaType = 'image' | 'video';
@@ -1084,7 +1084,13 @@ const ChannelChat = () => {
     useEffect(() => {
         if (!channelId) return;
         socketJoinChannel(channelId);
-        return () => { socketLeaveChannel(channelId); };
+        const unsubReconnect = onSocketReconnect(() => {
+            socketJoinChannel(channelId);
+        });
+        return () => {
+            unsubReconnect();
+            socketLeaveChannel(channelId);
+        };
     }, [channelId]);
 
     // Listen for channel background updates from other users/admins

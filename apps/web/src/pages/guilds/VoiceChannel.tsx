@@ -47,7 +47,8 @@ const ParticipantVideo = ({ track }: { track: any }) => {
             style={{
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover',
+                objectFit: 'contain',
+                background: '#000',
                 borderRadius: 'var(--radius-lg)',
             }}
         />
@@ -108,6 +109,8 @@ const VoiceChannel = () => {
         refreshDevices,
         selectAudioInput,
         selectVideoInput,
+        streamQuality,
+        setStreamQuality,
     } = useLiveKit({
         channelId: channelId || '',
         onParticipantJoined: useCallback((participant: LiveKitParticipant) => {
@@ -973,6 +976,23 @@ const VoiceChannel = () => {
                             <MonitorUp size={20} />
                         </button>
                         <div className="tooltip">{isScreenSharing ? 'Stop Sharing' : 'Share Screen'}</div>
+                    </div>
+
+                    {/* Stream Quality Picker */}
+                    <div style={{ display: 'flex', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--stroke)', height: '36px', alignSelf: 'center' }}>
+                        {(['low', 'medium', 'high', 'source'] as const).map((q) => (
+                            <button
+                                key={q}
+                                onClick={() => setStreamQuality(q)}
+                                style={{
+                                    padding: '0 10px', border: 'none', fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                                    background: streamQuality === q ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                    color: streamQuality === q ? '#000' : 'var(--text-secondary)',
+                                }}
+                            >
+                                {q === 'medium' ? 'Med' : q.charAt(0).toUpperCase() + q.slice(1)}
+                            </button>
+                        ))}
                     </div>
 
                     <div style={{ width: '1px', height: '32px', background: 'var(--stroke)', margin: '0 8px' }}></div>

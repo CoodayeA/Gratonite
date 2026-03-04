@@ -199,7 +199,7 @@ voiceRouter.post(
       .where(eq(users.id, userId))
       .limit(1);
 
-    const participantName = user?.displayName || user?.username || 'Unknown';
+    const participantName = user?.displayName || user?.username || userId.slice(0, 8);
 
     // Room name is the channel ID
     const roomName = channelId;
