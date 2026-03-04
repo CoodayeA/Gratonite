@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import AuthNavigator from './src/navigation/AuthNavigator';
 import AppNavigator from './src/navigation/AppNavigator';
+import OfflineBanner from './src/components/OfflineBanner';
 import { colors } from './src/lib/theme';
 
 function RootNavigator() {
@@ -45,6 +46,7 @@ export default function App() {
         }}
       >
         <AuthProvider>
+          <OfflineBanner />
           <RootNavigator />
           <StatusBar style="light" />
         </AuthProvider>

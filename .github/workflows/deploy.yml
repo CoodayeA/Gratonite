@@ -1,0 +1,65 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Build API
+        run: |
+          cd apps/api
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+      - name: Build Web
+        run: |
+          cd apps/web
+          npm ci
+          npm run build
+
+      - name: Prepare deploy package
+        run: |
+          mkdir -p deploy/api
+          mkdir -p deploy/web/dist
+          cp -r apps/api/dist deploy/api/
+          cp -r apps/api/drizzle deploy/api/
+          cp apps/api/package.json deploy/api/
+          cp apps/api/pnpm-lock.yaml deploy/api/
+          cp apps/api/drizzle.config.ts deploy/api/
+          cp -r apps/web/dist/. deploy/web/dist/
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known hosts
+        run: ssh-keyscan gratonite.chat >> ~/.ssh/known_hosts
+
+      - name: Upload to server
+        run: |
+          rsync -avz \
+            deploy/ \
+            ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/
+
+      - name: Restart containers and run migrations
+        run: |
+          ssh ferdinand@gratonite.chat \
+            'cd /home/ferdinand/gratonite-app &&
+             docker compose -f docker-compose.production.yml up -d --force-recreate api web &&
+             docker exec gratonite-api sh -c "cd /app && npx drizzle-kit migrate" || true &&
+             docker compose -f docker-compose.production.yml ps'
