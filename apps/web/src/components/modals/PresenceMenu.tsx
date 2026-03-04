@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Smile, Check, Paintbrush } from 'lucide-react';
+import { User, Smile, Check, Paintbrush, LogOut } from 'lucide-react';
 import { useTheme, AppTheme } from '../ui/ThemeProvider';
 
 export type PresenceType = 'online' | 'idle' | 'dnd' | 'invisible';
@@ -13,6 +13,7 @@ interface PresenceMenuProps {
     onChangeStatus: (s: string | null) => void;
     onOpenProfile: () => void;
     onOpenSettings: () => void;
+    onLogout: () => void;
     userName?: string;
     avatarUrl?: string | null;
 }
@@ -24,7 +25,7 @@ export const PRESENCE_COLORS = {
     invisible: '#6b7280'
 };
 
-const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, customStatus, onChangeStatus, onOpenProfile, userName, avatarUrl }: PresenceMenuProps) => {
+const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, customStatus, onChangeStatus, onOpenProfile, onLogout, userName, avatarUrl }: PresenceMenuProps) => {
     const [isEditingStatus, setIsEditingStatus] = useState(false);
     const [statusInput, setStatusInput] = useState(customStatus || '');
     const [mounted, setMounted] = useState(false);
@@ -184,6 +185,15 @@ const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, cust
                         {theme === t && <Check size={14} color="var(--text-muted)" />}
                     </button>
                 ))}
+
+                <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }}></div>
+
+                <button onClick={() => { onClose(); onLogout(); }} className="menu-item" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', background: 'transparent', border: 'none', width: '100%', textAlign: 'left', borderRadius: 'var(--radius-sm)', color: '#ef4444' }}
+                    onMouseOver={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.1)')}
+                    onMouseOut={e => (e.currentTarget.style.background = 'transparent')}>
+                    <LogOut size={16} />
+                    <span style={{ fontSize: '14px' }}>Log Out</span>
+                </button>
             </div>
 
             <style>

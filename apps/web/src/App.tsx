@@ -674,6 +674,12 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 onChangeStatus={setCustomStatus}
                 onOpenProfile={() => { setPresenceMenuOpen(false); onOpenProfile(); }}
                 onOpenSettings={() => { setPresenceMenuOpen(false); onOpenSettings(); }}
+                onLogout={async () => {
+                    try { await api.auth.logout(); } catch { /* ignore */ }
+                    window.localStorage.removeItem('gratonite_access_token');
+                    window.localStorage.removeItem('gratonite_user');
+                    window.location.replace('/app/login');
+                }}
                 userName={userProfile.name}
                 avatarUrl={userAvatarUrl}
             />
