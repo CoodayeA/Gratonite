@@ -9,11 +9,14 @@ build/
 .next/
 out/
 
-# Environment variables
+# Environment variables (secrets — never commit these)
 .env
 .env.local
 .env.*.local
 .env.production
+
+# Exception: web app public config is not secret
+!apps/web/.env.production
 
 # Uploads (user-generated content, not source code)
 apps/api/uploads/
