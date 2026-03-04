@@ -60,6 +60,6 @@ jobs:
         run: |
           ssh ferdinand@gratonite.chat \
             'cd /home/ferdinand/gratonite-app &&
-             docker compose -f docker-compose.production.yml up -d --force-recreate api web &&
+             docker compose --env-file .env.production -f docker-compose.production.yml up -d --force-recreate api web &&
              docker exec gratonite-api sh -c "cd /app && npx drizzle-kit migrate" || true &&
              docker compose -f docker-compose.production.yml ps'

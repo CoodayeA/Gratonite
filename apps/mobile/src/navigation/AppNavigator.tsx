@@ -5,14 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 import GuildListScreen from '../screens/app/GuildListScreen';
 import DMListScreen from '../screens/app/DMListScreen';
 import FriendsScreen from '../screens/app/FriendsScreen';
-import GuildChannelsScreen from '../screens/guild/GuildChannelsScreen';
-import ChannelChatScreen from '../screens/guild/ChannelChatScreen';
-import VoiceChannelScreen from '../screens/guild/VoiceChannelScreen';
 import DirectMessageScreen from '../screens/app/DirectMessageScreen';
 import CreateGuildScreen from '../screens/app/CreateGuildScreen';
 import GuildSettingsScreen from '../screens/guild/GuildSettingsScreen';
 import GuildMemberListScreen from '../screens/guild/GuildMemberListScreen';
 import InviteAcceptScreen from '../screens/app/InviteAcceptScreen';
+import GuildDrawerNavigator from './GuildDrawerNavigator';
 import { colors, fontSize } from '../lib/theme';
 import type { AppStackParamList, AppTabParamList } from './types';
 
@@ -45,8 +43,8 @@ function MainTabs() {
         component={GuildListScreen}
         options={{
           tabBarLabel: 'Servers',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="planet-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "planet" : "planet-outline"} size={size} color={color} />
           ),
         }}
       />
@@ -55,8 +53,8 @@ function MainTabs() {
         component={DMListScreen}
         options={{
           tabBarLabel: 'Messages',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "chatbubbles" : "chatbubbles-outline"} size={size} color={color} />
           ),
         }}
       />
@@ -65,8 +63,8 @@ function MainTabs() {
         component={FriendsScreen}
         options={{
           tabBarLabel: 'Friends',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "people" : "people-outline"} size={size} color={color} />
           ),
         }}
       />
@@ -96,26 +94,9 @@ export default function AppNavigator() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="GuildChannels"
-        component={GuildChannelsScreen}
-        options={({ route }) => ({
-          title: route.params.guildName,
-        })}
-      />
-      <Stack.Screen
-        name="ChannelChat"
-        component={ChannelChatScreen}
-        options={({ route }) => ({
-          title: `#${route.params.channelName}`,
-        })}
-      />
-      <Stack.Screen
-        name="VoiceChannel"
-        component={VoiceChannelScreen}
-        options={({ route }) => ({
-          title: route.params.channelName,
-          headerBackTitle: 'Back',
-        })}
+        name="GuildDrawer"
+        component={GuildDrawerNavigator}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="DirectMessage"

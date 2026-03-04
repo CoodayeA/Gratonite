@@ -55,7 +55,7 @@ export default function GuildListScreen({ navigation }: Props) {
   const renderGuild = ({ item }: { item: Guild }) => (
     <TouchableOpacity
       style={styles.guildItem}
-      onPress={() => navigation.navigate('GuildChannels', { guildId: item.id, guildName: item.name })}
+      onPress={() => navigation.navigate('GuildDrawer', { guildId: item.id, guildName: item.name })}
     >
       <View style={styles.guildIcon}>
         <Text style={styles.guildIconText}>

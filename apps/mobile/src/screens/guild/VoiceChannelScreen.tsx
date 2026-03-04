@@ -8,13 +8,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LiveKitRoom } from '@livekit/react-native';
 import { voice as voiceApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, fontSize, borderRadius } from '../../lib/theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 
-type Props = NativeStackScreenProps<AppStackParamList, 'VoiceChannel'>;
+type Props = any;
 
 export default function VoiceChannelScreen({ route, navigation }: Props) {
   const { channelId, channelName } = route.params;
@@ -59,13 +60,13 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
     return () => {
       // Cleanup on unmount
       if (connected) {
-        voiceApi.leave().catch(() => {});
+        voiceApi.leave().catch(() => { });
       }
     };
   }, []);
 
-  return (
-    <View style={styles.container}>
+  const renderContent = () => (
+    <>
       <View style={styles.content}>
         {/* Channel info */}
         <View style={styles.channelInfo}>
@@ -132,6 +133,23 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
           <Text style={styles.hangupLabel}>Leave</Text>
         </TouchableOpacity>
       </View>
+    </>
+  );
+
+  return (
+    <View style={styles.container}>
+      {token && endpoint ? (
+        <LiveKitRoom
+          serverUrl={endpoint}
+          token={token}
+          connect={true}
+          audio={!muted}
+        >
+          {renderContent()}
+        </LiveKitRoom>
+      ) : (
+        renderContent()
+      )}
     </View>
   );
 }

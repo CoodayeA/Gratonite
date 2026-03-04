@@ -129,7 +129,13 @@ export default function DirectMessageScreen({ route }: Props) {
             <Text style={styles.messageTime}>{formatTime(item.createdAt)}</Text>
           </View>
         )}
-        <Text style={styles.messageContent}>{item.content}</Text>
+        <View style={[styles.messageBubbleWrapper, isOwn && styles.messageBubbleWrapperOwn, isGrouped && styles.messageGroupedWrapper]}>
+          <View style={[styles.messageBubble, isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther]}>
+            <Text style={[styles.messageContent, isOwn && styles.messageContentOwn]}>
+              {item.content}
+            </Text>
+          </View>
+        </View>
       </View>
     );
   };
@@ -247,7 +253,33 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: fontSize.md,
     lineHeight: 22,
+  },
+  messageContentOwn: {
+    color: colors.white,
+  },
+  messageBubbleWrapper: {
     marginLeft: 40,
+    alignItems: 'flex-start',
+  },
+  messageBubbleWrapperOwn: {
+    marginLeft: 0,
+  },
+  messageGroupedWrapper: {
+    marginTop: -spacing.xs,
+  },
+  messageBubble: {
+    backgroundColor: colors.bgElevated,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
+    maxWidth: '85%',
+  },
+  messageBubbleOther: {
+    borderTopLeftRadius: 4,
+  },
+  messageBubbleOwn: {
+    backgroundColor: colors.accentPrimary,
+    borderTopRightRadius: 4,
   },
   empty: {
     flex: 1,

@@ -11,6 +11,7 @@ export type AppTabParamList = {
 
 export type AppStackParamList = {
   MainTabs: undefined;
+  GuildDrawer: { guildId: string; guildName: string };
   GuildChannels: { guildId: string; guildName: string };
   ChannelChat: { channelId: string; channelName: string; guildId: string };
   VoiceChannel: { channelId: string; channelName: string; guildId: string };

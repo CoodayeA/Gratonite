@@ -20,13 +20,15 @@ import {
   onMessageReactionRemove,
   getSocket,
 } from '../../lib/socket';
+import { files as filesApi } from '../../lib/api';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, fontSize, borderRadius } from '../../lib/theme';
 import type { Message, ReactionGroup } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 
-type Props = NativeStackScreenProps<AppStackParamList, 'ChannelChat'>;
+type Props = any;
 
 // Common emojis for the quick-reaction picker
 const QUICK_EMOJIS = ['\u{1F44D}', '\u{2764}\u{FE0F}', '\u{1F602}', '\u{1F60E}', '\u{1F525}', '\u{1F389}'];
@@ -214,13 +216,50 @@ export default function ChannelChatScreen({ route }: Props) {
     }
   };
 
+  const handlePickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images', 'videos'],// ImagePicker.MediaTypeOptions.Images, (using older SDK strings is safer or explicitly mediaTypes 'images' if expo 50+)
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      setSending(true);
+      try {
+        const formData = new FormData();
+        const filename = asset.uri.split('/').pop() || 'upload.jpg';
+
+        // React Native FormData requires this specific object structure for files
+        formData.append('file', {
+          uri: asset.uri,
+          name: filename,
+          type: asset.mimeType || 'image/jpeg',
+        } as any);
+
+        const uploadRes = await filesApi.upload(formData);
+
+        // Once string is returned, send message
+        const msg = await messagesApi.send(channelId, uploadRes.url);
+        setMessageList((prev) => {
+          if (prev.some((m) => m.id === msg.id)) return prev;
+          return [...prev, msg];
+        });
+      } catch (err) {
+        Alert.alert('Upload failed', 'There was an error uploading your file.');
+      } finally {
+        setSending(false);
+      }
+    }
+  };
+
   // Send typing indicator (throttled to every 3s)
   const handleInputChange = (text: string) => {
     setInputText(text);
     const now = Date.now();
     if (text.length > 0 && now - typingThrottle.current > 3000) {
       typingThrottle.current = now;
-      messagesApi.sendTyping(channelId).catch(() => {});
+      messagesApi.sendTyping(channelId).catch(() => { });
     }
   };
 
@@ -275,9 +314,13 @@ export default function ChannelChatScreen({ route }: Props) {
             <Text style={styles.messageTime}>{formatTime(item.createdAt)}</Text>
           </View>
         )}
-        <Text style={[styles.messageContent, isGrouped && styles.messageContentGrouped]}>
-          {item.content}
-        </Text>
+        <View style={[styles.messageBubbleWrapper, isOwn && styles.messageBubbleWrapperOwn, isGrouped && styles.messageGroupedWrapper]}>
+          <View style={[styles.messageBubble, isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther]}>
+            <Text style={[styles.messageContent, isOwn && styles.messageContentOwn]}>
+              {item.content}
+            </Text>
+          </View>
+        </View>
 
         {/* Reaction display */}
         {rxns.length > 0 && (
@@ -369,6 +412,9 @@ export default function ChannelChatScreen({ route }: Props) {
       )}
 
       <View style={styles.inputBar}>
+        <TouchableOpacity style={styles.attachButton} onPress={handlePickImage} disabled={sending}>
+          <Ionicons name="add" size={24} color={colors.textMuted} />
+        </TouchableOpacity>
         <TextInput
           style={styles.textInput}
           value={inputText}
@@ -455,10 +501,35 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: fontSize.md,
     lineHeight: 22,
-    marginLeft: 40, // aligned with text after avatar
   },
-  messageContentGrouped: {
+  messageContentOwn: {
+    color: colors.white,
+  },
+  messageBubbleWrapper: {
     marginLeft: 40,
+    alignItems: 'flex-start',
+  },
+  messageBubbleWrapperOwn: {
+    marginLeft: 0, // Reset for own messages if handled globally, but here we keep typical left-align
+    // Wait, in standard chat, own messages might be right aligned. If we want that:
+    // width: '100%', alignItems: 'flex-end', marginLeft: 0
+  },
+  messageGroupedWrapper: {
+    marginTop: -spacing.xs,
+  },
+  messageBubble: {
+    backgroundColor: colors.bgElevated,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
+    maxWidth: '85%',
+  },
+  messageBubbleOther: {
+    borderTopLeftRadius: 4,
+  },
+  messageBubbleOwn: {
+    backgroundColor: colors.accentPrimary,
+    borderTopRightRadius: 4,
   },
   loadingMore: {
     paddingVertical: spacing.md,
@@ -488,6 +559,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     gap: spacing.sm,
+  },
+  attachButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.bgElevated,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   textInput: {
     flex: 1,
