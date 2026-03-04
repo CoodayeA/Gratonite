@@ -48,3 +48,4 @@ archive/
 
 # TypeScript cache
 *.tsbuildinfo
+.worktrees/
