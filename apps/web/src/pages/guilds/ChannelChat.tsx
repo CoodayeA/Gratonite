@@ -1101,7 +1101,7 @@ const ChannelChat = () => {
         const handler = (data: { channelId: string; backgroundUrl: string | null; backgroundType: string | null }) => {
             if (data.channelId !== channelId) return;
             if (data.backgroundUrl) {
-                setBgMedia({ url: data.backgroundUrl, type: data.backgroundType || 'image' });
+                setBgMedia({ url: data.backgroundUrl, type: (data.backgroundType || 'image') as MediaType });
             } else {
                 setBgMedia(null);
             }
