@@ -110,6 +110,8 @@ const MemoizedMessageItem = memo(({
     currentUserId,
     currentUserAvatarFrame,
     currentUserNameplateStyle,
+    guildId,
+    addToast,
 }: any) => {
     const [isHovered, setIsHovered] = useState(false);
     const [famGiven, setFamGiven] = useState(false);

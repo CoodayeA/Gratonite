@@ -756,7 +756,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                             {collapsed['dm'] ? <ChevronRight size={14} /> : <ChevronDown size={14} />} <span>Direct Messages</span>
                         </div>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <Users size={14} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} title="New Group DM" onClick={(e) => { e.stopPropagation(); onOpenCreateGroupDm(); }} />
+                            <Users size={14} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} aria-label="New Group DM" onClick={(e) => { e.stopPropagation(); onOpenCreateGroupDm(); }} />
                             <Plus size={14} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onOpenDMSearch(); }} />
                         </div>
                     </div>

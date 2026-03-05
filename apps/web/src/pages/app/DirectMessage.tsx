@@ -1539,7 +1539,7 @@ const DirectMessage = () => {
                         <div style={{ padding: '16px', borderBottom: '1px solid var(--stroke)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>Members — {groupParticipants.length}</h3>
                             {groupOwnerId === userProfile?.id && (
-                                <UserPlus size={18} style={{ cursor: 'pointer', color: 'var(--text-muted)' }} title="Add Member" onClick={() => setShowAddMember(!showAddMember)} />
+                                <UserPlus size={18} style={{ cursor: 'pointer', color: 'var(--text-muted)' }} aria-label="Add Member" onClick={() => setShowAddMember(!showAddMember)} />
                             )}
                         </div>
 
@@ -1589,7 +1589,7 @@ const DirectMessage = () => {
                                         <UserMinus
                                             size={16}
                                             style={{ cursor: 'pointer', color: 'var(--text-muted)', flexShrink: 0 }}
-                                            title="Remove member"
+                                            aria-label="Remove member"
                                             onClick={async () => {
                                                 try {
                                                     await api.groupDms.removeMember(dmChannelId, p.id);
