@@ -728,7 +728,15 @@ const Friends = () => {
                                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                                 </button>
                                             )}
-                                            <button onClick={() => addToast({ title: req.type === 'incoming' ? 'Request Ignored' : 'Request Cancelled', description: `Friend request ${req.type === 'incoming' ? 'from' : 'to'} ${req.displayName} has been ${req.type === 'incoming' ? 'ignored' : 'cancelled'}.`, variant: 'info' })} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--error)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title={req.type === 'incoming' ? 'Ignore' : 'Cancel'}>
+                                            <button onClick={async () => {
+                                                try {
+                                                    await api.relationships.removeFriend(req.id);
+                                                    addToast({ title: req.type === 'incoming' ? 'Request Declined' : 'Request Cancelled', description: `Friend request ${req.type === 'incoming' ? 'from' : 'to'} ${req.displayName} has been ${req.type === 'incoming' ? 'declined' : 'cancelled'}.`, variant: 'info' });
+                                                    fetchRelationships();
+                                                } catch {
+                                                    addToast({ title: 'Failed', variant: 'error' });
+                                                }
+                                            }} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--error)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title={req.type === 'incoming' ? 'Decline' : 'Cancel'}>
                                                 <X size={20} />
                                             </button>
                                         </div>
