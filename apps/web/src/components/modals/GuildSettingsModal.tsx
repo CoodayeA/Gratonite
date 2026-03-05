@@ -784,12 +784,12 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         if (!guildId) return;
         try {
             await api.guilds.update(guildId, { name: serverName, description: serverDesc });
-            addAuditEntry('Server Settings Changed', actorName, `Name/Description updated`, 'settings');
+            addAuditEntry('Portal Settings Changed', actorName, `Name/Description updated`, 'settings');
             emitGuildUpdated();
             setSavedIndicator(true);
             setTimeout(() => setSavedIndicator(false), 2500);
         } catch {
-            addToast({ title: 'Failed to save server settings', variant: 'error' });
+            addToast({ title: 'Failed to save portal settings', variant: 'error' });
         }
     };
 
@@ -836,7 +836,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         if (!guildId) return;
         try {
             await api.guilds.update(guildId, { accentColor: selectedAccentColor });
-            addAuditEntry('Server Settings Changed', actorName, `Accent color → ${selectedAccentColor}`, 'settings');
+            addAuditEntry('Portal Settings Changed', actorName, `Accent color → ${selectedAccentColor}`, 'settings');
             emitGuildUpdated();
             setSavedIndicator(true);
             setTimeout(() => setSavedIndicator(false), 2500);

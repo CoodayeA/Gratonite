@@ -3441,10 +3441,12 @@ a {
     .auth-button { min-height: 52px; }
 }
 
-/* Desktop: hide mobile-only header toggles, show desktop hash */
+/* Desktop: hide mobile-only elements */
 .mobile-header-toggles { display: none !important; }
 .desktop-hash-icon { display: inline-block !important; }
 .hidden-on-mobile { display: flex !important; }
+.mobile-bottom-nav { display: none; }
+.mobile-backdrop { display: none; }
 
 /* Tablet (768px – 1024px) */
 @media (max-width: 1024px) {
@@ -3454,12 +3456,65 @@ a {
 
 /* Phone (<768px) */
 @media (max-width: 768px) {
-    .sidebar { position: fixed; left: -260px; top: 0; height: 100%; z-index: 500; transition: left 0.3s ease; }
-    .sidebar.open { left: 0; box-shadow: 8px 0 32px rgba(0,0,0,0.6); }
-    .guild-rail { display: none !important; }
+    /* Channel sidebar: slide-in drawer from left */
+    .channel-sidebar {
+        position: fixed !important;
+        left: -280px;
+        top: 0;
+        height: 100%;
+        width: 280px !important;
+        z-index: 500;
+        transition: left 0.3s ease;
+    }
+    .channel-sidebar.open { left: 0 !important; box-shadow: 8px 0 32px rgba(0,0,0,0.6); }
+
+    /* Guild/portal rail: slide-in drawer from left, behind channel sidebar */
+    .guild-rail {
+        display: flex !important;
+        position: fixed !important;
+        left: -76px;
+        top: 0;
+        height: 100%;
+        width: 76px;
+        z-index: 499;
+        transition: left 0.3s ease;
+        padding-bottom: 70px;
+    }
+    .guild-rail.open { left: 0 !important; box-shadow: 8px 0 32px rgba(0,0,0,0.6); }
+
+    /* Main content takes full width — sidebars are overlays now */
+    .main-content-wrapper { width: 100% !important; padding: 0 0 60px 0 !important; }
+
+    /* Backdrop: dim layer behind open drawers */
+    .mobile-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0);
+        z-index: 498;
+        pointer-events: none;
+        transition: background 0.3s ease;
+    }
+    .mobile-backdrop.visible {
+        background: rgba(0,0,0,0.5);
+        pointer-events: auto;
+    }
+
+    /* Bottom nav */
+    .mobile-bottom-nav {
+        display: flex !important;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        height: 60px;
+        background: var(--bg-elevated);
+        border-top: 1px solid var(--stroke);
+        z-index: 500;
+        justify-content: space-around;
+        align-items: center;
+        padding: 0 8px;
+    }
+
     .top-bar { padding: 0 12px !important; }
-    .main-content-wrapper { padding: 0; }
-    .mobile-bottom-nav { display: flex !important; position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--bg-elevated); border-top: 1px solid var(--stroke); z-index: 500; justify-content: space-around; align-items: center; padding: 0 8px; }
     .discover-content { padding: 16px !important; }
     .portal-card { min-width: 260px !important; }
     .mobile-header-toggles { display: flex !important; align-items: center; }

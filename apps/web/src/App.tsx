@@ -43,6 +43,7 @@ import { NotFound } from './pages/ErrorStates';
 import { getDeterministicGradient } from './utils/colors';
 import { api, API_BASE, getAccessToken, ApiRequestError } from './lib/api';
 import { connectSocket, disconnectSocket, onPresenceUpdate, onVoiceStateUpdate, onSocketReconnect } from './lib/socket';
+import { useMobileSwipe } from './hooks/useMobileSwipe';
 
 import SettingsModal from './components/modals/SettingsModal';
 import UserProfileModal from './components/modals/UserProfileModal';
@@ -180,9 +181,9 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
 
         openMenu(e, [
             { id: 'mark-read', label: 'Mark as Read', icon: Check, onClick: () => addToast({ title: `${guild.name} marked as read`, variant: 'info' }) },
-            { id: 'mute', label: 'Mute Server', icon: Volume1, onClick: () => addToast({ title: `${guild.name} muted`, variant: 'info' }) },
+            { id: 'mute', label: 'Mute Portal', icon: Volume1, onClick: () => addToast({ title: `${guild.name} muted`, variant: 'info' }) },
             { divider: true, id: 'div1', label: '', onClick: () => {} },
-            { id: 'server-settings', label: 'Server Settings', icon: Settings, onClick: () => { navigate(`/guild/${guild.id}`); onOpenGuildSettings(); } },
+            { id: 'server-settings', label: 'Portal Settings', icon: Settings, onClick: () => { navigate(`/guild/${guild.id}`); onOpenGuildSettings(); } },
             { id: 'invite', label: 'Invite People', icon: Link2, onClick: () => {
                 api.invites.create(guild.id, { channelId: guild.id }).then((invite) => {
                     const link = `${window.location.origin}/invite/${invite.code}`;
@@ -198,13 +199,13 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
             }},
             { id: 'privacy-settings', label: 'Privacy Settings', icon: ShieldIcon, onClick: () => onOpenSettings() },
             { divider: true, id: 'div2', label: '', onClick: () => {} },
-            { id: 'copy-id', label: 'Copy Server ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(guild.id).catch(() => {}); addToast({ title: 'Server ID copied', variant: 'info' }); } },
-            { id: 'leave', label: 'Leave Server', icon: LogOut, color: 'var(--error)', onClick: () => {
+            { id: 'copy-id', label: 'Copy Portal ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(guild.id).catch(() => {}); addToast({ title: 'Portal ID copied', variant: 'info' }); } },
+            { id: 'leave', label: 'Leave Portal', icon: LogOut, color: 'var(--error)', onClick: () => {
                 api.guilds.leave(guild.id).then(() => {
                     onGuildsRefresh?.();
                     addToast({ title: `Left ${guild.name}`, variant: 'info' });
                     if (location.pathname.startsWith(`/guild/${guild.id}`)) navigate('/');
-                }).catch(() => addToast({ title: 'Failed to leave server', variant: 'error' }));
+                }).catch(() => addToast({ title: 'Failed to leave portal', variant: 'error' }));
             }},
         ]);
     };
@@ -258,7 +259,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                 </Tooltip>
             ))}
 
-            <Tooltip content="Create Guild" position="right">
+            <Tooltip content="Create Portal" position="right">
                 <div className="guild-icon" onClick={onOpenCreateGuild} style={{ background: 'transparent', border: '1px dashed var(--stroke-light)', color: 'var(--text-muted)', cursor: 'pointer' }}>
                     <Plus size={24} />
                 </div>
@@ -1811,7 +1812,8 @@ export const AppLayout = () => {
     };
     const [activeModal, setActiveModal] = useState<ModalType>(null);
     const [isGuildRailOpen, setIsGuildRailOpen] = useState(false);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const mainContentRef = useRef<HTMLDivElement>(null);
     const { user: ctxUser, loading: userLoading, gratoniteBalance, setGratoniteBalance } = useUser();
     const { setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects } = useTheme();
     const [guilds, setGuilds] = useState<Array<{ id: string; name: string; iconHash: string | null; description: string | null; memberCount: number }>>([]);
@@ -2144,6 +2146,18 @@ export const AppLayout = () => {
     const isChatRoute = location.pathname.includes('/chat') || location.pathname.includes('/channel/');
     const isVoiceRoute = location.pathname.includes('/voice');
 
+    // Mobile swipe gestures
+    useMobileSwipe(mainContentRef, {
+        onSwipeRight: () => {
+            if (isSidebarOpen) { setIsSidebarOpen(false); return; }
+            setIsGuildRailOpen(true);
+        },
+        onSwipeLeft: () => {
+            if (isGuildRailOpen) { setIsGuildRailOpen(false); return; }
+            if (isChatRoute) setIsSidebarOpen(true);
+        },
+    });
+
     return (
         <ContextMenuProvider>
             <div className="app-container">
@@ -2174,7 +2188,7 @@ export const AppLayout = () => {
                     userProfile={userProfile}
                     guildSession={guildSession}
                 />
-                <div className={`main-content-wrapper ${bgMedia !== null ? 'has-custom-bg' : ''}`} style={(!isChatRoute && !isVoiceRoute) ? { flex: 1, display: 'flex', flexDirection: 'column' } : {}}>
+                <div ref={mainContentRef} className={`main-content-wrapper ${bgMedia !== null ? 'has-custom-bg' : ''}`} style={(!isChatRoute && !isVoiceRoute) ? { flex: 1, display: 'flex', flexDirection: 'column' } : {}}>
                     <div className="route-transition-wrapper" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
                         <Outlet context={{
                             bgMedia,
@@ -2195,7 +2209,7 @@ export const AppLayout = () => {
                     {isChatRoute && isSidebarOpen && <MembersSidebar onOpenProfile={() => setActiveModal('userProfile')} />}
                 </div>
 
-                {/* Mobile Bottom Navigation (< 768px) */}
+                {/* Mobile Bottom Navigation (< 768px) — 3 tabs only */}
                 <nav className="mobile-bottom-nav">
                     <Link to="/" className={`mobile-nav-item ${location.pathname === '/' ? 'active' : ''}`}>
                         <Home size={20} />
@@ -2205,30 +2219,9 @@ export const AppLayout = () => {
                         <Search size={20} />
                         <span>Discover</span>
                     </Link>
-                    <div className="mobile-nav-item" onClick={() => setIsGuildRailOpen(true)}>
-                        <div style={{ position: 'relative' }}>
-                            <div style={{ width: '24px', height: '24px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                                A
-                            </div>
-                            <div className="mobile-nav-badge unread-badge">3</div>
-                        </div>
-                        <span>Guilds</span>
-                    </div>
-                    <div className="mobile-nav-item" onClick={() => setIsSidebarOpen(true)}>
-                        <MessageSquare size={20} />
-                        <span>Chat</span>
-                    </div>
-                    <div className="mobile-nav-item" onClick={() => setActiveModal('userProfile')}>
-                        <Avatar
-                            userId={userProfile.id || 'me'}
-                            avatarHash={userProfile.avatarHash}
-                            displayName={userProfile.name || 'User'}
-                            frame={userProfile.avatarFrame as 'none' | 'neon' | 'gold' | 'glass'}
-                            size={24}
-                            status={(userProfile.status || 'online').toLowerCase() as any}
-                            statusRingColor="var(--bg-primary)"
-                        />
-                        <span>Profile</span>
+                    <div className="mobile-nav-item" onClick={() => setActiveModal('notifications')}>
+                        <Bell size={20} />
+                        <span>Notifications</span>
                     </div>
                 </nav>
             </div>

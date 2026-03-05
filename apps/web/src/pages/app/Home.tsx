@@ -74,7 +74,7 @@ const Home = () => {
                             <Hash size={24} />
                         </div>
                         <div className="action-card-text">
-                            <div className="action-title">Create a Portal or Server</div>
+                            <div className="action-title">Create a Portal</div>
                             <div className="action-subtext">Start your own community</div>
                         </div>
                     </div>

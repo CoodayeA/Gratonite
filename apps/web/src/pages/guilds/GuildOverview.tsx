@@ -122,7 +122,7 @@ const GuildOverview = () => {
         return (
             <div className="main-content-wrapper" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px' }}>
                 <div style={{ maxWidth: '520px', width: '100%', background: 'var(--bg-elevated)', border: 'var(--border-structural, 3px solid #000)', borderRadius: 'var(--radius-lg, 0)', boxShadow: 'var(--shadow-panel, 8px 8px 0 #000)', padding: '24px', display: 'grid', gap: '16px' }}>
-                    <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800, fontFamily: 'var(--font-display)' }}>You no longer have access to this server</h2>
+                    <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800, fontFamily: 'var(--font-display)' }}>You no longer have access to this portal</h2>
                     <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Your membership may have changed or the invite expired.</p>
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                         <button className="auth-button" style={{ margin: 0 }} onClick={() => navigate('/')}>Back to Home</button>
@@ -137,8 +137,8 @@ const GuildOverview = () => {
         return (
             <div className="main-content-wrapper" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px' }}>
                 <div style={{ maxWidth: '520px', width: '100%', background: 'var(--bg-elevated)', border: 'var(--border-structural, 3px solid #000)', borderRadius: 'var(--radius-lg, 0)', boxShadow: 'var(--shadow-panel, 8px 8px 0 #000)', padding: '24px', display: 'grid', gap: '16px' }}>
-                    <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Server not found or deleted</h2>
-                    <p style={{ margin: 0, color: 'var(--text-secondary)' }}>This server may have been removed or the URL is no longer valid.</p>
+                    <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Portal not found or deleted</h2>
+                    <p style={{ margin: 0, color: 'var(--text-secondary)' }}>This portal may have been removed or the URL is no longer valid.</p>
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                         <button className="auth-button" style={{ margin: 0 }} onClick={() => navigate('/')}>Back to Home</button>
                     </div>
@@ -150,7 +150,7 @@ const GuildOverview = () => {
     return (
         <div className="main-content-wrapper" style={{ flex: 1, overflowY: 'auto' }}>
             {loading && !guild && (
-                <div style={{ padding: '20px 48px', color: 'var(--text-muted)', fontSize: '13px' }}>Loading server…</div>
+                <div style={{ padding: '20px 48px', color: 'var(--text-muted)', fontSize: '13px' }}>Loading portal…</div>
             )}
             {/* Guild Banner */}
             {bannerUrl && (
@@ -271,7 +271,7 @@ const GuildOverview = () => {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <button className="auth-button" onClick={() => setActiveModal('invite')} style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--accent-primary)', color: '#000', border: '3px solid #000', fontWeight: 800 }}>Create Invite</button>
-                        <button className="auth-button" onClick={() => setActiveModal('guildSettings')} style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800 }}>Server Settings</button>
+                        <button className="auth-button" onClick={() => setActiveModal('guildSettings')} style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800 }}>Portal Settings</button>
                     </div>
                 </div>
 

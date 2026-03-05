@@ -400,7 +400,7 @@ function InvitePreview({
                     ) : isLoggedIn ? (
                         <>
                             <LogIn size={18} />
-                            Join Server
+                            Join Portal
                         </>
                     ) : (
                         <>
