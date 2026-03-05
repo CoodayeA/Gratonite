@@ -1,6 +1,6 @@
 {
   "name": "gratonite-desktop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Gratonite Desktop — Electron wrapper for the Gratonite web app",
   "main": "main.js",
   "scripts": {
@@ -9,7 +9,9 @@
     "build:mac": "electron-builder --mac",
     "build:win": "electron-builder --win",
     "build:linux": "electron-builder --linux",
-    "build": "electron-builder --mac --win --linux"
+    "build": "electron-builder --mac --win --linux",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "build": {
     "appId": "chat.gratonite.desktop",
@@ -22,10 +24,18 @@
     "mac": {
       "category": "public.app-category.social-networking",
       "target": ["dmg", "zip"],
-      "icon": "assets/icon.icns"
+      "icon": "assets/icon.icns",
+      "gatekeeperAssess": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Gratonite"
     },
     "win": {
-      "target": ["nsis", "portable"],
+      "target": ["nsis"],
       "icon": "assets/icon.ico"
     },
     "linux": {
@@ -35,7 +45,7 @@
     },
     "publish": {
       "provider": "generic",
-      "url": "https://releases.gratonite.chat"
+      "url": "https://gratonite.chat/downloads"
     }
   },
   "dependencies": {
@@ -43,6 +53,7 @@
   },
   "devDependencies": {
     "electron": "^33.0.0",
-    "electron-builder": "^25.0.0"
+    "electron-builder": "^25.0.0",
+    "vitest": "^2.0.0"
   }
 }

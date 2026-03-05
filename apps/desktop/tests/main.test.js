@@ -1,0 +1,360 @@
+'use strict';
+
+const { createElectronMock } = require('./setup');
+
+// Resolve absolute paths once
+const ELECTRON_PATH = require.resolve('electron');
+const MAIN_PATH = require.resolve('../main.js');
+let UPDATER_PATH;
+try { UPDATER_PATH = require.resolve('electron-updater'); } catch (_) {}
+
+let currentMocks;
+let mockAutoUpdater;
+
+function injectCache(modulePath, exports) {
+  require.cache[modulePath] = { id: modulePath, filename: modulePath, loaded: true, exports };
+}
+
+async function loadMain({ platform = 'darwin', isDev = false, envUrl = null } = {}) {
+  delete require.cache[MAIN_PATH];
+
+  Object.defineProperty(process, 'platform', { value: platform, configurable: true });
+  process.argv = isDev ? ['electron', 'main.js', '--dev'] : ['electron', 'main.js'];
+  process.env.NODE_ENV = isDev ? 'development' : 'production';
+  if (envUrl) {
+    process.env.GRATONITE_DESKTOP_URL = envUrl;
+  } else {
+    delete process.env.GRATONITE_DESKTOP_URL;
+  }
+
+  currentMocks = createElectronMock();
+  mockAutoUpdater = { checkForUpdatesAndNotify: vi.fn(), autoDownload: false, autoInstallOnAppQuit: false };
+
+  injectCache(ELECTRON_PATH, currentMocks);
+  if (UPDATER_PATH) injectCache(UPDATER_PATH, { autoUpdater: mockAutoUpdater });
+
+  require(MAIN_PATH);
+  await new Promise((r) => setImmediate(r));
+
+  return { ...currentMocks._mocks, autoUpdater: mockAutoUpdater };
+}
+
+afterEach(() => {
+  delete require.cache[MAIN_PATH];
+  vi.restoreAllMocks();
+});
+
+// ---------------------------------------------------------------------------
+// Group A: URL Selection
+// ---------------------------------------------------------------------------
+describe('URL selection', () => {
+  test('--dev flag → loads http://localhost:5174/app', async () => {
+    const mocks = await loadMain({ isDev: true });
+    expect(mocks.mockWindow.loadURL).toHaveBeenCalledWith('http://localhost:5174/app');
+  });
+
+  test('NODE_ENV=development → loads http://localhost:5174/app', async () => {
+    const mocks = await loadMain({ isDev: true });
+    expect(mocks.mockWindow.loadURL).toHaveBeenCalledWith('http://localhost:5174/app');
+  });
+
+  test('production → loads https://app.gratonite.chat', async () => {
+    const mocks = await loadMain({ isDev: false });
+    expect(mocks.mockWindow.loadURL).toHaveBeenCalledWith('https://app.gratonite.chat');
+  });
+
+  test('GRATONITE_DESKTOP_URL env var overrides production URL', async () => {
+    const mocks = await loadMain({ isDev: false, envUrl: 'https://custom.example.com' });
+    expect(mocks.mockWindow.loadURL).toHaveBeenCalledWith('https://custom.example.com');
+  });
+
+  test('dev mode opens DevTools; production does NOT', async () => {
+    const devMocks = await loadMain({ isDev: true });
+    expect(devMocks.mockWebContents.openDevTools).toHaveBeenCalled();
+
+    const prodMocks = await loadMain({ isDev: false });
+    expect(prodMocks.mockWebContents.openDevTools).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group B: IPC Handlers
+// ---------------------------------------------------------------------------
+describe('IPC handlers', () => {
+  test('app:version handler returns app.getVersion() result', async () => {
+    const mocks = await loadMain();
+    mocks.app.getVersion.mockReturnValue('2.3.4');
+    const result = await mocks.ipcHandlers['app:version']();
+    expect(result).toBe('2.3.4');
+  });
+
+  test('app:platform handler returns process.platform', async () => {
+    const mocks = await loadMain({ platform: 'linux' });
+    const result = await mocks.ipcHandlers['app:platform']();
+    expect(result).toBe('linux');
+  });
+
+  test('get-mute-state returns false initially', async () => {
+    const mocks = await loadMain();
+    const result = await mocks.ipcHandlers['get-mute-state']();
+    expect(result).toBe(false);
+  });
+
+  test('get-mute-state returns true after set-mute-state(null, true)', async () => {
+    const mocks = await loadMain();
+    mocks.ipcListeners['set-mute-state'](null, true);
+    const result = await mocks.ipcHandlers['get-mute-state']();
+    expect(result).toBe(true);
+  });
+
+  test('set-mute-state round-trips false → true → false', async () => {
+    const mocks = await loadMain();
+    mocks.ipcListeners['set-mute-state'](null, true);
+    expect(await mocks.ipcHandlers['get-mute-state']()).toBe(true);
+    mocks.ipcListeners['set-mute-state'](null, false);
+    expect(await mocks.ipcHandlers['get-mute-state']()).toBe(false);
+  });
+
+  test('set-mute-state triggers tray menu rebuild', async () => {
+    const mocks = await loadMain();
+    const callsBefore = mocks.mockTray.setContextMenu.mock.calls.length;
+    mocks.ipcListeners['set-mute-state'](null, true);
+    expect(mocks.mockTray.setContextMenu.mock.calls.length).toBeGreaterThan(callsBefore);
+  });
+
+  test('all 5 IPC channels are registered', async () => {
+    const mocks = await loadMain();
+    expect(mocks.ipcHandlers).toHaveProperty('app:version');
+    expect(mocks.ipcHandlers).toHaveProperty('app:platform');
+    expect(mocks.ipcHandlers).toHaveProperty('get-mute-state');
+    expect(mocks.ipcListeners).toHaveProperty('set-badge-count');
+    expect(mocks.ipcListeners).toHaveProperty('set-mute-state');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group C: Mute State
+// ---------------------------------------------------------------------------
+describe('mute state', () => {
+  test('initial state is false', async () => {
+    const mocks = await loadMain();
+    expect(await mocks.ipcHandlers['get-mute-state']()).toBe(false);
+  });
+
+  test('tray menu toggle → state updates + sends mute-toggled to renderer', async () => {
+    const mocks = await loadMain();
+    const template = mocks.Menu.buildFromTemplate.mock.calls[0][0];
+    const muteItem = template.find((item) => item.label === 'Mute Notifications');
+    muteItem.click({ checked: true });
+    expect(mocks.mockWebContents.send).toHaveBeenCalledWith('mute-toggled', true);
+  });
+
+  test('tray menu toggle → get-mute-state reflects new value', async () => {
+    const mocks = await loadMain();
+    const template = mocks.Menu.buildFromTemplate.mock.calls[0][0];
+    const muteItem = template.find((item) => item.label === 'Mute Notifications');
+    muteItem.click({ checked: true });
+    expect(await mocks.ipcHandlers['get-mute-state']()).toBe(true);
+  });
+
+  test('global shortcut CmdOrCtrl+Shift+M toggles false→true', async () => {
+    const mocks = await loadMain();
+    mocks.shortcutHandlers['CmdOrCtrl+Shift+M']();
+    expect(await mocks.ipcHandlers['get-mute-state']()).toBe(true);
+  });
+
+  test('global shortcut toggles true→false on second call', async () => {
+    const mocks = await loadMain();
+    mocks.shortcutHandlers['CmdOrCtrl+Shift+M']();
+    mocks.shortcutHandlers['CmdOrCtrl+Shift+M']();
+    expect(await mocks.ipcHandlers['get-mute-state']()).toBe(false);
+  });
+
+  test('shortcut registers with key string CmdOrCtrl+Shift+M', async () => {
+    const mocks = await loadMain();
+    expect(mocks.globalShortcut.register).toHaveBeenCalledWith(
+      'CmdOrCtrl+Shift+M',
+      expect.any(Function)
+    );
+  });
+
+  test('mute-toggled NOT sent if mainWindow.isDestroyed() is true', async () => {
+    const mocks = await loadMain();
+    mocks.mockWindow.isDestroyed.mockReturnValue(true);
+    mocks.shortcutHandlers['CmdOrCtrl+Shift+M']();
+    expect(mocks.mockWebContents.send).not.toHaveBeenCalledWith('mute-toggled', expect.anything());
+  });
+
+  // Note: The IPC set-mute-state handler only updates state and rebuilds the tray menu.
+  // Sending mute-toggled to the renderer is done by the tray menu toggle and global shortcut only.
+  test('IPC set-mute-state updates state but does not send mute-toggled', async () => {
+    const mocks = await loadMain();
+    mocks.ipcListeners['set-mute-state'](null, true);
+    expect(await mocks.ipcHandlers['get-mute-state']()).toBe(true);
+    expect(mocks.mockWebContents.send).not.toHaveBeenCalledWith('mute-toggled', expect.anything());
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group D: Badge System
+// ---------------------------------------------------------------------------
+describe('badge system', () => {
+  test('macOS: set-badge-count(5) → app.setBadgeCount(5)', async () => {
+    const mocks = await loadMain({ platform: 'darwin' });
+    mocks.ipcListeners['set-badge-count'](null, 5);
+    expect(mocks.app.setBadgeCount).toHaveBeenCalledWith(5);
+  });
+
+  test('macOS: set-badge-count(0) → app.setBadgeCount(0)', async () => {
+    const mocks = await loadMain({ platform: 'darwin' });
+    mocks.ipcListeners['set-badge-count'](null, 0);
+    expect(mocks.app.setBadgeCount).toHaveBeenCalledWith(0);
+  });
+
+  test('macOS: does NOT call setOverlayIcon', async () => {
+    const mocks = await loadMain({ platform: 'darwin' });
+    mocks.ipcListeners['set-badge-count'](null, 5);
+    expect(mocks.mockWindow.setOverlayIcon).not.toHaveBeenCalled();
+  });
+
+  test('Windows: set-badge-count(3) → setOverlayIcon(image, "3 unread notifications")', async () => {
+    const mocks = await loadMain({ platform: 'win32' });
+    mocks.ipcListeners['set-badge-count'](null, 3);
+    expect(mocks.mockWindow.setOverlayIcon).toHaveBeenCalledWith(
+      expect.anything(),
+      '3 unread notifications'
+    );
+  });
+
+  test('Windows: set-badge-count(0) → setOverlayIcon(null, "")', async () => {
+    const mocks = await loadMain({ platform: 'win32' });
+    mocks.ipcListeners['set-badge-count'](null, 0);
+    expect(mocks.mockWindow.setOverlayIcon).toHaveBeenCalledWith(null, '');
+  });
+
+  test('Windows: does NOT call app.setBadgeCount', async () => {
+    const mocks = await loadMain({ platform: 'win32' });
+    mocks.ipcListeners['set-badge-count'](null, 3);
+    expect(mocks.app.setBadgeCount).not.toHaveBeenCalled();
+  });
+
+  test('positive count → tray tooltip "Gratonite (7 unread)"', async () => {
+    const mocks = await loadMain({ platform: 'darwin' });
+    mocks.ipcListeners['set-badge-count'](null, 7);
+    expect(mocks.mockTray.setToolTip).toHaveBeenCalledWith('Gratonite (7 unread)');
+  });
+
+  test('zero count → tray tooltip "Gratonite"', async () => {
+    const mocks = await loadMain({ platform: 'darwin' });
+    mocks.ipcListeners['set-badge-count'](null, 0);
+    expect(mocks.mockTray.setToolTip).toHaveBeenCalledWith('Gratonite');
+  });
+
+  test('badge buffer is 1024 bytes (16×16×4 RGBA)', async () => {
+    const mocks = await loadMain({ platform: 'win32' });
+    mocks.ipcListeners['set-badge-count'](null, 5);
+    const [buffer] = mocks.nativeImage.createFromBuffer.mock.calls[0];
+    expect(buffer.length).toBe(1024);
+  });
+
+  test('nativeImage.createFromBuffer second arg is { width: 16, height: 16 }', async () => {
+    const mocks = await loadMain({ platform: 'win32' });
+    mocks.ipcListeners['set-badge-count'](null, 5);
+    const [, opts] = mocks.nativeImage.createFromBuffer.mock.calls[0];
+    expect(opts).toEqual({ width: 16, height: 16 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group E: Auto-Updater
+// ---------------------------------------------------------------------------
+describe('auto-updater', () => {
+  test('dev mode → checkForUpdatesAndNotify never called', async () => {
+    const mocks = await loadMain({ isDev: true });
+    expect(mocks.autoUpdater.checkForUpdatesAndNotify).not.toHaveBeenCalled();
+  });
+
+  test('production → checkForUpdatesAndNotify called once on startup', async () => {
+    const mocks = await loadMain({ isDev: false });
+    expect(mocks.autoUpdater.checkForUpdatesAndNotify).toHaveBeenCalledTimes(1);
+  });
+
+  test('production → autoUpdater.autoDownload set to true', async () => {
+    const mocks = await loadMain({ isDev: false });
+    expect(mocks.autoUpdater.autoDownload).toBe(true);
+  });
+
+  test('production → autoUpdater.autoInstallOnAppQuit set to true', async () => {
+    const mocks = await loadMain({ isDev: false });
+    expect(mocks.autoUpdater.autoInstallOnAppQuit).toBe(true);
+  });
+
+  test('production → setInterval called with 4-hour interval (14400000 ms)', async () => {
+    const spy = vi.spyOn(global, 'setInterval');
+    await loadMain({ isDev: false });
+    const call = spy.mock.calls.find((c) => c[1] === 14400000);
+    expect(call).toBeDefined();
+    spy.mockRestore();
+  });
+
+  test('interval callback calls checkForUpdatesAndNotify again', async () => {
+    const spy = vi.spyOn(global, 'setInterval');
+    const mocks = await loadMain({ isDev: false });
+    const call = spy.mock.calls.find((c) => c[1] === 14400000);
+    call[0]();
+    expect(mocks.autoUpdater.checkForUpdatesAndNotify).toHaveBeenCalledTimes(2);
+    spy.mockRestore();
+  });
+
+  test('dev mode → 4-hour setInterval NOT registered', async () => {
+    const spy = vi.spyOn(global, 'setInterval');
+    await loadMain({ isDev: true });
+    const call = spy.mock.calls.find((c) => c[1] === 14400000);
+    expect(call).toBeUndefined();
+    spy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group F: App Lifecycle
+// ---------------------------------------------------------------------------
+describe('app lifecycle', () => {
+  test('requestSingleInstanceLock called on load', async () => {
+    const mocks = await loadMain();
+    expect(mocks.app.requestSingleInstanceLock).toHaveBeenCalled();
+  });
+
+  test('second-instance: restores minimized window + focuses', async () => {
+    const mocks = await loadMain();
+    mocks.mockWindow.isMinimized.mockReturnValue(true);
+    mocks.appListeners['second-instance'][0]();
+    expect(mocks.mockWindow.restore).toHaveBeenCalled();
+    expect(mocks.mockWindow.focus).toHaveBeenCalled();
+  });
+
+  test('second-instance: focuses non-minimized window without restore', async () => {
+    const mocks = await loadMain();
+    mocks.mockWindow.isMinimized.mockReturnValue(false);
+    mocks.appListeners['second-instance'][0]();
+    expect(mocks.mockWindow.restore).not.toHaveBeenCalled();
+    expect(mocks.mockWindow.focus).toHaveBeenCalled();
+  });
+
+  test('window-all-closed on Linux → app.quit() called', async () => {
+    const mocks = await loadMain({ platform: 'linux' });
+    mocks.appListeners['window-all-closed'][0]();
+    expect(mocks.app.quit).toHaveBeenCalled();
+  });
+
+  test('window-all-closed on macOS → app.quit() NOT called', async () => {
+    const mocks = await loadMain({ platform: 'darwin' });
+    mocks.appListeners['window-all-closed'][0]();
+    expect(mocks.app.quit).not.toHaveBeenCalled();
+  });
+
+  test('will-quit → globalShortcut.unregisterAll() called', async () => {
+    const mocks = await loadMain();
+    mocks.appListeners['will-quit'][0]();
+    expect(mocks.globalShortcut.unregisterAll).toHaveBeenCalled();
+  });
+});
