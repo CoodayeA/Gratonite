@@ -58,9 +58,11 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - name: Add server to known hosts
-        run: ssh-keyscan gratonite.chat >> $env:USERPROFILE\.ssh\known_hosts
+        shell: bash
+        run: ssh-keyscan gratonite.chat >> ~/.ssh/known_hosts
       - name: Upload to server
+        shell: bash
         run: |
-          rsync -avz apps/desktop/dist/"Gratonite Setup*.exe" `
-            apps/desktop/dist/latest.yml `
-            ferdinand@gratonite.chat:/home/ferdinand/gratonite-releases/
+          ssh ferdinand@gratonite.chat 'mkdir -p /home/ferdinand/gratonite-releases'
+          scp apps/desktop/dist/latest.yml ferdinand@gratonite.chat:/home/ferdinand/gratonite-releases/
+          scp "apps/desktop/dist/Gratonite Setup"*.exe ferdinand@gratonite.chat:/home/ferdinand/gratonite-releases/
