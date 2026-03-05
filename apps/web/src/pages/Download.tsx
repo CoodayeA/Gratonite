@@ -1,7 +1,7 @@
 import { Monitor, Apple, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const VERSION = '1.0.0';
+const VERSION = '1.0.1';
 const BASE_URL = 'https://gratonite.chat/downloads';
 
 export default function Download() {
@@ -112,7 +112,7 @@ export default function Download() {
 
                         {/* Windows */}
                         <a
-                            href={`${BASE_URL}/Gratonite%20${VERSION}.exe`}
+                            href={`${BASE_URL}/Gratonite%20Setup%20${VERSION}.exe`}
                             download
                             style={{ textDecoration: 'none' }}
                         >
@@ -147,7 +147,7 @@ export default function Download() {
                                         Windows
                                     </div>
                                     <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                                        .exe portable · Windows 10+
+                                        .exe installer · Windows 10+
                                     </div>
                                 </div>
                                 <div style={{
