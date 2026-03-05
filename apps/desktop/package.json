@@ -33,8 +33,7 @@
       "gatekeeperAssess": false,
       "hardenedRuntime": true,
       "entitlements": "entitlements.mac.plist",
-      "entitlementsInherit": "entitlements.mac.plist",
-      "afterSign": "scripts/notarize.js"
+      "entitlementsInherit": "entitlements.mac.plist"
     },
     "nsis": {
       "oneClick": false,
