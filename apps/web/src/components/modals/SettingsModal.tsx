@@ -586,7 +586,7 @@ const SettingsModal = ({
                                             background: avatarStyle, backgroundSize: 'cover', backgroundPosition: 'center',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 'bold'
                                         }}>
-                                            {avatarStyle.includes('gradient') ? 'E' : ''}
+                                            {avatarStyle.includes('gradient') ? (editDisplayName?.[0]?.toUpperCase() || '?') : ''}
                                         </div>
                                         <button className="auth-button" onClick={() => setActiveTab('profile')} style={{ marginTop: 0, width: 'auto', padding: '0 16px', height: '36px', background: 'transparent', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)' }}>Edit User Profile</button>
                                     </div>

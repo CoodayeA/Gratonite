@@ -1240,7 +1240,7 @@ const ChannelChat = () => {
 
     const scrollToBottom = useCallback(() => {
         if (messages.length > 0) {
-            rowVirtualizer.scrollToIndex(messages.length - 1, { align: 'end', behavior: 'smooth' });
+            if (parentRef.current) parentRef.current.scrollTop = parentRef.current.scrollHeight;
         }
     }, [messages.length, rowVirtualizer]);
 
