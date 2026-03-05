@@ -76,8 +76,8 @@ jobs:
         run: |
           ssh ferdinand@gratonite.chat '
             cd /home/ferdinand/gratonite-app &&
-            docker build \
-              -t gratonite-web:latest \
-              -f docker/hetzner/web.Dockerfile . &&
-            docker restart gratonite-web-1
+            docker build -t gratonite-web:latest -f docker/hetzner/web.Dockerfile . &&
+            docker stop gratonite-web-1 || true &&
+            docker rm gratonite-web-1 || true &&
+            docker run -d --name gratonite-web-1 --network gratonite_default --network-alias web --restart unless-stopped gratonite-web:latest
           '
