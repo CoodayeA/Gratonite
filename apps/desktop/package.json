@@ -2,6 +2,11 @@
   "name": "gratonite-desktop",
   "version": "1.0.1",
   "description": "Gratonite Desktop — Electron wrapper for the Gratonite web app",
+  "author": {
+    "name": "Gratonite",
+    "email": "hello@gratonite.chat"
+  },
+  "homepage": "https://gratonite.chat",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
