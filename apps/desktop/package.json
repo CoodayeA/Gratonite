@@ -30,7 +30,11 @@
       "category": "public.app-category.social-networking",
       "target": ["dmg", "zip"],
       "icon": "assets/icon.icns",
-      "gatekeeperAssess": false
+      "gatekeeperAssess": false,
+      "hardenedRuntime": true,
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist",
+      "afterSign": "scripts/notarize.js"
     },
     "nsis": {
       "oneClick": false,
@@ -59,6 +63,7 @@
   "devDependencies": {
     "electron": "^33.0.0",
     "electron-builder": "^25.0.0",
+    "@electron/notarize": "^2.5.0",
     "vitest": "^2.0.0"
   }
 }

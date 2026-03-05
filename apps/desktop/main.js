@@ -263,20 +263,40 @@ ipcMain.on('set-mute-state', (_event, muted) => {
 if (!isDev) {
   try {
     const { autoUpdater } = require('electron-updater');
+    const { dialog } = require('electron');
 
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
 
+    autoUpdater.on('update-downloaded', (info) => {
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'Update Ready',
+        message: `Gratonite ${info.version} is ready to install.`,
+        detail: 'Restart Gratonite now to apply the update, or it will install the next time you quit.',
+        buttons: ['Restart Now', 'Later'],
+        defaultId: 0,
+        cancelId: 1,
+      }).then(({ response }) => {
+        if (response === 0) {
+          autoUpdater.quitAndInstall();
+        }
+      });
+    });
+
+    autoUpdater.on('error', (err) => {
+      console.error('Auto-updater error:', err.message);
+    });
+
     app.whenReady().then(() => {
-      autoUpdater.checkForUpdatesAndNotify();
+      autoUpdater.checkForUpdates();
     });
 
     // Check for updates every 4 hours
     setInterval(() => {
-      autoUpdater.checkForUpdatesAndNotify();
+      autoUpdater.checkForUpdates();
     }, 4 * 60 * 60 * 1000);
   } catch (e) {
-    // electron-updater may not be available in all environments
     console.warn('Auto-updater not available:', e.message);
   }
 }

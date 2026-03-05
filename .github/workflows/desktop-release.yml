@@ -1,0 +1,65 @@
+name: Desktop Release
+
+on:
+  push:
+    tags:
+      - 'desktop-v*'
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm ci
+        working-directory: apps/desktop
+      - name: Build, sign, and notarize
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npm run build:mac
+        working-directory: apps/desktop
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Add server to known hosts
+        run: ssh-keyscan gratonite.chat >> ~/.ssh/known_hosts
+      - name: Upload to server
+        run: |
+          ssh ferdinand@gratonite.chat 'mkdir -p /home/ferdinand/gratonite-releases'
+          rsync -avz apps/desktop/dist/Gratonite-*.dmg \
+            apps/desktop/dist/Gratonite-*-mac.zip \
+            apps/desktop/dist/latest-mac.yml \
+            ferdinand@gratonite.chat:/home/ferdinand/gratonite-releases/
+
+  build-win:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm ci
+        working-directory: apps/desktop
+      - name: Build Windows installer
+        run: npm run build:win
+        working-directory: apps/desktop
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Add server to known hosts
+        run: ssh-keyscan gratonite.chat >> $env:USERPROFILE\.ssh\known_hosts
+      - name: Upload to server
+        run: |
+          rsync -avz apps/desktop/dist/"Gratonite Setup*.exe" `
+            apps/desktop/dist/latest.yml `
+            ferdinand@gratonite.chat:/home/ferdinand/gratonite-releases/
