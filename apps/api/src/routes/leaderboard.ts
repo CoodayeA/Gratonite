@@ -17,10 +17,9 @@ import { Router, Request, Response } from 'express';
 import { sql, eq, and, gte, desc } from 'drizzle-orm';
 
 import { db } from '../db/index';
-import { messages } from '../db/schema/messages';
-import { channels } from '../db/schema/channels';
 import { users } from '../db/schema/users';
 import { guildMembers } from '../db/schema/guilds';
+import { fameTransactions } from '../db/schema/fameTransactions';
 import { requireAuth } from '../middleware/auth';
 
 export const leaderboardRouter = Router();
@@ -75,41 +74,37 @@ leaderboardRouter.get(
       const period = typeof req.query.period === 'string' ? req.query.period : 'week';
       const cutoff = periodCutoff(period);
 
-      // Build date condition
+      // Build date condition on fame transactions
       const dateCondition = cutoff
-        ? gte(messages.createdAt, cutoff)
+        ? gte(fameTransactions.createdAt, cutoff)
         : undefined;
 
-      // Aggregate message counts by author, join with users
-      const conditions = [
-        sql`${messages.authorId} IS NOT NULL`,
-        ...(dateCondition ? [dateCondition] : []),
-      ];
+      const conditions = dateCondition ? [dateCondition] : [];
 
+      // Aggregate fame received by user
       const rows = await db
         .select({
-          userId: messages.authorId,
+          userId: fameTransactions.receiverId,
           username: users.username,
           displayName: users.displayName,
           avatarHash: users.avatarHash,
-          messageCount: sql<number>`count(*)::int`.as('message_count'),
+          fameReceived: sql<number>`count(*)::int`.as('fame_received'),
           memberSince: users.createdAt,
         })
-        .from(messages)
-        .innerJoin(users, eq(users.id, messages.authorId))
-        .where(and(...conditions))
-        .groupBy(messages.authorId, users.username, users.displayName, users.avatarHash, users.createdAt)
+        .from(fameTransactions)
+        .innerJoin(users, eq(users.id, fameTransactions.receiverId))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .groupBy(fameTransactions.receiverId, users.username, users.displayName, users.avatarHash, users.createdAt)
         .orderBy(desc(sql`count(*)`))
         .limit(50);
 
       const result = rows.map((row, i) => ({
         rank: i + 1,
-        userId: row.userId!,
+        userId: row.userId,
         username: row.username,
         displayName: row.displayName,
         avatarHash: row.avatarHash,
-        messageCount: row.messageCount,
-        gratonitesEarned: row.messageCount * 10, // 10 gratonites per message
+        fameReceived: row.fameReceived,
         memberSince: row.memberSince?.toISOString() ?? null,
       }));
 
@@ -158,36 +153,34 @@ leaderboardRouter.get(
         return;
       }
 
-      // Build conditions: messages in channels belonging to this guild
+      // Build conditions: fame transactions in this guild
       const dateCondition = cutoff
-        ? gte(messages.createdAt, cutoff)
+        ? gte(fameTransactions.createdAt, cutoff)
         : undefined;
 
       const conditions = [
-        eq(channels.guildId, guildId),
-        sql`${messages.authorId} IS NOT NULL`,
+        eq(fameTransactions.guildId, guildId),
         ...(dateCondition ? [dateCondition] : []),
       ];
 
       const rows = await db
         .select({
-          userId: messages.authorId,
+          userId: fameTransactions.receiverId,
           username: users.username,
           displayName: users.displayName,
           avatarHash: users.avatarHash,
-          messageCount: sql<number>`count(*)::int`.as('message_count'),
+          fameReceived: sql<number>`count(*)::int`.as('fame_received'),
           joinedAt: guildMembers.joinedAt,
         })
-        .from(messages)
-        .innerJoin(channels, eq(channels.id, messages.channelId))
-        .innerJoin(users, eq(users.id, messages.authorId))
+        .from(fameTransactions)
+        .innerJoin(users, eq(users.id, fameTransactions.receiverId))
         .innerJoin(
           guildMembers,
-          and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, messages.authorId)),
+          and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, fameTransactions.receiverId)),
         )
         .where(and(...conditions))
         .groupBy(
-          messages.authorId,
+          fameTransactions.receiverId,
           users.username,
           users.displayName,
           users.avatarHash,
@@ -198,12 +191,11 @@ leaderboardRouter.get(
 
       const result = rows.map((row, i) => ({
         rank: i + 1,
-        userId: row.userId!,
+        userId: row.userId,
         username: row.username,
         displayName: row.displayName,
         avatarHash: row.avatarHash,
-        messageCount: row.messageCount,
-        gratonitesEarned: row.messageCount * 10,
+        fameReceived: row.fameReceived,
         memberSince: row.joinedAt?.toISOString() ?? null,
       }));
 

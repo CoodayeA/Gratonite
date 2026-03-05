@@ -40,6 +40,12 @@ const updateDiscoverCurationSchema = z.object({
   discoverRank: z.number().int().min(0).max(999999).optional(),
 });
 
+const updatePortalSchema = z.object({
+  isPinned: z.boolean().optional(),
+  isFeatured: z.boolean().optional(),
+  isPublic: z.boolean().optional(),
+});
+
 async function assertScope(req: Request, res: Response, scope: AdminScope): Promise<boolean> {
   if (!req.userId) {
     res.status(401).json({ code: 'UNAUTHORIZED', message: 'Authentication required' });
@@ -538,6 +544,74 @@ adminRouter.patch(
       targetId: guildId,
       description: 'Updated discover curation fields',
       metadata: { isFeatured, isPinned, discoverRank },
+    });
+
+    res.status(200).json(updated);
+  },
+);
+
+adminRouter.get('/portals', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!(await assertScope(req, res, ADMIN_SCOPES.DISCOVER_CURATE))) return;
+
+  const rows = await db
+    .select({
+      id: guilds.id,
+      name: guilds.name,
+      description: guilds.description,
+      iconHash: guilds.iconHash,
+      memberCount: guilds.memberCount,
+      isDiscoverable: guilds.isDiscoverable,
+      isFeatured: guilds.isFeatured,
+      isPinned: guilds.isPinned,
+      discoverRank: guilds.discoverRank,
+      createdAt: guilds.createdAt,
+    })
+    .from(guilds)
+    .where(eq(guilds.isDiscoverable, true))
+    .orderBy(guilds.discoverRank, guilds.name);
+
+  res.status(200).json({ items: rows });
+});
+
+adminRouter.patch(
+  '/portals/:guildId',
+  requireAuth,
+  validate(updatePortalSchema),
+  async (req: Request, res: Response): Promise<void> => {
+    if (!(await assertScope(req, res, ADMIN_SCOPES.DISCOVER_CURATE))) return;
+
+    const { guildId } = req.params as Record<string, string>;
+    const { isPinned, isFeatured, isPublic } = req.body as z.infer<typeof updatePortalSchema>;
+
+    const patch: Partial<typeof guilds.$inferInsert> = { updatedAt: new Date() };
+    if (isPinned !== undefined) patch.isPinned = isPinned;
+    if (isFeatured !== undefined) patch.isFeatured = isFeatured;
+    if (isPublic !== undefined) patch.isDiscoverable = isPublic;
+
+    const [updated] = await db
+      .update(guilds)
+      .set(patch)
+      .where(eq(guilds.id, guildId))
+      .returning({
+        id: guilds.id,
+        name: guilds.name,
+        isDiscoverable: guilds.isDiscoverable,
+        isFeatured: guilds.isFeatured,
+        isPinned: guilds.isPinned,
+      });
+
+    if (!updated) {
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Guild not found' });
+      return;
+    }
+
+    await logAdminAudit({
+      actorId: req.userId!,
+      action: 'PORTAL_UPDATED',
+      targetType: 'guild',
+      targetId: guildId,
+      description: `Updated portal settings for ${updated.name}`,
+      metadata: { isPinned, isFeatured, isPublic },
     });
 
     res.status(200).json(updated);

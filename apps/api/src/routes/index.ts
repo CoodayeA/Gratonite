@@ -37,6 +37,8 @@ import { botApplicationsRouter } from './bot-applications';
 import { adminRouter } from './admin';
 import { marketplaceRouter } from './marketplace';
 import { telemetryRouter } from './telemetry';
+import { fameRouter } from './fame';
+import { groupDmsRouter } from './group-dms';
 import { authRateLimit, apiRateLimit } from '../middleware/rateLimit';
 
 export const router = Router();
@@ -83,6 +85,7 @@ router.use('/guilds/:guildId/bans', bansRouter);
 router.use('/guilds/:guildId/emojis', emojisRouter);
 router.use('/', invitesRouter); // invites has mixed mount paths
 router.use('/relationships', relationshipsRouter);
+router.use('/dms/group', groupDmsRouter);
 router.use('/files', filesRouter);
 router.use('/voice', voiceRouter);
 router.use('/channels/:channelId', voiceStatesRouter);
@@ -134,6 +137,9 @@ router.use('/bots/applications', botApplicationsRouter);
 
 // Theme Store
 router.use('/', themesRouter);
+
+// Fame
+router.use('/users/:userId/fame', fameRouter);
 
 // Platform Admin
 router.use('/admin', adminRouter);

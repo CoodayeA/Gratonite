@@ -371,6 +371,7 @@ const FameDashboard = () => {
     const [serverRatings, setServerRatings] = useState<ServerRating[]>([]);
     const [currentUserId, setCurrentUserId] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [myFameStats, setMyFameStats] = useState<{ fameReceived: number; fameGiven: number } | null>(null);
 
     useEffect(() => {
         Promise.allSettled([
@@ -415,14 +416,26 @@ const FameDashboard = () => {
         ]).then(() => setIsLoading(false));
     }, []);
 
+    // Fetch fame stats for current user
+    useEffect(() => {
+        if (!currentUserId) return;
+        api.fame.getStats(currentUserId).then(stats => {
+            setMyFameStats(stats);
+        }).catch(() => {});
+    }, [currentUserId]);
+
     // Mark current user once both data are available
     useEffect(() => {
         if (!currentUserId || leaderboardUsers.length === 0) return;
         setLeaderboardUsers(prev => prev.map(u => ({
             ...u,
             isCurrentUser: u.sourceUserId === currentUserId,
+            ...(u.sourceUserId === currentUserId && myFameStats ? {
+                fameReceived: myFameStats.fameReceived,
+                fameGiven: myFameStats.fameGiven,
+            } : {}),
         })));
-    }, [currentUserId, leaderboardUsers.length]);
+    }, [currentUserId, leaderboardUsers.length, myFameStats]);
 
     const currentUser = leaderboardUsers.find(u => u.isCurrentUser) || null;
 

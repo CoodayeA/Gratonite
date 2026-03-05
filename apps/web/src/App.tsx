@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, Navigate, Outlet, Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package } from 'lucide-react';
+import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users } from 'lucide-react';
 import './components/chat.css';
 import CommandPalette from './components/ui/CommandPalette';
 import { playSound, setSoundVolume } from './utils/SoundManager';
@@ -35,6 +35,7 @@ import AdminAuditLog from './pages/admin/AdminAuditLog';
 import AdminBotModeration from './pages/admin/AdminBotModeration';
 import AdminFeedback from './pages/admin/AdminFeedback';
 import AdminReports from './pages/admin/AdminReports';
+import AdminPortals from './pages/admin/AdminPortals';
 import RequireAdmin from './components/guards/RequireAdmin';
 import RequireAuth from './components/guards/RequireAuth';
 import HelpCenter from './pages/app/HelpCenter';
@@ -54,6 +55,7 @@ import ScreenShareModal from './components/modals/ScreenShareModal';
 import GuildSettingsModal from './components/modals/GuildSettingsModal';
 import InviteModal from './components/modals/InviteModal';
 import DMSearchModal from './components/modals/DMSearchModal';
+import GroupDmCreateModal from './components/modals/GroupDmCreateModal';
 
 import NotificationModal from './components/modals/NotificationModal';
 import KeyboardShortcutsModal from './components/modals/KeyboardShortcutsModal';
@@ -78,7 +80,7 @@ import { useGuildSession, type GuildSessionErrorCode, type GuildSessionInfo, typ
 import { isAuthRuntimeExpired } from './lib/authRuntime';
 
 type MediaType = 'video' | 'image' | null;
-type ModalType = 'settings' | 'userProfile' | 'createGuild' | 'screenShare' | 'guildSettings' | 'invite' | 'globalSearch' | 'dmSearch' | 'notifications' | 'shortcuts' | 'bugReport' | 'onboarding' | null;
+type ModalType = 'settings' | 'userProfile' | 'createGuild' | 'screenShare' | 'guildSettings' | 'invite' | 'globalSearch' | 'dmSearch' | 'notifications' | 'shortcuts' | 'bugReport' | 'onboarding' | 'createGroupDm' | null;
 type VoiceSidebarMember = {
     userId: string;
     username: string;
@@ -268,6 +270,12 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
 
             <div style={{ flex: 1 }}></div>
 
+            <Tooltip content="Help & Support" position="right">
+                <div className="guild-icon" onClick={() => navigate('/help-center')} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', width: '32px', height: '32px', minWidth: '32px', minHeight: '32px', marginBottom: '4px' }}>
+                    <HelpCircle size={18} />
+                </div>
+            </Tooltip>
+
             <Tooltip content="Report Bug" position="right">
                 <div className="guild-icon" onClick={onOpenBugReport} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginBottom: '8px' }}>
                     <Bug size={24} />
@@ -277,7 +285,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
     );
 };
 
-const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSearch, onOpenDMSearch, userProfile, guildSession }: { isOpen: boolean, onOpenSettings: () => void, onOpenProfile: () => void, onOpenGlobalSearch: () => void, onOpenDMSearch: () => void, userProfile: { id?: string, name: string, handle: string, status: string, customStatus: string, avatarStyle: string, avatarFrame: string, nameplateStyle?: 'none' | 'rainbow' | 'fire' | 'ice' | 'gold' | 'glitch', avatarHash?: string | null, badges: string[] }, guildSession: GuildSessionViewState }) => {
+const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSearch, onOpenDMSearch, onOpenCreateGroupDm, userProfile, guildSession }: { isOpen: boolean, onOpenSettings: () => void, onOpenProfile: () => void, onOpenGlobalSearch: () => void, onOpenDMSearch: () => void, onOpenCreateGroupDm: () => void, userProfile: { id?: string, name: string, handle: string, status: string, customStatus: string, avatarStyle: string, avatarFrame: string, nameplateStyle?: 'none' | 'rainbow' | 'fire' | 'ice' | 'gold' | 'glitch', avatarHash?: string | null, badges: string[] }, guildSession: GuildSessionViewState }) => {
     const { openMenu } = useContextMenu();
     const { addToast } = useToast();
     const navigate = useNavigate();
@@ -747,7 +755,10 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                             {collapsed['dm'] ? <ChevronRight size={14} /> : <ChevronDown size={14} />} <span>Direct Messages</span>
                         </div>
-                        <Plus size={14} style={{ color: 'var(--text-muted)' }} onClick={(e) => { e.stopPropagation(); onOpenDMSearch(); }} />
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <Users size={14} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} title="New Group DM" onClick={(e) => { e.stopPropagation(); onOpenCreateGroupDm(); }} />
+                            <Plus size={14} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onOpenDMSearch(); }} />
+                        </div>
                     </div>
 
                     {!collapsed['dm'] && (
@@ -804,6 +815,24 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                 </div>
                             ) : (
                                 dmChannels.map((dm: any) => {
+                                    const isGroupDm = dm.isGroup || dm.type === 'GROUP_DM';
+                                    if (isGroupDm) {
+                                        const groupLabel = dm.groupName || 'Group DM';
+                                        const memberCount = dm.participants?.length || 0;
+                                        return (
+                                            <Link key={dm.id} to={`/dm/${dm.id}`} style={{ textDecoration: 'none' }}>
+                                                <div className={`channel-item ${location.pathname === `/dm/${dm.id}` ? 'active' : ''}`}>
+                                                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                        <Users size={16} color="var(--bg-app)" />
+                                                    </div>
+                                                    <div style={{ overflow: 'hidden', flex: 1 }}>
+                                                        <span style={{ fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{groupLabel}</span>
+                                                        {memberCount > 0 && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{memberCount} members</span>}
+                                                    </div>
+                                                </div>
+                                            </Link>
+                                        );
+                                    }
                                     const recipient = dm.otherUser || dm.recipients?.[0];
                                     const displayName = recipient?.displayName || recipient?.username || 'Unknown';
                                     return (
@@ -2194,6 +2223,7 @@ export const AppLayout = () => {
                     onOpenProfile={() => setActiveModal('userProfile')}
                     onOpenGlobalSearch={() => setActiveModal('globalSearch')}
                     onOpenDMSearch={() => setActiveModal('dmSearch')}
+                    onOpenCreateGroupDm={() => setActiveModal('createGroupDm')}
                     userProfile={userProfile}
                     guildSession={guildSession}
                 />
@@ -2272,6 +2302,9 @@ export const AppLayout = () => {
             {activeModal === 'dmSearch' && (
                 <DMSearchModal onClose={() => setActiveModal(null)} />
             )}
+            {activeModal === 'createGroupDm' && (
+                <GroupDmCreateModal onClose={() => { setActiveModal(null); api.relationships.getDmChannels().then(setDmChannels).catch(() => {}); }} />
+            )}
             <CommandPalette isOpen={activeModal === 'globalSearch'} onClose={() => setActiveModal(null)} guilds={guilds} dmChannels={dmChannels} onOpenSettings={() => setActiveModal('settings')} />
             <ModalWrapper isOpen={activeModal === 'notifications'}>
                 <NotificationModal onClose={() => setActiveModal(null)} />
@@ -2326,6 +2359,7 @@ const appRouter = createBrowserRouter(
                 <Route path="admin/bot-moderation" element={<RequireAdmin><AdminBotModeration /></RequireAdmin>} />
                 <Route path="admin/feedback" element={<RequireAdmin><AdminFeedback /></RequireAdmin>} />
                 <Route path="admin/reports" element={<RequireAdmin><AdminReports /></RequireAdmin>} />
+                <Route path="admin/portals" element={<RequireAdmin><AdminPortals /></RequireAdmin>} />
                 <Route path="dm/:id" element={<DirectMessage />} />
                 {/* Parameterized guild routes */}
                 <Route path="guild/:guildId" element={<GuildOverview />} />

@@ -459,7 +459,7 @@ relationshipsRouter.get(
 
           if (!channel) return null;
 
-          // Get the other participant (not the current user).
+          // Get all participants.
           const allParticipants = await db
             .select({
               id: users.id,
@@ -487,7 +487,12 @@ relationshipsRouter.get(
             name: channel.name,
             type: channel.type,
             createdAt: channel.createdAt,
+            isGroup: channel.isGroup,
+            groupName: channel.groupName,
+            groupIcon: channel.groupIcon,
+            ownerId: channel.ownerId,
             otherUser: other,
+            participants: channel.isGroup ? allParticipants : undefined,
             lastMessage: lastMsg ?? null,
           };
         }),

@@ -85,7 +85,7 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
     return (
         <div className="modal-overlay" onClick={onClose} style={{ alignItems: 'flex-start', justifyContent: 'flex-end', padding: '24px' }}>
             <div
-                className="glass-panel"
+                className="notification-panel"
                 onClick={e => e.stopPropagation()}
                 style={{
                     width: '420px',
@@ -98,7 +98,8 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
                     padding: 0,
                     animation: 'slideInRight 0.3s ease-out forwards',
                     height: 'max-content',
-                    maxHeight: 'calc(100vh - 48px)'
+                    maxHeight: 'calc(100vh - 48px)',
+                    background: 'var(--bg-primary)',
                 }}
             >
                 <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--stroke)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

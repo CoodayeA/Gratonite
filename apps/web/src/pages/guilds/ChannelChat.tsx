@@ -98,6 +98,7 @@ const MemoizedMessageItem = memo(({
     setPlayingMessageId,
     handleMessageContext,
     setActiveThreadMessage,
+    activeThreadMessageId,
     isHypeMode,
     onImageClick,
     onReply,
@@ -113,6 +114,7 @@ const MemoizedMessageItem = memo(({
     const [isHovered, setIsHovered] = useState(false);
     const [famGiven, setFamGiven] = useState(false);
     const [showFameSparkle, setShowFameSparkle] = useState(false);
+    const [fameLoading, setFameLoading] = useState(false);
     const [showReactionPicker, setShowReactionPicker] = useState(false);
     const reactionPickerRef = useRef<HTMLDivElement>(null);
     const avatarRef = useRef<HTMLDivElement>(null);
@@ -133,16 +135,23 @@ const MemoizedMessageItem = memo(({
     // Use reactions from message props (persisted via API), fall back to empty
     const reactions: Array<{ emoji: string; count: number; me: boolean }> = msg.reactions || [];
 
-    const handleGiveFAME = (e: React.MouseEvent) => {
+    const handleGiveFAME = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (msg.system) return;
-        if (famGiven) {
-            setFamGiven(false);
-            return;
+        if (msg.system || !msg.authorId || fameLoading) return;
+        if (famGiven) return;
+        if (msg.authorId === currentUserId) return;
+        setFameLoading(true);
+        try {
+            await api.fame.give(msg.authorId, { messageId: msg.apiId, guildId: guildId || '' });
+            setFamGiven(true);
+            setShowFameSparkle(true);
+            setTimeout(() => setShowFameSparkle(false), 1400);
+        } catch (err: any) {
+            const errMsg = err?.message || 'Failed to give FAME';
+            addToast?.({ title: errMsg, variant: 'error' });
+        } finally {
+            setFameLoading(false);
         }
-        setFamGiven(true);
-        setShowFameSparkle(true);
-        setTimeout(() => setShowFameSparkle(false), 1400);
     };
 
     const isGrouped = prevMsg &&
@@ -178,7 +187,7 @@ const MemoizedMessageItem = memo(({
                 initial={isNew ? { opacity: 0, y: 20, scale: 0.98 } : false}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                className={`message ${isGrouped ? 'grouped' : ''} ${highlightedMessageId === msg.id ? 'highlighted-message' : ''}`}
+                className={`message ${isGrouped ? 'grouped' : ''} ${highlightedMessageId === msg.id ? 'highlighted-message' : ''} ${activeThreadMessageId === msg.id ? 'active-thread-message' : ''}`}
                 data-message-id={msg.apiId}
                 style={{ position: 'relative', marginTop: isGrouped ? '2px' : '16px', paddingTop: isGrouped ? '2px' : '16px', paddingBottom: isGrouped ? '2px' : '16px' }}
                 onMouseEnter={() => setIsHovered(true)}
@@ -860,6 +869,7 @@ const ChannelChat = () => {
             edited: m.edited || false,
             replyToId: m.replyToId || undefined,
             attachments: Array.isArray(m.attachments) && m.attachments.length > 0 ? m.attachments : undefined,
+            reactions: Array.isArray(m.reactions) && m.reactions.length > 0 ? m.reactions : undefined,
             authorRoleColor: m.authorId ? roleColorCacheRef.current.get(m.authorId) : undefined,
             authorAvatarHash: m.author?.avatarHash ?? null,
             authorNameplateStyle: (m.author as any)?.nameplateStyle ?? null,
@@ -1890,6 +1900,7 @@ const ChannelChat = () => {
                                         setPlayingMessageId={setPlayingMessageId}
                                         handleMessageContext={handleMessageContext}
                                         setActiveThreadMessage={setActiveThreadMessage}
+                                        activeThreadMessageId={activeThreadMessage?.id ?? null}
                                         isHypeMode={isHypeMode}
                                         onImageClick={(url: string) => setLightboxUrl(url)}
                                         onReply={(r: any) => setReplyingTo(r)}
@@ -1901,6 +1912,8 @@ const ChannelChat = () => {
                                         currentUserId={currentUserId || userProfile?.id || ''}
                                         currentUserAvatarFrame={userProfile?.avatarFrame || 'none'}
                                         currentUserNameplateStyle={userProfile?.nameplateStyle || 'none'}
+                                        guildId={guildId}
+                                        addToast={addToast}
                                     />
                                 </div>
                             );

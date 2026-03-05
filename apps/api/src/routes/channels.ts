@@ -26,6 +26,7 @@ import { eq, and, asc, count, inArray } from 'drizzle-orm';
 import { db } from '../db/index';
 import { channels } from '../db/schema/channels';
 import { dmChannelMembers } from '../db/schema/channels';
+import { users } from '../db/schema/users';
 import { guilds } from '../db/schema/guilds';
 import { Permissions } from '../db/schema/roles';
 import { requireAuth } from '../middleware/auth';
@@ -396,6 +397,24 @@ channelsRouter.get(
       }
 
       await canAccessChannel(channel, req.userId!);
+
+      // For group DMs, include participants
+      if (channel.isGroup) {
+        const participantRows = await db
+          .select({
+            id: users.id,
+            username: users.username,
+            displayName: users.displayName,
+            avatarHash: users.avatarHash,
+            status: users.status,
+          })
+          .from(dmChannelMembers)
+          .innerJoin(users, eq(users.id, dmChannelMembers.userId))
+          .where(eq(dmChannelMembers.channelId, channelId));
+
+        res.status(200).json({ ...channel, participants: participantRows });
+        return;
+      }
 
       res.status(200).json(channel);
     } catch (err) {

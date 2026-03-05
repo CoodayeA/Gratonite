@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
-import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check } from 'lucide-react';
+import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, Users, UserPlus, UserMinus, Pencil, LogOut } from 'lucide-react';
 
 import { BackgroundMedia } from '../../components/ui/BackgroundMedia';
 import { useToast } from '../../components/ui/ToastManager';
@@ -109,6 +109,17 @@ const DirectMessage = () => {
 
     // Emoji picker state
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+
+    // Group DM state
+    const [isGroupDm, setIsGroupDm] = useState(false);
+    const [groupName, setGroupName] = useState('');
+    const [groupOwnerId, setGroupOwnerId] = useState<string | null>(null);
+    const [groupParticipants, setGroupParticipants] = useState<Array<{ id: string; username: string; displayName: string; avatarHash: string | null; status: string }>>([]);
+    const [memberPanelOpen, setMemberPanelOpen] = useState(false);
+    const [isEditingGroupName, setIsEditingGroupName] = useState(false);
+    const [editGroupNameValue, setEditGroupNameValue] = useState('');
+    const [addMemberInput, setAddMemberInput] = useState('');
+    const [showAddMember, setShowAddMember] = useState(false);
 
     const normalizeChannelType = useCallback((type: string | null | undefined) => {
         return String(type ?? '').trim().toUpperCase().replace(/-/g, '_');
@@ -430,6 +441,20 @@ const DirectMessage = () => {
     useEffect(() => {
         if (!dmChannelId) return;
         api.channels.get(dmChannelId).then(async (ch: any) => {
+            // Check if this is a group DM
+            if (ch.isGroup || ch.type === 'GROUP_DM') {
+                setIsGroupDm(true);
+                setGroupName(ch.groupName || 'Group DM');
+                setGroupOwnerId(ch.ownerId || null);
+                setGroupParticipants(ch.participants || []);
+                const label = ch.groupName || 'Group DM';
+                setUserName(label);
+                setInitial(label.charAt(0).toUpperCase());
+                setUserColor(getDeterministicGradient(label));
+                return;
+            }
+
+            setIsGroupDm(false);
             // Try recipients array first (if backend ever populates it)
             let recipient = ch.recipients?.[0];
 
@@ -869,16 +894,47 @@ const DirectMessage = () => {
                 {/* Header */}
                 <header className="top-bar">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <Avatar
-                            userId={recipientId || dmChannelId || ''}
-                            avatarHash={recipientAvatarHash}
-                            displayName={userName || 'Unknown'}
-                            size={36}
-                            status="online"
-                        />
+                        {isGroupDm ? (
+                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <Users size={18} color="var(--bg-app)" />
+                            </div>
+                        ) : (
+                            <Avatar
+                                userId={recipientId || dmChannelId || ''}
+                                avatarHash={recipientAvatarHash}
+                                displayName={userName || 'Unknown'}
+                                size={36}
+                                status="online"
+                            />
+                        )}
                         <div>
                             <h2 style={{ fontSize: '1.05rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                {userName}
+                                {isGroupDm && isEditingGroupName ? (
+                                    <input
+                                        autoFocus
+                                        value={editGroupNameValue}
+                                        onChange={(e) => setEditGroupNameValue(e.target.value)}
+                                        onBlur={async () => {
+                                            setIsEditingGroupName(false);
+                                            if (editGroupNameValue.trim() && editGroupNameValue.trim() !== groupName) {
+                                                try {
+                                                    await api.groupDms.update(dmChannelId, { groupName: editGroupNameValue.trim() });
+                                                    setGroupName(editGroupNameValue.trim());
+                                                    setUserName(editGroupNameValue.trim());
+                                                } catch { addToast({ title: 'Failed to rename group', variant: 'error' }); }
+                                            }
+                                        }}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setIsEditingGroupName(false); }}
+                                        style={{ fontSize: '1.05rem', fontWeight: 600, background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '4px', padding: '2px 8px', color: 'var(--text-primary)', outline: 'none', width: '200px' }}
+                                    />
+                                ) : (
+                                    <>
+                                        {userName}
+                                        {isGroupDm && groupOwnerId === userProfile?.id && (
+                                            <Pencil size={14} style={{ cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => { setEditGroupNameValue(groupName); setIsEditingGroupName(true); }} />
+                                        )}
+                                    </>
+                                )}
                                 {isConnected && (
                                     <span style={{ fontSize: '12px', color: 'var(--success)', fontWeight: 500 }}>
                                         In Call
@@ -886,7 +942,7 @@ const DirectMessage = () => {
                                 )}
                             </h2>
                             <div style={{ fontSize: '0.75rem', color: userGame ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
-                                {userGame ? <span style={{ fontWeight: 600 }}>{userGame}</span> : userStatus}
+                                {isGroupDm ? `${groupParticipants.length} members` : (userGame ? <span style={{ fontWeight: 600 }}>{userGame}</span> : userStatus)}
                             </div>
                         </div>
                     </div>
@@ -908,7 +964,11 @@ const DirectMessage = () => {
                             <Loader2 size={20} style={{ color: 'var(--accent-primary)', animation: 'spin 1s linear infinite' }} />
                         )}
 
-                        <Info size={20} style={{ cursor: 'pointer', transition: 'color 0.2s', color: infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }} onClick={() => setInfoPanelOpen(!infoPanelOpen)} onMouseOver={e => e.currentTarget.style.color = infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
+                        {isGroupDm && (
+                            <Users size={20} style={{ cursor: 'pointer', transition: 'color 0.2s', color: memberPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }} onClick={() => setMemberPanelOpen(!memberPanelOpen)} onMouseOver={e => e.currentTarget.style.color = memberPanelOpen ? 'var(--accent-primary)' : 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = memberPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
+                        )}
+
+                        <Info size={20} style={{ cursor: 'pointer', transition: 'color 0.2s', color: infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }} onClick={() => { setInfoPanelOpen(!infoPanelOpen); if (isGroupDm) setMemberPanelOpen(false); }} onMouseOver={e => e.currentTarget.style.color = infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
                     </div>
                 </header>
 
@@ -1462,6 +1522,109 @@ const DirectMessage = () => {
                     </>
                 )}
             </div>
+
+            {/* Group DM Member Panel */}
+            {isGroupDm && (
+                <aside style={{
+                    width: memberPanelOpen ? '260px' : '0px',
+                    background: 'var(--bg-elevated)',
+                    borderLeft: memberPanelOpen ? '1px solid var(--stroke)' : 'none',
+                    transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    zIndex: 2,
+                }}>
+                    <div style={{ width: '260px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ padding: '16px', borderBottom: '1px solid var(--stroke)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>Members — {groupParticipants.length}</h3>
+                            {groupOwnerId === userProfile?.id && (
+                                <UserPlus size={18} style={{ cursor: 'pointer', color: 'var(--text-muted)' }} title="Add Member" onClick={() => setShowAddMember(!showAddMember)} />
+                            )}
+                        </div>
+
+                        {showAddMember && groupOwnerId === userProfile?.id && (
+                            <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--stroke)' }}>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="User ID..."
+                                        value={addMemberInput}
+                                        onChange={(e) => setAddMemberInput(e.target.value)}
+                                        style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
+                                    />
+                                    <button
+                                        onClick={async () => {
+                                            if (!addMemberInput.trim()) return;
+                                            try {
+                                                const result = await api.groupDms.addMember(dmChannelId, addMemberInput.trim());
+                                                setGroupParticipants(result.members);
+                                                setAddMemberInput('');
+                                                setShowAddMember(false);
+                                                addToast({ title: 'Member added', variant: 'success' });
+                                            } catch (err: any) {
+                                                addToast({ title: 'Failed to add member', description: err?.message, variant: 'error' });
+                                            }
+                                        }}
+                                        style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--accent-primary)', border: 'none', color: 'var(--bg-app)', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
+                                    >
+                                        Add
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
+                            {groupParticipants.map((p) => (
+                                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', borderRadius: '8px' }} onMouseOver={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>
+                                    <Avatar userId={p.id} avatarHash={p.avatarHash} displayName={p.displayName || p.username} size={32} />
+                                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                                        <div style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            {p.displayName || p.username}
+                                            {p.id === groupOwnerId && <span style={{ fontSize: '10px', color: 'var(--accent-primary)', fontWeight: 700 }}>OWNER</span>}
+                                        </div>
+                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{p.username}</div>
+                                    </div>
+                                    {groupOwnerId === userProfile?.id && p.id !== userProfile?.id && (
+                                        <UserMinus
+                                            size={16}
+                                            style={{ cursor: 'pointer', color: 'var(--text-muted)', flexShrink: 0 }}
+                                            title="Remove member"
+                                            onClick={async () => {
+                                                try {
+                                                    await api.groupDms.removeMember(dmChannelId, p.id);
+                                                    setGroupParticipants((prev) => prev.filter((m) => m.id !== p.id));
+                                                    addToast({ title: 'Member removed', variant: 'success' });
+                                                } catch (err: any) {
+                                                    addToast({ title: 'Failed to remove member', description: err?.message, variant: 'error' });
+                                                }
+                                            }}
+                                        />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ padding: '12px 16px', borderTop: '1px solid var(--stroke)' }}>
+                            <button
+                                onClick={async () => {
+                                    if (!userProfile?.id) return;
+                                    try {
+                                        await api.groupDms.removeMember(dmChannelId, userProfile.id);
+                                        addToast({ title: 'Left group DM', variant: 'success' });
+                                        navigate('/');
+                                    } catch (err: any) {
+                                        addToast({ title: 'Failed to leave group', description: err?.message, variant: 'error' });
+                                    }
+                                }}
+                                style={{ width: '100%', padding: '8px', borderRadius: '8px', border: 'none', background: 'rgba(239,68,68,0.1)', color: 'var(--error)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                            >
+                                <LogOut size={14} /> Leave Group
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            )}
 
             {/* Sliding Info Panel */}
             <aside style={{

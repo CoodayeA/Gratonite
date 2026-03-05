@@ -1484,6 +1484,31 @@ export const api = {
       }),
   },
 
+  groupDms: {
+    create: (userIds: string[], name?: string) =>
+      apiFetch<any>('/dms/group', {
+        method: 'POST',
+        body: JSON.stringify({ userIds, name }),
+      }),
+
+    addMember: (channelId: string, userId: string) =>
+      apiFetch<any>(`/dms/group/${channelId}/members`, {
+        method: 'POST',
+        body: JSON.stringify({ userId }),
+      }),
+
+    removeMember: (channelId: string, userId: string) =>
+      apiFetch<any>(`/dms/group/${channelId}/members/${userId}`, {
+        method: 'DELETE',
+      }),
+
+    update: (channelId: string, data: { groupName?: string; groupIcon?: string }) =>
+      apiFetch<any>(`/dms/group/${channelId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+  },
+
   messageRequests: {
     list: (bucket: 'requests' | 'spam' = 'requests') =>
       apiFetch<Array<{
@@ -1988,6 +2013,24 @@ export const api = {
       apiFetch<any>(`/admin/reports/${reportId}`, { method: 'PATCH', body: JSON.stringify(data) }),
   },
 
+  adminPortals: {
+    list: () =>
+      apiFetch<{ items: Array<{
+        id: string;
+        name: string;
+        description: string | null;
+        iconHash: string | null;
+        memberCount: number;
+        isDiscoverable: boolean;
+        isFeatured: boolean;
+        isPinned: boolean;
+        discoverRank: number;
+        createdAt: string;
+      }> }>('/admin/portals'),
+    update: (guildId: string, data: { isPinned?: boolean; isFeatured?: boolean; isPublic?: boolean }) =>
+      apiFetch<any>(`/admin/portals/${guildId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  },
+
   telemetry: {
     captureClientEvent: (payload: ClientTelemetryEvent) =>
       apiFetch<{ ok: true }>('/telemetry/client-events', {
@@ -2008,5 +2051,16 @@ export const api = {
 
     dismiss: (notificationId: string) =>
       apiFetch<void>(`/notifications/${notificationId}`, { method: 'DELETE' }),
+  },
+
+  fame: {
+    give: (userId: string, data: { messageId?: string; guildId: string }) =>
+      apiFetch<{ success: boolean; fameGiven: number; remaining: number }>(`/users/${userId}/fame`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    getStats: (userId: string) =>
+      apiFetch<{ fameReceived: number; fameGiven: number }>(`/users/${userId}/fame`),
   },
 };

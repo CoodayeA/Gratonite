@@ -118,3 +118,20 @@
                 display: flex;
                 flex-direction: column;
             }
+
+            .thread-input {
+                padding: 16px;
+                border-top: 1px solid var(--stroke);
+                background: var(--bg-elevated);
+                position: relative;
+            }
+
+            .thread-emoji-picker {
+                max-height: 200px;
+                overflow-y: auto;
+            }
+
+            .message.active-thread-message {
+                border-left: 3px solid var(--accent-primary, #526df5);
+                background: rgba(82, 109, 245, 0.06);
+            }

@@ -9,6 +9,7 @@ type Message = {
     time: string;
     content: string;
     bgColor?: string;
+    createdAt?: number;
 };
 
 interface ThreadPanelProps {
@@ -69,12 +70,14 @@ const ThreadPanel = ({ originalMessage, onClose }: ThreadPanelProps) => {
         const fileNote = attachedFiles.length > 0
             ? '\n📎 ' + attachedFiles.map(f => `${f.name} (${f.size})`).join(', ')
             : '';
+        const now = Date.now();
         setReplies(prev => [...prev, {
-            id: Date.now(),
+            id: now,
             author: currentUserName,
             avatar: 'E',
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            content: (inputValue + fileNote).trim()
+            content: (inputValue + fileNote).trim(),
+            createdAt: now,
         }]);
         setInputValue('');
         setAttachedFiles([]);
@@ -124,7 +127,9 @@ const ThreadPanel = ({ originalMessage, onClose }: ThreadPanelProps) => {
                             <div className="msg-content">
                                 <div className="msg-header" style={{ fontSize: '13px' }}>
                                     <span className="msg-author">{reply.author}</span>
-                                    <span className="msg-timestamp">{reply.time}</span>
+                                    <span className="msg-timestamp" title={reply.createdAt ? new Date(reply.createdAt).toLocaleString() : reply.time}>
+                                        {reply.createdAt ? formatRelative(reply.createdAt) : reply.time}
+                                    </span>
                                 </div>
                                 <div className="msg-body" style={{ fontSize: '13px' }}>
                                     {reply.content}
@@ -136,10 +141,10 @@ const ThreadPanel = ({ originalMessage, onClose }: ThreadPanelProps) => {
                 </div>
             </div>
 
-            <div className="thread-input" style={{ padding: '16px', borderTop: '1px solid var(--stroke)', background: 'var(--bg-elevated)', position: 'relative' }}>
+            <div className="thread-input">
                 {/* Emoji Picker */}
                 {showEmojiPicker && (
-                    <div style={{
+                    <div className="thread-emoji-picker" style={{
                         position: 'absolute',
                         bottom: '100%',
                         right: '16px',
@@ -153,6 +158,8 @@ const ThreadPanel = ({ originalMessage, onClose }: ThreadPanelProps) => {
                         gap: '4px',
                         zIndex: 100,
                         boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                        maxHeight: '200px',
+                        overflowY: 'auto',
                     }}>
                         {EMOJI_LIST.map(emoji => (
                             <button
@@ -263,5 +270,18 @@ const ThreadPanel = ({ originalMessage, onClose }: ThreadPanelProps) => {
         </div>
     );
 };
+
+function formatRelative(timestamp: number): string {
+    const diffMs = Date.now() - timestamp;
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'Just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    const diffDay = Math.floor(diffHr / 24);
+    if (diffDay === 1) return 'Yesterday';
+    if (diffDay < 7) return `${diffDay} days ago`;
+    return new Date(timestamp).toLocaleDateString();
+}
 
 export default ThreadPanel;

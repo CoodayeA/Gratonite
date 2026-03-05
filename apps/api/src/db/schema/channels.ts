@@ -144,6 +144,29 @@ export const channels = pgTable('channels', {
    * Updated by the application on any channel settings change.
    */
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+
+  /**
+   * Whether this channel is a group DM (true) or a regular 1:1 DM (false).
+   * Only meaningful when type = 'GROUP_DM'. Defaults to false.
+   */
+  isGroup: boolean('is_group').notNull().default(false),
+
+  /**
+   * Display name for group DM channels. Null for 1:1 DMs and guild channels.
+   */
+  groupName: varchar('group_name', { length: 100 }),
+
+  /**
+   * Avatar/icon for group DM channels. Stores an avatar hash or URL.
+   * Null for 1:1 DMs and guild channels.
+   */
+  groupIcon: varchar('group_icon', { length: 255 }),
+
+  /**
+   * The user who created this group DM. Null for 1:1 DMs and guild channels.
+   * The owner can rename, change icon, and remove members.
+   */
+  ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
 });
 
 /**

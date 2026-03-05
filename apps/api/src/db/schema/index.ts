@@ -33,3 +33,5 @@ export * from './themes';
 export * from './auctions';
 export * from './bot-applications';
 export * from './admin';
+export * from './fameTransactions';
+export * from './fameDailyLimits';

@@ -37,6 +37,9 @@ import { files } from '../db/schema/files';
 import { users } from '../db/schema/users';
 import { guilds } from '../db/schema/guilds';
 import { guildMembers } from '../db/schema/guilds';
+import { messageReactions } from '../db/schema/reactions';
+import { channelPins } from '../db/schema/pins';
+import { inArray } from 'drizzle-orm';
 import { Permissions } from '../db/schema/roles';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
@@ -269,26 +272,70 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
       .orderBy(desc(messages.createdAt))
       .limit(limit);
 
-    const formatted = rows.map((row) => ({
-      id: row.id,
-      channelId: row.channelId,
-      authorId: row.authorId,
-      content: row.content,
-      attachments: row.attachments,
-      edited: row.edited,
-      editedAt: row.editedAt,
-      createdAt: row.createdAt,
-      replyToId: row.replyToId ?? null,
-      author: row.authorId
-        ? {
-            id: row.authorId,
-            username: row.authorUsername,
-            displayName: row.authorDisplayName,
-            avatarHash: row.authorAvatarHash,
-            nameplateStyle: row.authorNameplateStyle ?? 'none',
-          }
-        : null,
-    }));
+    // Fetch reactions for all returned messages in one query
+    const messageIds = rows.map((r) => r.id);
+    let reactionRows: { messageId: string; userId: string; emoji: string }[] = [];
+    if (messageIds.length > 0) {
+      reactionRows = await db
+        .select({ messageId: messageReactions.messageId, userId: messageReactions.userId, emoji: messageReactions.emoji })
+        .from(messageReactions)
+        .where(inArray(messageReactions.messageId, messageIds));
+    }
+
+    // Group reactions by messageId -> emoji
+    const reactionsByMessage = new Map<string, Map<string, { emoji: string; count: number; userIds: string[] }>>();
+    for (const r of reactionRows) {
+      if (!reactionsByMessage.has(r.messageId)) reactionsByMessage.set(r.messageId, new Map());
+      const emojiMap = reactionsByMessage.get(r.messageId)!;
+      if (!emojiMap.has(r.emoji)) emojiMap.set(r.emoji, { emoji: r.emoji, count: 0, userIds: [] });
+      const entry = emojiMap.get(r.emoji)!;
+      entry.count++;
+      entry.userIds.push(r.userId);
+    }
+
+    // Fetch pinned message IDs for this channel in one query
+    let pinnedSet = new Set<string>();
+    if (messageIds.length > 0) {
+      const pinRows = await db
+        .select({ messageId: channelPins.messageId })
+        .from(channelPins)
+        .where(inArray(channelPins.messageId, messageIds));
+      pinnedSet = new Set(pinRows.map((p) => p.messageId));
+    }
+
+    const formatted = rows.map((row) => {
+      const emojiMap = reactionsByMessage.get(row.id);
+      const reactions = emojiMap
+        ? Array.from(emojiMap.values()).map((e) => ({
+            emoji: e.emoji,
+            count: e.count,
+            me: e.userIds.includes(req.userId!),
+          }))
+        : [];
+
+      return {
+        id: row.id,
+        channelId: row.channelId,
+        authorId: row.authorId,
+        content: row.content,
+        attachments: row.attachments,
+        edited: row.edited,
+        editedAt: row.editedAt,
+        createdAt: row.createdAt,
+        replyToId: row.replyToId ?? null,
+        pinned: pinnedSet.has(row.id),
+        reactions,
+        author: row.authorId
+          ? {
+              id: row.authorId,
+              username: row.authorUsername,
+              displayName: row.authorDisplayName,
+              avatarHash: row.authorAvatarHash,
+              nameplateStyle: row.authorNameplateStyle ?? 'none',
+            }
+          : null,
+      };
+    });
 
     res.status(200).json(formatted);
   } catch (err) {
