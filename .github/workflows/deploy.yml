@@ -31,6 +31,12 @@ jobs:
           npm ci
           npm run build
 
+      - name: Build Landing Page
+        run: |
+          cd apps/landing
+          npm ci
+          npm run build
+
       - name: Prepare deploy package
         run: |
           mkdir -p deploy/api
@@ -52,9 +58,10 @@ jobs:
 
       - name: Upload to server
         run: |
-          rsync -avz \
-            deploy/ \
-            ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/
+          rsync -avz deploy/ ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/
+          rsync -avz apps/landing/out/ ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/apps/landing/out/
+          rsync -avz apps/web/dist/ ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/apps/web/dist/
+          rsync -avz docker/ ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/docker/
 
       - name: Restart containers and run migrations
         run: |
@@ -63,3 +70,13 @@ jobs:
              docker compose --env-file .env.production -f docker-compose.production.yml up -d --force-recreate api web &&
              docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js" &&
              docker compose -f docker-compose.production.yml ps'
+
+      - name: Build and deploy web Docker image
+        run: |
+          ssh ferdinand@gratonite.chat '
+            cd /home/ferdinand/gratonite-app &&
+            docker build \
+              -t gratonite-web:latest \
+              -f docker/hetzner/web.Dockerfile . &&
+            docker restart gratonite-web-1
+          '
