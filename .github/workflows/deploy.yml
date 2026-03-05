@@ -58,6 +58,7 @@ jobs:
 
       - name: Upload to server
         run: |
+          ssh ferdinand@gratonite.chat 'mkdir -p /home/ferdinand/gratonite-app/apps/landing/out /home/ferdinand/gratonite-app/apps/web/dist /home/ferdinand/gratonite-app/docker'
           rsync -avz deploy/ ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/
           rsync -avz apps/landing/out/ ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/apps/landing/out/
           rsync -avz apps/web/dist/ ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/apps/web/dist/
