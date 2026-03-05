@@ -147,6 +147,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     useEffect(() => {
         if (!guildId) return;
         api.guilds.get(guildId).then((g: any) => {
+            if (g.ownerId) setGuildOwnerId(g.ownerId);
             if (g.name) setServerName(g.name);
             if (g.description) setServerDesc(g.description);
             if (g.iconHash) {
@@ -664,6 +665,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [systemMsgBoost, setSystemMsgBoost] = useState(true);
     const [deleteConfirm, setDeleteConfirm] = useState(false);
     const [deleteInput, setDeleteInput] = useState('');
+    const [guildOwnerId, setGuildOwnerId] = useState('');
     const [adminWarning, setAdminWarning] = useState<string | null>(null);
     const [draggedRole, setDraggedRole] = useState<string | null>(null);
     const [dragOverRole, setDragOverRole] = useState<string | null>(null);
@@ -865,6 +867,19 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             });
         } finally {
             setDeletingGuild(false);
+        }
+    };
+
+    const leaveGuild = async () => {
+        if (!guildId) return;
+        try {
+            await api.guilds.leave(guildId);
+            addToast({ title: 'Left Server', description: `You have left ${serverName}.`, variant: 'info' });
+            onClose();
+            navigate('/');
+            window.dispatchEvent(new CustomEvent('gratonite:guild-left', { detail: { guildId } }));
+        } catch {
+            addToast({ title: 'Failed', description: 'Could not leave the server.', variant: 'error' });
         }
     };
 
@@ -1077,26 +1092,32 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
 
                             <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--error)', fontWeight: 600, marginBottom: '16px' }}>Danger Zone</h3>
 
-                            {!deleteConfirm ? (
-                                <button onClick={() => setDeleteConfirm(true)} style={{ background: 'transparent', border: '1px solid var(--error)', padding: '10px 24px', borderRadius: '8px', color: 'var(--error)', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}>
-                                    Delete Server
-                                </button>
-                            ) : (
-                                <div style={{ background: 'rgba(237,66,69,0.1)', border: '1px solid var(--error)', borderRadius: '12px', padding: '24px' }}>
-                                    <h4 style={{ color: 'var(--error)', marginBottom: '8px' }}>Are you sure? This cannot be undone.</h4>
-                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Type the server name to confirm: <strong>{serverName}</strong></p>
-                                    <input type="text" value={deleteInput} onChange={e => setDeleteInput(e.target.value)} placeholder="Type server name..." style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const, marginBottom: '16px' }} />
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        <button
-                                            disabled={deleteInput !== serverName || deletingGuild}
-                                            onClick={deleteGuild}
-                                            style={{ background: deleteInput === serverName ? 'var(--error)' : 'var(--bg-tertiary)', border: 'none', padding: '10px 24px', borderRadius: '8px', color: deleteInput === serverName ? 'white' : 'var(--text-muted)', fontWeight: 700, fontSize: '14px', cursor: deleteInput === serverName ? 'pointer' : 'not-allowed' }}
-                                        >
-                                            {deletingGuild ? 'Deleting...' : 'Delete Server'}
-                                        </button>
-                                        <button onClick={() => { setDeleteConfirm(false); setDeleteInput(''); }} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '10px 24px', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
+                            {currentUser.id === guildOwnerId ? (
+                                !deleteConfirm ? (
+                                    <button onClick={() => setDeleteConfirm(true)} style={{ background: 'transparent', border: '1px solid var(--error)', padding: '10px 24px', borderRadius: '8px', color: 'var(--error)', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}>
+                                        Delete Server
+                                    </button>
+                                ) : (
+                                    <div style={{ background: 'rgba(237,66,69,0.1)', border: '1px solid var(--error)', borderRadius: '12px', padding: '24px' }}>
+                                        <h4 style={{ color: 'var(--error)', marginBottom: '8px' }}>Are you sure? This cannot be undone.</h4>
+                                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Type the server name to confirm: <strong>{serverName}</strong></p>
+                                        <input type="text" value={deleteInput} onChange={e => setDeleteInput(e.target.value)} placeholder="Type server name..." style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const, marginBottom: '16px' }} />
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button
+                                                disabled={deleteInput !== serverName || deletingGuild}
+                                                onClick={deleteGuild}
+                                                style={{ background: deleteInput === serverName ? 'var(--error)' : 'var(--bg-tertiary)', border: 'none', padding: '10px 24px', borderRadius: '8px', color: deleteInput === serverName ? 'white' : 'var(--text-muted)', fontWeight: 700, fontSize: '14px', cursor: deleteInput === serverName ? 'pointer' : 'not-allowed' }}
+                                            >
+                                                {deletingGuild ? 'Deleting...' : 'Delete Server'}
+                                            </button>
+                                            <button onClick={() => { setDeleteConfirm(false); setDeleteInput(''); }} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '10px 24px', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
+                                        </div>
                                     </div>
-                                </div>
+                                )
+                            ) : (
+                                <button onClick={leaveGuild} style={{ background: 'transparent', border: '1px solid var(--error)', padding: '10px 24px', borderRadius: '8px', color: 'var(--error)', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}>
+                                    Leave Server
+                                </button>
                             )}
                         </>
                     )}
