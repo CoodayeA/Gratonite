@@ -1,8 +1,0 @@
-name: Hello
-on:
-  workflow_dispatch:
-jobs:
-  hi:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo hello

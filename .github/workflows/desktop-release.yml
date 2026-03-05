@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-mac:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -43,7 +43,7 @@ jobs:
             ferdinand@gratonite.chat:/home/ferdinand/gratonite-releases/
 
   build-win:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
