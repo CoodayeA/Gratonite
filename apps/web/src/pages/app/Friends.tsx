@@ -47,7 +47,7 @@ const Friends = () => {
             for (const rel of rels) {
                 const user = (rel as any).user || {};
                 const name = user.displayName || user.username || rel.userId?.slice(0, 8) || 'Unknown';
-                if ((rel as any).type === 'friend' || (rel as any).type === 1) {
+                if ((rel as any).type === 'FRIEND' || (rel as any).type === 'friend' || (rel as any).type === 1) {
                     friendList.push({
                         id: user.id || (rel as any).userId,
                         username: user.username || name,
@@ -55,7 +55,7 @@ const Friends = () => {
                         status: 'online', // Will be updated by presence
                         avatar: name.charAt(0).toUpperCase(),
                     });
-                } else if ((rel as any).type === 'pending_incoming' || (rel as any).type === 3) {
+                } else if ((rel as any).type === 'PENDING_INCOMING' || (rel as any).type === 'pending_incoming' || (rel as any).type === 3) {
                     requestList.push({
                         id: user.id || (rel as any).userId,
                         username: user.username || name,
@@ -63,7 +63,7 @@ const Friends = () => {
                         type: 'incoming',
                         avatar: name.charAt(0).toUpperCase(),
                     });
-                } else if ((rel as any).type === 'pending_outgoing' || (rel as any).type === 4) {
+                } else if ((rel as any).type === 'PENDING_OUTGOING' || (rel as any).type === 'pending_outgoing' || (rel as any).type === 4) {
                     requestList.push({
                         id: user.id || (rel as any).userId,
                         username: user.username || name,

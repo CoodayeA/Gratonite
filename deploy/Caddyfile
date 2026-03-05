@@ -12,3 +12,10 @@ api.gratonite.chat {
 app.gratonite.chat {
     reverse_proxy gratonite-web:80
 }
+
+# Desktop app releases
+releases.gratonite.chat {
+    root * /srv/releases
+    file_server
+    header Access-Control-Allow-Origin *
+}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Hash, Compass, MessageSquare, ClipboardList, Heart, Settings, Star } from 'lucide-react';
+import { Hash, Compass, MessageSquare, ClipboardList, Heart, Settings, Star, Monitor } from 'lucide-react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useToast } from '../../components/ui/ToastManager';
@@ -106,6 +106,16 @@ const Home = () => {
                         <div className="action-card-text">
                             <div className="action-title">Give Feedback or Report a Bug</div>
                             <div className="action-subtext">Help us improve</div>
+                        </div>
+                    </div>
+
+                    <div className="action-card hover-lift" onClick={() => navigate('/download')} style={{ cursor: 'pointer' }}>
+                        <div className="action-card-icon">
+                            <Monitor size={24} />
+                        </div>
+                        <div className="action-card-text">
+                            <div className="action-title">Download Desktop App</div>
+                            <div className="action-subtext">macOS &amp; Windows</div>
                         </div>
                     </div>
 

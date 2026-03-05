@@ -13,6 +13,7 @@ import Verify from './pages/auth/Verify';
 
 import HomePage from './pages/app/Home';
 import Discover from './pages/app/Discover';
+import Download from './pages/Download';
 import Friends from './pages/app/Friends';
 import Shop from './pages/app/Shop';
 import Marketplace from './pages/app/Marketplace';
@@ -2304,6 +2305,7 @@ const appRouter = createBrowserRouter(
                 <Route path="marketplace" element={<Marketplace />} />
                 <Route path="inventory" element={<Inventory />} />
                 <Route path="discover" element={<Discover />} />
+                <Route path="download" element={<Download />} />
                 <Route path="creator-dashboard" element={<CreatorDashboard />} />
                 <Route path="fame" element={<FameDashboard />} />
                 <Route path="theme-builder" element={<ThemeBuilder />} />
