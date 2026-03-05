@@ -28,13 +28,13 @@ jobs:
       - name: Build Web
         run: |
           cd apps/web
-          npm ci
+          npm install
           npm run build
 
       - name: Build Landing Page
         run: |
           cd apps/landing
-          npm ci
+          npm install
           npm run build
 
       - name: Prepare deploy package
