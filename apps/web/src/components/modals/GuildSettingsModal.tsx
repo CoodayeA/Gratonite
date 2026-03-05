@@ -139,8 +139,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
     const [editingCategoryName, setEditingCategoryName] = useState('');
 
-    const emitGuildUpdated = () => {
-        window.dispatchEvent(new CustomEvent('gratonite:guild-updated'));
+    const emitGuildUpdated = (detail?: { guildId?: string; iconHash?: string }) => {
+        window.dispatchEvent(new CustomEvent('gratonite:guild-updated', { detail }));
     };
 
     // Fetch guild info (name, description, icon, banner, accent) on mount
@@ -799,7 +799,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             const result = await api.guilds.uploadIcon(guildId, file);
             setAvatarUrl(`${API_BASE}/files/${result.iconHash}`);
             addToast({ title: 'Server icon updated', variant: 'success' });
-            emitGuildUpdated();
+            emitGuildUpdated({ guildId, iconHash: result.iconHash });
         } catch (err: any) {
             addToast({ title: 'Failed to upload server icon', description: err?.message || 'Unknown error', variant: 'error' });
         }
@@ -988,9 +988,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             <div style={{ width: '100%', height: '140px', borderRadius: '12px', background: !bannerUrl ? 'linear-gradient(135deg, rgba(82, 109, 245, 0.2), rgba(0,0,0,0.5))' : 'var(--bg-tertiary)', border: '2px dashed var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginBottom: '12px', overflow: 'hidden', position: 'relative' }} onClick={() => bannerInputRef.current?.click()}>
                                 {bannerUrl ? (
                                     bannerIsVideo ? (
-                                        <video src={bannerUrl} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} />
+                                        <video src={bannerUrl} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }} />
                                     ) : (
-                                        <img src={bannerUrl} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} />
+                                        <img src={bannerUrl} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }} />
                                     )
                                 ) : null}
                                 <span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 500, position: 'relative', zIndex: 1, background: bannerUrl ? 'rgba(0,0,0,0.5)' : 'transparent', padding: bannerUrl ? '4px 12px' : '0', borderRadius: '6px' }}>{bannerUrl ? 'Click to change' : 'Click to upload banner (960×540 recommended)'}</span>

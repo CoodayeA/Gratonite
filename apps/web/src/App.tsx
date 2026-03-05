@@ -1881,7 +1881,15 @@ export const AppLayout = () => {
     }, [refreshGuilds]);
 
     useEffect(() => {
-        const handler = () => refreshGuilds();
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+            if (detail?.guildId && detail?.iconHash) {
+                setGuilds(prev => prev.map(g =>
+                    g.id === detail.guildId ? { ...g, iconHash: detail.iconHash } : g
+                ));
+            }
+            refreshGuilds();
+        };
         window.addEventListener('gratonite:guild-updated', handler);
         return () => window.removeEventListener('gratonite:guild-updated', handler);
     }, [refreshGuilds]);

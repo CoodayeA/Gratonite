@@ -1322,7 +1322,7 @@ const DirectMessage = () => {
                                             {msg.attachments && msg.attachments.length > 0 && (
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
                                                     {msg.attachments.map((att) => (
-                                                        att.contentType?.startsWith('image/') ? (
+                                                        att.mimeType?.startsWith('image/') ? (
                                                             <div key={att.id} style={{ maxWidth: '400px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--stroke)', cursor: 'pointer', background: 'var(--bg-tertiary)' }}>
                                                                 <img src={att.url} alt={att.filename} style={{ width: '100%', display: 'block', objectFit: 'cover' }} />
                                                             </div>
