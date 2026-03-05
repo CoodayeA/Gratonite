@@ -132,23 +132,7 @@ relationshipsRouter.get('/', requireAuth, async (req: Request, res: Response): P
       .innerJoin(users, eq(users.id, relationships.addresseeId))
       .where(eq(relationships.requesterId, userId));
 
-    // Fetch relationships where current user is the addressee.
-    const asAddressee = await db
-      .select({
-        id: relationships.id,
-        type: relationships.type,
-        createdAt: relationships.createdAt,
-        otherId: relationships.requesterId,
-        otherUsername: users.username,
-        otherDisplayName: users.displayName,
-        otherAvatarHash: users.avatarHash,
-        otherStatus: users.status,
-      })
-      .from(relationships)
-      .innerJoin(users, eq(users.id, relationships.requesterId))
-      .where(eq(relationships.addresseeId, userId));
-
-    const all = [...asRequester, ...asAddressee].map((row) => ({
+    const all = [...asRequester].map((row) => ({
       id: row.id,
       type: row.type,
       createdAt: row.createdAt,

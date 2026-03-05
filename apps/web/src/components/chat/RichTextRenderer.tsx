@@ -198,6 +198,22 @@ function applyRemainingRules(text: string, ctx: InlineCtx, _startRule: number, d
 function renderLeaf(text: string, ctx: InlineCtx, depth: number): React.ReactNode[] {
     const kp = `${ctx.keyPrefix}-leaf${depth}`;
 
+    // Handle already-stored custom:name:url tokens (legacy format from old preprocessMessage)
+    const customTokenRe = /(custom:[a-zA-Z0-9_]+:https?:\/\/[^\s]+)/g;
+    if (customTokenRe.test(text)) {
+        const tokenParts = text.split(/(custom:[a-zA-Z0-9_]+:https?:\/\/[^\s]+)/g);
+        const tokenResult: React.ReactNode[] = [];
+        tokenParts.forEach((part, i) => {
+            const m = part.match(/^custom:([a-zA-Z0-9_]+):(https?:\/\/.+)$/);
+            if (m) {
+                tokenResult.push(<CustomEmojiInline key={`${kp}-ctoken-${i}`} name={m[1]} url={m[2]} />);
+            } else if (part) {
+                tokenResult.push(...renderLeaf(part, { ...ctx, keyPrefix: `${kp}-ctr-${i}` }, depth + 1));
+            }
+        });
+        return tokenResult;
+    }
+
     // Split by URLs
     const urlRe = /(https?:\/\/[^\s]+)/g;
     const urlParts = text.split(urlRe);

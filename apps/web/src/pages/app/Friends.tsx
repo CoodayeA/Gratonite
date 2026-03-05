@@ -34,7 +34,7 @@ const Friends = () => {
 
     // Real data from API
     const [friends, setFriends] = useState<Friend[]>([]);
-    const [requests, setRequests] = useState<{ id: string; username: string; displayName: string; type: string; avatar: string }[]>([]);
+    const [requests, setRequests] = useState<{ id: string; username: string; displayName: string; type: string; avatar: string; avatarHash?: string; nameplateStyle?: string }[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [fetchError, setFetchError] = useState(false);
 
@@ -62,6 +62,8 @@ const Friends = () => {
                         displayName: name,
                         type: 'incoming',
                         avatar: name.charAt(0).toUpperCase(),
+                        avatarHash: user.avatarHash,
+                        nameplateStyle: user.nameplateStyle,
                     });
                 } else if ((rel as any).type === 'PENDING_OUTGOING' || (rel as any).type === 'pending_outgoing' || (rel as any).type === 4) {
                     requestList.push({
@@ -70,6 +72,8 @@ const Friends = () => {
                         displayName: name,
                         type: 'outgoing',
                         avatar: name.charAt(0).toUpperCase(),
+                        avatarHash: user.avatarHash,
+                        nameplateStyle: user.nameplateStyle,
                     });
                 }
             }
@@ -437,7 +441,7 @@ const Friends = () => {
             {friends.map(friend => (
                 <div
                     key={friend.id}
-                    className="friend-item"
+                    className="friend-row"
                     onClick={(e) => handleFriendRowClick(friend, e)}
                     style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -700,7 +704,7 @@ const Friends = () => {
                             </h3>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                 {requests.filter(r => r.username.includes(searchQuery) || r.displayName.includes(searchQuery)).map(req => (
-                                    <div key={req.id} className="friend-item" style={{
+                                    <div key={req.id} className="friend-row" style={{
                                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                         padding: '12px 16px', borderRadius: '8px', cursor: 'pointer',
                                         transition: 'background 0.2s'
@@ -709,11 +713,12 @@ const Friends = () => {
                                             <Avatar
                                                 userId={req.id}
                                                 displayName={req.displayName}
+                                                avatarHash={req.avatarHash}
                                                 size={40}
                                             />
                                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                                    <span style={{ fontWeight: 600, fontSize: '15px' }}>{req.displayName}</span>
+                                                    <span className={req.nameplateStyle && req.nameplateStyle !== 'none' ? `nameplate-${req.nameplateStyle}` : undefined} style={{ fontWeight: 600, fontSize: '15px' }}>{req.displayName}</span>
                                                     <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{req.username}</span>
                                                 </div>
                                                 <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>

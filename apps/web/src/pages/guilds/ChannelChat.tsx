@@ -1342,7 +1342,7 @@ const ChannelChat = () => {
 
         result = result.replace(/(?<!\\):([a-zA-Z0-9_]+):/g, (match, name) => {
             const found = allEmojis.find(e => e.name === name);
-            if (found) return found.isCustom ? found.emoji : (found as any).emoji;
+            if (found) return found.isCustom ? `:${found.name}:` : (found as any).emoji;
             return match;
         });
         result = result.replace(/\\:([a-zA-Z0-9_]+):/g, ':$1:');
