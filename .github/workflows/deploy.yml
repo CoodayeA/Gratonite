@@ -79,5 +79,5 @@ jobs:
             docker build -t gratonite-web:latest -f docker/hetzner/web.Dockerfile . &&
             docker stop gratonite-web-1 || true &&
             docker rm gratonite-web-1 || true &&
-            docker run -d --name gratonite-web-1 --network gratonite_default --network-alias web --restart unless-stopped gratonite-web:latest
+            docker run -d --name gratonite-web-1 --network gratonite_default --network-alias web --restart unless-stopped -v /home/ferdinand/gratonite-releases:/usr/share/nginx/downloads:ro gratonite-web:latest
           '
