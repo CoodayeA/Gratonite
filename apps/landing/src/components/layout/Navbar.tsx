@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 const navLinks = [
-  { href: "/app/download", label: "Download" },
+  { href: "/download", label: "Download" },
   { href: "/discover", label: "Discover" },
   { href: "/safety", label: "Safety" },
   { href: "/support", label: "Support" },
@@ -60,7 +60,7 @@ export function Navbar() {
           >
             Log In
           </Link>
-          <Button variant="secondary" size="sm" href="/app/download">
+          <Button variant="secondary" size="sm" href="/download">
             Get the App
           </Button>
         </div>
@@ -112,7 +112,7 @@ export function Navbar() {
           >
             Log In
           </Link>
-          <Button variant="secondary" size="md" href="/app/download">
+          <Button variant="secondary" size="md" href="/download">
             Get the App
           </Button>
         </div>

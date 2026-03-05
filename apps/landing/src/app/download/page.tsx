@@ -80,16 +80,25 @@ export default function DownloadPage() {
         {/* Build channels */}
         <ScrollReveal>
           <div className="flex gap-3 mb-10">
-            {["Stable", "Canary", "Legacy"].map((channel, i) => (
+            {[
+              { label: "Stable", version: "v1.0.1" },
+              { label: "Canary", version: null },
+              { label: "Legacy", version: null },
+            ].map(({ label, version }, i) => (
               <button
-                key={channel}
+                key={label}
                 className={`px-4 py-2 font-display font-bold text-sm rounded-lg neo-border-2 transition-all ${
                   i === 0
                     ? "bg-charcoal text-white neo-shadow-sm"
                     : "bg-surface text-foreground hover:bg-gray-warm/30"
                 }`}
               >
-                {channel}
+                {label}
+                {version && (
+                  <span className={`ml-2 text-[10px] font-mono font-normal ${i === 0 ? "text-white/60" : "text-foreground/40"}`}>
+                    {version}
+                  </span>
+                )}
               </button>
             ))}
           </div>
