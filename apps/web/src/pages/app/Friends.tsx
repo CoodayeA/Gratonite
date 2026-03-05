@@ -3,7 +3,7 @@ import { getSocket } from '../../lib/socket';
 import { useNavigate } from 'react-router-dom';
 import { Search, UserPlus, MoreVertical, MessageSquare, X, UserMinus, VolumeX, Flag, Phone, Video, User } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
-import { api } from '../../lib/api';
+import { api, ApiRequestError } from '../../lib/api';
 import { type ActivityEntry } from '../../utils/activity';
 import ActivityCard from '../../components/ui/ActivityCard';
 import Avatar from '../../components/ui/Avatar';
@@ -115,8 +115,15 @@ const Friends = () => {
             addToast({ title: 'Friend Request Sent', description: `A friend request was sent to ${users[0].displayName || users[0].username}!`, variant: 'success' });
             setAddFriendInput('');
             fetchRelationships();
-        } catch {
-            addToast({ title: 'Failed', description: 'Could not send friend request.', variant: 'error' });
+        } catch (err) {
+            if (err instanceof ApiRequestError && err.code === 'CONFLICT') {
+                const msg = err.message.includes('already friends')
+                    ? 'You are already friends with this user.'
+                    : 'A friend request is already pending.';
+                addToast({ title: 'Already connected', description: msg, variant: 'info' });
+            } else {
+                addToast({ title: 'Failed', description: 'Could not send friend request.', variant: 'error' });
+            }
         }
     };
 

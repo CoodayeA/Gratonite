@@ -41,7 +41,7 @@ import HelpCenter from './pages/app/HelpCenter';
 import InviteAccept from './pages/InviteAccept';
 import { NotFound } from './pages/ErrorStates';
 import { getDeterministicGradient } from './utils/colors';
-import { api, API_BASE, getAccessToken } from './lib/api';
+import { api, API_BASE, getAccessToken, ApiRequestError } from './lib/api';
 import { connectSocket, disconnectSocket, onPresenceUpdate, onVoiceStateUpdate, onSocketReconnect } from './lib/socket';
 
 import SettingsModal from './components/modals/SettingsModal';
@@ -1500,8 +1500,15 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile }: { onOpenProfile: () =
         try {
             await api.relationships.sendFriendRequest(popoverUser.member.userId);
             addToast({ title: 'Friend request sent!', variant: 'success' });
-        } catch {
-            addToast({ title: 'Failed to send friend request', variant: 'error' });
+        } catch (err) {
+            if (err instanceof ApiRequestError && err.code === 'CONFLICT') {
+                const msg = err.message.includes('already friends')
+                    ? 'You are already friends with this user.'
+                    : 'A friend request is already pending.';
+                addToast({ title: 'Already connected', description: msg, variant: 'info' });
+            } else {
+                addToast({ title: 'Failed to send friend request', variant: 'error' });
+            }
         }
         setPopoverUser(null);
     };
@@ -1902,6 +1909,8 @@ export const AppLayout = () => {
         badges: []
     });
 
+    const nameplatesSyncedRef = useRef(false);
+
     // Sync userProfile from UserContext
     useEffect(() => {
         if (ctxUser.id) {
@@ -1939,6 +1948,13 @@ export const AppLayout = () => {
                     nameplateStyle: nextNameplateStyle,
                 };
             });
+
+            // One-shot: push localStorage nameplate to DB so other users see it
+            const persistedNameplateForSync = getStoredNameplateStyle(ctxUser.id);
+            if (!nameplatesSyncedRef.current && persistedNameplateForSync && persistedNameplateForSync !== 'none') {
+                nameplatesSyncedRef.current = true;
+                api.users.updateProfile({ nameplateStyle: persistedNameplateForSync }).catch(() => {});
+            }
         }
     }, [ctxUser.id, ctxUser.name, ctxUser.handle, ctxUser.avatarHash, ctxUser.bannerHash]);
 
