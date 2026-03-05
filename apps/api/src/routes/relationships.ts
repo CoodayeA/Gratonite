@@ -768,7 +768,7 @@ relationshipsRouter.put(
       const userId = req.userId!;
       const { userId: requesterId } = req.params as Record<string, string>;
 
-      // Find the PENDING_INCOMING row where current user is the addressee.
+      // Find the PENDING_OUTGOING row where the requester sent the request to current user.
       const [incomingRow] = await db
         .select()
         .from(relationships)
@@ -776,7 +776,7 @@ relationshipsRouter.put(
           and(
             eq(relationships.requesterId, requesterId),
             eq(relationships.addresseeId, userId),
-            eq(relationships.type, 'PENDING_INCOMING'),
+            eq(relationships.type, 'PENDING_OUTGOING'),
           ),
         )
         .limit(1);
