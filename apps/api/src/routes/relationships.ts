@@ -790,8 +790,8 @@ relationshipsRouter.put(
         .from(relationships)
         .where(
           and(
-            eq(relationships.requesterId, userId),
-            eq(relationships.addresseeId, requesterId),
+            eq(relationships.requesterId, requesterId),
+            eq(relationships.addresseeId, userId),
             eq(relationships.type, 'PENDING_INCOMING'),
           ),
         )
