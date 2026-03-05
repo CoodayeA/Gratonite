@@ -156,6 +156,19 @@ export default function DownloadPage() {
           ))}
         </div>
 
+        {/* Windows SmartScreen notice */}
+        <ScrollReveal>
+          <div className="mt-10 neo-border-2 rounded-xl px-5 py-4 bg-surface flex gap-3 items-start max-w-2xl">
+            <span className="text-lg mt-0.5">⊞</span>
+            <div>
+              <p className="text-sm font-bold text-foreground/80 mb-1">Windows users: SmartScreen warning</p>
+              <p className="text-sm text-foreground/55">
+                Windows may show a &ldquo;Windows protected your PC&rdquo; message when you run the installer. This is normal for new apps without an expensive publisher certificate. Click <strong className="text-foreground/80">More info</strong> then <strong className="text-foreground/80">Run anyway</strong> to continue.
+              </p>
+            </div>
+          </div>
+        </ScrollReveal>
+
         {/* Release notes link */}
         <ScrollReveal>
           <div className="mt-12 text-center">
