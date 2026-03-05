@@ -2,7 +2,7 @@ import { Monitor, Apple, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const VERSION = '1.0.0';
-const BASE_URL = 'https://releases.gratonite.chat';
+const BASE_URL = 'https://releases.gratonite.chat/downloads';
 
 export default function Download() {
     const navigate = useNavigate();
