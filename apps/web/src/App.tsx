@@ -2282,7 +2282,7 @@ export const AppLayout = () => {
                         setGuilds(prev => {
                             const next = [...prev];
                             const idx = next.findIndex((existing) => existing.id === g.id);
-                            const record = { ...g, description: null, memberCount: 0 };
+                            const record = { ...g, ownerId: (g as any).ownerId ?? '', description: null, memberCount: 0 };
                             if (idx >= 0) {
                                 next[idx] = { ...next[idx], ...record };
                             } else {
