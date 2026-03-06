@@ -55,6 +55,7 @@ import CreateGuildModal from './components/modals/CreateGuildModal';
 import PresenceMenu, { PresenceType, PRESENCE_COLORS } from './components/modals/PresenceMenu';
 import ScreenShareModal from './components/modals/ScreenShareModal';
 import GuildSettingsModal from './components/modals/GuildSettingsModal';
+import { ChannelSettingsModal } from './components/modals/ChannelSettingsModal';
 import MemberOptionsModal from './components/modals/MemberOptionsModal';
 import InviteModal from './components/modals/InviteModal';
 import DMSearchModal from './components/modals/DMSearchModal';
@@ -294,12 +295,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const { addToast } = useToast();
     const navigate = useNavigate();
     const voiceState = useVoice();
-    const [channelPermsOpen, setChannelPermsOpen] = useState<{ id: string; name: string } | null>(null);
-    const [channelPermsRoles, setChannelPermsRoles] = useState<Array<{ id: string; name: string; color: string | null }>>([]);
-    const [channelPermsOverrides, setChannelPermsOverrides] = useState<Array<{ id: string; targetId: string; targetType: string; allow: string; deny: string }>>([]);
-    const [channelPermsSaving, setChannelPermsSaving] = useState(false);
-    const [editingChannel, setEditingChannel] = useState<string | null>(null);
-    const [permStates, setPermStates] = useState<Record<string, Record<string, 'neutral' | 'allow' | 'deny'>>>({});
+    const [channelSettingsOpen, setChannelSettingsOpen] = useState<{ id: string; name: string; topic?: string; rateLimitPerUser?: number; isNsfw?: boolean } | null>(null);
     const [privateToggle, setPrivateToggle] = useState(false);
     const [showCreateChannel, setShowCreateChannel] = useState<{ type: 'text' | 'voice'; parentId?: string } | null>(null);
     const [newChannelName, setNewChannelName] = useState('');
@@ -556,14 +552,16 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
             { id: 'mark-read', label: 'Mark as Read', icon: Circle, onClick: () => addToast({ title: 'Channel Marked as Read', variant: 'info' }) },
             { id: 'mute', label: 'Mute Channel', icon: Volume1, onClick: () => addToast({ title: 'Channel Muted', variant: 'info' }) },
             { divider: true, id: 'div1', label: '', onClick: () => {} },
-            { id: 'edit', label: 'Edit Channel', icon: Settings, onClick: () => setEditingChannel(channel.name) },
+            { id: 'edit', label: 'Edit Channel', icon: Settings, onClick: () => {
+                api.channels.get(channel.id).then((ch: any) => {
+                    setChannelSettingsOpen({ id: channel.id, name: ch.name, topic: ch.topic || '', rateLimitPerUser: ch.rateLimitPerUser || 0, isNsfw: ch.isNsfw || false });
+                }).catch(() => setChannelSettingsOpen({ id: channel.id, name: channel.name }));
+            }},
             { id: 'duplicate', label: 'Duplicate Channel', icon: Copy, onClick: () => handleDuplicateChannel(channel.name) },
             { id: 'permissions', label: 'Channel Permissions', icon: ShieldIcon, onClick: () => {
-                setChannelPermsOpen({ id: channel.id, name: channel.name });
-                if (activeGuildId) {
-                    api.guilds.getRoles(activeGuildId).then((r: any) => setChannelPermsRoles(r.map((role: any) => ({ id: role.id, name: role.name, color: role.color })))).catch(() => {});
-                    api.channels.getPermissionOverrides(channel.id).then((o: any) => setChannelPermsOverrides(o)).catch(() => {});
-                }
+                api.channels.get(channel.id).then((ch: any) => {
+                    setChannelSettingsOpen({ id: channel.id, name: ch.name, topic: ch.topic || '', rateLimitPerUser: ch.rateLimitPerUser || 0, isNsfw: ch.isNsfw || false });
+                }).catch(() => setChannelSettingsOpen({ id: channel.id, name: channel.name }));
             }},
             { divider: true, id: 'div2', label: '', onClick: () => {} },
             { id: 'copy-id', label: 'Copy Channel ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(channel.id).catch(() => {}); addToast({ title: 'Channel ID copied', variant: 'info' }); } },
@@ -1127,232 +1125,22 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
 
             <UserPanel />
 
-            {/* Channel Permissions Modal */}
-            {channelPermsOpen && (() => {
-                const PERM_BITS: { key: string; label: string; bit: bigint }[] = [
-                    { key: 'view_channel', label: 'View Channel', bit: 1n << 8n },
-                    { key: 'send_messages', label: 'Send Messages', bit: 1n << 7n },
-                    { key: 'manage_messages', label: 'Manage Messages', bit: 1n << 6n },
-                    { key: 'connect', label: 'Connect', bit: 1n << 9n },
-                    { key: 'speak', label: 'Speak', bit: 1n << 10n },
-                    { key: 'manage_channels', label: 'Manage Channel', bit: 1n << 2n },
-                ];
-
-                const getPermState = (roleId: string, bit: bigint): 'allow' | 'deny' | 'neutral' => {
-                    const override = channelPermsOverrides.find(o => o.targetId === roleId);
-                    if (!override) return 'neutral';
-                    const allow = BigInt(override.allow);
-                    const deny = BigInt(override.deny);
-                    if ((allow & bit) !== 0n) return 'allow';
-                    if ((deny & bit) !== 0n) return 'deny';
-                    return 'neutral';
-                };
-
-                const cycleOverride = (roleId: string, bit: bigint) => {
-                    setChannelPermsOverrides(prev => {
-                        const existing = prev.find(o => o.targetId === roleId);
-                        const current = getPermState(roleId, bit);
-                        const nextState = current === 'neutral' ? 'allow' : current === 'allow' ? 'deny' : 'neutral';
-
-                        let allow = existing ? BigInt(existing.allow) : 0n;
-                        let deny = existing ? BigInt(existing.deny) : 0n;
-
-                        // Clear the bit from both
-                        allow = allow & ~bit;
-                        deny = deny & ~bit;
-
-                        if (nextState === 'allow') allow = allow | bit;
-                        if (nextState === 'deny') deny = deny | bit;
-
-                        if (existing) {
-                            return prev.map(o => o.targetId === roleId ? { ...o, allow: allow.toString(), deny: deny.toString() } : o);
-                        } else {
-                            return [...prev, { id: '', targetId: roleId, targetType: 'role', allow: allow.toString(), deny: deny.toString() }];
+            {/* Channel Settings Modal */}
+            {channelSettingsOpen && activeGuildId && (
+                <ChannelSettingsModal
+                    channelId={channelSettingsOpen.id}
+                    channelName={channelSettingsOpen.name}
+                    channelTopic={channelSettingsOpen.topic}
+                    guildId={activeGuildId}
+                    rateLimitPerUser={channelSettingsOpen.rateLimitPerUser}
+                    isNsfw={channelSettingsOpen.isNsfw}
+                    onClose={() => setChannelSettingsOpen(null)}
+                    onUpdate={(changes) => {
+                        if (changes.name) {
+                            setGuildChannels(prev => prev.map(c => c.id === channelSettingsOpen.id ? { ...c, name: changes.name! } : c));
                         }
-                    });
-                };
-
-                const handleSavePerms = async () => {
-                    if (!channelPermsOpen || !activeGuildId) return;
-                    setChannelPermsSaving(true);
-                    try {
-                        for (const override of channelPermsOverrides) {
-                            if (override.allow === '0' && override.deny === '0') {
-                                // Delete override if all neutral
-                                if (override.id) {
-                                    await api.channels.deletePermissionOverride(channelPermsOpen.id, override.targetId);
-                                }
-                            } else {
-                                await api.channels.setPermissionOverride(channelPermsOpen.id, override.targetId, {
-                                    targetType: override.targetType as 'role' | 'member',
-                                    allow: override.allow,
-                                    deny: override.deny,
-                                });
-                            }
-                        }
-                        addToast({ title: 'Permissions Updated', variant: 'success' });
-                        setChannelPermsOpen(null);
-                    } catch {
-                        addToast({ title: 'Failed to save permissions', variant: 'error' });
-                    } finally {
-                        setChannelPermsSaving(false);
-                    }
-                };
-
-                return (
-                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setChannelPermsOpen(null)}>
-                        <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '16px', padding: '24px', maxWidth: '560px', width: '90%', maxHeight: '80vh', overflowY: 'auto' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                <h2 style={{ fontSize: '18px', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>#{channelPermsOpen.name} Permissions</h2>
-                                <button onClick={() => setChannelPermsOpen(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><X size={20} /></button>
-                            </div>
-
-                            {/* Permission legend */}
-                            <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', fontSize: '11px', color: 'var(--text-muted)' }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Check size={12} color="var(--success)" /> Allow</span>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Minus size={12} /> Neutral</span>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><X size={12} color="var(--error)" /> Deny</span>
-                            </div>
-
-                            {/* Column headers */}
-                            <div style={{ display: 'flex', alignItems: 'center', padding: '6px 12px', marginBottom: '4px' }}>
-                                <span style={{ flex: 1, fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Role</span>
-                                <div style={{ display: 'flex', gap: '4px' }}>
-                                    {PERM_BITS.map(p => (
-                                        <span key={p.key} style={{ width: '28px', textAlign: 'center', fontSize: '9px', color: 'var(--text-muted)', fontWeight: 600 }} title={p.label}>
-                                            {p.label.split(' ').map(w => w[0]).join('')}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Role Overrides */}
-                            {channelPermsRoles.map(role => (
-                                <div key={role.id} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', borderRadius: '8px', marginBottom: '4px', background: 'var(--bg-tertiary)' }}>
-                                    <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: role.color || 'var(--text-primary)' }}>{role.name}</span>
-                                    <div style={{ display: 'flex', gap: '4px' }}>
-                                        {PERM_BITS.map(perm => {
-                                            const state = getPermState(role.id, perm.bit);
-                                            return (
-                                                <button
-                                                    key={perm.key}
-                                                    onClick={() => cycleOverride(role.id, perm.bit)}
-                                                    title={`${perm.label}: ${state}`}
-                                                    style={{
-                                                        width: '28px', height: '28px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        background: state === 'allow' ? 'rgba(34, 197, 94, 0.2)' : state === 'deny' ? 'rgba(239, 68, 68, 0.2)' : 'var(--bg-elevated)',
-                                                        color: state === 'allow' ? 'var(--success)' : state === 'deny' ? 'var(--error)' : 'var(--text-muted)',
-                                                        transition: 'all 0.15s'
-                                                    }}
-                                                >
-                                                    {state === 'allow' ? <Check size={14} /> : state === 'deny' ? <X size={14} /> : <Minus size={14} />}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            ))}
-
-                            {channelPermsRoles.length === 0 && (
-                                <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '13px' }}>Loading roles...</div>
-                            )}
-
-                            {/* Save */}
-                            <button
-                                onClick={handleSavePerms}
-                                disabled={channelPermsSaving}
-                                style={{
-                                    width: '100%', padding: '10px 16px', background: channelPermsSaving ? 'var(--bg-tertiary)' : 'var(--accent-primary)', border: 'none',
-                                    borderRadius: '8px', color: channelPermsSaving ? 'var(--text-muted)' : 'white', cursor: channelPermsSaving ? 'default' : 'pointer', fontSize: '14px',
-                                    fontWeight: 600, marginTop: '16px'
-                                }}
-                            >
-                                {channelPermsSaving ? 'Saving...' : 'Save Changes'}
-                            </button>
-                        </div>
-                    </div>
-                );
-            })()}
-
-            {/* Edit Channel Modal */}
-            {editingChannel && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setEditingChannel(null)}>
-                    <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '16px', padding: '24px', maxWidth: '460px', width: '90%' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h2 style={{ fontSize: '18px', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>Edit #{editingChannel}</h2>
-                            <button onClick={() => setEditingChannel(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><X size={20} /></button>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            <div>
-                                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>Channel Name</label>
-                                <input
-                                    defaultValue={editingChannel}
-                                    style={{
-                                        width: '100%', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
-                                        borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none',
-                                        boxSizing: 'border-box'
-                                    }}
-                                />
-                            </div>
-
-                            <div>
-                                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>Channel Topic</label>
-                                <textarea
-                                    placeholder="Set a topic for this channel"
-                                    rows={3}
-                                    style={{
-                                        width: '100%', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
-                                        borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none',
-                                        resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box'
-                                    }}
-                                />
-                            </div>
-
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                                <input type="checkbox" style={{ accentColor: 'var(--accent-primary)' }} />
-                                NSFW Channel
-                            </label>
-
-                            <div>
-                                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>Slowmode (seconds)</label>
-                                <input
-                                    type="number"
-                                    placeholder="0"
-                                    min={0}
-                                    max={21600}
-                                    style={{
-                                        width: '100%', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
-                                        borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none',
-                                        boxSizing: 'border-box'
-                                    }}
-                                />
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                                <button
-                                    onClick={() => { setEditingChannel(null); addToast({ title: 'Channel Updated', variant: 'success' }); }}
-                                    style={{
-                                        flex: 1, padding: '10px 16px', background: 'var(--accent-primary)', border: 'none',
-                                        borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: 600
-                                    }}
-                                >
-                                    Save
-                                </button>
-                                <button
-                                    onClick={() => setEditingChannel(null)}
-                                    style={{
-                                        flex: 1, padding: '10px 16px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
-                                        borderRadius: '8px', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '14px', fontWeight: 500
-                                    }}
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                    }}
+                />
             )}
         </aside>
     );
