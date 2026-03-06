@@ -336,7 +336,7 @@ const MemoizedMessageItem = memo(({
                             </div>
                         ) : (
                             <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.5', willChange: 'transform, opacity' }}>
-                                <RichTextRenderer content={msg.content} />
+                                <RichTextRenderer content={msg.content} customEmojis={customEmojis} />
                                 {msg.edited && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '4px' }}>(edited)</span>}
                             </div>
                         )}
