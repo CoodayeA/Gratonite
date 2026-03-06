@@ -17,10 +17,14 @@ import { db } from '../db/index';
 import { webhooks } from '../db/schema/webhooks';
 import { channels } from '../db/schema/channels';
 import { messages } from '../db/schema/messages';
+import { guildMembers } from '../db/schema/guilds';
 import { requireAuth } from '../middleware/auth';
 import { getIO } from '../lib/socket-io';
 
 export const webhooksRouter = Router();
+
+// Simple in-memory rate limit: max 5 executions per webhook per 10 seconds
+const webhookRateLimits = new Map<string, { count: number; resetAt: number }>();
 
 // POST /channels/:channelId/webhooks — create webhook
 webhooksRouter.post(
@@ -45,6 +49,15 @@ webhooksRouter.post(
 
       if (!channel || !channel.guildId) {
         res.status(404).json({ error: 'Guild channel not found' });
+        return;
+      }
+
+      const member = await db.select({ userId: guildMembers.userId })
+        .from(guildMembers)
+        .where(and(eq(guildMembers.guildId, channel.guildId!), eq(guildMembers.userId, userId)))
+        .limit(1);
+      if (!member.length) {
+        res.status(403).json({ error: 'Not a member of this guild' });
         return;
       }
 
@@ -73,6 +86,17 @@ webhooksRouter.get(
   async (req: Request, res: Response) => {
     try {
       const guildId = req.params.guildId as string;
+      const userId = req.userId!;
+
+      const member = await db.select({ id: guildMembers.userId })
+        .from(guildMembers)
+        .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, userId)))
+        .limit(1);
+      if (!member.length) {
+        res.status(403).json({ error: 'Not a member of this guild' });
+        return;
+      }
+
       const allWebhooks = await db
         .select()
         .from(webhooks)
@@ -92,6 +116,23 @@ webhooksRouter.delete(
   async (req: Request, res: Response) => {
     try {
       const webhookId = req.params.webhookId as string;
+      const userId = req.userId!;
+
+      const [webhook] = await db.select().from(webhooks).where(eq(webhooks.id, webhookId)).limit(1);
+      if (!webhook) {
+        res.status(404).json({ error: 'Webhook not found' });
+        return;
+      }
+
+      const member = await db.select({ userId: guildMembers.userId })
+        .from(guildMembers)
+        .where(and(eq(guildMembers.guildId, webhook.guildId), eq(guildMembers.userId, userId)))
+        .limit(1);
+      if (!member.length && webhook.creatorId !== userId) {
+        res.status(403).json({ error: 'Unauthorized' });
+        return;
+      }
+
       await db.delete(webhooks).where(eq(webhooks.id, webhookId));
       res.json({ success: true });
     } catch (err) {
@@ -109,6 +150,19 @@ webhooksRouter.post(
       const webhookId = req.params.webhookId as string;
       const token = req.params.token as string;
       const { content, username, avatarUrl } = req.body;
+
+      // Rate limit: max 5 executions per webhook per 10 seconds
+      const now = Date.now();
+      const rl = webhookRateLimits.get(webhookId);
+      if (rl && now < rl.resetAt) {
+        if (rl.count >= 5) {
+          res.status(429).json({ error: 'Rate limit exceeded. Max 5 requests per 10 seconds.' });
+          return;
+        }
+        rl.count++;
+      } else {
+        webhookRateLimits.set(webhookId, { count: 1, resetAt: now + 10000 });
+      }
 
       if (!content || typeof content !== 'string') {
         res.status(400).json({ error: 'content is required' });
@@ -136,7 +190,7 @@ webhooksRouter.post(
         })
         .returning();
 
-      const displayName = username || webhook.name;
+      const displayName = (username || webhook.name).slice(0, 80);
       const displayAvatar = avatarUrl || webhook.avatarUrl;
 
       try {

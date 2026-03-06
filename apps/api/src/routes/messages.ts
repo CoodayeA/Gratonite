@@ -547,11 +547,20 @@ messagesRouter.post(
       // --- Channel read-state: increment mention counts for <@userId> mentions ---
       if (content && chan?.guildId) {
         const mentionRegex = /<@([a-f0-9-]{36})>/g;
-        const mentionedIds = new Set<string>();
+        const rawMentionedIds = new Set<string>();
         let mentionResult = mentionRegex.exec(content);
         while (mentionResult !== null) {
-          if (mentionResult[1] !== req.userId!) mentionedIds.add(mentionResult[1]);
+          if (mentionResult[1] !== req.userId!) rawMentionedIds.add(mentionResult[1]);
           mentionResult = mentionRegex.exec(content);
+        }
+
+        // Filter to only actual guild members to prevent mention spam for non-members
+        let mentionedIds = new Set<string>();
+        if (rawMentionedIds.size > 0) {
+          const memberRows = await db.select({ userId: guildMembers.userId })
+            .from(guildMembers)
+            .where(and(eq(guildMembers.guildId, chan.guildId), inArray(guildMembers.userId, [...rawMentionedIds])));
+          mentionedIds = new Set(memberRows.map(m => m.userId));
         }
 
         for (const mentionedUserId of mentionedIds) {
