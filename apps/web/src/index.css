@@ -1933,7 +1933,7 @@ body {
 
 .channel-item:hover {
     color: var(--text-primary);
-    transform: translateY(1px);
+    background: var(--hover-overlay, rgba(255,255,255,0.05));
 }
 
 /* ------------------------
@@ -2167,6 +2167,7 @@ p {
     overflow: hidden;
     position: relative;
     z-index: 5;
+    isolation: isolate;
     background: linear-gradient(180deg, rgba(20, 20, 28, 0.2) 0%, rgba(20, 20, 28, 0.6) 100%);
 }
 
@@ -2190,7 +2191,7 @@ p {
     background: rgba(10, 10, 12, 0.5);
     backdrop-filter: var(--panel-blur);
     -webkit-backdrop-filter: var(--panel-blur);
-    z-index: 5;
+    z-index: 10;
 }
 
 .top-bar h2 {
@@ -2201,6 +2202,15 @@ p {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.action-icon-btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
 }
 
 .message-area {

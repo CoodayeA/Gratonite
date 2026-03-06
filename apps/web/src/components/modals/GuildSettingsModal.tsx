@@ -1005,7 +1005,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                     bannerIsVideo ? (
                                         <video src={bannerUrl} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }} />
                                     ) : (
-                                        <img src={bannerUrl} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }} />
+                                        <img src={bannerUrl} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
                                     )
                                 ) : null}
                                 <span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 500, position: 'relative', zIndex: 1, background: bannerUrl ? 'rgba(0,0,0,0.5)' : 'transparent', padding: bannerUrl ? '4px 12px' : '0', borderRadius: '6px' }}>{bannerUrl ? 'Click to change' : 'Click to upload banner (960×540 recommended)'}</span>

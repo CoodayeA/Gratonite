@@ -505,6 +505,7 @@ const ChannelChat = () => {
     const { channelId, guildId } = useParams<{ channelId: string; guildId: string }>();
     const navigate = useNavigate();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [showScrollButton, setShowScrollButton] = useState(false);
     const [inputValue, setInputValue] = useState('');
     const [replyingTo, setReplyingTo] = useState<{ id: number; apiId?: string; author: string; content: string } | null>(null);
     const [editingMessage, setEditingMessage] = useState<{ id: number; apiId: string; content: string } | null>(null);
@@ -1264,6 +1265,8 @@ const ChannelChat = () => {
             if (el.scrollTop < 200 && hasMoreMessages && !isLoadingOlder) {
                 loadOlderMessages();
             }
+            const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+            setShowScrollButton(distFromBottom > 200);
         };
         el.addEventListener('scroll', handleScroll, { passive: true });
         return () => el.removeEventListener('scroll', handleScroll);
@@ -1843,6 +1846,31 @@ const ChannelChat = () => {
                 </div>
             )}
 
+            {showScrollButton && (
+                <button
+                    onClick={scrollToBottom}
+                    style={{
+                        position: 'absolute',
+                        bottom: '80px',
+                        right: '24px',
+                        zIndex: 10,
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        background: 'var(--accent-primary)',
+                        border: '2px solid var(--stroke)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: 'var(--shadow-panel)',
+                        color: '#000',
+                    }}
+                    title="Scroll to bottom"
+                >
+                    <ChevronDown size={20} />
+                </button>
+            )}
             <div ref={parentRef} className="message-area" style={{ overflowY: 'auto', zIndex: 2, position: 'relative' }}>
                 {!isLoadingMessages && messages.length === 0 && (
                     <EmptyState

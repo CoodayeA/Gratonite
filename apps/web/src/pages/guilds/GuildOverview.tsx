@@ -47,6 +47,7 @@ const GuildOverview = () => {
     const [legacyChannels, setLegacyChannels] = useState<ChannelData[]>([]);
     const [legacyLoading, setLegacyLoading] = useState(false);
     const [voiceParticipants, setVoiceParticipants] = useState<Record<string, number>>({});
+    const [iconImgError, setIconImgError] = useState(false);
     
     const guild = (guildSession?.enabled ? guildSession.guildInfo : legacyGuild) as GuildData | null;
     const channels = (guildSession?.enabled ? guildSession.channels : legacyChannels) as ChannelData[];
@@ -157,7 +158,7 @@ const GuildOverview = () => {
             )}
             {/* Guild Banner */}
             {bannerUrl && (
-                <div style={{ width: '100%', height: '240px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+                <div style={{ width: '100%', height: '240px', position: 'relative', overflow: 'hidden', flexShrink: 0, willChange: 'auto', isolation: 'isolate' }}>
                     {isBannerVideo ? (
                         <video src={bannerUrl} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
@@ -246,12 +247,20 @@ const GuildOverview = () => {
                         <div style={{
                             width: '120px', height: '120px',
                             borderRadius: '24px',
-                            background: getDeterministicGradient(guildName),
+                            background: (guild?.iconHash && !iconImgError) ? 'transparent' : getDeterministicGradient(guildName),
                             border: '4px solid var(--accent-primary)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '48px', fontWeight: 'bold', color: 'white'
+                            fontSize: '48px', fontWeight: 'bold', color: 'white',
+                            overflow: 'hidden',
                         }}>
-                            {guildInitial}
+                            {(guild?.iconHash && !iconImgError) ? (
+                                <img
+                                    src={`${API_BASE}/files/${guild.iconHash}`}
+                                    alt={guildName}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    onError={() => setIconImgError(true)}
+                                />
+                            ) : guildInitial}
                         </div>
                     </div>
 

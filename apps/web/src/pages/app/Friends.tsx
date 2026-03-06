@@ -19,6 +19,7 @@ interface Friend {
     status: FriendStatus;
     customStatus?: string;
     avatar: string;
+    avatarHash?: string | null;
     activity?: ActivityEntry;
 }
 
@@ -54,6 +55,7 @@ const Friends = () => {
                         displayName: name,
                         status: 'online', // Will be updated by presence
                         avatar: name.charAt(0).toUpperCase(),
+                        avatarHash: user.avatarHash ?? null,
                     });
                 } else if ((rel as any).type === 'PENDING_INCOMING' || (rel as any).type === 'pending_incoming' || (rel as any).type === 3) {
                     requestList.push({
@@ -273,6 +275,7 @@ const Friends = () => {
                             size={80}
                             status={selectedFriend.status}
                             statusRingColor="var(--bg-secondary)"
+                            avatarHash={selectedFriend.avatarHash}
                         />
                     </div>
                     <div style={{ fontWeight: 700, fontSize: '20px', marginBottom: '4px' }}>
@@ -459,6 +462,7 @@ const Friends = () => {
                             size={40}
                             status={friend.status}
                             statusRingColor="var(--bg-primary)"
+                            avatarHash={friend.avatarHash}
                         />
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
