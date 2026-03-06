@@ -854,9 +854,15 @@ usersRouter.post(
       res.status(403).json({ code: 'FORBIDDEN', message: 'Admin access required' });
       return;
     }
+    const VALID_BADGES = ['admin', 'early_adopter', 'verified', 'developer', 'moderator', 'supporter'] as const;
     const { badges } = req.body;
-    if (!Array.isArray(badges)) {
-      res.status(400).json({ code: 'BAD_REQUEST', message: 'badges must be an array' });
+    if (!Array.isArray(badges) || badges.length > 10) {
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'badges must be an array of max 10 items' });
+      return;
+    }
+    const invalidBadge = badges.find((b: unknown) => !VALID_BADGES.includes(b as any));
+    if (invalidBadge !== undefined) {
+      res.status(400).json({ code: 'BAD_REQUEST', message: `Invalid badge: ${invalidBadge}. Valid values: ${VALID_BADGES.join(', ')}` });
       return;
     }
     await db.update(users).set({ badges }).where(eq(users.id, req.params.userId as string));
