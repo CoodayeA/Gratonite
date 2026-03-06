@@ -643,16 +643,18 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
 
     const UserPanel = () => (
         <div className="user-panel">
-            <Avatar
-                userId={userProfile.id || 'me'}
-                avatarHash={userProfile.avatarHash}
-                displayName={userProfile.name || 'User'}
-                frame={userProfile.avatarFrame as 'none' | 'neon' | 'gold' | 'glass'}
-                size={36}
-                status={presence as any}
-                statusRingColor="var(--bg-sidebar)"
-                onClick={() => setPresenceMenuOpen(!presenceMenuOpen)}
-            />
+            <span data-presence-toggle style={{ display: 'contents' }}>
+                <Avatar
+                    userId={userProfile.id || 'me'}
+                    avatarHash={userProfile.avatarHash}
+                    displayName={userProfile.name || 'User'}
+                    frame={userProfile.avatarFrame as 'none' | 'neon' | 'gold' | 'glass'}
+                    size={36}
+                    status={presence as any}
+                    statusRingColor="var(--bg-sidebar)"
+                    onClick={() => setPresenceMenuOpen(!presenceMenuOpen)}
+                />
+            </span>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <span
                     className={userProfile.nameplateStyle && userProfile.nameplateStyle !== 'none' ? `nameplate-${userProfile.nameplateStyle}` : undefined}
