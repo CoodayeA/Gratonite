@@ -45,6 +45,10 @@ import { groupKeysRouter } from './group-keys';
 import { stageRouter } from './stage';
 import { workflowsRouter } from './workflows';
 import { webhooksRouter } from './webhooks';
+import { moderationRouter } from './moderation';
+import { templatesRouter } from './templates';
+import { automodRouter } from './automod';
+import { commandsRouter } from './commands';
 import { authRateLimit, apiRateLimit } from '../middleware/rateLimit';
 
 export const router = Router();
@@ -165,3 +169,19 @@ router.use('/admin', adminRouter);
 
 // Stage channels
 router.use('/', stageRouter);
+
+// Moderation (warnings)
+router.use('/guilds/:guildId/members', moderationRouter);
+// Moderation (delete warning by id — mounted separately for /guilds/:guildId/warnings/:warningId)
+router.use('/guilds/:guildId', moderationRouter);
+
+// Server templates
+router.use('/guilds/:guildId/templates', templatesRouter);
+router.use('/guilds', templatesRouter); // for /guilds/templates/:code
+
+// AutoMod
+router.use('/guilds/:guildId/auto-moderation', automodRouter);
+
+// Slash commands
+router.use('/guilds/:guildId/commands', commandsRouter);
+router.use('/', commandsRouter); // for /applications/:appId/... and /channels/:channelId/interactions

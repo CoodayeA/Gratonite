@@ -16,6 +16,7 @@ export const bansRouter = Router({ mergeParams: true });
 
 const banSchema = z.object({
   reason: z.string().max(512).nullable().optional(),
+  duration: z.number().int().positive().optional(), // minutes
 });
 
 /** PUT /guilds/:guildId/bans/:userId */
@@ -38,7 +39,8 @@ bansRouter.put(
       res.status(400).json({ code: 'BAD_REQUEST', message: 'Cannot ban the guild owner' }); return;
     }
 
-    const { reason } = req.body;
+    const { reason, duration } = req.body;
+    const expiresAt = duration ? new Date(Date.now() + duration * 60 * 1000) : null;
 
     // Remove from guild members first
     await db.delete(guildMembers).where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, userId)));
@@ -49,6 +51,7 @@ bansRouter.put(
       userId,
       reason: reason || null,
       bannedBy: req.userId!,
+      expiresAt,
     }).onConflictDoNothing();
 
     // Audit log

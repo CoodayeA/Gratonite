@@ -800,8 +800,15 @@ export const api = {
         body: JSON.stringify({ status }),
       }),
 
-    updateCustomStatus: (data: { text: string | null; expiresAt: string | null }) =>
+    updateCustomStatus: (data: { text: string | null; expiresAt: string | null; emoji?: string | null }) =>
       apiFetch<void>('/users/@me/status', { method: 'PATCH', body: JSON.stringify(data) }),
+
+    // Activity
+    setActivity: (data: { type: string; name: string }) =>
+      apiFetch<void>('/users/@me/activity', { method: 'PATCH', body: JSON.stringify(data) }),
+
+    clearActivity: () =>
+      apiFetch<void>('/users/@me/activity', { method: 'DELETE' }),
 
     updateWidgets: (widgets: string[]) =>
       apiFetch<void>('/users/@me/widgets', { method: 'PATCH', body: JSON.stringify({ widgets }) }),
@@ -820,6 +827,37 @@ export const api = {
 
     getSettings: () =>
       apiFetch<Record<string, unknown>>('/users/@me/settings'),
+
+    // Guild folders
+    getGuildFolders: () =>
+      apiFetch<any[]>('/users/@me/guild-folders'),
+
+    createGuildFolder: (data: { name: string; color: string; guildIds: string[] }) =>
+      apiFetch<any>('/users/@me/guild-folders', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    updateGuildFolder: (folderId: string, data: { name?: string; color?: string; guildIds?: string[] }) =>
+      apiFetch<any>(`/users/@me/guild-folders/${folderId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    deleteGuildFolder: (folderId: string) =>
+      apiFetch<void>(`/users/@me/guild-folders/${folderId}`, { method: 'DELETE' }),
+
+    // Favorites
+    getFavorites: () =>
+      apiFetch<any[]>('/users/@me/favorites'),
+
+    addFavorite: (channelId: string) =>
+      apiFetch<any>(`/users/@me/favorites/${channelId}`, {
+        method: 'PUT',
+      }),
+
+    removeFavorite: (channelId: string) =>
+      apiFetch<void>(`/users/@me/favorites/${channelId}`, { method: 'DELETE' }),
   },
 
   profiles: {
@@ -1239,10 +1277,10 @@ export const api = {
     getBans: (guildId: string) =>
       apiFetch<any[]>(`/guilds/${guildId}/bans`),
 
-    ban: (guildId: string, userId: string, reason?: string) =>
+    ban: (guildId: string, userId: string, reason?: string, duration?: number) =>
       apiFetch<void>(`/guilds/${guildId}/bans/${userId}`, {
         method: 'PUT',
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify({ reason, ...(duration ? { duration } : {}) }),
       }),
 
     unban: (guildId: string, userId: string) =>
@@ -1256,6 +1294,51 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ durationSeconds }),
       }),
+
+    warnMember: (guildId: string, userId: string, reason: string) =>
+      apiFetch<any>(`/guilds/${guildId}/members/${userId}/warnings`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      }),
+
+    getMemberWarnings: (guildId: string, userId: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/members/${userId}/warnings`),
+
+    getVanityUrl: (guildId: string) =>
+      apiFetch<{ code: string | null }>(`/guilds/${guildId}/vanity-url`),
+
+    updateVanityUrl: (guildId: string, code: string) =>
+      apiFetch<{ code: string }>(`/guilds/${guildId}/vanity-url`, {
+        method: 'PATCH',
+        body: JSON.stringify({ code }),
+      }),
+
+    getTemplates: (guildId: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/templates`),
+
+    createTemplate: (guildId: string, data: { name: string; description?: string }) =>
+      apiFetch<any>(`/guilds/${guildId}/templates`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    syncTemplate: (guildId: string, templateId: string) =>
+      apiFetch<any>(`/guilds/${guildId}/templates/${templateId}`, { method: 'PATCH' }),
+
+    deleteTemplate: (guildId: string, templateId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/templates/${templateId}`, { method: 'DELETE' }),
+
+    createFromTemplate: (code: string) =>
+      apiFetch<any>(`/guilds/templates/${code}`, { method: 'POST' }),
+
+    boost: (guildId: string) =>
+      apiFetch<any>(`/guilds/${guildId}/boost`, { method: 'POST' }),
+
+    removeBoost: (guildId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/boost`, { method: 'DELETE' }),
+
+    getCommands: (guildId: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/commands`),
 
     getAuditLog: (guildId: string, params?: { limit?: number; offset?: number; action?: string; userId?: string }) => {
       const q = new URLSearchParams();
@@ -1328,11 +1411,23 @@ export const api = {
       });
     },
 
-    update: (channelId: string, data: { name?: string; topic?: string; nsfw?: boolean; rateLimitPerUser?: number; backgroundUrl?: string | null; backgroundType?: 'image' | 'video' | null }) =>
+    update: (channelId: string, data: { name?: string; topic?: string; nsfw?: boolean; rateLimitPerUser?: number; backgroundUrl?: string | null; backgroundType?: 'image' | 'video' | null; isAnnouncement?: boolean }) =>
       apiFetch<Channel>(`/channels/${channelId}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
+
+    follow: (channelId: string, targetChannelId?: string) =>
+      apiFetch<any>(`/channels/${channelId}/followers`, {
+        method: 'POST',
+        body: JSON.stringify({ targetChannelId }),
+      }),
+
+    crosspost: (channelId: string, messageId: string) =>
+      apiFetch<any>(`/channels/${channelId}/messages/${messageId}/crosspost`, { method: 'POST' }),
+
+    getCallHistory: (channelId: string) =>
+      apiFetch<any[]>(`/channels/${channelId}/call-history`),
 
     delete: (channelId: string) =>
       apiFetch<void>(`/channels/${channelId}`, { method: 'DELETE' }),

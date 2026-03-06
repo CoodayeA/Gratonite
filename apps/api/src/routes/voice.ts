@@ -19,12 +19,14 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '../db/index';
 import { channels, dmChannelMembers } from '../db/schema/channels';
 import { users } from '../db/schema/users';
+import { callHistory } from '../db/schema/call-history';
 import { Permissions } from '../db/schema/roles';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { getIO } from '../lib/socket-io';
 import { hasChannelPermission } from './roles';
 import { redis } from '../lib/redis';
+import { desc } from 'drizzle-orm';
 
 export const voiceRouter = Router();
 
@@ -369,5 +371,27 @@ voiceStatesRouter.get(
     }
 
     res.json(states);
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// GET /channels/:channelId/call-history — Call history for a channel
+// ---------------------------------------------------------------------------
+
+voiceStatesRouter.get(
+  '/call-history',
+  requireAuth,
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const channelId = req.params.channelId as string;
+    const limit = Math.min(Number(req.query.limit) || 20, 50);
+
+    const records = await db
+      .select()
+      .from(callHistory)
+      .where(eq(callHistory.channelId, channelId))
+      .orderBy(desc(callHistory.startedAt))
+      .limit(limit);
+
+    res.json(records);
   }),
 );

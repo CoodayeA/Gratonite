@@ -38,6 +38,7 @@ import {
   text,
   integer,
   boolean,
+  jsonb,
   timestamp,
   unique,
 } from 'drizzle-orm/pg-core';
@@ -187,6 +188,12 @@ export const channels = pgTable('channels', {
    * the linked text channel does not cascade-delete the voice channel.
    */
   linkedTextChannelId: uuid('linked_text_channel_id').references((): AnyPgColumn => channels.id, { onDelete: 'set null' }),
+
+  /** Forum tags (JSON array of { id, name, color? } objects). */
+  forumTags: jsonb('forum_tags'),
+
+  /** Whether this channel is an announcement channel. */
+  isAnnouncement: boolean('is_announcement').notNull().default(false),
 });
 
 /**

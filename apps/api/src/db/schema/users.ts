@@ -22,7 +22,7 @@
  *   simple and avoids collisions.
  */
 
-import { pgTable, uuid, varchar, text, boolean, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, boolean, jsonb, timestamp } from 'drizzle-orm/pg-core';
 
 /**
  * The `users` table.
@@ -133,6 +133,15 @@ export const users = pgTable('users', {
 
   /** User interests from onboarding, stored as JSON array of strings. */
   interests: text('interests'),
+
+  /** Rich presence activity (e.g. playing a game). */
+  activity: jsonb('activity'),
+
+  /** Custom status emoji. */
+  statusEmoji: text('status_emoji'),
+
+  /** When the custom status expires. Null = no expiry. */
+  statusExpiresAt: timestamp('status_expires_at', { withTimezone: true }),
 
   /**
    * Timestamp of account creation. Set once by Postgres default, never
