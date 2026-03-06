@@ -151,6 +151,13 @@ export const messages = pgTable(
      * and returned as-is; only the recipient can decrypt it.
      */
     encryptedContent: text('encrypted_content'),
+
+    /**
+     * JSON array of OpenGraph embed objects for URLs found in the message.
+     * Each element has the shape:
+     *   { url: string, title?: string, description?: string, image?: string, siteName?: string }
+     */
+    embeds: jsonb('embeds').default([]),
   },
   (table) => [
     /**
