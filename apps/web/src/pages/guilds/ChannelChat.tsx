@@ -92,6 +92,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { RichTextRenderer } from '../../components/chat/RichTextRenderer';
 import { Tooltip } from '../../components/ui/Tooltip';
 import ForwardModal from '../../components/modals/ForwardModal';
+import { MemberListPanel } from '../../components/guild/MemberListPanel';
 
 const MemoizedMessageItem = memo(({
     msg,
@@ -542,6 +543,9 @@ const ChannelChat = () => {
 
     // Image Lightbox State
     const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+
+    // Member List Panel State
+    const [memberListOpen, setMemberListOpen] = useState(() => localStorage.getItem('memberListOpen') !== 'false');
 
     // Chat File Attachment State
     const chatFileInputRef = useRef<HTMLInputElement>(null);
@@ -1861,7 +1865,23 @@ const ChannelChat = () => {
 
                     <div className="action-divider hidden-on-mobile" style={{ width: '1px', height: '24px', background: 'var(--stroke)' }}></div>
 
-                    <Users size={20} className="mobile-toggle-btn member-list-toggle" onClick={toggleSidebar} />
+                    <div
+                        className="action-icon-btn member-list-toggle-btn"
+                        onClick={() => {
+                            // Desktop: toggle member list panel; Mobile: toggle sidebar
+                            if (window.innerWidth <= 768) {
+                                toggleSidebar();
+                            } else {
+                                const next = !memberListOpen;
+                                setMemberListOpen(next);
+                                localStorage.setItem('memberListOpen', String(next));
+                            }
+                        }}
+                        style={{ cursor: 'pointer', color: memberListOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
+                        title="Members"
+                    >
+                        <Users size={20} />
+                    </div>
                 </div>
             </header>
 
@@ -2592,6 +2612,26 @@ const ChannelChat = () => {
                             maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain',
                             borderRadius: '8px', cursor: 'default',
                             boxShadow: '0 32px 80px rgba(0,0,0,0.6)'
+                        }}
+                    />
+                </div>
+            )}
+
+            {/* Member List Panel */}
+            {memberListOpen && guildId && (
+                <div style={{
+                    position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 4,
+                    width: '240px',
+                }}>
+                    <MemberListPanel
+                        guildId={guildId}
+                        onMemberClick={(userId, displayName, e) => {
+                            setProfilePopover({
+                                userId,
+                                user: displayName,
+                                x: e.clientX,
+                                y: e.clientY,
+                            });
                         }}
                     />
                 </div>

@@ -1444,16 +1444,22 @@ guildsRouter.get(
 
       const userIds = rows.map((row) => row.userId);
       const statusByUser = new Map<string, MemberWithPresenceStatus>();
+      const activityByUser = new Map<string, { name: string; type: string } | null>();
       if (userIds.length > 0) {
         try {
           const pipeline = redis.pipeline();
           for (const userId of userIds) {
             pipeline.get(`presence:${userId}`);
+            pipeline.get(`presence:${userId}:activity`);
           }
           const pipelineResult = await pipeline.exec();
           userIds.forEach((userId, index) => {
-            const value = (pipelineResult?.[index]?.[1] as string | null) ?? 'offline';
-            statusByUser.set(userId, normalizePresenceStatus(value));
+            const statusValue = (pipelineResult?.[index * 2]?.[1] as string | null) ?? 'offline';
+            statusByUser.set(userId, normalizePresenceStatus(statusValue));
+            const activityValue = pipelineResult?.[index * 2 + 1]?.[1] as string | null;
+            if (activityValue) {
+              try { activityByUser.set(userId, JSON.parse(activityValue)); } catch { /* ignore */ }
+            }
           });
         } catch {
           userIds.forEach((userId) => statusByUser.set(userId, 'offline'));
@@ -1463,6 +1469,7 @@ guildsRouter.get(
       const membersWithRoles = rows.map((row) => ({
         ...row,
         status: statusByUser.get(row.userId) ?? 'offline',
+        activity: activityByUser.get(row.userId) ?? null,
         roles: rolesByUser.get(row.userId) ?? [],
         roleIds: rolesByUser.get(row.userId) ?? [],
         groupIds: groupIdsByUser.get(row.userId) ?? [],
