@@ -46,6 +46,14 @@ async function main() {
 }
 
 main().catch((err) => {
+  // ECONNREFUSED means no DB is available (e.g. CI environment without a database).
+  // Skip the gate rather than failing — this check is only meaningful against production.
+  const isConnectionError = err?.cause?.code === 'ECONNREFUSED' ||
+    (Array.isArray(err?.cause?.errors) && err.cause.errors.some((e: any) => e?.code === 'ECONNREFUSED'));
+  if (isConnectionError) {
+    console.warn('[gate:data] skipped: no database connection available');
+    process.exit(0);
+  }
   console.error('[gate:data] failed:', err);
   process.exit(1);
 });
