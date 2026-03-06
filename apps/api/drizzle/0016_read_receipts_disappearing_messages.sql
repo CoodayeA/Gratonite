@@ -13,4 +13,6 @@ ALTER TABLE "dm_read_state" ADD CONSTRAINT "dm_read_state_user_id_users_id_fk" F
 
 -- A2: Disappearing messages — expiresAt on messages, disappearTimer on channels
 ALTER TABLE "messages" ADD COLUMN "expires_at" timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "channels" ADD COLUMN "disappear_timer" integer;
+ALTER TABLE "channels" ADD COLUMN "disappear_timer" integer;--> statement-breakpoint
+-- Partial index so the 60s expiry sweep is fast (only non-null values indexed)
+CREATE INDEX "messages_expires_at_idx" ON "messages" ("expires_at") WHERE "expires_at" IS NOT NULL;

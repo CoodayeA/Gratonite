@@ -27,7 +27,7 @@
 
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { eq, and, lt, desc, isNull, or } from 'drizzle-orm';
+import { eq, and, lt, gt, desc, isNull, or } from 'drizzle-orm';
 
 import { db } from '../db/index';
 import { messages } from '../db/schema/messages';
@@ -268,9 +268,11 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
       .from(messages)
       .leftJoin(users, eq(users.id, messages.authorId))
       .where(
-        cursorCondition
-          ? and(eq(messages.channelId, channelId), cursorCondition)
-          : eq(messages.channelId, channelId),
+        and(
+          eq(messages.channelId, channelId),
+          or(isNull(messages.expiresAt), gt(messages.expiresAt, new Date())),
+          ...(cursorCondition ? [cursorCondition] : []),
+        ),
       )
       .orderBy(desc(messages.createdAt))
       .limit(limit);
@@ -911,7 +913,14 @@ messagesRouter.patch('/disappear-timer', requireAuth, validate(disappearTimerSch
     const { channelId } = req.params as Record<string, string>;
     const channel = await resolveChannel(channelId, req.userId!);
 
-    // Only meaningful for DM/GROUP_DM channels; guild channels can use it too for now.
+    // Require MANAGE_CHANNELS permission for guild channels (any DM participant can set timer).
+    if (channel.guildId) {
+      const canManage = await hasPermission(req.userId!, channel.guildId, Permissions.MANAGE_CHANNELS);
+      if (!canManage) {
+        throw new AppError(403, 'You need the Manage Channels permission to set disappearing messages in a guild channel', 'FORBIDDEN');
+      }
+    }
+
     const { seconds } = req.body as z.infer<typeof disappearTimerSchema>;
 
     const [updated] = await db

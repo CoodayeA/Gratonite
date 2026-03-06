@@ -59,6 +59,7 @@ type Message = {
     authorAvatarHash?: string | null;
     authorNameplateStyle?: string | null;
     expiresAt?: string | null;
+    createdAt?: string | null;
 };
 
 // Video element component for rendering participant video
@@ -521,6 +522,7 @@ const DirectMessage = () => {
             edited: m.edited ?? false,
             reactions: m.reactions || [],
             expiresAt: m.expiresAt ?? null,
+            createdAt: m.createdAt ?? null,
         };
     };
 
@@ -634,7 +636,12 @@ const DirectMessage = () => {
                 content: data.content || '',
                 edited: data.edited,
                 expiresAt: (data as any).expiresAt ?? null,
+                createdAt: data.createdAt ?? null,
             }]);
+            // Auto-mark read when message arrives and window is focused/visible
+            if (!document.hidden && document.hasFocus()) {
+                api.messages.markRead(dmChannelId, data.id).catch(() => {});
+            }
         }));
 
         unsubs.push(onMessageUpdate((data: MessageUpdatePayload) => {
@@ -1493,7 +1500,7 @@ const DirectMessage = () => {
                                                     {isCurrentUserMessage && (() => {
                                                         const myMsgs = messages.filter(m => m.authorId === currentUserId);
                                                         if (myMsgs[myMsgs.length - 1]?.id !== msg.id) return null;
-                                                        const isRead = partnerLastReadMessageId === msg.apiId || (partnerLastReadAt && msg.apiId && new Date(partnerLastReadAt) >= new Date(msg.time));
+                                                        const isRead = partnerLastReadMessageId === msg.apiId || (partnerLastReadAt && msg.createdAt && new Date(partnerLastReadAt) >= new Date(msg.createdAt));
                                                         return isRead
                                                             ? <CheckCheck size={12} style={{ marginLeft: '6px', color: 'var(--accent-primary)', verticalAlign: 'middle' }} title="Read" />
                                                             : <Check size={12} style={{ marginLeft: '6px', color: 'var(--text-muted)', verticalAlign: 'middle' }} title="Sent" />;
