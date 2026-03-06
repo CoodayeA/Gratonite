@@ -129,6 +129,14 @@ export const messages = pgTable(
      * Used as the cursor for keyset / cursor-based pagination.
      */
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+
+    /**
+     * Optional expiry timestamp for disappearing messages.
+     * Null means the message never expires. When set, a background cron job
+     * deletes the message after this time and emits MESSAGE_DELETE.
+     * Set at creation time based on the channel's `disappearTimer` setting.
+     */
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
   },
   (table) => [
     /**

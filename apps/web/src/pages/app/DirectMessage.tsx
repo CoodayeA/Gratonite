@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
-import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, Users, UserPlus, UserMinus, Pencil, LogOut } from 'lucide-react';
+import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock } from 'lucide-react';
 
 import { BackgroundMedia } from '../../components/ui/BackgroundMedia';
 import { useToast } from '../../components/ui/ToastManager';
@@ -12,7 +12,7 @@ import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { api, ApiRequestError } from '../../lib/api';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
-import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload } from '../../lib/socket';
+import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onMessageRead, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type MessageReadPayload } from '../../lib/socket';
 import { getDeterministicGradient } from '../../utils/colors';
 import { useLiveKit, type LiveKitParticipant } from '../../lib/useLiveKit';
 import Avatar from '../../components/ui/Avatar';
@@ -58,6 +58,7 @@ type Message = {
     attachments?: MessageAttachment[];
     authorAvatarHash?: string | null;
     authorNameplateStyle?: string | null;
+    expiresAt?: string | null;
 };
 
 // Video element component for rendering participant video
@@ -339,6 +340,15 @@ const DirectMessage = () => {
         }).catch(() => { addToast({ title: 'Failed to load user info', variant: 'error' }); });
     }, []);
 
+    // Read receipts state (A1)
+    const [partnerLastReadAt, setPartnerLastReadAt] = useState<string | null>(null);
+    const [partnerLastReadMessageId, setPartnerLastReadMessageId] = useState<string | null>(null);
+
+    // Disappearing messages timer state (A2)
+    const [disappearTimer, setDisappearTimer] = useState<number | null>(null);
+    const [showDisappearMenu, setShowDisappearMenu] = useState(false);
+    const disappearMenuRef = useRef<HTMLDivElement>(null);
+
     // Typing indicator state
     const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map());
     const typingTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -510,6 +520,7 @@ const DirectMessage = () => {
             content: m.content || '',
             edited: m.edited ?? false,
             reactions: m.reactions || [],
+            expiresAt: m.expiresAt ?? null,
         };
     };
 
@@ -622,6 +633,7 @@ const DirectMessage = () => {
                 time: new Date(data.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 content: data.content || '',
                 edited: data.edited,
+                expiresAt: (data as any).expiresAt ?? null,
             }]);
         }));
 
@@ -666,8 +678,77 @@ const DirectMessage = () => {
             }));
         }));
 
+        // MESSAGE_READ — update partner's read state for ✓✓ indicator (A1)
+        unsubs.push(onMessageRead((payload: MessageReadPayload) => {
+            if (payload.channelId !== dmChannelId) return;
+            if (payload.userId === currentUserId) return;
+            setPartnerLastReadAt(payload.lastReadAt);
+            setPartnerLastReadMessageId(payload.lastReadMessageId);
+        }));
+
         return () => { unsubs.forEach(fn => fn()); };
     }, [dmChannelId, currentUserId]);
+
+    // Mark channel as read when focused/opened (A1)
+    const markAsRead = useCallback(() => {
+        if (!dmChannelId) return;
+        api.messages.markRead(dmChannelId).catch(() => { /* non-fatal */ });
+    }, [dmChannelId]);
+
+    useEffect(() => {
+        markAsRead();
+    }, [markAsRead]);
+
+    useEffect(() => {
+        const handleFocus = () => markAsRead();
+        const handleVisibility = () => { if (!document.hidden) markAsRead(); };
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
+    }, [markAsRead]);
+
+    // Fetch initial read state + disappear timer when channel opens (A1, A2)
+    useEffect(() => {
+        if (!dmChannelId) return;
+        // Fetch read state for partner read receipt
+        api.messages.getReadState(dmChannelId).then((states: any[]) => {
+            const partner = states.find((s: any) => s.userId !== currentUserId);
+            if (partner) {
+                setPartnerLastReadAt(partner.lastReadAt);
+                setPartnerLastReadMessageId(partner.lastReadMessageId);
+            }
+        }).catch(() => { /* non-fatal */ });
+        // Fetch channel to get disappear timer
+        api.channels.get(dmChannelId).then((ch: any) => {
+            setDisappearTimer(ch.disappearTimer ?? null);
+        }).catch(() => { /* non-fatal */ });
+    }, [dmChannelId, currentUserId]);
+
+    // Close disappear menu on outside click (A2)
+    useEffect(() => {
+        if (!showDisappearMenu) return;
+        const handleClick = (e: MouseEvent) => {
+            if (disappearMenuRef.current && !disappearMenuRef.current.contains(e.target as Node)) {
+                setShowDisappearMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [showDisappearMenu]);
+
+    const handleSetDisappearTimer = async (seconds: number | null) => {
+        if (!dmChannelId) return;
+        try {
+            await api.messages.setDisappearTimer(dmChannelId, seconds);
+            setDisappearTimer(seconds);
+        } catch {
+            addToast({ title: 'Failed to set timer', variant: 'error' });
+        }
+        setShowDisappearMenu(false);
+    };
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -968,6 +1049,30 @@ const DirectMessage = () => {
                             <Users size={20} style={{ cursor: 'pointer', transition: 'color 0.2s', color: memberPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }} onClick={() => setMemberPanelOpen(!memberPanelOpen)} onMouseOver={e => e.currentTarget.style.color = memberPanelOpen ? 'var(--accent-primary)' : 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = memberPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
                         )}
 
+                        {/* Disappear Timer (A2) */}
+                        <div style={{ position: 'relative' }} ref={disappearMenuRef}>
+                            <Clock
+                                size={20}
+                                style={{ cursor: 'pointer', transition: 'color 0.2s', color: disappearTimer ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
+                                onClick={() => setShowDisappearMenu(v => !v)}
+                                title={disappearTimer ? `Disappearing: ${disappearTimer >= 86400 ? `${disappearTimer / 86400}d` : disappearTimer >= 3600 ? `${disappearTimer / 3600}h` : `${disappearTimer / 60}m`}` : 'Disappearing Messages Off'}
+                            />
+                            {showDisappearMenu && (
+                                <div style={{ position: 'absolute', top: '28px', right: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '6px', zIndex: 50, minWidth: '160px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+                                    {[
+                                        { label: 'Off', value: null },
+                                        { label: '5 minutes', value: 300 },
+                                        { label: '1 hour', value: 3600 },
+                                        { label: '24 hours', value: 86400 },
+                                        { label: '7 days', value: 604800 },
+                                    ].map(opt => (
+                                        <button key={String(opt.value)} onClick={() => handleSetDisappearTimer(opt.value)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', borderRadius: '4px', border: 'none', background: disappearTimer === opt.value ? 'var(--accent-primary)' : 'transparent', color: disappearTimer === opt.value ? '#fff' : 'var(--text-primary)', cursor: 'pointer', fontSize: '13px' }}>
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                         <Info size={20} style={{ cursor: 'pointer', transition: 'color 0.2s', color: infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }} onClick={() => { setInfoPanelOpen(!infoPanelOpen); if (isGroupDm) setMemberPanelOpen(false); }} onMouseOver={e => e.currentTarget.style.color = infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
                     </div>
                 </header>
@@ -1376,6 +1481,23 @@ const DirectMessage = () => {
                                                 <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.5' }}>
                                                     <RichTextRenderer content={msg.content} />
                                                     {msg.edited && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '6px' }}>(edited)</span>}
+                                                    {/* Expiry countdown (A2) */}
+                                                    {msg.expiresAt && (() => {
+                                                        const remaining = new Date(msg.expiresAt).getTime() - Date.now();
+                                                        if (remaining <= 0) return null;
+                                                        const secs = Math.floor(remaining / 1000);
+                                                        const label = secs < 60 ? `${secs}s` : secs < 3600 ? `${Math.floor(secs / 60)}m` : secs < 86400 ? `${Math.floor(secs / 3600)}h` : `${Math.floor(secs / 86400)}d`;
+                                                        return <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '6px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}><Clock size={10} />Disappears in {label}</span>;
+                                                    })()}
+                                                    {/* Read receipt checkmarks (A1) — only on current user's last message */}
+                                                    {isCurrentUserMessage && (() => {
+                                                        const myMsgs = messages.filter(m => m.authorId === currentUserId);
+                                                        if (myMsgs[myMsgs.length - 1]?.id !== msg.id) return null;
+                                                        const isRead = partnerLastReadMessageId === msg.apiId || (partnerLastReadAt && msg.apiId && new Date(partnerLastReadAt) >= new Date(msg.time));
+                                                        return isRead
+                                                            ? <CheckCheck size={12} style={{ marginLeft: '6px', color: 'var(--accent-primary)', verticalAlign: 'middle' }} title="Read" />
+                                                            : <Check size={12} style={{ marginLeft: '6px', color: 'var(--text-muted)', verticalAlign: 'middle' }} title="Sent" />;
+                                                    })()}
                                                 </div>
                                             )}
                                             {/* Render file attachments */}

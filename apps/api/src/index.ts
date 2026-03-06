@@ -9,6 +9,7 @@ import { router } from './routes/index';
 import { setIO } from './lib/socket-io';
 import { initSocket } from './socket/index';
 import { startAuctionCron } from './lib/auction-cron';
+import { startMessageExpiryCron } from './lib/message-expiry';
 
 const PLACEHOLDER_PATTERNS = [
   'changeme',
@@ -150,6 +151,7 @@ server.listen(PORT, () => {
   console.info(`API running on port ${PORT}`);
   // Start background jobs after server is listening
   startAuctionCron();
+  startMessageExpiryCron();
 });
 
 export { io };

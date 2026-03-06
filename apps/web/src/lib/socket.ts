@@ -86,6 +86,13 @@ export interface ChannelPinsUpdatePayload {
   pinned: boolean;
 }
 
+export interface MessageReadPayload {
+  channelId: string;
+  userId: string;
+  lastReadAt: string;
+  lastReadMessageId: string | null;
+}
+
 /* ── Callback registries ────────────────────────────────────── */
 
 type PresenceCallback = (payload: PresenceUpdatePayload) => void;
@@ -98,6 +105,7 @@ type ReactionCallback = (payload: ReactionPayload) => void;
 type VoiceStateUpdateCallback = (payload: VoiceStateUpdatePayload) => void;
 type ThreadCreateCallback = (payload: ThreadCreatePayload) => void;
 type ChannelPinsUpdateCallback = (payload: ChannelPinsUpdatePayload) => void;
+type MessageReadCallback = (payload: MessageReadPayload) => void;
 type ConnectionCallback = () => void;
 
 const presenceListeners = new Set<PresenceCallback>();
@@ -111,6 +119,7 @@ const reactionRemoveListeners = new Set<ReactionCallback>();
 const voiceStateUpdateListeners = new Set<VoiceStateUpdateCallback>();
 const threadCreateListeners = new Set<ThreadCreateCallback>();
 const channelPinsUpdateListeners = new Set<ChannelPinsUpdateCallback>();
+const messageReadListeners = new Set<MessageReadCallback>();
 const socketDisconnectListeners = new Set<ConnectionCallback>();
 const socketReconnectListeners = new Set<ConnectionCallback>();
 
@@ -167,6 +176,11 @@ export function onThreadCreate(cb: ThreadCreateCallback): () => void {
 export function onChannelPinsUpdate(cb: ChannelPinsUpdateCallback): () => void {
   channelPinsUpdateListeners.add(cb);
   return () => { channelPinsUpdateListeners.delete(cb); };
+}
+
+export function onMessageRead(cb: MessageReadCallback): () => void {
+  messageReadListeners.add(cb);
+  return () => { messageReadListeners.delete(cb); };
 }
 
 export function onSocketDisconnect(cb: ConnectionCallback): () => void {
@@ -323,6 +337,10 @@ export function connectSocket(): GratoniteSocket {
 
   socket.on('CHANNEL_PINS_UPDATE', (data: ChannelPinsUpdatePayload) => {
     channelPinsUpdateListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('MESSAGE_READ', (data: MessageReadPayload) => {
+    messageReadListeners.forEach(cb => cb(data));
   });
 
   socket.on('disconnect', () => {

@@ -1381,6 +1381,15 @@ export const api = {
 
     startTyping: (channelId: string) =>
       apiFetch<void>(`/channels/${channelId}/messages/typing`, { method: 'POST' }),
+
+    markRead: (channelId: string, lastReadMessageId?: string) =>
+      apiFetch<{ ok: boolean }>(`/channels/${channelId}/messages/read`, { method: 'POST', body: JSON.stringify(lastReadMessageId ? { lastReadMessageId } : {}) }),
+
+    getReadState: (channelId: string) =>
+      apiFetch<{ userId: string; lastReadAt: string; lastReadMessageId: string | null }[]>(`/channels/${channelId}/messages/read-state`),
+
+    setDisappearTimer: (channelId: string, seconds: number | null) =>
+      apiFetch<{ disappearTimer: number | null }>(`/channels/${channelId}/messages/disappear-timer`, { method: 'PATCH', body: JSON.stringify({ seconds }) }),
   },
 
   search: {

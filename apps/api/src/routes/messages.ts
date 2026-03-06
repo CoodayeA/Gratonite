@@ -33,6 +33,7 @@ import { db } from '../db/index';
 import { messages } from '../db/schema/messages';
 import { channels } from '../db/schema/channels';
 import { dmChannelMembers } from '../db/schema/channels';
+import { dmReadState } from '../db/schema/dm-read-state';
 import { files } from '../db/schema/files';
 import { users } from '../db/schema/users';
 import { guilds } from '../db/schema/guilds';
@@ -160,6 +161,7 @@ function formatMessage(
     edited: msg.edited,
     editedAt: msg.editedAt,
     createdAt: msg.createdAt,
+    expiresAt: msg.expiresAt ?? null,
     replyToId: msg.replyToId ?? null,
     author: author
       ? {
@@ -255,6 +257,7 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
         edited: messages.edited,
         editedAt: messages.editedAt,
         createdAt: messages.createdAt,
+        expiresAt: messages.expiresAt,
         replyToId: messages.replyToId,
         authorId: messages.authorId,
         authorUsername: users.username,
@@ -322,6 +325,7 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
         edited: row.edited,
         editedAt: row.editedAt,
         createdAt: row.createdAt,
+        expiresAt: row.expiresAt ?? null,
         replyToId: row.replyToId ?? null,
         pinned: pinnedSet.has(row.id),
         reactions,
@@ -432,6 +436,12 @@ messagesRouter.post(
         }));
       }
 
+      // Compute expiresAt if the channel has a disappear timer set.
+      let expiresAt: Date | undefined;
+      if (channel.disappearTimer) {
+        expiresAt = new Date(Date.now() + channel.disappearTimer * 1000);
+      }
+
       // Insert the message.
       const [newMessage] = await db
         .insert(messages)
@@ -442,6 +452,7 @@ messagesRouter.post(
           attachments: attachmentSnapshot,
           ...(replyToId ? { replyToId } : {}),
           ...(threadId ? { threadId } : {}),
+          ...(expiresAt ? { expiresAt } : {}),
         })
         .returning();
 
@@ -756,6 +767,160 @@ messagesRouter.post('/typing', requireAuth, async (req: Request, res: Response):
     }
 
     res.status(200).json({ ok: true });
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /read  (A1 — Read Receipts)
+// ---------------------------------------------------------------------------
+
+/**
+ * POST /api/v1/channels/:channelId/messages/read
+ *
+ * Mark the channel as read for the calling user up to the latest message.
+ * Upserts a `dm_read_state` row. Emits `MESSAGE_READ` to the DM channel room
+ * so the sender can update their read-receipt indicator in real time.
+ *
+ * Only meaningful for DM and GROUP_DM channels; silently succeeds for guild
+ * channels (no read state stored, no event emitted).
+ *
+ * @auth    requireAuth
+ * @body    { lastReadMessageId?: string } — optional, defaults to latest message
+ * @returns 200 { ok: true }
+ */
+messagesRouter.post('/read', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { channelId } = req.params as Record<string, string>;
+    const channel = await resolveChannel(channelId, req.userId!);
+
+    // Only track read state for DM channels.
+    if (channel.guildId) {
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    const { lastReadMessageId } = req.body as { lastReadMessageId?: string };
+
+    // Resolve the latest message ID if not provided.
+    let resolvedMessageId = lastReadMessageId;
+    if (!resolvedMessageId) {
+      const [latest] = await db
+        .select({ id: messages.id })
+        .from(messages)
+        .where(eq(messages.channelId, channelId))
+        .orderBy(desc(messages.createdAt))
+        .limit(1);
+      resolvedMessageId = latest?.id;
+    }
+
+    const now = new Date();
+
+    await db
+      .insert(dmReadState)
+      .values({
+        channelId,
+        userId: req.userId!,
+        lastReadAt: now,
+        lastReadMessageId: resolvedMessageId ?? null,
+      })
+      .onConflictDoUpdate({
+        target: [dmReadState.channelId, dmReadState.userId],
+        set: {
+          lastReadAt: now,
+          lastReadMessageId: resolvedMessageId ?? null,
+        },
+      });
+
+    try {
+      getIO().to(`channel:${channelId}`).emit('MESSAGE_READ', {
+        channelId,
+        userId: req.userId!,
+        lastReadAt: now.toISOString(),
+        lastReadMessageId: resolvedMessageId ?? null,
+      });
+    } catch {
+      // Non-fatal.
+    }
+
+    res.status(200).json({ ok: true });
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /read-state  (A1 — Read Receipts)
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/v1/channels/:channelId/messages/read-state
+ *
+ * Returns the read state for all participants of a DM channel.
+ * Returns an empty array for guild channels.
+ *
+ * @auth    requireAuth
+ * @returns 200 Array of { userId, lastReadAt, lastReadMessageId }
+ */
+messagesRouter.get('/read-state', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { channelId } = req.params as Record<string, string>;
+    const channel = await resolveChannel(channelId, req.userId!);
+
+    if (channel.guildId) {
+      res.status(200).json([]);
+      return;
+    }
+
+    const rows = await db
+      .select({
+        userId: dmReadState.userId,
+        lastReadAt: dmReadState.lastReadAt,
+        lastReadMessageId: dmReadState.lastReadMessageId,
+      })
+      .from(dmReadState)
+      .where(eq(dmReadState.channelId, channelId));
+
+    res.status(200).json(rows);
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /disappear-timer  (A2 — Disappearing Messages)
+// ---------------------------------------------------------------------------
+
+/**
+ * PATCH /api/v1/channels/:channelId/messages/disappear-timer
+ *
+ * Set or clear the disappearing-message timer for a DM or GROUP_DM channel.
+ * After this is set, new messages will have `expiresAt` computed automatically.
+ *
+ * @auth    requireAuth (must be a participant in the channel)
+ * @body    { seconds: number | null } — seconds until expiry; null to disable
+ * @returns 200 { disappearTimer: number | null }
+ */
+const disappearTimerSchema = z.object({
+  seconds: z.number().int().positive().nullable(),
+});
+
+messagesRouter.patch('/disappear-timer', requireAuth, validate(disappearTimerSchema), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { channelId } = req.params as Record<string, string>;
+    const channel = await resolveChannel(channelId, req.userId!);
+
+    // Only meaningful for DM/GROUP_DM channels; guild channels can use it too for now.
+    const { seconds } = req.body as z.infer<typeof disappearTimerSchema>;
+
+    const [updated] = await db
+      .update(channels)
+      .set({ disappearTimer: seconds })
+      .where(eq(channels.id, channelId))
+      .returning({ disappearTimer: channels.disappearTimer });
+
+    res.status(200).json({ disappearTimer: updated.disappearTimer });
   } catch (err) {
     handleAppError(res, err);
   }

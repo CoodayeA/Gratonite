@@ -167,6 +167,15 @@ export const channels = pgTable('channels', {
    * The owner can rename, change icon, and remove members.
    */
   ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
+
+  /**
+   * Disappearing messages timer in seconds. Null = disabled. When set,
+   * new messages in this channel have their `expiresAt` set to `now + disappearTimer`.
+   * A background cron job deletes expired messages and emits MESSAGE_DELETE.
+   *
+   * Common values: 300 (5 min), 3600 (1 hr), 86400 (24 hrs), 604800 (7 days).
+   */
+  disappearTimer: integer('disappear_timer'),
 });
 
 /**
