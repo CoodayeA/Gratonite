@@ -113,6 +113,12 @@ export const guilds = pgTable('guilds', {
   memberCount: integer('member_count').notNull().default(1),
 
   /**
+   * Category for discovery filtering.
+   * One of: gaming|music|art|tech|community|anime|education|other (nullable).
+   */
+  category: varchar('category', { length: 30 }),
+
+  /**
    * Timestamp of guild creation. Set once by Postgres, never changed.
    */
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

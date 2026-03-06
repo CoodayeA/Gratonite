@@ -167,6 +167,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             if (g.accentColor) {
                 setSelectedAccentColor(g.accentColor);
             }
+            if (g.category) setGuildCategory(g.category);
+            if (Array.isArray(g.tags)) setGuildTags(g.tags);
         }).catch(() => {});
     }, [guildId]);
 
@@ -509,6 +511,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [savedIndicator, setSavedIndicator] = useState(false);
     const [kickConfirm, setKickConfirm] = useState<string | null>(null);
     const [selectedAccentColor, setSelectedAccentColor] = useState('#526df5');
+    const [guildCategory, setGuildCategory] = useState<string>('');
+    const [guildTags, setGuildTags] = useState<string[]>([]);
+    const [tagInput, setTagInput] = useState('');
     const [assignRoleFor, setAssignRoleFor] = useState<string | null>(null);
     const [editingRule, setEditingRule] = useState<string | null>(null);
     const [editRuleName, setEditRuleName] = useState('');
@@ -785,7 +790,12 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const saveOverview = async () => {
         if (!guildId) return;
         try {
-            await api.guilds.update(guildId, { name: serverName, description: serverDesc });
+            await api.guilds.update(guildId, {
+                name: serverName,
+                description: serverDesc,
+                category: guildCategory || null,
+                tags: guildTags,
+            } as any);
             addAuditEntry('Portal Settings Changed', actorName, `Name/Description updated`, 'settings');
             emitGuildUpdated();
             setSavedIndicator(true);
@@ -1036,6 +1046,76 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                         <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>{stat.label}</div>
                                     </div>
                                 ))}
+                            </div>
+
+                            {/* Category & Tags */}
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>CATEGORY</label>
+                                <select
+                                    value={guildCategory}
+                                    onChange={e => setGuildCategory(e.target.value)}
+                                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: guildCategory ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}
+                                >
+                                    <option value=''>None (not categorized)</option>
+                                    <option value='gaming'>Gaming</option>
+                                    <option value='music'>Music</option>
+                                    <option value='art'>Art</option>
+                                    <option value='tech'>Tech</option>
+                                    <option value='community'>Community</option>
+                                    <option value='anime'>Anime</option>
+                                    <option value='education'>Education</option>
+                                    <option value='other'>Other</option>
+                                </select>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>Category helps users find your server in Discovery.</p>
+                            </div>
+
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>TAGS</label>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                                    {guildTags.map(tag => (
+                                        <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'var(--bg-tertiary)', borderRadius: '999px', border: '1px solid var(--stroke)', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                            {tag}
+                                            <button
+                                                onClick={() => setGuildTags(prev => prev.filter(t => t !== tag))}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+                                            >
+                                                ×
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <input
+                                        type="text"
+                                        value={tagInput}
+                                        onChange={e => setTagInput(e.target.value)}
+                                        onKeyDown={e => {
+                                            if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
+                                                e.preventDefault();
+                                                const newTag = tagInput.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
+                                                if (newTag && !guildTags.includes(newTag) && guildTags.length < 10) {
+                                                    setGuildTags(prev => [...prev, newTag]);
+                                                }
+                                                setTagInput('');
+                                            }
+                                        }}
+                                        placeholder="Type a tag and press Enter (max 10)"
+                                        style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            const newTag = tagInput.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
+                                            if (newTag && !guildTags.includes(newTag) && guildTags.length < 10) {
+                                                setGuildTags(prev => [...prev, newTag]);
+                                            }
+                                            setTagInput('');
+                                        }}
+                                        style={{ padding: '8px 16px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
+                                    >
+                                        Add
+                                    </button>
+                                </div>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>Up to 10 tags. Tags help users discover your server.</p>
                             </div>
 
                             <button onClick={saveOverview} onMouseEnter={() => setHoveredBtn('save-overview')} onMouseLeave={() => setHoveredBtn(null)}

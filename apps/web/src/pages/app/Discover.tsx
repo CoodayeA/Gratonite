@@ -16,12 +16,25 @@ type PortalInfo = {
     members: number;
     online: number;
     tags: string[];
+    category: string | null;
     verified: boolean;
     featured: boolean;
     isPinned: boolean;
     isPublic: boolean;
     mutualFriends: { name: string; avatar: string }[];
 };
+
+const CATEGORIES = [
+    { id: '', label: 'All' },
+    { id: 'gaming', label: 'Gaming' },
+    { id: 'music', label: 'Music' },
+    { id: 'art', label: 'Art' },
+    { id: 'tech', label: 'Tech' },
+    { id: 'community', label: 'Community' },
+    { id: 'anime', label: 'Anime' },
+    { id: 'education', label: 'Education' },
+    { id: 'other', label: 'Other' },
+];
 
 const initialPortals: PortalInfo[] = [];
 const SUPPORTED_THEMES: AppTheme[] = ['default', 'glass', 'neobrutalism', 'synthwave', 'y2k', 'memphis', 'artdeco', 'terminal', 'aurora', 'vaporwave', 'nord', 'solarized', 'bubblegum', 'obsidian', 'sakura', 'midnight', 'forest'];
@@ -147,6 +160,10 @@ const Discover = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [joiningPortal, setJoiningPortal] = useState<PortalInfo | null>(null);
     const [portals, setPortals] = useState<PortalInfo[]>(initialPortals);
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [tagFilters, setTagFilters] = useState<string[]>([]);
+    const [tagInputValue, setTagInputValue] = useState('');
+    const [sortOption, setSortOption] = useState<'members' | 'activity' | 'trending'>('members');
     const [_discoverBots, setDiscoverBots] = useState<any[]>([]);
     const [_discoverThemes, setDiscoverThemes] = useState<any[]>([]);
     const { addToast } = useToast();
@@ -188,6 +205,9 @@ const Discover = () => {
                             q: textQuery || undefined,
                             hashtag: hashtag || undefined,
                             featured: portalView === 'featured' ? true : undefined,
+                            category: selectedCategory || undefined,
+                            tag: tagFilters.length > 0 ? tagFilters[0] : undefined,
+                            sort: sortOption,
                             limit: pageSize,
                             offset,
                         });
@@ -210,6 +230,7 @@ const Discover = () => {
                     members: g.memberCount,
                     online: 0,
                     tags: g.tags ?? [],
+                    category: g.category ?? null,
                     verified: Boolean((g as any).verified),
                     featured: Boolean(g.featured),
                     isPinned: Boolean(g.isPinned),
@@ -231,7 +252,7 @@ const Discover = () => {
             }
         }, 200);
         return () => clearTimeout(timer);
-    }, [activeTab, addToast, portalView, searchQuery]);
+    }, [activeTab, addToast, portalView, searchQuery, selectedCategory, tagFilters, sortOption]);
 
     const renderTabs = () => (
         <div style={{ display: 'flex', gap: '24px', borderBottom: '1px solid var(--stroke)', marginBottom: '32px' }}>
@@ -274,45 +295,95 @@ const Discover = () => {
         </div>
     );
 
+    const addTagFilter = (tag: string) => {
+        const clean = tag.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+        if (clean && !tagFilters.includes(clean)) {
+            setTagFilters(prev => [...prev, clean]);
+        }
+        setTagInputValue('');
+    };
+
     const renderPortals = () => (
         <>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '16px' }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                    <Star size={18} color="var(--accent-primary)" /> {portalView === 'featured' ? 'Featured Portals' : 'Public Portals'}
-                </h2>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                        onClick={() => setPortalView('all')}
-                        style={{
-                            borderRadius: '999px',
-                            border: '1px solid var(--stroke)',
-                            padding: '6px 12px',
-                            background: portalView === 'all' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                            color: portalView === 'all' ? '#111' : 'var(--text-secondary)',
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                        }}
+            {/* Filter bar */}
+            <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* Category buttons */}
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, marginRight: '4px' }}>Category:</span>
+                    {CATEGORIES.map(cat => (
+                        <button
+                            key={cat.id}
+                            onClick={() => setSelectedCategory(cat.id)}
+                            style={{
+                                borderRadius: '999px',
+                                border: '1px solid var(--stroke)',
+                                padding: '5px 12px',
+                                background: selectedCategory === cat.id ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                color: selectedCategory === cat.id ? '#111' : 'var(--text-secondary)',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                            }}
+                        >
+                            {cat.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Sort + tag filter row */}
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <select
+                        value={sortOption}
+                        onChange={e => setSortOption(e.target.value as any)}
+                        style={{ padding: '6px 10px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '12px', cursor: 'pointer', outline: 'none' }}
                     >
-                        All
-                    </button>
-                    <button
-                        onClick={() => setPortalView('featured')}
-                        style={{
-                            borderRadius: '999px',
-                            border: '1px solid var(--stroke)',
-                            padding: '6px 12px',
-                            background: portalView === 'featured' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                            color: portalView === 'featured' ? '#111' : 'var(--text-secondary)',
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                        }}
-                    >
-                        Featured
-                    </button>
+                        <option value="members">Most Members</option>
+                        <option value="activity">Active</option>
+                        <option value="trending">Trending</option>
+                    </select>
+
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flex: 1 }}>
+                        <input
+                            type="text"
+                            value={tagInputValue}
+                            onChange={e => setTagInputValue(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter' && tagInputValue) { e.preventDefault(); addTagFilter(tagInputValue); } }}
+                            placeholder="Filter by tag..."
+                            style={{ padding: '6px 10px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', width: '140px' }}
+                        />
+                        {tagFilters.map(tag => (
+                            <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', background: 'rgba(82,109,245,0.15)', border: '1px solid var(--accent-primary)', borderRadius: '999px', fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                                #{tag}
+                                <button onClick={() => setTagFilters(prev => prev.filter(t => t !== tag))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--accent-primary)', fontSize: '14px', lineHeight: 1 }}>×</button>
+                            </span>
+                        ))}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
+                        <button
+                            onClick={() => setPortalView('all')}
+                            style={{
+                                borderRadius: '999px', border: '1px solid var(--stroke)', padding: '5px 12px',
+                                background: portalView === 'all' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                color: portalView === 'all' ? '#111' : 'var(--text-secondary)',
+                                fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                            }}
+                        >All</button>
+                        <button
+                            onClick={() => setPortalView('featured')}
+                            style={{
+                                borderRadius: '999px', border: '1px solid var(--stroke)', padding: '5px 12px',
+                                background: portalView === 'featured' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                color: portalView === 'featured' ? '#111' : 'var(--text-secondary)',
+                                fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                            }}
+                        >
+                            <Star size={11} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />Featured
+                        </button>
+                    </div>
                 </div>
             </div>
+
             {portals.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>
                     <Compass size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
@@ -320,9 +391,9 @@ const Discover = () => {
                     <p style={{ fontSize: '13px' }}>Public portals will appear here as the community grows.</p>
                 </div>
             )}
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '40px', overflowX: 'auto', paddingBottom: '16px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '40px' }}>
                 {portals.map(portal => (
-                    <div key={portal.id} className="portal-card hover-lift" onClick={() => setJoiningPortal(portal)} style={{ minWidth: '300px', flex: '0 0 auto', cursor: 'pointer' }}>
+                    <div key={portal.id} className="portal-card hover-lift" onClick={() => setJoiningPortal(portal)} style={{ width: '300px', flex: '0 0 auto', cursor: 'pointer' }}>
                         <div
                             style={{
                                 height: '140px',
@@ -344,15 +415,27 @@ const Discover = () => {
                                     PINNED
                                 </div>
                             )}
+                            {portal.category && (
+                                <div style={{ position: 'absolute', top: '10px', right: '10px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(82,109,245,0.8)', color: '#fff', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}>
+                                    {portal.category}
+                                </div>
+                            )}
                         </div>
                         <div style={{ padding: '28px 16px 16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                                 <div style={{ fontSize: '16px', fontWeight: 600 }}>{portal.name}</div>
                                 {portal.verified && <Shield size={14} color="var(--accent-primary)" />}
                             </div>
-                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                 {portal.description}
                             </div>
+                            {portal.tags.length > 0 && (
+                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                                    {portal.tags.slice(0, 3).map(tag => (
+                                        <span key={tag} style={{ fontSize: '10px', padding: '2px 7px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '999px', color: 'var(--text-muted)' }}>#{tag}</span>
+                                    ))}
+                                </div>
+                            )}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     <Users size={12} /> {portal.members.toLocaleString()} members
@@ -362,11 +445,6 @@ const Discover = () => {
                         </div>
                     </div>
                 ))}
-            </div>
-
-            <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>Explore Categories</h2>
-            <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)' }}>
-                <p style={{ fontSize: '14px' }}>Discover results are now sourced directly from public portal listings.</p>
             </div>
         </>
     );

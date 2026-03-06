@@ -1065,13 +1065,16 @@ export const api = {
   guilds: {
     getMine: () => apiFetch<Guild[]>('/guilds/@me'),
 
-    discover: (params?: { q?: string; hashtag?: string; featured?: boolean; limit?: number; offset?: number }) => {
+    discover: (params?: { q?: string; hashtag?: string; featured?: boolean; limit?: number; offset?: number; category?: string; tag?: string; sort?: string }) => {
       const query = new URLSearchParams();
       if (params?.q) query.set('q', params.q);
       if (params?.hashtag) query.set('hashtag', params.hashtag);
       if (params?.featured !== undefined) query.set('featured', String(params.featured));
       if (params?.limit !== undefined) query.set('limit', String(params.limit));
       if (params?.offset !== undefined) query.set('offset', String(params.offset));
+      if (params?.category) query.set('category', params.category);
+      if (params?.tag) query.set('tag', params.tag);
+      if (params?.sort) query.set('sort', params.sort);
       const suffix = query.toString() ? `?${query.toString()}` : '';
       return apiFetch<Array<{
       id: string;
@@ -1081,6 +1084,7 @@ export const api = {
       bannerHash: string | null;
       memberCount: number;
       tags: string[];
+      category: string | null;
       categories: string[];
       featured?: boolean;
       isFeatured?: boolean;

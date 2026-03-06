@@ -26,12 +26,13 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { z } from 'zod';
-import { eq, desc, sql, and, inArray, asc } from 'drizzle-orm';
+import { eq, desc, sql, and, inArray, asc, ilike } from 'drizzle-orm';
 import multer from 'multer';
 
 import { db } from '../db/index';
 import { guilds } from '../db/schema/guilds';
 import { guildMembers } from '../db/schema/guilds';
+import { guildTags } from '../db/schema/guild-tags';
 import { channels } from '../db/schema/channels';
 import { users } from '../db/schema/users';
 import { roles, memberRoles, DEFAULT_PERMISSIONS, Permissions } from '../db/schema/roles';
@@ -185,6 +186,8 @@ const updateGuildSchema = z.object({
     .regex(/^#?[0-9a-fA-F]{6}$/, 'Accent color must be a 6-digit hex color')
     .nullable()
     .optional(),
+  category: z.string().max(30).nullable().optional(),
+  tags: z.array(z.string().max(32)).max(10).optional(),
 });
 
 /**
@@ -421,29 +424,98 @@ guildsRouter.get(
       const offset = Number.isFinite(requestedOffset) ? Math.max(requestedOffset, 0) : 0;
       const escapedQ = q.replace(/[%_\\]/g, '\\$&');
 
-      const rows = await db
-        .select({
-          id: guilds.id,
-          name: guilds.name,
-          description: guilds.description,
-          iconHash: guilds.iconHash,
-          bannerHash: guilds.bannerHash,
-          isDiscoverable: guilds.isDiscoverable,
-          isFeatured: guilds.isFeatured,
-          isPinned: guilds.isPinned,
-          discoverRank: guilds.discoverRank,
-          memberCount: guilds.memberCount,
-        })
-        .from(guilds)
-        .where(
-          q.length > 0
-            ? and(eq(guilds.isDiscoverable, true), sql`${guilds.name} ILIKE ${'%' + escapedQ + '%'}`)
-            : eq(guilds.isDiscoverable, true),
-        )
-        .orderBy(desc(guilds.memberCount));
+      // New filter / sort params
+      const categoryFilter = typeof req.query.category === 'string' ? req.query.category.trim().toLowerCase() : '';
+      const tagFilter = typeof req.query.tag === 'string' ? req.query.tag.trim().toLowerCase() : '';
+      const sortParam = typeof req.query.sort === 'string' ? req.query.sort.trim() : 'members';
+
+      // Build WHERE conditions for guilds query
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const conditions: any[] = [eq(guilds.isDiscoverable, true)];
+      if (q.length > 0) {
+        conditions.push(ilike(guilds.name, `%${escapedQ}%`));
+      }
+      if (categoryFilter.length > 0) {
+        conditions.push(eq(guilds.category, categoryFilter));
+      }
+
+      type GuildRow = {
+        id: string;
+        name: string;
+        description: string | null;
+        iconHash: string | null;
+        bannerHash: string | null;
+        isDiscoverable: boolean;
+        isFeatured: boolean;
+        isPinned: boolean;
+        discoverRank: number;
+        memberCount: number;
+        category: string | null;
+        createdAt: Date;
+      };
+
+      let rows: GuildRow[];
+
+      if (tagFilter.length > 0) {
+        rows = await db
+          .selectDistinct({
+            id: guilds.id,
+            name: guilds.name,
+            description: guilds.description,
+            iconHash: guilds.iconHash,
+            bannerHash: guilds.bannerHash,
+            isDiscoverable: guilds.isDiscoverable,
+            isFeatured: guilds.isFeatured,
+            isPinned: guilds.isPinned,
+            discoverRank: guilds.discoverRank,
+            memberCount: guilds.memberCount,
+            category: guilds.category,
+            createdAt: guilds.createdAt,
+          })
+          .from(guilds)
+          .innerJoin(guildTags, and(
+            eq(guildTags.guildId, guilds.id),
+            ilike(guildTags.tag, tagFilter),
+          ))
+          .where(and(...conditions));
+      } else {
+        rows = await db
+          .select({
+            id: guilds.id,
+            name: guilds.name,
+            description: guilds.description,
+            iconHash: guilds.iconHash,
+            bannerHash: guilds.bannerHash,
+            isDiscoverable: guilds.isDiscoverable,
+            isFeatured: guilds.isFeatured,
+            isPinned: guilds.isPinned,
+            discoverRank: guilds.discoverRank,
+            memberCount: guilds.memberCount,
+            category: guilds.category,
+            createdAt: guilds.createdAt,
+          })
+          .from(guilds)
+          .where(and(...conditions));
+      }
+
+      // Fetch all guild_tags rows for the returned guilds
+      const guildIds = rows.map((r) => r.id);
+      const tagsByGuildId: Record<string, string[]> = {};
+      if (guildIds.length > 0) {
+        const tagRows = await db
+          .select({ guildId: guildTags.guildId, tag: guildTags.tag })
+          .from(guildTags)
+          .where(inArray(guildTags.guildId, guildIds));
+        for (const tr of tagRows) {
+          if (!tagsByGuildId[tr.guildId]) tagsByGuildId[tr.guildId] = [];
+          tagsByGuildId[tr.guildId].push(tr.tag);
+        }
+      }
 
       const enriched = rows.map((row) => {
-        const tags = extractTags(row.name, row.description);
+        const extractedTags = extractTags(row.name, row.description);
+        const dbTags = tagsByGuildId[row.id] ?? [];
+        const mergedTags = [...new Set([...dbTags, ...extractedTags])];
         return {
           id: row.id,
           name: row.name,
@@ -451,7 +523,8 @@ guildsRouter.get(
           iconHash: row.iconHash,
           bannerHash: row.bannerHash,
           memberCount: row.memberCount,
-          tags,
+          tags: mergedTags,
+          category: row.category ?? null,
           categories: [] as string[],
           featured: row.isFeatured,
           isFeatured: row.isFeatured,
@@ -459,6 +532,7 @@ guildsRouter.get(
           verified: row.memberCount >= 100,
           isPublic: row.isDiscoverable,
           isPinned: row.isPinned,
+          createdAt: row.createdAt,
         };
       });
 
@@ -481,8 +555,14 @@ guildsRouter.get(
 
       filtered.sort((a, b) => {
         if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
-        if (a.discoverRank !== b.discoverRank) return a.discoverRank - b.discoverRank;
-        if (a.memberCount !== b.memberCount) return b.memberCount - a.memberCount;
+        if (sortParam === 'activity' || sortParam === 'trending') {
+          const timeDiff = b.createdAt.getTime() - a.createdAt.getTime();
+          if (timeDiff !== 0) return timeDiff;
+          if (a.memberCount !== b.memberCount) return b.memberCount - a.memberCount;
+        } else {
+          if (a.discoverRank !== b.discoverRank) return a.discoverRank - b.discoverRank;
+          if (a.memberCount !== b.memberCount) return b.memberCount - a.memberCount;
+        }
         return a.name.localeCompare(b.name);
       });
 
@@ -491,6 +571,9 @@ guildsRouter.get(
         route: '/guilds/discover',
         q: q || null,
         hashtag: hashtag || null,
+        category: categoryFilter || null,
+        tag: tagFilter || null,
+        sort: sortParam,
         featured: featuredFilter ?? null,
         resultCount: filtered.length,
       }));
@@ -698,13 +781,14 @@ guildsRouter.patch(
         throw new AppError(403, 'Missing MANAGE_GUILD permission', 'FORBIDDEN');
       }
 
-      const { name, description, isDiscoverable, accentColor } = req.body as z.infer<typeof updateGuildSchema>;
+      const { name, description, isDiscoverable, accentColor, category, tags } = req.body as z.infer<typeof updateGuildSchema>;
 
       const updateData: Partial<typeof guilds.$inferInsert> = { updatedAt: new Date() };
       if (name !== undefined) updateData.name = name;
       if (description !== undefined) updateData.description = description;
       if (isDiscoverable !== undefined) updateData.isDiscoverable = isDiscoverable;
       if (accentColor !== undefined) updateData.accentColor = accentColor === null ? null : normalizeHexColor(accentColor);
+      if (category !== undefined) updateData.category = category === null ? null : category.toLowerCase().slice(0, 30);
 
       const [updated] = await db
         .update(guilds)
@@ -712,12 +796,24 @@ guildsRouter.patch(
         .where(eq(guilds.id, guildId))
         .returning();
 
+      // Update tags if provided
+      if (tags !== undefined) {
+        await db.delete(guildTags).where(eq(guildTags.guildId, guildId));
+        if (tags.length > 0) {
+          await db.insert(guildTags).values(
+            tags.map((tag) => ({ guildId, tag: tag.toLowerCase().trim() })),
+          );
+        }
+      }
+
       // Audit log
       const changes: Record<string, unknown> = {};
       if (name !== undefined) changes.name = name;
       if (description !== undefined) changes.description = description;
       if (isDiscoverable !== undefined) changes.isDiscoverable = isDiscoverable;
       if (accentColor !== undefined) changes.accentColor = accentColor;
+      if (category !== undefined) changes.category = category;
+      if (tags !== undefined) changes.tags = tags;
       logAuditEvent(guildId, req.userId!, AuditActionTypes.GUILD_UPDATE, guildId, 'GUILD', changes);
 
       res.status(200).json(updated);
