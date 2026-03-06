@@ -1057,7 +1057,10 @@ const ChannelChat = () => {
         setHasMoreMessages(true);
         oldestMessageIdRef.current = null;
         try {
-            const apiMessages = await api.messages.list(channelId, { limit: 50 });
+            const [apiMessages, apiPolls] = await Promise.all([
+                api.messages.list(channelId, { limit: 50 }),
+                api.polls.list(channelId).catch(() => [] as any[]),
+            ]);
             // If this fetch was superseded by a newer one (channel changed), discard
             if (options?.signal?.aborted) return;
             const authorIds = [...new Set(apiMessages.map((m: any) => m.authorId))];
@@ -1075,7 +1078,31 @@ const ChannelChat = () => {
                     msg.replyToContent = (ref.content || '').slice(0, 100);
                 }
             }
-            setMessages(converted);
+            // Merge polls into the message list, sorted by createdAt
+            const pollMessages: Message[] = (apiPolls as any[]).map((poll: any) => ({
+                id: Math.abs(parseInt(poll.id.replace(/-/g, '').slice(0, 8), 16)) || Date.now(),
+                apiId: `poll:${poll.id}`,
+                authorId: poll.creatorId,
+                author: poll.creatorName || 'Unknown',
+                system: false,
+                avatar: (poll.creatorName || 'U').charAt(0).toUpperCase(),
+                time: new Date(poll.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                content: '',
+                createdAt: poll.createdAt,
+                type: 'poll' as const,
+                pollData: {
+                    pollId: poll.id,
+                    question: poll.question,
+                    options: poll.options?.map((o: any) => ({ id: o.id, text: o.text, votes: o.voteCount ?? 0 })) ?? [],
+                    totalVotes: poll.totalVoters ?? 0,
+                    multipleChoice: poll.multipleChoice ?? false,
+                    myVotes: poll.myVotes ?? [],
+                },
+            }));
+            const merged = [...converted, ...pollMessages].sort((a, b) =>
+                new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+            );
+            setMessages(merged);
             if (apiMessages.length > 0) {
                 // API returns newest-first; the last element is the oldest message
                 oldestMessageIdRef.current = apiMessages[apiMessages.length - 1].id;
