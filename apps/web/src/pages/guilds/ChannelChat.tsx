@@ -86,7 +86,7 @@ type Message = {
     createdAt?: string | null;
 };
 
-import { EmbedCard } from '../../components/chat/EmbedCard';
+import { EmbedCard, OgEmbed } from '../../components/chat/EmbedCard';
 import ThreadPanel from '../../components/chat/ThreadPanel';
 import SoundboardMenu from '../../components/chat/SoundboardMenu';
 import EmojiPicker from '../../components/chat/EmojiPicker';
@@ -394,7 +394,7 @@ const MemoizedMessageItem = memo(({
                         {/* URL Embeds */}
                         {msg.embeds && msg.embeds.length > 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
-                                {msg.embeds.map((embed, i) => <EmbedCard key={i} embed={embed} />)}
+                                {msg.embeds.map((embed: OgEmbed, i: number) => <EmbedCard key={i} embed={embed} />)}
                             </div>
                         )}
                         {/* Reaction badges */}
