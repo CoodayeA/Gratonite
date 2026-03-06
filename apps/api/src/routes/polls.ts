@@ -23,6 +23,7 @@ import { polls, pollOptions, pollVotes } from '../db/schema/polls';
 import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { getIO } from '../lib/socket-io';
 
 // Channel-scoped router (mounted at /channels/:channelId/polls)
 export const channelPollsRouter = Router({ mergeParams: true });
@@ -37,7 +38,7 @@ export const pollsRouter = Router({ mergeParams: true });
 const createPollSchema = z.object({
   question: z.string().min(1).max(500),
   options: z.array(z.string().min(1).max(255)).min(2).max(25),
-  duration: z.number().int().positive().optional(), // minutes until expiry
+  duration: z.number().int().positive().max(60 * 24 * 30).optional(), // minutes, max 30 days
   multiselect: z.boolean().optional(),
 });
 
@@ -152,6 +153,34 @@ channelPollsRouter.post('/', requireAuth, validate(createPollSchema), async (req
   await db.insert(pollOptions).values(optionRows);
 
   const result = await buildPollResponse(poll.id, req.userId);
+
+  // Fetch author info for the socket payload
+  const [author] = await db
+    .select({ id: users.id, username: users.username, displayName: users.displayName, avatarHash: users.avatarHash })
+    .from(users)
+    .where(eq(users.id, req.userId!))
+    .limit(1);
+
+  // Broadcast to all channel subscribers so other users see the poll instantly
+  try {
+    getIO().to(`channel:${channelId}`).emit('MESSAGE_CREATE', {
+      id: `poll:${poll.id}`,
+      channelId,
+      authorId: req.userId!,
+      author: author ?? null,
+      content: '',
+      attachments: [],
+      embeds: [],
+      edited: false,
+      createdAt: poll.createdAt,
+      expiresAt: null,
+      replyToId: null,
+      pollData: result,
+    });
+  } catch {
+    // Non-fatal if socket not available
+  }
+
   res.status(201).json(result);
 });
 
