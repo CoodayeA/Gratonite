@@ -2641,7 +2641,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                         </>
                     )}
 
-                    {activeTab === 'insights' && (
+                    {activeTab === 'insights' && guildId && (
                         <GuildInsightsPanel guildId={guildId} />
                     )}
 
