@@ -18,6 +18,7 @@ import { BackgroundMedia } from '../../components/ui/BackgroundMedia';
 import UserProfilePopover from '../../components/ui/UserProfilePopover';
 import { playSound } from '../../utils/SoundManager';
 import { api, API_BASE } from '../../lib/api';
+import { markRead } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
 import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onChannelPinsUpdate, onSocketReconnect, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type ChannelPinsUpdatePayload } from '../../lib/socket';
 import Avatar from '../../components/ui/Avatar';
@@ -615,6 +616,13 @@ const ChannelChat = () => {
             setCurrentUserId(me.id);
         }).catch(() => { addToast({ title: 'Failed to load user info', variant: 'error' }); });
     }, []);
+
+    // Mark channel as read on mount
+    useEffect(() => {
+        if (!channelId) return;
+        markRead(channelId);
+        api.messages.ack(channelId).catch(() => {});
+    }, [channelId]);
 
     // Listen for remote typing events
     useEffect(() => {

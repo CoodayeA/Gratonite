@@ -1120,6 +1120,9 @@ export const api = {
 
     get: (guildId: string, options?: RequestInit) => apiFetch<Guild>(`/guilds/${guildId}`, options),
 
+    getChannelsUnread: (guildId: string) =>
+      apiFetch<Array<{ channelId: string; mentionCount: number; lastReadAt: string }>>(`/guilds/${guildId}/channels/unread`),
+
     getMembers: (
       guildId: string,
       params: { limit?: number; offset?: number; search?: string; status?: 'online' | 'offline'; groupId?: string } = {},
@@ -1400,6 +1403,9 @@ export const api = {
 
     markRead: (channelId: string, lastReadMessageId?: string) =>
       apiFetch<{ ok: boolean }>(`/channels/${channelId}/messages/read`, { method: 'POST', body: JSON.stringify(lastReadMessageId ? { lastReadMessageId } : {}) }),
+
+    ack: (channelId: string, lastMessageId?: string) =>
+      apiFetch<void>(`/channels/${channelId}/messages/ack`, { method: 'POST', body: JSON.stringify(lastMessageId ? { lastMessageId } : {}) }),
 
     getReadState: (channelId: string) =>
       apiFetch<{ userId: string; lastReadAt: string; lastReadMessageId: string | null }[]>(`/channels/${channelId}/messages/read-state`),
