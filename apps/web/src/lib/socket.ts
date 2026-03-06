@@ -166,6 +166,14 @@ const stageSpeakerAddListeners = new Set<StageSpeakerAddCallback>();
 const stageSpeakerRemoveListeners = new Set<StageSpeakerRemoveCallback>();
 const stageHandRaiseListeners = new Set<StageHandRaiseCallback>();
 
+export interface ChannelBackgroundUpdatedPayload {
+  channelId: string;
+  backgroundUrl: string | null;
+  backgroundType: string | null;
+}
+type ChannelBgCallback = (p: ChannelBackgroundUpdatedPayload) => void;
+const channelBgListeners = new Set<ChannelBgCallback>();
+
 export function onPresenceUpdate(cb: PresenceCallback): () => void {
   presenceListeners.add(cb);
   return () => { presenceListeners.delete(cb); };
@@ -259,6 +267,11 @@ export function onStageSpeakerRemove(cb: StageSpeakerRemoveCallback): () => void
 export function onStageHandRaise(cb: StageHandRaiseCallback): () => void {
   stageHandRaiseListeners.add(cb);
   return () => { stageHandRaiseListeners.delete(cb); };
+}
+
+export function onChannelBackgroundUpdated(cb: ChannelBgCallback): () => void {
+  channelBgListeners.add(cb);
+  return () => { channelBgListeners.delete(cb); };
 }
 
 let socket: GratoniteSocket | null = null;
@@ -429,6 +442,10 @@ export function connectSocket(): GratoniteSocket {
 
   socket.on('STAGE_HAND_RAISE', (data: StageHandRaisePayload) => {
     stageHandRaiseListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('CHANNEL_BACKGROUND_UPDATED', (data: ChannelBackgroundUpdatedPayload) => {
+    channelBgListeners.forEach(cb => cb(data));
   });
 
   socket.on('disconnect', () => {
