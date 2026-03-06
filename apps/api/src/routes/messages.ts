@@ -52,6 +52,7 @@ import { hasPermission, hasChannelPermission } from './roles';
 import { createNotification } from '../lib/notifications';
 import { dispatchMessageCreate } from '../lib/webhook-dispatch';
 import { scrapeUrl, extractUrls } from '../lib/og-scraper';
+import { workflows, workflowTriggers, workflowActions } from '../db/schema/workflows';
 
 /** Use mergeParams so `:channelId` from the parent mount path is accessible. */
 export const messagesRouter = Router({ mergeParams: true });
@@ -580,6 +581,47 @@ messagesRouter.post(
             } catch { /* non-fatal */ }
           } catch { /* skip failed upserts */ }
         }
+      }
+
+      // --- AutoMod check (fire-and-forget) ---
+      if (chan?.guildId && content) {
+        (async () => {
+          try {
+            const guildWorkflows = await db
+              .select()
+              .from(workflows)
+              .where(and(eq(workflows.guildId, chan.guildId!), eq(workflows.enabled, true)));
+
+            for (const wf of guildWorkflows) {
+              const triggers = await db
+                .select()
+                .from(workflowTriggers)
+                .where(and(eq(workflowTriggers.workflowId, wf.id), eq(workflowTriggers.type, 'message_contains')));
+
+              for (const trigger of triggers) {
+                const config = trigger.config as { keywords?: string[] };
+                const keywords: string[] = config?.keywords || [];
+                const msgLower = content.toLowerCase();
+                const matched = keywords.some((kw: string) => msgLower.includes(kw.toLowerCase()));
+                if (!matched) continue;
+
+                const actions = await db
+                  .select()
+                  .from(workflowActions)
+                  .where(eq(workflowActions.workflowId, wf.id));
+
+                for (const action of actions) {
+                  if (action.type === 'delete_message') {
+                    await db.delete(messages).where(eq(messages.id, newMessage.id));
+                    getIO().to(`channel:${channelId}`).emit('MESSAGE_DELETE', { id: newMessage.id, channelId });
+                  }
+                }
+              }
+            }
+          } catch (automodErr) {
+            console.error('[automod] check failed:', automodErr);
+          }
+        })();
       }
 
       // 1) DM notification — notify the other participant(s)

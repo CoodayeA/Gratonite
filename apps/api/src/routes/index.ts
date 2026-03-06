@@ -44,6 +44,7 @@ import { keysRouter } from './keys';
 import { groupKeysRouter } from './group-keys';
 import { stageRouter } from './stage';
 import { workflowsRouter } from './workflows';
+import { webhooksRouter } from './webhooks';
 import { authRateLimit, apiRateLimit } from '../middleware/rateLimit';
 
 export const router = Router();
@@ -155,6 +156,9 @@ router.use('/channels', groupKeysRouter);
 
 // Workflow automation
 router.use('/guilds', workflowsRouter);
+
+// Webhooks (create, list, delete, execute)
+router.use('/', webhooksRouter);
 
 // Platform Admin
 router.use('/admin', adminRouter);
