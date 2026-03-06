@@ -41,15 +41,16 @@ const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, cust
     }, []);
 
     useEffect(() => {
+        if (!isOpen) return;
         const handleClickOutside = (e: MouseEvent) => {
             const target = e.target as HTMLElement;
-            if (!target.closest('[data-presence-menu]')) {
+            if (!target.closest('[data-presence-menu]') && !target.closest('[data-presence-toggle]')) {
                 onClose();
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [onClose]);
+    }, [isOpen, onClose]);
 
     if (!isOpen) return null;
 
