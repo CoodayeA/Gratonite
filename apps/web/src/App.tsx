@@ -543,13 +543,6 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         api.relationships.getDmChannels().then(setDmChannels).catch(() => { addToast({ title: 'Failed to load direct messages', variant: 'error' }); }).finally(() => setIsDmLoading(false));
     }, []);
 
-    const cyclePermState = (role: string, perm: string) => {
-        setPermStates(prev => {
-            const current = prev[role]?.[perm] || 'neutral';
-            const next = current === 'neutral' ? 'allow' : current === 'allow' ? 'deny' : 'neutral';
-            return { ...prev, [role]: { ...prev[role], [perm]: next } };
-        });
-    };
 
     const handleDuplicateChannel = (channelName: string) => {
         addToast({ title: 'Channel Duplicated', description: `#${channelName}-copy has been created with the same permissions.`, variant: 'success' });
