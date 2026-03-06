@@ -34,6 +34,7 @@ import { messages } from '../db/schema/messages';
 import { channels } from '../db/schema/channels';
 import { dmChannelMembers } from '../db/schema/channels';
 import { dmReadState } from '../db/schema/dm-read-state';
+import { channelReadState } from '../db/schema/channel-read-state';
 import { files } from '../db/schema/files';
 import { users } from '../db/schema/users';
 import { guilds } from '../db/schema/guilds';
@@ -530,6 +531,45 @@ messagesRouter.post(
         });
       }
 
+      // --- Channel read-state: increment mention counts for <@userId> mentions ---
+      if (content && chan?.guildId) {
+        const mentionRegex = /<@([a-f0-9-]{36})>/g;
+        const mentionedIds = new Set<string>();
+        let mentionResult = mentionRegex.exec(content);
+        while (mentionResult !== null) {
+          if (mentionResult[1] !== req.userId!) mentionedIds.add(mentionResult[1]);
+          mentionResult = mentionRegex.exec(content);
+        }
+
+        for (const mentionedUserId of mentionedIds) {
+          try {
+            const [row] = await db
+              .insert(channelReadState)
+              .values({
+                channelId,
+                userId: mentionedUserId,
+                lastReadAt: new Date(0),
+                mentionCount: 1,
+              })
+              .onConflictDoUpdate({
+                target: [channelReadState.channelId, channelReadState.userId],
+                set: {
+                  mentionCount: sql`${channelReadState.mentionCount} + 1`,
+                },
+              })
+              .returning({ mentionCount: channelReadState.mentionCount });
+
+            try {
+              getIO().to(`user:${mentionedUserId}`).emit('MENTION_CREATED', {
+                channelId,
+                guildId: chan.guildId,
+                mentionCount: row?.mentionCount ?? 1,
+              });
+            } catch { /* non-fatal */ }
+          } catch { /* skip failed upserts */ }
+        }
+      }
+
       // 1) DM notification — notify the other participant(s)
       if (chan && !chan.guildId) {
         const dmMembers = await db
@@ -809,6 +849,46 @@ messagesRouter.post('/typing', requireAuth, async (req: Request, res: Response):
     }
 
     res.status(200).json({ ok: true });
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /ack  (Channel unread badges)
+// ---------------------------------------------------------------------------
+
+const ackSchema = z.object({
+  lastMessageId: z.string().uuid().optional(),
+});
+
+messagesRouter.post('/ack', requireAuth, validate(ackSchema), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { channelId } = req.params as Record<string, string>;
+    await resolveChannel(channelId, req.userId!);
+
+    const { lastMessageId } = req.body as z.infer<typeof ackSchema>;
+    const now = new Date();
+
+    await db
+      .insert(channelReadState)
+      .values({
+        channelId,
+        userId: req.userId!,
+        lastReadAt: now,
+        lastReadMessageId: lastMessageId ?? null,
+        mentionCount: 0,
+      })
+      .onConflictDoUpdate({
+        target: [channelReadState.channelId, channelReadState.userId],
+        set: {
+          lastReadAt: now,
+          lastReadMessageId: lastMessageId ?? null,
+          mentionCount: 0,
+        },
+      });
+
+    res.status(204).end();
   } catch (err) {
     handleAppError(res, err);
   }

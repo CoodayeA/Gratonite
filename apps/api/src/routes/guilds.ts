@@ -40,6 +40,7 @@ import { guildMemberGroups, guildMemberGroupMembers } from '../db/schema/member-
 import { auditLog } from '../db/schema/audit';
 import { files } from '../db/schema/files';
 import { guildMemberOnboarding } from '../db/schema/guild-onboarding';
+import { channelReadState } from '../db/schema/channel-read-state';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { hasPermission } from './roles';
@@ -1755,6 +1756,40 @@ guildsRouter.get(
         .limit(limit);
 
       res.status(200).json({ items: rows });
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// GET /:guildId/channels/unread  (Unread badges)
+// ---------------------------------------------------------------------------
+
+guildsRouter.get(
+  '/:guildId/channels/unread',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { guildId } = req.params as Record<string, string>;
+      await requireMember(guildId, req.userId!);
+
+      const rows = await db
+        .select({
+          channelId: channelReadState.channelId,
+          mentionCount: channelReadState.mentionCount,
+          lastReadAt: channelReadState.lastReadAt,
+        })
+        .from(channelReadState)
+        .innerJoin(channels, eq(channels.id, channelReadState.channelId))
+        .where(
+          and(
+            eq(channels.guildId, guildId),
+            eq(channelReadState.userId, req.userId!),
+          ),
+        );
+
+      res.status(200).json(rows);
     } catch (err) {
       handleAppError(res, err);
     }
