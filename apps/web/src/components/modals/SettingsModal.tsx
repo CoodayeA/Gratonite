@@ -248,6 +248,9 @@ const SettingsModal = ({
     const [soundMuted, setSoundMutedState] = useState(isSoundMuted());
     const [soundVolume, setSoundVolumeState] = useState(getSoundVolume());
     const [soundPack, setSoundPackState] = useState(getSoundPack());
+    const [noiseSuppressionEnabled, setNoiseSuppressionEnabledState] = useState(
+        () => localStorage.getItem('noiseSuppression') === 'true',
+    );
     const [ambientMode, setAmbientMode] = useState<string>(
         () => localStorage.getItem('gratonite_ambient_mode') ?? 'off'
     );
@@ -1882,6 +1885,37 @@ const SettingsModal = ({
                                             </button>
                                         </div>
                                     ))}
+                                </div>
+
+                                <div style={{ height: '1px', background: 'var(--stroke)', margin: '32px 0' }} />
+
+                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Voice Processing</h3>
+                                <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px' }}>
+                                        <div>
+                                            <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>Noise Suppression</div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.4' }}>Filters background noise from your microphone using Web Audio processing.</div>
+                                        </div>
+                                        <div
+                                            onClick={() => {
+                                                const next = !noiseSuppressionEnabled;
+                                                setNoiseSuppressionEnabledState(next);
+                                                try { localStorage.setItem('noiseSuppression', String(next)); } catch {}
+                                            }}
+                                            style={{
+                                                width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', flexShrink: 0,
+                                                background: noiseSuppressionEnabled ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                                                border: `1px solid ${noiseSuppressionEnabled ? 'transparent' : 'var(--stroke)'}`,
+                                                position: 'relative', transition: 'background 0.2s ease',
+                                            }}
+                                        >
+                                            <div style={{
+                                                width: '18px', height: '18px', borderRadius: '50%', background: 'white',
+                                                position: 'absolute', top: '2px', left: noiseSuppressionEnabled ? '22px' : '2px',
+                                                transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                                            }} />
+                                        </div>
+                                    </div>
                                 </div>
                             </>
                         )}

@@ -5,6 +5,7 @@
 export * from './users';
 export * from './auth';
 export * from './guilds';
+export * from './guild-tags';
 export * from './member-groups';
 export * from './channels';
 export * from './messages';

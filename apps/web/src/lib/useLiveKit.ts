@@ -15,6 +15,7 @@ import {
   setLogLevel,
 } from 'livekit-client';
 import { api } from './api';
+import { isNoiseSuppressionSupported, createNoiseSuppressionStream } from './noise-suppression';
 
 // Suppress expected "abort transport/connection attempt" warnings that occur
 // when users intentionally disconnect during in-flight WebRTC setup.
@@ -82,6 +83,10 @@ export interface UseLiveKitReturn {
   streamQuality: StreamQuality;
   setStreamQuality: (quality: StreamQuality) => void;
 
+  // Noise suppression
+  noiseSuppressionEnabled: boolean;
+  toggleNoiseSuppression: () => Promise<void>;
+
   // Actions
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
@@ -118,6 +123,11 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
   const [isDeafened, setIsDeafened] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+
+  // Noise suppression
+  const [noiseSuppressionEnabled, setNoiseSuppressionEnabled] = useState(
+    () => localStorage.getItem('noiseSuppression') === 'true',
+  );
 
   // Stream quality
   const [streamQuality, setStreamQuality] = useState<StreamQuality>('medium');
@@ -493,6 +503,58 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
     updateParticipants();
   }, [isMuted, updateParticipants]);
 
+  // Toggle noise suppression
+  const toggleNoiseSuppression = useCallback(async () => {
+    const next = !noiseSuppressionEnabled;
+    setNoiseSuppressionEnabled(next);
+    try {
+      localStorage.setItem('noiseSuppression', String(next));
+    } catch {
+      // Ignore storage failures
+    }
+
+    // If currently unmuted, re-publish mic with/without noise suppression
+    const room = roomRef.current;
+    if (!room?.localParticipant) return;
+    if (isMuted) return; // mic is off, changes will take effect on next unmute
+
+    try {
+      // Disable mic, then re-enable with new processing
+      await room.localParticipant.setMicrophoneEnabled(false);
+
+      if (next && isNoiseSuppressionSupported()) {
+        // Get raw mic stream and pipe through noise suppression
+        const rawStream = await navigator.mediaDevices.getUserMedia({
+          audio: selectedAudioInputIdRef.current
+            ? { deviceId: { exact: selectedAudioInputIdRef.current } }
+            : true,
+          video: false,
+        });
+        const processedStream = await createNoiseSuppressionStream(rawStream);
+        const audioTrack = processedStream.getAudioTracks()[0];
+        if (audioTrack) {
+          const { LocalAudioTrack } = await import('livekit-client');
+          const localAudioTrack = new LocalAudioTrack(audioTrack, undefined, false);
+          await room.localParticipant.publishTrack(localAudioTrack);
+        } else {
+          // Fallback to standard enable if no track
+          await room.localParticipant.setMicrophoneEnabled(true);
+        }
+      } else {
+        await room.localParticipant.setMicrophoneEnabled(true);
+      }
+    } catch (err) {
+      console.warn('[LiveKit] Failed to re-publish mic with noise suppression:', err);
+      // Attempt to restore mic without noise suppression
+      try {
+        await room.localParticipant.setMicrophoneEnabled(true);
+      } catch {
+        // Ignore
+      }
+    }
+    updateParticipants();
+  }, [noiseSuppressionEnabled, isMuted, updateParticipants]);
+
   // Toggle deafen (client-side only - mutes all incoming audio)
   const toggleDeafen = useCallback(() => {
     const newDeafened = !isDeafened;
@@ -661,6 +723,8 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
     isDeafened,
     isCameraOn,
     isScreenSharing,
+    noiseSuppressionEnabled,
+    toggleNoiseSuppression,
     streamQuality,
     setStreamQuality,
     participants,

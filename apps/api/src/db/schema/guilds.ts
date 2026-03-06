@@ -126,6 +126,12 @@ export const guilds = pgTable('guilds', {
   rulesChannelId: uuid('rules_channel_id').references(() => channels.id, { onDelete: 'set null' }),
 
   /**
+   * Category for discovery filtering.
+   * One of: gaming|music|art|tech|community|anime|education|other (nullable).
+   */
+  category: varchar('category', { length: 30 }),
+
+  /**
    * Timestamp of guild creation. Set once by Postgres, never changed.
    */
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
