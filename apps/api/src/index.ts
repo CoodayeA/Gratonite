@@ -10,6 +10,8 @@ import { setIO } from './lib/socket-io';
 import { initSocket } from './socket/index';
 import { startAuctionCron } from './lib/auction-cron';
 import { startMessageExpiryCron } from './lib/message-expiry';
+import { startUnbanExpiredJob } from './jobs/unbanExpired';
+import { startExpireStatusesJob } from './jobs/expireStatuses';
 
 const PLACEHOLDER_PATTERNS = [
   'changeme',
@@ -152,6 +154,8 @@ server.listen(PORT, () => {
   // Start background jobs after server is listening
   startAuctionCron();
   startMessageExpiryCron();
+  startUnbanExpiredJob();
+  startExpireStatusesJob();
 });
 
 export { io };

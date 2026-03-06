@@ -20,7 +20,7 @@ import { playSound } from '../../utils/SoundManager';
 import { api, API_BASE } from '../../lib/api';
 import { markRead } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
-import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onChannelPinsUpdate, onSocketReconnect, onChannelBackgroundUpdated, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type ChannelPinsUpdatePayload } from '../../lib/socket';
+import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onMessageDeleteBulk, onReactionAdd, onReactionRemove, onChannelPinsUpdate, onSocketReconnect, onChannelBackgroundUpdated, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type MessageDeleteBulkPayload, type ReactionPayload, type ChannelPinsUpdatePayload } from '../../lib/socket';
 import Avatar from '../../components/ui/Avatar';
 
 type MediaType = 'image' | 'video';
@@ -632,6 +632,11 @@ const ChannelChat = () => {
     const [channelIndex, setChannelIndex] = useState(0);
     const [guildChannelsList, setGuildChannelsList] = useState<{ id: string; name: string; type?: string }[]>([]);
 
+    // Slash command picker state
+    const [slashSearch, setSlashSearch] = useState<string | null>(null);
+    const [slashIndex, setSlashIndex] = useState(0);
+    const [guildCommands, setGuildCommands] = useState<Array<{ id: string; name: string; description: string; options?: any[] }>>([]);
+
     const [isScheduleOpen, setIsScheduleOpen] = useState(false);
     const [scheduleDate, setScheduleDate] = useState('');
     const [scheduleTime, setScheduleTime] = useState('');
@@ -1222,6 +1227,16 @@ const ChannelChat = () => {
         }).catch(() => {});
     }, [guildId]);
 
+    // Fetch slash commands for this guild
+    useEffect(() => {
+        if (!guildId) { setGuildCommands([]); return; }
+        api.guilds.getCommands(guildId).then((cmds: any[]) => {
+            if (Array.isArray(cmds)) {
+                setGuildCommands(cmds.map((c: any) => ({ id: c.id, name: c.name, description: c.description || '', options: c.options })));
+            }
+        }).catch(() => {});
+    }, [guildId]);
+
     // Fetch guild custom emojis for :name: rendering in messages
     useEffect(() => {
         if (!guildId) { setGuildCustomEmojis([]); return; }
@@ -1389,6 +1404,12 @@ const ChannelChat = () => {
             setMessages(prev => prev.filter(msg => msg.apiId !== data.id));
         });
 
+        const unsubDeleteBulk = onMessageDeleteBulk((data: MessageDeleteBulkPayload) => {
+            if (data.channelId !== channelId) return;
+            const deletedSet = new Set(data.ids);
+            setMessages(prev => prev.filter(msg => !msg.apiId || !deletedSet.has(msg.apiId)));
+        });
+
         const unsubReactionAdd = onReactionAdd((data: ReactionPayload) => {
             if (data.channelId !== channelId) return;
             // Skip own reactions (handled optimistically)
@@ -1418,7 +1439,7 @@ const ChannelChat = () => {
             }));
         });
 
-        return () => { unsubCreate(); unsubUpdate(); unsubDelete(); unsubReactionAdd(); unsubReactionRemove(); };
+        return () => { unsubCreate(); unsubUpdate(); unsubDelete(); unsubDeleteBulk(); unsubReactionAdd(); unsubReactionRemove(); };
     }, [channelId, currentUserId]);
 
     // Socket listener for embed updates (URL unfurling)
@@ -1741,6 +1762,19 @@ const ChannelChat = () => {
         // Notify server that we're typing
         if (val.trim().length > 0) sendTypingIndicator();
 
+        // Slash command detection: starts with "/" and no spaces before cursor
+        const slashMatch = val.match(/^\/([a-zA-Z0-9_]*)$/);
+        if (slashMatch) {
+            setSlashSearch(slashMatch[1]);
+            setSlashIndex(0);
+            setMentionSearch(null);
+            setChannelSearch(null);
+            setEmojiSearch(null);
+            return;
+        } else {
+            setSlashSearch(null);
+        }
+
         const mentionMatch = val.match(/@([a-zA-Z0-9_]*)$/);
         const channelMatch = val.match(/#([a-zA-Z0-9_-]*)$/);
         const emojiMatch = val.match(/(?<!\\):([a-zA-Z0-9_]{1,})$/); // at least 1 char for autocomplete
@@ -1781,6 +1815,19 @@ const ChannelChat = () => {
         setChannelSearch(null);
     };
 
+    const selectSlashCommand = (cmd: { id: string; name: string; description: string; options?: any[] }) => {
+        // Replace /search with /commandName, then send as interaction
+        setInputValue(`/${cmd.name} `);
+        setSlashSearch(null);
+        // If command has no options, send it immediately
+        if (!cmd.options || cmd.options.length === 0) {
+            api.messages.send(channelId!, { content: `/${cmd.name}` }).catch(() => {});
+            setInputValue('');
+        }
+    };
+
+    const filteredCommands = slashSearch !== null ? guildCommands.filter(c => c.name.toLowerCase().includes(slashSearch.toLowerCase())).slice(0, 10) : [];
+
     const insertEmoji = (emojiName: string) => {
         if (emojiSearch === null) return;
         const val = inputValue.replace(/:([a-zA-Z0-9_]*)$/, `:${emojiName}: `);
@@ -1789,6 +1836,26 @@ const ChannelChat = () => {
     };
 
     const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        // Slash command navigation
+        if (slashSearch !== null && filteredCommands.length > 0) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setSlashIndex(prev => (prev + 1) % filteredCommands.length);
+                return;
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setSlashIndex(prev => (prev - 1 + filteredCommands.length) % filteredCommands.length);
+                return;
+            } else if (e.key === 'Enter' || e.key === 'Tab') {
+                e.preventDefault();
+                selectSlashCommand(filteredCommands[slashIndex]);
+                return;
+            } else if (e.key === 'Escape') {
+                setSlashSearch(null);
+                return;
+            }
+        }
+
         if (mentionSearch !== null && filteredUsers.length > 0) {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
@@ -2695,6 +2762,30 @@ const ChannelChat = () => {
                                 </div>
                             )}
                         </>
+                    )}
+
+                    {/* Slash Command Picker Popover */}
+                    {slashSearch !== null && filteredCommands.length > 0 && (
+                        <div style={{ position: 'absolute', bottom: 'calc(100% + 12px)', left: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '8px', width: '340px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '2px', maxHeight: '300px', overflowY: 'auto' }}>
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px', padding: '0 8px' }}>COMMANDS</div>
+                            {filteredCommands.map((cmd, idx) => (
+                                <div
+                                    key={cmd.id}
+                                    onClick={() => selectSlashCommand(cmd)}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '12px', padding: '8px',
+                                        borderRadius: '6px', cursor: 'pointer',
+                                        background: slashIndex === idx ? 'var(--bg-tertiary)' : 'transparent',
+                                    }}
+                                >
+                                    <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700, fontSize: '14px', flexShrink: 0 }}>/</div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: 600, fontSize: '14px' }}>/{cmd.name}</div>
+                                        {cmd.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cmd.description}</div>}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     )}
 
                     {/* Emoji Autocomplete Popover */}

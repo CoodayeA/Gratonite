@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSocket } from '../../lib/socket';
 import { useNavigate } from 'react-router-dom';
-import { Search, UserPlus, MoreVertical, MessageSquare, X, UserMinus, VolumeX, Flag, Phone, Video, User } from 'lucide-react';
+import { Search, UserPlus, MoreVertical, MessageSquare, X, UserMinus, VolumeX, Flag, Phone, Video, User, Gamepad2, Headphones, Eye } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { api, ApiRequestError } from '../../lib/api';
 import { type ActivityEntry } from '../../utils/activity';
@@ -26,7 +26,7 @@ interface Friend {
 const Friends = () => {
     const navigate = useNavigate();
     const { addToast } = useToast();
-    const [activeTab, setActiveTab] = useState<'online' | 'all' | 'pending' | 'add'>('online');
+    const [activeTab, setActiveTab] = useState<'online' | 'all' | 'pending' | 'activity' | 'add'>('online');
     const [searchQuery, setSearchQuery] = useState('');
     const [moreMenuId, setMoreMenuId] = useState<string | null>(null);
     const [addFriendInput, setAddFriendInput] = useState('');
@@ -547,6 +547,7 @@ const Friends = () => {
                     <button className={activeTab === 'online' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('online')} style={{ background: activeTab === 'online' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', padding: '6px 12px', borderRadius: '4px', color: activeTab === 'online' ? 'white' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500 }}>Online</button>
                     <button className={activeTab === 'all' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('all')} style={{ background: activeTab === 'all' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', padding: '6px 12px', borderRadius: '4px', color: activeTab === 'all' ? 'white' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500 }}>All</button>
                     <button className={activeTab === 'pending' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('pending')} style={{ background: activeTab === 'pending' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', padding: '6px 12px', borderRadius: '4px', color: activeTab === 'pending' ? 'white' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500 }}>Pending {requests.length > 0 && <span style={{ background: 'var(--error)', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '10px', marginLeft: '4px' }}>{requests.length}</span>}</button>
+                    <button className={activeTab === 'activity' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('activity')} style={{ background: activeTab === 'activity' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', padding: '6px 12px', borderRadius: '4px', color: activeTab === 'activity' ? 'white' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500 }}>Activity</button>
                     <button className={activeTab === 'add' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('add')} style={{ background: activeTab === 'add' ? 'rgba(16, 185, 129, 0.2)' : 'var(--success)', border: 'none', padding: '6px 12px', borderRadius: '4px', color: activeTab === 'add' ? 'var(--success)' : 'white', cursor: 'pointer', fontWeight: 500 }}>Add Friend</button>
                 </div>
             </header>
@@ -565,7 +566,7 @@ const Friends = () => {
                         />
                     ) : (
                     <>
-                    {activeTab !== 'add' && (
+                    {activeTab !== 'add' && activeTab !== 'activity' && (
                         <div style={{ position: 'relative', marginBottom: '24px' }}>
                             <input
                                 type="text"
@@ -754,6 +755,78 @@ const Friends = () => {
                             </div>
                         </div>
                     )}
+
+                    {activeTab === 'activity' && (() => {
+                        const activityTypeIcon = (type: string) => {
+                            if (type === 'game' || type === 'PLAYING') return Gamepad2;
+                            if (type === 'music' || type === 'LISTENING') return Headphones;
+                            if (type === 'watching' || type === 'WATCHING') return Eye;
+                            return Gamepad2;
+                        };
+                        const activityTypeLabel = (type: string) => {
+                            if (type === 'game' || type === 'PLAYING') return 'Playing';
+                            if (type === 'music' || type === 'LISTENING') return 'Listening to';
+                            if (type === 'watching' || type === 'WATCHING') return 'Watching';
+                            return 'Playing';
+                        };
+                        const friendsWithActivity = friends.filter(f => f.activity && f.status !== 'offline');
+                        const onlineNoActivity = friends.filter(f => !f.activity && f.status !== 'offline');
+                        return (
+                            <div>
+                                {friendsWithActivity.length > 0 && (
+                                    <>
+                                        <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px', borderBottom: '1px solid var(--stroke)', paddingBottom: '8px' }}>
+                                            Now Playing — {friendsWithActivity.length}
+                                        </h3>
+                                        {friendsWithActivity.map(f => {
+                                            const Icon = activityTypeIcon(f.activity!.type);
+                                            return (
+                                                <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-secondary)', marginBottom: '8px', cursor: 'pointer' }}
+                                                    onClick={() => setSelectedFriend(f)}>
+                                                    <Avatar userId={f.id} avatarHash={f.avatarHash ?? null} displayName={f.displayName} size={40} status={f.status as any} />
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{ fontWeight: 600, fontSize: '14px' }}>{f.displayName}</div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '12px' }}>
+                                                            <Icon size={12} />
+                                                            <span>{activityTypeLabel(f.activity!.type)} <strong style={{ color: 'var(--text-secondary)' }}>{f.activity!.name}</strong></span>
+                                                        </div>
+                                                        {f.activity!.startedAt && (
+                                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                                for {Math.round((Date.now() - f.activity!.startedAt) / 60000)}m
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </>
+                                )}
+                                {onlineNoActivity.length > 0 && (
+                                    <>
+                                        <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px', marginTop: '24px', borderBottom: '1px solid var(--stroke)', paddingBottom: '8px' }}>
+                                            Online — No Activity — {onlineNoActivity.length}
+                                        </h3>
+                                        {onlineNoActivity.map(f => (
+                                            <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', borderRadius: 'var(--radius-sm)', marginBottom: '4px', cursor: 'pointer' }}
+                                                onClick={() => setSelectedFriend(f)}>
+                                                <Avatar userId={f.id} avatarHash={f.avatarHash ?? null} displayName={f.displayName} size={32} status={f.status as any} />
+                                                <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{f.displayName}</span>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
+                                {friendsWithActivity.length === 0 && onlineNoActivity.length === 0 && (
+                                    <div style={{ textAlign: 'center', padding: '64px 24px', color: 'var(--text-muted)' }}>
+                                        <Gamepad2 size={48} style={{ marginBottom: '16px', opacity: 0.3 }} />
+                                        <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>No friends are active right now</p>
+                                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '300px', margin: '8px auto 0' }}>
+                                            When your friends start an activity, it will show up here.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
 
                     {activeTab === 'add' && (
                         <div style={{ maxWidth: '600px', margin: '0 auto', marginTop: '40px' }}>

@@ -62,6 +62,7 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, gui
     const [topic, setTopic] = useState(channelTopic || '');
     const [slowmode, setSlowmode] = useState(rateLimitPerUser || 0);
     const [nsfw, setNsfw] = useState(isNsfw || false);
+    const [isAnnouncement, setIsAnnouncement] = useState(false);
     const [saving, setSaving] = useState(false);
 
     // Permissions state
@@ -74,6 +75,9 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, gui
     useEffect(() => {
         api.guilds.getRoles(guildId).then((r: any[]) => setRoles(r)).catch(() => {});
         api.channels.getPermissionOverrides(channelId).then((o: any[]) => setOverrides(o)).catch(() => {});
+        api.channels.get(channelId).then((ch: any) => {
+            if (ch.isAnnouncement) setIsAnnouncement(true);
+        }).catch(() => {});
     }, [channelId, guildId]);
 
     function getPermState(roleId: string, bit: bigint): PermState {
@@ -110,7 +114,7 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, gui
     async function saveOverview() {
         setSaving(true);
         try {
-            await api.channels.update(channelId, { name, topic, rateLimitPerUser: slowmode, nsfw });
+            await api.channels.update(channelId, { name, topic, rateLimitPerUser: slowmode, nsfw, isAnnouncement });
             onUpdate?.({ name, topic, rateLimitPerUser: slowmode });
             addToast({ title: 'Channel Updated', variant: 'success' });
             onClose();
@@ -261,9 +265,14 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, gui
                                 </select>
                             </div>
 
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '24px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '12px' }}>
                                 <input type="checkbox" checked={nsfw} onChange={e => setNsfw(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
                                 NSFW Channel
+                            </label>
+
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '24px' }}>
+                                <input type="checkbox" checked={isAnnouncement} onChange={e => setIsAnnouncement(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
+                                Announcement Channel
                             </label>
 
                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
