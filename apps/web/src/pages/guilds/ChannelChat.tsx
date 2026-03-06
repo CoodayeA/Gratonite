@@ -2756,7 +2756,7 @@ const ChannelChat = () => {
             {/* Member List Panel */}
             {memberListOpen && guildId && (
                 <div style={{
-                    position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 4,
+                    position: 'absolute', right: 0, top: '64px', bottom: 0, zIndex: 4,
                     width: '240px',
                 }}>
                     <MemberListPanel
