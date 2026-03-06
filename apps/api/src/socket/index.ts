@@ -235,16 +235,30 @@ export function initSocket(io: SocketIOServer): void {
     // -------------------------------------------------------------------------
     // PRESENCE_UPDATE — client sets their own presence (idle, dnd, etc.)
     // -------------------------------------------------------------------------
-    socket.on('PRESENCE_UPDATE', async (data: { status: string }) => {
+    socket.on('PRESENCE_UPDATE', async (data: { status: string; activity?: { name: string; type: string } | null }) => {
       if (!data?.status) return;
       const validStatuses = ['online', 'idle', 'dnd', 'invisible'];
       if (!validStatuses.includes(data.status)) return;
 
+      // Validate activity if provided
+      const validActivityTypes = ['PLAYING', 'WATCHING', 'LISTENING', 'STREAMING'];
+      let activity: { name: string; type: string } | null = null;
+      if (data.activity && typeof data.activity.name === 'string' && validActivityTypes.includes(data.activity.type)) {
+        activity = { name: data.activity.name.slice(0, 128), type: data.activity.type };
+      }
+
       try {
         await redis.set(`presence:${userId}`, data.status, 'EX', 300);
+        if (activity) {
+          await redis.set(`presence:${userId}:activity`, JSON.stringify(activity), 'EX', 300);
+        } else if (data.activity === null) {
+          await redis.del(`presence:${userId}:activity`);
+        }
         // Broadcast to all guilds
+        const payload: { userId: string; status: string; activity?: { name: string; type: string } | null } = { userId, status: data.status };
+        if (activity !== undefined) payload.activity = activity;
         for (const guildId of userGuildIds) {
-          socket.to(`guild:${guildId}`).emit('PRESENCE_UPDATE', { userId, status: data.status });
+          socket.to(`guild:${guildId}`).emit('PRESENCE_UPDATE', payload);
         }
       } catch {
         // Non-fatal
