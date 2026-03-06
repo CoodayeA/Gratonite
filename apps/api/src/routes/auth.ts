@@ -38,6 +38,7 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../lib/jw
 import { sendVerificationEmail, sendPasswordResetEmail } from '../lib/mailer';
 import { requireAuth } from '../middleware/auth';
 import { redis } from '../lib/redis';
+import { referrals as referralsTable } from '../db/schema/referrals';
 
 export const authRouter = Router();
 
@@ -429,6 +430,17 @@ authRouter.post('/register', asyncHandler(async (req: Request, res: Response): P
       emailVerified: true, // Email verification disabled for now
     })
     .returning();
+
+  // 5b. Handle referral code if provided
+  const refCode = req.query.ref || req.body.referralCode;
+  if (refCode) {
+    try {
+      const [referral] = await db.select().from(referralsTable).where(eq(referralsTable.code, String(refCode))).limit(1);
+      if (referral && !referral.referredId) {
+        await db.update(referralsTable).set({ referredId: newUser.id, redeemedAt: new Date() }).where(eq(referralsTable.id, referral.id));
+      }
+    } catch { /* non-fatal */ }
+  }
 
   // 6. Generate and store email verification token
   //    The raw token goes into the email; the hash is stored in the DB.

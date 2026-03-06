@@ -49,6 +49,9 @@ import { moderationRouter } from './moderation';
 import { templatesRouter } from './templates';
 import { automodRouter } from './automod';
 import { commandsRouter } from './commands';
+import { stickersRouter } from './stickers';
+import { pushRouter } from './push';
+import { referralsRouter } from './referrals';
 import { authRateLimit, apiRateLimit } from '../middleware/rateLimit';
 
 export const router = Router();
@@ -93,6 +96,10 @@ router.use('/channels/:channelId/threads', threadsRouter);
 router.use('/guilds/:guildId/roles', rolesRouter);
 router.use('/guilds/:guildId/bans', bansRouter);
 router.use('/guilds/:guildId/emojis', emojisRouter);
+router.use('/stickers', stickersRouter);
+router.use('/guilds/:guildId/stickers', stickersRouter);
+router.use('/push', pushRouter);
+router.use('/referrals', referralsRouter);
 router.use('/', invitesRouter); // invites has mixed mount paths
 router.use('/relationships', relationshipsRouter);
 router.use('/dms/group', groupDmsRouter);

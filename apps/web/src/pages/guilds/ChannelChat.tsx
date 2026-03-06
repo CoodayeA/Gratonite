@@ -348,6 +348,14 @@ const MemoizedMessageItem = memo(({
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
                                 {msg.attachments.map((att: Attachment) => {
                                     const isImage = att.mimeType?.startsWith('image/');
+                                    const isVideo = att.mimeType?.startsWith('video/') || /\.(mp4|webm|mov|ogg)$/i.test(att.filename);
+                                    const isAudio = att.mimeType?.startsWith('audio/') || /\.(mp3|wav|flac|m4a|aac)$/i.test(att.filename);
+                                    const isSticker = (att as any).type === 'sticker';
+                                    if (isSticker) {
+                                        return (
+                                            <img key={att.id} src={att.url} alt={att.filename} style={{ width: '160px', height: '160px', objectFit: 'contain' }} />
+                                        );
+                                    }
                                     if (isImage) {
                                         return (
                                             <div key={att.id} className="chat-media-attachment" onClick={() => onImageClick?.(att.url)} style={{
@@ -357,6 +365,16 @@ const MemoizedMessageItem = memo(({
                                             }}>
                                                 <img src={att.url} alt={att.filename} style={{ width: '100%', display: 'block', objectFit: 'contain', maxHeight: '350px' }} />
                                             </div>
+                                        );
+                                    }
+                                    if (isVideo) {
+                                        return (
+                                            <video key={att.id} controls preload="metadata" src={att.url} style={{ maxWidth: '400px', borderRadius: '8px', display: 'block' }} />
+                                        );
+                                    }
+                                    if (isAudio) {
+                                        return (
+                                            <audio key={att.id} controls src={att.url} style={{ width: '100%', maxWidth: '400px' }} />
                                         );
                                     }
                                     const sizeStr = att.size < 1024 ? `${att.size} B` : att.size < 1048576 ? `${(att.size / 1024).toFixed(1)} KB` : `${(att.size / 1048576).toFixed(1)} MB`;
@@ -1755,6 +1773,31 @@ const ChannelChat = () => {
         setIsEmojiPickerOpen(false);
     };
 
+    const handleSendSticker = (sticker: { id: string; name: string; url: string }) => {
+        const optimisticId = Date.now();
+        setMessages(prev => [...prev, {
+            id: optimisticId,
+            authorId: currentUserId,
+            author: currentUserName || 'You',
+            system: false,
+            avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            content: '',
+            attachments: [{ id: sticker.id, url: sticker.url, filename: sticker.name, size: 0, mimeType: 'image/png', type: 'sticker' } as any],
+        }]);
+        setIsEmojiPickerOpen(false);
+        if (channelId) {
+            api.messages.send(channelId, { content: ' ', stickerId: sticker.id } as any).then((sent: any) => {
+                if (sent?.id) {
+                    setMessages(prev => prev.map(m => m.id === optimisticId ? { ...m, apiId: sent.id } : m));
+                }
+            }).catch(() => {
+                setMessages(prev => prev.filter(m => m.id !== optimisticId));
+                addToast({ title: 'Failed to send sticker', variant: 'error' });
+            });
+        }
+    };
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
         setInputValue(val);
@@ -2822,6 +2865,7 @@ const ChannelChat = () => {
                                 setInputValue(prev => prev + emoji);
                             }}
                             onSendGif={handleSendGif}
+                            onStickerSelect={handleSendSticker}
                             guildId={guildId}
                         />
                     )}

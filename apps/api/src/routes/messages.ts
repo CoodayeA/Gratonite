@@ -52,6 +52,7 @@ import { hasPermission, hasChannelPermission } from './roles';
 import { createNotification } from '../lib/notifications';
 import { dispatchMessageCreate } from '../lib/webhook-dispatch';
 import { scrapeUrl, extractUrls } from '../lib/og-scraper';
+import { redis } from '../lib/redis';
 import { workflows, workflowTriggers, workflowActions } from '../db/schema/workflows';
 import { automodRules } from '../db/schema/automod-rules';
 
@@ -433,6 +434,16 @@ messagesRouter.post(
         }
       }
 
+      // Slow mode enforcement
+      const [slowCh] = await db.select({ rateLimitPerUser: channels.rateLimitPerUser }).from(channels).where(eq(channels.id, channelId)).limit(1);
+      if (slowCh?.rateLimitPerUser && slowCh.rateLimitPerUser > 0) {
+        const slowKey = `slowmode:${channelId}:${req.userId}`;
+        const remaining = await redis.ttl(slowKey);
+        if (remaining > 0) {
+          res.status(429).json({ error: 'SLOW_MODE', retryAfter: remaining }); return;
+        }
+      }
+
       const { content, attachmentIds, replyToId, threadId, expiresIn } = req.body as z.infer<typeof sendMessageSchema>;
 
       // Automod check: check message content against enabled keyword rules
@@ -538,6 +549,11 @@ messagesRouter.post(
         .limit(1);
 
       const payload = formatMessage(newMessage, author ?? null);
+
+      // Set slow mode cooldown after successful message insert
+      if (slowCh?.rateLimitPerUser && slowCh.rateLimitPerUser > 0) {
+        await redis.set(`slowmode:${channelId}:${req.userId}`, '1', 'EX', slowCh.rateLimitPerUser);
+      }
 
       // Emit real-time event to all clients subscribed to this channel.
       try {
