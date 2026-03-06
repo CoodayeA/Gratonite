@@ -118,6 +118,9 @@ const DirectMessage = () => {
     // Emoji picker state
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
 
+    // Call history state
+    const [callHistory, setCallHistory] = useState<Array<{ id: string; startedAt: string; endedAt?: string; duration?: number; participants: string[]; missed?: boolean }>>([]);
+
     // Mention autocomplete state (for group DMs)
     const [mentionSearch, setMentionSearch] = useState<string | null>(null);
     const [mentionIndex, setMentionIndex] = useState(0);
@@ -585,6 +588,23 @@ const DirectMessage = () => {
     }, [dmChannelId]);
 
     useEffect(() => { fetchDmMessages(); }, [fetchDmMessages]);
+
+    // Load call history for this DM
+    useEffect(() => {
+        if (!dmChannelId) { setCallHistory([]); return; }
+        api.channels.getCallHistory(dmChannelId).then((history: any[]) => {
+            if (Array.isArray(history)) {
+                setCallHistory(history.map((h: any) => ({
+                    id: h.id,
+                    startedAt: h.startedAt || h.createdAt,
+                    endedAt: h.endedAt,
+                    duration: h.duration,
+                    participants: h.participants || [],
+                    missed: h.missed || false,
+                })));
+            }
+        }).catch(() => {});
+    }, [dmChannelId]);
 
     // Load older messages when scrolling to top
     const loadOlderMessages = useCallback(async () => {
@@ -1677,6 +1697,54 @@ const DirectMessage = () => {
                                 <h2 style={{ fontFamily: 'var(--font-display)', color: 'white', marginBottom: '8px', fontSize: '1.8rem' }}>{userName}</h2>
                                 <p style={{ fontSize: '1rem', textAlign: 'center', maxWidth: '400px' }}>This is the beginning of your direct message history with <strong>{userName}</strong>.</p>
                             </div>
+
+                            {/* Call History Cards */}
+                            {callHistory.length > 0 && (
+                                <div style={{ padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {callHistory.map(call => {
+                                        const startDate = new Date(call.startedAt);
+                                        const durationMin = call.duration ? Math.round(call.duration / 60000) : 0;
+                                        return (
+                                            <div key={call.id} style={{
+                                                display: 'flex', alignItems: 'center', gap: '12px',
+                                                padding: '12px 16px', borderRadius: '8px',
+                                                background: call.missed ? 'rgba(237, 66, 69, 0.08)' : 'var(--bg-secondary)',
+                                                border: `1px solid ${call.missed ? 'rgba(237, 66, 69, 0.2)' : 'var(--stroke)'}`,
+                                            }}>
+                                                <div style={{
+                                                    width: '36px', height: '36px', borderRadius: '50%',
+                                                    background: call.missed ? 'rgba(237, 66, 69, 0.15)' : 'rgba(67, 181, 129, 0.15)',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                                                }}>
+                                                    {call.missed ? <PhoneOff size={18} style={{ color: '#ed4245' }} /> : <Phone size={18} style={{ color: '#43b581' }} />}
+                                                </div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontWeight: 600, fontSize: '14px', color: call.missed ? '#ed4245' : 'var(--text-primary)' }}>
+                                                        {call.missed ? 'Missed Call' : 'Voice Call'}
+                                                    </div>
+                                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                                        {startDate.toLocaleDateString()} at {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        {!call.missed && durationMin > 0 && ` · ${durationMin}m`}
+                                                        {call.participants.length > 0 && ` · ${call.participants.length} participant${call.participants.length !== 1 ? 's' : ''}`}
+                                                    </div>
+                                                </div>
+                                                {call.missed && (
+                                                    <button onClick={() => {
+                                                        // Initiate a call back
+                                                        addToast({ title: 'Calling back...', variant: 'info' });
+                                                    }} style={{
+                                                        background: 'var(--success)', border: 'none', borderRadius: '6px',
+                                                        padding: '6px 12px', color: '#fff', fontWeight: 600, fontSize: '12px',
+                                                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                                                    }}>
+                                                        <Phone size={12} /> Call Back
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
 
                             {messages.length === 0 && (
                                 <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>

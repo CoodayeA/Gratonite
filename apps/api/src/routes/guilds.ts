@@ -32,6 +32,7 @@ import multer from 'multer';
 import { db } from '../db/index';
 import { guilds } from '../db/schema/guilds';
 import { guildMembers } from '../db/schema/guilds';
+import { serverBoosts } from '../db/schema/server-boosts';
 import { guildTags } from '../db/schema/guild-tags';
 import { channels } from '../db/schema/channels';
 import { users } from '../db/schema/users';
@@ -1852,6 +1853,155 @@ guildsRouter.get(
         );
 
       res.status(200).json(rows);
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// GET /:guildId/vanity-url
+// ---------------------------------------------------------------------------
+
+guildsRouter.get(
+  '/:guildId/vanity-url',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { guildId } = req.params as Record<string, string>;
+      await requireMember(guildId, req.userId!);
+
+      const [guild] = await db
+        .select({ vanityCode: guilds.vanityCode })
+        .from(guilds)
+        .where(eq(guilds.id, guildId))
+        .limit(1);
+
+      if (!guild) {
+        res.status(404).json({ code: 'NOT_FOUND', message: 'Guild not found' }); return;
+      }
+
+      res.json({ code: guild.vanityCode });
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// PATCH /:guildId/vanity-url
+// ---------------------------------------------------------------------------
+
+const vanityUrlSchema = z.object({
+  code: z.string().min(2).max(32).regex(/^[a-zA-Z0-9-]+$/),
+});
+
+guildsRouter.patch(
+  '/:guildId/vanity-url',
+  requireAuth,
+  validate(vanityUrlSchema),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { guildId } = req.params as Record<string, string>;
+      await requireOwner(guildId, req.userId!);
+
+      const { code } = req.body as z.infer<typeof vanityUrlSchema>;
+
+      // Check uniqueness
+      const [existing] = await db
+        .select({ id: guilds.id })
+        .from(guilds)
+        .where(and(eq(guilds.vanityCode, code), sql`${guilds.id} != ${guildId}`))
+        .limit(1);
+
+      if (existing) {
+        res.status(409).json({ code: 'CONFLICT', message: 'Vanity code is already taken' }); return;
+      }
+
+      await db.update(guilds).set({ vanityCode: code, updatedAt: new Date() }).where(eq(guilds.id, guildId));
+
+      res.json({ code });
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// POST /:guildId/boost — Boost a server
+// ---------------------------------------------------------------------------
+
+guildsRouter.post(
+  '/:guildId/boost',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { guildId } = req.params as Record<string, string>;
+      await requireMember(guildId, req.userId!);
+
+      await db.insert(serverBoosts).values({
+        guildId,
+        userId: req.userId!,
+      });
+
+      // Atomically increment boost_count and recalculate tier
+      const [updated] = await db.update(guilds).set({
+        boostCount: sql`boost_count + 1`,
+        boostTier: sql`CASE WHEN boost_count + 1 >= 14 THEN 3 WHEN boost_count + 1 >= 7 THEN 2 WHEN boost_count + 1 >= 2 THEN 1 ELSE 0 END`,
+        updatedAt: new Date(),
+      }).where(eq(guilds.id, guildId)).returning({ boostCount: guilds.boostCount, boostTier: guilds.boostTier });
+
+      const newCount = updated?.boostCount ?? 0;
+      const newTier = updated?.boostTier ?? 0;
+
+      try {
+        getIO().to(`guild:${guildId}`).emit('GUILD_UPDATE', { guildId, boostCount: newCount, boostTier: newTier });
+      } catch { /* non-fatal */ }
+
+      res.status(201).json({ boostCount: newCount, boostTier: newTier });
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// DELETE /:guildId/boost — Remove boost
+// ---------------------------------------------------------------------------
+
+guildsRouter.delete(
+  '/:guildId/boost',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { guildId } = req.params as Record<string, string>;
+
+      // Find and delete user's active boost
+      const [boost] = await db.select({ id: serverBoosts.id }).from(serverBoosts)
+        .where(and(eq(serverBoosts.guildId, guildId), eq(serverBoosts.userId, req.userId!), eq(serverBoosts.active, true)))
+        .limit(1);
+
+      if (!boost) {
+        res.status(404).json({ code: 'NOT_FOUND', message: 'No active boost found' }); return;
+      }
+
+      await db.update(serverBoosts).set({ active: false }).where(eq(serverBoosts.id, boost.id));
+
+      // Atomically decrement boost_count and recalculate tier
+      const [updated] = await db.update(guilds).set({
+        boostCount: sql`GREATEST(boost_count - 1, 0)`,
+        boostTier: sql`CASE WHEN GREATEST(boost_count - 1, 0) >= 14 THEN 3 WHEN GREATEST(boost_count - 1, 0) >= 7 THEN 2 WHEN GREATEST(boost_count - 1, 0) >= 2 THEN 1 ELSE 0 END`,
+        updatedAt: new Date(),
+      }).where(eq(guilds.id, guildId)).returning({ boostCount: guilds.boostCount, boostTier: guilds.boostTier });
+
+      const newCount = updated?.boostCount ?? 0;
+      const newTier = updated?.boostTier ?? 0;
+
+      try {
+        getIO().to(`guild:${guildId}`).emit('GUILD_UPDATE', { guildId, boostCount: newCount, boostTier: newTier });
+      } catch { /* non-fatal */ }
+
+      res.json({ boostCount: newCount, boostTier: newTier });
     } catch (err) {
       handleAppError(res, err);
     }

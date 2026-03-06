@@ -26,6 +26,8 @@ import { eq, and, asc, count, inArray } from 'drizzle-orm';
 import { db } from '../db/index';
 import { channels } from '../db/schema/channels';
 import { dmChannelMembers } from '../db/schema/channels';
+import { channelFollowers } from '../db/schema/channel-followers';
+import { messages } from '../db/schema/messages';
 import { users } from '../db/schema/users';
 import { guilds } from '../db/schema/guilds';
 import { Permissions } from '../db/schema/roles';
@@ -143,6 +145,8 @@ const updateChannelSchema = z.object({
   backgroundUrl: z.string().url().nullable().optional(),
   backgroundType: z.enum(['image', 'video']).nullable().optional(),
   linkedTextChannelId: z.string().uuid().nullable().optional(),
+  isAnnouncement: z.boolean().optional(),
+  forumTags: z.array(z.object({ id: z.string(), name: z.string(), color: z.string().optional() })).optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -509,7 +513,7 @@ channelsRouter.patch(
         throw new AppError(403, 'Missing MANAGE_CHANNELS permission', 'FORBIDDEN');
       }
 
-      const { name, topic, isNsfw, rateLimitPerUser, position, backgroundUrl, backgroundType, linkedTextChannelId } = req.body as z.infer<
+      const { name, topic, isNsfw, rateLimitPerUser, position, backgroundUrl, backgroundType, linkedTextChannelId, isAnnouncement, forumTags } = req.body as z.infer<
         typeof updateChannelSchema
       >;
 
@@ -522,6 +526,8 @@ channelsRouter.patch(
       if (backgroundUrl !== undefined) updateData.backgroundUrl = backgroundUrl;
       if (backgroundType !== undefined) updateData.backgroundType = backgroundType;
       if (linkedTextChannelId !== undefined) updateData.linkedTextChannelId = linkedTextChannelId;
+      if (isAnnouncement !== undefined) updateData.isAnnouncement = isAnnouncement;
+      if (forumTags !== undefined) updateData.forumTags = forumTags;
 
       const [updated] = await db
         .update(channels)
@@ -627,6 +633,101 @@ channelsRouter.delete(
       await db.delete(channels).where(eq(channels.id, channelId));
 
       res.status(200).json({ code: 'OK', message: 'Channel deleted' });
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// POST /channels/:channelId/followers — Follow an announcement channel
+// ---------------------------------------------------------------------------
+
+const followSchema = z.object({
+  targetChannelId: z.string().uuid(),
+});
+
+channelsRouter.post(
+  '/channels/:channelId/followers',
+  requireAuth,
+  validate(followSchema),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { channelId } = req.params as Record<string, string>;
+      const { targetChannelId } = req.body as z.infer<typeof followSchema>;
+
+      const [source] = await db.select().from(channels).where(eq(channels.id, channelId)).limit(1);
+      if (!source || !source.guildId) {
+        res.status(404).json({ code: 'NOT_FOUND', message: 'Source channel not found' }); return;
+      }
+
+      if (!(await hasPermission(req.userId!, source.guildId, Permissions.MANAGE_CHANNELS))) {
+        res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_CHANNELS permission' }); return;
+      }
+
+      await db.insert(channelFollowers).values({
+        sourceChannelId: channelId,
+        targetChannelId,
+      }).onConflictDoNothing();
+
+      res.status(201).json({ sourceChannelId: channelId, targetChannelId });
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// POST /channels/:channelId/messages/:messageId/crosspost — Crosspost to followers
+// ---------------------------------------------------------------------------
+
+channelsRouter.post(
+  '/channels/:channelId/messages/:messageId/crosspost',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { channelId, messageId } = req.params as Record<string, string>;
+
+      const [channel] = await db.select().from(channels).where(eq(channels.id, channelId)).limit(1);
+      if (!channel || !channel.guildId) {
+        res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found' }); return;
+      }
+
+      if (!channel.isAnnouncement) {
+        res.status(400).json({ code: 'BAD_REQUEST', message: 'Channel is not an announcement channel' }); return;
+      }
+
+      if (!(await hasPermission(req.userId!, channel.guildId, Permissions.MANAGE_MESSAGES))) {
+        res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_MESSAGES permission' }); return;
+      }
+
+      const [message] = await db.select().from(messages).where(and(eq(messages.id, messageId), eq(messages.channelId, channelId))).limit(1);
+      if (!message) {
+        res.status(404).json({ code: 'NOT_FOUND', message: 'Message not found' }); return;
+      }
+
+      // Find all followers
+      const followers = await db.select().from(channelFollowers).where(eq(channelFollowers.sourceChannelId, channelId));
+
+      // Copy message to each target channel
+      for (const f of followers) {
+        const [copied] = await db.insert(messages).values({
+          channelId: f.targetChannelId,
+          authorId: message.authorId,
+          content: message.content,
+          attachments: message.attachments,
+        }).returning();
+
+        try {
+          getIO().to(`channel:${f.targetChannelId}`).emit('MESSAGE_CREATE', {
+            ...copied,
+            crossposted: true,
+            sourceChannelId: channelId,
+          });
+        } catch { /* non-fatal */ }
+      }
+
+      res.json({ crossposted: followers.length });
     } catch (err) {
       handleAppError(res, err);
     }
