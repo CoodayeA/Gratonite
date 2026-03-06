@@ -39,6 +39,7 @@ import { marketplaceRouter } from './marketplace';
 import { telemetryRouter } from './telemetry';
 import { fameRouter } from './fame';
 import { groupDmsRouter } from './group-dms';
+import { connectionsRouter } from './connections';
 import { authRateLimit, apiRateLimit } from '../middleware/rateLimit';
 
 export const router = Router();
@@ -86,6 +87,7 @@ router.use('/guilds/:guildId/emojis', emojisRouter);
 router.use('/', invitesRouter); // invites has mixed mount paths
 router.use('/relationships', relationshipsRouter);
 router.use('/dms/group', groupDmsRouter);
+router.use('/users', connectionsRouter);
 router.use('/files', filesRouter);
 router.use('/voice', voiceRouter);
 router.use('/channels/:channelId', voiceStatesRouter);

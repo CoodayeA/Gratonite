@@ -6,6 +6,7 @@ import { useUser } from '../../contexts/UserContext';
 import { getDeterministicGradient } from '../../utils/colors';
 import { onVoiceStateUpdate, type VoiceStateUpdatePayload } from '../../lib/socket';
 import type { GuildSessionChannel, GuildSessionInfo, GuildSessionErrorCode } from '../../hooks/useGuildSession';
+import GuildWelcomeModal from '../../components/modals/GuildWelcomeModal';
 
 interface GuildData {
     id: string;
@@ -48,12 +49,33 @@ const GuildOverview = () => {
     const [legacyLoading, setLegacyLoading] = useState(false);
     const [voiceParticipants, setVoiceParticipants] = useState<Record<string, number>>({});
     const [iconImgError, setIconImgError] = useState(false);
+    const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+    const [onboardingData, setOnboardingData] = useState<{ welcomeMessage: string | null; rulesChannelId: string | null } | null>(null);
     
     const guild = (guildSession?.enabled ? guildSession.guildInfo : legacyGuild) as GuildData | null;
     const channels = (guildSession?.enabled ? guildSession.channels : legacyChannels) as ChannelData[];
     const loading = guildSession?.enabled ? (guildSession.loading ?? false) : legacyLoading;
     const errorCode = guildSession?.enabled ? (guildSession.errorCode ?? null) : null;
     const guildFetchEnabled = guildSession?.enabled ?? true;
+
+    // Fetch onboarding status and show welcome modal if not completed
+    useEffect(() => {
+        if (!guildId) return;
+        void fetch(`${API_BASE}/guilds/${guildId}/onboarding`, {
+            credentials: 'include',
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}`,
+            },
+        })
+            .then(r => r.ok ? r.json() : null)
+            .then((data: { completed: boolean; welcomeMessage: string | null; rulesChannelId: string | null } | null) => {
+                if (data && !data.completed && data.welcomeMessage) {
+                    setOnboardingData({ welcomeMessage: data.welcomeMessage, rulesChannelId: data.rulesChannelId });
+                    setShowWelcomeModal(true);
+                }
+            })
+            .catch(() => {});
+    }, [guildId]);
 
     useEffect(() => {
         if (guildFetchEnabled || !guildId) return;
@@ -153,6 +175,18 @@ const GuildOverview = () => {
 
     return (
         <div className="main-content-wrapper" style={{ flex: 1, overflowY: 'auto', flexDirection: 'column' }}>
+            {showWelcomeModal && guild && onboardingData && onboardingData.welcomeMessage && (
+                <GuildWelcomeModal
+                    guildId={guild.id}
+                    guildName={guild.name}
+                    memberCount={guild.memberCount}
+                    iconHash={guild.iconHash}
+                    bannerHash={guild.bannerHash}
+                    welcomeMessage={onboardingData.welcomeMessage}
+                    rulesChannelId={onboardingData.rulesChannelId}
+                    onClose={() => setShowWelcomeModal(false)}
+                />
+            )}
             {loading && !guild && (
                 <div style={{ padding: '20px 48px', color: 'var(--text-muted)', fontSize: '13px' }}>Loading portal…</div>
             )}

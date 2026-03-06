@@ -38,6 +38,7 @@ import { roles, memberRoles, DEFAULT_PERMISSIONS, Permissions } from '../db/sche
 import { guildMemberGroups, guildMemberGroupMembers } from '../db/schema/member-groups';
 import { auditLog } from '../db/schema/audit';
 import { files } from '../db/schema/files';
+import { guildMemberOnboarding } from '../db/schema/guild-onboarding';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { hasPermission } from './roles';
@@ -185,6 +186,8 @@ const updateGuildSchema = z.object({
     .regex(/^#?[0-9a-fA-F]{6}$/, 'Accent color must be a 6-digit hex color')
     .nullable()
     .optional(),
+  welcomeMessage: z.string().max(2000).nullable().optional(),
+  rulesChannelId: z.string().uuid().nullable().optional(),
 });
 
 /**
@@ -564,6 +567,12 @@ guildsRouter.post(
             updatedAt: new Date(),
           })
           .where(eq(guilds.id, guildId));
+
+        // Insert onboarding row (completedAt = null) so the welcome modal can be shown
+        await db
+          .insert(guildMemberOnboarding)
+          .values({ guildId, userId: req.userId!, completedAt: null })
+          .onConflictDoNothing();
       }
 
       const [fresh] = await db
@@ -583,6 +592,87 @@ guildsRouter.post(
         joined,
         alreadyMember: !joined,
       });
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// GET /:guildId/onboarding
+// ---------------------------------------------------------------------------
+
+guildsRouter.get(
+  '/:guildId/onboarding',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { guildId } = req.params as Record<string, string>;
+      const userId = req.userId!;
+
+      await requireMember(guildId, userId);
+
+      const [guild] = await db
+        .select({
+          welcomeMessage: guilds.welcomeMessage,
+          rulesChannelId: guilds.rulesChannelId,
+        })
+        .from(guilds)
+        .where(eq(guilds.id, guildId))
+        .limit(1);
+
+      if (!guild) {
+        res.status(404).json({ code: 'NOT_FOUND', message: 'Guild not found' });
+        return;
+      }
+
+      const [onboarding] = await db
+        .select()
+        .from(guildMemberOnboarding)
+        .where(
+          and(
+            eq(guildMemberOnboarding.guildId, guildId),
+            eq(guildMemberOnboarding.userId, userId),
+          ),
+        )
+        .limit(1);
+
+      const completed = onboarding ? onboarding.completedAt !== null : true;
+
+      res.status(200).json({
+        completed,
+        welcomeMessage: guild.welcomeMessage,
+        rulesChannelId: guild.rulesChannelId,
+      });
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// POST /:guildId/onboarding/complete
+// ---------------------------------------------------------------------------
+
+guildsRouter.post(
+  '/:guildId/onboarding/complete',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { guildId } = req.params as Record<string, string>;
+      const userId = req.userId!;
+
+      await requireMember(guildId, userId);
+
+      await db
+        .insert(guildMemberOnboarding)
+        .values({ guildId, userId, completedAt: new Date() })
+        .onConflictDoUpdate({
+          target: [guildMemberOnboarding.guildId, guildMemberOnboarding.userId],
+          set: { completedAt: new Date() },
+        });
+
+      res.status(200).json({ completed: true });
     } catch (err) {
       handleAppError(res, err);
     }
@@ -698,13 +788,15 @@ guildsRouter.patch(
         throw new AppError(403, 'Missing MANAGE_GUILD permission', 'FORBIDDEN');
       }
 
-      const { name, description, isDiscoverable, accentColor } = req.body as z.infer<typeof updateGuildSchema>;
+      const { name, description, isDiscoverable, accentColor, welcomeMessage, rulesChannelId } = req.body as z.infer<typeof updateGuildSchema>;
 
       const updateData: Partial<typeof guilds.$inferInsert> = { updatedAt: new Date() };
       if (name !== undefined) updateData.name = name;
       if (description !== undefined) updateData.description = description;
       if (isDiscoverable !== undefined) updateData.isDiscoverable = isDiscoverable;
       if (accentColor !== undefined) updateData.accentColor = accentColor === null ? null : normalizeHexColor(accentColor);
+      if (welcomeMessage !== undefined) updateData.welcomeMessage = welcomeMessage;
+      if (rulesChannelId !== undefined) updateData.rulesChannelId = rulesChannelId;
 
       const [updated] = await db
         .update(guilds)

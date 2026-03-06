@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Check, ZoomIn, ZoomOut, RotateCw, Volume2, VolumeX, Eye, EyeOff, Copy, Info } from 'lucide-react';
+import { X, Check, ZoomIn, ZoomOut, RotateCw, Volume2, VolumeX, Eye, EyeOff, Copy, Info, Link2 } from 'lucide-react';
 import { useTheme, ButtonShape } from '../ui/ThemeProvider';
 import { useToast } from '../ui/ToastManager';
 import { useUser } from '../../contexts/UserContext';
@@ -240,7 +240,7 @@ const SettingsModal = ({
     userTheme?: any;
     setUserTheme?: any;
 }) => {
-    const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy'>('account');
+    const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections'>('account');
     const [feedbackCategory, setFeedbackCategory] = useState('general');
     const [feedbackBody, setFeedbackBody] = useState('');
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
@@ -315,7 +315,91 @@ const SettingsModal = ({
     const [backupCodesVerifyCode, setBackupCodesVerifyCode] = useState('');
     const [showBackupCodesVerify, setShowBackupCodesVerify] = useState(false);
 
-    // Connections & Activity Privacy tabs removed — not yet implemented
+    // Connections tab state
+    const PROVIDERS = ['github', 'twitch', 'steam', 'twitter', 'youtube'] as const;
+    type Provider = typeof PROVIDERS[number];
+    const [connectionUsernames, setConnectionUsernames] = useState<Record<Provider, string>>({
+        github: '', twitch: '', steam: '', twitter: '', youtube: '',
+    });
+    const [connectionProfileUrls, setConnectionProfileUrls] = useState<Record<Provider, string>>({
+        github: '', twitch: '', steam: '', twitter: '', youtube: '',
+    });
+    const [connectionSaving, setConnectionSaving] = useState<Provider | null>(null);
+    const [connectionRemoving, setConnectionRemoving] = useState<Provider | null>(null);
+
+    useEffect(() => {
+        if (activeTab !== 'connections') return;
+        fetch(`${API_BASE}/users/@me/connections`, {
+            credentials: 'include',
+            headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}` },
+        })
+            .then(r => r.ok ? r.json() : [])
+            .then((rows: any[]) => {
+                if (!Array.isArray(rows)) return;
+                const usernames: Record<string, string> = {};
+                const profileUrls: Record<string, string> = {};
+                rows.forEach((r: any) => {
+                    usernames[r.provider] = r.providerUsername ?? '';
+                    profileUrls[r.provider] = r.profileUrl ?? '';
+                });
+                setConnectionUsernames(prev => ({ ...prev, ...usernames }) as Record<Provider, string>);
+                setConnectionProfileUrls(prev => ({ ...prev, ...profileUrls }) as Record<Provider, string>);
+            })
+            .catch(() => {});
+    }, [activeTab]);
+
+    const saveConnection = async (provider: Provider) => {
+        const username = connectionUsernames[provider];
+        if (!username.trim()) return;
+        setConnectionSaving(provider);
+        try {
+            await fetch(`${API_BASE}/users/@me/connections`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}`,
+                },
+                body: JSON.stringify({
+                    provider,
+                    providerUsername: username.trim(),
+                    profileUrl: connectionProfileUrls[provider].trim() || undefined,
+                }),
+            });
+            addToast({ title: `${provider} connected`, variant: 'success' });
+        } catch {
+            addToast({ title: `Failed to save ${provider}`, variant: 'error' });
+        } finally {
+            setConnectionSaving(null);
+        }
+    };
+
+    const removeConnection = async (provider: Provider) => {
+        setConnectionRemoving(provider);
+        try {
+            await fetch(`${API_BASE}/users/@me/connections/${provider}`, {
+                method: 'DELETE',
+                credentials: 'include',
+                headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}` },
+            });
+            setConnectionUsernames(prev => ({ ...prev, [provider]: '' }));
+            setConnectionProfileUrls(prev => ({ ...prev, [provider]: '' }));
+            addToast({ title: `${provider} removed`, variant: 'success' });
+        } catch {
+            addToast({ title: `Failed to remove ${provider}`, variant: 'error' });
+        } finally {
+            setConnectionRemoving(null);
+        }
+    };
+
+    const PROVIDER_LABELS: Record<Provider, string> = {
+        github: 'GitHub',
+        twitch: 'Twitch',
+        steam: 'Steam',
+        twitter: 'Twitter / X',
+        youtube: 'YouTube',
+    };
+
     const [showServerOverrideInfo, setShowServerOverrideInfo] = useState(false);
 
     useEffect(() => {
@@ -556,6 +640,7 @@ const SettingsModal = ({
                             <div className={`sidebar-nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>Profile</div>
                             <div className={`sidebar-nav-item ${activeTab === 'sessions' ? 'active' : ''}`} onClick={() => setActiveTab('sessions')}>Sessions</div>
                             <div className={`sidebar-nav-item ${activeTab === 'privacy' ? 'active' : ''}`} onClick={() => setActiveTab('privacy')}>Privacy &amp; Safety</div>
+                            <div className={`sidebar-nav-item ${activeTab === 'connections' ? 'active' : ''}`} onClick={() => setActiveTab('connections')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Link2 size={14} />Connections</div>
                         </div>
                         <div>
                             <div className="sidebar-section-label">APPEARANCE</div>
@@ -1866,6 +1951,55 @@ const SettingsModal = ({
                                             defaultValue={true}
                                         />
                                     </div>
+                                </div>
+                            </>
+                        )}
+                        {activeTab === 'connections' && (
+                            <>
+                                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Connected Accounts</h2>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Link your third-party accounts to display them on your profile.</p>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    {PROVIDERS.map((provider) => (
+                                        <div key={provider} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                                                <Link2 size={16} color="var(--accent-primary)" />
+                                                <span style={{ fontWeight: 600, fontSize: '14px' }}>{PROVIDER_LABELS[provider]}</span>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <input
+                                                    type="text"
+                                                    placeholder={`Your ${PROVIDER_LABELS[provider]} username`}
+                                                    value={connectionUsernames[provider]}
+                                                    onChange={e => setConnectionUsernames(prev => ({ ...prev, [provider]: e.target.value }))}
+                                                    style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
+                                                />
+                                                <button
+                                                    onClick={() => saveConnection(provider)}
+                                                    disabled={connectionSaving === provider || !connectionUsernames[provider].trim()}
+                                                    style={{
+                                                        padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: 600, fontSize: '13px',
+                                                        background: 'var(--accent-primary)', color: '#000', cursor: 'pointer', whiteSpace: 'nowrap',
+                                                        opacity: (!connectionUsernames[provider].trim() || connectionSaving === provider) ? 0.6 : 1,
+                                                    }}
+                                                >
+                                                    {connectionSaving === provider ? 'Saving...' : 'Save'}
+                                                </button>
+                                                {connectionUsernames[provider] && (
+                                                    <button
+                                                        onClick={() => removeConnection(provider)}
+                                                        disabled={connectionRemoving === provider}
+                                                        style={{
+                                                            padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', fontWeight: 600, fontSize: '13px',
+                                                            background: 'var(--bg-elevated)', color: 'var(--error)', cursor: 'pointer',
+                                                        }}
+                                                    >
+                                                        {connectionRemoving === provider ? '...' : 'Remove'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </>
                         )}

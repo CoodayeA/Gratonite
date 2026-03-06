@@ -121,6 +121,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [auditFilter, setAuditFilter] = useState<string>('all');
     const [serverName, setServerName] = useState('');
     const [serverDesc, setServerDesc] = useState('');
+    const [welcomeMessage, setWelcomeMessage] = useState('');
+    const [rulesChannelId, setRulesChannelId] = useState<string>('');
     const [rolesLoading, setRolesLoading] = useState(false);
     const [membersLoading, setMembersLoading] = useState(false);
     const [rolesSaving, setRolesSaving] = useState(false);
@@ -150,6 +152,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             if (g.ownerId) setGuildOwnerId(g.ownerId);
             if (g.name) setServerName(g.name);
             if (g.description) setServerDesc(g.description);
+            setWelcomeMessage(g.welcomeMessage ?? '');
+            setRulesChannelId(g.rulesChannelId ?? '');
             if (g.iconHash) {
                 setAvatarUrl(`${API_BASE}/files/${g.iconHash}`);
             } else {
@@ -785,7 +789,12 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const saveOverview = async () => {
         if (!guildId) return;
         try {
-            await api.guilds.update(guildId, { name: serverName, description: serverDesc });
+            await api.guilds.update(guildId, {
+                name: serverName,
+                description: serverDesc,
+                welcomeMessage: welcomeMessage || null,
+                rulesChannelId: rulesChannelId || null,
+            } as any);
             addAuditEntry('Portal Settings Changed', actorName, `Name/Description updated`, 'settings');
             emitGuildUpdated();
             setSavedIndicator(true);
@@ -993,6 +1002,34 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                     <div>
                                         <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>SERVER DESCRIPTION</label>
                                         <textarea value={serverDesc} onChange={e => setServerDesc(e.target.value)} rows={3} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>WELCOME MESSAGE</label>
+                                        <textarea
+                                            value={welcomeMessage}
+                                            onChange={e => setWelcomeMessage(e.target.value)}
+                                            rows={3}
+                                            placeholder="Welcome to our server!"
+                                            style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                                        />
+                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Shown to new members when they join. Leave empty to disable.</div>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>RULES CHANNEL</label>
+                                        <select
+                                            value={rulesChannelId}
+                                            onChange={e => setRulesChannelId(e.target.value)}
+                                            style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}
+                                        >
+                                            <option value="">None</option>
+                                            {channelsList
+                                                .filter(ch => ch.type === 'GUILD_TEXT' || ch.type === 'text')
+                                                .map(ch => (
+                                                    <option key={ch.id} value={ch.id}>#{ch.name}</option>
+                                                ))
+                                            }
+                                        </select>
+                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>A "Go to #rules" button will appear in the welcome modal.</div>
                                     </div>
                                 </div>
                             </div>

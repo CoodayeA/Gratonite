@@ -35,3 +35,5 @@ export * from './bot-applications';
 export * from './admin';
 export * from './fameTransactions';
 export * from './fameDailyLimits';
+export * from './connected-accounts';
+export * from './guild-onboarding';
