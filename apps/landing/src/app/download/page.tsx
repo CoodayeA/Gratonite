@@ -16,7 +16,7 @@ const platforms = [
     description: "macOS desktop app for Apple Silicon (M1 and later).",
     format: ".dmg",
     accent: "purple" as const,
-    href: "https://gratonite.chat/downloads/Gratonite-1.0.2-arm64.dmg",
+    href: "https://gratonite.chat/downloads/Gratonite-1.0.3-arm64.dmg",
   },
   {
     icon: "⊞",
@@ -24,7 +24,7 @@ const platforms = [
     description: "Windows installer — NSIS setup, installs like any app.",
     format: ".exe",
     accent: "blue" as const,
-    href: "https://gratonite.chat/downloads/Gratonite%20Setup%201.0.2.exe",
+    href: "https://gratonite.chat/downloads/Gratonite%20Setup%201.0.3.exe",
   },
   {
     icon: "🐧",
@@ -81,7 +81,7 @@ export default function DownloadPage() {
         <ScrollReveal>
           <div className="flex gap-3 mb-10">
             {[
-              { label: "Stable", version: "v1.0.2" },
+              { label: "Stable", version: "v1.0.3" },
               { label: "Canary", version: null },
               { label: "Legacy", version: null },
             ].map(({ label, version }, i) => (

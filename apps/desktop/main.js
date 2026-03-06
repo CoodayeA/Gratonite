@@ -4,7 +4,7 @@ const path = require('path');
 // In production, load from the deployed web app.
 // In dev, load from the local Vite dev server.
 const DEV_URL = 'http://localhost:5174/app';
-const PROD_URL = process.env.GRATONITE_DESKTOP_URL || 'https://app.gratonite.chat';
+const PROD_URL = process.env.GRATONITE_DESKTOP_URL || 'https://gratonite.chat/app';
 
 const isDev = process.argv.includes('--dev') || process.env.NODE_ENV === 'development';
 
