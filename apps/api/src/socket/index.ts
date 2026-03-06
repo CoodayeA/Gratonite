@@ -39,7 +39,8 @@ import { verifyAccessToken } from '../lib/jwt';
 import { db } from '../db/index';
 import { guildMembers } from '../db/schema/guilds';
 import { channels, dmChannelMembers } from '../db/schema/channels';
-import { eq, and } from 'drizzle-orm';
+import { stageSessions, stageSpeakers } from '../db/schema/stage';
+import { eq, and, isNull } from 'drizzle-orm';
 import { redis } from '../lib/redis';
 
 /**
@@ -238,6 +239,138 @@ export function initSocket(io: SocketIOServer): void {
         }
       } catch {
         // Non-fatal
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // STAGE_START — client starts a stage session via socket
+    // -------------------------------------------------------------------------
+    socket.on('STAGE_START', async (data: { channelId: string; topic?: string }) => {
+      if (!data?.channelId) return;
+      try {
+        // End any existing active session
+        const [existing] = await db
+          .select({ id: stageSessions.id })
+          .from(stageSessions)
+          .where(and(eq(stageSessions.channelId, data.channelId), isNull(stageSessions.endedAt)))
+          .limit(1);
+
+        if (existing) {
+          await db
+            .update(stageSessions)
+            .set({ endedAt: new Date() })
+            .where(eq(stageSessions.id, existing.id));
+        }
+
+        const [session] = await db
+          .insert(stageSessions)
+          .values({
+            channelId: data.channelId,
+            hostId: userId,
+            topic: data.topic ?? null,
+          })
+          .returning();
+
+        io.to(`channel:${data.channelId}`).emit('STAGE_START', {
+          channelId: data.channelId,
+          sessionId: session.id,
+          hostId: session.hostId,
+          topic: session.topic ?? null,
+        });
+      } catch (err) {
+        console.error('[socket.io] STAGE_START error:', err);
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // STAGE_END — host ends the stage session via socket
+    // -------------------------------------------------------------------------
+    socket.on('STAGE_END', async (data: { channelId: string; sessionId: string }) => {
+      if (!data?.channelId || !data?.sessionId) return;
+      try {
+        await db
+          .update(stageSessions)
+          .set({ endedAt: new Date() })
+          .where(
+            and(
+              eq(stageSessions.id, data.sessionId),
+              eq(stageSessions.hostId, userId),
+            ),
+          );
+
+        io.to(`channel:${data.channelId}`).emit('STAGE_END', {
+          channelId: data.channelId,
+          sessionId: data.sessionId,
+        });
+      } catch (err) {
+        console.error('[socket.io] STAGE_END error:', err);
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // STAGE_SPEAKER_ADD — host invites a speaker via socket
+    // -------------------------------------------------------------------------
+    socket.on('STAGE_SPEAKER_ADD', async (data: { channelId: string; sessionId: string; userId: string }) => {
+      if (!data?.channelId || !data?.sessionId || !data?.userId) return;
+      try {
+        await db
+          .insert(stageSpeakers)
+          .values({
+            sessionId: data.sessionId,
+            userId: data.userId,
+            invitedBy: userId,
+          })
+          .onConflictDoNothing();
+
+        io.to(`channel:${data.channelId}`).emit('STAGE_SPEAKER_ADD', {
+          channelId: data.channelId,
+          sessionId: data.sessionId,
+          userId: data.userId,
+          invitedBy: userId,
+        });
+      } catch (err) {
+        console.error('[socket.io] STAGE_SPEAKER_ADD error:', err);
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // STAGE_SPEAKER_REMOVE — host removes a speaker via socket
+    // -------------------------------------------------------------------------
+    socket.on('STAGE_SPEAKER_REMOVE', async (data: { channelId: string; sessionId: string; userId: string }) => {
+      if (!data?.channelId || !data?.sessionId || !data?.userId) return;
+      try {
+        await db
+          .delete(stageSpeakers)
+          .where(
+            and(
+              eq(stageSpeakers.sessionId, data.sessionId),
+              eq(stageSpeakers.userId, data.userId),
+            ),
+          );
+
+        io.to(`channel:${data.channelId}`).emit('STAGE_SPEAKER_REMOVE', {
+          channelId: data.channelId,
+          sessionId: data.sessionId,
+          userId: data.userId,
+        });
+      } catch (err) {
+        console.error('[socket.io] STAGE_SPEAKER_REMOVE error:', err);
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // STAGE_HAND_RAISE — audience member raises hand via socket
+    // -------------------------------------------------------------------------
+    socket.on('STAGE_HAND_RAISE', async (data: { channelId: string; sessionId: string }) => {
+      if (!data?.channelId || !data?.sessionId) return;
+      try {
+        io.to(`channel:${data.channelId}`).emit('STAGE_HAND_RAISE', {
+          channelId: data.channelId,
+          sessionId: data.sessionId,
+          userId,
+        });
+      } catch (err) {
+        console.error('[socket.io] STAGE_HAND_RAISE error:', err);
       }
     });
 

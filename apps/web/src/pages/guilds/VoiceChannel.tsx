@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, Settings, Users, Headphones, HeadphoneOff, Volume2, X, Loader2, MessageSquare, Send, Hash, Wifi, ChevronDown, Check } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, Settings, Users, Headphones, HeadphoneOff, Volume2, X, Loader2, MessageSquare, Send, Hash, Wifi, ChevronDown, Check, Radio, Hand, Crown } from 'lucide-react';
 import { useOutletContext, useParams } from 'react-router-dom';
 import { TopBarActions } from '../../components/ui/TopBarActions';
 import { useToast } from '../../components/ui/ToastManager';
 import { api } from '../../lib/api';
 import { useLiveKit, LiveKitParticipant } from '../../lib/useLiveKit';
 import { getDeterministicGradient } from '../../utils/colors';
-import { getSocket } from '../../lib/socket';
+import { getSocket, onStageStart, onStageEnd, onStageSpeakerAdd, onStageSpeakerRemove, onStageHandRaise, StageStartPayload, StageEndPayload, StageSpeakerAddPayload, StageSpeakerRemovePayload, StageHandRaisePayload } from '../../lib/socket';
 import { leaveVoiceSession } from '../../lib/voiceSession';
 import Avatar from '../../components/ui/Avatar';
 import { useVoice } from '../../contexts/VoiceContext';
@@ -71,7 +71,14 @@ const VoiceChannel = () => {
     const deviceMenuRef = useRef<HTMLDivElement>(null);
     const contextMenuRef = useRef<HTMLDivElement>(null);
     const [channelName, setChannelName] = useState('Voice');
+    const [channelType, setChannelType] = useState<string>('GUILD_VOICE');
+    const [linkedTextChannelId, setLinkedTextChannelId] = useState<string | null>(null);
     const [hasAutoConnected, setHasAutoConnected] = useState(false);
+
+    // Stage channel state
+    const [stageSession, setStageSession] = useState<{ id: string; hostId: string | null; topic: string | null; channelId: string } | null>(null);
+    const [stageSpeakers, setStageSpeakers] = useState<Array<{ id: string; sessionId: string; userId: string; invitedBy: string | null }>>([]);
+    const [raisedHands, setRaisedHands] = useState<string[]>([]);
 
     // Embedded text chat state
     const [chatOpen, setChatOpen] = useState(false);
@@ -125,14 +132,28 @@ const VoiceChannel = () => {
     useEffect(() => {
         if (!channelId) return;
         api.channels.get(channelId)
-            .then((ch: any) => setChannelName(ch.name || 'Voice'))
+            .then((ch: any) => {
+                setChannelName(ch.name || 'Voice');
+                setChannelType(ch.type || 'GUILD_VOICE');
+                setLinkedTextChannelId(ch.linkedTextChannelId ?? null);
+            })
             .catch(() => { addToast({ title: 'Failed to load channel info', variant: 'error' }); });
     }, [channelId]);
 
-    // Load existing messages for this channel's text chat
+    // Fetch active stage session for GUILD_STAGE channels
     useEffect(() => {
-        if (!channelId) return;
-        api.messages.list(channelId, { limit: 50 }).then((msgs: any[]) => {
+        if (!channelId || channelType !== 'GUILD_STAGE') return;
+        api.stage.getSession(channelId).then((data) => {
+            setStageSession(data.session ?? null);
+            setStageSpeakers(data.speakers ?? []);
+        }).catch(() => { /* non-fatal */ });
+    }, [channelId, channelType]);
+
+    // Load existing messages — use linked text channel if available, otherwise fall back to voice channel
+    const chatChannelId = linkedTextChannelId ?? channelId;
+    useEffect(() => {
+        if (!chatChannelId) return;
+        api.messages.list(chatChannelId, { limit: 50 }).then((msgs: any[]) => {
             setChatMessages(msgs.map(m => ({
                 id: m.id,
                 author: m.author?.displayName || m.author?.username || 'Unknown',
@@ -140,16 +161,16 @@ const VoiceChannel = () => {
                 time: new Date(m.createdAt || m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             })).reverse());
         }).catch(() => { addToast({ title: 'Failed to load messages', variant: 'error' }); });
-    }, [channelId]);
+    }, [chatChannelId]);
 
-    // Listen for new messages via WebSocket
+    // Listen for new messages via WebSocket (on the chat channel: linked text or voice channel itself)
     useEffect(() => {
-        if (!channelId) return;
+        if (!chatChannelId) return;
         const socket = getSocket();
         if (!socket) return;
 
         const handleMessage = (data: any) => {
-            if (data.channelId !== channelId) return;
+            if (data.channelId !== chatChannelId) return;
             const newMsg = {
                 id: data.id || String(Date.now()),
                 author: data.author?.displayName || data.author?.username || 'Someone',
@@ -171,7 +192,7 @@ const VoiceChannel = () => {
 
         socket.on('MESSAGE_CREATE', handleMessage);
         return () => { socket.off('MESSAGE_CREATE', handleMessage); };
-    }, [channelId, chatOpen]);
+    }, [chatChannelId, chatOpen]);
 
     // Scroll chat to bottom on new messages
     useEffect(() => {
@@ -181,15 +202,113 @@ const VoiceChannel = () => {
     }, [chatMessages, chatOpen]);
 
     const handleSendChat = useCallback(async () => {
-        if (!chatInput.trim() || !channelId) return;
+        if (!chatInput.trim() || !chatChannelId) return;
         const content = chatInput.trim();
         setChatInput('');
         try {
-            await api.messages.send(channelId, { content });
+            await api.messages.send(chatChannelId, { content });
         } catch {
             addToast({ title: 'Failed to send message', variant: 'error' });
         }
-    }, [chatInput, channelId, addToast]);
+    }, [chatInput, chatChannelId, addToast]);
+
+    // Stage socket event listeners
+    useEffect(() => {
+        if (!channelId || channelType !== 'GUILD_STAGE') return;
+
+        const offStart = onStageStart((data: StageStartPayload) => {
+            if (data.channelId !== channelId) return;
+            setStageSession({ id: data.sessionId, hostId: data.hostId, topic: data.topic, channelId: data.channelId });
+            setStageSpeakers([]);
+            setRaisedHands([]);
+        });
+
+        const offEnd = onStageEnd((data: StageEndPayload) => {
+            if (data.channelId !== channelId) return;
+            setStageSession(null);
+            setStageSpeakers([]);
+            setRaisedHands([]);
+        });
+
+        const offSpeakerAdd = onStageSpeakerAdd((data: StageSpeakerAddPayload) => {
+            if (data.channelId !== channelId) return;
+            setStageSpeakers(prev => {
+                if (prev.some(s => s.userId === data.userId)) return prev;
+                return [...prev, { id: data.userId, sessionId: data.sessionId, userId: data.userId, invitedBy: data.invitedBy }];
+            });
+            // Remove from raised hands if they were invited
+            setRaisedHands(prev => prev.filter(uid => uid !== data.userId));
+        });
+
+        const offSpeakerRemove = onStageSpeakerRemove((data: StageSpeakerRemovePayload) => {
+            if (data.channelId !== channelId) return;
+            setStageSpeakers(prev => prev.filter(s => s.userId !== data.userId));
+        });
+
+        const offHandRaise = onStageHandRaise((data: StageHandRaisePayload) => {
+            if (data.channelId !== channelId) return;
+            setRaisedHands(prev => prev.includes(data.userId) ? prev : [...prev, data.userId]);
+        });
+
+        return () => {
+            offStart();
+            offEnd();
+            offSpeakerAdd();
+            offSpeakerRemove();
+            offHandRaise();
+        };
+    }, [channelId, channelType]);
+
+    // Stage actions
+    const handleStartStage = useCallback(async () => {
+        if (!channelId) return;
+        try {
+            const data = await api.stage.startSession(channelId);
+            setStageSession(data.session);
+            setStageSpeakers([]);
+        } catch {
+            addToast({ title: 'Failed to start stage', variant: 'error' });
+        }
+    }, [channelId, addToast]);
+
+    const handleEndStage = useCallback(async () => {
+        if (!channelId) return;
+        try {
+            await api.stage.endSession(channelId);
+            setStageSession(null);
+            setStageSpeakers([]);
+            setRaisedHands([]);
+        } catch {
+            addToast({ title: 'Failed to end stage', variant: 'error' });
+        }
+    }, [channelId, addToast]);
+
+    const handleRaiseHand = useCallback(async () => {
+        if (!channelId) return;
+        try {
+            await api.stage.raiseHand(channelId);
+        } catch {
+            addToast({ title: 'Failed to raise hand', variant: 'error' });
+        }
+    }, [channelId, addToast]);
+
+    const handleInviteSpeaker = useCallback(async (userId: string) => {
+        if (!channelId) return;
+        try {
+            await api.stage.inviteSpeaker(channelId, userId);
+        } catch {
+            addToast({ title: 'Failed to invite speaker', variant: 'error' });
+        }
+    }, [channelId, addToast]);
+
+    const handleRemoveSpeaker = useCallback(async (userId: string) => {
+        if (!channelId) return;
+        try {
+            await api.stage.removeSpeaker(channelId, userId);
+        } catch {
+            addToast({ title: 'Failed to remove speaker', variant: 'error' });
+        }
+    }, [channelId, addToast]);
 
     // Auto-connect when entering voice channel
     useEffect(() => {
@@ -399,7 +518,7 @@ const VoiceChannel = () => {
     return (
         <main className={`main-view ${hasCustomBg ? 'has-custom-bg' : ''}`} style={{ background: hasCustomBg ? 'transparent' : 'radial-gradient(circle at center, var(--bg-tertiary) 0%, var(--bg-app) 100%)' }}>
             <header className="top-bar">
-                <Mic size={24} style={{ color: 'var(--text-muted)' }} />
+                {channelType === 'GUILD_STAGE' ? <Radio size={24} style={{ color: 'var(--accent-primary)' }} /> : <Mic size={24} style={{ color: 'var(--text-muted)' }} />}
                 <h2>{channelName}</h2>
                 {isConnecting && (
                     <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '13px' }}>
@@ -429,6 +548,100 @@ const VoiceChannel = () => {
                     <TopBarActions />
                 </div>
             </header>
+
+            {/* Stage channel topic bar */}
+            {channelType === 'GUILD_STAGE' && (
+                <div style={{
+                    padding: '8px 16px', background: 'var(--bg-secondary)',
+                    borderBottom: '1px solid var(--stroke)',
+                    display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
+                }}>
+                    <Radio size={16} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                    {stageSession ? (
+                        <>
+                            <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '14px' }}>
+                                {stageSession.topic || 'Stage in progress'}
+                            </span>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                                {stageSpeakers.length} speaker{stageSpeakers.length !== 1 ? 's' : ''}
+                            </span>
+                            {/* Host controls */}
+                            {stageSession.hostId === userProfile?.id && (
+                                <>
+                                    <button onClick={handleEndStage} style={{
+                                        marginLeft: 'auto', padding: '4px 12px', borderRadius: 'var(--radius-sm)',
+                                        background: 'var(--error)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
+                                    }}>End Stage</button>
+                                    {raisedHands.length > 0 && (
+                                        <span style={{ color: 'var(--warning)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <Hand size={14} />
+                                            {raisedHands.length} raised hand{raisedHands.length !== 1 ? 's' : ''}
+                                        </span>
+                                    )}
+                                </>
+                            )}
+                            {/* Audience raise hand */}
+                            {stageSession.hostId !== userProfile?.id && !stageSpeakers.some(s => s.userId === userProfile?.id) && (
+                                <button onClick={handleRaiseHand} style={{
+                                    marginLeft: 'auto', padding: '4px 12px', borderRadius: 'var(--radius-sm)',
+                                    background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--stroke)',
+                                    cursor: 'pointer', fontSize: '12px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px',
+                                }}>
+                                    <Hand size={13} /> Raise Hand
+                                </button>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '14px' }}>No active stage</span>
+                            <button onClick={handleStartStage} style={{
+                                marginLeft: 'auto', padding: '4px 12px', borderRadius: 'var(--radius-sm)',
+                                background: 'var(--accent-primary)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
+                            }}>Start Stage</button>
+                        </>
+                    )}
+                </div>
+            )}
+
+            {/* Stage speakers panel (when session is active, shown below topic bar) */}
+            {channelType === 'GUILD_STAGE' && stageSession && stageSpeakers.length > 0 && (
+                <div style={{
+                    padding: '8px 16px', background: 'var(--bg-tertiary)',
+                    borderBottom: '1px solid var(--stroke)',
+                    display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
+                }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Speakers</span>
+                    {stageSpeakers.map(sp => (
+                        <div key={sp.userId} style={{
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', padding: '2px 8px',
+                            fontSize: '12px', color: 'var(--text-primary)',
+                        }}>
+                            {sp.userId === stageSession.hostId && <Crown size={11} style={{ color: 'var(--warning)' }} />}
+                            <span>{sp.userId}</span>
+                            {stageSession.hostId === userProfile?.id && sp.userId !== userProfile?.id && (
+                                <X size={12} style={{ cursor: 'pointer', color: 'var(--text-muted)', marginLeft: '4px' }}
+                                   onClick={() => handleRemoveSpeaker(sp.userId)} />
+                            )}
+                        </div>
+                    ))}
+                    {/* Host can invite raised-hand users */}
+                    {stageSession.hostId === userProfile?.id && raisedHands.map(uid => (
+                        <div key={uid} style={{
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            background: 'var(--warning-alpha, rgba(250,166,26,0.15))', borderRadius: 'var(--radius-sm)', padding: '2px 8px',
+                            fontSize: '12px', color: 'var(--warning)',
+                        }}>
+                            <Hand size={11} />
+                            <span>{uid}</span>
+                            <button onClick={() => handleInviteSpeaker(uid)} style={{
+                                marginLeft: '4px', padding: '0 4px', borderRadius: '2px',
+                                background: 'var(--accent-primary)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '10px',
+                            }}>Invite</button>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             <div style={{ flex: 1, padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflowY: 'auto' }}>
                 {/* Connection status messages */}

@@ -41,6 +41,7 @@ import { fameRouter } from './fame';
 import { groupDmsRouter } from './group-dms';
 import { connectionsRouter } from './connections';
 import { keysRouter } from './keys';
+import { stageRouter } from './stage';
 import { authRateLimit, apiRateLimit } from '../middleware/rateLimit';
 
 export const router = Router();
@@ -149,3 +150,6 @@ router.use('/users', keysRouter);
 
 // Platform Admin
 router.use('/admin', adminRouter);
+
+// Stage channels
+router.use('/', stageRouter);
