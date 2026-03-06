@@ -41,6 +41,7 @@ import { guildMembers } from '../db/schema/guilds';
 import { channels, dmChannelMembers } from '../db/schema/channels';
 import { eq, and } from 'drizzle-orm';
 import { redis } from '../lib/redis';
+import { executeWorkflows } from '../lib/workflow-executor';
 
 /**
  * initSocket — Wire up Socket.io authentication middleware and connection
@@ -159,9 +160,17 @@ export function initSocket(io: SocketIOServer): void {
     // -------------------------------------------------------------------------
     // IDENTIFY handler — frontend sends this after connect; we already authed
     // via middleware, so just acknowledge with READY again.
+    // Trigger 'member_join' workflows for all guilds this user is in.
     // -------------------------------------------------------------------------
     socket.on('IDENTIFY', () => {
       socket.emit('READY', { userId, sessionId: socket.id });
+
+      // Fire member_join workflows (non-blocking)
+      for (const guildId of userGuildIds) {
+        executeWorkflows(guildId, 'member_join', { guildId, userId }, io).catch((err) => {
+          console.error(`[socket.io] workflow member_join error guild=${guildId}:`, err);
+        });
+      }
     });
 
     // -------------------------------------------------------------------------

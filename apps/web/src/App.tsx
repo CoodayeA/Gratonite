@@ -29,6 +29,7 @@ import ChannelChat from './pages/guilds/ChannelChat';
 import VoiceChannel from './pages/guilds/VoiceChannel';
 import GuildOverview from './pages/guilds/GuildOverview';
 import AuditLog from './pages/guilds/AuditLog';
+import GuildWorkflows from './pages/guilds/GuildWorkflows';
 import MessageRequests from './pages/app/MessageRequests';
 import AdminTeam from './pages/admin/AdminTeam';
 import AdminAuditLog from './pages/admin/AdminAuditLog';
@@ -2380,6 +2381,7 @@ const appRouter = createBrowserRouter(
                 <Route path="guild/:guildId/:channelId" element={<LegacyGuildChannelRedirect />} />
                 <Route path="guild/:guildId/overview" element={<ErrorBoundary><GuildOverview /></ErrorBoundary>} />
                 <Route path="guild/:guildId/audit-log" element={<AuditLog />} />
+                <Route path="guild/:guildId/workflows" element={<GuildWorkflows />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

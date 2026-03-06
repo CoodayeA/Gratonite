@@ -2062,6 +2062,26 @@ export const api = {
       apiFetch<void>(`/notifications/${notificationId}`, { method: 'DELETE' }),
   },
 
+  workflows: {
+    list: (guildId: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/workflows`),
+
+    create: (guildId: string, data: { name: string; triggers: Array<{ type: string; config?: Record<string, unknown> }>; actions: Array<{ order: number; type: string; config?: Record<string, unknown> }> }) =>
+      apiFetch<any>(`/guilds/${guildId}/workflows`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    update: (guildId: string, workflowId: string, data: { name?: string; enabled?: boolean; triggers?: Array<{ type: string; config?: Record<string, unknown> }>; actions?: Array<{ order: number; type: string; config?: Record<string, unknown> }> }) =>
+      apiFetch<any>(`/guilds/${guildId}/workflows/${workflowId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    delete: (guildId: string, workflowId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/workflows/${workflowId}`, { method: 'DELETE' }),
+  },
+
   fame: {
     give: (userId: string, data: { messageId?: string; guildId: string }) =>
       apiFetch<{ success: boolean; fameGiven: number; remaining: number }>(`/users/${userId}/fame`, {

@@ -39,6 +39,7 @@ import { marketplaceRouter } from './marketplace';
 import { telemetryRouter } from './telemetry';
 import { fameRouter } from './fame';
 import { groupDmsRouter } from './group-dms';
+import { workflowsRouter } from './workflows';
 import { authRateLimit, apiRateLimit } from '../middleware/rateLimit';
 
 export const router = Router();
@@ -140,6 +141,9 @@ router.use('/', themesRouter);
 
 // Fame
 router.use('/users/:userId/fame', fameRouter);
+
+// Workflow automation
+router.use('/guilds', workflowsRouter);
 
 // Platform Admin
 router.use('/admin', adminRouter);
