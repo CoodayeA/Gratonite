@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
 import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock } from 'lucide-react';
-import { getOrCreateKeyPair, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported } from '../../lib/e2e';
+import { getOrCreateKeyPair, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported, generateGroupKey, encryptGroupKey, decryptGroupKey } from '../../lib/e2e';
 
 import { BackgroundMedia } from '../../components/ui/BackgroundMedia';
 import { useToast } from '../../components/ui/ToastManager';
@@ -354,6 +354,8 @@ const DirectMessage = () => {
     // E2E encryption state
     const [e2eKey, setE2eKey] = useState<CryptoKey | null>(null);
     const [e2eSupported, setE2eSupported] = useState(false);
+    // Whether all GROUP_DM members have registered public keys (controls lock icon)
+    const [groupE2eAllMembersHaveKeys, setGroupE2eAllMembersHaveKeys] = useState(false);
     // Map of messageId -> decrypted plaintext (populated asynchronously)
     const [decryptedContents, setDecryptedContents] = useState<Map<number, string>>(new Map());
     const [showDisappearMenu, setShowDisappearMenu] = useState(false);
@@ -786,6 +788,100 @@ const DirectMessage = () => {
         return () => { cancelled = true; };
     }, [currentUserId, recipientId, isGroupDm]);
 
+    // E2E setup — fetches or creates group key for GROUP_DM channels
+    useEffect(() => {
+        if (!isE2ESupported() || !currentUserId || !dmChannelId || !isGroupDm || groupParticipants.length === 0) return;
+        setE2eSupported(true);
+
+        let cancelled = false;
+        (async () => {
+            try {
+                const myKeyPair = await getOrCreateKeyPair(currentUserId);
+                if (!myKeyPair || cancelled) return;
+
+                // Attempt to fetch the existing group key for this user.
+                const keyRes = await fetch(`/api/v1/channels/${dmChannelId}/group-key`, { credentials: 'include' });
+                if (!keyRes.ok || cancelled) return;
+                const keyData = await keyRes.json() as { version: number | null; encryptedKey: string | null };
+
+                if (keyData.version !== null && keyData.encryptedKey) {
+                    // Decrypt the stored group key using our private key.
+                    const groupKey = await decryptGroupKey(keyData.encryptedKey, myKeyPair.privateKey);
+                    if (!cancelled && groupKey) {
+                        setE2eKey(groupKey);
+                        // We have the group key — check if all members have public keys for the lock icon.
+                        const publicKeyChecks = await Promise.all(
+                            groupParticipants.map(async (p) => {
+                                const r = await fetch(`/api/v1/users/${p.id}/public-key`, { credentials: 'include' });
+                                if (!r.ok) return false;
+                                const d = await r.json() as { publicKeyJwk: string | null };
+                                return d.publicKeyJwk !== null;
+                            }),
+                        );
+                        if (!cancelled) setGroupE2eAllMembersHaveKeys(publicKeyChecks.every(Boolean));
+                    }
+                    return;
+                }
+
+                // No group key yet — only the group owner/first member creates it.
+                const isOwner = groupParticipants[0]?.id === currentUserId || groupParticipants.length === 0;
+                if (!isOwner || cancelled) return;
+
+                // Fetch public keys for all members.
+                const memberKeys = await Promise.all(
+                    groupParticipants.map(async (p) => {
+                        const r = await fetch(`/api/v1/users/${p.id}/public-key`, { credentials: 'include' });
+                        if (!r.ok) return { id: p.id, key: null };
+                        const d = await r.json() as { publicKeyJwk: string | null };
+                        if (!d.publicKeyJwk) return { id: p.id, key: null };
+                        const key = await importPublicKey(d.publicKeyJwk).catch(() => null);
+                        return { id: p.id, key };
+                    }),
+                );
+                if (cancelled) return;
+
+                const allHaveKeys = memberKeys.every((m) => m.key !== null);
+                if (!allHaveKeys) {
+                    // Not all members have set up E2E yet — skip group key creation.
+                    setGroupE2eAllMembersHaveKeys(false);
+                    return;
+                }
+
+                // Generate the group key and encrypt it for each member.
+                const groupKey = await generateGroupKey();
+                const encryptedKeys: Record<string, string> = {};
+                for (const { id, key } of memberKeys) {
+                    if (key) {
+                        encryptedKeys[id] = await encryptGroupKey(groupKey, key);
+                    }
+                }
+
+                // Also encrypt for the current user using their own public key.
+                if (!encryptedKeys[currentUserId]) {
+                    encryptedKeys[currentUserId] = await encryptGroupKey(groupKey, myKeyPair.publicKey);
+                }
+
+                // POST the new key version to the server.
+                const postRes = await fetch(`/api/v1/channels/${dmChannelId}/group-key`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ version: 1, keyData: encryptedKeys }),
+                });
+                if (!postRes.ok || cancelled) return;
+
+                if (!cancelled) {
+                    setE2eKey(groupKey);
+                    setGroupE2eAllMembersHaveKeys(true);
+                }
+            } catch {
+                // Network error or crypto failure — silently fall back to plaintext
+            }
+        })();
+
+        return () => { cancelled = true; };
+    }, [currentUserId, dmChannelId, isGroupDm, groupParticipants]);
+
     // Decrypt encrypted messages whenever the e2eKey or messages list changes
     useEffect(() => {
         if (!e2eKey) return;
@@ -1141,6 +1237,9 @@ const DirectMessage = () => {
                                         )}
                                         {e2eKey && !isGroupDm && (
                                             <Lock size={14} style={{ color: 'var(--success, #22c55e)' }} aria-label="End-to-end encrypted" />
+                                        )}
+                                        {e2eKey && isGroupDm && groupE2eAllMembersHaveKeys && (
+                                            <Lock size={14} style={{ color: 'var(--success, #22c55e)' }} aria-label="End-to-end encrypted (group)" />
                                         )}
                                     </>
                                 )}

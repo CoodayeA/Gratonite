@@ -197,3 +197,145 @@ export async function getOrCreateKeyPair(
 export function isE2ESupported(): boolean {
   return !!(window.crypto?.subtle && window.indexedDB);
 }
+
+// ---------------------------------------------------------------------------
+// Group key management (GROUP_DM E2E)
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate a new symmetric AES-GCM 256-bit group key.
+ * Used when initialising E2E encryption for a GROUP_DM channel.
+ */
+export async function generateGroupKey(): Promise<CryptoKey> {
+  return crypto.subtle.generateKey(
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt'],
+  );
+}
+
+/**
+ * Export a group key as raw bytes, then encrypt it for a specific member
+ * using an ephemeral ECDH key exchange with their public ECDH key.
+ *
+ * The output is a base64-encoded JSON blob containing:
+ *   - `eph`: the ephemeral public key (JWK) used for the ECDH exchange
+ *   - `iv`:  the AES-GCM IV (base64)
+ *   - `ct`:  the AES-GCM ciphertext (base64)
+ *
+ * The recipient decrypts by performing the same ECDH derivation with their
+ * private key and the ephemeral public key, then decrypting with AES-GCM.
+ *
+ * @param groupKey       — The symmetric group key to wrap.
+ * @param memberPublicKey — The recipient's ECDH P-256 public key.
+ * @returns              Base64-encoded encrypted key blob.
+ */
+export async function encryptGroupKey(groupKey: CryptoKey, memberPublicKey: CryptoKey): Promise<string> {
+  // Export group key to raw bytes.
+  const rawKey = await crypto.subtle.exportKey('raw', groupKey);
+
+  // Generate an ephemeral ECDH key pair for this wrapping operation.
+  const ephemeral = await crypto.subtle.generateKey(
+    { name: 'ECDH', namedCurve: 'P-256' },
+    false,
+    ['deriveKey'],
+  );
+
+  // Derive a one-time wrapping key via ECDH between the ephemeral private key
+  // and the member's public key.
+  const wrappingKey = await crypto.subtle.deriveKey(
+    { name: 'ECDH', public: memberPublicKey },
+    (ephemeral as CryptoKeyPair).privateKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt'],
+  );
+
+  // Encrypt the raw group key bytes with the wrapping key.
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, wrappingKey, rawKey);
+
+  // Export the ephemeral public key as JWK so the recipient can reconstruct
+  // the ECDH shared secret.
+  const ephPublicJwk = await crypto.subtle.exportKey('jwk', (ephemeral as CryptoKeyPair).publicKey);
+
+  // Combine all fields into a single base64-encoded JSON blob.
+  const combined = {
+    eph: ephPublicJwk,
+    iv: btoa(String.fromCharCode(...iv)),
+    ct: btoa(String.fromCharCode(...new Uint8Array(encrypted))),
+  };
+  return btoa(JSON.stringify(combined));
+}
+
+/**
+ * Decrypt a group key that was encrypted by `encryptGroupKey`.
+ *
+ * @param encryptedBase64 — The base64 blob produced by `encryptGroupKey`.
+ * @param myPrivateKey    — The calling user's ECDH P-256 private key.
+ * @returns               The decrypted AES-GCM CryptoKey, or null on failure.
+ */
+export async function decryptGroupKey(
+  encryptedBase64: string,
+  myPrivateKey: CryptoKey,
+): Promise<CryptoKey | null> {
+  try {
+    const combined = JSON.parse(atob(encryptedBase64)) as {
+      eph: JsonWebKey;
+      iv: string;
+      ct: string;
+    };
+
+    // Import the sender's ephemeral public key.
+    const ephPublicKey = await crypto.subtle.importKey(
+      'jwk',
+      combined.eph,
+      { name: 'ECDH', namedCurve: 'P-256' },
+      false,
+      [],
+    );
+
+    // Derive the same wrapping key using our private key and the ephemeral public key.
+    const wrappingKey = await crypto.subtle.deriveKey(
+      { name: 'ECDH', public: ephPublicKey },
+      myPrivateKey,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['decrypt'],
+    );
+
+    // Decrypt the raw group key bytes.
+    const iv = Uint8Array.from(atob(combined.iv), (c) => c.charCodeAt(0));
+    const ct = Uint8Array.from(atob(combined.ct), (c) => c.charCodeAt(0));
+    const rawKey = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, wrappingKey, ct);
+
+    // Import the raw bytes back as an AES-GCM key.
+    return crypto.subtle.importKey(
+      'raw',
+      rawKey,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt'],
+    );
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Encrypt a plaintext message with the group AES-GCM key.
+ * Delegates to the shared `encrypt` utility — provided as a named alias for
+ * call-site clarity.
+ */
+export async function encryptWithGroupKey(key: CryptoKey, plaintext: string): Promise<string> {
+  return encrypt(key, plaintext);
+}
+
+/**
+ * Decrypt a ciphertext message with the group AES-GCM key.
+ * Delegates to the shared `decrypt` utility — provided as a named alias for
+ * call-site clarity.
+ */
+export async function decryptWithGroupKey(key: CryptoKey, ciphertext: string): Promise<string> {
+  return decrypt(key, ciphertext);
+}
