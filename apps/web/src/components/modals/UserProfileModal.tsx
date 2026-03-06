@@ -2,9 +2,19 @@ import { useState, useEffect, useRef } from 'react';
 import { MoreHorizontal, MessageSquare, X, Star, Palette, Lock, Copy, ShieldOff, ShieldCheck, Flag, Check, Loader2 } from 'lucide-react';
 import { Tooltip } from '../ui/Tooltip';
 import { useToast } from '../ui/ToastManager';
+import { useUser } from '../../contexts/UserContext';
 import Avatar from '../ui/Avatar';
 import { api, API_BASE } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
+
+const BADGE_META: Record<string, { label: string; emoji: string; color: string }> = {
+    admin: { label: 'Admin', emoji: '\u{1F6E1}\uFE0F', color: '#ed4245' },
+    early_adopter: { label: 'Early Adopter', emoji: '\u2B50', color: '#faa61a' },
+    verified: { label: 'Verified', emoji: '\u2705', color: '#3ba55c' },
+    developer: { label: 'Developer', emoji: '\u{1F527}', color: '#5865f2' },
+    moderator: { label: 'Moderator', emoji: '\u{1F528}', color: '#eb459e' },
+    supporter: { label: 'Supporter', emoji: '\u{1F48E}', color: '#5865f2' },
+};
 
 // ─── Live Canvas Backgrounds ─────────────────────────────────────────────────
 
@@ -148,7 +158,10 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
     const [isBlockLoading, setIsBlockLoading] = useState(false);
     const [isReportLoading, setIsReportLoading] = useState(false);
     const { addToast } = useToast();
+    const { user: currentUser } = useUser();
     const optionsRef = useRef<HTMLDivElement>(null);
+    const [note, setNote] = useState('');
+    const [noteLoaded, setNoteLoaded] = useState(false);
 
     const getCanvasStorageKey = (userId?: string) => `gratonite-profile-canvas:${userId || 'me'}`;
 
@@ -187,6 +200,21 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
             })
             .catch(() => {});
     }, [userProfile?.id]);
+
+    // Fetch note
+    useEffect(() => {
+        const userId = userProfile?.id;
+        if (!userId || userId === currentUser?.id) { setNoteLoaded(true); return; }
+        api.users.getNote(userId)
+            .then(data => { setNote(data.content || ''); setNoteLoaded(true); })
+            .catch(() => setNoteLoaded(true));
+    }, [userProfile?.id, currentUser?.id]);
+
+    const saveNote = async () => {
+        const userId = userProfile?.id;
+        if (!userId) return;
+        await api.users.saveNote(userId, note).catch(() => {});
+    };
 
     // Persist selected canvas per-user so it sticks between modal opens.
     useEffect(() => {
@@ -347,15 +375,13 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                         <h2 style={{ fontSize: '20px', fontWeight: 600, fontFamily: 'var(--font-display)', margin: 0 }}>{displayName}</h2>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            {userProfile?.badges?.map((badge: string, i: number) => {
-                                let label = 'Achievement Badge';
-                                if (badge === '✨') label = 'Early Adopter';
-                                if (badge === '🚀') label = 'Beta Tester';
-                                if (badge === '🐛') label = 'Bug Hunter';
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            {(profile?.badges ?? []).map((badge: string) => {
+                                const meta = BADGE_META[badge];
+                                if (!meta) return null;
                                 return (
-                                    <Tooltip key={i} content={label} position="top">
-                                        <div style={{ width: 24, height: 24, background: 'var(--bg-tertiary)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>{badge}</div>
+                                    <Tooltip key={badge} content={meta.label} position="top">
+                                        <div style={{ width: 24, height: 24, background: 'var(--bg-tertiary)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'default', fontSize: '14px', color: meta.color }}>{meta.emoji}</div>
                                     </Tooltip>
                                 );
                             })}
@@ -467,6 +493,24 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                     {loadingProfile && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: 'var(--text-muted)', fontSize: '12px' }}>
                             <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Loading profile...
+                        </div>
+                    )}
+
+                    {noteLoaded && userProfile?.id !== currentUser?.id && (
+                        <div style={{ marginBottom: '16px' }}>
+                            <h3 style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '4px', letterSpacing: '0.5px' }}>Note</h3>
+                            <textarea
+                                value={note}
+                                onChange={e => setNote(e.target.value.slice(0, 256))}
+                                onBlur={saveNote}
+                                placeholder="Click to add a note"
+                                rows={2}
+                                style={{
+                                    width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                    borderRadius: '4px', color: 'var(--text-primary)', fontSize: '13px', padding: '6px 8px',
+                                    resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+                                }}
+                            />
                         </div>
                     )}
 
