@@ -805,13 +805,18 @@ messagesRouter.post('/read', requireAuth, async (req: Request, res: Response): P
 
     const { lastReadMessageId } = req.body as { lastReadMessageId?: string };
 
-    // Resolve the latest message ID if not provided.
+    // Resolve the latest visible (non-expired) message ID if not provided.
     let resolvedMessageId = lastReadMessageId;
     if (!resolvedMessageId) {
       const [latest] = await db
         .select({ id: messages.id })
         .from(messages)
-        .where(eq(messages.channelId, channelId))
+        .where(
+          and(
+            eq(messages.channelId, channelId),
+            or(isNull(messages.expiresAt), gt(messages.expiresAt, new Date())),
+          ),
+        )
         .orderBy(desc(messages.createdAt))
         .limit(1);
       resolvedMessageId = latest?.id;

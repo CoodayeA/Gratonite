@@ -757,6 +757,24 @@ const DirectMessage = () => {
         setShowDisappearMenu(false);
     };
 
+    // Filter out expired disappearing messages from the display list
+    useEffect(() => {
+        const now = Date.now();
+        const hasExpiring = messages.some(m => m.expiresAt && new Date(m.expiresAt).getTime() > now);
+        if (!hasExpiring) return;
+        // Find the soonest expiry and schedule a trim then
+        const soonest = messages
+            .filter(m => m.expiresAt)
+            .map(m => new Date(m.expiresAt!).getTime())
+            .sort((a, b) => a - b)[0];
+        if (!soonest) return;
+        const delay = Math.max(0, soonest - Date.now()) + 500;
+        const timer = setTimeout(() => {
+            setMessages(prev => prev.filter(m => !m.expiresAt || new Date(m.expiresAt).getTime() > Date.now()));
+        }, delay);
+        return () => clearTimeout(timer);
+    }, [messages]);
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
