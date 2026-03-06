@@ -156,6 +156,7 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
     const [profile, setProfile] = useState<any>(null);
     const [mutuals, setMutuals] = useState<{ mutualServers: any[]; mutualFriends: any[] } | null>(null);
     const [loadingProfile, setLoadingProfile] = useState(true);
+    const [connections, setConnections] = useState<{ provider: string; providerUsername: string; profileUrl: string | null }[]>([]);
 
     // Fetch real data on mount
     useEffect(() => {
@@ -174,6 +175,17 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
             finally { setLoadingProfile(false); }
         };
         fetchData();
+
+        // Fetch connections separately (non-blocking)
+        fetch(`${API_BASE}/users/${userId}/connections`, {
+            credentials: 'include',
+            headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}` },
+        })
+            .then(r => r.ok ? r.json() : [])
+            .then((rows: any[]) => {
+                if (Array.isArray(rows)) setConnections(rows);
+            })
+            .catch(() => {});
     }, [userProfile?.id]);
 
     // Persist selected canvas per-user so it sticks between modal opens.
@@ -366,6 +378,44 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                 {bio}
                             </p>
+                        </div>
+                    )}
+
+                    {connections.length > 0 && (
+                        <div style={{ marginBottom: '16px' }}>
+                            <h3 style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px', letterSpacing: '0.5px' }}>Connections</h3>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {connections.map((conn) => {
+                                    const label = conn.provider.charAt(0).toUpperCase() + conn.provider.slice(1);
+                                    const inner = (
+                                        <>
+                                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
+                                            <span style={{ color: 'var(--text-primary)' }}>{conn.providerUsername}</span>
+                                        </>
+                                    );
+                                    if (conn.profileUrl) {
+                                        return (
+                                            <a
+                                                key={conn.provider}
+                                                href={conn.profileUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}
+                                            >
+                                                {inner}
+                                            </a>
+                                        );
+                                    }
+                                    return (
+                                        <div
+                                            key={conn.provider}
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}
+                                        >
+                                            {inner}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
 
