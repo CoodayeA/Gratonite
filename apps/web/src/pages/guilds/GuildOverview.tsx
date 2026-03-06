@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Hash as HashIcon, Mic, Users } from 'lucide-react';
 import { useOutletContext, Link, useParams, useNavigate } from 'react-router-dom';
 import { api, API_BASE } from '../../lib/api';
+import { useUser } from '../../contexts/UserContext';
 import { getDeterministicGradient } from '../../utils/colors';
 import { onVoiceStateUpdate, type VoiceStateUpdatePayload } from '../../lib/socket';
 import type { GuildSessionChannel, GuildSessionInfo, GuildSessionErrorCode } from '../../hooks/useGuildSession';
@@ -9,6 +10,7 @@ import type { GuildSessionChannel, GuildSessionInfo, GuildSessionErrorCode } fro
 interface GuildData {
     id: string;
     name: string;
+    ownerId: string;
     description: string | null;
     iconHash: string | null;
     bannerHash: string | null;
@@ -26,7 +28,7 @@ interface ChannelData {
 }
 
 type GuildOverviewContext = {
-    setActiveModal: (modal: 'invite' | 'guildSettings' | null) => void;
+    setActiveModal: (modal: 'invite' | 'guildSettings' | 'memberOptions' | null) => void;
     guildSession?: {
         guildInfo: GuildSessionInfo | null;
         channels: GuildSessionChannel[];
@@ -40,6 +42,7 @@ const GuildOverview = () => {
     const { setActiveModal, guildSession } = useOutletContext<GuildOverviewContext>();
     const { guildId } = useParams<{ guildId: string }>();
     const navigate = useNavigate();
+    const { user: currentUser } = useUser();
     const [legacyGuild, setLegacyGuild] = useState<GuildData | null>(null);
     const [legacyChannels, setLegacyChannels] = useState<ChannelData[]>([]);
     const [legacyLoading, setLegacyLoading] = useState(false);
@@ -271,7 +274,11 @@ const GuildOverview = () => {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <button className="auth-button" onClick={() => setActiveModal('invite')} style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--accent-primary)', color: '#000', border: '3px solid #000', fontWeight: 800 }}>Create Invite</button>
-                        <button className="auth-button" onClick={() => setActiveModal('guildSettings')} style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800 }}>Portal Settings</button>
+                        {guild?.ownerId === currentUser.id ? (
+                            <button className="auth-button" onClick={() => setActiveModal('guildSettings')} style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800 }}>Portal Settings</button>
+                        ) : (
+                            <button className="auth-button" onClick={() => setActiveModal('memberOptions')} style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800 }}>Server Options</button>
+                        )}
                     </div>
                 </div>
 

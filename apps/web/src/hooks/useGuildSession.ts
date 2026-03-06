@@ -7,6 +7,7 @@ export type GuildSessionErrorCode = 'UNAUTHORIZED' | 'FORBIDDEN' | 'NOT_FOUND' |
 export type GuildSessionInfo = {
   id: string;
   name: string;
+  ownerId: string;
   iconHash: string | null;
   bannerHash: string | null;
   description: string | null;
@@ -115,6 +116,7 @@ export function useGuildSession(args: UseGuildSessionArgs) {
       setGuildInfo({
         id: guild.id,
         name: guild.name,
+        ownerId: guild.ownerId ?? '',
         iconHash: guild.iconHash ?? null,
         bannerHash: (guild as { bannerHash?: string | null }).bannerHash ?? null,
         description: guild.description ?? null,

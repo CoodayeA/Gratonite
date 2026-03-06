@@ -53,6 +53,7 @@ import CreateGuildModal from './components/modals/CreateGuildModal';
 import PresenceMenu, { PresenceType, PRESENCE_COLORS } from './components/modals/PresenceMenu';
 import ScreenShareModal from './components/modals/ScreenShareModal';
 import GuildSettingsModal from './components/modals/GuildSettingsModal';
+import MemberOptionsModal from './components/modals/MemberOptionsModal';
 import InviteModal from './components/modals/InviteModal';
 import DMSearchModal from './components/modals/DMSearchModal';
 import GroupDmCreateModal from './components/modals/GroupDmCreateModal';
@@ -80,7 +81,7 @@ import { useGuildSession, type GuildSessionErrorCode, type GuildSessionInfo, typ
 import { isAuthRuntimeExpired } from './lib/authRuntime';
 
 type MediaType = 'video' | 'image' | null;
-type ModalType = 'settings' | 'userProfile' | 'createGuild' | 'screenShare' | 'guildSettings' | 'invite' | 'globalSearch' | 'dmSearch' | 'notifications' | 'shortcuts' | 'bugReport' | 'onboarding' | 'createGroupDm' | null;
+type ModalType = 'settings' | 'userProfile' | 'createGuild' | 'screenShare' | 'guildSettings' | 'memberOptions' | 'invite' | 'globalSearch' | 'dmSearch' | 'notifications' | 'shortcuts' | 'bugReport' | 'onboarding' | 'createGroupDm' | null;
 type VoiceSidebarMember = {
     userId: string;
     username: string;
@@ -159,7 +160,7 @@ const LegacyGuildVoiceRedirect = () => {
 
 // BackgroundMedia moved to src/components/ui/BackgroundMedia.tsx
 
-const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugReport, onOpenProfile, onOpenSettings, onOpenGuildSettings, onOpenInvite, onGuildsRefresh, guilds, userProfile }: { isOpen: boolean, onOpenCreateGuild: () => void, onOpenNotifications: () => void, onOpenBugReport: () => void, onOpenProfile: () => void, onOpenSettings: () => void, onOpenGuildSettings: () => void, onOpenInvite: () => void, onGuildsRefresh?: () => void, guilds: Array<{ id: string; name: string; iconHash: string | null; description: string | null; memberCount: number }>, userProfile: { id?: string; name: string; avatarHash?: string | null; avatarFrame?: 'none' | 'neon' | 'gold' | 'glass' } }) => {
+const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugReport, onOpenProfile, onOpenSettings, onOpenGuildSettings, onOpenInvite, onGuildsRefresh, guilds, userProfile }: { isOpen: boolean, onOpenCreateGuild: () => void, onOpenNotifications: () => void, onOpenBugReport: () => void, onOpenProfile: () => void, onOpenSettings: () => void, onOpenGuildSettings: () => void, onOpenInvite: () => void, onGuildsRefresh?: () => void, guilds: Array<{ id: string; name: string; ownerId: string; iconHash: string | null; description: string | null; memberCount: number }>, userProfile: { id?: string; name: string; avatarHash?: string | null; avatarFrame?: 'none' | 'neon' | 'gold' | 'glass' } }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const { openMenu } = useContextMenu();
@@ -175,18 +176,19 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
         return match ? match[1] : null;
     })();
 
-    const handleGuildContext = (e: React.MouseEvent, guild: { id: string; name: string }) => {
+    const handleGuildContext = (e: React.MouseEvent, guild: { id: string; name: string; ownerId: string }) => {
         e.preventDefault();
         let overrides: Record<string, boolean> = {};
         try { overrides = JSON.parse(localStorage.getItem('gratonite-server-activity-overrides') || '{}'); } catch {}
         const autoShare = localStorage.getItem('gratonite-auto-share-on-join') !== 'false';
         const activityEnabled = overrides[guild.id] ?? autoShare;
+        const isOwner = guild.ownerId === userProfile.id;
 
         openMenu(e, [
             { id: 'mark-read', label: 'Mark as Read', icon: Check, onClick: () => addToast({ title: `${guild.name} marked as read`, variant: 'info' }) },
             { id: 'mute', label: 'Mute Portal', icon: Volume1, onClick: () => addToast({ title: `${guild.name} muted`, variant: 'info' }) },
             { divider: true, id: 'div1', label: '', onClick: () => {} },
-            { id: 'server-settings', label: 'Portal Settings', icon: Settings, onClick: () => { navigate(`/guild/${guild.id}`); onOpenGuildSettings(); } },
+            ...(isOwner ? [{ id: 'server-settings', label: 'Portal Settings', icon: Settings, onClick: () => { navigate(`/guild/${guild.id}`); onOpenGuildSettings(); } }] : []),
             { id: 'invite', label: 'Invite People', icon: Link2, onClick: () => {
                 api.invites.create(guild.id, { channelId: guild.id }).then((invite) => {
                     const link = `${window.location.origin}/invite/${invite.code}`;
@@ -1846,7 +1848,7 @@ export const AppLayout = () => {
     const mainContentRef = useRef<HTMLDivElement>(null);
     const { user: ctxUser, loading: userLoading, gratoniteBalance, setGratoniteBalance } = useUser();
     const { setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects } = useTheme();
-    const [guilds, setGuilds] = useState<Array<{ id: string; name: string; iconHash: string | null; description: string | null; memberCount: number }>>([]);
+    const [guilds, setGuilds] = useState<Array<{ id: string; name: string; ownerId: string; iconHash: string | null; description: string | null; memberCount: number }>>([]);
     const [dmChannels, setDmChannels] = useState<Array<{ id: string; recipientIds?: string[]; recipients?: Array<{ id: string; username: string; displayName: string; avatarHash: string | null }> }>>([]);
     const activeGuildId = useMemo(() => {
         const match = location.pathname.match(/\/guild\/([^/]+)/);
@@ -1894,6 +1896,7 @@ export const AppLayout = () => {
             const normalized = Array.isArray(list) ? list.map((g) => ({
                 id: g.id,
                 name: g.name,
+                ownerId: g.ownerId ?? '',
                 iconHash: g.iconHash ?? null,
                 description: g.description ?? null,
                 memberCount: typeof g.memberCount === 'number' ? g.memberCount : 0,
@@ -2295,6 +2298,13 @@ export const AppLayout = () => {
             </ModalWrapper>
             <ModalWrapper isOpen={activeModal === 'guildSettings'}>
                 <GuildSettingsModal onClose={() => setActiveModal(null)} guildId={location.pathname.match(/\/guild\/([^/]+)/)?.[1] || null} />
+            </ModalWrapper>
+            <ModalWrapper isOpen={activeModal === 'memberOptions'}>
+                {activeModal === 'memberOptions' && (() => {
+                    const guildId = location.pathname.match(/\/guild\/([^/]+)/)?.[1] || '';
+                    const guildName = guilds.find(g => g.id === guildId)?.name || '';
+                    return <MemberOptionsModal onClose={() => setActiveModal(null)} guildId={guildId} guildName={guildName} />;
+                })()}
             </ModalWrapper>
             <ModalWrapper isOpen={activeModal === 'invite'}>
                 <InviteModal onClose={() => setActiveModal(null)} guildId={location.pathname.match(/\/guild\/([^/]+)/)?.[1] || null} />
