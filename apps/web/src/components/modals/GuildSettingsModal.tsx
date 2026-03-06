@@ -111,7 +111,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const { user: currentUser } = useUser();
     const navigate = useNavigate();
     const actorName = currentUser.name || currentUser.handle || 'Unknown';
-    const [activeTab, setActiveTab] = useState<'overview' | 'channels' | 'roles' | 'members' | 'bans' | 'invites' | 'emojis' | 'automod' | 'audit' | 'branding' | 'webhooks' | 'bots'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'channels' | 'roles' | 'members' | 'bans' | 'invites' | 'emojis' | 'automod' | 'audit' | 'branding' | 'webhooks' | 'bots' | 'templates'>('overview');
     const [roles, setRoles] = useState<Role[]>([]);
     const [activeRole, setActiveRole] = useState<Role | null>(null);
     const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
@@ -560,10 +560,29 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         if (activeTab === 'audit') fetchAuditLog();
         if (activeTab === 'webhooks') fetchWebhooks();
         if (activeTab === 'automod') fetchAutomodRules();
+        if (activeTab === 'overview' && guildId) {
+            setVanityLoading(true);
+            api.guilds.getVanityUrl?.(guildId)?.then?.((data: any) => {
+                setVanityCode(data?.code || '');
+            }).catch(() => {}).finally(() => setVanityLoading(false));
+        }
+        if (activeTab === 'templates' && guildId) {
+            setTemplatesLoading(true);
+            api.guilds.getTemplates?.(guildId)?.then?.((data: any[]) => {
+                setTemplates(Array.isArray(data) ? data.map((t: any) => ({
+                    id: t.id,
+                    name: t.name || 'Untitled',
+                    description: t.description || '',
+                    code: t.code || t.id,
+                    createdAt: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'Unknown',
+                })) : []);
+            }).catch(() => {}).finally(() => setTemplatesLoading(false));
+        }
     }, [activeTab]);
     const [editingRoleName, setEditingRoleName] = useState(false);
     const [editRoleNameVal, setEditRoleNameVal] = useState('');
     const [editRoleColorVal, setEditRoleColorVal] = useState('');
+    const [editRoleEmojiVal, setEditRoleEmojiVal] = useState('');
     const [savedIndicator, setSavedIndicator] = useState(false);
     const [kickConfirm, setKickConfirm] = useState<string | null>(null);
     const [selectedAccentColor, setSelectedAccentColor] = useState('#526df5');
@@ -580,6 +599,18 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [emojiNameInput, setEmojiNameInput] = useState('');
     const [emojiFileToUpload, setEmojiFileToUpload] = useState<File | null>(null);
     const [emojiFilePreview, setEmojiFilePreview] = useState<string | null>(null);
+
+    // Vanity URL state
+    const [vanityCode, setVanityCode] = useState('');
+    const [vanityLoading, setVanityLoading] = useState(false);
+    const [vanitySaving, setVanitySaving] = useState(false);
+
+    // Templates state
+    const [templates, setTemplates] = useState<Array<{ id: string; name: string; description: string; code: string; createdAt: string }>>([]);
+    const [templatesLoading, setTemplatesLoading] = useState(false);
+    const [newTemplateName, setNewTemplateName] = useState('');
+    const [newTemplateDesc, setNewTemplateDesc] = useState('');
+    const [templateCreating, setTemplateCreating] = useState(false);
 
     // Invite management state
     const [invites, setInvites] = useState<Array<{ code: string; inviterName: string; uses: number; maxUses: number | null; expiresAt: string | null; createdAt: string }>>([]);
@@ -764,6 +795,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             await api.guilds.updateRole(guildId, activeRole.id, {
                 name: newName,
                 color: colorHexToInt(newColor),
+                ...(editRoleEmojiVal !== undefined ? { unicodeEmoji: editRoleEmojiVal || null } : {}),
             });
             setRoles(prev => prev.map(r => {
                 if (r.id === activeRole.id) {
@@ -1000,7 +1032,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                         <div style={{ padding: '0 8px', marginBottom: '16px', fontWeight: 600, color: 'var(--text-primary)', fontSize: '15px' }}>
                             {serverName}
                         </div>
-                        {(['overview', 'channels', 'roles', 'members', 'invites'] as const).map(tab => (
+                        {(['overview', 'channels', 'roles', 'members', 'invites', 'templates'] as const).map(tab => (
                             <div key={tab} onClick={() => setActiveTab(tab)}
                                 onMouseEnter={() => setHoveredBtn(`tab-${tab}`)} onMouseLeave={() => setHoveredBtn(null)}
                                 style={tabStyle(tab)}
@@ -1229,6 +1261,42 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             >
                                 {savedIndicator ? <><Check size={16} /> Saved!</> : <><Save size={16} /> Save Changes</>}
                             </button>
+
+                            {/* Vanity URL */}
+                            <div style={{ height: '1px', background: 'var(--stroke)', margin: '24px 0' }} />
+                            <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Vanity URL</h3>
+                            <div style={{ marginBottom: '24px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0', marginBottom: '8px' }}>
+                                    <span style={{ padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRight: 'none', borderRadius: '8px 0 0 8px', fontSize: '14px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>gratonite.chat/invite/</span>
+                                    <input
+                                        type="text"
+                                        value={vanityCode}
+                                        onChange={e => setVanityCode(e.target.value.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase())}
+                                        placeholder="your-code"
+                                        disabled={vanityLoading}
+                                        style={{ flex: 1, padding: '10px 14px', borderRadius: '0 8px 8px 0', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                                    />
+                                </div>
+                                <button
+                                    onClick={async () => {
+                                        if (!guildId || !vanityCode.trim()) return;
+                                        setVanitySaving(true);
+                                        try {
+                                            await api.guilds.updateVanityUrl(guildId, vanityCode.trim());
+                                            addToast({ title: 'Vanity URL saved', variant: 'success' });
+                                        } catch (err: any) {
+                                            addToast({ title: 'Failed to save vanity URL', description: err?.message || 'Code may be taken.', variant: 'error' });
+                                        } finally {
+                                            setVanitySaving(false);
+                                        }
+                                    }}
+                                    disabled={vanitySaving || !vanityCode.trim()}
+                                    style={{ padding: '8px 20px', borderRadius: '6px', background: vanityCode.trim() && !vanitySaving ? 'var(--accent-primary)' : 'var(--bg-tertiary)', border: 'none', color: vanityCode.trim() && !vanitySaving ? '#000' : 'var(--text-muted)', fontWeight: 600, fontSize: '13px', cursor: vanityCode.trim() && !vanitySaving ? 'pointer' : 'default' }}
+                                >
+                                    {vanitySaving ? 'Saving...' : 'Save Vanity URL'}
+                                </button>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>Custom invite URL for your server. Only alphanumeric characters and hyphens.</p>
+                            </div>
 
                             {/* Safety & Verification */}
                             <div style={{ height: '1px', background: 'var(--stroke)', margin: '24px 0' }} />
@@ -1574,9 +1642,10 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
                                         <div>
                                             {editingRoleName ? (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
                                                     <input type="text" value={editRoleNameVal} onChange={e => setEditRoleNameVal(e.target.value)} style={{ padding: '6px 10px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--accent-primary)', color: 'var(--text-primary)', fontSize: '16px', fontWeight: 600, outline: 'none' }} autoFocus />
                                                     <input type="color" value={editRoleColorVal} onChange={e => setEditRoleColorVal(e.target.value)} style={{ width: '32px', height: '32px', border: 'none', cursor: 'pointer', borderRadius: '6px' }} />
+                                                    <input type="text" value={editRoleEmojiVal} onChange={e => setEditRoleEmojiVal(e.target.value)} placeholder="Emoji" title="Role icon emoji" style={{ width: '48px', padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '16px', textAlign: 'center', outline: 'none' }} maxLength={4} />
                                                     <button onClick={saveRoleEdit} style={{ background: 'var(--accent-primary)', border: 'none', padding: '6px 12px', borderRadius: '6px', color: '#000', fontWeight: 600, cursor: 'pointer', fontSize: '12px' }}>Save</button>
                                                     <button onClick={() => setEditingRoleName(false)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '6px 12px', borderRadius: '6px', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: '12px' }}>Cancel</button>
                                                 </div>
@@ -2299,6 +2368,124 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                             >
                                                 {inviteRevoking === inv.code ? '...' : 'Revoke'}
                                             </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {/* ===================== TEMPLATES ===================== */}
+                    {activeTab === 'templates' && (
+                        <>
+                            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Templates</h2>
+                            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>Create templates from your server that others can use to create new servers.</p>
+
+                            {/* Create Template Form */}
+                            <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
+                                <div style={{ fontSize: '12px', textTransform: 'uppercase', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '12px' }}>Create Template</div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <input
+                                        type="text"
+                                        value={newTemplateName}
+                                        onChange={e => setNewTemplateName(e.target.value)}
+                                        placeholder="Template name"
+                                        style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                                    />
+                                    <textarea
+                                        value={newTemplateDesc}
+                                        onChange={e => setNewTemplateDesc(e.target.value)}
+                                        placeholder="Description (optional)"
+                                        rows={2}
+                                        style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                                    />
+                                    <button
+                                        onClick={async () => {
+                                            if (!guildId || !newTemplateName.trim()) return;
+                                            setTemplateCreating(true);
+                                            try {
+                                                const created = await api.guilds.createTemplate(guildId, {
+                                                    name: newTemplateName.trim(),
+                                                    description: newTemplateDesc.trim() || undefined,
+                                                });
+                                                setTemplates(prev => [...prev, {
+                                                    id: created.id,
+                                                    name: created.name || newTemplateName.trim(),
+                                                    description: created.description || newTemplateDesc.trim(),
+                                                    code: created.code || created.id,
+                                                    createdAt: 'Just now',
+                                                }]);
+                                                setNewTemplateName('');
+                                                setNewTemplateDesc('');
+                                                addToast({ title: 'Template created', variant: 'success' });
+                                            } catch (err: any) {
+                                                addToast({ title: 'Failed to create template', description: err?.message, variant: 'error' });
+                                            } finally {
+                                                setTemplateCreating(false);
+                                            }
+                                        }}
+                                        disabled={templateCreating || !newTemplateName.trim()}
+                                        style={{ alignSelf: 'flex-start', padding: '10px 24px', borderRadius: '8px', background: newTemplateName.trim() && !templateCreating ? 'var(--accent-primary)' : 'var(--bg-tertiary)', border: 'none', color: newTemplateName.trim() && !templateCreating ? '#000' : 'var(--text-muted)', fontWeight: 600, fontSize: '13px', cursor: newTemplateName.trim() && !templateCreating ? 'pointer' : 'default' }}
+                                    >
+                                        {templateCreating ? 'Creating...' : 'Create Template'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Template List */}
+                            {templatesLoading ? (
+                                <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)', fontSize: '14px' }}>
+                                    <RefreshCw size={16} style={{ marginRight: '8px', animation: 'spin 1s linear infinite' }} />
+                                    Loading templates...
+                                </div>
+                            ) : templates.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>
+                                    <p style={{ fontSize: '14px', fontWeight: 500 }}>No templates yet</p>
+                                    <p style={{ fontSize: '12px', marginTop: '4px' }}>Create one above to let others clone your server structure.</p>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    {templates.map(tmpl => (
+                                        <div key={tmpl.id} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                                <div>
+                                                    <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '4px' }}>{tmpl.name}</h3>
+                                                    {tmpl.description && <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{tmpl.description}</p>}
+                                                </div>
+                                                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tmpl.createdAt}</span>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--bg-tertiary)', borderRadius: '6px', marginBottom: '12px' }}>
+                                                <code style={{ flex: 1, fontSize: '13px', fontFamily: 'monospace', color: 'var(--accent-primary)' }}>{tmpl.code}</code>
+                                                <button
+                                                    onClick={() => { navigator.clipboard.writeText(tmpl.code).catch(() => {}); addToast({ title: 'Template code copied', variant: 'info' }); }}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+                                                >
+                                                    <Copy size={14} />
+                                                </button>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button
+                                                    onClick={async () => {
+                                                        if (!guildId) return;
+                                                        try {
+                                                            await api.guilds.syncTemplate(guildId, tmpl.code);
+                                                            addToast({ title: 'Template synced', variant: 'success' });
+                                                        } catch { addToast({ title: 'Failed to sync', variant: 'error' }); }
+                                                    }}
+                                                    style={{ padding: '6px 16px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                                                >Sync</button>
+                                                <button
+                                                    onClick={async () => {
+                                                        if (!guildId) return;
+                                                        try {
+                                                            await api.guilds.deleteTemplate(guildId, tmpl.code);
+                                                            setTemplates(prev => prev.filter(t => t.code !== tmpl.code));
+                                                            addToast({ title: 'Template deleted', variant: 'success' });
+                                                        } catch { addToast({ title: 'Failed to delete', variant: 'error' }); }
+                                                    }}
+                                                    style={{ padding: '6px 16px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--error)', color: 'var(--error)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                                                >Delete</button>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, Navigate, Outlet, Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users } from 'lucide-react';
+import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap } from 'lucide-react';
 import './components/chat.css';
 import CommandPalette from './components/ui/CommandPalette';
 import { playSound, setSoundVolume } from './utils/SoundManager';
@@ -171,7 +171,20 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
     const { openMenu } = useContextMenu();
     const { addToast } = useToast();
     const [notifPrefs, setNotifPrefs] = useState<{ type: 'guild' | 'channel'; id: string; name: string } | null>(null);
+    const [guildFolders, setGuildFolders] = useState<Array<{ id: string; name: string; color: string; guildIds: string[]; collapsed: boolean }>>([]);
     useUnreadStore(); // subscribe to re-render on unread changes
+
+    // Load guild folders from API
+    useEffect(() => {
+        api.users.getGuildFolders().then((folders: any[]) => {
+            if (Array.isArray(folders)) {
+                setGuildFolders(folders.map((f: any) => ({
+                    id: f.id, name: f.name || '', color: f.color || '#526df5',
+                    guildIds: f.guildIds || [], collapsed: false,
+                })));
+            }
+        }).catch(() => {});
+    }, []);
     const isAppRoot = location.pathname === '/' || [
         '/friends', '/discover', '/shop', '/marketplace', '/inventory',
         '/creator-dashboard', '/fame', '/dm',
@@ -204,6 +217,11 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                 }).catch(() => onOpenInvite());
             }},
             { id: 'notification-settings', label: 'Notification Settings', icon: Bell, onClick: () => setNotifPrefs({ type: 'guild', id: guild.id, name: guild.name }) },
+            { id: 'boost', label: 'Boost Portal', icon: Zap, onClick: () => {
+                api.guilds.boost(guild.id).then(() => {
+                    addToast({ title: `Boosted ${guild.name}!`, variant: 'success' });
+                }).catch(() => addToast({ title: 'Failed to boost', variant: 'error' }));
+            }},
             { id: 'activity-toggle', label: activityEnabled ? 'Disable Activity Status' : 'Enable Activity Status', icon: Activity, onClick: () => {
                 const newOverrides = { ...overrides, [guild.id]: !activityEnabled };
                 try { localStorage.setItem('gratonite-server-activity-overrides', JSON.stringify(newOverrides)); } catch {}
@@ -212,6 +230,13 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
             { id: 'privacy-settings', label: 'Privacy Settings', icon: ShieldIcon, onClick: () => onOpenSettings() },
             { divider: true, id: 'div2', label: '', onClick: () => {} },
             { id: 'copy-id', label: 'Copy Portal ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(guild.id).catch(() => {}); addToast({ title: 'Portal ID copied', variant: 'info' }); } },
+            { id: 'create-folder', label: 'Create Folder', icon: FolderIcon, onClick: () => {
+                const folderId = `folder-${Date.now()}`;
+                const newFolder = { id: folderId, name: 'New Folder', color: '#526df5', guildIds: [guild.id], collapsed: false };
+                setGuildFolders(prev => [...prev, newFolder]);
+                api.users.createGuildFolder({ name: 'New Folder', color: '#526df5', guildIds: [guild.id] }).catch(() => {});
+                addToast({ title: 'Folder created', variant: 'success' });
+            }},
             { id: 'leave', label: 'Leave Portal', icon: LogOut, color: 'var(--error)', onClick: () => {
                 api.guilds.leave(guild.id).then(() => {
                     onGuildsRefresh?.();
@@ -322,6 +347,16 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const [showCreateChannel, setShowCreateChannel] = useState<{ type: 'text' | 'voice'; parentId?: string } | null>(null);
     const [notifPrefs, setNotifPrefs] = useState<{ type: 'guild' | 'channel'; id: string; name: string } | null>(null);
     const [newChannelName, setNewChannelName] = useState('');
+    const [favoriteChannelIds, setFavoriteChannelIds] = useState<Set<string>>(new Set());
+
+    // Load favorites
+    useEffect(() => {
+        api.users.getFavorites().then((favs: any[]) => {
+            if (Array.isArray(favs)) {
+                setFavoriteChannelIds(new Set(favs.map((f: any) => f.channelId || f.id)));
+            }
+        }).catch(() => {});
+    }, []);
 
     // Guild data for guild mode
     const location = useLocation();
@@ -572,8 +607,20 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     };
 
     const handleChannelContext = (e: React.MouseEvent, channel: { id: string; name: string }) => {
+        const isFav = favoriteChannelIds.has(channel.id);
         openMenu(e, [
             { id: 'mark-read', label: 'Mark as Read', icon: Circle, onClick: () => addToast({ title: 'Channel Marked as Read', variant: 'info' }) },
+            { id: 'favorite', label: isFav ? 'Remove from Favorites' : 'Add to Favorites', icon: Star, onClick: () => {
+                if (isFav) {
+                    setFavoriteChannelIds(prev => { const next = new Set(prev); next.delete(channel.id); return next; });
+                    api.users.removeFavorite(channel.id).catch(() => {});
+                    addToast({ title: `Removed #${channel.name} from favorites`, variant: 'info' });
+                } else {
+                    setFavoriteChannelIds(prev => new Set(prev).add(channel.id));
+                    api.users.addFavorite(channel.id).catch(() => {});
+                    addToast({ title: `Added #${channel.name} to favorites`, variant: 'success' });
+                }
+            }},
             { id: 'mute', label: 'Mute Channel', icon: Volume1, onClick: () => addToast({ title: 'Channel Muted', variant: 'info' }) },
             { divider: true, id: 'div1', label: '', onClick: () => {} },
             { id: 'edit', label: 'Edit Channel', icon: Settings, onClick: () => {
@@ -1086,8 +1133,27 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         );
                     };
 
+                    const favoriteChannels = guildChannels.filter(c => favoriteChannelIds.has(c.id));
+
                     return (
                         <>
+                            {/* ── FAVORITES ── */}
+                            {favoriteChannels.length > 0 && (
+                                <>
+                                    <div
+                                        style={sectionHeaderStyle}
+                                        onClick={() => toggleCategory('__favorites__')}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            {collapsed['__favorites__'] ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
+                                            <Star size={10} style={{ color: '#faa61a' }} />
+                                            <span>Favorites</span>
+                                        </div>
+                                    </div>
+                                    {!collapsed['__favorites__'] && favoriteChannels.map(renderChannel)}
+                                </>
+                            )}
+
                             {/* ── TEXT CHANNELS ── */}
                             <div
                                 style={sectionHeaderStyle}
@@ -1215,6 +1281,7 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile }: { onOpenProfile: () =
     const [popoverUser, setPopoverUser] = useState<{ member: MemberWithPresence; position: { x: number; y: number } } | null>(null);
     const [banDialog, setBanDialog] = useState<{ userId: string; name: string } | null>(null);
     const [banReason, setBanReason] = useState('');
+    const [banDuration, setBanDuration] = useState(0);
     const [banSubmitting, setBanSubmitting] = useState(false);
 
     useEffect(() => {
@@ -1382,11 +1449,12 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile }: { onOpenProfile: () =
         if (!guildId || !banDialog) return;
         setBanSubmitting(true);
         try {
-            await api.guilds.ban(guildId, banDialog.userId, banReason || undefined);
+            await api.guilds.ban(guildId, banDialog.userId, banReason || undefined, banDuration || undefined);
             setMembers(prev => prev.filter(m => m.userId !== banDialog.userId));
-            addToast({ title: 'User banned', description: `${banDialog.name} has been banned from the server.`, variant: 'success' });
+            addToast({ title: 'User banned', description: `${banDialog.name} has been banned${banDuration ? ` for ${banDuration === 60 ? '1 hour' : banDuration === 1440 ? '24 hours' : banDuration === 10080 ? '7 days' : '30 days'}` : ' permanently'}.`, variant: 'success' });
             setBanDialog(null);
             setBanReason('');
+            setBanDuration(0);
         } catch {
             addToast({ title: 'Failed to ban user', variant: 'error' });
         } finally {
@@ -1562,7 +1630,7 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile }: { onOpenProfile: () =
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
                     background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     zIndex: 10000,
-                }} onClick={() => { setBanDialog(null); setBanReason(''); }}>
+                }} onClick={() => { setBanDialog(null); setBanReason(''); setBanDuration(0); }}>
                     <div style={{
                         width: '440px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg, 12px)',
                         border: '1px solid var(--stroke)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
@@ -1580,7 +1648,7 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile }: { onOpenProfile: () =
                                     Ban {banDialog.name}
                                 </h3>
                                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, marginTop: '2px' }}>
-                                    This user will be permanently banned from the server.
+                                    {banDuration ? 'This user will be temporarily banned.' : 'This user will be permanently banned from the server.'}
                                 </p>
                             </div>
                         </div>
@@ -1604,9 +1672,32 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile }: { onOpenProfile: () =
                             />
                         </div>
 
+                        <div>
+                            <label style={{
+                                display: 'block', fontSize: '12px', textTransform: 'uppercase',
+                                color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px',
+                            }}>BAN DURATION</label>
+                            <select
+                                value={banDuration}
+                                onChange={(e) => setBanDuration(Number(e.target.value))}
+                                style={{
+                                    width: '100%', padding: '10px 14px', borderRadius: '8px',
+                                    background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                    color: 'var(--text-primary)', fontSize: '14px', outline: 'none',
+                                    boxSizing: 'border-box',
+                                }}
+                            >
+                                <option value={0}>Permanent</option>
+                                <option value={60}>1 hour</option>
+                                <option value={1440}>24 hours</option>
+                                <option value={10080}>7 days</option>
+                                <option value={43200}>30 days</option>
+                            </select>
+                        </div>
+
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                             <button
-                                onClick={() => { setBanDialog(null); setBanReason(''); }}
+                                onClick={() => { setBanDialog(null); setBanReason(''); setBanDuration(0); }}
                                 style={{
                                     padding: '10px 20px', borderRadius: '8px', border: 'none',
                                     background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
@@ -1622,7 +1713,7 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile }: { onOpenProfile: () =
                                     fontSize: '14px', fontWeight: 600, cursor: banSubmitting ? 'default' : 'pointer',
                                     opacity: banSubmitting ? 0.6 : 1,
                                 }}
-                            >{banSubmitting ? 'Banning...' : 'Ban'}</button>
+                            >{banSubmitting ? 'Banning...' : (banDuration ? 'Temp Ban' : 'Ban')}</button>
                         </div>
                     </div>
                 </div>

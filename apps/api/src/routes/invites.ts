@@ -5,11 +5,12 @@ import { db } from '../db/index';
 import { guildInvites } from '../db/schema/invites';
 import { guilds, guildMembers } from '../db/schema/guilds';
 import { guildBans } from '../db/schema/bans';
-import { roles as rolesTable } from '../db/schema/roles';
+import { roles as rolesTable, Permissions } from '../db/schema/roles';
 import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { getIO } from '../lib/socket-io';
+import { hasPermission } from './roles';
 import crypto from 'crypto';
 
 export const invitesRouter = Router();
@@ -119,11 +120,39 @@ invitesRouter.get('/invites/:code', async (req: Request, res: Response): Promise
   res.json({ invite: { code: invite.code, guildId: invite.guildId }, guild });
 });
 
-/** POST /api/v1/invites/:code — join guild via invite */
+/** POST /api/v1/invites/:code — join guild via invite or vanity code */
 invitesRouter.post('/invites/:code', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { code } = req.params as Record<string, string>;
   const [invite] = await db.select().from(guildInvites).where(eq(guildInvites.code, code)).limit(1);
-  if (!invite) { res.status(404).json({ code: 'NOT_FOUND', message: 'Invite not found' }); return; }
+
+  // Fallback: check if this is a vanity code
+  if (!invite) {
+    const [vanityGuild] = await db.select({ id: guilds.id }).from(guilds).where(eq(guilds.vanityCode, code)).limit(1);
+    if (!vanityGuild) { res.status(404).json({ code: 'NOT_FOUND', message: 'Invite not found' }); return; }
+
+    // Check ban
+    const [ban] = await db.select({ id: guildBans.id }).from(guildBans)
+      .where(and(eq(guildBans.guildId, vanityGuild.id), eq(guildBans.userId, req.userId!))).limit(1);
+    if (ban) { res.status(403).json({ code: 'BANNED', message: 'You are banned from this guild' }); return; }
+
+    // Check already a member
+    const [existing] = await db.select({ id: guildMembers.id }).from(guildMembers)
+      .where(and(eq(guildMembers.guildId, vanityGuild.id), eq(guildMembers.userId, req.userId!))).limit(1);
+    if (existing) { res.json({ code: 'ALREADY_MEMBER', guildId: vanityGuild.id }); return; }
+
+    // Join guild via vanity code
+    await db.insert(guildMembers).values({ guildId: vanityGuild.id, userId: req.userId! });
+
+    const [user] = await db.select({ id: users.id, username: users.username, displayName: users.displayName, avatarHash: users.avatarHash })
+      .from(users).where(eq(users.id, req.userId!)).limit(1);
+
+    try {
+      getIO().to(`guild:${vanityGuild.id}`).emit('GUILD_MEMBER_ADD', { guildId: vanityGuild.id, user });
+    } catch {}
+
+    res.json({ code: 'OK', guildId: vanityGuild.id });
+    return;
+  }
 
   if (invite.expiresAt && invite.expiresAt < new Date()) {
     res.status(410).json({ code: 'EXPIRED', message: 'Invite has expired' }); return;
@@ -171,6 +200,22 @@ invitesRouter.delete('/invites/:code', requireAuth, async (req: Request, res: Re
   if (invite.createdBy !== req.userId && guild?.ownerId !== req.userId) {
     res.status(403).json({ code: 'FORBIDDEN', message: 'Not authorized' }); return;
   }
+
+  await db.delete(guildInvites).where(eq(guildInvites.code, code));
+  res.json({ code: 'OK', message: 'Invite revoked' });
+});
+
+/** DELETE /api/v1/guilds/:guildId/invites/:code — revoke invite (MANAGE_GUILD perm) */
+invitesRouter.delete('/guilds/:guildId/invites/:code', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId, code } = req.params as Record<string, string>;
+
+  if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_GUILD))) {
+    res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_GUILD permission' }); return;
+  }
+
+  const [invite] = await db.select().from(guildInvites)
+    .where(and(eq(guildInvites.code, code), eq(guildInvites.guildId, guildId))).limit(1);
+  if (!invite) { res.status(404).json({ code: 'NOT_FOUND', message: 'Invite not found' }); return; }
 
   await db.delete(guildInvites).where(eq(guildInvites.code, code));
   res.json({ code: 'OK', message: 'Invite revoked' });

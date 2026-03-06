@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { User, Smile, Check, Paintbrush, LogOut } from 'lucide-react';
+import { User, Smile, Check, Paintbrush, LogOut, Gamepad2, Headphones, Eye } from 'lucide-react';
 import { useTheme, AppTheme } from '../ui/ThemeProvider';
+import { api } from '../../lib/api';
 
 export type PresenceType = 'online' | 'idle' | 'dnd' | 'invisible';
 
@@ -25,11 +26,30 @@ export const PRESENCE_COLORS = {
     invisible: '#6b7280'
 };
 
+const ACTIVITY_TYPES = [
+    { value: 'PLAYING', label: 'Playing', icon: Gamepad2 },
+    { value: 'LISTENING', label: 'Listening to', icon: Headphones },
+    { value: 'WATCHING', label: 'Watching', icon: Eye },
+] as const;
+
+const STATUS_EXPIRY_OPTIONS = [
+    { label: "Don't clear", value: '' },
+    { label: 'Clear after 1 hour', value: '1h' },
+    { label: 'Clear after 4 hours', value: '4h' },
+    { label: 'Clear today', value: 'today' },
+    { label: 'Clear this week', value: 'week' },
+] as const;
+
 const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, customStatus, onChangeStatus, onOpenProfile, onLogout, userName, avatarUrl }: PresenceMenuProps) => {
     const [isEditingStatus, setIsEditingStatus] = useState(false);
     const [statusInput, setStatusInput] = useState(customStatus || '');
+    const [statusEmoji, setStatusEmoji] = useState('');
+    const [statusExpiry, setStatusExpiry] = useState('');
     const [mounted, setMounted] = useState(false);
     const { theme, setTheme } = useTheme();
+    const [showActivityEditor, setShowActivityEditor] = useState(false);
+    const [activityType, setActivityType] = useState<string>('PLAYING');
+    const [activityName, setActivityName] = useState('');
 
     useEffect(() => {
         requestAnimationFrame(() => {
@@ -55,8 +75,25 @@ const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, cust
     if (!isOpen) return null;
 
     const handleSetCustomStatus = () => {
-        onChangeStatus(statusInput.trim() ? statusInput : null);
+        const text = statusInput.trim() ? statusInput : null;
+        onChangeStatus(text);
+        // Compute expiry
+        let expiresAt: string | null = null;
+        if (statusExpiry === '1h') expiresAt = new Date(Date.now() + 3600000).toISOString();
+        else if (statusExpiry === '4h') expiresAt = new Date(Date.now() + 14400000).toISOString();
+        else if (statusExpiry === 'today') { const d = new Date(); d.setHours(23, 59, 59, 999); expiresAt = d.toISOString(); }
+        else if (statusExpiry === 'week') { const d = new Date(); d.setDate(d.getDate() + (7 - d.getDay())); d.setHours(23, 59, 59, 999); expiresAt = d.toISOString(); }
+        api.users.updateCustomStatus({ text, expiresAt, emoji: statusEmoji || null }).catch(() => {});
         setIsEditingStatus(false);
+    };
+
+    const handleSetActivity = () => {
+        if (activityName.trim()) {
+            api.users.setActivity({ type: activityType, name: activityName.trim() }).catch(() => {});
+        } else {
+            api.users.clearActivity().catch(() => {});
+        }
+        setShowActivityEditor(false);
     };
 
     const handleInputKeyDown = (e: React.KeyboardEvent) => {
@@ -114,17 +151,37 @@ const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, cust
                 {isEditingStatus ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-sm)' }}>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Set a custom status</div>
-                        <input
-                            autoFocus
-                            type="text"
-                            className="chat-input"
-                            style={{ padding: '8px', fontSize: '13px', background: 'var(--bg-primary)' }}
-                            value={statusInput}
-                            onChange={e => setStatusInput(e.target.value)}
-                            onKeyDown={handleInputKeyDown}
-                            placeholder="What's happening?"
-                            maxLength={50}
-                        />
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <input
+                                type="text"
+                                className="chat-input"
+                                style={{ padding: '8px', fontSize: '16px', background: 'var(--bg-primary)', width: '40px', textAlign: 'center' }}
+                                value={statusEmoji}
+                                onChange={e => setStatusEmoji(e.target.value)}
+                                placeholder="😀"
+                                maxLength={2}
+                            />
+                            <input
+                                autoFocus
+                                type="text"
+                                className="chat-input"
+                                style={{ padding: '8px', fontSize: '13px', background: 'var(--bg-primary)', flex: 1 }}
+                                value={statusInput}
+                                onChange={e => setStatusInput(e.target.value)}
+                                onKeyDown={handleInputKeyDown}
+                                placeholder="What's happening?"
+                                maxLength={50}
+                            />
+                        </div>
+                        <select
+                            value={statusExpiry}
+                            onChange={e => setStatusExpiry(e.target.value)}
+                            style={{ padding: '6px 8px', fontSize: '12px', background: 'var(--bg-primary)', color: 'var(--text-secondary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)' }}
+                        >
+                            {STATUS_EXPIRY_OPTIONS.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                             <button onClick={() => setIsEditingStatus(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer' }}>Cancel</button>
                             <button onClick={handleSetCustomStatus} style={{ background: 'var(--accent-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', padding: '4px 12px', fontSize: '12px', cursor: 'pointer' }}>Save</button>
@@ -134,6 +191,47 @@ const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, cust
                     <button onClick={() => setIsEditingStatus(true)} className="menu-item" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', background: 'transparent', border: 'none', width: '100%', textAlign: 'left', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }}>
                         <Smile size={16} />
                         <span style={{ fontSize: '14px' }}>{customStatus ? 'Edit text status' : 'Set custom status'}</span>
+                    </button>
+                )}
+
+                {/* Set Activity */}
+                {showActivityEditor ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '4px', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-sm)' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Set activity</div>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                            {ACTIVITY_TYPES.map(at => {
+                                const Icon = at.icon;
+                                const isActive = activityType === at.value;
+                                return (
+                                    <button key={at.value} onClick={() => setActivityType(at.value)}
+                                        style={{ flex: 1, padding: '6px', fontSize: '11px', background: isActive ? 'var(--accent-primary)' : 'var(--bg-primary)', color: isActive ? '#fff' : 'var(--text-secondary)', border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                        <Icon size={12} /> {at.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <input
+                            type="text"
+                            className="chat-input"
+                            style={{ padding: '8px', fontSize: '13px', background: 'var(--bg-primary)' }}
+                            value={activityName}
+                            onChange={e => setActivityName(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleSetActivity(); if (e.key === 'Escape') setShowActivityEditor(false); }}
+                            placeholder="Activity name..."
+                            maxLength={100}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <button onClick={() => { setActivityName(''); handleSetActivity(); }} style={{ background: 'transparent', border: 'none', color: 'var(--error)', fontSize: '12px', cursor: 'pointer' }}>Clear</button>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={() => setShowActivityEditor(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer' }}>Cancel</button>
+                                <button onClick={handleSetActivity} style={{ background: 'var(--accent-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', padding: '4px 12px', fontSize: '12px', cursor: 'pointer' }}>Set</button>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <button onClick={() => setShowActivityEditor(true)} className="menu-item" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', background: 'transparent', border: 'none', width: '100%', textAlign: 'left', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }}>
+                        <Gamepad2 size={16} />
+                        <span style={{ fontSize: '14px' }}>Set Activity</span>
                     </button>
                 )}
 

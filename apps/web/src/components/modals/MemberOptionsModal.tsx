@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Link2, Bell, BellOff, User, EyeOff, LogOut, Check, Copy, Clock } from 'lucide-react';
+import { X, Link2, Bell, BellOff, User, EyeOff, LogOut, Check, Copy, Clock, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
@@ -68,6 +68,10 @@ const MemberOptionsModal = ({ onClose, guildId, guildName }: { onClose: () => vo
     const [timeoutTarget, setTimeoutTarget] = useState('');
     const [timeoutDuration, setTimeoutDuration] = useState(300);
     const [timeoutApplying, setTimeoutApplying] = useState(false);
+    const [warnTarget, setWarnTarget] = useState('');
+    const [warnReason, setWarnReason] = useState('');
+    const [warnSending, setWarnSending] = useState(false);
+    const [warningCounts, setWarningCounts] = useState<Record<string, number>>({});
 
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -124,6 +128,31 @@ const MemberOptionsModal = ({ onClose, guildId, guildName }: { onClose: () => vo
             addToast({ title: 'Failed to apply timeout', variant: 'error' });
         } finally {
             setTimeoutApplying(false);
+        }
+    };
+
+    // Fetch warning counts for members
+    useEffect(() => {
+        if (!guildId || !canModerate || members.length === 0) return;
+        members.forEach(m => {
+            api.guilds.getMemberWarnings?.(guildId, m.userId)?.then((warnings: any[]) => {
+                setWarningCounts(prev => ({ ...prev, [m.userId]: Array.isArray(warnings) ? warnings.length : 0 }));
+            }).catch(() => {});
+        });
+    }, [guildId, canModerate, members]);
+
+    const handleWarn = async (targetUserId: string, reason: string) => {
+        if (!guildId) return;
+        setWarnSending(true);
+        try {
+            await api.guilds.warnMember?.(guildId, targetUserId, reason);
+            addToast({ title: 'Warning issued', variant: 'success' });
+            setWarningCounts(prev => ({ ...prev, [targetUserId]: (prev[targetUserId] || 0) + 1 }));
+            setWarnReason('');
+        } catch {
+            addToast({ title: 'Failed to issue warning', variant: 'error' });
+        } finally {
+            setWarnSending(false);
         }
     };
 
@@ -253,6 +282,50 @@ const MemberOptionsModal = ({ onClose, guildId, guildName }: { onClose: () => vo
 
                     {canModerate && (
                         <>
+                            <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />
+
+                            {/* Warn Member */}
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>Warn Member</label>
+
+                            <select
+                                value={warnTarget}
+                                onChange={e => setWarnTarget(e.target.value)}
+                                style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
+                            >
+                                <option value="">Select a member...</option>
+                                {members.filter(m => m.userId !== (localStorage.getItem('userId') || '')).map(m => (
+                                    <option key={m.userId} value={m.userId}>
+                                        {m.displayName || m.username}{warningCounts[m.userId] ? ` (${warningCounts[m.userId]} warning${warningCounts[m.userId] !== 1 ? 's' : ''})` : ''}
+                                    </option>
+                                ))}
+                            </select>
+
+                            {warnTarget && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {warningCounts[warnTarget] > 0 && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '6px', fontSize: '12px', color: '#f59e0b' }}>
+                                            <AlertTriangle size={12} /> {warningCounts[warnTarget]} warning{warningCounts[warnTarget] !== 1 ? 's' : ''} on record
+                                        </div>
+                                    )}
+                                    <input
+                                        type="text"
+                                        placeholder="Reason for warning..."
+                                        value={warnReason}
+                                        onChange={e => setWarnReason(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter' && warnReason.trim()) handleWarn(warnTarget, warnReason.trim()); }}
+                                        style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                                    />
+                                    <button
+                                        onClick={() => { if (warnReason.trim()) handleWarn(warnTarget, warnReason.trim()); }}
+                                        disabled={warnSending || !warnReason.trim()}
+                                        className="auth-button"
+                                        style={{ margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: '#f59e0b', color: '#000', border: '3px solid #000', fontWeight: 800, opacity: (warnSending || !warnReason.trim()) ? 0.6 : 1 }}
+                                    >
+                                        <AlertTriangle size={14} /> {warnSending ? 'Sending...' : 'Issue Warning'}
+                                    </button>
+                                </div>
+                            )}
+
                             <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />
 
                             {/* Timeout Member */}

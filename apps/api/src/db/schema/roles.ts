@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, boolean, bigint, integer, timestamp, unique } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, boolean, bigint, integer, timestamp, unique } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { guilds } from './guilds';
 import { users } from './users';
@@ -48,6 +48,8 @@ export const roles = pgTable('roles', {
   permissions: bigint('permissions', { mode: 'bigint' }).notNull().default(sql.raw(`${Number(DEFAULT_PERMISSIONS)}`)),
   hoist: boolean('hoist').notNull().default(false),
   mentionable: boolean('mentionable').notNull().default(false),
+  iconHash: text('icon_hash'),
+  unicodeEmoji: text('unicode_emoji'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

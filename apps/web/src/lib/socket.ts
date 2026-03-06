@@ -54,6 +54,11 @@ export interface MessageDeletePayload {
   channelId: string;
 }
 
+export interface MessageDeleteBulkPayload {
+  ids: string[];
+  channelId: string;
+}
+
 export interface ReactionPayload {
   messageId: string;
   channelId: string;
@@ -134,6 +139,7 @@ type NotificationCallback = (payload: NotificationCreatePayload) => void;
 type MessageCreateCallback = (payload: MessageCreatePayload) => void;
 type MessageUpdateCallback = (payload: MessageUpdatePayload) => void;
 type MessageDeleteCallback = (payload: MessageDeletePayload) => void;
+type MessageDeleteBulkCallback = (payload: MessageDeleteBulkPayload) => void;
 type ReactionCallback = (payload: ReactionPayload) => void;
 type VoiceStateUpdateCallback = (payload: VoiceStateUpdatePayload) => void;
 type ThreadCreateCallback = (payload: ThreadCreatePayload) => void;
@@ -152,6 +158,7 @@ const notificationListeners = new Set<NotificationCallback>();
 const messageCreateListeners = new Set<MessageCreateCallback>();
 const messageUpdateListeners = new Set<MessageUpdateCallback>();
 const messageDeleteListeners = new Set<MessageDeleteCallback>();
+const messageDeleteBulkListeners = new Set<MessageDeleteBulkCallback>();
 const reactionAddListeners = new Set<ReactionCallback>();
 const reactionRemoveListeners = new Set<ReactionCallback>();
 const voiceStateUpdateListeners = new Set<VoiceStateUpdateCallback>();
@@ -202,6 +209,11 @@ export function onMessageUpdate(cb: MessageUpdateCallback): () => void {
 export function onMessageDelete(cb: MessageDeleteCallback): () => void {
   messageDeleteListeners.add(cb);
   return () => { messageDeleteListeners.delete(cb); };
+}
+
+export function onMessageDeleteBulk(cb: MessageDeleteBulkCallback): () => void {
+  messageDeleteBulkListeners.add(cb);
+  return () => { messageDeleteBulkListeners.delete(cb); };
 }
 
 export function onReactionAdd(cb: ReactionCallback): () => void {
@@ -398,6 +410,10 @@ export function connectSocket(): GratoniteSocket {
 
   socket.on('MESSAGE_DELETE', (data: MessageDeletePayload) => {
     messageDeleteListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('MESSAGE_DELETE_BULK', (data: MessageDeleteBulkPayload) => {
+    messageDeleteBulkListeners.forEach(cb => cb(data));
   });
 
   socket.on('VOICE_STATE_UPDATE', (data: VoiceStateUpdatePayload) => {
