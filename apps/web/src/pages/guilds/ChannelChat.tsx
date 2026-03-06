@@ -1918,6 +1918,8 @@ const ChannelChat = () => {
                 zIndex: 0
             }} />
 
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, position: 'relative', zIndex: 1, background: 'transparent', overflow: 'hidden' }}>
+
             <header className="top-bar" style={{ zIndex: 2 }}>
                 {/* Mobile Toggles */}
                 <div className="mobile-header-toggles">
@@ -2780,6 +2782,8 @@ const ChannelChat = () => {
                     }}
                 />
             )}
+
+            </div>
         </main >
     );
 };
