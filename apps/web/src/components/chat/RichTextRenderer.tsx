@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 type RichTextRendererProps = {
     content: string;
     customEmojis?: Array<{ name: string; url: string }>;
+    members?: Array<{ id: string; username: string; displayName: string }>;
+    channels?: Array<{ id: string; name: string }>;
 };
 
 // ─── Spoiler Tag Component ────────────────────────────────────────────────────
@@ -49,6 +51,8 @@ const IMAGE_URL_REGEX = /^https?:\/\/[^\s]+\.(png|jpe?g|gif|webp|svg|bmp)(\?[^\s
 
 type InlineCtx = {
     customEmojis?: Array<{ name: string; url: string }>;
+    members?: Array<{ id: string; username: string; displayName: string }>;
+    channels?: Array<{ id: string; name: string }>;
     keyPrefix: string;
 };
 
@@ -198,6 +202,48 @@ function applyRemainingRules(text: string, ctx: InlineCtx, _startRule: number, d
 function renderLeaf(text: string, ctx: InlineCtx, depth: number): React.ReactNode[] {
     const kp = `${ctx.keyPrefix}-leaf${depth}`;
 
+    // Parse <@userId> user mentions
+    const userMentionRe = /<@([a-zA-Z0-9_-]+)>/g;
+    if (userMentionRe.test(text)) {
+        const parts = text.split(/(<@[a-zA-Z0-9_-]+>)/g);
+        const result: React.ReactNode[] = [];
+        parts.forEach((part, i) => {
+            const m = part.match(/^<@([a-zA-Z0-9_-]+)>$/);
+            if (m) {
+                const userId = m[1];
+                const member = ctx.members?.find(u => u.id === userId);
+                const displayName = member ? (member.displayName || member.username) : userId;
+                result.push(
+                    <span key={`${kp}-umention-${i}`} className="mention">@{displayName}</span>
+                );
+            } else if (part) {
+                result.push(...renderLeaf(part, { ...ctx, keyPrefix: `${kp}-um-${i}` }, depth + 1));
+            }
+        });
+        return result;
+    }
+
+    // Parse <#channelId> channel mentions
+    const channelMentionRe = /<#([a-zA-Z0-9_-]+)>/g;
+    if (channelMentionRe.test(text)) {
+        const parts = text.split(/(<#[a-zA-Z0-9_-]+>)/g);
+        const result: React.ReactNode[] = [];
+        parts.forEach((part, i) => {
+            const m = part.match(/^<#([a-zA-Z0-9_-]+)>$/);
+            if (m) {
+                const channelId = m[1];
+                const channel = ctx.channels?.find(c => c.id === channelId);
+                const channelName = channel ? channel.name : channelId;
+                result.push(
+                    <span key={`${kp}-cmention-${i}`} className="mention">#{channelName}</span>
+                );
+            } else if (part) {
+                result.push(...renderLeaf(part, { ...ctx, keyPrefix: `${kp}-cm-${i}` }, depth + 1));
+            }
+        });
+        return result;
+    }
+
     // Handle already-stored custom:name:url tokens (legacy format from old preprocessMessage)
     const customTokenRe = /(custom:[a-zA-Z0-9_]+:https?:\/\/[^\s]+)/g;
     if (customTokenRe.test(text)) {
@@ -279,10 +325,10 @@ function renderCustomEmojis(text: string, ctx: InlineCtx, keyPrefix: string): Re
 // ─── Block-Level Parser ───────────────────────────────────────────────────────
 // Handles: code blocks, block quotes, headers, subtext, lists, then inline.
 
-export const RichTextRenderer: React.FC<RichTextRendererProps> = ({ content, customEmojis }) => {
+export const RichTextRenderer: React.FC<RichTextRendererProps> = ({ content, customEmojis, members, channels }) => {
     if (!content) return null;
 
-    const ctx: InlineCtx = { customEmojis, keyPrefix: 'rt' };
+    const ctx: InlineCtx = { customEmojis, members, channels, keyPrefix: 'rt' };
 
     // 1. Split by code blocks first — they are sacred (no formatting inside)
     const codeBlockRe = /```([\s\S]*?)```/g;
