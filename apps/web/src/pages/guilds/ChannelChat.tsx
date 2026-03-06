@@ -75,6 +75,7 @@ type Message = {
     replyToId?: string;
     replyToAuthor?: string;
     replyToContent?: string;
+    threadReplyCount?: number;
     attachments?: Attachment[];
     authorRoleColor?: string;
     authorAvatarHash?: string | null;
@@ -263,21 +264,27 @@ const MemoizedMessageItem = memo(({
                     {msg.replyToId && msg.replyToAuthor && (
                         <div style={{
                             display: 'flex', alignItems: 'center', gap: '6px',
-                            fontSize: '12px', color: 'var(--text-muted)',
-                            marginBottom: '4px', paddingLeft: '12px',
+                            fontSize: '11px', marginBottom: '4px',
+                            paddingLeft: '8px', paddingRight: '8px',
+                            paddingTop: '3px', paddingBottom: '3px',
+                            background: 'rgba(255,255,255,0.03)',
                             borderLeft: '2px solid var(--accent-primary)',
-                            cursor: 'pointer', maxWidth: '100%',
-                            overflow: 'hidden',
+                            borderRadius: '0 4px 4px 0',
+                            cursor: 'pointer',
+                            maxWidth: '100%', overflow: 'hidden',
+                        }} onClick={() => {
+                            const el = document.querySelector(`[data-message-id="${msg.replyToId}"]`);
+                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         }}>
-                            <Reply size={12} style={{ flexShrink: 0, color: 'var(--accent-primary)' }} />
-                            <span style={{ fontWeight: 600, color: 'var(--text-secondary)', flexShrink: 0 }}>
+                            <Reply size={11} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                            <span style={{ fontWeight: 600, color: 'var(--accent-primary)', flexShrink: 0, fontSize: '11px' }}>
                                 {msg.replyToAuthor}
                             </span>
                             <span style={{
                                 overflow: 'hidden', textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap', flex: 1, opacity: 0.8,
+                                whiteSpace: 'nowrap', flex: 1, color: 'var(--text-muted)', fontSize: '11px',
                             }}>
-                                {msg.replyToContent || 'Click to see message'}
+                                {msg.replyToContent || '— click to view'}
                             </span>
                         </div>
                     )}
@@ -386,6 +393,20 @@ const MemoizedMessageItem = memo(({
                                         <span>{r.emoji}</span> <span style={{ fontSize: '11px', fontWeight: 600 }}>{r.count}</span>
                                     </button>
                                 ))}
+                            </div>
+                        )}
+                        {/* Thread reply count */}
+                        {(msg.threadReplyCount ?? 0) > 0 && (
+                            <div
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                    marginTop: '4px', cursor: 'pointer', color: 'var(--accent-primary)',
+                                    fontSize: '12px', fontWeight: 600,
+                                }}
+                                onClick={() => setActiveThreadMessage?.(msg)}
+                            >
+                                <MessageSquare size={12} />
+                                {msg.threadReplyCount} {msg.threadReplyCount === 1 ? 'reply' : 'replies'}
                             </div>
                         )}
                     </div>
@@ -873,6 +894,7 @@ const ChannelChat = () => {
             content: m.content || '',
             edited: m.edited || false,
             replyToId: m.replyToId || undefined,
+            threadReplyCount: m.threadReplyCount ?? 0,
             attachments: Array.isArray(m.attachments) && m.attachments.length > 0 ? m.attachments : undefined,
             reactions: Array.isArray(m.reactions) && m.reactions.length > 0 ? m.reactions : undefined,
             authorRoleColor: m.authorId ? roleColorCacheRef.current.get(m.authorId) : undefined,

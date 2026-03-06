@@ -41,15 +41,15 @@
 
             /* Fix message content structure to allow absolute positioning of toolbar */
             .message {
-                padding: 4px 16px;
+                padding: 2px 16px;
                 margin: 0;
                 display: flex;
-                gap: 16px;
+                gap: 12px;
                 transition: background-color 0.1s;
             }
 
             .message:hover {
-                background-color: rgba(255, 255, 255, 0.03);
+                background-color: rgba(255, 255, 255, 0.04);
             }
 
             .message-toolbar {
