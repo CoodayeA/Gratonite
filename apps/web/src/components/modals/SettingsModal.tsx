@@ -1917,6 +1917,24 @@ const SettingsModal = ({
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Email Notifications */}
+                                <div style={{ height: '1px', background: 'var(--stroke)', margin: '24px 0' }} />
+                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Email Notifications</h3>
+                                <div style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '12px', border: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                                        <input type="checkbox" defaultChecked={false} onChange={e => {
+                                            api.users.updateSettings({ emailNotifications: { mentions: e.target.checked } }).catch(() => {});
+                                        }} style={{ accentColor: 'var(--accent-primary)' }} />
+                                        Email when mentioned while offline
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                                        <input type="checkbox" defaultChecked={false} onChange={e => {
+                                            api.users.updateSettings({ emailNotifications: { dms: e.target.checked } }).catch(() => {});
+                                        }} style={{ accentColor: 'var(--accent-primary)' }} />
+                                        Email for DMs while offline
+                                    </label>
+                                </div>
                             </>
                         )}
                         {activeTab === 'privacy' && (

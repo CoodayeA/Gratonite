@@ -134,6 +134,12 @@ export const guilds = pgTable('guilds', {
   /**
    * Timestamp of guild creation. Set once by Postgres, never changed.
    */
+  /** Server rules text displayed to members. */
+  rulesText: text('rules_text'),
+
+  /** Whether members must agree to rules before chatting. */
+  requireRulesAgreement: boolean('require_rules_agreement').notNull().default(false),
+
   /** Vanity invite code for the guild (unique). */
   vanityCode: text('vanity_code').unique(),
 
@@ -220,6 +226,9 @@ export const guildMembers = pgTable(
      * Null means not timed out.
      */
     timeoutUntil: timestamp('timeout_until', { withTimezone: true }),
+
+    /** When the member agreed to the guild's rules. Null = not yet agreed. */
+    agreedRulesAt: timestamp('agreed_rules_at', { withTimezone: true }),
   },
   (table) => [
     /**

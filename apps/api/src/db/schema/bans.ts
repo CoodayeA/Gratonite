@@ -12,6 +12,11 @@ export const guildBans = pgTable('guild_bans', {
   reason: text('reason'),
   bannedBy: uuid('banned_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
   expiresAt: timestamp('expires_at', { withTimezone: true }),
+  appealStatus: text('appeal_status'),
+  appealText: text('appeal_text'),
+  appealSubmittedAt: timestamp('appeal_submitted_at', { withTimezone: true }),
+  appealReviewedBy: uuid('appeal_reviewed_by').references(() => users.id),
+  appealReviewedAt: timestamp('appeal_reviewed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   unique('guild_bans_guild_user_unique').on(table.guildId, table.userId),

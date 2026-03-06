@@ -161,16 +161,26 @@ interface ServerEmoji {
     animated?: boolean;
 }
 
+// ─── Sticker Type ─────────────────────────────────────────────────────────────
+interface Sticker {
+    id: string;
+    name: string;
+    url: string;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
-const EmojiPicker = ({ onSelectEmoji, onSendGif, guildId }: {
+const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
     onSelectEmoji: (emoji: string) => void;
     onSendGif?: (url: string, previewUrl: string) => void;
+    onStickerSelect?: (sticker: Sticker) => void;
     guildId?: string | null;
 }) => {
     const { addToast } = useToast();
     const [search, setSearch] = useState('');
-    const [activeTab, setActiveTab] = useState<'emoji' | 'gif'>('emoji');
+    const [activeTab, setActiveTab] = useState<'emoji' | 'gif' | 'sticker'>('emoji');
     const [activeCategory, setActiveCategory] = useState('recent');
+    const [stickers, setStickers] = useState<Sticker[]>([]);
+    const [stickersLoading, setStickersLoading] = useState(false);
     const [recentEmojis, setRecentEmojis] = useState<string[]>(getRecentEmojis());
     const [serverEmojis, setServerEmojis] = useState<ServerEmoji[]>([]);
     const [gifSearch, setGifSearch] = useState('');
@@ -190,6 +200,26 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, guildId }: {
             })));
         }).catch(() => { addToast({ title: 'Failed to load server emojis', variant: 'error' }); });
     }, [guildId]);
+
+    // Fetch stickers when sticker tab is active
+    useEffect(() => {
+        if (activeTab !== 'sticker') return;
+        setStickersLoading(true);
+        const promises: Promise<any[]>[] = [
+            api.get<any[]>('/stickers/default').catch(() => []),
+        ];
+        if (guildId) {
+            promises.push(api.get<any[]>(`/guilds/${guildId}/stickers`).catch(() => []));
+        }
+        Promise.all(promises).then(results => {
+            const all = results.flat().map((s: any) => ({
+                id: s.id,
+                name: s.name,
+                url: s.url || (s.imageHash ? `${API_BASE}/files/${s.imageHash}` : ''),
+            }));
+            setStickers(all);
+        }).finally(() => setStickersLoading(false));
+    }, [activeTab, guildId]);
 
     // Focus search on open
     useEffect(() => {
@@ -249,6 +279,11 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, guildId }: {
                 <button onClick={() => setActiveTab('gif')} style={{ background: activeTab === 'gif' ? 'var(--bg-elevated)' : 'transparent', border: 'none', color: activeTab === 'gif' ? 'var(--text-primary)' : 'var(--text-muted)', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s' }}>
                     <ImageIcon size={15} /> GIFs
                 </button>
+                {onStickerSelect && (
+                    <button onClick={() => setActiveTab('sticker')} style={{ background: activeTab === 'sticker' ? 'var(--bg-elevated)' : 'transparent', border: 'none', color: activeTab === 'sticker' ? 'var(--text-primary)' : 'var(--text-muted)', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s' }}>
+                        <span style={{ fontSize: '15px' }}>&#127915;</span> Stickers
+                    </button>
+                )}
             </div>
 
             {/* Search */}
@@ -363,6 +398,38 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, guildId }: {
                         <div style={{ textAlign: 'center', padding: '8px 0 4px', fontSize: '10px', color: 'var(--text-muted)', opacity: 0.5 }}>
                             Powered by Tenor
                         </div>
+                    </div>
+                )}
+
+                {activeTab === 'sticker' && (
+                    <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: '200px' }}>
+                        {stickersLoading && (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
+                                <Loader size={24} style={{ color: 'var(--text-muted)', animation: 'spin 1s linear infinite' }} />
+                            </div>
+                        )}
+                        {!stickersLoading && stickers.length === 0 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, padding: '32px 0' }}>
+                                <span style={{ fontSize: '32px', opacity: 0.3, marginBottom: '12px' }}>&#127915;</span>
+                                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No stickers available</p>
+                            </div>
+                        )}
+                        {!stickersLoading && stickers.length > 0 && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                                {stickers.map(sticker => (
+                                    <button
+                                        key={sticker.id}
+                                        onClick={() => onStickerSelect?.(sticker)}
+                                        style={{ background: 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', padding: '4px', transition: 'background 0.15s' }}
+                                        onMouseOver={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                                        onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                                        title={sticker.name}
+                                    >
+                                        <img src={sticker.url} alt={sticker.name} loading="lazy" style={{ width: '80px', height: '80px', objectFit: 'contain', display: 'block', margin: '0 auto' }} />
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
