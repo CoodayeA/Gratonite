@@ -29,6 +29,7 @@ import { db } from '../db/index';
 import { users } from '../db/schema/users';
 import { guilds, guildMembers } from '../db/schema/guilds';
 import { relationships } from '../db/schema/relationships';
+import { userNotes } from '../db/schema/user-notes';
 import { cosmetics } from '../db/schema/cosmetics';
 import { userCosmetics } from '../db/schema/cosmetics';
 import { files } from '../db/schema/files';
@@ -127,6 +128,7 @@ function publicProfile(user: typeof users.$inferSelect) {
     pronouns: user.pronouns,
     status: user.status,
     customStatus: user.customStatus,
+    badges: user.badges ?? [],
     createdAt: user.createdAt,
   };
 }
@@ -783,3 +785,68 @@ usersRouter.get('/@me/equipped-cosmetics', requireAuth, asyncHandler(async (req:
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 }));
+
+// ---------------------------------------------------------------------------
+// GET /:userId/note — Get personal note about a user
+// ---------------------------------------------------------------------------
+usersRouter.get(
+  '/:userId/note',
+  requireAuth,
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const authorId = req.userId!;
+    const targetId = req.params.userId;
+    const [note] = await db
+      .select()
+      .from(userNotes)
+      .where(and(eq(userNotes.authorId, authorId), eq(userNotes.targetId, targetId)))
+      .limit(1);
+    res.json({ content: note?.content || '' });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// PUT /:userId/note — Upsert personal note about a user
+// ---------------------------------------------------------------------------
+usersRouter.put(
+  '/:userId/note',
+  requireAuth,
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const authorId = req.userId!;
+    const targetId = req.params.userId;
+    const content = String(req.body.content || '').slice(0, 256);
+    await db
+      .insert(userNotes)
+      .values({ authorId, targetId, content, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: [userNotes.authorId, userNotes.targetId],
+        set: { content, updatedAt: new Date() },
+      });
+    res.json({ success: true });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// POST /admin/:userId/badges — Admin-only badge assignment
+// ---------------------------------------------------------------------------
+usersRouter.post(
+  '/admin/:userId/badges',
+  requireAuth,
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const [requester] = await db
+      .select({ isAdmin: users.isAdmin })
+      .from(users)
+      .where(eq(users.id, req.userId!))
+      .limit(1);
+    if (!requester?.isAdmin) {
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Admin access required' });
+      return;
+    }
+    const { badges } = req.body;
+    if (!Array.isArray(badges)) {
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'badges must be an array' });
+      return;
+    }
+    await db.update(users).set({ badges }).where(eq(users.id, req.params.userId));
+    res.json({ success: true });
+  }),
+);
