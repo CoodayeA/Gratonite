@@ -46,7 +46,7 @@ import InviteAccept from './pages/InviteAccept';
 import { NotFound } from './pages/ErrorStates';
 import { getDeterministicGradient } from './utils/colors';
 import { api, API_BASE, getAccessToken, ApiRequestError } from './lib/api';
-import { connectSocket, disconnectSocket, onPresenceUpdate, onVoiceStateUpdate, onSocketReconnect } from './lib/socket';
+import { connectSocket, disconnectSocket, getSocket, onPresenceUpdate, onVoiceStateUpdate, onSocketReconnect } from './lib/socket';
 import { useMobileSwipe } from './hooks/useMobileSwipe';
 
 import SettingsModal from './components/modals/SettingsModal';
@@ -81,6 +81,7 @@ import Avatar from './components/ui/Avatar';
 import UserProfilePopover from './components/ui/UserProfilePopover';
 import { useGuildSession, type GuildSessionErrorCode, type GuildSessionInfo, type GuildSessionChannel } from './hooks/useGuildSession';
 import { isAuthRuntimeExpired } from './lib/authRuntime';
+import { useUnreadStore, setChannelHasUnread, incrementUnread, markRead as markReadStore, registerChannelGuild, hasGuildUnread } from './store/unreadStore';
 
 type MediaType = 'video' | 'image' | null;
 type ModalType = 'settings' | 'userProfile' | 'createGuild' | 'screenShare' | 'guildSettings' | 'memberOptions' | 'invite' | 'globalSearch' | 'dmSearch' | 'notifications' | 'shortcuts' | 'bugReport' | 'onboarding' | 'createGroupDm' | null;
@@ -167,6 +168,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
     const navigate = useNavigate();
     const { openMenu } = useContextMenu();
     const { addToast } = useToast();
+    useUnreadStore(); // subscribe to re-render on unread changes
     const isAppRoot = location.pathname === '/' || [
         '/friends', '/discover', '/shop', '/marketplace', '/inventory',
         '/creator-dashboard', '/fame', '/dm',
@@ -247,9 +249,11 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
 
             <div style={{ width: '32px', height: '2px', background: 'var(--stroke)', margin: '4px 0' }}></div>
 
-            {guilds.map(guild => (
+            {guilds.map(guild => {
+                const guildHasUnread = hasGuildUnread(guild.id) && activeGuildId !== guild.id;
+                return (
                 <Tooltip key={guild.id} content={guild.name} position="right">
-                    <Link to={`/guild/${guild.id}`} style={{ textDecoration: 'none' }} onContextMenu={(e) => handleGuildContext(e, guild)}>
+                    <Link to={`/guild/${guild.id}`} style={{ textDecoration: 'none', position: 'relative' }} onContextMenu={(e) => handleGuildContext(e, guild)}>
                         <div className={`guild-icon ${activeGuildId === guild.id ? 'active' : ''}`}
                              style={{ background: getDeterministicGradient(guild.name), color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>
                             {guild.iconHash ? (
@@ -262,9 +266,16 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                                 guild.name.charAt(0).toUpperCase()
                             )}
                         </div>
+                        {guildHasUnread && (
+                            <span style={{
+                                position: 'absolute', left: '-4px', top: '50%', transform: 'translateY(-50%)',
+                                width: '8px', height: '8px', borderRadius: '50%', background: 'var(--text-primary)',
+                            }} />
+                        )}
                     </Link>
                 </Tooltip>
-            ))}
+                );
+            })}
 
             <Tooltip content="Create Portal" position="right">
                 <div className="guild-icon" onClick={onOpenCreateGuild} style={{ background: 'transparent', border: '1px dashed var(--stroke-light)', color: 'var(--text-muted)', cursor: 'pointer' }}>
@@ -294,6 +305,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const { addToast } = useToast();
     const navigate = useNavigate();
     const voiceState = useVoice();
+    const unreadMap = useUnreadStore();
     const [channelPermsOpen, setChannelPermsOpen] = useState<{ id: string; name: string } | null>(null);
     const [channelPermsRoles, setChannelPermsRoles] = useState<Array<{ id: string; name: string; color: string | null }>>([]);
     const [channelPermsOverrides, setChannelPermsOverrides] = useState<Array<{ id: string; targetId: string; targetType: string; allow: string; deny: string }>>([]);
@@ -314,6 +326,14 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const guildInfo = guildSession.enabled ? guildSession.guildInfo : legacyGuildInfo;
     const guildChannels = guildSession.enabled ? guildSession.channels : legacyGuildChannels;
     const setGuildChannels = guildSession.enabled ? guildSession.setChannels : setLegacyGuildChannels;
+    // Register channel-guild mappings for unread tracking
+    useEffect(() => {
+        if (!activeGuildId) return;
+        for (const ch of guildChannels) {
+            registerChannelGuild(ch.id, activeGuildId);
+        }
+    }, [activeGuildId, guildChannels]);
+
     const enableVoiceSidebarSync = true;
     const [voiceMembersByChannel, setVoiceMembersByChannel] = useState<Record<string, VoiceSidebarMember[]>>({});
     const [dmChannels, setDmChannels] = useState<Array<{ id: string; recipientIds?: string[]; recipients?: Array<{ id: string; username: string; displayName: string; avatarHash: string | null }> }>>([]);
@@ -985,13 +1005,21 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         // Text channels: navigate normally
                         const linkTo = `/guild/${gId}/channel/${ch.id}`;
                         const isActive = location.pathname === linkTo;
+                        const unreadEntry = unreadMap.get(ch.id);
+                        const hasUnread = !!unreadEntry?.hasUnread && !isActive;
+                        const mentions = unreadEntry?.mentionCount ?? 0;
                         return (
                             <Link key={ch.id} to={linkTo} style={{ textDecoration: 'none' }} onContextMenu={(e) => handleChannelContext(e, ch)}>
                                 <div className={`channel-item ${isActive ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                                         <HashIcon size={18} style={{ flexShrink: 0, opacity: 0.7 }} />
-                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.name}</span>
+                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: hasUnread ? 600 : undefined, color: hasUnread ? 'var(--text-primary)' : undefined }}>{ch.name}</span>
                                     </div>
+                                    {mentions > 0 && !isActive && (
+                                        <span style={{ background: '#ed4245', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px', flexShrink: 0 }}>
+                                            {mentions}
+                                        </span>
+                                    )}
                                 </div>
                             </Link>
                         );
@@ -1891,6 +1919,47 @@ export const AppLayout = () => {
             disconnectSocket();
         };
     }, [userLoading, ctxUser.id]);
+
+    // Fetch unread state when guild changes
+    useEffect(() => {
+        if (!activeGuildId || !getAccessToken()) return;
+        api.guilds.getChannelsUnread(activeGuildId).then((rows) => {
+            for (const r of rows) {
+                if (r.mentionCount > 0) {
+                    incrementUnread(r.channelId, r.mentionCount);
+                }
+            }
+        }).catch(() => {});
+    }, [activeGuildId]);
+
+    // Listen for MESSAGE_CREATE and MENTION_CREATED globally for unread tracking
+    useEffect(() => {
+        const socket = getSocket();
+        if (!socket) return;
+
+        const onMsgCreate = (data: { channelId: string }) => {
+            const currentChannelMatch = location.pathname.match(/\/channel\/([^/]+)/);
+            const currentChannelId = currentChannelMatch?.[1];
+            if (data.channelId !== currentChannelId) {
+                setChannelHasUnread(data.channelId);
+            }
+        };
+
+        const onMentionCreated = (data: { channelId: string; guildId: string; mentionCount: number }) => {
+            const currentChannelMatch = location.pathname.match(/\/channel\/([^/]+)/);
+            const currentChannelId = currentChannelMatch?.[1];
+            if (data.channelId !== currentChannelId) {
+                incrementUnread(data.channelId, 1);
+            }
+        };
+
+        socket.on('MESSAGE_CREATE', onMsgCreate);
+        socket.on('MENTION_CREATED', onMentionCreated);
+        return () => {
+            socket.off('MESSAGE_CREATE', onMsgCreate);
+            socket.off('MENTION_CREATED', onMentionCreated);
+        };
+    }, [location.pathname]);
 
     const refreshGuilds = useCallback(() => {
         if (!getAccessToken() || isAuthRuntimeExpired()) return;
