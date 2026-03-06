@@ -194,6 +194,33 @@
     --bg-tertiary: #e4e4e7;
 }
 
+/* Glass mode: light contrast fixes — rgba(255,255,255,0.1) is invisible in light mode */
+[data-theme="glass"][data-color-mode="light"] .chat-input-wrapper {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="glass"][data-color-mode="light"] .chat-input-wrapper:focus-within {
+    background: rgba(255, 255, 255, 0.92);
+}
+
+[data-theme="glass"][data-color-mode="light"] .bg-upload-btn {
+    background: rgba(255, 255, 255, 0.7);
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="glass"][data-color-mode="light"] .bg-upload-btn:hover {
+    background: rgba(255, 255, 255, 0.88);
+}
+
+[data-theme="glass"][data-color-mode="light"] .input-icon-btn {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="glass"][data-color-mode="light"] .input-icon-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
 /* ------------------------
    THEME: NEOBRUTALISM
    ------------------------ */

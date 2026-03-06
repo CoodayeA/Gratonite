@@ -2372,13 +2372,13 @@ const appRouter = createBrowserRouter(
                 <Route path="admin/portals" element={<RequireAdmin><AdminPortals /></RequireAdmin>} />
                 <Route path="dm/:id" element={<DirectMessage />} />
                 {/* Parameterized guild routes */}
-                <Route path="guild/:guildId" element={<GuildOverview />} />
+                <Route path="guild/:guildId" element={<ErrorBoundary><GuildOverview /></ErrorBoundary>} />
                 <Route path="guild/:guildId/channel/:channelId" element={<ChannelChat />} />
                 <Route path="guild/:guildId/voice/:channelId" element={<VoiceChannel />} />
                 <Route path="guilds/:guildId/:channelId" element={<LegacyGuildChannelRedirect />} />
                 <Route path="guilds/:guildId/voice/:channelId" element={<LegacyGuildVoiceRedirect />} />
                 <Route path="guild/:guildId/:channelId" element={<LegacyGuildChannelRedirect />} />
-                <Route path="guild/:guildId/overview" element={<GuildOverview />} />
+                <Route path="guild/:guildId/overview" element={<ErrorBoundary><GuildOverview /></ErrorBoundary>} />
                 <Route path="guild/:guildId/audit-log" element={<AuditLog />} />
             </Route>
 
