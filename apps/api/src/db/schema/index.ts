@@ -43,3 +43,4 @@ export * from './group-encryption';
 export * from './stage';
 export * from './workflows';
 export * from './user-notes';
+export * from './channel-read-state';
