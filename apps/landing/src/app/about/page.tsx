@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/Badge";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
 
 export const metadata: Metadata = {
-  title: "About — Gratonite",
-  description: "Built by friends, for friends. The story behind Gratonite.",
+  title: "About Gratonite — The Open-Source Community Platform",
+  description: "The story behind Gratonite, a free and open-source alternative to Discord. Built by friends who wanted a better place to hang out online.",
 };
 
 const team = [

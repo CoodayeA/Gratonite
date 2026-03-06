@@ -6,9 +6,9 @@ import { Badge } from "@/components/ui/Badge";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
 
 export const metadata: Metadata = {
-  title: "Blog — Gratonite",
+  title: "Gratonite Blog — Updates on the Open-Source Discord Alternative",
   description:
-    "Notes from building Gratonite in public: product updates, ideas, and honest progress.",
+    "Follow the development of Gratonite: product updates, community insights, and honest progress on building a better alternative to Discord.",
 };
 
 export default function BlogPage() {

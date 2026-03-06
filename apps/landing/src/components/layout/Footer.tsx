@@ -7,6 +7,7 @@ const footerSections = [
       { label: "Download", href: "/download" },
       { label: "Discover", href: "/discover" },
       { label: "Pricing", href: "/pricing" },
+      { label: "Why Gratonite", href: "/why-gratonite" },
     ],
   },
   {
