@@ -1500,7 +1500,8 @@ const DirectMessage = () => {
                                                     {isCurrentUserMessage && (() => {
                                                         const myMsgs = messages.filter(m => m.authorId === currentUserId);
                                                         if (myMsgs[myMsgs.length - 1]?.id !== msg.id) return null;
-                                                        const isRead = partnerLastReadMessageId === msg.apiId || (partnerLastReadAt && msg.createdAt && new Date(partnerLastReadAt) >= new Date(msg.createdAt));
+                                                        // Only check exact message ID — avoids false positives from lastReadAt timestamp comparison
+                                                        const isRead = !!(partnerLastReadMessageId && partnerLastReadMessageId === msg.apiId);
                                                         return isRead
                                                             ? <CheckCheck size={12} style={{ marginLeft: '6px', color: 'var(--accent-primary)', verticalAlign: 'middle' }} title="Read" />
                                                             : <Check size={12} style={{ marginLeft: '6px', color: 'var(--text-muted)', verticalAlign: 'middle' }} title="Sent" />;

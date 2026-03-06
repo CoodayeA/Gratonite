@@ -915,7 +915,7 @@ messagesRouter.patch('/disappear-timer', requireAuth, validate(disappearTimerSch
 
     // Require MANAGE_CHANNELS permission for guild channels (any DM participant can set timer).
     if (channel.guildId) {
-      const canManage = await hasPermission(req.userId!, channel.guildId, Permissions.MANAGE_CHANNELS);
+      const canManage = await hasChannelPermission(req.userId!, channel.guildId, channelId, Permissions.MANAGE_CHANNELS);
       if (!canManage) {
         throw new AppError(403, 'You need the Manage Channels permission to set disappearing messages in a guild channel', 'FORBIDDEN');
       }
