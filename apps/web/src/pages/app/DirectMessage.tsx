@@ -1085,7 +1085,7 @@ const DirectMessage = () => {
                                 size={20}
                                 style={{ cursor: 'pointer', transition: 'color 0.2s', color: disappearTimer ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
                                 onClick={() => setShowDisappearMenu(v => !v)}
-                                title={disappearTimer ? `Disappearing: ${disappearTimer >= 86400 ? `${disappearTimer / 86400}d` : disappearTimer >= 3600 ? `${disappearTimer / 3600}h` : `${disappearTimer / 60}m`}` : 'Disappearing Messages Off'}
+                                aria-label={disappearTimer ? `Disappearing: ${disappearTimer >= 86400 ? `${disappearTimer / 86400}d` : disappearTimer >= 3600 ? `${disappearTimer / 3600}h` : `${disappearTimer / 60}m`}` : 'Disappearing Messages Off'}
                             />
                             {showDisappearMenu && (
                                 <div style={{ position: 'absolute', top: '28px', right: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '6px', zIndex: 50, minWidth: '160px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
@@ -1526,8 +1526,8 @@ const DirectMessage = () => {
                                                         // Only check exact message ID — avoids false positives from lastReadAt timestamp comparison
                                                         const isRead = !!(partnerLastReadMessageId && partnerLastReadMessageId === msg.apiId);
                                                         return isRead
-                                                            ? <CheckCheck size={12} style={{ marginLeft: '6px', color: 'var(--accent-primary)', verticalAlign: 'middle' }} title="Read" />
-                                                            : <Check size={12} style={{ marginLeft: '6px', color: 'var(--text-muted)', verticalAlign: 'middle' }} title="Sent" />;
+                                                            ? <CheckCheck size={12} style={{ marginLeft: '6px', color: 'var(--accent-primary)', verticalAlign: 'middle' }} aria-label="Read" />
+                                                            : <Check size={12} style={{ marginLeft: '6px', color: 'var(--text-muted)', verticalAlign: 'middle' }} aria-label="Sent" />;
                                                     })()}
                                                 </div>
                                             )}

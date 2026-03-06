@@ -9,7 +9,7 @@ type Message = {
     time: string;
     content: string;
     bgColor?: string;
-    createdAt?: number;
+    createdAt?: number | string | null;
 };
 
 interface ThreadPanelProps {
