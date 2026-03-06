@@ -2279,19 +2279,19 @@ p {
 }
 
 .msg-avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: var(--radius-lg);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
     background: rgba(255, 255, 255, 0.05);
-    border: var(--border-structural);
+    border: none;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
     color: var(--text-secondary);
-    font-size: 1.1rem;
-    box-shadow: var(--shadow-hover);
+    font-size: 1rem;
+    box-shadow: none;
 }
 
 .msg-avatar.system {
@@ -2303,22 +2303,18 @@ p {
 
 .msg-content {
     flex: 1;
-    background: rgba(255, 255, 255, 0.02);
-    border: var(--border-structural);
-    border-radius: 0 var(--radius-lg) var(--radius-lg) var(--radius-lg);
-    padding: 16px 20px;
-    transition: background 0.2s ease;
-}
-
-.message:hover .msg-content {
-    background: rgba(255, 255, 255, 0.04);
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    min-width: 0;
 }
 
 .msg-header {
     display: flex;
     align-items: baseline;
     gap: 12px;
-    margin-bottom: 8px;
+    margin-bottom: 2px;
 }
 
 .msg-author {
@@ -4157,12 +4153,8 @@ a {
     width: 38px !important;
     height: 38px !important;
     font-size: 0.95rem !important;
+    border-radius: 50% !important;
     box-shadow: 2px 2px 0 #000000 !important;
-}
-
-/* Reduce message content spacing */
-[data-theme="neobrutalism"] .msg-content {
-    gap: 0px !important;
 }
 
 [data-theme="neobrutalism"] .msg-header {
