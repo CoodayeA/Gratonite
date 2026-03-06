@@ -39,6 +39,7 @@ import { marketplaceRouter } from './marketplace';
 import { telemetryRouter } from './telemetry';
 import { fameRouter } from './fame';
 import { groupDmsRouter } from './group-dms';
+import { keysRouter } from './keys';
 import { authRateLimit, apiRateLimit } from '../middleware/rateLimit';
 
 export const router = Router();
@@ -140,6 +141,9 @@ router.use('/', themesRouter);
 
 // Fame
 router.use('/users/:userId/fame', fameRouter);
+
+// E2E encryption key management
+router.use('/users', keysRouter);
 
 // Platform Admin
 router.use('/admin', adminRouter);

@@ -137,6 +137,20 @@ export const messages = pgTable(
      * Set at creation time based on the channel's `disappearTimer` setting.
      */
     expiresAt: timestamp('expires_at', { withTimezone: true }),
+
+    /**
+     * Whether this message is E2E-encrypted. When true, `encryptedContent`
+     * holds the ciphertext and `content` is null. The client decrypts using
+     * the shared ECDH-derived AES-GCM key stored locally.
+     */
+    isEncrypted: boolean('is_encrypted').notNull().default(false),
+
+    /**
+     * Base64-encoded AES-GCM ciphertext (IV prepended) for encrypted DMs.
+     * Null for plain-text messages. Ignored by the server — it is stored
+     * and returned as-is; only the recipient can decrypt it.
+     */
+    encryptedContent: text('encrypted_content'),
   },
   (table) => [
     /**
