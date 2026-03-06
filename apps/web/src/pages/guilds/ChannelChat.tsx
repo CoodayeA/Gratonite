@@ -1167,7 +1167,7 @@ const ChannelChat = () => {
                 authorRoleColor: data.authorId ? roleColorCacheRef.current.get(data.authorId) : undefined,
                 authorAvatarHash: (data as any).author?.avatarHash ?? null,
                 authorNameplateStyle: (data as any).author?.nameplateStyle ?? null,
-                expiresAt: (data as any).expiresAt ?? null,
+                expiresAt: data.expiresAt ?? null,
                 createdAt: data.createdAt ?? null,
             }]);
             playSound('messageReceive');

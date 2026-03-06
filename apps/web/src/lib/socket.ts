@@ -36,6 +36,7 @@ export interface MessageCreatePayload {
   edited: boolean;
   editedAt: string | null;
   createdAt: string;
+  expiresAt?: string | null;
   author: {
     id: string;
     username: string;

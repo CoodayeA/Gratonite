@@ -792,7 +792,11 @@ messagesRouter.post('/typing', requireAuth, async (req: Request, res: Response):
  * @body    { lastReadMessageId?: string } — optional, defaults to latest message
  * @returns 200 { ok: true }
  */
-messagesRouter.post('/read', requireAuth, async (req: Request, res: Response): Promise<void> => {
+const readSchema = z.object({
+  lastReadMessageId: z.string().uuid().optional(),
+});
+
+messagesRouter.post('/read', requireAuth, validate(readSchema), async (req: Request, res: Response): Promise<void> => {
   try {
     const { channelId } = req.params as Record<string, string>;
     const channel = await resolveChannel(channelId, req.userId!);
@@ -803,7 +807,7 @@ messagesRouter.post('/read', requireAuth, async (req: Request, res: Response): P
       return;
     }
 
-    const { lastReadMessageId } = req.body as { lastReadMessageId?: string };
+    const { lastReadMessageId } = req.body as z.infer<typeof readSchema>;
 
     // Resolve the latest visible (non-expired) message ID if not provided.
     let resolvedMessageId = lastReadMessageId;

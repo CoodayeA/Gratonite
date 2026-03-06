@@ -635,7 +635,7 @@ const DirectMessage = () => {
                 time: new Date(data.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 content: data.content || '',
                 edited: data.edited,
-                expiresAt: (data as any).expiresAt ?? null,
+                expiresAt: data.expiresAt ?? null,
                 createdAt: data.createdAt ?? null,
             }]);
             // Auto-mark read when message arrives and window is focused/visible
