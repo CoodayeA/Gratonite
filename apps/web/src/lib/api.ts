@@ -1954,12 +1954,12 @@ export const api = {
 
   // ── Webhooks ───────────────────────────────────────────────────────────
   webhooks: {
+    listByGuild: (guildId: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/webhooks`),
     listByChannel: (channelId: string) =>
       apiFetch<any[]>(`/webhooks/channel/${channelId}`),
     create: (data: { channelId: string; name: string; avatarUrl?: string }) =>
-      apiFetch<any>('/webhooks', { method: 'POST', body: JSON.stringify(data) }),
-    update: (webhookId: string, data: { name?: string; avatarUrl?: string }) =>
-      apiFetch<any>(`/webhooks/${webhookId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+      apiFetch<any>(`/channels/${data.channelId}/webhooks`, { method: 'POST', body: JSON.stringify({ name: data.name, avatarUrl: data.avatarUrl }) }),
     delete: (webhookId: string) =>
       apiFetch<void>(`/webhooks/${webhookId}`, { method: 'DELETE' }),
   },
