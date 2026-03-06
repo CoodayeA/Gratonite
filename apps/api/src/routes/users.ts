@@ -174,6 +174,10 @@ const patchAccountSchema = z.object({
  */
 const patchPresenceSchema = z.object({
   status: z.enum(['online', 'idle', 'dnd', 'invisible']),
+  activity: z.object({
+    name: z.string().min(1).max(128),
+    type: z.enum(['PLAYING', 'WATCHING', 'LISTENING', 'STREAMING']),
+  }).nullable().optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -394,12 +398,21 @@ usersRouter.patch(
   requireAuth,
   validate(patchPresenceSchema),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const { status } = req.body as z.infer<typeof patchPresenceSchema>;
+    const { status, activity } = req.body as z.infer<typeof patchPresenceSchema>;
 
     await db
       .update(users)
       .set({ status, updatedAt: new Date() })
       .where(eq(users.id, req.userId!));
+
+    // Store activity in Redis alongside presence
+    if (activity !== undefined) {
+      if (activity) {
+        await redis.set(`presence:${req.userId!}:activity`, JSON.stringify(activity), 'EX', 300);
+      } else {
+        await redis.del(`presence:${req.userId!}:activity`);
+      }
+    }
 
     res.status(200).json({ status });
   }),
