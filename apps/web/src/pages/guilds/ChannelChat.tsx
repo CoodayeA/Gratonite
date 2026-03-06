@@ -554,7 +554,7 @@ const ChannelChat = () => {
     const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
     // Member List Panel State
-    const [memberListOpen, setMemberListOpen] = useState(() => localStorage.getItem('memberListOpen') === 'true');
+    const [memberListOpen, setMemberListOpen] = useState(() => localStorage.getItem('memberListOpen') !== 'false');
 
     // Chat File Attachment State
     const chatFileInputRef = useRef<HTMLInputElement>(null);
