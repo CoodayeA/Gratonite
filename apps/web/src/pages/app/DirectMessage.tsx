@@ -118,6 +118,10 @@ const DirectMessage = () => {
     // Emoji picker state
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
 
+    // Mention autocomplete state (for group DMs)
+    const [mentionSearch, setMentionSearch] = useState<string | null>(null);
+    const [mentionIndex, setMentionIndex] = useState(0);
+
     // Group DM state
     const [isGroupDm, setIsGroupDm] = useState(false);
     const [groupName, setGroupName] = useState('');
@@ -1077,6 +1081,57 @@ const DirectMessage = () => {
         return () => window.removeEventListener('paste', handlePaste);
     }, []);
 
+    // Mention autocomplete: filter group participants
+    const filteredMentionUsers = groupParticipants.filter(u =>
+        mentionSearch !== null &&
+        (u.username.toLowerCase().includes(mentionSearch.toLowerCase()) || u.displayName.toLowerCase().includes(mentionSearch.toLowerCase()))
+    );
+
+    const handleDmInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setInputValue(val);
+        if (val.trim().length > 0) sendTypingIndicator();
+
+        if (isGroupDm) {
+            const mentionMatch = val.match(/@([a-zA-Z0-9_]*)$/);
+            if (mentionMatch) {
+                setMentionSearch(mentionMatch[1]);
+                setMentionIndex(0);
+            } else {
+                setMentionSearch(null);
+            }
+        }
+    };
+
+    const insertDmMention = (userId: string) => {
+        if (mentionSearch === null) return;
+        const val = inputValue.replace(/@([a-zA-Z0-9_]*)$/, `<@${userId}> `);
+        setInputValue(val);
+        setMentionSearch(null);
+    };
+
+    const handleDmKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (mentionSearch !== null && filteredMentionUsers.length > 0) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setMentionIndex(prev => (prev + 1) % filteredMentionUsers.length);
+                return;
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setMentionIndex(prev => (prev - 1 + filteredMentionUsers.length) % filteredMentionUsers.length);
+                return;
+            } else if (e.key === 'Enter' || e.key === 'Tab') {
+                e.preventDefault();
+                insertDmMention(filteredMentionUsers[mentionIndex].id);
+                return;
+            } else if (e.key === 'Escape') {
+                setMentionSearch(null);
+                return;
+            }
+        }
+        if (e.key === 'Enter') handleSendMessage();
+    };
+
     const handleSendMessage = async () => {
         if (inputValue.trim() === '' && dmAttachedFiles.length === 0) return;
         if (!dmChannelId) {
@@ -1732,7 +1787,7 @@ const DirectMessage = () => {
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                     {msg.content && (
                                                         <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.5' }}>
-                                                            <RichTextRenderer content={msg.content} />
+                                                            <RichTextRenderer content={msg.content} members={groupParticipants.map(p => ({ id: p.id, username: p.username, displayName: p.displayName }))} />
                                                         </div>
                                                     )}
                                                     <div style={{
@@ -1751,7 +1806,7 @@ const DirectMessage = () => {
                                                 <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.5' }}>
                                                     {msg.isEncrypted ? (
                                                         decryptedContents.has(msg.id) ? (
-                                                            <RichTextRenderer content={decryptedContents.get(msg.id)!} />
+                                                            <RichTextRenderer content={decryptedContents.get(msg.id)!} members={groupParticipants.map(p => ({ id: p.id, username: p.username, displayName: p.displayName }))} />
                                                         ) : (
                                                             <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                                                 <Lock size={12} />
@@ -1759,7 +1814,7 @@ const DirectMessage = () => {
                                                             </span>
                                                         )
                                                     ) : (
-                                                        <RichTextRenderer content={msg.content} />
+                                                        <RichTextRenderer content={msg.content} members={groupParticipants.map(p => ({ id: p.id, username: p.username, displayName: p.displayName }))} />
                                                     )}
                                                     {msg.edited && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '6px' }}>(edited)</span>}
                                                     {/* Expiry countdown (A2) */}
@@ -1898,7 +1953,39 @@ const DirectMessage = () => {
                                     ))}
                                 </div>
                             )}
-                            <div className="chat-input-wrapper">
+                            <div className="chat-input-wrapper" style={{ position: 'relative' }}>
+                                {/* Mention Autocomplete for Group DMs */}
+                                {isGroupDm && mentionSearch !== null && filteredMentionUsers.length > 0 && (
+                                    <div style={{
+                                        position: 'absolute', bottom: 'calc(100% + 8px)', left: 0,
+                                        background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+                                        borderRadius: 'var(--radius-md, 8px)', padding: '8px', minWidth: '300px',
+                                        boxShadow: '0 8px 32px rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', flexDirection: 'column', gap: '4px'
+                                    }}>
+                                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, padding: '4px 8px', marginBottom: '4px' }}>
+                                            Members
+                                        </div>
+                                        {filteredMentionUsers.slice(0, 8).map((user, idx) => (
+                                            <div
+                                                key={user.id}
+                                                onClick={() => insertDmMention(user.id)}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: '12px', padding: '8px',
+                                                    borderRadius: '6px', cursor: 'pointer',
+                                                    background: mentionIndex === idx ? 'var(--bg-tertiary)' : 'transparent',
+                                                    transition: 'background 0.1s'
+                                                }}
+                                                onMouseEnter={() => setMentionIndex(idx)}
+                                            >
+                                                <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>@</span>
+                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                    <span style={{ fontSize: '14px', fontWeight: 600 }}>{user.displayName}</span>
+                                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>@{user.username}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                                 <button className="input-icon-btn" title="Upload Attachment" onClick={() => attachmentInputRef.current?.click()}>
                                     <Plus size={20} />
                                 </button>
@@ -1907,8 +1994,8 @@ const DirectMessage = () => {
                                     className="chat-input"
                                     placeholder={`Message @${userName}...`}
                                     value={inputValue}
-                                    onChange={(e) => { setInputValue(e.target.value); if (e.target.value.trim().length > 0) sendTypingIndicator(); }}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                    onChange={handleDmInputChange}
+                                    onKeyDown={handleDmKeyDown}
                                 />
                                 <button className={`input-icon-btn ${isEmojiPickerOpen ? 'primary' : ''}`} title="Select Emoji" onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}>
                                     <Smile size={20} />

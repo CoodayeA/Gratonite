@@ -110,6 +110,8 @@ const MemoizedMessageItem = memo(({
     onReaction,
     channelId: msgChannelId,
     customEmojis,
+    members,
+    channels,
     currentUserId,
     currentUserAvatarFrame,
     currentUserNameplateStyle,
@@ -325,7 +327,7 @@ const MemoizedMessageItem = memo(({
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 {msg.content && (
                                     <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.5' }}>
-                                        <RichTextRenderer content={msg.content} customEmojis={customEmojis} />
+                                        <RichTextRenderer content={msg.content} customEmojis={customEmojis} members={members} channels={channels} />
                                     </div>
                                 )}
                                 <div className="chat-media-attachment" onClick={() => onImageClick && onImageClick(msg.mediaUrl)} style={{
@@ -343,7 +345,7 @@ const MemoizedMessageItem = memo(({
                             </div>
                         ) : (
                             <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.5', willChange: 'transform, opacity' }}>
-                                <RichTextRenderer content={msg.content} customEmojis={customEmojis} />
+                                <RichTextRenderer content={msg.content} customEmojis={customEmojis} members={members} channels={channels} />
                                 {msg.edited && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '4px' }}>(edited)</span>}
                             </div>
                         )}
@@ -566,6 +568,11 @@ const ChannelChat = () => {
     // Mentions State
     const [mentionSearch, setMentionSearch] = useState<string | null>(null);
     const [mentionIndex, setMentionIndex] = useState(0);
+
+    // Channel autocomplete state
+    const [channelSearch, setChannelSearch] = useState<string | null>(null);
+    const [channelIndex, setChannelIndex] = useState(0);
+    const [guildChannelsList, setGuildChannelsList] = useState<{ id: string; name: string; type?: string }[]>([]);
 
     const [isScheduleOpen, setIsScheduleOpen] = useState(false);
     const [scheduleDate, setScheduleDate] = useState('');
@@ -1059,6 +1066,14 @@ const ChannelChat = () => {
         }
     }, [guildId]);
 
+    // Fetch guild channels for #channel autocomplete
+    useEffect(() => {
+        if (!guildId) { setGuildChannelsList([]); return; }
+        api.channels.getGuildChannels(guildId).then((channels: any[]) => {
+            setGuildChannelsList(channels.map((c: any) => ({ id: c.id, name: c.name, type: c.type })));
+        }).catch(() => {});
+    }, [guildId]);
+
     // Fetch guild custom emojis for :name: rendering in messages
     useEffect(() => {
         if (!guildId) { setGuildCustomEmojis([]); return; }
@@ -1095,6 +1110,11 @@ const ChannelChat = () => {
     const filteredUsers = guildMembers.filter(u =>
         mentionSearch !== null &&
         (u.username.toLowerCase().includes(mentionSearch.toLowerCase()) || u.displayName.toLowerCase().includes(mentionSearch.toLowerCase()))
+    );
+
+    const filteredChannels = guildChannelsList.filter(c =>
+        channelSearch !== null &&
+        c.name.toLowerCase().includes(channelSearch.toLowerCase())
     );
 
     const [messages, setMessages] = useState<Message[]>([]);
@@ -1470,6 +1490,7 @@ const ChannelChat = () => {
         setChatAttachedFiles([]);
         setReplyingTo(null);
         setMentionSearch(null);
+        setChannelSearch(null);
         setEmojiSearch(null);
         setRoomVelocity(prev => Math.min(10, prev + 2));
     };
@@ -1540,27 +1561,43 @@ const ChannelChat = () => {
         if (val.trim().length > 0) sendTypingIndicator();
 
         const mentionMatch = val.match(/@([a-zA-Z0-9_]*)$/);
+        const channelMatch = val.match(/#([a-zA-Z0-9_-]*)$/);
         const emojiMatch = val.match(/(?<!\\):([a-zA-Z0-9_]{1,})$/); // at least 1 char for autocomplete
 
         if (mentionMatch) {
             setMentionSearch(mentionMatch[1]);
             setMentionIndex(0);
+            setChannelSearch(null);
+            setEmojiSearch(null);
+        } else if (channelMatch) {
+            setChannelSearch(channelMatch[1]);
+            setChannelIndex(0);
+            setMentionSearch(null);
             setEmojiSearch(null);
         } else if (emojiMatch) {
             setEmojiSearch(emojiMatch[1]);
             setEmojiIndex(0);
             setMentionSearch(null);
+            setChannelSearch(null);
         } else {
             setMentionSearch(null);
+            setChannelSearch(null);
             setEmojiSearch(null);
         }
     };
 
-    const insertMention = (username: string) => {
+    const insertMention = (userId: string) => {
         if (mentionSearch === null) return;
-        const val = inputValue.replace(/@([a-zA-Z0-9_]*)$/, `@${username} `);
+        const val = inputValue.replace(/@([a-zA-Z0-9_]*)$/, `<@${userId}> `);
         setInputValue(val);
         setMentionSearch(null);
+    };
+
+    const insertChannelMention = (chId: string) => {
+        if (channelSearch === null) return;
+        const val = inputValue.replace(/#([a-zA-Z0-9_-]*)$/, `<#${chId}> `);
+        setInputValue(val);
+        setChannelSearch(null);
     };
 
     const insertEmoji = (emojiName: string) => {
@@ -1582,10 +1619,29 @@ const ChannelChat = () => {
                 return;
             } else if (e.key === 'Enter' || e.key === 'Tab') {
                 e.preventDefault();
-                insertMention(filteredUsers[mentionIndex].username);
+                insertMention(filteredUsers[mentionIndex].id);
                 return;
             } else if (e.key === 'Escape') {
                 setMentionSearch(null);
+                return;
+            }
+        }
+
+        if (channelSearch !== null && filteredChannels.length > 0) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setChannelIndex(prev => (prev + 1) % filteredChannels.length);
+                return;
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setChannelIndex(prev => (prev - 1 + filteredChannels.length) % filteredChannels.length);
+                return;
+            } else if (e.key === 'Enter' || e.key === 'Tab') {
+                e.preventDefault();
+                insertChannelMention(filteredChannels[channelIndex].id);
+                return;
+            } else if (e.key === 'Escape') {
+                setChannelSearch(null);
                 return;
             }
         }
@@ -1990,6 +2046,8 @@ const ChannelChat = () => {
                                         onReaction={handleReaction}
                                         channelId={channelId}
                                         customEmojis={guildCustomEmojis}
+                                        members={guildMembers}
+                                        channels={guildChannelsList}
                                         currentUserId={currentUserId || userProfile?.id || ''}
                                         currentUserAvatarFrame={userProfile?.avatarFrame || 'none'}
                                         currentUserNameplateStyle={userProfile?.nameplateStyle || 'none'}
@@ -2168,7 +2226,7 @@ const ChannelChat = () => {
                             {filteredUsers.length > 0 ? filteredUsers.map((user, idx) => (
                                 <div
                                     key={user.id}
-                                    onClick={() => insertMention(user.username)}
+                                    onClick={() => insertMention(user.id)}
                                     style={{
                                         display: 'flex', alignItems: 'center', gap: '12px', padding: '8px',
                                         borderRadius: '6px', cursor: 'pointer',
@@ -2190,6 +2248,36 @@ const ChannelChat = () => {
                             )) : (
                                 <div style={{ padding: '8px', color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center' }}>No members found</div>
                             )}
+                        </div>
+                    )}
+
+                    {/* Channel Autocomplete */}
+                    {channelSearch !== null && filteredChannels.length > 0 && (
+                        <div style={{
+                            position: 'absolute', bottom: 'calc(100% + 8px)', left: 0,
+                            background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+                            borderRadius: 'var(--radius-md)', padding: '8px', minWidth: '300px',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', flexDirection: 'column', gap: '4px'
+                        }}>
+                            <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, padding: '4px 8px', marginBottom: '4px' }}>
+                                Channels
+                            </div>
+                            {filteredChannels.slice(0, 8).map((ch, idx) => (
+                                <div
+                                    key={ch.id}
+                                    onClick={() => insertChannelMention(ch.id)}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '12px', padding: '8px',
+                                        borderRadius: '6px', cursor: 'pointer',
+                                        background: channelIndex === idx ? 'var(--bg-tertiary)' : 'transparent',
+                                        transition: 'background 0.1s'
+                                    }}
+                                    onMouseEnter={() => setChannelIndex(idx)}
+                                >
+                                    <Hash size={18} style={{ color: 'var(--text-muted)' }} />
+                                    <span style={{ fontSize: '14px', fontWeight: 500 }}>{ch.name}</span>
+                                </div>
+                            ))}
                         </div>
                     )}
 
