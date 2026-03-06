@@ -207,6 +207,12 @@ export const guildMembers = pgTable(
      * When the user joined the guild. Displayed in the member info panel.
      */
     joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
+
+    /**
+     * If set and in the future, the member is timed out and cannot send messages.
+     * Null means not timed out.
+     */
+    timeoutUntil: timestamp('timeout_until', { withTimezone: true }),
   },
   (table) => [
     /**
