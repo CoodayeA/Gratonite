@@ -1260,14 +1260,20 @@ const ChannelChat = () => {
     // Remove expired disappearing messages from the display list (A2)
     useEffect(() => {
         const now = Date.now();
-        const hasExpiring = messages.some(m => m.expiresAt && new Date(m.expiresAt).getTime() > now);
-        if (!hasExpiring) return;
-        const soonest = messages
-            .filter(m => m.expiresAt)
+        const hasAnyExpiry = messages.some(m => m.expiresAt);
+        if (!hasAnyExpiry) return;
+        // Immediately remove already-past-due messages
+        setMessages(prev => {
+            const filtered = prev.filter(m => !m.expiresAt || new Date(m.expiresAt).getTime() > Date.now());
+            return filtered.length < prev.length ? filtered : prev;
+        });
+        // Schedule removal of the next-to-expire message
+        const futureExpiries = messages
+            .filter(m => m.expiresAt && new Date(m.expiresAt).getTime() > now)
             .map(m => new Date(m.expiresAt!).getTime())
-            .sort((a, b) => a - b)[0];
-        if (!soonest) return;
-        const delay = Math.max(0, soonest - Date.now()) + 500;
+            .sort((a, b) => a - b);
+        if (futureExpiries.length === 0) return;
+        const delay = futureExpiries[0] - Date.now() + 500;
         const timer = setTimeout(() => {
             setMessages(prev => prev.filter(m => !m.expiresAt || new Date(m.expiresAt).getTime() > Date.now()));
         }, delay);
