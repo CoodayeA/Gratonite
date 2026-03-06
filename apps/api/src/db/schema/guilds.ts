@@ -34,7 +34,6 @@ import {
   unique,
 } from 'drizzle-orm/pg-core';
 import { users } from './users';
-import { channels } from './channels';
 
 // ---------------------------------------------------------------------------
 // guilds
@@ -123,7 +122,8 @@ export const guilds = pgTable('guilds', {
    * Optional reference to a rules channel. When set, the welcome modal
    * shows a "Go to #rules" button that navigates to this channel.
    */
-  rulesChannelId: uuid('rules_channel_id').references(() => channels.id, { onDelete: 'set null' }),
+  // Note: no FK reference to channels to avoid guilds ↔ channels circular schema dependency.
+  rulesChannelId: uuid('rules_channel_id'),
 
   /**
    * Category for discovery filtering.

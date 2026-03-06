@@ -57,13 +57,13 @@ async function requireGuildOwner(guildId: string, userId: string): Promise<void>
 
 const triggerSchema = z.object({
   type: z.string().min(1),
-  config: z.record(z.any()).optional(),
+  config: z.record(z.string(), z.any()).optional(),
 });
 
 const actionSchema = z.object({
   order: z.number().int(),
   type: z.string().min(1),
-  config: z.record(z.any()).optional(),
+  config: z.record(z.string(), z.any()).optional(),
 });
 
 const createWorkflowSchema = z.object({
@@ -87,7 +87,7 @@ workflowsRouter.get(
   '/:guildId/workflows',
   requireAuth,
   async (req: Request, res: Response) => {
-    const { guildId } = req.params;
+    const { guildId } = req.params as Record<string, string>;
     const userId = req.userId!;
 
     try {
@@ -136,7 +136,7 @@ workflowsRouter.post(
   '/:guildId/workflows',
   requireAuth,
   async (req: Request, res: Response) => {
-    const { guildId } = req.params;
+    const { guildId } = req.params as Record<string, string>;
     const userId = req.userId!;
 
     try {
@@ -211,7 +211,7 @@ workflowsRouter.patch(
   '/:guildId/workflows/:workflowId',
   requireAuth,
   async (req: Request, res: Response) => {
-    const { guildId, workflowId } = req.params;
+    const { guildId, workflowId } = req.params as Record<string, string>;
     const userId = req.userId!;
 
     try {
@@ -313,7 +313,7 @@ workflowsRouter.delete(
   '/:guildId/workflows/:workflowId',
   requireAuth,
   async (req: Request, res: Response) => {
-    const { guildId, workflowId } = req.params;
+    const { guildId, workflowId } = req.params as Record<string, string>;
     const userId = req.userId!;
 
     try {

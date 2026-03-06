@@ -26,7 +26,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { z } from 'zod';
-import { eq, desc, sql, and, inArray, asc, ilike } from 'drizzle-orm';
+import { eq, desc, sql, and, inArray, asc, ilike, SQL } from 'drizzle-orm';
 import multer from 'multer';
 
 import { db } from '../db/index';
@@ -433,8 +433,7 @@ guildsRouter.get(
       const sortParam = typeof req.query.sort === 'string' ? req.query.sort.trim() : 'members';
 
       // Build WHERE conditions for guilds query
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const conditions: any[] = [eq(guilds.isDiscoverable, true)];
+      const conditions: SQL[] = [eq(guilds.isDiscoverable, true)];
       if (q.length > 0) {
         conditions.push(ilike(guilds.name, `%${escapedQ}%`));
       }
