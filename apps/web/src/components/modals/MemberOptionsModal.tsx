@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Link2, Bell, BellOff, User, EyeOff, LogOut, Check, Copy } from 'lucide-react';
+import { X, Link2, Bell, BellOff, User, EyeOff, LogOut, Check, Copy, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
@@ -39,6 +39,16 @@ const SectionRow = ({ icon, label, sub, right }: { icon: React.ReactNode; label:
     </div>
 );
 
+const TIMEOUT_DURATIONS = [
+    { label: '60 seconds', seconds: 60 },
+    { label: '5 minutes', seconds: 300 },
+    { label: '10 minutes', seconds: 600 },
+    { label: '1 hour', seconds: 3600 },
+    { label: '1 day', seconds: 86400 },
+    { label: '1 week', seconds: 604800 },
+    { label: '28 days', seconds: 2419200 },
+];
+
 const MemberOptionsModal = ({ onClose, guildId, guildName }: { onClose: () => void; guildId: string; guildName: string }) => {
     const { addToast } = useToast();
     const navigate = useNavigate();
@@ -53,6 +63,11 @@ const MemberOptionsModal = ({ onClose, guildId, guildName }: { onClose: () => vo
     const [copied, setCopied] = useState(false);
     const [leaveConfirm, setLeaveConfirm] = useState(false);
     const [leaving, setLeaving] = useState(false);
+    const [canModerate, setCanModerate] = useState(false);
+    const [members, setMembers] = useState<Array<{ id: string; userId: string; nickname: string | null; username: string; displayName: string | null; timeoutUntil: string | null }>>([]);
+    const [timeoutTarget, setTimeoutTarget] = useState('');
+    const [timeoutDuration, setTimeoutDuration] = useState(300);
+    const [timeoutApplying, setTimeoutApplying] = useState(false);
 
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -66,6 +81,51 @@ const MemberOptionsModal = ({ onClose, guildId, guildName }: { onClose: () => vo
             .then((p: any) => { if (p?.nickname) setNickname(p.nickname); })
             .catch(() => {});
     }, [guildId]);
+
+    useEffect(() => {
+        if (!guildId) return;
+        // Check if current user can moderate (owner or has roles)
+        api.guilds.get(guildId).then((guild: any) => {
+            const me = localStorage.getItem('userId') || '';
+            if (guild.ownerId === me) {
+                setCanModerate(true);
+                return;
+            }
+            api.guilds.getMemberRoles(guildId, me).then((roles: any[]) => {
+                if (roles && roles.length > 0) setCanModerate(true);
+            }).catch(() => {});
+        }).catch(() => {});
+
+        // Fetch members for timeout target selection
+        api.guilds.getMembers(guildId).then((m: any[]) => {
+            setMembers(m.map((mem: any) => ({
+                id: mem.id,
+                userId: mem.userId,
+                nickname: mem.nickname,
+                username: mem.user?.username || mem.username || '',
+                displayName: mem.user?.displayName || mem.displayName || null,
+                timeoutUntil: mem.timeoutUntil || null,
+            })));
+        }).catch(() => {});
+    }, [guildId]);
+
+    const handleTimeout = async (targetUserId: string, durationSeconds: number) => {
+        setTimeoutApplying(true);
+        try {
+            await api.guilds.timeoutMember(guildId, targetUserId, durationSeconds);
+            addToast({ title: durationSeconds > 0 ? 'Timeout applied' : 'Timeout removed', variant: 'success' });
+            // Update local state
+            setMembers(prev => prev.map(m =>
+                m.userId === targetUserId
+                    ? { ...m, timeoutUntil: durationSeconds > 0 ? new Date(Date.now() + durationSeconds * 1000).toISOString() : null }
+                    : m
+            ));
+        } catch {
+            addToast({ title: 'Failed to apply timeout', variant: 'error' });
+        } finally {
+            setTimeoutApplying(false);
+        }
+    };
 
     const handleMuteToggle = (val: boolean) => {
         setMuted(val);
@@ -190,6 +250,66 @@ const MemberOptionsModal = ({ onClose, guildId, guildName }: { onClose: () => vo
                         sub="Filter out muted channels from the sidebar"
                         right={<Toggle value={hideMuted} onChange={handleHideMutedToggle} />}
                     />
+
+                    {canModerate && (
+                        <>
+                            <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />
+
+                            {/* Timeout Member */}
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>Timeout Member</label>
+
+                            <select
+                                value={timeoutTarget}
+                                onChange={e => setTimeoutTarget(e.target.value)}
+                                style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
+                            >
+                                <option value="">Select a member...</option>
+                                {members.filter(m => m.userId !== (localStorage.getItem('userId') || '')).map(m => (
+                                    <option key={m.userId} value={m.userId}>
+                                        {m.displayName || m.username}{m.timeoutUntil && new Date(m.timeoutUntil) > new Date() ? ' (timed out)' : ''}
+                                    </option>
+                                ))}
+                            </select>
+
+                            {timeoutTarget && (() => {
+                                const target = members.find(m => m.userId === timeoutTarget);
+                                const isTimedOut = target?.timeoutUntil && new Date(target.timeoutUntil) > new Date();
+                                return (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        {isTimedOut && (
+                                            <button
+                                                onClick={() => handleTimeout(timeoutTarget, 0)}
+                                                disabled={timeoutApplying}
+                                                className="auth-button"
+                                                style={{ margin: 0, background: 'var(--success)', color: '#000', border: '3px solid #000', fontWeight: 800, opacity: timeoutApplying ? 0.6 : 1 }}
+                                            >
+                                                Remove Timeout
+                                            </button>
+                                        )}
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <select
+                                                value={timeoutDuration}
+                                                onChange={e => setTimeoutDuration(Number(e.target.value))}
+                                                style={{ flex: 1, padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
+                                            >
+                                                {TIMEOUT_DURATIONS.map(d => (
+                                                    <option key={d.seconds} value={d.seconds}>{d.label}</option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                onClick={() => handleTimeout(timeoutTarget, timeoutDuration)}
+                                                disabled={timeoutApplying}
+                                                className="auth-button"
+                                                style={{ margin: 0, padding: '0 16px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px', opacity: timeoutApplying ? 0.6 : 1 }}
+                                            >
+                                                <Clock size={14} /> Apply Timeout
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </>
+                    )}
 
                     <div style={{ height: '1px', background: 'var(--stroke)', margin: '8px 0' }} />
 
