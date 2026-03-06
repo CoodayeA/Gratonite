@@ -128,6 +128,9 @@ export const users = pgTable('users', {
   /** Name style displayed on messages (rainbow, fire, ice, gold, glitch, none). */
   nameplateStyle: text('nameplate_style').default('none'),
 
+  /** User badges (e.g. admin, early_adopter, verified, developer, moderator, supporter). */
+  badges: text('badges').array().default([]),
+
   /** User interests from onboarding, stored as JSON array of strings. */
   interests: text('interests'),
 
