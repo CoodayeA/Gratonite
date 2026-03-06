@@ -135,3 +135,78 @@
                 border-left: 3px solid var(--accent-primary, #526df5);
                 background: rgba(82, 109, 245, 0.06);
             }
+
+            /* Spoiler tags */
+            .spoiler {
+                background: var(--text-primary, #dcddde);
+                color: transparent;
+                border-radius: 3px;
+                padding: 0 2px;
+                cursor: pointer;
+                user-select: none;
+                transition: all 0.15s;
+            }
+            .spoiler.revealed {
+                background: var(--bg-tertiary, #202225);
+                color: var(--text-primary, #dcddde);
+            }
+
+            /* Code blocks with syntax highlighting */
+            .code-block {
+                background: var(--bg-tertiary, #202225);
+                border: 1px solid var(--border-color, #40444b);
+                border-radius: 6px;
+                padding: 8px 12px;
+                margin: 4px 0;
+                overflow-x: auto;
+                font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+                font-size: 13px;
+                line-height: 1.5;
+            }
+            .code-block-lang {
+                font-size: 11px;
+                color: var(--text-muted, #72767d);
+                margin-bottom: 4px;
+                font-family: sans-serif;
+            }
+
+            /* Notification prefs modal */
+            .notif-prefs-modal {
+                max-width: 420px;
+                width: 90vw;
+            }
+            .notif-section {
+                margin-bottom: 16px;
+            }
+            .notif-section-title {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-weight: 600;
+                font-size: 14px;
+                color: var(--text-primary);
+                margin-bottom: 8px;
+                cursor: pointer;
+            }
+            .notif-radio {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 0;
+                cursor: pointer;
+                font-size: 14px;
+                color: var(--text-secondary);
+            }
+            .notif-radio input[type="radio"] {
+                accent-color: var(--accent-primary);
+            }
+            .notif-duration-select {
+                margin-top: 8px;
+                width: 100%;
+                padding: 8px 12px;
+                background: var(--bg-tertiary);
+                border: 1px solid var(--stroke);
+                border-radius: var(--radius-sm);
+                color: var(--text-primary);
+                font-size: 14px;
+            }

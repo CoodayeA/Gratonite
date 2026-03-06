@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/github-dark.css';
 
 type RichTextRendererProps = {
     content: string;
@@ -10,16 +12,9 @@ const SpoilerTag = ({ children }: { children: React.ReactNode }) => {
     const [revealed, setRevealed] = useState(false);
     return (
         <span
-            onClick={() => setRevealed(true)}
-            style={{
-                background: revealed ? 'rgba(255,255,255,0.06)' : 'var(--text-muted)',
-                color: revealed ? 'inherit' : 'transparent',
-                borderRadius: '4px',
-                padding: '0 4px',
-                cursor: revealed ? 'text' : 'pointer',
-                transition: 'all 0.15s ease',
-                userSelect: revealed ? 'text' : 'none',
-            }}
+            className={`spoiler ${revealed ? 'revealed' : ''}`}
+            onClick={() => setRevealed(r => !r)}
+            title={revealed ? 'Click to hide' : 'Click to reveal spoiler'}
         >
             {children}
         </span>
@@ -302,15 +297,13 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({ content, cus
                 lang = lines.slice(0, firstNewline).trim();
                 code = lines.slice(firstNewline + 1);
             }
+            const highlightedHtml = lang && hljs.getLanguage(lang)
+                ? hljs.highlight(code, { language: lang }).value
+                : hljs.highlightAuto(code).value;
             rendered.push(
-                <pre key={`cb-${idx}`} style={{
-                    background: 'var(--bg-tertiary)', padding: '12px', borderRadius: '8px',
-                    fontFamily: 'var(--font-mono)', fontSize: '13px', overflowX: 'auto',
-                    border: '1px solid var(--stroke)', marginTop: '4px', marginBottom: '4px',
-                    color: 'var(--text-secondary)', position: 'relative',
-                }}>
-                    {lang && <span style={{ position: 'absolute', top: '4px', right: '8px', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>{lang}</span>}
-                    <code>{code}</code>
+                <pre key={`cb-${idx}`} className="code-block">
+                    {lang && <div className="code-block-lang">{lang}</div>}
+                    <code dangerouslySetInnerHTML={{ __html: highlightedHtml }} />
                 </pre>
             );
             return;

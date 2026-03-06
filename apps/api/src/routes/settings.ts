@@ -5,6 +5,7 @@ import { db } from '../db/index';
 import { userSettings } from '../db/schema/settings';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { redis } from '../lib/redis';
 
 export const settingsRouter = Router();
 
@@ -91,3 +92,42 @@ settingsRouter.patch(
     }
   },
 );
+
+// ---------------------------------------------------------------------------
+// Notification preferences (per-guild/channel key-value store in Redis)
+// ---------------------------------------------------------------------------
+
+const notifKeySchema = z.object({
+  key: z.string().min(1).max(200),
+  value: z.object({
+    level: z.enum(['all', 'mentions', 'nothing']).optional(),
+    mutedUntil: z.string().nullable().optional(),
+  }),
+});
+
+/** GET /api/v1/users/@me/settings/notif?key=notif:guild:xxx */
+settingsRouter.get('/notif', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const key = req.query.key as string | undefined;
+  if (!key) { res.status(400).json({ code: 'BAD_REQUEST', message: 'key query parameter required' }); return; }
+  try {
+    const raw = await redis.get(`user-notif:${req.userId!}:${key}`);
+    if (!raw) { res.json({ key, value: null }); return; }
+    res.json({ key, value: JSON.parse(raw) });
+  } catch {
+    res.json({ key, value: null });
+  }
+});
+
+/** PATCH /api/v1/users/@me/settings/notif */
+settingsRouter.patch('/notif', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const parsed = notifKeySchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ code: 'VALIDATION_ERROR', message: parsed.error.message }); return; }
+  const { key, value } = parsed.data;
+  try {
+    await redis.set(`user-notif:${req.userId!}:${key}`, JSON.stringify(value));
+    res.json({ key, value });
+  } catch (err) {
+    console.error('[settings] notif save error:', err);
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to save notification preference' });
+  }
+});

@@ -61,6 +61,7 @@ import DMSearchModal from './components/modals/DMSearchModal';
 import GroupDmCreateModal from './components/modals/GroupDmCreateModal';
 
 import NotificationModal from './components/modals/NotificationModal';
+import { NotificationPrefsModal } from './components/modals/NotificationPrefsModal';
 import KeyboardShortcutsModal from './components/modals/KeyboardShortcutsModal';
 import BugReportModal from './components/modals/BugReportModal';
 import OnboardingModal from './components/modals/OnboardingModal';
@@ -167,6 +168,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
     const navigate = useNavigate();
     const { openMenu } = useContextMenu();
     const { addToast } = useToast();
+    const [notifPrefs, setNotifPrefs] = useState<{ type: 'guild' | 'channel'; id: string; name: string } | null>(null);
     const isAppRoot = location.pathname === '/' || [
         '/friends', '/discover', '/shop', '/marketplace', '/inventory',
         '/creator-dashboard', '/fame', '/dm',
@@ -198,7 +200,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                     addToast({ title: 'Invite link copied to clipboard', variant: 'success' });
                 }).catch(() => onOpenInvite());
             }},
-            { id: 'notification-settings', label: 'Notification Settings', icon: Bell, onClick: () => addToast({ title: 'Notification Settings', variant: 'info' }) },
+            { id: 'notification-settings', label: 'Notification Settings', icon: Bell, onClick: () => setNotifPrefs({ type: 'guild', id: guild.id, name: guild.name }) },
             { id: 'activity-toggle', label: activityEnabled ? 'Disable Activity Status' : 'Enable Activity Status', icon: Activity, onClick: () => {
                 const newOverrides = { ...overrides, [guild.id]: !activityEnabled };
                 try { localStorage.setItem('gratonite-server-activity-overrides', JSON.stringify(newOverrides)); } catch {}
@@ -285,6 +287,14 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                     <Bug size={24} />
                 </div>
             </Tooltip>
+            {notifPrefs && (
+                <NotificationPrefsModal
+                    type={notifPrefs.type}
+                    id={notifPrefs.id}
+                    name={notifPrefs.name}
+                    onClose={() => setNotifPrefs(null)}
+                />
+            )}
         </nav>
     );
 };
@@ -302,6 +312,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const [permStates, setPermStates] = useState<Record<string, Record<string, 'neutral' | 'allow' | 'deny'>>>({});
     const [privateToggle, setPrivateToggle] = useState(false);
     const [showCreateChannel, setShowCreateChannel] = useState<{ type: 'text' | 'voice'; parentId?: string } | null>(null);
+    const [notifPrefs, setNotifPrefs] = useState<{ type: 'guild' | 'channel'; id: string; name: string } | null>(null);
     const [newChannelName, setNewChannelName] = useState('');
 
     // Guild data for guild mode
@@ -576,7 +587,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 }).catch(() => addToast({ title: 'Failed to create invite', variant: 'error' }));
             }},
             { id: 'private', label: 'Make Private', icon: Lock, onClick: () => addToast({ title: `${channel.name} is now private`, description: 'Only selected roles can view this channel.', variant: 'success' }) },
-            { id: 'settings', label: 'Notification Settings', icon: Bell, onClick: () => addToast({ title: 'Notification Settings', variant: 'info' }) },
+            { id: 'settings', label: 'Notification Settings', icon: Bell, onClick: () => setNotifPrefs({ type: 'channel', id: channel.id, name: channel.name }) },
             { divider: true, id: 'div3', label: '', onClick: () => {} },
             { id: 'delete', label: 'Delete Channel', icon: Trash2, color: 'var(--error)', onClick: () => {
                 api.channels.delete(channel.id).then(() => {
@@ -1353,6 +1364,14 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         </div>
                     </div>
                 </div>
+            )}
+            {notifPrefs && (
+                <NotificationPrefsModal
+                    type={notifPrefs.type}
+                    id={notifPrefs.id}
+                    name={notifPrefs.name}
+                    onClose={() => setNotifPrefs(null)}
+                />
             )}
         </aside>
     );
