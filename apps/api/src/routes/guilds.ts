@@ -44,6 +44,7 @@ import { channelReadState } from '../db/schema/channel-read-state';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { hasPermission } from './roles';
+import { getIO } from '../lib/socket-io';
 import { logAuditEvent, AuditActionTypes } from '../lib/audit';
 import { redis } from '../lib/redis';
 
@@ -1687,6 +1688,51 @@ guildsRouter.delete(
       logAuditEvent(guildId, req.userId!, AuditActionTypes.MEMBER_KICK, targetUserId, 'USER');
 
       res.status(200).json({ code: 'OK', message: 'Member removed' });
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// POST /:guildId/members/:userId/timeout
+// ---------------------------------------------------------------------------
+
+guildsRouter.post(
+  '/:guildId/members/:userId/timeout',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { guildId, userId: targetUserId } = req.params as Record<string, string>;
+      await requireMember(guildId, req.userId!);
+
+      if (!(await hasPermission(req.userId!, guildId, Permissions.KICK_MEMBERS))) {
+        throw new AppError(403, 'Missing KICK_MEMBERS permission', 'FORBIDDEN');
+      }
+
+      // Cannot timeout yourself
+      if (targetUserId === req.userId) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', message: 'You cannot timeout yourself' });
+        return;
+      }
+
+      const { durationSeconds } = req.body as { durationSeconds: number };
+
+      const timeoutUntil = durationSeconds > 0
+        ? new Date(Date.now() + durationSeconds * 1000)
+        : null;
+
+      await db.update(guildMembers)
+        .set({ timeoutUntil })
+        .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, targetUserId)));
+
+      getIO().to(`guild:${guildId}`).emit('MEMBER_UPDATE', {
+        guildId,
+        userId: targetUserId,
+        timeoutUntil: timeoutUntil?.toISOString() ?? null,
+      });
+
+      res.json({ success: true, timeoutUntil: timeoutUntil?.toISOString() ?? null });
     } catch (err) {
       handleAppError(res, err);
     }

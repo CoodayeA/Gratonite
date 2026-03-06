@@ -617,6 +617,10 @@ const ChannelChat = () => {
     const [roomVelocity, setRoomVelocity] = useState(0);
     const isHypeMode = roomVelocity >= 5;
 
+    // Bulk message selection state
+    const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
+    const [selectionMode, setSelectionMode] = useState(false);
+
     const { openMenu } = useContextMenu();
     const { addToast } = useToast();
     const [currentUserName, setCurrentUserName] = useState('');
@@ -709,6 +713,10 @@ const ChannelChat = () => {
                 setShowSearchBar(true);
                 setTimeout(() => searchInputRef.current?.focus(), 50);
             }
+            if (e.key === 'Escape' && selectionMode) {
+                setSelectionMode(false);
+                setSelectedMessages(new Set());
+            }
             if (e.key === 'Escape' && showSearchBar) {
                 setShowSearchBar(false);
                 setSearchQuery('');
@@ -718,7 +726,33 @@ const ChannelChat = () => {
         };
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [showSearchBar]);
+    }, [showSearchBar, selectionMode]);
+
+    const handleMessageShiftClick = useCallback((e: React.MouseEvent, messageApiId: string | undefined) => {
+        if (e.shiftKey && messageApiId && canManageChannel) {
+            e.preventDefault();
+            setSelectionMode(true);
+            setSelectedMessages(prev => {
+                const next = new Set(prev);
+                if (next.has(messageApiId)) next.delete(messageApiId); else next.add(messageApiId);
+                return next;
+            });
+        }
+    }, [canManageChannel]);
+
+    const handleBulkDelete = useCallback(async () => {
+        if (!channelId || selectedMessages.size === 0) return;
+        if (!window.confirm(`Delete ${selectedMessages.size} messages? This cannot be undone.`)) return;
+        try {
+            await api.messages.bulkDelete(channelId, [...selectedMessages]);
+            setMessages(prev => prev.filter(m => !m.apiId || !selectedMessages.has(m.apiId)));
+            addToast({ title: `Deleted ${selectedMessages.size} messages`, variant: 'success' });
+        } catch {
+            addToast({ title: 'Bulk delete failed', variant: 'error' });
+        }
+        setSelectedMessages(new Set());
+        setSelectionMode(false);
+    }, [channelId, selectedMessages, addToast]);
 
     // Debounced search API call
     const performSearch = useCallback((query: string) => {
@@ -2097,12 +2131,14 @@ const ChannelChat = () => {
                                     key={virtualRow.key}
                                     data-index={virtualRow.index}
                                     ref={rowVirtualizer.measureElement}
+                                    onClick={(e) => handleMessageShiftClick(e, msg.apiId)}
                                     style={{
                                         position: 'absolute',
                                         top: 0,
                                         left: 0,
                                         width: '100%',
                                         transform: `translateY(${virtualRow.start}px)`,
+                                        ...(msg.apiId && selectedMessages.has(msg.apiId) ? { background: 'rgba(88, 101, 242, 0.15)', borderLeft: '3px solid var(--accent-primary, #5865f2)' } : {}),
                                     }}
                                 >
                                     <MemoizedMessageItem
@@ -2137,6 +2173,40 @@ const ChannelChat = () => {
                     </>
                 )}
             </div >
+
+            {/* Bulk Delete Action Bar */}
+            {selectedMessages.size > 0 && canManageChannel && (
+                <div style={{
+                    position: 'sticky', bottom: 0,
+                    background: 'var(--bg-secondary, #2f3136)',
+                    borderTop: '1px solid var(--stroke, #40444b)',
+                    padding: '12px 16px',
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    zIndex: 50,
+                }}>
+                    <span style={{ fontSize: '14px', color: 'var(--text-primary)' }}>
+                        {selectedMessages.size} message{selectedMessages.size !== 1 ? 's' : ''} selected
+                    </span>
+                    <button
+                        onClick={handleBulkDelete}
+                        style={{
+                            padding: '8px 16px', background: 'var(--error, #ed4245)', color: '#fff',
+                            border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '14px',
+                        }}
+                    >
+                        Delete {selectedMessages.size} message{selectedMessages.size !== 1 ? 's' : ''}
+                    </button>
+                    <button
+                        onClick={() => { setSelectedMessages(new Set()); setSelectionMode(false); }}
+                        style={{
+                            padding: '8px 16px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
+                            border: '1px solid var(--stroke)', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '14px',
+                        }}
+                    >
+                        Cancel
+                    </button>
+                </div>
+            )}
 
             {/* Pinned Messages Panel */}
             {showPinnedPanel && (

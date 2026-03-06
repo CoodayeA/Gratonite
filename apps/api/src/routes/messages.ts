@@ -418,6 +418,18 @@ messagesRouter.post(
         }
       }
 
+      // Check if user is timed out in this guild
+      if (channel.guildId) {
+        const [member] = await db.select({ timeoutUntil: guildMembers.timeoutUntil })
+          .from(guildMembers)
+          .where(and(eq(guildMembers.guildId, channel.guildId), eq(guildMembers.userId, req.userId!)))
+          .limit(1);
+        if (member?.timeoutUntil && member.timeoutUntil > new Date()) {
+          res.status(403).json({ code: 'FORBIDDEN', message: 'You are timed out in this server' });
+          return;
+        }
+      }
+
       const { content, attachmentIds, replyToId, threadId } = req.body as z.infer<typeof sendMessageSchema>;
 
       // Resolve attachments and verify ownership.
@@ -727,6 +739,56 @@ messagesRouter.patch(
       }
 
       res.status(200).json(payload);
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// DELETE /bulk — Bulk delete messages
+// ---------------------------------------------------------------------------
+
+messagesRouter.delete(
+  '/bulk',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { channelId } = req.params as Record<string, string>;
+      const { ids } = req.body as { ids: string[] };
+
+      if (!Array.isArray(ids) || ids.length === 0 || ids.length > 100) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', message: 'ids must be an array of 1-100 message IDs' });
+        return;
+      }
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!ids.every((id: string) => uuidRegex.test(id))) {
+        res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Invalid message ID format' });
+        return;
+      }
+
+      const channel = await resolveChannel(channelId, req.userId!);
+
+      if (!channel.guildId) {
+        res.status(403).json({ code: 'FORBIDDEN', message: 'Bulk delete is only available in guild channels' });
+        return;
+      }
+
+      const canManage = await hasPermission(req.userId!, channel.guildId, Permissions.MANAGE_MESSAGES);
+      if (!canManage) {
+        res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_MESSAGES permission' });
+        return;
+      }
+
+      await db.delete(messages)
+        .where(and(inArray(messages.id, ids), eq(messages.channelId, channelId)));
+
+      for (const id of ids) {
+        getIO().to(`channel:${channelId}`).emit('MESSAGE_DELETE', { id, channelId });
+      }
+
+      res.json({ deleted: ids.length });
     } catch (err) {
       handleAppError(res, err);
     }
