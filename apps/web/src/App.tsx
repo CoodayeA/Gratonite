@@ -1662,18 +1662,16 @@ export const AppLayout = () => {
     }, [channelBgKey]);
 
     // Wrapper that persists background per-channel
-    const setBgMedia = (media: { url: string, type: MediaType } | null) => {
+    const setBgMedia = useCallback((media: { url: string, type: MediaType } | null) => {
         setBgMediaRaw(media);
         if (media) {
-            // For blob URLs we can't persist, but for real URLs we can
-            // In production this would save to the server; for now persist the reference
             try {
                 localStorage.setItem(channelBgKey, JSON.stringify(media));
-            } catch { /* quota exceeded or blob URL — that's ok */ }
+            } catch {}
         } else {
             localStorage.removeItem(channelBgKey);
         }
-    };
+    }, [channelBgKey]);
     const [activeModal, setActiveModal] = useState<ModalType>(null);
     const [isGuildRailOpen, setIsGuildRailOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);

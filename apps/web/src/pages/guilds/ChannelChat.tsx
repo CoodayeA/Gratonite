@@ -20,7 +20,7 @@ import { playSound } from '../../utils/SoundManager';
 import { api, API_BASE } from '../../lib/api';
 import { markRead } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
-import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onChannelPinsUpdate, onSocketReconnect, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type ChannelPinsUpdatePayload } from '../../lib/socket';
+import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onChannelPinsUpdate, onSocketReconnect, onChannelBackgroundUpdated, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type ChannelPinsUpdatePayload } from '../../lib/socket';
 import Avatar from '../../components/ui/Avatar';
 
 type MediaType = 'image' | 'video';
@@ -1227,18 +1227,14 @@ const ChannelChat = () => {
     // Listen for channel background updates from other users/admins
     useEffect(() => {
         if (!channelId) return;
-        const socket = getSocket();
-        if (!socket) return;
-        const handler = (data: { channelId: string; backgroundUrl: string | null; backgroundType: string | null }) => {
+        return onChannelBackgroundUpdated((data) => {
             if (data.channelId !== channelId) return;
             if (data.backgroundUrl) {
                 setBgMedia({ url: data.backgroundUrl, type: (data.backgroundType || 'image') as MediaType });
             } else {
                 setBgMedia(null);
             }
-        };
-        socket.on('CHANNEL_BACKGROUND_UPDATED', handler);
-        return () => { socket.off('CHANNEL_BACKGROUND_UPDATED', handler); };
+        });
     }, [channelId, setBgMedia]);
 
     // Socket listener for real-time messages (create, update, delete)
