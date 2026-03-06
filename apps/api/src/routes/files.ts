@@ -31,7 +31,7 @@ import fs from 'fs';
 import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
-import { eq } from 'drizzle-orm';
+import { eq, or, like } from 'drizzle-orm';
 
 import { db } from '../db/index';
 import { files } from '../db/schema/files';
@@ -250,17 +250,20 @@ filesRouter.get('/:fileId', async (req: Request, res: Response): Promise<void> =
   const { fileId } = req.params as Record<string, string>;
 
   try {
-    // Look up the file record by matching the storageKey that starts with the fileId.
-    // Since storageKey = "<uuid>.<ext>" and the fileId = "<uuid>", we search
-    // the files table for the record whose ID matches the fileId UUID directly.
+    // Look up by storageKey prefix (the URL contains the storage UUID, not the DB row ID).
+    // storageKey format: "<uuid>.<ext>" — the URL contains only the UUID portion.
+    // Also try exact DB id match for forward compatibility.
     const [fileRecord] = await db
       .select()
       .from(files)
-      .where(eq(files.id, fileId))
+      .where(or(
+        eq(files.id, fileId),
+        eq(files.storageKey, fileId),
+        like(files.storageKey, `${fileId}.%`),
+      ))
       .limit(1);
 
     if (!fileRecord) {
-      // Try looking up by storage key prefix (UUID part).
       res.status(404).json({ code: 'NOT_FOUND', message: 'File not found' });
       return;
     }
