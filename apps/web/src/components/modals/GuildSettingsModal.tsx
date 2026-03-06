@@ -501,6 +501,56 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         }
     };
 
+    const fetchWebhooks = async () => {
+        if (!guildId) return;
+        try {
+            const whs = await api.webhooks.listByGuild(guildId);
+            const mapped = whs.map((wh: any) => {
+                const ch = channelsList.find(c => c.id === wh.channelId);
+                return {
+                    id: wh.id,
+                    name: wh.name,
+                    channel: ch ? `#${ch.name}` : '#unknown',
+                    channelId: wh.channelId,
+                    token: wh.token,
+                    avatar: '#526df5',
+                    createdAt: wh.createdAt ? new Date(wh.createdAt).toLocaleDateString() : 'Unknown',
+                };
+            });
+            setWebhooksList(mapped);
+        } catch {
+            // silent
+        }
+    };
+
+    const fetchAutomodRules = async () => {
+        if (!guildId) return;
+        try {
+            const wfs = await api.workflows.list(guildId);
+            const automodWfs = wfs.filter((wf: any) =>
+                wf.triggers?.some((t: any) => t.type === 'message_contains')
+            );
+            const rules = automodWfs.map((wf: any) => {
+                const trigger = wf.triggers?.find((t: any) => t.type === 'message_contains');
+                const keywords: string[] = trigger?.config?.keywords || [];
+                const action = wf.actions?.[0]?.type || 'delete_message';
+                return {
+                    id: wf.id,
+                    workflowId: wf.id,
+                    name: wf.name,
+                    desc: `Keywords: ${keywords.join(', ') || 'none'}`,
+                    enabled: wf.enabled,
+                    action: action === 'delete_message' ? 'Delete Message' : action,
+                    isBuiltIn: false,
+                    keywords,
+                };
+            });
+            setAutomodRules(rules);
+        } catch {
+            // silent — workflows API may not be available
+        }
+    };
+
     useEffect(() => {
         if (activeTab === 'overview' || activeTab === 'channels' || activeTab === 'webhooks') fetchChannels();
         if (activeTab === 'roles') fetchRoles();
@@ -508,6 +558,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         if (activeTab === 'invites') fetchInvites();
         if (activeTab === 'bans') fetchBans();
         if (activeTab === 'audit') fetchAuditLog();
+        if (activeTab === 'webhooks') fetchWebhooks();
+        if (activeTab === 'automod') fetchAutomodRules();
     }, [activeTab]);
     const [editingRoleName, setEditingRoleName] = useState(false);
     const [editRoleNameVal, setEditRoleNameVal] = useState('');
@@ -522,6 +574,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [editingRule, setEditingRule] = useState<string | null>(null);
     const [editRuleName, setEditRuleName] = useState('');
     const [editRuleAction, setEditRuleAction] = useState('');
+    const [editRuleKeywords, setEditRuleKeywords] = useState('');
     const [customEmojis, setCustomEmojis] = useState<Array<{ id?: string; name: string; url: string }>>([]);
     const [emojiUploading, setEmojiUploading] = useState(false);
     const [emojiNameInput, setEmojiNameInput] = useState('');
@@ -651,9 +704,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         }
     };
 
-    const [automodRules, setAutomodRules] = useState<{ id: string; name: string; desc: string; enabled: boolean; action: string; isBuiltIn: boolean }[]>([]);
+    const [automodRules, setAutomodRules] = useState<{ id: string; name: string; desc: string; enabled: boolean; action: string; isBuiltIn: boolean; workflowId?: string; keywords?: string[] }[]>([]);
 
-    const [webhooksList, setWebhooksList] = useState<{ id: string; name: string; channel: string; token: string; avatar: string; createdAt: string }[]>([]);
+    const [webhooksList, setWebhooksList] = useState<{ id: string; name: string; channel: string; channelId: string; token: string; avatar: string; createdAt: string }[]>([]);
     const [newWebhookName, setNewWebhookName] = useState('');
     const [newWebhookChannel, setNewWebhookChannel] = useState('');
     const [showCreateWebhook, setShowCreateWebhook] = useState(false);
@@ -730,21 +783,40 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         }
     };
 
-    const toggleAutomodRule = (ruleId: string) => {
-        setAutomodRules(prev => prev.map(r => {
-            if (r.id === ruleId) {
-                addAuditEntry(r.enabled ? 'AutoMod Rule Disabled' : 'AutoMod Rule Enabled', actorName, r.name, 'settings');
-                return { ...r, enabled: !r.enabled };
-            }
-            return r;
-        }));
+    const toggleAutomodRule = async (ruleId: string) => {
+        const rule = automodRules.find(r => r.id === ruleId);
+        if (!rule || !guildId) return;
+        const newEnabled = !rule.enabled;
+        setAutomodRules(prev => prev.map(r => r.id === ruleId ? { ...r, enabled: newEnabled } : r));
+        addAuditEntry(newEnabled ? 'AutoMod Rule Enabled' : 'AutoMod Rule Disabled', actorName, rule.name, 'settings');
+        try {
+            await api.workflows.update(guildId, ruleId, { enabled: newEnabled });
+        } catch {
+            setAutomodRules(prev => prev.map(r => r.id === ruleId ? { ...r, enabled: !newEnabled } : r));
+        }
     };
 
-    const saveRuleEdit = (ruleId: string) => {
+    const saveRuleEdit = async (ruleId: string) => {
+        if (!guildId) return;
+        const rule = automodRules.find(r => r.id === ruleId);
+        if (!rule) return;
+        const newName = editRuleName || rule.name;
+        const newAction = editRuleAction || rule.action;
+        const keywords = editRuleKeywords.split(',').map(k => k.trim()).filter(Boolean);
         setAutomodRules(prev => prev.map(r =>
-            r.id === ruleId ? { ...r, name: editRuleName || r.name, action: editRuleAction || r.action } : r
+            r.id === ruleId ? { ...r, name: newName, action: newAction, keywords, desc: `Keywords: ${keywords.join(', ') || 'none'}` } : r
         ));
         setEditingRule(null);
+        try {
+            const actionType = newAction === 'Delete Message' ? 'delete_message' : newAction;
+            await api.workflows.update(guildId, ruleId, {
+                name: newName,
+                triggers: [{ type: 'message_contains', config: { keywords } }],
+                actions: [{ order: 0, type: actionType }],
+            });
+        } catch {
+            // revert silently
+        }
     };
 
     const kickMember = async (memberId: string) => {
@@ -1711,13 +1783,19 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                     <input type="text" value={editRuleName} onChange={e => setEditRuleName(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--accent-primary)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} autoFocus />
                                                 </div>
                                                 <div>
+                                                    <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Keywords (comma-separated)</label>
+                                                    <input type="text" value={editRuleKeywords} onChange={e => setEditRuleKeywords(e.target.value)} placeholder="e.g. spam, scam, phishing" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                                                </div>
+                                                <div>
                                                     <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Action</label>
-                                                    <input type="text" value={editRuleAction} onChange={e => setEditRuleAction(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                                                    <select value={editRuleAction} onChange={e => setEditRuleAction(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}>
+                                                        <option value="Delete Message">Delete Message</option>
+                                                    </select>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '8px' }}>
                                                     <button onClick={() => saveRuleEdit(rule.id)} style={{ background: 'var(--accent-primary)', border: 'none', padding: '8px 20px', borderRadius: '6px', color: '#000', fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}>Save Rule</button>
                                                     <button onClick={() => setEditingRule(null)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '8px 20px', borderRadius: '6px', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
-                                                    <button onClick={() => { setAutomodRules(prev => prev.filter(r => r.id !== rule.id)); setEditingRule(null); }} style={{ background: 'transparent', border: '1px solid var(--error)', padding: '8px 16px', borderRadius: '6px', color: 'var(--error)', fontWeight: 600, cursor: 'pointer', fontSize: '13px', marginLeft: 'auto' }}>Delete</button>
+                                                    <button onClick={async () => { if (guildId) { try { await api.workflows.delete(guildId, rule.id); } catch {} } setAutomodRules(prev => prev.filter(r => r.id !== rule.id)); setEditingRule(null); }} style={{ background: 'transparent', border: '1px solid var(--error)', padding: '8px 16px', borderRadius: '6px', color: 'var(--error)', fontWeight: 600, cursor: 'pointer', fontSize: '13px', marginLeft: 'auto' }}>Delete</button>
                                                 </div>
                                             </div>
                                         ) : (
@@ -1738,7 +1816,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                 <div style={{ background: 'var(--bg-tertiary)', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <div><span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Action:</span> {rule.action}</div>
                                                     {!rule.isBuiltIn && (
-                                                        <button onClick={() => { setEditingRule(rule.id); setEditRuleName(rule.name); setEditRuleAction(rule.action); }}
+                                                        <button onClick={() => { setEditingRule(rule.id); setEditRuleName(rule.name); setEditRuleAction(rule.action); setEditRuleKeywords((rule.keywords || []).join(', ')); }}
                                                             onMouseEnter={() => setHoveredBtn(`edit-rule-${rule.id}`)} onMouseLeave={() => setHoveredBtn(null)}
                                                             style={{ background: 'none', border: 'none', color: hoveredBtn === `edit-rule-${rule.id}` ? 'var(--text-primary)' : 'var(--accent-primary)', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px' }}
                                                         ><Edit2 size={12} /> Edit</button>
@@ -1750,13 +1828,23 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 ))}
 
                                 <button onMouseEnter={() => setHoveredBtn('create-rule')} onMouseLeave={() => setHoveredBtn(null)}
-                                    onClick={() => {
-                                        const newId = Date.now().toString();
-                                        const newRule = { id: newId, name: 'New Custom Rule', desc: 'Configure this rule to your needs.', enabled: false, action: 'Block Message', isBuiltIn: false };
-                                        setAutomodRules(prev => [...prev, newRule]);
-                                        setEditingRule(newId);
-                                        setEditRuleName(newRule.name);
-                                        setEditRuleAction(newRule.action);
+                                    onClick={async () => {
+                                        if (!guildId) return;
+                                        try {
+                                            const created = await api.workflows.create(guildId, {
+                                                name: 'New AutoMod Rule',
+                                                triggers: [{ type: 'message_contains', config: { keywords: [] } }],
+                                                actions: [{ order: 0, type: 'delete_message' }],
+                                            });
+                                            const newRule = { id: created.id, workflowId: created.id, name: created.name, desc: 'Keywords: none', enabled: created.enabled, action: 'Delete Message', isBuiltIn: false, keywords: [] as string[] };
+                                            setAutomodRules(prev => [...prev, newRule]);
+                                            setEditingRule(created.id);
+                                            setEditRuleName(newRule.name);
+                                            setEditRuleAction(newRule.action);
+                                            setEditRuleKeywords('');
+                                        } catch {
+                                            addToast({ title: 'Failed to create rule', variant: 'error' });
+                                        }
                                     }}
                                     style={{ padding: '14px', borderRadius: '12px', background: hoveredBtn === 'create-rule' ? 'var(--hover-overlay)' : 'transparent', border: '1px dashed var(--stroke)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 600, fontSize: '14px' }}
                                 ><Plus size={16} /> Create Custom Rule</button>
@@ -2024,7 +2112,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                         setWebhookCreating(true);
                                         try {
                                             const created = await api.webhooks.create({ channelId: channel.id, name: newWebhookName });
-                                            const newWh = { id: created.id ?? `wh${Date.now()}`, name: created.name ?? newWebhookName, channel: newWebhookChannel, token: created.token ?? 'Token generated by server', avatar: '#526df5', createdAt: 'Just now' };
+                                            const newWh = { id: created.id ?? `wh${Date.now()}`, name: created.name ?? newWebhookName, channel: newWebhookChannel, channelId: channel.id, token: created.token ?? 'Token generated by server', avatar: '#526df5', createdAt: 'Just now' };
                                             setWebhooksList(prev => [...prev, newWh]);
                                             addAuditEntry('Webhook Created', actorName, newWebhookName, 'settings');
                                             setNewWebhookName(''); setShowCreateWebhook(false);
@@ -2050,7 +2138,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Posts to {wh.channel} &middot; Created {wh.createdAt}</div>
                                         </div>
                                         <div style={{ display: 'flex', gap: '8px' }}>
-                                            <button onClick={() => { setCopiedWebhookId(wh.id); setTimeout(() => setCopiedWebhookId(null), 2000); }}
+                                            <button onClick={() => { const apiHost = API_BASE; const url = `${apiHost}/webhooks/${wh.id}/${wh.token}`; navigator.clipboard.writeText(url).catch(() => {}); setCopiedWebhookId(wh.id); setTimeout(() => setCopiedWebhookId(null), 2000); }}
                                                 title="Copy Webhook URL"
                                                 style={{ padding: '8px', borderRadius: '6px', background: copiedWebhookId === wh.id ? 'rgba(16,185,129,0.15)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: copiedWebhookId === wh.id ? 'var(--success)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
                                                 {copiedWebhookId === wh.id ? <Check size={16} /> : <Copy size={16} />}
