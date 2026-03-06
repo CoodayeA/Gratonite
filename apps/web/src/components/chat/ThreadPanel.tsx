@@ -128,7 +128,7 @@ const ThreadPanel = ({ originalMessage, onClose }: ThreadPanelProps) => {
                                 <div className="msg-header" style={{ fontSize: '13px' }}>
                                     <span className="msg-author">{reply.author}</span>
                                     <span className="msg-timestamp" title={reply.createdAt ? new Date(reply.createdAt).toLocaleString() : reply.time}>
-                                        {reply.createdAt ? formatRelative(reply.createdAt) : reply.time}
+                                        {reply.createdAt ? formatRelative(typeof reply.createdAt === "string" ? new Date(reply.createdAt).getTime() : reply.createdAt) : reply.time}
                                     </span>
                                 </div>
                                 <div className="msg-body" style={{ fontSize: '13px' }}>
