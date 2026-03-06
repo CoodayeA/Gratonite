@@ -210,6 +210,8 @@ const patchRoleSchema = z.object({
   hoist: z.boolean().optional(),
   mentionable: z.boolean().optional(),
   position: z.number().int().min(0).optional(),
+  unicodeEmoji: z.string().max(50).nullable().optional(),
+  iconHash: z.string().max(255).nullable().optional(),
 });
 
 /** PATCH /api/v1/guilds/:guildId/roles/:roleId */
@@ -220,7 +222,7 @@ rolesRouter.patch('/:roleId', requireAuth, validate(patchRoleSchema), async (req
     res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_ROLES permission' }); return;
   }
 
-  const { name, color, permissions: permsStr, hoist, mentionable, position } = req.body;
+  const { name, color, permissions: permsStr, hoist, mentionable, position, unicodeEmoji, iconHash } = req.body;
   const updateData: Record<string, unknown> = {};
   if (name !== undefined) updateData.name = name;
   if (color !== undefined) updateData.color = color;
@@ -228,6 +230,8 @@ rolesRouter.patch('/:roleId', requireAuth, validate(patchRoleSchema), async (req
   if (hoist !== undefined) updateData.hoist = hoist;
   if (mentionable !== undefined) updateData.mentionable = mentionable;
   if (position !== undefined) updateData.position = position;
+  if (unicodeEmoji !== undefined) updateData.unicodeEmoji = unicodeEmoji;
+  if (iconHash !== undefined) updateData.iconHash = iconHash;
 
   const [updated] = await db.update(roles).set(updateData).where(and(eq(roles.id, roleId), eq(roles.guildId, guildId))).returning();
   if (!updated) { res.status(404).json({ code: 'NOT_FOUND', message: 'Role not found' }); return; }

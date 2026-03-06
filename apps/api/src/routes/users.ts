@@ -33,9 +33,14 @@ import { userNotes } from '../db/schema/user-notes';
 import { cosmetics } from '../db/schema/cosmetics';
 import { userCosmetics } from '../db/schema/cosmetics';
 import { files } from '../db/schema/files';
+import { guildFolders } from '../db/schema/guild-folders';
+import { favoriteChannels } from '../db/schema/favorite-channels';
+import { channels } from '../db/schema/channels';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { redis } from '../lib/redis';
+import { getIO } from '../lib/socket-io';
+import { asc } from 'drizzle-orm';
 
 const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -151,6 +156,8 @@ const patchMeSchema = z.object({
   onboardingCompleted: z.boolean().optional(),
   interests: z.array(z.string()).nullable().optional(),
   nameplateStyle: z.enum(['none', 'rainbow', 'fire', 'ice', 'gold', 'glitch']).optional(),
+  statusEmoji: z.string().max(50).nullable().optional(),
+  statusExpiresAt: z.string().datetime().nullable().optional(),
 });
 
 /**
@@ -262,7 +269,7 @@ usersRouter.patch(
   requireAuth,
   validate(patchMeSchema),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const { displayName, bio, pronouns, customStatus, onboardingCompleted, interests, nameplateStyle } = req.body as z.infer<typeof patchMeSchema>;
+    const { displayName, bio, pronouns, customStatus, onboardingCompleted, interests, nameplateStyle, statusEmoji, statusExpiresAt } = req.body as z.infer<typeof patchMeSchema>;
 
     // Build update payload — only include explicitly provided fields.
     const updateData: Partial<typeof users.$inferInsert> = { updatedAt: new Date() };
@@ -273,6 +280,8 @@ usersRouter.patch(
     if (onboardingCompleted !== undefined) updateData.onboardingCompleted = onboardingCompleted;
     if (interests !== undefined) updateData.interests = interests ? JSON.stringify(interests) : null;
     if (nameplateStyle !== undefined) updateData.nameplateStyle = nameplateStyle;
+    if (statusEmoji !== undefined) updateData.statusEmoji = statusEmoji;
+    if (statusExpiresAt !== undefined) updateData.statusExpiresAt = statusExpiresAt ? new Date(statusExpiresAt) : null;
 
     const [updated] = await db
       .update(users)
@@ -869,3 +878,143 @@ usersRouter.post(
     res.json({ success: true });
   }),
 );
+
+// ---------------------------------------------------------------------------
+// Guild Folders
+// ---------------------------------------------------------------------------
+
+/** GET /users/@me/guild-folders */
+usersRouter.get('/@me/guild-folders', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const folders = await db.select().from(guildFolders)
+    .where(eq(guildFolders.userId, req.userId!))
+    .orderBy(asc(guildFolders.position));
+  res.json(folders);
+}));
+
+/** POST /users/@me/guild-folders */
+usersRouter.post('/@me/guild-folders', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { name, color, guildIds } = req.body as { name?: string; color?: string; guildIds?: string[] };
+  const [folder] = await db.insert(guildFolders).values({
+    userId: req.userId!,
+    name: name || null,
+    color: color ?? null,
+    guildIds: guildIds || [],
+  }).returning();
+  res.status(201).json(folder);
+}));
+
+/** PATCH /users/@me/guild-folders/:folderId */
+usersRouter.patch('/@me/guild-folders/:folderId', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { folderId } = req.params as Record<string, string>;
+  const { name, color, guildIds, position } = req.body as { name?: string; color?: string; guildIds?: string[]; position?: number };
+
+  const updateData: Record<string, unknown> = {};
+  if (name !== undefined) updateData.name = name;
+  if (color !== undefined) updateData.color = color;
+  if (guildIds !== undefined) updateData.guildIds = guildIds;
+  if (position !== undefined) updateData.position = position;
+
+  const [updated] = await db.update(guildFolders)
+    .set(updateData)
+    .where(and(eq(guildFolders.id, folderId), eq(guildFolders.userId, req.userId!)))
+    .returning();
+
+  if (!updated) { res.status(404).json({ code: 'NOT_FOUND', message: 'Folder not found' }); return; }
+  res.json(updated);
+}));
+
+/** DELETE /users/@me/guild-folders/:folderId */
+usersRouter.delete('/@me/guild-folders/:folderId', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { folderId } = req.params as Record<string, string>;
+  await db.delete(guildFolders).where(and(eq(guildFolders.id, folderId), eq(guildFolders.userId, req.userId!)));
+  res.json({ code: 'OK' });
+}));
+
+// ---------------------------------------------------------------------------
+// Favorite Channels
+// ---------------------------------------------------------------------------
+
+/** GET /users/@me/favorites */
+usersRouter.get('/@me/favorites', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const favorites = await db
+    .select({
+      channelId: favoriteChannels.channelId,
+      position: favoriteChannels.position,
+      channelName: channels.name,
+      channelType: channels.type,
+      guildId: channels.guildId,
+    })
+    .from(favoriteChannels)
+    .leftJoin(channels, eq(channels.id, favoriteChannels.channelId))
+    .where(eq(favoriteChannels.userId, req.userId!))
+    .orderBy(asc(favoriteChannels.position));
+  res.json(favorites);
+}));
+
+/** PUT /users/@me/favorites/:channelId */
+usersRouter.put('/@me/favorites/:channelId', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { channelId } = req.params as Record<string, string>;
+  const { position } = req.body as { position?: number };
+
+  await db.insert(favoriteChannels).values({
+    userId: req.userId!,
+    channelId,
+    position: position ?? 0,
+  }).onConflictDoUpdate({
+    target: [favoriteChannels.userId, favoriteChannels.channelId],
+    set: { position: position ?? 0 },
+  });
+
+  res.json({ code: 'OK' });
+}));
+
+/** DELETE /users/@me/favorites/:channelId */
+usersRouter.delete('/@me/favorites/:channelId', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { channelId } = req.params as Record<string, string>;
+  await db.delete(favoriteChannels).where(
+    and(eq(favoriteChannels.userId, req.userId!), eq(favoriteChannels.channelId, channelId)),
+  );
+  res.json({ code: 'OK' });
+}));
+
+// ---------------------------------------------------------------------------
+// Rich Presence / Activity
+// ---------------------------------------------------------------------------
+
+const activitySchema = z.object({
+  type: z.enum(['PLAYING', 'WATCHING', 'LISTENING', 'STREAMING']),
+  name: z.string().min(1).max(128),
+  details: z.string().max(256).optional(),
+  state: z.string().max(256).optional(),
+});
+
+/** PATCH /users/@me/activity */
+usersRouter.patch('/@me/activity', requireAuth, validate(activitySchema), asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const activity = req.body;
+  await db.update(users).set({ activity, updatedAt: new Date() }).where(eq(users.id, req.userId!));
+
+  try {
+    const memberships = await db.select({ guildId: guildMembers.guildId }).from(guildMembers).where(eq(guildMembers.userId, req.userId!));
+    const io = getIO();
+    for (const { guildId } of memberships) {
+      io.to(`guild:${guildId}`).emit('PRESENCE_UPDATE', { userId: req.userId!, activity });
+    }
+  } catch { /* non-fatal */ }
+
+  res.json({ activity });
+}));
+
+/** DELETE /users/@me/activity */
+usersRouter.delete('/@me/activity', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  await db.update(users).set({ activity: null, updatedAt: new Date() }).where(eq(users.id, req.userId!));
+
+  try {
+    const memberships = await db.select({ guildId: guildMembers.guildId }).from(guildMembers).where(eq(guildMembers.userId, req.userId!));
+    const io = getIO();
+    for (const { guildId } of memberships) {
+      io.to(`guild:${guildId}`).emit('PRESENCE_UPDATE', { userId: req.userId!, activity: null });
+    }
+  } catch { /* non-fatal */ }
+
+  res.json({ code: 'OK' });
+}));
