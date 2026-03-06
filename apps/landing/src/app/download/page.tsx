@@ -4,9 +4,9 @@ import { Badge } from "@/components/ui/Badge";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
 
 export const metadata: Metadata = {
-  title: "Download — Gratonite",
+  title: "Download Gratonite — Free Discord Alternative for Desktop & Mobile",
   description:
-    "Download Gratonite for desktop or jump in on web. Native iOS and Android builds are on the way.",
+    "Download Gratonite free for macOS, Windows, and Linux. A privacy-first, open-source Discord alternative with real-time chat, voice, and community features.",
 };
 
 const platforms = [

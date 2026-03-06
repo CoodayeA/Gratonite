@@ -31,11 +31,33 @@ export default async function BlogPostPage({ params }: PageProps) {
   const post = getPostBySlug(slug);
   if (!post) notFound();
 
+  const articleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.title,
+    description: post.description,
+    datePublished: post.date,
+    author: {
+      "@type": "Person",
+      name: post.author,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Gratonite",
+      url: "https://gratonite.chat",
+    },
+  };
+
   return (
-    <div className="pt-28 pb-16 px-6 relative overflow-hidden">
-      <div className="neo-burst neo-burst-purple top-28 right-[-80px]" />
-      <article className="max-w-3xl mx-auto relative z-10">
-        {/* Back link */}
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
+      <div className="pt-28 pb-16 px-6 relative overflow-hidden">
+        <div className="neo-burst neo-burst-purple top-28 right-[-80px]" />
+        <article className="max-w-3xl mx-auto relative z-10">
+          {/* Back link */}
         <Link
           href="/blog"
           className="inline-flex items-center gap-2 text-sm font-bold text-foreground/40 hover:text-purple transition-colors mb-8"
@@ -73,5 +95,6 @@ export default async function BlogPostPage({ params }: PageProps) {
         </div>
       </article>
     </div>
+    </>
   );
 }

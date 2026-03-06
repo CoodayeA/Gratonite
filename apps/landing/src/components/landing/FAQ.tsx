@@ -1,6 +1,6 @@
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
 
-const faqs = [
+export const faqs = [
   {
     question: "Is Gratonite actually free?",
     answer:
