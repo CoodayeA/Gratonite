@@ -56,6 +56,9 @@ type Message = {
     mediaAspectRatio?: number;
     forwarded?: boolean;
     forwardedFrom?: string;
+    replyToId?: string;
+    replyToAuthor?: string;
+    replyToContent?: string;
     attachments?: MessageAttachment[];
     authorAvatarHash?: string | null;
     authorNameplateStyle?: string | null;
@@ -1626,18 +1629,25 @@ const DirectMessage = () => {
                                     <p style={{ fontSize: '13px' }}>Send a message to start the conversation</p>
                                 </div>
                             )}
-                            {messages.map((msg) => {
+                            {messages.map((msg, index) => {
                                 const isCurrentUserMessage =
                                     (Boolean(msg.authorId) && msg.authorId === currentUserId)
                                     || (!msg.authorId && msg.author === currentUserName);
                                 const currentFrame = userProfile?.avatarFrame ?? 'none';
                                 const currentNameplate = userProfile?.nameplateStyle ?? 'none';
+                                const prevMsg = index > 0 ? messages[index - 1] : null;
+                                const isGrouped = !!(prevMsg &&
+                                    !msg.system && !prevMsg.system &&
+                                    !msg.replyToId &&
+                                    prevMsg.author === msg.author &&
+                                    msg.createdAt && prevMsg.createdAt &&
+                                    new Date(msg.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() < 5 * 60 * 1000);
 
                                 return (
                                 <div
                                     key={msg.id}
-                                    className="message"
-                                    style={{ margin: 0, padding: '4px 16px', display: 'flex', gap: '16px', position: 'relative' }}
+                                    className={`message${isGrouped ? ' grouped' : ''}`}
+                                    style={{ margin: 0, marginTop: isGrouped ? '1px' : '12px', padding: isGrouped ? '1px 16px' : '4px 16px', display: 'flex', gap: '12px', position: 'relative' }}
                                     onMouseEnter={() => setHoveredMessageId(msg.id)}
                                     onMouseLeave={() => { setHoveredMessageId(null); }}
                                     onContextMenu={(e) => {
@@ -1666,18 +1676,51 @@ const DirectMessage = () => {
                                         ]);
                                     }}
                                 >
-                                    <Avatar
-                                        userId={msg.authorId || String(msg.id)}
-                                        displayName={msg.author}
-                                        avatarHash={msg.authorAvatarHash}
-                                        frame={isCurrentUserMessage ? currentFrame : 'none'}
-                                        size={40}
-                                    />
+                                    {isGrouped ? (
+                                        <div style={{ width: '40px', flexShrink: 0 }} />
+                                    ) : (
+                                        <Avatar
+                                            userId={msg.authorId || String(msg.id)}
+                                            displayName={msg.author}
+                                            avatarHash={msg.authorAvatarHash}
+                                            frame={isCurrentUserMessage ? currentFrame : 'none'}
+                                            size={40}
+                                        />
+                                    )}
                                     <div className="msg-content">
+                                        {!isGrouped && (
                                         <div className="msg-header">
                                             <span className={`msg-author ${msg.authorNameplateStyle && msg.authorNameplateStyle !== 'none' ? `nameplate-${msg.authorNameplateStyle}` : (isCurrentUserMessage && currentNameplate !== 'none' ? `nameplate-${currentNameplate}` : '')}`}>{msg.author}</span>
                                             <span className="msg-timestamp">{msg.time}</span>
                                         </div>
+                                        )}
+                                        {msg.replyToId && msg.replyToAuthor && (
+                                            <div style={{
+                                                display: 'flex', alignItems: 'center', gap: '6px',
+                                                fontSize: '11px', marginBottom: '4px',
+                                                paddingLeft: '8px', paddingRight: '8px',
+                                                paddingTop: '3px', paddingBottom: '3px',
+                                                background: 'rgba(255,255,255,0.03)',
+                                                borderLeft: '2px solid var(--accent-primary)',
+                                                borderRadius: '0 4px 4px 0',
+                                                cursor: 'pointer',
+                                                maxWidth: '100%', overflow: 'hidden',
+                                            }} onClick={() => {
+                                                const el = document.querySelector(`[data-message-id="${msg.replyToId}"]`);
+                                                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                            }}>
+                                                <Reply size={11} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                                                <span style={{ fontWeight: 600, color: 'var(--accent-primary)', flexShrink: 0, fontSize: '11px' }}>
+                                                    {msg.replyToAuthor}
+                                                </span>
+                                                <span style={{
+                                                    overflow: 'hidden', textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap', flex: 1, color: 'var(--text-muted)', fontSize: '11px',
+                                                }}>
+                                                    {msg.replyToContent || '— click to view'}
+                                                </span>
+                                            </div>
+                                        )}
                                         <div className="msg-body">
                                             {msg.forwarded && (
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontStyle: 'italic' }}>
