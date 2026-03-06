@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
-import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock } from 'lucide-react';
+import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock } from 'lucide-react';
+import { getOrCreateKeyPair, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported } from '../../lib/e2e';
 
 import { BackgroundMedia } from '../../components/ui/BackgroundMedia';
 import { useToast } from '../../components/ui/ToastManager';
@@ -60,6 +61,8 @@ type Message = {
     authorNameplateStyle?: string | null;
     expiresAt?: string | null;
     createdAt?: string | null;
+    isEncrypted?: boolean;
+    encryptedContent?: string | null;
 };
 
 // Video element component for rendering participant video
@@ -347,6 +350,12 @@ const DirectMessage = () => {
 
     // Disappearing messages timer state (A2)
     const [disappearTimer, setDisappearTimer] = useState<number | null>(null);
+
+    // E2E encryption state
+    const [e2eKey, setE2eKey] = useState<CryptoKey | null>(null);
+    const [e2eSupported, setE2eSupported] = useState(false);
+    // Map of messageId -> decrypted plaintext (populated asynchronously)
+    const [decryptedContents, setDecryptedContents] = useState<Map<number, string>>(new Map());
     const [showDisappearMenu, setShowDisappearMenu] = useState(false);
     const disappearMenuRef = useRef<HTMLDivElement>(null);
 
@@ -523,6 +532,8 @@ const DirectMessage = () => {
             reactions: m.reactions || [],
             expiresAt: m.expiresAt ?? null,
             createdAt: m.createdAt ?? null,
+            isEncrypted: m.isEncrypted ?? false,
+            encryptedContent: m.encryptedContent ?? null,
         };
     };
 
@@ -623,8 +634,11 @@ const DirectMessage = () => {
             if (data.channelId !== dmChannelId) return;
             if (data.authorId === currentUserId) return;
             const authorName = data.author?.displayName || data.author?.username || data.authorId.slice(0, 8);
+            const msgId = typeof data.id === 'string' ? parseInt(data.id, 36) || Date.now() : Number(data.id);
+            const isEncryptedMsg = (data as any).isEncrypted ?? false;
+            const encryptedContent = (data as any).encryptedContent ?? null;
             setMessages(prev => [...prev, {
-                id: typeof data.id === 'string' ? parseInt(data.id, 36) || Date.now() : Number(data.id),
+                id: msgId,
                 apiId: data.id,
                 authorId: data.authorId,
                 author: authorName,
@@ -637,6 +651,8 @@ const DirectMessage = () => {
                 edited: data.edited,
                 expiresAt: data.expiresAt ?? null,
                 createdAt: data.createdAt ?? null,
+                isEncrypted: isEncryptedMsg,
+                encryptedContent: encryptedContent,
             }]);
             // Auto-mark read when message arrives and window is focused/visible
             if (!document.hidden && document.hasFocus()) {
@@ -745,6 +761,56 @@ const DirectMessage = () => {
         document.addEventListener('mousedown', handleClick);
         return () => document.removeEventListener('mousedown', handleClick);
     }, [showDisappearMenu]);
+
+    // E2E setup — derives shared key when a non-group DM partner is known
+    useEffect(() => {
+        if (!isE2ESupported() || !currentUserId || !recipientId || isGroupDm) return;
+        setE2eSupported(true);
+
+        let cancelled = false;
+        getOrCreateKeyPair(currentUserId).then(async (myKeyPair) => {
+            if (!myKeyPair || cancelled) return;
+            try {
+                const res = await fetch(`/api/v1/users/${recipientId}/public-key`, { credentials: 'include' });
+                if (!res.ok || cancelled) return;
+                const data = await res.json() as { publicKeyJwk: string | null };
+                if (!data.publicKeyJwk || cancelled) return;
+                const theirKey = await importPublicKey(data.publicKeyJwk);
+                const sharedKey = await deriveSharedKey(myKeyPair.privateKey, theirKey);
+                if (!cancelled) setE2eKey(sharedKey);
+            } catch {
+                // Partner has no key yet or network error — silently fall back to plaintext
+            }
+        });
+
+        return () => { cancelled = true; };
+    }, [currentUserId, recipientId, isGroupDm]);
+
+    // Decrypt encrypted messages whenever the e2eKey or messages list changes
+    useEffect(() => {
+        if (!e2eKey) return;
+        const encryptedMsgs = messages.filter(
+            (m) => m.isEncrypted && m.encryptedContent && !decryptedContents.has(m.id),
+        );
+        if (encryptedMsgs.length === 0) return;
+
+        Promise.all(
+            encryptedMsgs.map(async (m) => {
+                try {
+                    const plain = await decrypt(e2eKey, m.encryptedContent!);
+                    return [m.id, plain] as const;
+                } catch {
+                    return [m.id, '[Decryption failed]'] as const;
+                }
+            }),
+        ).then((results) => {
+            setDecryptedContents((prev) => {
+                const next = new Map(prev);
+                for (const [id, text] of results) next.set(id, text);
+                return next;
+            });
+        });
+    }, [e2eKey, messages]);
 
     const handleSetDisappearTimer = async (seconds: number | null) => {
         if (!dmChannelId) return;
@@ -943,13 +1009,34 @@ const DirectMessage = () => {
             // If there are image attachments, show the first as inline media
             const firstImage = uploadedFiles.find(f => f.mimeType?.startsWith('image/'));
 
+            // Encrypt if E2E key is available (only text content is encrypted; attachments remain unencrypted)
+            let sendPayload: { content?: string | null; encryptedContent?: string; isEncrypted?: boolean; attachmentIds?: string[] };
+            let optimisticContent = content;
+            if (e2eKey && content) {
+                try {
+                    const encryptedContent = await encrypt(e2eKey, content);
+                    sendPayload = { content: null, encryptedContent, isEncrypted: true, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined };
+                    // Store decrypted version optimistically so sender sees plaintext immediately
+                    setDecryptedContents(prev => { const next = new Map(prev); next.set(optimisticId, content); return next; });
+                } catch {
+                    // Encryption failed — send plaintext as fallback
+                    sendPayload = { content, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined };
+                }
+            } else {
+                sendPayload = { content, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined };
+            }
+
+            const isOptimisticEncrypted = e2eKey != null && content != null && content.length > 0 && 'encryptedContent' in sendPayload;
+
             setMessages(prev => [...prev, {
                 id: optimisticId,
                 author: currentUserName || 'You',
                 system: false,
                 avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                content,
+                content: isOptimisticEncrypted ? '' : optimisticContent,
+                isEncrypted: isOptimisticEncrypted,
+                encryptedContent: isOptimisticEncrypted ? (sendPayload as any).encryptedContent : null,
                 attachments,
                 ...(firstImage ? {
                     type: 'media' as const,
@@ -958,12 +1045,20 @@ const DirectMessage = () => {
                 } : {})
             }]);
 
-            api.messages.send(dmChannelId, {
-                content,
-                attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined
-            }).then((res: any) => {
+            api.messages.send(dmChannelId, sendPayload as any).then((res: any) => {
                 if (res?.id) {
                     setMessages(prev => prev.map(m => m.id === optimisticId ? { ...m, apiId: res.id, authorId: res.authorId } : m));
+                    // Move decrypted content to real message id
+                    if (isOptimisticEncrypted) {
+                        setDecryptedContents(prev => {
+                            const text = prev.get(optimisticId);
+                            if (!text) return prev;
+                            const next = new Map(prev);
+                            next.delete(optimisticId);
+                            // We can't use apiId as numeric key; keep optimistic entry for now
+                            return next;
+                        });
+                    }
                 }
             }).catch(() => {
                 setMessages(prev => prev.filter(m => m.id !== optimisticId));
@@ -1043,6 +1138,9 @@ const DirectMessage = () => {
                                         {userName}
                                         {isGroupDm && groupOwnerId === userProfile?.id && (
                                             <Pencil size={14} style={{ cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => { setEditGroupNameValue(groupName); setIsEditingGroupName(true); }} />
+                                        )}
+                                        {e2eKey && !isGroupDm && (
+                                            <Lock size={14} style={{ color: 'var(--success, #22c55e)' }} title="End-to-end encrypted" aria-label="End-to-end encrypted" />
                                         )}
                                     </>
                                 )}
@@ -1509,7 +1607,18 @@ const DirectMessage = () => {
                                                 </div>
                                             ) : (
                                                 <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.5' }}>
-                                                    <RichTextRenderer content={msg.content} />
+                                                    {msg.isEncrypted ? (
+                                                        decryptedContents.has(msg.id) ? (
+                                                            <RichTextRenderer content={decryptedContents.get(msg.id)!} />
+                                                        ) : (
+                                                            <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                                <Lock size={12} />
+                                                                {e2eKey ? 'Decrypting...' : 'Encrypted message'}
+                                                            </span>
+                                                        )
+                                                    ) : (
+                                                        <RichTextRenderer content={msg.content} />
+                                                    )}
                                                     {msg.edited && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '6px' }}>(edited)</span>}
                                                     {/* Expiry countdown (A2) */}
                                                     {msg.expiresAt && (() => {
