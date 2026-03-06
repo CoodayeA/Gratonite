@@ -2439,13 +2439,14 @@ p {
     background: linear-gradient(180deg, rgba(10, 10, 14, 0.6) 0%, rgba(10, 10, 16, 0.85) 100%);
 }
 
-/* Channel background: make message area transparent so background video/image shows through */
-.main-view.has-custom-bg .message-area {
+/* Channel background: make message area transparent so background video/image shows through.
+   Uses html ancestor for specificity [0,3,1] to beat theme-specific [0,3,0] !important rules. */
+html .main-view.has-custom-bg .message-area {
     background: transparent !important;
 }
 
 /* Keep input area readable with frosted glass */
-.main-view.has-custom-bg .input-area {
+html .main-view.has-custom-bg .input-area {
     background: rgba(0, 0, 0, 0.3) !important;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -3752,10 +3753,9 @@ a {
     background: var(--bg-channel) !important;
 }
 
-/* When custom bg is set, make message area semi-transparent so bg shows through */
+/* When custom bg is set, make message area transparent so bg shows through */
 [data-theme="neobrutalism"] .has-custom-bg .message-area {
-    background: rgba(245, 240, 232, 0.75) !important;
-    /* Warm cream overlay */
+    background: transparent !important;
 }
 
 [data-theme="neobrutalism"] .chat-media-attachment {
