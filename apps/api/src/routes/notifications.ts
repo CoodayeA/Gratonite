@@ -43,6 +43,20 @@ notificationsRouter.get('/unread-count', requireAuth, async (req: Request, res: 
   res.json({ count: unread.length });
 });
 
+/** POST /api/v1/notifications/mark-all-read */
+notificationsRouter.post('/mark-all-read', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  await db.update(notifications).set({ read: true })
+    .where(and(eq(notifications.userId, req.userId!), eq(notifications.read, false)));
+  res.json({ code: 'OK' });
+});
+
+/** POST /api/v1/notifications/read-all — alias (frontend compat) */
+notificationsRouter.post('/read-all', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  await db.update(notifications).set({ read: true })
+    .where(and(eq(notifications.userId, req.userId!), eq(notifications.read, false)));
+  res.json({ code: 'OK' });
+});
+
 /** PATCH /api/v1/notifications/:id/read */
 notificationsRouter.patch('/:id/read', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params as Record<string, string>;
@@ -56,20 +70,6 @@ notificationsRouter.post('/:id/read', requireAuth, async (req: Request, res: Res
   const { id } = req.params as Record<string, string>;
   await db.update(notifications).set({ read: true })
     .where(and(eq(notifications.id, id), eq(notifications.userId, req.userId!)));
-  res.json({ code: 'OK' });
-});
-
-/** POST /api/v1/notifications/mark-all-read */
-notificationsRouter.post('/mark-all-read', requireAuth, async (req: Request, res: Response): Promise<void> => {
-  await db.update(notifications).set({ read: true })
-    .where(and(eq(notifications.userId, req.userId!), eq(notifications.read, false)));
-  res.json({ code: 'OK' });
-});
-
-/** POST /api/v1/notifications/read-all — alias (frontend compat) */
-notificationsRouter.post('/read-all', requireAuth, async (req: Request, res: Response): Promise<void> => {
-  await db.update(notifications).set({ read: true })
-    .where(and(eq(notifications.userId, req.userId!), eq(notifications.read, false)));
   res.json({ code: 'OK' });
 });
 

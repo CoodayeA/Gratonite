@@ -63,16 +63,16 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
     const filtered = notifications.filter(n => activeTab === 'all' || n.type === 'mention');
 
     const markAllRead = () => {
-        api.notifications.markAllRead().catch(() => {
-            addToast({ title: 'Failed to mark notifications as read', variant: 'error' });
-        });
-        setNotifications([]);
+        api.notifications.markAllRead()
+            .then(() => setNotifications(prev => prev.map(n => ({ ...n, read: true }))))
+            .catch(() => addToast({ title: 'Failed to mark notifications as read', variant: 'error' }));
     };
 
     const dismissNotification = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        api.notifications.dismiss(id).catch(() => {});
-        setNotifications(prev => prev.filter(n => n.id !== id));
+        api.notifications.dismiss(id)
+            .then(() => setNotifications(prev => prev.filter(n => n.id !== id)))
+            .catch(() => addToast({ title: 'Failed to dismiss notification', variant: 'error' }));
     };
 
     const handleNotificationClick = (notif: Notification) => {
