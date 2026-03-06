@@ -638,6 +638,7 @@ const ChannelChat = () => {
     const [showPollCreator, setShowPollCreator] = useState(false);
     const [pollQuestion, setPollQuestion] = useState('');
     const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
+    const [pollDuration, setPollDuration] = useState<number | null>(null); // minutes; null = no expiry
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const [emojiSearch, setEmojiSearch] = useState<string | null>(null);
     const [emojiIndex, setEmojiIndex] = useState(0);
@@ -1308,6 +1309,9 @@ const ChannelChat = () => {
                     return currentMsgs;
                 });
             }
+            const incomingPollData = (data as any).pollData;
+            const incomingAttachments = Array.isArray((data as any).attachments) && (data as any).attachments.length > 0 ? (data as any).attachments : undefined;
+            const isVoiceMsg = incomingAttachments?.length === 1 && incomingAttachments[0]?.mimeType?.startsWith('audio/');
             setMessages(prev => [...prev, {
                 id: typeof data.id === 'string' ? parseInt(data.id, 36) || Date.now() : data.id,
                 apiId: data.id,
@@ -1321,13 +1325,25 @@ const ChannelChat = () => {
                 replyToId: (data as any).replyToId || undefined,
                 replyToAuthor,
                 replyToContent,
-                attachments: Array.isArray((data as any).attachments) && (data as any).attachments.length > 0 ? (data as any).attachments : undefined,
+                attachments: incomingAttachments,
                 embeds: Array.isArray((data as any).embeds) && (data as any).embeds.length > 0 ? (data as any).embeds : undefined,
                 authorRoleColor: data.authorId ? roleColorCacheRef.current.get(data.authorId) : undefined,
                 authorAvatarHash: (data as any).author?.avatarHash ?? null,
                 authorNameplateStyle: (data as any).author?.nameplateStyle ?? null,
                 expiresAt: data.expiresAt ?? null,
                 createdAt: data.createdAt ?? null,
+                ...(incomingPollData ? {
+                    type: 'poll' as const,
+                    pollData: {
+                        pollId: incomingPollData.id,
+                        question: incomingPollData.question,
+                        options: incomingPollData.options?.map((o: any) => ({ id: o.id, text: o.text, votes: o.voteCount ?? 0 })) ?? [],
+                        totalVotes: incomingPollData.totalVoters ?? 0,
+                        multipleChoice: incomingPollData.multipleChoice ?? false,
+                        myVotes: incomingPollData.myVotes ?? [],
+                    },
+                } : {}),
+                ...(!incomingPollData && isVoiceMsg ? { type: 'voice' as const } : {}),
             }]);
             playSound('messageReceive');
         });
@@ -1924,6 +1940,7 @@ const ChannelChat = () => {
                 const poll = await api.polls.create(channelId, {
                     question: pollQuestion.trim(),
                     options: validOptions.map(o => o.trim()),
+                    ...(pollDuration ? { duration: pollDuration } : {}),
                 });
                 setMessages(prev => [...prev, {
                     id: Date.now(),
@@ -1946,6 +1963,7 @@ const ChannelChat = () => {
                 }]);
                 setPollQuestion('');
                 setPollOptions(['', '']);
+                setPollDuration(null);
                 setShowPollCreator(false);
                 return;
             } catch {
@@ -2792,6 +2810,22 @@ const ChannelChat = () => {
                                         Add Option
                                     </button>
                                 )}
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>Poll Duration</label>
+                                <select
+                                    value={pollDuration ?? ''}
+                                    onChange={e => setPollDuration(e.target.value ? Number(e.target.value) : null)}
+                                    style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', padding: '8px 10px', fontSize: '13px', outline: 'none' }}
+                                >
+                                    <option value="">No expiry</option>
+                                    <option value={60}>1 hour</option>
+                                    <option value={60 * 6}>6 hours</option>
+                                    <option value={60 * 24}>24 hours</option>
+                                    <option value={60 * 24 * 3}>3 days</option>
+                                    <option value={60 * 24 * 7}>7 days</option>
+                                </select>
                             </div>
 
                             <button
