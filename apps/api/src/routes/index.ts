@@ -42,6 +42,7 @@ import { groupDmsRouter } from './group-dms';
 import { connectionsRouter } from './connections';
 import { keysRouter } from './keys';
 import { stageRouter } from './stage';
+import { workflowsRouter } from './workflows';
 import { authRateLimit, apiRateLimit } from '../middleware/rateLimit';
 
 export const router = Router();
@@ -147,6 +148,9 @@ router.use('/users/:userId/fame', fameRouter);
 
 // E2E encryption key management
 router.use('/users', keysRouter);
+
+// Workflow automation
+router.use('/guilds', workflowsRouter);
 
 // Platform Admin
 router.use('/admin', adminRouter);
