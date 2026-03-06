@@ -807,7 +807,7 @@ usersRouter.get(
   requireAuth,
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const authorId = req.userId!;
-    const targetId = req.params.userId;
+    const targetId = req.params.userId as string;
     const [note] = await db
       .select()
       .from(userNotes)
@@ -825,7 +825,7 @@ usersRouter.put(
   requireAuth,
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const authorId = req.userId!;
-    const targetId = req.params.userId;
+    const targetId = req.params.userId as string;
     const content = String(req.body.content || '').slice(0, 256);
     await db
       .insert(userNotes)
@@ -859,7 +859,7 @@ usersRouter.post(
       res.status(400).json({ code: 'BAD_REQUEST', message: 'badges must be an array' });
       return;
     }
-    await db.update(users).set({ badges }).where(eq(users.id, req.params.userId));
+    await db.update(users).set({ badges }).where(eq(users.id, req.params.userId as string));
     res.json({ success: true });
   }),
 );
