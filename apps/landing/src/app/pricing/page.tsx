@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/Button";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
 
 export const metadata: Metadata = {
-  title: "Pricing — Gratonite",
+  title: "Pricing — Gratonite Is Free Forever | Discord Alternative",
   description:
-    "Free now, free forever. Built for community, not monetization tricks.",
+    "Gratonite is 100% free with no ads, no tracking, and no microtransactions. An open-source Discord alternative that puts community over profit.",
 };
 
 const included = [
