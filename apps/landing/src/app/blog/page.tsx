@@ -39,6 +39,31 @@ export default function BlogPage() {
           </div>
         </ScrollReveal>
 
+        {/* Featured: Why Gratonite comparison page */}
+        <ScrollReveal>
+          <Link href="/why-gratonite" className="block group mb-10">
+            <div className="bg-charcoal text-white neo-border rounded-xl p-8 transition-all group-hover:border-purple">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <Badge color="purple" className="mb-3">
+                    Featured
+                  </Badge>
+                  <h2 className="font-display text-2xl font-bold mb-2 group-hover:text-purple transition-colors">
+                    Why Gratonite? A Free, Open-Source Alternative to Discord
+                  </h2>
+                  <p className="text-white/60">
+                    Side-by-side feature comparison, what sets us apart, and
+                    answers to common questions about switching.
+                  </p>
+                </div>
+                <span className="font-display text-2xl font-bold text-white/20 group-hover:text-purple transition-colors mt-2">
+                  {"->"}
+                </span>
+              </div>
+            </div>
+          </Link>
+        </ScrollReveal>
+
         {/* Posts list */}
         <div className="space-y-6">
           {posts.length === 0 && (
