@@ -774,6 +774,7 @@ export const api = {
         pronouns: string | null;
         accentColor: string | null;
         primaryColor: string | null;
+        badges: string[];
         messageCount: number;
         createdAt: string;
       }>(`/users/${userId}/profile`),
@@ -783,6 +784,15 @@ export const api = {
         mutualServers: Array<{ id: string; name: string; iconHash: string | null; nickname: string | null }>;
         mutualFriends: Array<{ id: string; username: string; displayName: string; avatarHash: string | null }>;
       }>(`/users/${userId}/mutuals`),
+
+    getNote: (userId: string) =>
+      apiFetch<{ content: string }>(`/users/${userId}/note`),
+
+    saveNote: (userId: string, content: string) =>
+      apiFetch<{ success: boolean }>(`/users/${userId}/note`, {
+        method: 'PUT',
+        body: JSON.stringify({ content }),
+      }),
 
     updatePresence: (status: Extract<PresenceStatus, 'online' | 'idle' | 'dnd' | 'invisible'>) =>
       apiFetch<{ status: PresenceStatus }>('/users/@me/presence', {
