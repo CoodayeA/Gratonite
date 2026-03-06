@@ -1638,6 +1638,7 @@ const DirectMessage = () => {
                                 const prevMsg = index > 0 ? messages[index - 1] : null;
                                 const isGrouped = !!(prevMsg &&
                                     !msg.system && !prevMsg.system &&
+                                    !msg.replyToId &&
                                     prevMsg.author === msg.author &&
                                     msg.createdAt && prevMsg.createdAt &&
                                     new Date(msg.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() < 5 * 60 * 1000);
