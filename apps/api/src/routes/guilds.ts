@@ -1716,7 +1716,23 @@ guildsRouter.post(
         return;
       }
 
-      const { durationSeconds } = req.body as { durationSeconds: number };
+      // Validate durationSeconds
+      const durationSeconds = Number(req.body.durationSeconds);
+      if (!Number.isFinite(durationSeconds) || durationSeconds < 0 || durationSeconds > 2419200) {
+        res.status(400).json({ error: 'durationSeconds must be a number between 0 and 2419200 (28 days)' });
+        return;
+      }
+
+      // Cannot timeout the guild owner
+      const [guild] = await db.select({ ownerId: guilds.ownerId }).from(guilds).where(eq(guilds.id, guildId)).limit(1);
+      if (!guild) {
+        res.status(404).json({ error: 'Guild not found' });
+        return;
+      }
+      if (targetUserId === guild.ownerId) {
+        res.status(400).json({ error: 'Cannot timeout the guild owner' });
+        return;
+      }
 
       const timeoutUntil = durationSeconds > 0
         ? new Date(Date.now() + durationSeconds * 1000)
