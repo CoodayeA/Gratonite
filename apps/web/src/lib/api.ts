@@ -2260,9 +2260,22 @@ export const api = {
       apiFetch<{ code: string }>(`/channels/${channelId}/stage/request-speak`, { method: 'POST', body: JSON.stringify({}) }),
   },
 
+  stickers: {
+    getDefault: () => apiFetch<any[]>('/stickers/default'),
+    getGuildStickers: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/stickers`),
+  },
+
+  push: {
+    getVapidPublicKey: () => apiFetch<{ key: string }>('/push/vapid-public-key'),
+    subscribe: (sub: any) => apiFetch<any>('/push/subscribe', { method: 'POST', body: JSON.stringify(sub) }),
+    unsubscribe: (endpoint: string) => apiFetch<any>('/push/subscribe', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
+  },
+
   // Generic helpers for custom endpoints not covered by typed methods above
   get: <T = unknown>(path: string) => apiFetch<T>(path),
   post: <T = unknown>(path: string, data: unknown) =>
     apiFetch<T>(path, { method: 'POST', body: JSON.stringify(data) }),
+  patch: <T = unknown>(path: string, data: unknown) =>
+    apiFetch<T>(path, { method: 'PATCH', body: JSON.stringify(data) }),
   delete: <T = unknown>(path: string) => apiFetch<T>(path, { method: 'DELETE' }),
 };

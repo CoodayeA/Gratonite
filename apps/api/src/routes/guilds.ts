@@ -26,7 +26,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { z } from 'zod';
-import { eq, desc, sql, and, inArray, asc, ilike, SQL } from 'drizzle-orm';
+import { eq, desc, sql, and, inArray, asc, ilike, gt, SQL } from 'drizzle-orm';
 import multer from 'multer';
 
 import { db } from '../db/index';
@@ -42,6 +42,7 @@ import { auditLog } from '../db/schema/audit';
 import { files } from '../db/schema/files';
 import { guildMemberOnboarding } from '../db/schema/guild-onboarding';
 import { channelReadState } from '../db/schema/channel-read-state';
+import { messages } from '../db/schema/messages';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { hasPermission } from './roles';
@@ -194,6 +195,8 @@ const updateGuildSchema = z.object({
   rulesChannelId: z.string().uuid().nullable().optional(),
   category: z.string().max(30).nullable().optional(),
   tags: z.array(z.string().max(32)).max(10).optional(),
+  rulesText: z.string().max(5000).nullable().optional(),
+  requireRulesAgreement: z.boolean().optional(),
 });
 
 /**
@@ -590,6 +593,16 @@ guildsRouter.get(
 );
 
 // ---------------------------------------------------------------------------
+// GET /tags — Available discovery tags
+// ---------------------------------------------------------------------------
+
+const AVAILABLE_TAGS = ['Gaming', 'Music', 'Art', 'Technology', 'Education', 'Community', 'Entertainment', 'Sports', 'Science', 'Anime'];
+
+guildsRouter.get('/tags', (_req: Request, res: Response) => {
+  res.json(AVAILABLE_TAGS);
+});
+
+// ---------------------------------------------------------------------------
 // POST /:guildId/join
 // ---------------------------------------------------------------------------
 
@@ -873,7 +886,7 @@ guildsRouter.patch(
         throw new AppError(403, 'Missing MANAGE_GUILD permission', 'FORBIDDEN');
       }
 
-      const { name, description, isDiscoverable, accentColor, welcomeMessage, rulesChannelId, category, tags } = req.body as z.infer<typeof updateGuildSchema>;
+      const { name, description, isDiscoverable, accentColor, welcomeMessage, rulesChannelId, category, tags, rulesText, requireRulesAgreement } = req.body as z.infer<typeof updateGuildSchema>;
 
       const updateData: Partial<typeof guilds.$inferInsert> = { updatedAt: new Date() };
       if (name !== undefined) updateData.name = name;
@@ -883,6 +896,8 @@ guildsRouter.patch(
       if (welcomeMessage !== undefined) updateData.welcomeMessage = welcomeMessage;
       if (rulesChannelId !== undefined) updateData.rulesChannelId = rulesChannelId;
       if (category !== undefined) updateData.category = category === null ? null : category.toLowerCase().slice(0, 30);
+      if (rulesText !== undefined) updateData.rulesText = rulesText;
+      if (requireRulesAgreement !== undefined) updateData.requireRulesAgreement = requireRulesAgreement;
 
       const [updated] = await db
         .update(guilds)
@@ -2007,3 +2022,74 @@ guildsRouter.delete(
     }
   },
 );
+
+// ---------------------------------------------------------------------------
+// POST /:guildId/agree-rules
+// ---------------------------------------------------------------------------
+
+guildsRouter.post('/:guildId/agree-rules', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { guildId } = req.params as Record<string, string>;
+    await requireMember(guildId, req.userId!);
+    await db.update(guildMembers)
+      .set({ agreedRulesAt: new Date() })
+      .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, req.userId!)));
+    res.json({ ok: true });
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /:guildId/insights — Server analytics
+// ---------------------------------------------------------------------------
+
+guildsRouter.get('/:guildId/insights', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { guildId } = req.params as Record<string, string>;
+    await requireMember(guildId, req.userId!);
+    if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_GUILD))) {
+      res.status(403).json({ code: 'FORBIDDEN' }); return;
+    }
+
+    const [memberCount] = await db.select({ count: sql<number>`count(*)`.mapWith(Number) }).from(guildMembers).where(eq(guildMembers.guildId, guildId));
+    const [newMembers] = await db.select({ count: sql<number>`count(*)`.mapWith(Number) }).from(guildMembers).where(and(eq(guildMembers.guildId, guildId), gt(guildMembers.joinedAt, sql`now() - interval '7 days'`)));
+
+    const guildChannels = await db.select({ id: channels.id, name: channels.name }).from(channels).where(eq(channels.guildId, guildId));
+    const channelIds = guildChannels.map(c => c.id);
+
+    let messages7d = 0;
+    let topChannels: Array<{ channelId: string; name: string; messages: number }> = [];
+    if (channelIds.length > 0) {
+      const [msgCount] = await db.select({ count: sql<number>`count(*)`.mapWith(Number) }).from(messages).where(and(inArray(messages.channelId, channelIds), gt(messages.createdAt, sql`now() - interval '7 days'`)));
+      messages7d = msgCount?.count ?? 0;
+
+      const channelActivity = await db.select({ channelId: messages.channelId, count: sql<number>`count(*)`.mapWith(Number) })
+        .from(messages).where(and(inArray(messages.channelId, channelIds), gt(messages.createdAt, sql`now() - interval '7 days'`)))
+        .groupBy(messages.channelId).orderBy(desc(sql`count(*)`)).limit(5);
+      topChannels = channelActivity.map(r => ({ channelId: r.channelId, name: guildChannels.find(c => c.id === r.channelId)?.name ?? 'unknown', messages: r.count }));
+    }
+
+    res.json({ memberCount: memberCount?.count ?? 0, memberGrowth7d: newMembers?.count ?? 0, messages7d, topChannels });
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// Discovery Tags — PATCH /:guildId/tags is safe here since it's a PATCH, not GET
+guildsRouter.patch('/:guildId/tags', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId } = req.params as Record<string, string>;
+  if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_GUILD))) {
+    res.status(403).json({ code: 'FORBIDDEN' }); return;
+  }
+  const { tags } = req.body as { tags?: unknown };
+  if (!Array.isArray(tags) || tags.length > 5) {
+    res.status(400).json({ error: 'tags must be an array of max 5' }); return;
+  }
+  const validatedTags = (tags as unknown[]).map(t => String(t).trim()).filter(t => t.length > 0 && t.length <= 32);
+  await db.delete(guildTags).where(eq(guildTags.guildId, guildId));
+  if (validatedTags.length > 0) {
+    await db.insert(guildTags).values(validatedTags.map(tag => ({ guildId, tag })));
+  }
+  res.json({ ok: true });
+});

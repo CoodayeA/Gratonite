@@ -10,6 +10,42 @@ import Avatar from '../../components/ui/Avatar';
 import { SkeletonFriendList } from '../../components/ui/SkeletonLoader';
 import { ErrorState } from '../../components/ui/ErrorState';
 
+function ReferralCard() {
+    const [refData, setRefData] = useState<{ code: string; referralLink: string; count: number } | null>(null);
+    const [copied, setCopied] = useState(false);
+
+    useEffect(() => {
+        api.get<any>('/referrals/@me').then(data => {
+            if (data?.referralLink) setRefData(data);
+        }).catch(() => {});
+    }, []);
+
+    if (!refData) return null;
+
+    return (
+        <div style={{ background: 'var(--bg-tertiary)', borderRadius: 8, padding: 16, marginBottom: 16, border: '1px solid var(--stroke)' }}>
+            <h3 style={{ color: 'var(--text-primary)', margin: '0 0 8px', fontSize: '15px', fontWeight: 600 }}>Invite Friends</h3>
+            <p style={{ color: 'var(--text-muted)', margin: '0 0 12px', fontSize: 13 }}>
+                Share your personal invite link and earn rewards for every friend who joins!
+                {refData.count > 0 && ` You've referred ${refData.count} friend${refData.count > 1 ? 's' : ''} so far.`}
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                    readOnly
+                    value={refData.referralLink}
+                    style={{ flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: 4, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 13 }}
+                />
+                <button
+                    onClick={() => { navigator.clipboard.writeText(refData.referralLink); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                    style={{ background: 'var(--accent-primary)', color: '#000', border: 'none', borderRadius: 4, padding: '6px 14px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+                >
+                    {copied ? 'Copied!' : 'Copy'}
+                </button>
+            </div>
+        </div>
+    );
+}
+
 type FriendStatus = 'online' | 'idle' | 'dnd' | 'offline';
 
 interface Friend {
@@ -566,6 +602,7 @@ const Friends = () => {
                         />
                     ) : (
                     <>
+                    <ReferralCard />
                     {activeTab !== 'add' && activeTab !== 'activity' && (
                         <div style={{ position: 'relative', marginBottom: '24px' }}>
                             <input

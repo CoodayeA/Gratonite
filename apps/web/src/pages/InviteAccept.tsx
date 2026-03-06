@@ -173,6 +173,29 @@ function LoadingState() {
 }
 
 function ErrorState({ message, onBack }: { message: string; onBack: () => void }) {
+    const isBanned = /ban/i.test(message);
+    const [appealText, setAppealText] = useState('');
+    const [appealSent, setAppealSent] = useState(false);
+    const [appealSending, setAppealSending] = useState(false);
+
+    const handleAppeal = async () => {
+        if (!appealText.trim()) return;
+        setAppealSending(true);
+        try {
+            // Extract guild ID from the URL path
+            const pathMatch = window.location.pathname.match(/invite\/([^/]+)/);
+            const code = pathMatch?.[1];
+            if (code) {
+                await api.post(`/invites/${code}/ban-appeal`, { text: appealText });
+            }
+            setAppealSent(true);
+        } catch {
+            // silently fail
+        } finally {
+            setAppealSending(false);
+        }
+    };
+
     return (
         <div style={{
             padding: '48px 32px',
@@ -201,7 +224,7 @@ function ErrorState({ message, onBack }: { message: string; onBack: () => void }
                     color: 'var(--text-primary)',
                     margin: '0 0 8px',
                 }}>
-                    Invalid Invite
+                    {isBanned ? 'You Are Banned' : 'Invalid Invite'}
                 </h2>
                 <p style={{
                     fontSize: '14px',
@@ -212,6 +235,30 @@ function ErrorState({ message, onBack }: { message: string; onBack: () => void }
                     {message}
                 </p>
             </div>
+            {isBanned && !appealSent && (
+                <div style={{ width: '100%', textAlign: 'left', marginTop: '8px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                        Submit a Ban Appeal
+                    </label>
+                    <textarea
+                        value={appealText}
+                        onChange={e => setAppealText(e.target.value)}
+                        rows={3}
+                        placeholder="Explain why you should be unbanned..."
+                        style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-secondary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                    />
+                    <button
+                        onClick={handleAppeal}
+                        disabled={appealSending || !appealText.trim()}
+                        style={{ marginTop: '8px', padding: '8px 20px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 600, fontSize: '13px', cursor: appealSending ? 'default' : 'pointer', opacity: appealSending ? 0.6 : 1 }}
+                    >
+                        {appealSending ? 'Sending...' : 'Submit Appeal'}
+                    </button>
+                </div>
+            )}
+            {isBanned && appealSent && (
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '8px' }}>Your appeal has been submitted. A moderator will review it.</p>
+            )}
             <button
                 onClick={onBack}
                 style={{

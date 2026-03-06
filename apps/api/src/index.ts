@@ -12,6 +12,7 @@ import { startAuctionCron } from './lib/auction-cron';
 import { startMessageExpiryCron } from './lib/message-expiry';
 import { startUnbanExpiredJob } from './jobs/unbanExpired';
 import { startExpireStatusesJob } from './jobs/expireStatuses';
+import { startEmailNotificationJob } from './jobs/emailNotifications';
 
 const PLACEHOLDER_PATTERNS = [
   'changeme',
@@ -156,6 +157,7 @@ server.listen(PORT, () => {
   startMessageExpiryCron();
   startUnbanExpiredJob();
   startExpireStatusesJob();
+  startEmailNotificationJob();
 });
 
 export { io };

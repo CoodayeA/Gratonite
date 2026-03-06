@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, boolean, integer, text, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, boolean, integer, text, jsonb, timestamp } from 'drizzle-orm/pg-core';
 import { users } from './users';
 
 /**
@@ -22,6 +22,7 @@ export const userSettings = pgTable('user_settings', {
   highContrast: boolean('high_contrast').notNull().default(false),
   compactMode: boolean('compact_mode').notNull().default(false),
   accentColor: varchar('accent_color', { length: 20 }),
+  emailNotifications: jsonb('email_notifications').notNull().default({ mentions: true, dms: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

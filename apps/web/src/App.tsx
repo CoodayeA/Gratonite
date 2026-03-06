@@ -1852,6 +1852,23 @@ export const AppLayout = () => {
         };
     }, [location.pathname]);
 
+    // Browser tab title with unread count
+    const tabTitleUnreadMap = useUnreadStore();
+    useEffect(() => {
+        let totalUnread = 0;
+        for (const entry of tabTitleUnreadMap.values()) {
+            if (entry.hasUnread) totalUnread += Math.max(entry.mentionCount, 1);
+        }
+        document.title = totalUnread > 0 ? `(${totalUnread}) Gratonite` : 'Gratonite';
+    }, [tabTitleUnreadMap]);
+
+    // Register service worker for web push
+    useEffect(() => {
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+            navigator.serviceWorker.register('/app/sw.js').catch(() => {});
+        }
+    }, []);
+
     const refreshGuilds = useCallback(() => {
         if (!getAccessToken() || isAuthRuntimeExpired()) return;
         api.guilds.getMine().then((list: any[]) => {

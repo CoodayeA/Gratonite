@@ -111,7 +111,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const { user: currentUser } = useUser();
     const navigate = useNavigate();
     const actorName = currentUser.name || currentUser.handle || 'Unknown';
-    const [activeTab, setActiveTab] = useState<'overview' | 'channels' | 'roles' | 'members' | 'bans' | 'invites' | 'emojis' | 'automod' | 'audit' | 'branding' | 'webhooks' | 'bots' | 'templates'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'channels' | 'roles' | 'members' | 'bans' | 'invites' | 'emojis' | 'automod' | 'audit' | 'branding' | 'webhooks' | 'bots' | 'templates' | 'insights' | 'onboarding'>('overview');
     const [roles, setRoles] = useState<Role[]>([]);
     const [activeRole, setActiveRole] = useState<Role | null>(null);
     const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
@@ -173,6 +173,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             }
             if (g.category) setGuildCategory(g.category);
             if (Array.isArray(g.tags)) setGuildTags(g.tags);
+            if (g.rulesText) setRulesText(g.rulesText);
+            if (g.requireRulesAgreement) setRequireRulesAgreement(true);
         }).catch(() => {});
     }, [guildId]);
 
@@ -556,7 +558,15 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         if (activeTab === 'roles') fetchRoles();
         if (activeTab === 'members') fetchMembers();
         if (activeTab === 'invites') fetchInvites();
-        if (activeTab === 'bans') fetchBans();
+        if (activeTab === 'bans') {
+            fetchBans();
+            if (guildId) {
+                setAppealsLoading(true);
+                api.get<any[]>(`/guilds/${guildId}/bans/appeals`).then((data: any) => {
+                    setBanAppeals(Array.isArray(data) ? data : []);
+                }).catch(() => setBanAppeals([])).finally(() => setAppealsLoading(false));
+            }
+        }
         if (activeTab === 'audit') fetchAuditLog();
         if (activeTab === 'webhooks') fetchWebhooks();
         if (activeTab === 'automod') fetchAutomodRules();
@@ -588,6 +598,10 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [selectedAccentColor, setSelectedAccentColor] = useState('#526df5');
     const [guildCategory, setGuildCategory] = useState<string>('');
     const [guildTags, setGuildTags] = useState<string[]>([]);
+    const [rulesText, setRulesText] = useState('');
+    const [requireRulesAgreement, setRequireRulesAgreement] = useState(false);
+    const [banAppeals, setBanAppeals] = useState<Array<{ userId: string; username: string; displayName: string; avatarHash: string | null; text: string; status: string; createdAt: string }>>([]);
+    const [appealsLoading, setAppealsLoading] = useState(false);
     const [tagInput, setTagInput] = useState('');
     const [assignRoleFor, setAssignRoleFor] = useState<string | null>(null);
     const [editingRule, setEditingRule] = useState<string | null>(null);
@@ -905,6 +919,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                 rulesChannelId: rulesChannelId || null,
                 category: guildCategory || null,
                 tags: guildTags,
+                rulesText: rulesText || null,
+                requireRulesAgreement,
             } as any);
             addAuditEntry('Portal Settings Changed', actorName, `Name/Description updated`, 'settings');
             emitGuildUpdated();
@@ -1065,6 +1081,17 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 style={tabStyle(tab)}
                             >{tab === 'automod' ? 'AutoMod' : tab === 'bans' ? 'Bans' : 'Audit Log'}</div>
                         ))}
+                    </div>
+                    <div>
+                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>ANALYTICS</div>
+                        <div onClick={() => setActiveTab('insights')}
+                            onMouseEnter={() => setHoveredBtn('tab-insights')} onMouseLeave={() => setHoveredBtn(null)}
+                            style={tabStyle('insights')}
+                        >Insights</div>
+                        <div onClick={() => setActiveTab('onboarding')}
+                            onMouseEnter={() => setHoveredBtn('tab-onboarding')} onMouseLeave={() => setHoveredBtn(null)}
+                            style={tabStyle('onboarding')}
+                        >Onboarding</div>
                     </div>
                 </div>
 
@@ -1255,6 +1282,23 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 </div>
                                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>Up to 10 tags. Tags help users discover your server.</p>
                             </div>
+
+                            <div style={{ height: '1px', background: 'var(--stroke)', margin: '24px 0' }} />
+                            <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Server Rules</h3>
+                            <div style={{ marginBottom: '16px' }}>
+                                <textarea
+                                    value={rulesText}
+                                    onChange={e => setRulesText(e.target.value)}
+                                    rows={5}
+                                    placeholder="Enter your server rules here..."
+                                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' as const }}
+                                />
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Rules shown to new members when they join.</div>
+                            </div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '24px' }}>
+                                <input type="checkbox" checked={requireRulesAgreement} onChange={e => setRequireRulesAgreement(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
+                                Require agreement to rules before chatting
+                            </label>
 
                             <button onClick={saveOverview} onMouseEnter={() => setHoveredBtn('save-overview')} onMouseLeave={() => setHoveredBtn(null)}
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 24px', borderRadius: '8px', background: savedIndicator ? '#10b981' : 'var(--accent-primary)', border: 'none', color: savedIndicator ? 'white' : '#000', fontWeight: 700, fontSize: '14px', cursor: 'pointer', transition: 'background 0.3s' }}
@@ -2034,6 +2078,58 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                     ))}
                                 </div>
                             )}
+
+                            {/* Pending Ban Appeals */}
+                            <div style={{ height: '1px', background: 'var(--stroke)', margin: '24px 0' }} />
+                            <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>Pending Appeals</h3>
+                            {appealsLoading ? (
+                                <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '13px' }}>Loading appeals...</div>
+                            ) : banAppeals.filter(a => a.status === 'pending').length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '13px' }}>No pending ban appeals.</div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {banAppeals.filter(a => a.status === 'pending').map(appeal => (
+                                        <div key={appeal.userId} style={{ padding: '14px 16px', borderRadius: '10px', border: '1px solid var(--stroke)', background: 'var(--bg-elevated)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                                                <Avatar userId={appeal.userId} avatarHash={appeal.avatarHash} displayName={appeal.displayName} size={32} />
+                                                <div>
+                                                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{appeal.displayName}</span>
+                                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>@{appeal.username}</span>
+                                                </div>
+                                            </div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px', padding: '8px 12px', background: 'var(--bg-tertiary)', borderRadius: '6px' }}>
+                                                {appeal.text}
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button
+                                                    onClick={async () => {
+                                                        try {
+                                                            await api.patch(`/guilds/${guildId}/bans/${appeal.userId}/appeal`, { status: 'approved' });
+                                                            setBanAppeals(prev => prev.map(a => a.userId === appeal.userId ? { ...a, status: 'approved' } : a));
+                                                            addToast({ title: 'Appeal approved', variant: 'success' });
+                                                        } catch { addToast({ title: 'Failed to approve appeal', variant: 'error' }); }
+                                                    }}
+                                                    style={{ padding: '6px 14px', borderRadius: '6px', background: '#10b981', border: 'none', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                                                >
+                                                    Approve
+                                                </button>
+                                                <button
+                                                    onClick={async () => {
+                                                        try {
+                                                            await api.patch(`/guilds/${guildId}/bans/${appeal.userId}/appeal`, { status: 'denied' });
+                                                            setBanAppeals(prev => prev.map(a => a.userId === appeal.userId ? { ...a, status: 'denied' } : a));
+                                                            addToast({ title: 'Appeal denied', variant: 'info' });
+                                                        } catch { addToast({ title: 'Failed to deny appeal', variant: 'error' }); }
+                                                    }}
+                                                    style={{ padding: '6px 14px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                                                >
+                                                    Deny
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </>
                     )}
 
@@ -2544,10 +2640,78 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             </button>
                         </>
                     )}
+
+                    {activeTab === 'insights' && (
+                        <GuildInsightsPanel guildId={guildId} />
+                    )}
+
+                    {activeTab === 'onboarding' && (
+                        <>
+                            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Onboarding</h2>
+                            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
+                                Configure how new members are welcomed to your server.
+                            </p>
+                            <div style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '12px', border: '1px solid var(--stroke)' }}>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Member Screening</div>
+                                <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                                    New members must complete onboarding before sending messages.
+                                </div>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                                    <input type="checkbox" defaultChecked={false} onChange={e => {
+                                        if (guildId) {
+                                            api.patch(`/guilds/${guildId}`, { memberScreeningEnabled: e.target.checked }).catch(() => {});
+                                        }
+                                    }} style={{ accentColor: 'var(--accent-primary)' }} />
+                                    Enable member screening
+                                </label>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </div>
     );
 };
+
+function GuildInsightsPanel({ guildId }: { guildId: string }) {
+    const [data, setData] = useState<{ memberCount: number; memberGrowth7d: number; messages7d: number; topChannels: { channelId: string; name: string; messages: number }[] } | null>(null);
+
+    useEffect(() => {
+        api.get<any>(`/guilds/${guildId}/insights`).then(setData).catch(() => {});
+    }, [guildId]);
+
+    if (!data) return <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text-muted)' }}>Loading insights...</div>;
+
+    return (
+        <>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Insights</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>Analytics for the past 7 days.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+                <div style={{ background: 'var(--bg-tertiary)', padding: 16, borderRadius: 8, border: '1px solid var(--stroke)' }}>
+                    <div style={{ fontSize: 32, fontWeight: 700 }}>{data.memberCount}</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Total Members</div>
+                    <div style={{ color: '#43b581', fontSize: 12, marginTop: 4 }}>+{data.memberGrowth7d} this week</div>
+                </div>
+                <div style={{ background: 'var(--bg-tertiary)', padding: 16, borderRadius: 8, border: '1px solid var(--stroke)' }}>
+                    <div style={{ fontSize: 32, fontWeight: 700 }}>{data.messages7d}</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Messages (7d)</div>
+                </div>
+            </div>
+            {data.topChannels.length > 0 && (
+                <>
+                    <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: 12 }}>Top Channels</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {data.topChannels.map(ch => (
+                            <div key={ch.channelId} style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--bg-tertiary)', padding: '8px 16px', borderRadius: 6, border: '1px solid var(--stroke)' }}>
+                                <span>#{ch.name}</span>
+                                <span style={{ color: 'var(--text-muted)' }}>{ch.messages} messages</span>
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
+        </>
+    );
+}
 
 export default GuildSettingsModal;

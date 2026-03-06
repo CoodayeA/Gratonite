@@ -169,6 +169,13 @@ const Discover = () => {
     const { addToast } = useToast();
     const { setTheme } = useTheme();
     const [isLoading, setIsLoading] = useState(false);
+    const [availableTags, setAvailableTags] = useState<string[]>([]);
+
+    useEffect(() => {
+        api.get<string[]>('/guilds/tags').then(tags => {
+            if (Array.isArray(tags)) setAvailableTags(tags);
+        }).catch(() => {});
+    }, []);
 
     useEffect(() => {
         Promise.allSettled([
@@ -329,6 +336,37 @@ const Discover = () => {
                         </button>
                     ))}
                 </div>
+
+                {/* Popular tags */}
+                {availableTags.length > 0 && (
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, marginRight: '4px' }}>Tags:</span>
+                        {availableTags.slice(0, 12).map(tag => (
+                            <button
+                                key={tag}
+                                onClick={() => {
+                                    if (tagFilters.includes(tag)) {
+                                        setTagFilters(prev => prev.filter(t => t !== tag));
+                                    } else {
+                                        setTagFilters(prev => [...prev, tag]);
+                                    }
+                                }}
+                                style={{
+                                    borderRadius: '999px',
+                                    border: tagFilters.includes(tag) ? '1px solid var(--accent-primary)' : '1px solid var(--stroke)',
+                                    padding: '4px 10px',
+                                    background: tagFilters.includes(tag) ? 'rgba(82,109,245,0.15)' : 'var(--bg-tertiary)',
+                                    color: tagFilters.includes(tag) ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                #{tag}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {/* Sort + tag filter row */}
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>

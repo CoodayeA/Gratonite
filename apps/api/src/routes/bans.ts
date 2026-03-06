@@ -111,3 +111,97 @@ bansRouter.get('/', requireAuth, async (req: Request, res: Response): Promise<vo
 
   res.json(bans);
 });
+
+/** GET /guilds/:guildId/bans/appeals — list pending appeals (must be before /:userId routes) */
+bansRouter.get('/appeals', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId } = req.params as Record<string, string>;
+
+  if (!(await hasPermission(req.userId!, guildId, Permissions.BAN_MEMBERS))) {
+    res.status(403).json({ code: 'FORBIDDEN', message: 'Missing BAN_MEMBERS permission' }); return;
+  }
+
+  const appeals = await db
+    .select({
+      id: guildBans.id,
+      userId: guildBans.userId,
+      reason: guildBans.reason,
+      appealStatus: guildBans.appealStatus,
+      appealText: guildBans.appealText,
+      appealSubmittedAt: guildBans.appealSubmittedAt,
+      createdAt: guildBans.createdAt,
+      username: users.username,
+      displayName: users.displayName,
+      avatarHash: users.avatarHash,
+    })
+    .from(guildBans)
+    .leftJoin(users, eq(users.id, guildBans.userId))
+    .where(and(eq(guildBans.guildId, guildId), eq(guildBans.appealStatus, 'pending')));
+
+  res.json(appeals);
+});
+
+/** POST /guilds/:guildId/bans/:userId/appeal — submit a ban appeal */
+bansRouter.post('/:userId/appeal', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId, userId } = req.params as Record<string, string>;
+
+  // The banned user themselves submits the appeal
+  if (userId !== req.userId!) {
+    res.status(403).json({ code: 'FORBIDDEN', message: 'You can only appeal your own ban' }); return;
+  }
+
+  const [ban] = await db.select().from(guildBans)
+    .where(and(eq(guildBans.guildId, guildId), eq(guildBans.userId, userId)))
+    .limit(1);
+  if (!ban) { res.status(404).json({ code: 'NOT_FOUND', message: 'Ban not found' }); return; }
+  if (ban.appealStatus) { res.status(400).json({ code: 'BAD_REQUEST', message: 'Appeal already submitted' }); return; }
+
+  const { text: appealText } = req.body as { text?: string };
+  if (!appealText || appealText.trim().length === 0) {
+    res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Appeal text is required' }); return;
+  }
+  if (appealText.length > 2000) {
+    res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Appeal text must be 2000 characters or fewer' }); return;
+  }
+
+  const [updated] = await db.update(guildBans).set({
+    appealStatus: 'pending',
+    appealText: appealText.trim(),
+    appealSubmittedAt: new Date(),
+  }).where(eq(guildBans.id, ban.id)).returning();
+
+  res.json(updated);
+});
+
+/** PATCH /guilds/:guildId/bans/:userId/appeal — review an appeal */
+bansRouter.patch('/:userId/appeal', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId, userId } = req.params as Record<string, string>;
+
+  if (!(await hasPermission(req.userId!, guildId, Permissions.BAN_MEMBERS))) {
+    res.status(403).json({ code: 'FORBIDDEN', message: 'Missing BAN_MEMBERS permission' }); return;
+  }
+
+  const { status } = req.body as { status?: string };
+  if (!status || !['approved', 'denied'].includes(status)) {
+    res.status(400).json({ code: 'VALIDATION_ERROR', message: 'status must be "approved" or "denied"' }); return;
+  }
+
+  const [ban] = await db.select().from(guildBans)
+    .where(and(eq(guildBans.guildId, guildId), eq(guildBans.userId, userId)))
+    .limit(1);
+  if (!ban) { res.status(404).json({ code: 'NOT_FOUND', message: 'Ban not found' }); return; }
+
+  if (status === 'approved') {
+    await db.delete(guildBans).where(eq(guildBans.id, ban.id));
+    try {
+      getIO().to(`guild:${guildId}`).emit('GUILD_BAN_REMOVE', { guildId, userId });
+    } catch {}
+    res.json({ code: 'OK', message: 'Appeal approved, ban removed' });
+  } else {
+    await db.update(guildBans).set({
+      appealStatus: 'denied',
+      appealReviewedBy: req.userId!,
+      appealReviewedAt: new Date(),
+    }).where(eq(guildBans.id, ban.id));
+    res.json({ code: 'OK', message: 'Appeal denied' });
+  }
+});
