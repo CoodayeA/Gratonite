@@ -41,6 +41,7 @@ import {
   timestamp,
   unique,
 } from 'drizzle-orm/pg-core';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { guilds } from './guilds';
 import { users } from './users';
 
@@ -176,6 +177,16 @@ export const channels = pgTable('channels', {
    * Common values: 300 (5 min), 3600 (1 hr), 86400 (24 hrs), 604800 (7 days).
    */
   disappearTimer: integer('disappear_timer'),
+
+  /**
+   * For GUILD_VOICE channels: the companion GUILD_TEXT channel that serves as
+   * the voice text chat. Set automatically when a voice channel is created with
+   * `createLinkedText: true`. Null for all other channel types.
+   *
+   * Self-references channels.id. Uses `onDelete: 'set null'` so that deleting
+   * the linked text channel does not cascade-delete the voice channel.
+   */
+  linkedTextChannelId: uuid('linked_text_channel_id').references((): AnyPgColumn => channels.id, { onDelete: 'set null' }),
 });
 
 /**

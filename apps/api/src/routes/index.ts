@@ -39,6 +39,7 @@ import { marketplaceRouter } from './marketplace';
 import { telemetryRouter } from './telemetry';
 import { fameRouter } from './fame';
 import { groupDmsRouter } from './group-dms';
+import { stageRouter } from './stage';
 import { authRateLimit, apiRateLimit } from '../middleware/rateLimit';
 
 export const router = Router();
@@ -143,3 +144,6 @@ router.use('/users/:userId/fame', fameRouter);
 
 // Platform Admin
 router.use('/admin', adminRouter);
+
+// Stage channels
+router.use('/', stageRouter);

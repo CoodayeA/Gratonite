@@ -94,6 +94,37 @@ export interface MessageReadPayload {
   lastReadMessageId: string | null;
 }
 
+export interface StageStartPayload {
+  channelId: string;
+  topic: string | null;
+  sessionId: string;
+  hostId: string;
+}
+
+export interface StageEndPayload {
+  channelId: string;
+  sessionId: string;
+}
+
+export interface StageSpeakerAddPayload {
+  channelId: string;
+  sessionId: string;
+  userId: string;
+  invitedBy: string;
+}
+
+export interface StageSpeakerRemovePayload {
+  channelId: string;
+  sessionId: string;
+  userId: string;
+}
+
+export interface StageHandRaisePayload {
+  channelId: string;
+  sessionId: string;
+  userId: string;
+}
+
 /* ── Callback registries ────────────────────────────────────── */
 
 type PresenceCallback = (payload: PresenceUpdatePayload) => void;
@@ -108,6 +139,11 @@ type ThreadCreateCallback = (payload: ThreadCreatePayload) => void;
 type ChannelPinsUpdateCallback = (payload: ChannelPinsUpdatePayload) => void;
 type MessageReadCallback = (payload: MessageReadPayload) => void;
 type ConnectionCallback = () => void;
+type StageStartCallback = (payload: StageStartPayload) => void;
+type StageEndCallback = (payload: StageEndPayload) => void;
+type StageSpeakerAddCallback = (payload: StageSpeakerAddPayload) => void;
+type StageSpeakerRemoveCallback = (payload: StageSpeakerRemovePayload) => void;
+type StageHandRaiseCallback = (payload: StageHandRaisePayload) => void;
 
 const presenceListeners = new Set<PresenceCallback>();
 const typingStartListeners = new Set<TypingCallback>();
@@ -123,6 +159,11 @@ const channelPinsUpdateListeners = new Set<ChannelPinsUpdateCallback>();
 const messageReadListeners = new Set<MessageReadCallback>();
 const socketDisconnectListeners = new Set<ConnectionCallback>();
 const socketReconnectListeners = new Set<ConnectionCallback>();
+const stageStartListeners = new Set<StageStartCallback>();
+const stageEndListeners = new Set<StageEndCallback>();
+const stageSpeakerAddListeners = new Set<StageSpeakerAddCallback>();
+const stageSpeakerRemoveListeners = new Set<StageSpeakerRemoveCallback>();
+const stageHandRaiseListeners = new Set<StageHandRaiseCallback>();
 
 export function onPresenceUpdate(cb: PresenceCallback): () => void {
   presenceListeners.add(cb);
@@ -192,6 +233,31 @@ export function onSocketDisconnect(cb: ConnectionCallback): () => void {
 export function onSocketReconnect(cb: ConnectionCallback): () => void {
   socketReconnectListeners.add(cb);
   return () => { socketReconnectListeners.delete(cb); };
+}
+
+export function onStageStart(cb: StageStartCallback): () => void {
+  stageStartListeners.add(cb);
+  return () => { stageStartListeners.delete(cb); };
+}
+
+export function onStageEnd(cb: StageEndCallback): () => void {
+  stageEndListeners.add(cb);
+  return () => { stageEndListeners.delete(cb); };
+}
+
+export function onStageSpeakerAdd(cb: StageSpeakerAddCallback): () => void {
+  stageSpeakerAddListeners.add(cb);
+  return () => { stageSpeakerAddListeners.delete(cb); };
+}
+
+export function onStageSpeakerRemove(cb: StageSpeakerRemoveCallback): () => void {
+  stageSpeakerRemoveListeners.add(cb);
+  return () => { stageSpeakerRemoveListeners.delete(cb); };
+}
+
+export function onStageHandRaise(cb: StageHandRaiseCallback): () => void {
+  stageHandRaiseListeners.add(cb);
+  return () => { stageHandRaiseListeners.delete(cb); };
 }
 
 let socket: GratoniteSocket | null = null;
@@ -342,6 +408,26 @@ export function connectSocket(): GratoniteSocket {
 
   socket.on('MESSAGE_READ', (data: MessageReadPayload) => {
     messageReadListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('STAGE_START', (data: StageStartPayload) => {
+    stageStartListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('STAGE_END', (data: StageEndPayload) => {
+    stageEndListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('STAGE_SPEAKER_ADD', (data: StageSpeakerAddPayload) => {
+    stageSpeakerAddListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('STAGE_SPEAKER_REMOVE', (data: StageSpeakerRemovePayload) => {
+    stageSpeakerRemoveListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('STAGE_HAND_RAISE', (data: StageHandRaisePayload) => {
+    stageHandRaiseListeners.forEach(cb => cb(data));
   });
 
   socket.on('disconnect', () => {

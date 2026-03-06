@@ -121,8 +121,9 @@ const createChannelSchema = z.object({
     .min(1)
     .max(100)
     .regex(/^[a-z0-9-]+$/, 'Channel name may only contain lowercase letters, digits, and hyphens'),
-  type: z.enum(['GUILD_TEXT', 'GUILD_VOICE', 'GUILD_CATEGORY']),
+  type: z.enum(['GUILD_TEXT', 'GUILD_VOICE', 'GUILD_CATEGORY', 'GUILD_STAGE']),
   parentId: z.string().uuid().optional(),
+  createLinkedText: z.boolean().optional(),
 });
 
 /**
@@ -141,6 +142,7 @@ const updateChannelSchema = z.object({
   position: z.number().int().min(0).optional(),
   backgroundUrl: z.string().url().nullable().optional(),
   backgroundType: z.enum(['image', 'video']).nullable().optional(),
+  linkedTextChannelId: z.string().uuid().nullable().optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -241,7 +243,7 @@ channelsRouter.post(
         throw new AppError(403, 'Missing MANAGE_CHANNELS permission', 'FORBIDDEN');
       }
 
-      const { name, type, parentId } = req.body as z.infer<typeof createChannelSchema>;
+      const { name, type, parentId, createLinkedText } = req.body as z.infer<typeof createChannelSchema>;
 
       // Determine next position (append after existing channels in guild).
       const [{ value: existingCount }] = await db
@@ -262,6 +264,38 @@ channelsRouter.post(
 
       // Audit log
       logAuditEvent(guildId, req.userId!, AuditActionTypes.CHANNEL_CREATE, channel.id, 'CHANNEL', { name, type });
+
+      // If requested, create a companion text channel for voice/stage channels
+      if (createLinkedText && (type === 'GUILD_VOICE' || type === 'GUILD_STAGE')) {
+        const [{ value: countAfter }] = await db
+          .select({ value: count() })
+          .from(channels)
+          .where(eq(channels.guildId, guildId));
+
+        const linkedName = `${name}-chat`;
+        const [textChannel] = await db
+          .insert(channels)
+          .values({
+            guildId,
+            name: linkedName.slice(0, 100),
+            type: 'GUILD_TEXT',
+            parentId: parentId ?? null,
+            position: Number(countAfter),
+          })
+          .returning();
+
+        // Link the voice/stage channel to its text companion
+        const [updated] = await db
+          .update(channels)
+          .set({ linkedTextChannelId: textChannel.id })
+          .where(eq(channels.id, channel.id))
+          .returning();
+
+        logAuditEvent(guildId, req.userId!, AuditActionTypes.CHANNEL_CREATE, textChannel.id, 'CHANNEL', { name: linkedName, type: 'GUILD_TEXT' });
+
+        res.status(201).json({ ...updated, linkedTextChannel: textChannel });
+        return;
+      }
 
       res.status(201).json(channel);
     } catch (err) {
@@ -475,7 +509,7 @@ channelsRouter.patch(
         throw new AppError(403, 'Missing MANAGE_CHANNELS permission', 'FORBIDDEN');
       }
 
-      const { name, topic, isNsfw, rateLimitPerUser, position, backgroundUrl, backgroundType } = req.body as z.infer<
+      const { name, topic, isNsfw, rateLimitPerUser, position, backgroundUrl, backgroundType, linkedTextChannelId } = req.body as z.infer<
         typeof updateChannelSchema
       >;
 
@@ -487,6 +521,7 @@ channelsRouter.patch(
       if (position !== undefined) updateData.position = position;
       if (backgroundUrl !== undefined) updateData.backgroundUrl = backgroundUrl;
       if (backgroundType !== undefined) updateData.backgroundType = backgroundType;
+      if (linkedTextChannelId !== undefined) updateData.linkedTextChannelId = linkedTextChannelId;
 
       const [updated] = await db
         .update(channels)

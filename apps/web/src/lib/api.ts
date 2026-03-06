@@ -2072,4 +2072,38 @@ export const api = {
     getStats: (userId: string) =>
       apiFetch<{ fameReceived: number; fameGiven: number }>(`/users/${userId}/fame`),
   },
+
+  stage: {
+    getSession: (channelId: string) =>
+      apiFetch<{ session: { id: string; channelId: string; hostId: string | null; topic: string | null; startedAt: string; endedAt: string | null } | null; speakers: Array<{ id: string; sessionId: string; userId: string; invitedBy: string | null; joinedAt: string }> }>(
+        `/channels/${channelId}/stage`,
+      ),
+
+    startSession: (channelId: string, data?: { topic?: string }) =>
+      apiFetch<{ session: { id: string; channelId: string; hostId: string | null; topic: string | null; startedAt: string; endedAt: string | null }; speakers: Array<unknown> }>(
+        `/channels/${channelId}/stage/start`,
+        { method: 'POST', body: JSON.stringify(data ?? {}) },
+      ),
+
+    endSession: (channelId: string) =>
+      apiFetch<{ session: { id: string; endedAt: string | null } }>(`/channels/${channelId}/stage`, { method: 'DELETE' }),
+
+    inviteSpeaker: (channelId: string, userId: string) =>
+      apiFetch<{ speaker: unknown }>(`/channels/${channelId}/stage/speakers`, {
+        method: 'POST',
+        body: JSON.stringify({ userId }),
+      }),
+
+    removeSpeaker: (channelId: string, userId: string) =>
+      apiFetch<void>(`/channels/${channelId}/stage/speakers/${userId}`, { method: 'DELETE' }),
+
+    raiseHand: (channelId: string) =>
+      apiFetch<{ code: string }>(`/channels/${channelId}/stage/request-speak`, { method: 'POST', body: JSON.stringify({}) }),
+  },
+
+  // Generic helpers for custom endpoints not covered by typed methods above
+  get: <T = unknown>(path: string) => apiFetch<T>(path),
+  post: <T = unknown>(path: string, data: unknown) =>
+    apiFetch<T>(path, { method: 'POST', body: JSON.stringify(data) }),
+  delete: <T = unknown>(path: string) => apiFetch<T>(path, { method: 'DELETE' }),
 };
