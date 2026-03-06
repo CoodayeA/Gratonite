@@ -1140,7 +1140,7 @@ const DirectMessage = () => {
                                             <Pencil size={14} style={{ cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => { setEditGroupNameValue(groupName); setIsEditingGroupName(true); }} />
                                         )}
                                         {e2eKey && !isGroupDm && (
-                                            <Lock size={14} style={{ color: 'var(--success, #22c55e)' }} title="End-to-end encrypted" aria-label="End-to-end encrypted" />
+                                            <Lock size={14} style={{ color: 'var(--success, #22c55e)' }} aria-label="End-to-end encrypted" />
                                         )}
                                     </>
                                 )}
