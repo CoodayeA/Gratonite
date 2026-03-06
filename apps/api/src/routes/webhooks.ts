@@ -28,7 +28,7 @@ webhooksRouter.post(
   requireAuth,
   async (req: Request, res: Response) => {
     try {
-      const { channelId } = req.params;
+      const channelId = req.params.channelId as string;
       const { name } = req.body;
       const userId = req.userId!;
 
@@ -72,7 +72,7 @@ webhooksRouter.get(
   requireAuth,
   async (req: Request, res: Response) => {
     try {
-      const { guildId } = req.params;
+      const guildId = req.params.guildId as string;
       const allWebhooks = await db
         .select()
         .from(webhooks)
@@ -91,7 +91,7 @@ webhooksRouter.delete(
   requireAuth,
   async (req: Request, res: Response) => {
     try {
-      const { webhookId } = req.params;
+      const webhookId = req.params.webhookId as string;
       await db.delete(webhooks).where(eq(webhooks.id, webhookId));
       res.json({ success: true });
     } catch (err) {
@@ -106,7 +106,8 @@ webhooksRouter.post(
   '/webhooks/:webhookId/:token',
   async (req: Request, res: Response) => {
     try {
-      const { webhookId, token } = req.params;
+      const webhookId = req.params.webhookId as string;
+      const token = req.params.token as string;
       const { content, username, avatarUrl } = req.body;
 
       if (!content || typeof content !== 'string') {
