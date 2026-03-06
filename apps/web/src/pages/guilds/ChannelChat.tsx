@@ -621,6 +621,22 @@ const ChannelChat = () => {
     const [currentUserName, setCurrentUserName] = useState('');
     const [currentUserId, setCurrentUserId] = useState('');
     const [channelName, setChannelName] = useState('general');
+    const [rateLimitPerUser, setRateLimitPerUser] = useState(0);
+    const [lastSentAt, setLastSentAt] = useState<number | null>(null);
+    const [slowRemaining, setSlowRemaining] = useState(0);
+
+    // Slowmode countdown timer
+    useEffect(() => {
+        if (!lastSentAt || !rateLimitPerUser) return;
+        const tick = () => {
+            const remaining = Math.max(0, rateLimitPerUser - Math.floor((Date.now() - lastSentAt) / 1000));
+            setSlowRemaining(remaining);
+            if (remaining === 0) clearInterval(interval);
+        };
+        tick();
+        const interval = setInterval(tick, 1000);
+        return () => clearInterval(interval);
+    }, [lastSentAt, rateLimitPerUser]);
 
     // Typing indicator state: map of userId -> username, with auto-expiry
     const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map());
@@ -768,6 +784,7 @@ const ChannelChat = () => {
         if (channelId) {
             api.channels.get(channelId).then(ch => {
                 setChannelName(ch.name);
+                setRateLimitPerUser((ch as any).rateLimitPerUser || 0);
                 // Load channel background if set (for all users to see same theme)
                 if ((ch as any).backgroundUrl) {
                     setBgMedia({ 
@@ -1454,6 +1471,10 @@ const ChannelChat = () => {
     const handleSendMessage = async () => {
         if (inputValue.trim() === '' && chatAttachedFiles.length === 0) return;
         if (!channelId) return;
+        if (slowRemaining > 0) {
+            addToast({ title: `Slowmode active. Wait ${slowRemaining}s`, variant: 'error' });
+            return;
+        }
         playSound('messageSend');
 
         const processedContent = processEmojis(inputValue);
@@ -1490,6 +1511,9 @@ const ChannelChat = () => {
             ...(replyToApiId ? { replyToId: replyToApiId, replyToAuthor, replyToContent } : {}),
             authorRoleColor: currentUserId ? roleColorCacheRef.current.get(currentUserId) : undefined,
         }]);
+
+        // Track slowmode
+        if (rateLimitPerUser > 0) setLastSentAt(Date.now());
 
         // Send to API
         api.messages.send(channelId, {
@@ -2195,6 +2219,16 @@ const ChannelChat = () => {
             )}
 
             <div className="input-area" style={{ zIndex: 2, position: 'relative' }}>
+                {slowRemaining > 0 && (
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 16px',
+                        fontSize: '12px', color: 'var(--text-muted)', background: 'var(--bg-tertiary)',
+                        margin: '0 16px 4px', borderRadius: '8px',
+                    }}>
+                        <Clock size={14} style={{ flexShrink: 0 }} />
+                        <span>Slowmode enabled. You can send another message in <strong style={{ color: 'var(--text-primary)' }}>{slowRemaining}s</strong></span>
+                    </div>
+                )}
                 {typingUsers.size > 0 && (
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', paddingLeft: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{ display: 'flex', gap: '4px' }}>
