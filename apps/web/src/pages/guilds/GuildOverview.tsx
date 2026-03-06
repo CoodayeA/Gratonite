@@ -151,7 +151,7 @@ const GuildOverview = () => {
     }
 
     return (
-        <div className="main-content-wrapper" style={{ flex: 1, overflowY: 'auto' }}>
+        <div className="main-content-wrapper" style={{ flex: 1, overflowY: 'auto', flexDirection: 'column' }}>
             {loading && !guild && (
                 <div style={{ padding: '20px 48px', color: 'var(--text-muted)', fontSize: '13px' }}>Loading portal…</div>
             )}
