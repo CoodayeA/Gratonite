@@ -2,7 +2,17 @@ import { useState, useEffect } from 'react';
 import { MessageSquare, UserPlus, MoreHorizontal } from 'lucide-react';
 import { api, API_BASE } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
+import { useUser } from '../../contexts/UserContext';
 import Avatar from './Avatar';
+
+const BADGE_META: Record<string, { label: string; emoji: string; color: string }> = {
+    admin: { label: 'Admin', emoji: '\u{1F6E1}\uFE0F', color: '#ed4245' },
+    early_adopter: { label: 'Early Adopter', emoji: '\u2B50', color: '#faa61a' },
+    verified: { label: 'Verified', emoji: '\u2705', color: '#3ba55c' },
+    developer: { label: 'Developer', emoji: '\u{1F527}', color: '#5865f2' },
+    moderator: { label: 'Moderator', emoji: '\u{1F528}', color: '#eb459e' },
+    supporter: { label: 'Supporter', emoji: '\u{1F48E}', color: '#5865f2' },
+};
 
 /** Minimal user data passed from the caller (no API fetch needed for these) */
 export type PopoverUserInput = {
@@ -61,6 +71,10 @@ const UserProfilePopover = ({
     const [mutuals, setMutuals] = useState<MutualData | null>(null);
     const [roles, setRoles] = useState<Array<{ name: string; color: string }>>([]);
     const [loadingProfile, setLoadingProfile] = useState(true);
+    const [badges, setBadges] = useState<string[]>([]);
+    const [note, setNote] = useState('');
+    const [noteLoaded, setNoteLoaded] = useState(false);
+    const { user: currentUser } = useUser();
 
     // Fetch real profile + mutuals on mount
     useEffect(() => {
@@ -87,6 +101,7 @@ const UserProfilePopover = ({
                         primaryColor: profileRes.primaryColor,
                         createdAt: profileRes.createdAt,
                     });
+                    if (profileRes.badges) setBadges(profileRes.badges);
                 }
                 if (mutualsRes) {
                     setMutuals(mutualsRes);
@@ -114,6 +129,19 @@ const UserProfilePopover = ({
         fetchAll();
         return () => { cancelled = true; };
     }, [user.id, user.guildId]);
+
+    // Fetch note
+    useEffect(() => {
+        if (!user.id || user.id === currentUser?.id) { setNoteLoaded(true); return; }
+        api.users.getNote(user.id)
+            .then(data => { setNote(data.content || ''); setNoteLoaded(true); })
+            .catch(() => setNoteLoaded(true));
+    }, [user.id, currentUser?.id]);
+
+    const saveNote = async () => {
+        if (!user.id) return;
+        await api.users.saveNote(user.id, note).catch(() => {});
+    };
 
     // Use fetched profile data when available, fall back to input props
     const displayName = profile?.displayName || user.name;
@@ -190,6 +218,18 @@ const UserProfilePopover = ({
                     </div>
                     <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{handle}</p>
 
+                    {badges.length > 0 && (
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                            {badges.map((badge: string) => {
+                                const meta = BADGE_META[badge];
+                                if (!meta) return null;
+                                return (
+                                    <span key={badge} title={meta.label} style={{ fontSize: '14px', cursor: 'default', color: meta.color }}>{meta.emoji}</span>
+                                );
+                            })}
+                        </div>
+                    )}
+
                     {pronouns && (
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{pronouns}</p>
                     )}
@@ -256,6 +296,25 @@ const UserProfilePopover = ({
                     {/* Loading indicator */}
                     {loadingProfile && (
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Loading...</div>
+                    )}
+
+                    {/* Note */}
+                    {noteLoaded && user.id !== currentUser?.id && (
+                        <div style={{ marginBottom: '8px' }}>
+                            <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '4px', letterSpacing: '0.05em' }}>Note</div>
+                            <textarea
+                                value={note}
+                                onChange={e => setNote(e.target.value.slice(0, 256))}
+                                onBlur={saveNote}
+                                placeholder="Click to add a note"
+                                rows={2}
+                                style={{
+                                    width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                    borderRadius: '4px', color: 'var(--text-primary)', fontSize: '12px', padding: '4px 6px',
+                                    resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+                                }}
+                            />
+                        </div>
                     )}
 
                     {/* Actions */}
