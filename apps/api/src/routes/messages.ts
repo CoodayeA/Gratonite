@@ -50,6 +50,7 @@ import { getIO } from '../lib/socket-io';
 import { hasPermission, hasChannelPermission } from './roles';
 import { createNotification } from '../lib/notifications';
 import { dispatchMessageCreate } from '../lib/webhook-dispatch';
+import { scrapeUrl, extractUrls } from '../lib/og-scraper';
 
 /** Use mergeParams so `:channelId` from the parent mount path is accessible. */
 export const messagesRouter = Router({ mergeParams: true });
@@ -162,6 +163,7 @@ function formatMessage(
     edited: msg.edited,
     editedAt: msg.editedAt,
     createdAt: msg.createdAt,
+    embeds: msg.embeds ?? [],
     expiresAt: msg.expiresAt ?? null,
     replyToId: msg.replyToId ?? null,
     author: author
@@ -260,6 +262,7 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
         createdAt: messages.createdAt,
         expiresAt: messages.expiresAt,
         replyToId: messages.replyToId,
+        embeds: messages.embeds,
         authorId: messages.authorId,
         authorUsername: users.username,
         authorDisplayName: users.displayName,
@@ -345,6 +348,7 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
         edited: row.edited,
         editedAt: row.editedAt,
         createdAt: row.createdAt,
+        embeds: row.embeds ?? [],
         expiresAt: row.expiresAt ?? null,
         replyToId: row.replyToId ?? null,
         pinned: pinnedSet.has(row.id),
@@ -580,6 +584,23 @@ messagesRouter.post(
       }
 
       res.status(201).json(payload);
+
+      // Fire-and-forget URL embed scraping
+      (async () => {
+        const urls = extractUrls(content || '');
+        if (urls.length === 0) return;
+
+        const embedResults = await Promise.all(urls.map(u => scrapeUrl(u)));
+        const embeds = embedResults.filter(Boolean);
+        if (embeds.length === 0) return;
+
+        await db.update(messages).set({ embeds }).where(eq(messages.id, newMessage.id));
+
+        getIO().to(`channel:${channelId}`).emit('MESSAGE_EMBED_UPDATE', {
+          messageId: newMessage.id,
+          embeds,
+        });
+      })().catch(() => {});
     } catch (err) {
       handleAppError(res, err);
     }

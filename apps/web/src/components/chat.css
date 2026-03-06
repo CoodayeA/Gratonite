@@ -135,3 +135,24 @@
                 border-left: 3px solid var(--accent-primary, #526df5);
                 background: rgba(82, 109, 245, 0.06);
             }
+
+            /* URL Embed Cards */
+            .embed-card {
+                position: relative;
+                background: var(--bg-secondary, #2f3136);
+                border-left: 4px solid var(--accent-primary, #5865f2);
+                border-radius: 4px;
+                padding: 8px 12px;
+                margin-top: 4px;
+                max-width: 432px;
+            }
+            .embed-card-inner { display: flex; gap: 12px; align-items: flex-start; }
+            .embed-card-content { flex: 1; min-width: 0; }
+            .embed-site-name { font-size: 12px; color: var(--text-muted, #72767d); margin-bottom: 4px; }
+            .embed-title { font-size: 14px; font-weight: 600; color: var(--accent-primary, #00aff4); text-decoration: none; display: block; margin-bottom: 4px; }
+            .embed-title:hover { text-decoration: underline; }
+            .embed-description { font-size: 13px; color: var(--text-secondary, #b9bbbe); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+            .embed-image-wrap { flex-shrink: 0; }
+            .embed-image { max-width: 80px; max-height: 80px; border-radius: 4px; object-fit: cover; }
+            .embed-dismiss { position: absolute; top: 4px; right: 4px; background: none; border: none; color: var(--text-muted, #72767d); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; }
+            .embed-dismiss:hover { color: var(--text-primary, #dcddde); }

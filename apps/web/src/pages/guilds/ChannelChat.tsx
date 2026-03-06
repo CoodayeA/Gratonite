@@ -80,10 +80,12 @@ type Message = {
     authorRoleColor?: string;
     authorAvatarHash?: string | null;
     authorNameplateStyle?: string | null;
+    embeds?: Array<{ url: string; title?: string; description?: string; image?: string; siteName?: string }>;
     expiresAt?: string | null;
     createdAt?: string | null;
 };
 
+import { EmbedCard } from '../../components/chat/EmbedCard';
 import ThreadPanel from '../../components/chat/ThreadPanel';
 import SoundboardMenu from '../../components/chat/SoundboardMenu';
 import EmojiPicker from '../../components/chat/EmojiPicker';
@@ -383,6 +385,12 @@ const MemoizedMessageItem = memo(({
                                         </a>
                                     );
                                 })}
+                            </div>
+                        )}
+                        {/* URL Embeds */}
+                        {msg.embeds && msg.embeds.length > 0 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                                {msg.embeds.map((embed, i) => <EmbedCard key={i} embed={embed} />)}
                             </div>
                         )}
                         {/* Reaction badges */}
@@ -897,6 +905,7 @@ const ChannelChat = () => {
             threadReplyCount: m.threadReplyCount ?? 0,
             attachments: Array.isArray(m.attachments) && m.attachments.length > 0 ? m.attachments : undefined,
             reactions: Array.isArray(m.reactions) && m.reactions.length > 0 ? m.reactions : undefined,
+            embeds: Array.isArray(m.embeds) && m.embeds.length > 0 ? m.embeds : undefined,
             authorRoleColor: m.authorId ? roleColorCacheRef.current.get(m.authorId) : undefined,
             authorAvatarHash: m.author?.avatarHash ?? null,
             authorNameplateStyle: (m.author as any)?.nameplateStyle ?? null,
@@ -1186,6 +1195,7 @@ const ChannelChat = () => {
                 replyToAuthor,
                 replyToContent,
                 attachments: Array.isArray((data as any).attachments) && (data as any).attachments.length > 0 ? (data as any).attachments : undefined,
+                embeds: Array.isArray((data as any).embeds) && (data as any).embeds.length > 0 ? (data as any).embeds : undefined,
                 authorRoleColor: data.authorId ? roleColorCacheRef.current.get(data.authorId) : undefined,
                 authorAvatarHash: (data as any).author?.avatarHash ?? null,
                 authorNameplateStyle: (data as any).author?.nameplateStyle ?? null,
@@ -1240,6 +1250,20 @@ const ChannelChat = () => {
 
         return () => { unsubCreate(); unsubUpdate(); unsubDelete(); unsubReactionAdd(); unsubReactionRemove(); };
     }, [channelId, currentUserId]);
+
+    // Socket listener for embed updates (URL unfurling)
+    useEffect(() => {
+        if (!channelId) return;
+        const socket = getSocket();
+        if (!socket) return;
+        const handler = ({ messageId, embeds }: { messageId: string; embeds: any[] }) => {
+            setMessages(prev => prev.map(m =>
+                m.apiId === messageId ? { ...m, embeds } : m
+            ));
+        };
+        socket.on('MESSAGE_EMBED_UPDATE', handler);
+        return () => { socket.off('MESSAGE_EMBED_UPDATE', handler); };
+    }, [channelId]);
 
     // Socket listener for pin updates
     useEffect(() => {
