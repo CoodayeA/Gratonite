@@ -79,6 +79,8 @@ type Message = {
     authorRoleColor?: string;
     authorAvatarHash?: string | null;
     authorNameplateStyle?: string | null;
+    expiresAt?: string | null;
+    createdAt?: string | null;
 };
 
 import ThreadPanel from '../../components/chat/ThreadPanel';
@@ -876,6 +878,8 @@ const ChannelChat = () => {
             authorRoleColor: m.authorId ? roleColorCacheRef.current.get(m.authorId) : undefined,
             authorAvatarHash: m.author?.avatarHash ?? null,
             authorNameplateStyle: (m.author as any)?.nameplateStyle ?? null,
+            expiresAt: m.expiresAt ?? null,
+            createdAt: m.createdAt ?? null,
         };
     };
 
@@ -1163,6 +1167,8 @@ const ChannelChat = () => {
                 authorRoleColor: data.authorId ? roleColorCacheRef.current.get(data.authorId) : undefined,
                 authorAvatarHash: (data as any).author?.avatarHash ?? null,
                 authorNameplateStyle: (data as any).author?.nameplateStyle ?? null,
+                expiresAt: (data as any).expiresAt ?? null,
+                createdAt: data.createdAt ?? null,
             }]);
             playSound('messageReceive');
         });
@@ -1250,6 +1256,23 @@ const ChannelChat = () => {
         estimateSize: () => 80, // estimated height of a message
         overscan: 10, // preload outside view for smooth scrolling
     });
+
+    // Remove expired disappearing messages from the display list (A2)
+    useEffect(() => {
+        const now = Date.now();
+        const hasExpiring = messages.some(m => m.expiresAt && new Date(m.expiresAt).getTime() > now);
+        if (!hasExpiring) return;
+        const soonest = messages
+            .filter(m => m.expiresAt)
+            .map(m => new Date(m.expiresAt!).getTime())
+            .sort((a, b) => a - b)[0];
+        if (!soonest) return;
+        const delay = Math.max(0, soonest - Date.now()) + 500;
+        const timer = setTimeout(() => {
+            setMessages(prev => prev.filter(m => !m.expiresAt || new Date(m.expiresAt).getTime() > Date.now()));
+        }, delay);
+        return () => clearTimeout(timer);
+    }, [messages]);
 
     const scrollToBottom = useCallback(() => {
         if (messages.length > 0) {
