@@ -1375,7 +1375,7 @@ export const api = {
         `/channels/${channelId}/messages${params ? '?' + buildQuery(params) : ''}`,
       ),
 
-    send: (channelId: string, data: { content: string; nonce?: string; messageReference?: { messageId: string }; attachmentIds?: string[]; replyToId?: string; threadId?: string }) =>
+    send: (channelId: string, data: { content?: string; nonce?: string; messageReference?: { messageId: string }; attachmentIds?: string[]; replyToId?: string; threadId?: string; expiresIn?: number }) =>
       apiFetch<Message>(`/channels/${channelId}/messages`, {
         method: 'POST',
         body: JSON.stringify(data),

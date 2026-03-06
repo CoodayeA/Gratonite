@@ -194,6 +194,7 @@ const sendMessageSchema = z
     attachmentIds: z.array(z.string().uuid()).optional(),
     replyToId: z.string().uuid().optional(),
     threadId: z.string().uuid().optional(),
+    expiresIn: z.number().int().positive().max(60 * 60 * 24 * 30).optional(), // seconds, max 30 days
   })
   .refine((d) => d.content !== undefined || (d.attachmentIds && d.attachmentIds.length > 0), {
     message: 'Message must have content or at least one attachment',
@@ -431,7 +432,7 @@ messagesRouter.post(
         }
       }
 
-      const { content, attachmentIds, replyToId, threadId } = req.body as z.infer<typeof sendMessageSchema>;
+      const { content, attachmentIds, replyToId, threadId, expiresIn } = req.body as z.infer<typeof sendMessageSchema>;
 
       // Resolve attachments and verify ownership.
       let attachmentSnapshot: Array<{
@@ -475,9 +476,11 @@ messagesRouter.post(
         }));
       }
 
-      // Compute expiresAt if the channel has a disappear timer set.
+      // Compute expiresAt: client-specified expiresIn takes priority, then channel disappear timer.
       let expiresAt: Date | undefined;
-      if (channel.disappearTimer) {
+      if (expiresIn) {
+        expiresAt = new Date(Date.now() + expiresIn * 1000);
+      } else if (channel.disappearTimer) {
         expiresAt = new Date(Date.now() + channel.disappearTimer * 1000);
       }
 

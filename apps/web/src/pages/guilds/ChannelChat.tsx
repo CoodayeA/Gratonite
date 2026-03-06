@@ -302,22 +302,12 @@ const MemoizedMessageItem = memo(({
                             </div>
                         )}
                         {msg.type === 'voice' ? (
-                            <div style={{ background: 'var(--bg-tertiary)', padding: '8px 16px', borderRadius: '24px', display: 'inline-flex', alignItems: 'center', gap: '12px', marginTop: '4px', border: '1px solid var(--stroke)' }}>
-                                <button
-                                    onClick={() => setPlayingMessageId(playingMessageId === msg.id ? null : msg.id)}
-                                    style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-primary)', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                                >
-                                    {playingMessageId === msg.id ? <Pause size={16} /> : <Play size={16} style={{ marginLeft: '2px' }} />}
-                                </button>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '2px', height: '20px', opacity: 0.7 }}>
-                                    {[...Array(15)].map((_, i) => (
-                                        <div key={i} style={{ width: '3px', height: `${Math.max(4, Math.random() * 20)}px`, background: 'var(--text-primary)', borderRadius: '2px' }}></div>
-                                    ))}
-                                </div>
-                                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                                    {playingMessageId === msg.id ? "0:06" : msg.duration}
-                                </span>
-                            </div>
+                            msg.attachments?.[0]?.url
+                                ? <VoicePlayer url={msg.attachments[0].url} duration={msg.duration} />
+                                : <div style={{ background: 'var(--bg-tertiary)', padding: '8px 16px', borderRadius: '24px', display: 'inline-flex', alignItems: 'center', gap: '12px', marginTop: '4px', border: '1px solid var(--stroke)', color: 'var(--text-muted)', fontSize: '13px' }}>
+                                    <Mic size={16} />
+                                    <span>Voice message unavailable</span>
+                                  </div>
                         ) : msg.type === 'poll' && msg.pollData ? (
                             <ChatPoll
                                 pollId={msg.pollData.pollId}
@@ -535,6 +525,58 @@ const EmojiRain = ({ active }: { active: boolean }) => {
     );
 };
 
+// Stable waveform bar heights — deterministic so they don't jump on re-render
+const WAVEFORM_HEIGHTS = [6, 14, 10, 18, 8, 16, 12, 20, 7, 15, 11, 17, 9, 13, 6];
+
+function VoicePlayer({ url, duration }: { url: string; duration?: string }) {
+    const audioRef = useRef<HTMLAudioElement>(null);
+    const [playing, setPlaying] = useState(false);
+    const [elapsed, setElapsed] = useState('0:00');
+
+    const toggle = () => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        if (playing) {
+            audio.pause();
+            setPlaying(false);
+        } else {
+            audio.play().catch(() => {});
+            setPlaying(true);
+        }
+    };
+
+    return (
+        <div style={{ background: 'var(--bg-tertiary)', padding: '8px 16px', borderRadius: '24px', display: 'inline-flex', alignItems: 'center', gap: '12px', marginTop: '4px', border: '1px solid var(--stroke)' }}>
+            <button
+                onClick={toggle}
+                style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-primary)', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+            >
+                {playing ? <Pause size={16} /> : <Play size={16} style={{ marginLeft: '2px' }} />}
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', height: '20px', opacity: playing ? 1 : 0.7 }}>
+                {WAVEFORM_HEIGHTS.map((h, i) => (
+                    <div key={i} style={{ width: '3px', height: `${h}px`, background: playing ? 'var(--accent-primary)' : 'var(--text-primary)', borderRadius: '2px', transition: 'background 0.2s' }} />
+                ))}
+            </div>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', minWidth: '32px' }}>
+                {playing ? elapsed : (duration || '0:00')}
+            </span>
+            <audio
+                ref={audioRef}
+                src={url}
+                onTimeUpdate={() => {
+                    const audio = audioRef.current;
+                    if (audio) {
+                        const s = Math.floor(audio.currentTime);
+                        setElapsed(`${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`);
+                    }
+                }}
+                onEnded={() => { setPlaying(false); setElapsed('0:00'); }}
+            />
+        </div>
+    );
+}
+
 const ChannelChat = () => {
     const { bgMedia, hasCustomBg, setBgMedia, toggleGuildRail, toggleSidebar, userProfile } = useOutletContext<OutletContextType>();
     const { channelId, guildId } = useParams<{ channelId: string; guildId: string }>();
@@ -565,6 +607,9 @@ const ChannelChat = () => {
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
     const recordingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+    const [voiceExpiry, setVoiceExpiry] = useState<number | null>(null); // seconds; null = never
 
     // Voice Playback State
     const [playingMessageId, setPlayingMessageId] = useState<number | null>(null);
@@ -961,6 +1006,8 @@ const ChannelChat = () => {
     const convertApiMessage = (m: any): Message => {
         const authorInfo = userCacheRef.current.get(m.authorId);
         const authorName = m.author?.displayName || m.author?.username || authorInfo?.displayName || authorInfo?.username || m.authorId?.slice(0, 8) || 'Unknown';
+        const attachments = Array.isArray(m.attachments) && m.attachments.length > 0 ? m.attachments : undefined;
+        const isVoice = attachments?.length === 1 && attachments[0]?.mimeType?.startsWith('audio/');
         return {
             id: typeof m.id === 'string' ? parseInt(m.id, 36) || Date.now() : m.id,
             apiId: typeof m.id === 'string' ? m.id : undefined,
@@ -973,7 +1020,8 @@ const ChannelChat = () => {
             edited: m.edited || false,
             replyToId: m.replyToId || undefined,
             threadReplyCount: m.threadReplyCount ?? 0,
-            attachments: Array.isArray(m.attachments) && m.attachments.length > 0 ? m.attachments : undefined,
+            attachments,
+            ...(isVoice ? { type: 'voice' as const } : {}),
             reactions: Array.isArray(m.reactions) && m.reactions.length > 0 ? m.reactions : undefined,
             embeds: Array.isArray(m.embeds) && m.embeds.length > 0 ? m.embeds : undefined,
             authorRoleColor: m.authorId ? roleColorCacheRef.current.get(m.authorId) : undefined,
@@ -1770,20 +1818,93 @@ const ChannelChat = () => {
         }
     };
 
-    const handleSendVoiceNote = () => {
-        setMessages(prev => [...prev, {
-            id: Date.now(),
-            author: currentUserName,
-            system: false,
-            avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            content: 'Voice Note',
-            type: 'voice',
-            duration: `0:${recordingTime.toString().padStart(2, '0')}`
-        }]);
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+            const recorder = new MediaRecorder(stream, { mimeType });
+            audioChunksRef.current = [];
+            recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+            recorder.start();
+            mediaRecorderRef.current = recorder;
+            setIsRecording(true);
+        } catch {
+            addToast({ title: 'Microphone access denied', description: 'Allow microphone access to send voice messages.', variant: 'error' });
+        }
+    };
+
+    const cancelRecording = () => {
+        if (mediaRecorderRef.current) {
+            // Null out ondataavailable before stopping so stale chunks don't leak into the next recording
+            mediaRecorderRef.current.ondataavailable = null;
+            mediaRecorderRef.current.stop();
+            mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+            mediaRecorderRef.current = null;
+        }
+        audioChunksRef.current = [];
         setIsRecording(false);
         setRecordingTime(0);
+    };
+
+    const handleSendVoiceNote = async () => {
+        const recorder = mediaRecorderRef.current;
+        if (!recorder) return;
+
+        // Collect the final chunk and wait for onstop — both inside onstop to guarantee ordering
+        const chunks = await new Promise<Blob[]>(resolve => {
+            const collected: Blob[] = [...audioChunksRef.current];
+            recorder.ondataavailable = (e) => { if (e.data.size > 0) collected.push(e.data); };
+            recorder.onstop = () => resolve(collected);
+            recorder.stop();
+            // Stop tracks AFTER stop() so the encoder can flush its final buffer
+            recorder.stream.getTracks().forEach(t => t.stop());
+        });
+        mediaRecorderRef.current = null;
+        audioChunksRef.current = [];
+
+        const durationStr = `0:${recordingTime.toString().padStart(2, '0')}`;
+        setIsRecording(false);
+        setRecordingTime(0);
+        setVoiceExpiry(null);
         setRoomVelocity(prev => Math.min(10, prev + 1.5));
+
+        if (chunks.length === 0 || chunks.reduce((sum, b) => sum + b.size, 0) === 0) {
+            addToast({ title: 'Recording too short', description: 'Hold the mic button longer to record a voice message.', variant: 'error' });
+            return;
+        }
+
+        if (!channelId) return;
+        const mimeType = chunks[0]?.type || 'audio/webm';
+        const ext = mimeType.includes('ogg') ? 'ogg' : 'webm';
+        const audioBlob = new Blob(chunks, { type: mimeType });
+        const audioFile = new File([audioBlob], `voice-note-${Date.now()}.${ext}`, { type: mimeType });
+
+        try {
+            const uploaded = await api.files.upload(audioFile, 'attachment');
+            const optimisticId = Date.now();
+            const expirySnapshot = voiceExpiry;
+            setMessages(prev => [...prev, {
+                id: optimisticId,
+                authorId: currentUserId,
+                author: currentUserName || 'You',
+                system: false,
+                avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                content: '',
+                type: 'voice' as const,
+                duration: durationStr,
+                attachments: [{ id: uploaded.id, url: uploaded.url, filename: audioFile.name, size: audioFile.size, mimeType }],
+            }]);
+            api.messages.send(channelId, {
+                attachmentIds: [uploaded.id],
+                ...(expirySnapshot ? { expiresIn: expirySnapshot } : {}),
+            }).catch(() => {
+                setMessages(prev => prev.filter(m => m.id !== optimisticId));
+                addToast({ title: 'Failed to send voice message', variant: 'error' });
+            });
+        } catch {
+            addToast({ title: 'Failed to upload voice message', variant: 'error' });
+        }
     };
 
     const submitPoll = async () => {
@@ -2442,19 +2563,29 @@ const ChannelChat = () => {
                     />
 
                     {isRecording ? (
-                        <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '16px', padding: '0 8px' }}>
-                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--error)', animation: 'pulse 1.5s infinite' }}></div>
-                            <span style={{ color: 'var(--error)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>{formatTime(recordingTime)}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '12px', padding: '0 8px' }}>
+                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--error)', animation: 'pulse 1.5s infinite', flexShrink: 0 }}></div>
+                            <span style={{ color: 'var(--error)', fontWeight: 600, fontFamily: 'var(--font-mono)', flexShrink: 0 }}>{formatTime(recordingTime)}</span>
                             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '2px', height: '24px', opacity: 0.5 }}>
-                                {/* Live recording waveform visualization */}
-                                {[...Array(20)].map((_, i) => (
-                                    <div key={i} style={{ width: '4px', height: `${Math.max(4, Math.random() * 20)}px`, background: 'var(--text-primary)', borderRadius: '2px', animation: `pulse ${0.5 + Math.random()}s infinite` }}></div>
+                                {WAVEFORM_HEIGHTS.map((h, i) => (
+                                    <div key={i} style={{ width: '4px', height: `${h}px`, background: 'var(--error)', borderRadius: '2px', animation: `pulse ${0.7 + i * 0.1}s infinite alternate` }} />
                                 ))}
                             </div>
-                            <button className="input-icon-btn" style={{ color: 'var(--text-secondary)' }} onClick={() => { setIsRecording(false); setRecordingTime(0); }}>
+                            <select
+                                value={voiceExpiry ?? ''}
+                                onChange={e => setVoiceExpiry(e.target.value ? Number(e.target.value) : null)}
+                                style={{ fontSize: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '6px', color: 'var(--text-secondary)', padding: '2px 4px', cursor: 'pointer', flexShrink: 0 }}
+                                title="Voice message expiry"
+                            >
+                                <option value="">Never expires</option>
+                                <option value={3600}>1 hour</option>
+                                <option value={86400}>24 hours</option>
+                                <option value={604800}>7 days</option>
+                            </select>
+                            <button className="input-icon-btn" style={{ color: 'var(--text-secondary)' }} onClick={cancelRecording} title="Cancel">
                                 <Square size={18} />
                             </button>
-                            <button className="input-icon-btn primary" onClick={handleSendVoiceNote}>
+                            <button className="input-icon-btn primary" onClick={handleSendVoiceNote} title="Send voice message">
                                 <Send size={18} />
                             </button>
                         </div>
@@ -2482,7 +2613,7 @@ const ChannelChat = () => {
                                 onChange={editingMessage ? (e) => setEditContent(e.target.value) : handleInputChange}
                                 onKeyDown={handleInputKeyDown}
                             />
-                            <button className="input-icon-btn" title="Record Voice Note" onClick={() => setIsRecording(true)}>
+                            <button className="input-icon-btn" title="Record Voice Note" onClick={startRecording}>
                                 <Mic size={20} />
                             </button>
                             {inputValue.trim().length === 0 && (
