@@ -8,6 +8,7 @@ type GratoniteSocket = Socket;
 export interface PresenceUpdatePayload {
   userId: string;
   status: 'online' | 'idle' | 'dnd' | 'invisible' | 'offline';
+  activity?: { name: string; type: string } | null;
 }
 
 export interface TypingStartPayload {
