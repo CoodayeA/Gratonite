@@ -197,3 +197,68 @@ export async function sendVerificationEmail(
     html,
   });
 }
+
+export async function sendPasswordResetEmail(
+  to: string,
+  token: string,
+  appUrl: string
+): Promise<void> {
+  const resetUrl = `${appUrl}/app/reset-password?token=${token}`;
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reset your Gratonite password</title>
+</head>
+<body style="margin:0;padding:0;background:#0f0f10;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f10;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="520" cellpadding="0" cellspacing="0" style="background:#1a1b1e;border-radius:12px;overflow:hidden;max-width:520px;width:100%;">
+          <tr>
+            <td style="background:#5865f2;padding:32px 40px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">Gratonite</h1>
+              <p style="margin:6px 0 0;color:#c3c8ff;font-size:14px;">Your place to hang out</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="margin:0 0 16px;color:#ffffff;font-size:20px;font-weight:600;">Reset your password</h2>
+              <p style="margin:0 0 24px;color:#a0a3b1;font-size:15px;line-height:1.6;">
+                We received a request to reset your Gratonite password. Click the button below to choose a new one.
+                This link expires in <strong style="color:#ffffff;">1 hour</strong>.
+              </p>
+              <table cellpadding="0" cellspacing="0" style="margin:0 0 32px;">
+                <tr>
+                  <td style="border-radius:8px;background:#5865f2;">
+                    <a href="${resetUrl}" style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;">
+                      Reset Password
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 8px;color:#a0a3b1;font-size:13px;">If the button doesn't work, copy and paste this link:</p>
+              <p style="margin:0;word-break:break-all;">
+                <a href="${resetUrl}" style="color:#5865f2;font-size:13px;">${resetUrl}</a>
+              </p>
+              <p style="margin:24px 0 0;color:#5a5c6a;font-size:13px;">
+                If you didn't request a password reset, you can safely ignore this email. Your password will not change.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+
+  await sendMail({
+    to,
+    subject: 'Reset your Gratonite password',
+    html,
+  });
+}

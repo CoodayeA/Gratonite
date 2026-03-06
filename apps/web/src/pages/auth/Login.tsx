@@ -60,11 +60,19 @@ const Login = () => {
         }
     };
 
-    const handleResetSubmit = () => {
+    const handleResetSubmit = async () => {
         if (!resetEmail.trim()) return;
-        addToast({ title: 'Password reset link sent to your email.', variant: 'success' });
-        setResetEmail('');
-        setShowResetForm(false);
+        setLoading(true);
+        try {
+            await api.auth.forgotPassword(resetEmail.trim());
+            addToast({ title: 'If that email is registered, a reset link has been sent.', variant: 'success' });
+            setResetEmail('');
+            setShowResetForm(false);
+        } catch {
+            addToast({ title: 'Something went wrong. Please try again.', variant: 'error' });
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (

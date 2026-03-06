@@ -33,9 +33,9 @@ import { eq, or, sql } from 'drizzle-orm';
 
 import { db } from '../db/index';
 import { users } from '../db/schema/users';
-import { refreshTokens, emailVerificationTokens } from '../db/schema/auth';
+import { refreshTokens, emailVerificationTokens, passwordResetTokens } from '../db/schema/auth';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../lib/jwt';
-import { sendVerificationEmail } from '../lib/mailer';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../lib/mailer';
 import { requireAuth } from '../middleware/auth';
 import { redis } from '../lib/redis';
 
@@ -1083,4 +1083,87 @@ authRouter.post('/verify-email/confirm', asyncHandler(async (req: Request, res: 
   const accessToken = signAccessToken(tokenRecord.userId);
 
   res.status(200).json({ ok: true, message: 'Email verified', accessToken });
+}));
+
+// ---------------------------------------------------------------------------
+// POST /forgot-password
+// ---------------------------------------------------------------------------
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+authRouter.post('/forgot-password', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const parse = forgotPasswordSchema.safeParse(req.body);
+  if (!parse.success) {
+    res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Valid email required' });
+    return;
+  }
+
+  const emailLower = parse.data.email.toLowerCase();
+
+  // Always return 200 to prevent email enumeration
+  const [user] = await db.select().from(users).where(eq(users.email, emailLower)).limit(1);
+  if (!user) {
+    res.status(200).json({ message: 'If that email is registered, a reset link has been sent.' });
+    return;
+  }
+
+  // Delete any existing reset tokens for this user
+  await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, user.id));
+
+  const rawToken = generateRawToken();
+  const tokenHash = hashToken(rawToken);
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await db.insert(passwordResetTokens).values({ userId: user.id, token: tokenHash, expiresAt });
+
+  const appUrl = process.env.APP_URL || 'http://localhost:5173';
+  try {
+    await sendPasswordResetEmail(user.email, rawToken, appUrl);
+  } catch (err) {
+    console.error('Failed to send password reset email:', err);
+  }
+
+  res.status(200).json({ message: 'If that email is registered, a reset link has been sent.' });
+}));
+
+// ---------------------------------------------------------------------------
+// POST /reset-password
+// ---------------------------------------------------------------------------
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+authRouter.post('/reset-password', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const parse = resetPasswordSchema.safeParse(req.body);
+  if (!parse.success) {
+    res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Validation failed', details: parse.error.issues });
+    return;
+  }
+
+  const { token, password } = parse.data;
+  const tokenHash = hashToken(token);
+
+  const [record] = await db
+    .select()
+    .from(passwordResetTokens)
+    .where(eq(passwordResetTokens.token, tokenHash))
+    .limit(1);
+
+  if (!record || record.expiresAt < new Date()) {
+    if (record) await db.delete(passwordResetTokens).where(eq(passwordResetTokens.id, record.id));
+    res.status(400).json({ code: 'INVALID_TOKEN', message: 'Reset link is invalid or has expired.' });
+    return;
+  }
+
+  const passwordHash = await argon2.hash(password);
+  await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, record.userId));
+  await db.delete(passwordResetTokens).where(eq(passwordResetTokens.id, record.id));
+  // Invalidate all existing sessions
+  await db.delete(refreshTokens).where(eq(refreshTokens.userId, record.userId));
+
+  res.status(200).json({ ok: true, message: 'Password updated successfully.' });
 }));

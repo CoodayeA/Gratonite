@@ -10,6 +10,7 @@ import AuthLayout from './layouts/AuthLayout';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Verify from './pages/auth/Verify';
+import ResetPassword from './pages/auth/ResetPassword';
 
 import HomePage from './pages/app/Home';
 import Discover from './pages/app/Discover';
@@ -2343,6 +2344,7 @@ const appRouter = createBrowserRouter(
                 <Route path="login" element={<Login />} />
                 <Route path="register" element={<Register />} />
                 <Route path="verify" element={<Verify />} />
+                <Route path="reset-password" element={<ResetPassword />} />
             </Route>
 
             {/* Public Invite Route */}

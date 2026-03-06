@@ -601,6 +601,18 @@ export const api = {
         body: JSON.stringify({ token }),
       }),
 
+    forgotPassword: (email: string) =>
+      apiFetch<{ message: string }>('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+
+    resetPassword: (token: string, password: string) =>
+      apiFetch<{ ok: true; message: string }>('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ token, password }),
+      }),
+
     getMfaStatus: () =>
       apiFetch<{ enabled: boolean; pendingSetup: boolean; backupCodeCount: number }>('/auth/mfa/status'),
 

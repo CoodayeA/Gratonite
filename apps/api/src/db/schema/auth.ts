@@ -173,3 +173,17 @@ export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect
  * TypeScript type for inserting a new email verification token row.
  */
 export type NewEmailVerificationToken = typeof emailVerificationTokens.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// password_reset_tokens
+// ---------------------------------------------------------------------------
+
+export const passwordResetTokens = pgTable('password_reset_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  token: varchar('token', { length: 255 }).notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
