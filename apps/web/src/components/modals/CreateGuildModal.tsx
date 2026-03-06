@@ -57,7 +57,9 @@ const templates: Template[] = [
 const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; onGuildCreated?: (guild: { id: string; name: string; iconHash: string | null }) => void }) => {
     const { addToast } = useToast();
     const navigate = useNavigate();
-    const [step, setStep] = useState<'template' | 'details' | 'import'>('template');
+    const [step, setStep] = useState<'template' | 'details' | 'import' | 'from-template'>('template');
+    const [templateCode, setTemplateCode] = useState('');
+    const [templateCreating, setTemplateCreating] = useState(false);
     const [guildName, setGuildName] = useState('My Portal');
     const [description, setDescription] = useState('');
     const [isPublic, setIsPublic] = useState(true);
@@ -259,6 +261,22 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                                 <span style={{ fontSize: '22px' }}>✨</span>
                                 <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Start from Scratch</span>
                             </div>
+
+                            {/* Use a Template Code */}
+                            <div
+                                onClick={() => setStep('from-template')}
+                                style={{
+                                    padding: '14px 12px', borderRadius: '10px',
+                                    background: 'var(--bg-tertiary)', border: '1px dashed var(--stroke)',
+                                    cursor: 'pointer', display: 'flex', flexDirection: 'column',
+                                    alignItems: 'center', gap: '8px', textAlign: 'center', transition: 'all 0.15s',
+                                }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--accent-primary)'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--stroke)'; }}
+                            >
+                                <span style={{ fontSize: '22px' }}>📋</span>
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Use a Template</span>
+                            </div>
                         </div>
                     </>
                 )}
@@ -311,6 +329,49 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                                 <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{Math.round(importProgress)}%</span>
                             </div>
                         )}
+                    </>
+                )}
+
+                {/* ── Step: Use a Template Code ── */}
+                {step === 'from-template' && (
+                    <>
+                        <button onClick={() => setStep('template')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', marginBottom: '16px', padding: 0 }}>← Back</button>
+                        <h1 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>Use a Template</h1>
+                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', textAlign: 'center' }}>Enter a template code to create a portal from an existing template.</p>
+
+                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Template Code</label>
+                        <input
+                            type="text"
+                            value={templateCode}
+                            onChange={(e) => setTemplateCode(e.target.value)}
+                            placeholder="Paste template code here..."
+                            style={{ width: '100%', height: '44px', background: 'var(--bg-app)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', padding: '0 16px', fontSize: '14px', outline: 'none', marginBottom: '24px' }}
+                        />
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
+                            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
+                            <button
+                                onClick={async () => {
+                                    if (!templateCode.trim() || templateCreating) return;
+                                    setTemplateCreating(true);
+                                    try {
+                                        const guild = await api.guilds.createFromTemplate(templateCode.trim());
+                                        addToast({ title: 'Portal Created from Template!', variant: 'success' });
+                                        onGuildCreated?.({ id: guild.id, name: guild.name, iconHash: guild.iconHash ?? null });
+                                        onClose();
+                                        navigate(`/guild/${guild.id}`);
+                                    } catch (err: any) {
+                                        addToast({ title: 'Failed to create from template', description: err?.message || 'Invalid template code.', variant: 'error' });
+                                    } finally {
+                                        setTemplateCreating(false);
+                                    }
+                                }}
+                                disabled={!templateCode.trim() || templateCreating}
+                                style={{ height: '44px', padding: '0 24px', borderRadius: 'var(--radius-sm)', background: templateCode.trim() && !templateCreating ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: templateCode.trim() && !templateCreating ? '#000' : 'var(--text-muted)', border: 'none', fontSize: '14px', fontWeight: 600, cursor: templateCode.trim() && !templateCreating ? 'pointer' : 'default', transition: 'all 0.2s' }}
+                            >
+                                {templateCreating ? 'Creating...' : 'Create from Template'}
+                            </button>
+                        </div>
                     </>
                 )}
 

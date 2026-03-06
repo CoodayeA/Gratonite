@@ -53,6 +53,7 @@ import { createNotification } from '../lib/notifications';
 import { dispatchMessageCreate } from '../lib/webhook-dispatch';
 import { scrapeUrl, extractUrls } from '../lib/og-scraper';
 import { workflows, workflowTriggers, workflowActions } from '../db/schema/workflows';
+import { automodRules } from '../db/schema/automod-rules';
 
 /** Use mergeParams so `:channelId` from the parent mount path is accessible. */
 export const messagesRouter = Router({ mergeParams: true });
@@ -433,6 +434,31 @@ messagesRouter.post(
       }
 
       const { content, attachmentIds, replyToId, threadId, expiresIn } = req.body as z.infer<typeof sendMessageSchema>;
+
+      // Automod check: check message content against enabled keyword rules
+      if (channel.guildId && content) {
+        try {
+          const rules = await db.select().from(automodRules)
+            .where(and(eq(automodRules.guildId, channel.guildId), eq(automodRules.enabled, true)));
+
+          for (const rule of rules) {
+            if (rule.triggerType !== 'KEYWORD') continue;
+            const metadata = rule.triggerMetadata as { keywords?: string[] };
+            const keywords: string[] = metadata?.keywords || [];
+            const msgLower = content.toLowerCase();
+            const matched = keywords.some((kw: string) => msgLower.includes(kw.toLowerCase()));
+            if (!matched) continue;
+
+            const actions = (rule.actions as Array<{ type: string; alertChannelId?: string }>) || [];
+            for (const action of actions) {
+              if (action.type === 'BLOCK_MESSAGE') {
+                res.status(403).json({ code: 'AUTOMOD_BLOCKED', message: 'Message blocked by auto-moderation' });
+                return;
+              }
+            }
+          }
+        } catch { /* automod should not break message sending */ }
+      }
 
       // Resolve attachments and verify ownership.
       let attachmentSnapshot: Array<{

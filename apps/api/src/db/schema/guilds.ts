@@ -134,6 +134,13 @@ export const guilds = pgTable('guilds', {
   /**
    * Timestamp of guild creation. Set once by Postgres, never changed.
    */
+  /** Vanity invite code for the guild (unique). */
+  vanityCode: text('vanity_code').unique(),
+
+  /** Server boost count and tier. */
+  boostCount: integer('boost_count').notNull().default(0),
+  boostTier: integer('boost_tier').notNull().default(0),
+
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 
   /**

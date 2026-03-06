@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, boolean, timestamp, unique } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, boolean, integer, timestamp, unique } from 'drizzle-orm/pg-core';
 import { channels } from './channels';
 import { messages } from './messages';
 import { users } from './users';
@@ -14,6 +14,9 @@ export const threads = pgTable('threads', {
   originMessageId: uuid('origin_message_id').references(() => messages.id, { onDelete: 'set null' }),
   archived: boolean('archived').notNull().default(false),
   locked: boolean('locked').notNull().default(false),
+  forumTagIds: text('forum_tag_ids').array(),
+  pinned: boolean('pinned').notNull().default(false),
+  messageCount: integer('message_count').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -11,6 +11,7 @@ export const guildBans = pgTable('guild_bans', {
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   reason: text('reason'),
   bannedBy: uuid('banned_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   unique('guild_bans_guild_user_unique').on(table.guildId, table.userId),
