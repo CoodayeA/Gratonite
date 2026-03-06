@@ -1238,6 +1238,12 @@ export const api = {
     kickMember: (guildId: string, userId: string) =>
       apiFetch<void>(`/guilds/${guildId}/members/${userId}`, { method: 'DELETE' }),
 
+    timeoutMember: (guildId: string, userId: string, durationSeconds: number) =>
+      apiFetch<{ success: boolean; timeoutUntil: string | null }>(`/guilds/${guildId}/members/${userId}/timeout`, {
+        method: 'POST',
+        body: JSON.stringify({ durationSeconds }),
+      }),
+
     getAuditLog: (guildId: string, params?: { limit?: number; offset?: number; action?: string; userId?: string }) => {
       const q = new URLSearchParams();
       if (params?.limit) q.set('limit', String(params.limit));
@@ -1371,6 +1377,12 @@ export const api = {
     delete: (channelId: string, messageId: string) =>
       apiFetch<void>(`/channels/${channelId}/messages/${messageId}`, {
         method: 'DELETE',
+      }),
+
+    bulkDelete: (channelId: string, ids: string[]) =>
+      apiFetch<{ deleted: number }>(`/channels/${channelId}/messages/bulk`, {
+        method: 'DELETE',
+        body: JSON.stringify({ ids }),
       }),
 
     addReaction: (channelId: string, messageId: string, emoji: string) =>
