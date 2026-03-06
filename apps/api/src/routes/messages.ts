@@ -27,7 +27,7 @@
 
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { eq, and, lt, gt, desc, isNull, or } from 'drizzle-orm';
+import { eq, and, lt, gt, desc, isNull, or, sql } from 'drizzle-orm';
 
 import { db } from '../db/index';
 import { messages } from '../db/schema/messages';
@@ -40,6 +40,7 @@ import { guilds } from '../db/schema/guilds';
 import { guildMembers } from '../db/schema/guilds';
 import { messageReactions } from '../db/schema/reactions';
 import { channelPins } from '../db/schema/pins';
+import { threads } from '../db/schema/threads';
 import { inArray } from 'drizzle-orm';
 import { Permissions } from '../db/schema/roles';
 import { requireAuth } from '../middleware/auth';
@@ -308,6 +309,23 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
       pinnedSet = new Set(pinRows.map((p) => p.messageId));
     }
 
+    // Fetch thread reply counts: count messages per thread, grouped by originMessageId
+    const threadReplyCountMap = new Map<string, number>();
+    if (messageIds.length > 0) {
+      const threadRows = await db
+        .select({
+          originMessageId: threads.originMessageId,
+          replyCount: sql<number>`cast(count(${messages.id}) as int)`,
+        })
+        .from(threads)
+        .leftJoin(messages, eq(messages.threadId, threads.id))
+        .where(inArray(threads.originMessageId, messageIds))
+        .groupBy(threads.originMessageId);
+      for (const t of threadRows) {
+        if (t.originMessageId) threadReplyCountMap.set(t.originMessageId, t.replyCount ?? 0);
+      }
+    }
+
     const formatted = rows.map((row) => {
       const emojiMap = reactionsByMessage.get(row.id);
       const reactions = emojiMap
@@ -330,6 +348,7 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
         expiresAt: row.expiresAt ?? null,
         replyToId: row.replyToId ?? null,
         pinned: pinnedSet.has(row.id),
+        threadReplyCount: threadReplyCountMap.get(row.id) ?? 0,
         reactions,
         author: row.authorId
           ? {
