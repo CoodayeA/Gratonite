@@ -2440,6 +2440,8 @@ const ChannelChat = () => {
                 </div>
             )}
 
+            {/* Content area wrapper — positions pinned panel between header and input */}
+            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0 }}>
             {showScrollButton && (
                 <button
                     onClick={scrollToBottom}
@@ -2589,7 +2591,7 @@ const ChannelChat = () => {
             {showPinnedPanel && (
                 <div style={{
                     width: '340px', flexShrink: 0, borderLeft: '1px solid var(--stroke)',
-                    background: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column',
+                    background: 'var(--bg-secondary, #2f3136)', display: 'flex', flexDirection: 'column',
                     position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 30,
                 }}>
                     <div style={{
@@ -2675,6 +2677,7 @@ const ChannelChat = () => {
                     </div>
                 </div>
             )}
+            </div>{/* end content area wrapper */}
 
             <div className="input-area" style={{ zIndex: 2, position: 'relative' }}>
                 {slowRemaining > 0 && (
