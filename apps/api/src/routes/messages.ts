@@ -55,6 +55,10 @@ import { scrapeUrl, extractUrls } from '../lib/og-scraper';
 import { redis } from '../lib/redis';
 import { workflows, workflowTriggers, workflowActions } from '../db/schema/workflows';
 import { automodRules } from '../db/schema/automod-rules';
+import { scheduledMessages } from '../db/schema/scheduled-messages';
+import { messageDrafts } from '../db/schema/message-drafts';
+import { guildWordFilters } from '../db/schema/guild-word-filters';
+import { messagesSentTotal } from '../lib/metrics';
 
 /** Use mergeParams so `:channelId` from the parent mount path is accessible. */
 export const messagesRouter = Router({ mergeParams: true });
@@ -197,6 +201,7 @@ const sendMessageSchema = z
     replyToId: z.string().uuid().optional(),
     threadId: z.string().uuid().optional(),
     expiresIn: z.number().int().positive().max(60 * 60 * 24 * 30).optional(), // seconds, max 30 days
+    scheduledAt: z.string().datetime().optional(), // ISO 8601 date for scheduled messages
   })
   .refine((d) => d.content !== undefined || (d.attachmentIds && d.attachmentIds.length > 0), {
     message: 'Message must have content or at least one attachment',
@@ -444,7 +449,24 @@ messagesRouter.post(
         }
       }
 
-      const { content, attachmentIds, replyToId, threadId, expiresIn } = req.body as z.infer<typeof sendMessageSchema>;
+      const { content, attachmentIds, replyToId, threadId, expiresIn, scheduledAt } = req.body as z.infer<typeof sendMessageSchema>;
+
+      // Handle scheduled messages: insert into scheduled_messages instead of messages
+      if (scheduledAt) {
+        const scheduledDate = new Date(scheduledAt);
+        if (scheduledDate <= new Date()) {
+          res.status(400).json({ code: 'VALIDATION_ERROR', message: 'scheduledAt must be in the future' });
+          return;
+        }
+        const [scheduled] = await db.insert(scheduledMessages).values({
+          channelId,
+          authorId: req.userId!,
+          content: content ?? '',
+          scheduledAt: scheduledDate,
+        }).returning();
+        res.status(202).json(scheduled);
+        return;
+      }
 
       // Automod check: check message content against enabled keyword rules
       if (channel.guildId && content) {
@@ -469,6 +491,22 @@ messagesRouter.post(
             }
           }
         } catch { /* automod should not break message sending */ }
+      }
+
+      // Word filter check
+      if (channel.guildId && content) {
+        try {
+          const [wordFilter] = await db.select().from(guildWordFilters)
+            .where(eq(guildWordFilters.guildId, channel.guildId!)).limit(1);
+          if (wordFilter && wordFilter.words && wordFilter.words.length > 0) {
+            const contentLower = content.toLowerCase();
+            const matched = wordFilter.words.some((w: string) => contentLower.includes(w.toLowerCase()));
+            if (matched && wordFilter.action === 'block') {
+              res.status(400).json({ code: 'BLOCKED_CONTENT', message: 'Your message contains blocked words' });
+              return;
+            }
+          }
+        } catch { /* word filter should not break message sending */ }
       }
 
       // Resolve attachments and verify ownership.
@@ -558,6 +596,7 @@ messagesRouter.post(
       // Emit real-time event to all clients subscribed to this channel.
       try {
         getIO().to(`channel:${channelId}`).emit('MESSAGE_CREATE', payload);
+        messagesSentTotal.inc();
       } catch {
         // Socket.io not yet initialised (e.g. test environment); non-fatal.
       }
@@ -732,6 +771,11 @@ messagesRouter.post(
       }
 
       res.status(201).json(payload);
+
+      // Clear draft for this user/channel (fire-and-forget)
+      db.delete(messageDrafts)
+        .where(and(eq(messageDrafts.userId, req.userId!), eq(messageDrafts.channelId, channelId)))
+        .catch(() => {});
 
       // Fire-and-forget URL embed scraping
       (async () => {
@@ -1129,6 +1173,18 @@ messagesRouter.post('/read', requireAuth, validate(readSchema), async (req: Requ
         lastReadAt: now.toISOString(),
         lastReadMessageId: resolvedMessageId ?? null,
       });
+
+      // Emit DM_READ to the other participant (for read receipt indicator)
+      const otherMembers = await db.select({ userId: dmChannelMembers.userId })
+        .from(dmChannelMembers)
+        .where(eq(dmChannelMembers.channelId, channelId));
+      for (const member of otherMembers) {
+        if (member.userId !== req.userId!) {
+          getIO().to(`user:${member.userId}`).emit('DM_READ', {
+            channelId, userId: req.userId!, lastReadMessageId: resolvedMessageId ?? null,
+          });
+        }
+      }
     } catch {
       // Non-fatal.
     }
@@ -1217,6 +1273,89 @@ messagesRouter.patch('/disappear-timer', requireAuth, validate(disappearTimerSch
       .returning({ disappearTimer: channels.disappearTimer });
 
     res.status(200).json({ disappearTimer: updated.disappearTimer });
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /scheduled — list pending scheduled messages for this channel (author only)
+// ---------------------------------------------------------------------------
+messagesRouter.get('/scheduled', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { channelId } = req.params as Record<string, string>;
+    await resolveChannel(channelId, req.userId!);
+    const rows = await db.select()
+      .from(scheduledMessages)
+      .where(and(
+        eq(scheduledMessages.channelId, channelId),
+        eq(scheduledMessages.authorId, req.userId!),
+        isNull(scheduledMessages.sentAt),
+        isNull(scheduledMessages.cancelledAt),
+      ))
+      .orderBy(scheduledMessages.scheduledAt);
+    res.json(rows);
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /scheduled/:id — cancel a scheduled message
+// ---------------------------------------------------------------------------
+messagesRouter.delete('/scheduled/:id', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { channelId, id } = req.params as Record<string, string>;
+    await resolveChannel(channelId, req.userId!);
+    const [sm] = await db.select()
+      .from(scheduledMessages)
+      .where(and(eq(scheduledMessages.id, id), eq(scheduledMessages.channelId, channelId)))
+      .limit(1);
+    if (!sm) { res.status(404).json({ code: 'NOT_FOUND', message: 'Scheduled message not found' }); return; }
+    if (sm.authorId !== req.userId) { res.status(403).json({ code: 'FORBIDDEN', message: 'Not your scheduled message' }); return; }
+    if (sm.sentAt) { res.status(400).json({ code: 'ALREADY_SENT', message: 'Message has already been sent' }); return; }
+    await db.update(scheduledMessages).set({ cancelledAt: new Date() }).where(eq(scheduledMessages.id, id));
+    res.json({ ok: true });
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /:messageId/translate — Translate a message via DeepL
+// ---------------------------------------------------------------------------
+messagesRouter.post('/:messageId/translate', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const messageId = req.params.messageId as string;
+    const { targetLang = 'EN' } = req.body as { targetLang?: string };
+    const [msg] = await db.select({ content: messages.content }).from(messages).where(eq(messages.id, messageId)).limit(1);
+    if (!msg || !msg.content) { res.status(404).json({ code: 'NOT_FOUND', message: 'Message not found' }); return; }
+
+    const cacheKey = `translate:${messageId}:${targetLang.toUpperCase()}`;
+    const cached = await redis.get(cacheKey);
+    if (cached) { res.json(JSON.parse(cached)); return; }
+
+    const deeplKey = process.env.DEEPL_API_KEY;
+    if (!deeplKey) {
+      res.json({ translatedText: msg.content, detectedLanguage: 'EN', mock: true });
+      return;
+    }
+
+    const deeplRes = await fetch(`https://api-free.deepl.com/v2/translate`, {
+      method: 'POST',
+      headers: { 'Authorization': `DeepL-Auth-Key ${deeplKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: [msg.content], target_lang: targetLang.toUpperCase() }),
+    });
+
+    if (!deeplRes.ok) {
+      res.status(502).json({ code: 'TRANSLATION_FAILED', message: 'Translation service unavailable' });
+      return;
+    }
+
+    const data = await deeplRes.json() as { translations: Array<{ text: string; detected_source_language: string }> };
+    const result = { translatedText: data.translations[0].text, detectedLanguage: data.translations[0].detected_source_language };
+    await redis.set(cacheKey, JSON.stringify(result), 'EX', 3600);
+    res.json(result);
   } catch (err) {
     handleAppError(res, err);
   }

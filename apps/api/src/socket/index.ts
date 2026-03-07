@@ -43,6 +43,7 @@ import { stageSessions, stageSpeakers } from '../db/schema/stage';
 import { eq, and, isNull } from 'drizzle-orm';
 import { redis } from '../lib/redis';
 import { executeWorkflows } from '../lib/workflow-executor';
+import { activeWebSocketConnections } from '../lib/metrics';
 
 // In-memory spatial positions: channelId → Map<userId, {x, y}>
 // Ephemeral — not persisted to Redis (too high frequency: ~15 updates/sec/user)
@@ -105,6 +106,7 @@ export function initSocket(io: SocketIOServer): void {
    */
   io.on('connection', async (socket: Socket) => {
     const userId: string = socket.data.userId;
+    activeWebSocketConnections.inc();
 
     console.info(`[socket.io] user ${userId} connected (${socket.id})`);
 
@@ -448,6 +450,7 @@ export function initSocket(io: SocketIOServer): void {
     // Disconnect handler
     // -------------------------------------------------------------------------
     socket.on('disconnect', async () => {
+      activeWebSocketConnections.dec();
       // Clean up spatial positions for this user
       for (const [channelId, posMap] of spatialPositions) {
         posMap.delete(userId);

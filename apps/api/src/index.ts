@@ -13,6 +13,9 @@ import { startMessageExpiryCron } from './lib/message-expiry';
 import { startUnbanExpiredJob } from './jobs/unbanExpired';
 import { startExpireStatusesJob } from './jobs/expireStatuses';
 import { startEmailNotificationJob } from './jobs/emailNotifications';
+import { startScheduledMessagesJob } from './jobs/scheduledMessages';
+import { startAccountDeletionJob } from './jobs/accountDeletion';
+import { httpRequestDuration, activeWebSocketConnections, registry } from './lib/metrics';
 
 const PLACEHOLDER_PATTERNS = [
   'changeme',
@@ -121,6 +124,18 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
+// Request duration tracking for metrics
+app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    httpRequestDuration.observe(
+      { method: req.method, route: req.path, status: String(res.statusCode) },
+      Date.now() - start,
+    );
+  });
+  next();
+});
+
 // ---------------------------------------------------------------------------
 // Health check
 // ---------------------------------------------------------------------------
@@ -158,6 +173,8 @@ server.listen(PORT, () => {
   startUnbanExpiredJob();
   startExpireStatusesJob();
   startEmailNotificationJob();
+  startScheduledMessagesJob();
+  startAccountDeletionJob();
 });
 
 export { io };
