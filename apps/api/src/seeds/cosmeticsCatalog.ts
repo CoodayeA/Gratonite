@@ -7,6 +7,11 @@ type ShopInsert = typeof shopItems.$inferInsert;
 
 const rarityCycle: Array<ShopInsert['rarity']> = ['uncommon', 'rare', 'epic', 'legendary', 'rare'];
 
+const frameGlowColors = ['#38bdf8', '#f9a8d4', '#7c3aed', '#34d399', '#fbbf24', '#f87171'];
+const frameStyles = ['neon', 'gold', 'glass'] as const;
+const nameplateStyles = ['rainbow', 'fire', 'ice', 'gold', 'glitch'] as const;
+const effectTypes = ['gradient-pulse', 'stars', 'particles', 'matrix-rain', 'aurora'] as const;
+
 const names = {
   avatar_frame: [
     'Aurora Halo', 'Neon Rift', 'Solar Flare', 'Obsidian Loop', 'Crystal Arc',
@@ -73,7 +78,26 @@ function createCatalogItems(): ShopInsert[] {
         assetUrl: null,
         assetConfig: category.type === 'soundboard'
           ? null
-          : { preset: category.type, index: i + 1 },
+          : category.type === 'avatar_frame'
+            ? {
+                frameStyle: frameStyles[i % frameStyles.length],
+                glowColor: frameGlowColors[i % frameGlowColors.length],
+                preset: category.type,
+                index: i + 1,
+              }
+            : category.type === 'nameplate'
+              ? {
+                  nameplateStyle: nameplateStyles[i % nameplateStyles.length],
+                  preset: category.type,
+                  index: i + 1,
+                }
+              : category.type === 'profile_effect'
+                ? {
+                    effectType: effectTypes[i % effectTypes.length],
+                    preset: category.type,
+                    index: i + 1,
+                  }
+                : { preset: category.type, index: i + 1 },
         duration: category.type === 'soundboard' ? 1 + (i % 10) : null,
         metadata: {
           sku,

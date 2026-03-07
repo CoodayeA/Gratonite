@@ -5,6 +5,7 @@ import Skeleton from '../../components/ui/Skeleton';
 import { TiltCard, RippleWrapper } from '../../components/ui/Physics';
 import { useToast } from '../../components/ui/ToastManager';
 import { api } from '../../lib/api';
+import { applyEquippedItem, clearEquippedItem } from '../../lib/cosmetics';
 
 
 /* ------------------------------------------------------------------ */
@@ -143,22 +144,40 @@ const Inventory = () => {
     const handleEquip = async (item: ApiInventoryItem) => {
         if (equippingId) return;
         setEquippingId(item.id);
+        const willEquip = !item.equipped;
         try {
             const targetItemId = item.itemId;
+            const userId = userProfile?.id || (localStorage.getItem('gratonite-user-id') ?? 'me');
+            let response: any = {};
             if (item.source === 'shop') {
-                if (item.equipped) await api.shop.unequipItem(targetItemId);
-                else await api.shop.equipItem(targetItemId);
+                if (willEquip) response = await api.shop.equipItem(targetItemId);
+                else await api.shop.unequipItem(targetItemId);
             } else {
-                if (item.equipped) await api.cosmetics.unequip(targetItemId);
-                else await api.cosmetics.equipCosmetic(targetItemId);
+                if (willEquip) response = await api.cosmetics.equipCosmetic(targetItemId);
+                else await api.cosmetics.unequip(targetItemId);
             }
+
+            if (willEquip) {
+                const cfg = (response?.assetConfig ?? item.assetConfig ?? {}) as Record<string, unknown>;
+                applyEquippedItem(item.type, cfg, userId);
+                // Persist nameplate to user profile
+                if (item.type === 'nameplate') {
+                    const style = (cfg.nameplateStyle as string) ?? 'none';
+                    api.users.updateProfile({ nameplateStyle: style }).catch(() => {});
+                }
+            } else {
+                clearEquippedItem(item.type, userId);
+                if (item.type === 'nameplate') {
+                    api.users.updateProfile({ nameplateStyle: 'none' }).catch(() => {});
+                }
+            }
+
             setInventory(prev => prev.map(i => {
                 if (i.type === item.type && i.id !== item.id) return { ...i, equipped: false };
-                if (i.id === item.id) return { ...i, equipped: !i.equipped };
+                if (i.id === item.id) return { ...i, equipped: willEquip };
                 return i;
             }));
-            window.dispatchEvent(new Event('gratonite:cosmetics-updated'));
-            addToast({ title: item.equipped ? 'Item unequipped' : 'Item equipped', variant: 'success' });
+            addToast({ title: willEquip ? 'Item equipped' : 'Item unequipped', variant: 'success' });
         } catch (err: any) {
             addToast({ title: 'Failed to equip item', description: err?.message ?? 'Please try again.', variant: 'error' });
         } finally {
