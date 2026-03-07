@@ -97,6 +97,48 @@ import { Tooltip } from '../../components/ui/Tooltip';
 import ForwardModal from '../../components/modals/ForwardModal';
 import { MemberListPanel } from '../../components/guild/MemberListPanel';
 
+const ReactionBadge = ({ emoji, count, me, messageApiId, channelId, onReaction }: { emoji: string; count: number; me: boolean; messageApiId?: string; channelId?: string; onReaction?: (apiId: string, emoji: string, me: boolean) => void }) => {
+    const [tooltip, setTooltip] = useState<{ users: Array<{ displayName?: string; username: string }>; total: number } | null>(null);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleMouseEnter = () => {
+        if (!messageApiId || !channelId) return;
+        timerRef.current = setTimeout(() => {
+            fetch(`${API_BASE}/api/v1/channels/${channelId}/messages/${messageApiId}/reactions/${encodeURIComponent(emoji)}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+            }).then(r => r.ok ? r.json() : []).then(data => {
+                if (Array.isArray(data) && data.length > 0) {
+                    setTooltip({ users: data.slice(0, 5), total: count });
+                }
+            }).catch(() => {});
+        }, 300);
+    };
+
+    const handleMouseLeave = () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        setTooltip(null);
+    };
+
+    return (
+        <button
+            onClick={() => onReaction?.(messageApiId!, emoji, me)}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '12px', background: me ? 'rgba(var(--accent-primary-rgb, 139,92,246), 0.15)' : 'var(--bg-tertiary)', border: `1px solid ${me ? 'var(--accent-primary)' : 'var(--stroke)'}`, cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'all 0.15s', position: 'relative' }}
+        >
+            <span>{emoji}</span> <span style={{ fontSize: '11px', fontWeight: 600 }}>{count}</span>
+            {tooltip && (
+                <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '6px 10px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', zIndex: 50, whiteSpace: 'nowrap', fontSize: '12px', color: 'var(--text-primary)', pointerEvents: 'none' }}>
+                    {tooltip.users.map((u, i) => (
+                        <span key={i}>{u.displayName || u.username}{i < tooltip.users.length - 1 ? ', ' : ''}</span>
+                    ))}
+                    {tooltip.total > 5 && <span style={{ color: 'var(--text-muted)' }}> and {tooltip.total - 5} more</span>}
+                </div>
+            )}
+        </button>
+    );
+};
+
 const MemoizedMessageItem = memo(({
     msg,
     prevMsg,
@@ -409,9 +451,7 @@ const MemoizedMessageItem = memo(({
                         {reactions.length > 0 && (
                             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
                                 {reactions.map((r: any) => (
-                                    <button key={r.emoji} onClick={() => onReaction?.(msg.apiId, r.emoji, r.me)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '12px', background: r.me ? 'rgba(var(--accent-primary-rgb, 139,92,246), 0.15)' : 'var(--bg-tertiary)', border: `1px solid ${r.me ? 'var(--accent-primary)' : 'var(--stroke)'}`, cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'all 0.15s' }}>
-                                        <span>{r.emoji}</span> <span style={{ fontSize: '11px', fontWeight: 600 }}>{r.count}</span>
-                                    </button>
+                                    <ReactionBadge key={r.emoji} emoji={r.emoji} count={r.count} me={r.me} messageApiId={msg.apiId} channelId={msgChannelId} onReaction={onReaction} />
                                 ))}
                             </div>
                         )}
@@ -658,6 +698,12 @@ const ChannelChat = () => {
     const [isScheduleOpen, setIsScheduleOpen] = useState(false);
     const [scheduleDate, setScheduleDate] = useState('');
     const [scheduleTime, setScheduleTime] = useState('');
+    const [scheduledMessages, setScheduledMessages] = useState<Array<{ id: string; content: string; scheduledAt: string }>>([]);
+
+    // Draft state
+    const [hasDraft, setHasDraft] = useState(false);
+    const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     const [showPollCreator, setShowPollCreator] = useState(false);
     const [pollQuestion, setPollQuestion] = useState('');
     const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
@@ -978,6 +1024,18 @@ const ChannelChat = () => {
                     }
                 }
             },
+            ...(msg.apiId ? [{
+                id: 'bookmark', label: 'Bookmark Message', icon: Star, onClick: () => {
+                    fetch(`${API_BASE}/api/v1/users/@me/bookmarks`, {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ messageId: msg.apiId }),
+                    }).then(r => {
+                        if (r.ok) addToast({ title: 'Message bookmarked', variant: 'success' });
+                        else addToast({ title: 'Already bookmarked', variant: 'info' });
+                    }).catch(() => addToast({ title: 'Failed to bookmark', variant: 'error' }));
+                }
+            }] : []),
             { divider: true, id: 'div1', label: '', onClick: () => { } },
             ...(!isOwn ? [{
                 id: 'report', label: 'Report Message', icon: Flag, color: 'var(--warning)', onClick: () => {
@@ -1156,6 +1214,28 @@ const ChannelChat = () => {
         fetchMessages({ signal: abortController.signal });
         return () => { abortController.abort(); };
     }, [fetchMessages]);
+
+    // Load draft and scheduled messages when channel changes
+    useEffect(() => {
+        if (!channelId) return;
+        // Load draft
+        fetch(`${API_BASE}/api/v1/channels/${channelId}/draft`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        }).then(r => r.ok ? r.json() : null).then(draft => {
+            if (draft?.content) {
+                setInputValue(draft.content);
+                setHasDraft(true);
+            } else {
+                setHasDraft(false);
+            }
+        }).catch(() => {});
+        // Load scheduled messages
+        fetch(`${API_BASE}/api/v1/channels/${channelId}/messages/scheduled`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        }).then(r => r.ok ? r.json() : []).then(data => {
+            setScheduledMessages(Array.isArray(data) ? data : []);
+        }).catch(() => {});
+    }, [channelId]);
 
     // Load older messages when scrolling to top
     const loadOlderMessages = useCallback(async () => {
@@ -1713,6 +1793,8 @@ const ChannelChat = () => {
         setChannelSearch(null);
         setEmojiSearch(null);
         setRoomVelocity(prev => Math.min(10, prev + 2));
+        setHasDraft(false);
+        if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
     };
 
     // Edit message handler
@@ -1801,6 +1883,27 @@ const ChannelChat = () => {
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
         setInputValue(val);
+
+        // Debounced draft auto-save (2s)
+        if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+        if (channelId) {
+            if (val.trim().length > 0) {
+                setHasDraft(true);
+                draftSaveTimerRef.current = setTimeout(() => {
+                    fetch(`${API_BASE}/api/v1/channels/${channelId}/draft`, {
+                        method: 'PUT',
+                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content: val }),
+                    }).catch(() => {});
+                }, 2000);
+            } else {
+                setHasDraft(false);
+                fetch(`${API_BASE}/api/v1/channels/${channelId}/draft`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+                }).catch(() => {});
+            }
+        }
 
         // Notify server that we're typing
         if (val.trim().length > 0) sendTypingIndicator();
@@ -2611,6 +2714,36 @@ const ChannelChat = () => {
                     </div>
                 )}
 
+                {/* Scheduled Messages Indicator */}
+                {scheduledMessages.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '4px 16px 4px', maxHeight: '100px', overflowY: 'auto' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Clock size={12} /> {scheduledMessages.length} scheduled
+                        </div>
+                        {scheduledMessages.map(sm => (
+                            <div key={sm.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)', padding: '2px 0' }}>
+                                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    "{sm.content.slice(0, 60)}" — {new Date(sm.scheduledAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                                <button onClick={() => {
+                                    if (!channelId) return;
+                                    fetch(`${API_BASE}/api/v1/channels/${channelId}/messages/scheduled/${sm.id}`, {
+                                        method: 'DELETE',
+                                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+                                    }).then(r => {
+                                        if (r.ok) {
+                                            setScheduledMessages(prev => prev.filter(s => s.id !== sm.id));
+                                            addToast({ title: 'Scheduled message cancelled', variant: 'info' });
+                                        }
+                                    }).catch(() => {});
+                                }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex', flexShrink: 0 }} title="Cancel">
+                                    <X size={12} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 {/* Reply Banner */}
                 {replyingTo && !editingMessage && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'var(--bg-tertiary)', borderLeft: '3px solid var(--accent-primary)', margin: '0 16px 4px', borderRadius: '0 8px 8px 0' }}>
@@ -2760,6 +2893,9 @@ const ChannelChat = () => {
                             <button className="input-icon-btn" title="Upload Attachment" onClick={() => chatFileInputRef.current?.click()}>
                                 <Plus size={20} />
                             </button>
+                            {hasDraft && !editingMessage && (
+                                <span style={{ fontSize: '10px', fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.15)', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0 }}>Draft</span>
+                            )}
                             <input
                                 type="text"
                                 className="chat-input"
@@ -2894,8 +3030,35 @@ const ChannelChat = () => {
                                 </div>
                             </div>
 
-                            <button className="auth-button" style={{ margin: 0, padding: '8px 0', height: 'auto', fontSize: '13px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)' }} onClick={() => { setIsScheduleOpen(false); setInputValue(''); }}>
-                                Queue for later
+                            <button className="auth-button" style={{ margin: 0, padding: '8px 0', height: 'auto', fontSize: '13px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)' }} onClick={() => {
+                                if (!channelId || !scheduleDate || !scheduleTime) {
+                                    addToast({ title: 'Pick a date and time', variant: 'error' });
+                                    return;
+                                }
+                                const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
+                                const processedContent = processEmojis(inputValue);
+                                fetch(`${API_BASE}/api/v1/channels/${channelId}/messages`, {
+                                    method: 'POST',
+                                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ content: processedContent || ' ', scheduledAt }),
+                                }).then(r => {
+                                    if (r.ok) {
+                                        r.json().then(sm => {
+                                            setScheduledMessages(prev => [...prev, sm]);
+                                            addToast({ title: 'Message scheduled', variant: 'success' });
+                                        });
+                                    } else {
+                                        addToast({ title: 'Failed to schedule', variant: 'error' });
+                                    }
+                                }).catch(() => addToast({ title: 'Failed to schedule', variant: 'error' }));
+                                setIsScheduleOpen(false);
+                                setInputValue('');
+                                setScheduleDate('');
+                                setScheduleTime('');
+                                setHasDraft(false);
+                                if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+                            }}>
+                                Schedule Message
                             </button>
                         </div>
                     )}

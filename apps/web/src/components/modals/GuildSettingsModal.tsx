@@ -111,7 +111,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const { user: currentUser } = useUser();
     const navigate = useNavigate();
     const actorName = currentUser.name || currentUser.handle || 'Unknown';
-    const [activeTab, setActiveTab] = useState<'overview' | 'channels' | 'roles' | 'members' | 'bans' | 'invites' | 'emojis' | 'automod' | 'audit' | 'branding' | 'webhooks' | 'bots' | 'templates' | 'insights' | 'onboarding'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'channels' | 'roles' | 'members' | 'bans' | 'invites' | 'emojis' | 'automod' | 'audit' | 'branding' | 'webhooks' | 'bots' | 'templates' | 'insights' | 'onboarding' | 'wordfilter' | 'security'>('overview');
     const [roles, setRoles] = useState<Role[]>([]);
     const [activeRole, setActiveRole] = useState<Role | null>(null);
     const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
@@ -556,8 +556,21 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     useEffect(() => {
         if (activeTab === 'overview' || activeTab === 'channels' || activeTab === 'webhooks') fetchChannels();
         if (activeTab === 'roles') fetchRoles();
-        if (activeTab === 'members') fetchMembers();
+        if (activeTab === 'members') { fetchMembers(); setSelectedMemberIds(new Set()); }
         if (activeTab === 'invites') fetchInvites();
+        if (activeTab === 'wordfilter' && guildId) {
+            api.get<any>(`/guilds/${guildId}/word-filter`).then((data: any) => {
+                setWordFilterWords(Array.isArray(data.words) ? data.words : []);
+                setWordFilterAction(data.action || 'block');
+                setWordFilterExemptRoles(Array.isArray(data.exemptRoles) ? data.exemptRoles : []);
+            }).catch(() => {});
+        }
+        if (activeTab === 'security' && guildId) {
+            api.guilds.get(guildId).then((g: any) => {
+                setRaidProtectionEnabled(!!g.raidProtectionEnabled);
+                setGuildLocked(!!g.lockedAt);
+            }).catch(() => {});
+        }
         if (activeTab === 'bans') {
             fetchBans();
             if (guildId) {
@@ -748,6 +761,22 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             addToast({ title: 'Delete failed', description: err?.message || 'Could not delete emoji.', variant: 'error' });
         }
     };
+
+    // Word filter state
+    const [wordFilterWords, setWordFilterWords] = useState<string[]>([]);
+    const [wordFilterAction, setWordFilterAction] = useState<'block' | 'delete' | 'warn'>('block');
+    const [wordFilterExemptRoles, setWordFilterExemptRoles] = useState<string[]>([]);
+    const [wordFilterInput, setWordFilterInput] = useState('');
+    const [wordFilterSaving, setWordFilterSaving] = useState(false);
+
+    // Raid protection state
+    const [raidProtectionEnabled, setRaidProtectionEnabled] = useState(false);
+    const [guildLocked, setGuildLocked] = useState(false);
+    const [raidSaving, setRaidSaving] = useState(false);
+
+    // Batch moderation state
+    const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
+    const [bulkActionConfirm, setBulkActionConfirm] = useState<'kick' | 'ban' | 'timeout' | null>(null);
 
     const [automodRules, setAutomodRules] = useState<{ id: string; name: string; desc: string; enabled: boolean; action: string; isBuiltIn: boolean; workflowId?: string; keywords?: string[] }[]>([]);
 
@@ -1075,11 +1104,11 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                     </div>
                     <div>
                         <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>MODERATION</div>
-                        {(['automod', 'bans', 'audit'] as const).map(tab => (
+                        {(['automod', 'wordfilter', 'bans', 'audit', 'security'] as const).map(tab => (
                             <div key={tab} onClick={() => setActiveTab(tab)}
                                 onMouseEnter={() => setHoveredBtn(`tab-${tab}`)} onMouseLeave={() => setHoveredBtn(null)}
                                 style={tabStyle(tab)}
-                            >{tab === 'automod' ? 'AutoMod' : tab === 'bans' ? 'Bans' : 'Audit Log'}</div>
+                            >{tab === 'automod' ? 'AutoMod' : tab === 'wordfilter' ? 'Word Filter' : tab === 'bans' ? 'Bans' : tab === 'security' ? 'Security' : 'Audit Log'}</div>
                         ))}
                     </div>
                     <div>
@@ -1825,14 +1854,66 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 </div>
                             )}
 
+                            {/* Bulk action bar */}
+                            {selectedMemberIds.size > 0 && (
+                                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--accent-primary)', borderRadius: '8px', padding: '10px 16px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 600 }}>{selectedMemberIds.size} member{selectedMemberIds.size !== 1 ? 's' : ''} selected</span>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button onClick={() => setBulkActionConfirm('kick')} style={{ padding: '6px 14px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>Kick</button>
+                                        <button onClick={() => setBulkActionConfirm('ban')} style={{ padding: '6px 14px', borderRadius: '6px', background: 'rgba(237,66,69,0.1)', border: '1px solid var(--error)', color: 'var(--error)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>Ban</button>
+                                        <button onClick={() => setSelectedMemberIds(new Set())} style={{ padding: '6px 14px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>Clear</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Bulk action confirmation */}
+                            {bulkActionConfirm && (
+                                <div style={{ background: 'rgba(237,66,69,0.1)', border: '1px solid var(--error)', borderRadius: '8px', padding: '12px 16px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
+                                        {bulkActionConfirm === 'kick' ? 'Kick' : 'Ban'} <strong>{selectedMemberIds.size}</strong> selected member{selectedMemberIds.size !== 1 ? 's' : ''}?
+                                    </span>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button onClick={async () => {
+                                            if (!guildId) return;
+                                            const ids = Array.from(selectedMemberIds);
+                                            try {
+                                                const endpoint = bulkActionConfirm === 'kick' ? 'bulk-kick' : 'bulk-ban';
+                                                const result = await api.post<{ processed: number; failed: string[] }>(`/guilds/${guildId}/members/${endpoint}`, { userIds: ids });
+                                                setMembers(prev => prev.filter(m => !ids.includes(m.id) || result.failed.includes(m.id)));
+                                                setSelectedMemberIds(new Set());
+                                                addToast({ title: `${bulkActionConfirm === 'kick' ? 'Kicked' : 'Banned'} ${result.processed} member${result.processed !== 1 ? 's' : ''}`, variant: 'success' });
+                                            } catch {
+                                                addToast({ title: `Failed to ${bulkActionConfirm}`, variant: 'error' });
+                                            }
+                                            setBulkActionConfirm(null);
+                                        }} style={{ background: 'var(--error)', border: 'none', padding: '6px 14px', borderRadius: '6px', color: 'white', fontWeight: 600, cursor: 'pointer', fontSize: '12px' }}>Confirm</button>
+                                        <button onClick={() => setBulkActionConfirm(null)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '6px 14px', borderRadius: '6px', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: '12px' }}>Cancel</button>
+                                    </div>
+                                </div>
+                            )}
+
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 80px', padding: '8px 16px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '28px 2fr 1fr 1fr 1fr 80px', padding: '8px 16px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+                                    <input type="checkbox" checked={selectedMemberIds.size > 0 && selectedMemberIds.size === filteredMembers.filter(m => m.roles[0] !== 'Owner').length} onChange={e => {
+                                        if (e.target.checked) {
+                                            setSelectedMemberIds(new Set(filteredMembers.filter(m => m.roles[0] !== 'Owner').map(m => m.id)));
+                                        } else {
+                                            setSelectedMemberIds(new Set());
+                                        }
+                                    }} style={{ accentColor: 'var(--accent-primary)' }} />
                                     <span>Member</span><span>Role</span><span>Status</span><span>Joined</span><span />
                                 </div>
                                 {filteredMembers.map(member => (
                                     <div key={member.id} onMouseEnter={() => setHoveredBtn(`member-${member.id}`)} onMouseLeave={() => setHoveredBtn(null)}
-                                        style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 80px', padding: '12px 16px', borderRadius: '8px', alignItems: 'center', background: hoveredBtn === `member-${member.id}` ? 'var(--hover-overlay)' : 'transparent' }}
+                                        style={{ display: 'grid', gridTemplateColumns: '28px 2fr 1fr 1fr 1fr 80px', padding: '12px 16px', borderRadius: '8px', alignItems: 'center', background: selectedMemberIds.has(member.id) ? 'rgba(82, 109, 245, 0.1)' : hoveredBtn === `member-${member.id}` ? 'var(--hover-overlay)' : 'transparent' }}
                                     >
+                                        <input type="checkbox" checked={selectedMemberIds.has(member.id)} disabled={member.roles[0] === 'Owner'} onChange={e => {
+                                            setSelectedMemberIds(prev => {
+                                                const next = new Set(prev);
+                                                if (e.target.checked) next.add(member.id); else next.delete(member.id);
+                                                return next;
+                                            });
+                                        }} style={{ accentColor: 'var(--accent-primary)' }} />
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                             <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, position: 'relative', flexShrink: 0 }}>
                                                 {member.avatar}
@@ -1962,6 +2043,168 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                     style={{ padding: '14px', borderRadius: '12px', background: hoveredBtn === 'create-rule' ? 'var(--hover-overlay)' : 'transparent', border: '1px dashed var(--stroke)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 600, fontSize: '14px' }}
                                 ><Plus size={16} /> Create Custom Rule</button>
                             </div>
+                        </>
+                    )}
+
+                    {/* ===================== WORD FILTER ===================== */}
+                    {activeTab === 'wordfilter' && (
+                        <>
+                            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Word Filter</h2>
+                            <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Block or filter messages containing specific words or phrases.</p>
+
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>BLOCKED WORDS</label>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                                    {wordFilterWords.map((word, i) => (
+                                        <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'var(--bg-tertiary)', borderRadius: '999px', border: '1px solid var(--stroke)', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                            {word}
+                                            <button onClick={() => setWordFilterWords(prev => prev.filter((_, idx) => idx !== i))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>x</button>
+                                        </span>
+                                    ))}
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <input
+                                        type="text"
+                                        value={wordFilterInput}
+                                        onChange={e => setWordFilterInput(e.target.value)}
+                                        onKeyDown={e => {
+                                            if ((e.key === 'Enter' || e.key === ',') && wordFilterInput.trim()) {
+                                                e.preventDefault();
+                                                const newWord = wordFilterInput.trim().toLowerCase();
+                                                if (newWord && !wordFilterWords.includes(newWord)) {
+                                                    setWordFilterWords(prev => [...prev, newWord]);
+                                                }
+                                                setWordFilterInput('');
+                                            }
+                                        }}
+                                        placeholder="Type a word and press Enter"
+                                        style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            const newWord = wordFilterInput.trim().toLowerCase();
+                                            if (newWord && !wordFilterWords.includes(newWord)) {
+                                                setWordFilterWords(prev => [...prev, newWord]);
+                                            }
+                                            setWordFilterInput('');
+                                        }}
+                                        style={{ padding: '8px 16px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
+                                    >Add</button>
+                                </div>
+                            </div>
+
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>ACTION</label>
+                                <select
+                                    value={wordFilterAction}
+                                    onChange={e => setWordFilterAction(e.target.value as any)}
+                                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}
+                                >
+                                    <option value="block">Block message</option>
+                                    <option value="delete">Delete after sending</option>
+                                    <option value="warn">Warn user</option>
+                                </select>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>What happens when a message contains a blocked word.</p>
+                            </div>
+
+                            <button
+                                disabled={wordFilterSaving}
+                                onClick={async () => {
+                                    if (!guildId) return;
+                                    setWordFilterSaving(true);
+                                    try {
+                                        await api.put(`/guilds/${guildId}/word-filter`, { words: wordFilterWords, action: wordFilterAction, exemptRoles: wordFilterExemptRoles });
+                                        addToast({ title: 'Word filter saved', variant: 'success' });
+                                    } catch {
+                                        addToast({ title: 'Failed to save word filter', variant: 'error' });
+                                    } finally {
+                                        setWordFilterSaving(false);
+                                    }
+                                }}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 24px', borderRadius: '8px', background: wordFilterSaving ? 'var(--bg-tertiary)' : 'var(--accent-primary)', border: 'none', color: wordFilterSaving ? 'var(--text-muted)' : '#000', fontWeight: 700, fontSize: '14px', cursor: wordFilterSaving ? 'default' : 'pointer' }}
+                            >
+                                <Save size={16} /> {wordFilterSaving ? 'Saving...' : 'Save Word Filter'}
+                            </button>
+                        </>
+                    )}
+
+                    {/* ===================== SECURITY (Raid Protection) ===================== */}
+                    {activeTab === 'security' && (
+                        <>
+                            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Security</h2>
+                            <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Protect your server from raids and automated attacks.</p>
+
+                            {guildLocked && (
+                                <div style={{ background: 'rgba(237,66,69,0.1)', border: '1px solid var(--error)', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <Lock size={20} color="var(--error)" />
+                                        <div>
+                                            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--error)' }}>Server is Locked</div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>No new members can join until the lockdown is lifted.</div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={async () => {
+                                            if (!guildId) return;
+                                            try {
+                                                await api.delete(`/guilds/${guildId}/lock`);
+                                                setGuildLocked(false);
+                                                addToast({ title: 'Server unlocked', variant: 'success' });
+                                            } catch {
+                                                addToast({ title: 'Failed to unlock', variant: 'error' });
+                                            }
+                                        }}
+                                        style={{ padding: '8px 20px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
+                                    >Unlock Server</button>
+                                </div>
+                            )}
+
+                            <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                    <div>
+                                        <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>Raid Protection</h3>
+                                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Automatically lock the server if more than 10 users join within 10 seconds.</p>
+                                    </div>
+                                    <div
+                                        onClick={async () => {
+                                            if (!guildId || raidSaving) return;
+                                            setRaidSaving(true);
+                                            const newVal = !raidProtectionEnabled;
+                                            setRaidProtectionEnabled(newVal);
+                                            try {
+                                                await api.guilds.update(guildId, { raidProtectionEnabled: newVal } as any);
+                                                addToast({ title: newVal ? 'Raid protection enabled' : 'Raid protection disabled', variant: 'success' });
+                                            } catch {
+                                                setRaidProtectionEnabled(!newVal);
+                                                addToast({ title: 'Failed to update', variant: 'error' });
+                                            } finally {
+                                                setRaidSaving(false);
+                                            }
+                                        }}
+                                        style={{ width: '40px', height: '24px', borderRadius: '12px', position: 'relative', cursor: raidSaving ? 'wait' : 'pointer', flexShrink: 0, background: raidProtectionEnabled ? 'var(--success)' : 'var(--bg-tertiary)', transition: 'background 0.2s' }}
+                                    >
+                                        <div style={{ width: '18px', height: '18px', background: 'white', borderRadius: '50%', position: 'absolute', top: '3px', transition: 'left 0.2s', left: raidProtectionEnabled ? '19px' : '3px' }} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {!guildLocked && (
+                                <button
+                                    onClick={async () => {
+                                        if (!guildId) return;
+                                        try {
+                                            await api.post(`/guilds/${guildId}/lock`, {});
+                                            setGuildLocked(true);
+                                            addToast({ title: 'Server locked', description: 'No new members can join.', variant: 'success' });
+                                        } catch {
+                                            addToast({ title: 'Failed to lock server', variant: 'error' });
+                                        }
+                                    }}
+                                    style={{ padding: '10px 24px', borderRadius: '8px', background: 'transparent', border: '1px solid var(--error)', color: 'var(--error)', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                >
+                                    <Lock size={16} /> Manual Lockdown
+                                </button>
+                            )}
                         </>
                     )}
 

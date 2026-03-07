@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import { guildInvites } from '../db/schema/invites';
 import { guilds, guildMembers } from '../db/schema/guilds';
@@ -11,6 +11,7 @@ import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { getIO } from '../lib/socket-io';
 import { hasPermission } from './roles';
+import { redis } from '../lib/redis';
 import crypto from 'crypto';
 
 export const invitesRouter = Router();
@@ -159,6 +160,25 @@ invitesRouter.post('/invites/:code', requireAuth, async (req: Request, res: Resp
   }
   if (invite.maxUses && invite.uses >= invite.maxUses) {
     res.status(410).json({ code: 'EXHAUSTED', message: 'Invite has reached max uses' }); return;
+  }
+
+  // Check if guild is locked (raid protection)
+  const guildResult = await db.execute(sql`SELECT locked_at, raid_protection_enabled FROM guilds WHERE id = ${invite.guildId}`);
+  const guildRow = (guildResult as any)[0] ?? (guildResult as any).rows?.[0];
+  if (guildRow && (guildRow as any).locked_at) {
+    res.status(403).json({ code: 'GUILD_LOCKED', message: 'This server is currently locked' }); return;
+  }
+
+  // Raid detection
+  if (guildRow && (guildRow as any).raid_protection_enabled) {
+    const key = `raid:joins:${invite.guildId}`;
+    const count = await redis.incr(key);
+    if (count === 1) await redis.expire(key, 10);
+    if (count > 10) {
+      await db.execute(sql`UPDATE guilds SET locked_at = now() WHERE id = ${invite.guildId}`);
+      getIO().to(`guild:${invite.guildId}`).emit('GUILD_LOCKDOWN_START', { guildId: invite.guildId });
+      res.status(403).json({ code: 'GUILD_LOCKED', message: 'Server locked due to raid detection' }); return;
+    }
   }
 
   // Check ban
