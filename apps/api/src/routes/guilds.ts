@@ -26,7 +26,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { z } from 'zod';
-import { eq, desc, sql, and, inArray, asc, ilike, gt, SQL } from 'drizzle-orm';
+import { eq, desc, sql, and, inArray, asc, ilike, gt, gte, SQL } from 'drizzle-orm';
 import multer from 'multer';
 
 import { db } from '../db/index';
@@ -199,6 +199,8 @@ const updateGuildSchema = z.object({
   rulesText: z.string().max(5000).nullable().optional(),
   requireRulesAgreement: z.boolean().optional(),
   raidProtectionEnabled: z.boolean().optional(),
+  spotlightChannelId: z.string().uuid().nullable().optional(),
+  spotlightMessage: z.string().max(2000).nullable().optional(),
 });
 
 /**
@@ -779,6 +781,50 @@ guildsRouter.post(
   },
 );
 
+// ============================================================
+// WAVE 3: Trending Guilds
+// ============================================================
+
+// GET /guilds/trending — must be before /:guildId to avoid param capture
+guildsRouter.get('/trending', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const trending = await db.select({
+      guildId: guildMembers.guildId,
+      newMemberCount: sql<number>`count(*)::int`,
+    })
+      .from(guildMembers)
+      .where(gte(guildMembers.joinedAt, sevenDaysAgo))
+      .groupBy(guildMembers.guildId)
+      .orderBy(desc(sql`count(*)`))
+      .limit(20);
+
+    if (trending.length === 0) {
+      res.json([]);
+      return;
+    }
+
+    const guildIds = trending.map(t => t.guildId);
+    const guildDetails = await db.select({
+      id: guilds.id,
+      name: guilds.name,
+      description: guilds.description,
+      iconHash: guilds.iconHash,
+      memberCount: guilds.memberCount,
+    }).from(guilds).where(inArray(guilds.id, guildIds));
+
+    const result = trending.map(t => ({
+      ...guildDetails.find(g => g.id === t.guildId),
+      newMemberCount: t.newMemberCount,
+    })).filter(g => g.id);
+
+    res.json(result);
+  } catch {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ---------------------------------------------------------------------------
 // GET /:guildId
 // ---------------------------------------------------------------------------
@@ -888,7 +934,7 @@ guildsRouter.patch(
         throw new AppError(403, 'Missing MANAGE_GUILD permission', 'FORBIDDEN');
       }
 
-      const { name, description, isDiscoverable, accentColor, welcomeMessage, rulesChannelId, category, tags, rulesText, requireRulesAgreement, raidProtectionEnabled } = req.body as z.infer<typeof updateGuildSchema>;
+      const { name, description, isDiscoverable, accentColor, welcomeMessage, rulesChannelId, category, tags, rulesText, requireRulesAgreement, raidProtectionEnabled, spotlightChannelId, spotlightMessage } = req.body as z.infer<typeof updateGuildSchema>;
 
       const updateData: Partial<typeof guilds.$inferInsert> = { updatedAt: new Date() };
       if (name !== undefined) updateData.name = name;
@@ -900,6 +946,8 @@ guildsRouter.patch(
       if (category !== undefined) updateData.category = category === null ? null : category.toLowerCase().slice(0, 30);
       if (rulesText !== undefined) updateData.rulesText = rulesText;
       if (requireRulesAgreement !== undefined) updateData.requireRulesAgreement = requireRulesAgreement;
+      if (spotlightChannelId !== undefined) updateData.spotlightChannelId = spotlightChannelId;
+      if (spotlightMessage !== undefined) updateData.spotlightMessage = spotlightMessage;
 
       const [updated] = await db
         .update(guilds)

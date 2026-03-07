@@ -22,7 +22,7 @@
  *   simple and avoids collisions.
  */
 
-import { pgTable, uuid, varchar, text, boolean, jsonb, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, boolean, integer, jsonb, timestamp } from 'drizzle-orm/pg-core';
 
 /**
  * The `users` table.
@@ -142,6 +142,27 @@ export const users = pgTable('users', {
 
   /** When the custom status expires. Null = no expiry. */
   statusExpiresAt: timestamp('status_expires_at', { withTimezone: true }),
+
+  /** XP points for level system. */
+  xp: integer('xp').notNull().default(0),
+
+  /** Current level (derived from XP). */
+  level: integer('level').notNull().default(1),
+
+  /** Current daily login streak (days). */
+  currentStreak: integer('current_streak').notNull().default(0),
+
+  /** All-time longest streak. */
+  longestStreak: integer('longest_streak').notNull().default(0),
+
+  /** Date of last streak update (date only, no time). */
+  lastStreakAt: text('last_streak_at'),
+
+  /** Gratonite coins balance. */
+  coins: integer('coins').notNull().default(0),
+
+  /** Banner background color hex (e.g. '#5865F2'). */
+  bannerColor: text('banner_color').default('#5865F2'),
 
   /**
    * Timestamp of account creation. Set once by Postgres default, never

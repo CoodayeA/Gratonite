@@ -37,7 +37,7 @@ const CATEGORIES = [
 ];
 
 const initialPortals: PortalInfo[] = [];
-const SUPPORTED_THEMES: AppTheme[] = ['default', 'glass', 'neobrutalism', 'synthwave', 'y2k', 'memphis', 'artdeco', 'terminal', 'aurora', 'vaporwave', 'nord', 'solarized', 'bubblegum', 'obsidian', 'sakura', 'midnight', 'forest'];
+const SUPPORTED_THEMES: AppTheme[] = ['default', 'glass', 'neobrutalism', 'synthwave', 'y2k', 'memphis', 'artdeco', 'terminal', 'aurora', 'vaporwave', 'nord', 'solarized', 'bubblegum', 'obsidian', 'sakura', 'midnight', 'forest', 'cyberpunk', 'pastel', 'monochrome', 'ocean', 'fire', 'desert', 'lavender', 'coffee', 'matrix', 'rose_gold', 'emerald', 'dracula', 'monokai', 'catppuccin', 'gruvbox', 'tokyo_night', 'everforest', 'arctic', 'neon', 'midnight_blue'];
 
 // Portal Check-in Modal
 const PortalCheckinModal = ({ portal, onClose }: { portal: PortalInfo; onClose: () => void }) => {
