@@ -34,7 +34,7 @@ type OutletContextType = {
     toggleSidebar: () => void;
     userProfile?: {
         id?: string;
-        avatarFrame?: 'none' | 'neon' | 'gold' | 'glass';
+        avatarFrame?: 'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse';
         nameplateStyle?: 'none' | 'rainbow' | 'fire' | 'ice' | 'gold' | 'glitch';
     };
 };
@@ -89,6 +89,7 @@ type Message = {
 import { EmbedCard, OgEmbed } from '../../components/chat/EmbedCard';
 import ThreadPanel from '../../components/chat/ThreadPanel';
 import SoundboardMenu from '../../components/chat/SoundboardMenu';
+import { playSynthSound } from '../../lib/soundSynth';
 import EmojiPicker from '../../components/chat/EmojiPicker';
 import ChatPoll from '../../components/chat/ChatPoll';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -2229,6 +2230,7 @@ const ChannelChat = () => {
     };
 
     const handlePlaySound = (sound: { name: string, emoji: string }) => {
+        playSynthSound(sound.name);
         setMessages(prev => [...prev, {
             id: Date.now(),
             author: 'System',

@@ -8,7 +8,7 @@ export interface AvatarProps {
   avatarHash?: string | null;
   displayName?: string;
   size?: number;
-  frame?: 'none' | 'neon' | 'gold' | 'glass';
+  frame?: 'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse';
   /** Optional presence status dot */
   status?: 'online' | 'idle' | 'dnd' | 'invisible' | 'offline' | null;
   /** Background color behind the status dot (matches parent bg) */
@@ -24,6 +24,27 @@ const STATUS_DOT_COLORS: Record<string, string> = {
   invisible: '#747f8d',
   offline: '#747f8d',
 };
+
+const DECORATION_EMOJI: Record<string, string> = {
+  crown:  '\u{1F451}',
+  star:   '\u2B50',
+  flame:  '\u{1F525}',
+  bolt:   '\u26A1',
+  orb:    '\u{1F52E}',
+  shield: '\u{1F6E1}\uFE0F',
+  gem:    '\u{1F48E}',
+  lotus:  '\u{1F338}',
+  moon:   '\u{1F319}',
+};
+
+const DECORATION_POSITIONS: Record<string, React.CSSProperties> = {
+  'top-right':    { top: -4, right: -4 },
+  'top-left':     { top: -4, left:  -4 },
+  'bottom-right': { bottom: -4, right: -4 },
+  'bottom-left':  { bottom: -4, left:  -4 },
+};
+
+type FrameType = 'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse';
 
 const Avatar = ({
   userId,
@@ -48,11 +69,11 @@ const Avatar = ({
   const statusRingSize = statusDotSize + 4;
   const isCurrentUserAvatar = userId === 'me' || (!!user.id && userId === user.id);
 
-  const readStoredFrame = (): 'none' | 'neon' | 'gold' | 'glass' => {
+  const readStoredFrame = (): FrameType => {
     try {
       const key = user.id ? `gratonite-avatar-frame:${user.id}` : 'gratonite-avatar-frame';
       const value = localStorage.getItem(key) || localStorage.getItem('gratonite-avatar-frame');
-      if (value === 'neon' || value === 'gold' || value === 'glass' || value === 'none') return value;
+      if (value === 'neon' || value === 'gold' || value === 'glass' || value === 'rainbow' || value === 'pulse' || value === 'none') return value;
     } catch { /* ignore */ }
     return 'none';
   };
@@ -65,10 +86,22 @@ const Avatar = ({
     return undefined;
   };
 
-  const [frameState, setFrameState] = useState<{ frame: 'none' | 'neon' | 'gold' | 'glass'; glowColor?: string }>(() => ({
+  const readStoredDecoration = (): { shape: string; position: string } | null => {
+    try {
+      const key = user.id ? `gratonite-decoration:${user.id}` : 'gratonite-decoration';
+      const raw = localStorage.getItem(key) || localStorage.getItem('gratonite-decoration');
+      return raw ? JSON.parse(raw) as { shape: string; position: string } : null;
+    } catch { return null; }
+  };
+
+  const [frameState, setFrameState] = useState<{ frame: FrameType; glowColor?: string }>(() => ({
     frame: isCurrentUserAvatar ? readStoredFrame() : 'none',
     glowColor: isCurrentUserAvatar ? readStoredGlowColor() : undefined,
   }));
+
+  const [decoration, setDecoration] = useState<{ shape: string; position: string } | null>(
+    () => isCurrentUserAvatar ? readStoredDecoration() : null
+  );
 
   useEffect(() => {
     setImgError(false);
@@ -81,20 +114,36 @@ const Avatar = ({
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail ?? {};
       const f = detail.frame as string;
-      const validFrame = (f === 'neon' || f === 'gold' || f === 'glass' || f === 'none') ? f : 'none';
+      const validFrame: FrameType =
+        (f === 'neon' || f === 'gold' || f === 'glass' || f === 'rainbow' || f === 'pulse' || f === 'none') ? f : 'none';
       setFrameState({ frame: validFrame, glowColor: detail.glowColor as string | undefined });
     };
     window.addEventListener('gratonite:avatar-frame-updated', handler);
     return () => window.removeEventListener('gratonite:avatar-frame-updated', handler);
   }, [isCurrentUserAvatar]);
 
-  const fallbackFrame = useMemo<'none' | 'neon' | 'gold' | 'glass'>(() => {
+  useEffect(() => {
+    if (!isCurrentUserAvatar) return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setDecoration(detail ?? null);
+    };
+    window.addEventListener('gratonite:decoration-updated', handler);
+    return () => window.removeEventListener('gratonite:decoration-updated', handler);
+  }, [isCurrentUserAvatar]);
+
+  const fallbackFrame = useMemo<FrameType>(() => {
     if (!isCurrentUserAvatar) return 'none';
     return frameState.frame;
   }, [isCurrentUserAvatar, frameState.frame]);
 
   const resolvedFrame = frame ?? fallbackFrame;
   const resolvedGlowColor = frameState.glowColor ?? 'rgba(56, 189, 248, 0.6)';
+
+  const frameClassName =
+    resolvedFrame === 'rainbow' ? 'avatar-frame-rainbow' :
+    resolvedFrame === 'pulse'   ? 'avatar-frame-pulse'   :
+    undefined;
 
   return (
     <div
@@ -110,6 +159,7 @@ const Avatar = ({
     >
       {/* Inner circle — overflow:hidden here clips the image without clipping the status dot */}
       <div
+        className={frameClassName}
         style={{
           width: size,
           height: size,
@@ -127,15 +177,20 @@ const Avatar = ({
               ? `0 0 14px ${resolvedGlowColor}`
               : resolvedFrame === 'gold'
                 ? '0 0 0 2px #f59e0b, 0 0 10px rgba(245, 158, 11, 0.5)'
-                : undefined,
+                : resolvedFrame === 'pulse'
+                  ? `0 0 0 2px ${resolvedGlowColor}, 0 0 20px ${resolvedGlowColor}`
+                  : undefined,
           border:
             resolvedFrame === 'glass'
               ? '1px solid rgba(255,255,255,0.35)'
-              : undefined,
+              : resolvedFrame === 'rainbow'
+                ? '2px solid transparent'
+                : undefined,
           backdropFilter:
             resolvedFrame === 'glass'
               ? 'blur(6px)'
               : undefined,
+          ['--glow-color' as string]: resolvedGlowColor,
         }}
       >
         {showImg ? (
@@ -189,6 +244,26 @@ const Avatar = ({
           />
         </div>
       )}
+
+      {/* Decoration badge */}
+      {decoration && (() => {
+        const emoji = DECORATION_EMOJI[decoration.shape] ?? '\u2728';
+        const pos = DECORATION_POSITIONS[decoration.position] ?? DECORATION_POSITIONS['top-right'];
+        const badgeSize = Math.max(12, Math.round(size * 0.38));
+        return (
+          <div style={{
+            position: 'absolute',
+            ...pos,
+            fontSize: badgeSize,
+            lineHeight: 1,
+            pointerEvents: 'none',
+            userSelect: 'none',
+            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))',
+          }}>
+            {emoji}
+          </div>
+        );
+      })()}
     </div>
   );
 };
