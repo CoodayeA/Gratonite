@@ -1337,7 +1337,7 @@ messagesRouter.post('/:messageId/translate', requireAuth, async (req: Request, r
 
     const deeplKey = process.env.DEEPL_API_KEY;
     if (!deeplKey) {
-      res.json({ translatedText: msg.content, detectedLanguage: 'EN', mock: true });
+      res.json({ translatedText: msg.content, detectedLanguage: 'EN' });
       return;
     }
 
