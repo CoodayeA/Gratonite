@@ -4630,12 +4630,14 @@ button:active:not(:disabled) {
    LOW POWER MODE — .low-power class on <html>
    ============================================================ */
 
-/* Stop all animations to save CPU */
+/* Stop all animations and backdrop-filter to save CPU/GPU */
 .low-power *,
 .low-power *::before,
 .low-power *::after {
     animation: none !important;
     transition: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
 
 /* Hide video backgrounds */
@@ -4648,12 +4650,4 @@ button:active:not(:disabled) {
 .low-power .avatar-animated,
 .low-power [class*="animated-avatar"] {
     animation-play-state: paused !important;
-}
-
-/* Reduce backdrop-filter cost */
-.low-power .glass-panel,
-.low-power [class*="glass"],
-.low-power [class*="backdrop"] {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
 }
