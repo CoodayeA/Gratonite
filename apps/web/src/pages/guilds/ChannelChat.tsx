@@ -2441,7 +2441,7 @@ const ChannelChat = () => {
             )}
 
             {/* Content area wrapper — positions pinned panel between header and input */}
-            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0 }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', minHeight: 0 }}>
             {showScrollButton && (
                 <button
                     onClick={scrollToBottom}
