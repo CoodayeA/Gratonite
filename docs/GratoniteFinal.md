@@ -149,7 +149,7 @@
 - **Redis**: Port 6379
 - **LiveKit Server**: Ports 7880 (HTTP/WS), 7881 (RTC/TCP), 7882 (RTC/UDP)
   - Dev credentials: `LIVEKIT_API_KEY=devkey`, `LIVEKIT_API_SECRET=secret`
-  - LiveKit Cloud (production): `wss://gratonite-80q9d3up.livekit.cloud`
+  - LiveKit Cloud (production): `wss://<your-livekit-host>`
 
 ---
 
@@ -562,7 +562,7 @@ The app uses Socket.io for real-time features:
 - Frontend connects via `livekit-client` SDK through `useLiveKit.ts` hook
 - Supports: audio, video, screen sharing, per-participant volume, mute/deafen
 - Local dev: Docker LiveKit server on `ws://localhost:7880`
-- Production: LiveKit Cloud at `wss://gratonite-80q9d3up.livekit.cloud`
+- Production: LiveKit Cloud at `wss://<your-livekit-host>`
 
 ---
 
@@ -597,9 +597,9 @@ LIVEKIT_API_KEY=devkey
 LIVEKIT_API_SECRET=secret
 
 # LiveKit Cloud (production)
-# LIVEKIT_URL=wss://gratonite-80q9d3up.livekit.cloud
-# LIVEKIT_API_KEY=APImsBH6DEXWux9
-# LIVEKIT_API_SECRET=WFdpecnQnFqs8j9m9SyOhuJOkFcLlClVRSenKBeMelBB
+# LIVEKIT_URL=wss://<your-livekit-host>
+# LIVEKIT_API_KEY=<your-livekit-api-key>
+# LIVEKIT_API_SECRET=<your-livekit-api-secret>
 ```
 
 ---

@@ -83,11 +83,11 @@ Your Gratonite platform is **95% production-ready**. All core features are imple
 - [ ] Set production APP_URL and CORS_ORIGIN
 - [ ] Set up SSL/TLS certificates
 
-**LiveKit Production Credentials (Already Available):**
+**LiveKit Production Configuration (Set via secrets manager or deployment environment):**
 ```env
-LIVEKIT_URL=wss://gratonite-80q9d3up.livekit.cloud
-LIVEKIT_API_KEY=APImsBH6DEXWux9
-LIVEKIT_API_SECRET=WFdpecnQnFqs8j9m9SyOhuJOkFcLlClVRSenKBeMelBB
+LIVEKIT_URL=wss://<your-livekit-host>
+LIVEKIT_API_KEY=<your-livekit-api-key>
+LIVEKIT_API_SECRET=<your-livekit-api-secret>
 ```
 
 ### 2. Database Migrations (HIGH PRIORITY)

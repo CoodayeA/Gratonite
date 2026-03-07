@@ -43,7 +43,7 @@ This tells React Router that all routes are prefixed with `/app`, so:
 
 ```bash
 cd apps/web && pnpm run build
-rsync -avz apps/web/dist/ ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/web/dist/
+rsync -avz apps/web/dist/ <ssh-user>@<server-host>:/home/<ssh-user>/gratonite-app/web/dist/
 docker restart gratonite-web
 ```
 

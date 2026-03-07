@@ -78,7 +78,7 @@ TTL: 300 (or default)
 
 To find your server IP:
 ```bash
-ssh -i ~/.ssh/codex_gratonite_hetzner ferdinand@gratonite.chat "curl -s ifconfig.me"
+ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host> "curl -s ifconfig.me"
 ```
 
 ### 2. Wait for DNS Propagation (5-30 minutes)
@@ -102,7 +102,7 @@ Caddy will automatically provision SSL certificate for app.gratonite.chat
 Update the SMTP settings in `/home/ferdinand/gratonite-app/.env.production`:
 
 ```bash
-ssh -i ~/.ssh/codex_gratonite_hetzner ferdinand@gratonite.chat
+ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host>
 nano /home/ferdinand/gratonite-app/.env.production
 ```
 
@@ -194,14 +194,14 @@ cd apps/api && pnpm run build && cd ../..
 cd apps/web && pnpm run build && cd ../..
 
 # Upload
-rsync -avz -e "ssh -i ~/.ssh/codex_gratonite_hetzner" \
-  apps/api/dist/ ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/api/dist/
+rsync -avz -e "ssh -i ~/.ssh/<your-deploy-key>" \
+  apps/api/dist/ <ssh-user>@<server-host>:/home/<ssh-user>/gratonite-app/api/dist/
 
-rsync -avz -e "ssh -i ~/.ssh/codex_gratonite_hetzner" \
-  apps/web/dist/ ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/web/dist/
+rsync -avz -e "ssh -i ~/.ssh/<your-deploy-key>" \
+  apps/web/dist/ <ssh-user>@<server-host>:/home/<ssh-user>/gratonite-app/web/dist/
 
 # Restart
-ssh -i ~/.ssh/codex_gratonite_hetzner ferdinand@gratonite.chat \
+ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host> \
   "docker restart gratonite-api gratonite-web"
 ```
 
@@ -215,7 +215,7 @@ ssh -i ~/.ssh/codex_gratonite_hetzner ferdinand@gratonite.chat \
 - ✅ DB_PASSWORD: Secure random password generated
 
 ### LiveKit Credentials
-- ✅ LIVEKIT_URL: wss://gratonite-80q9d3up.livekit.cloud
+- ✅ LIVEKIT_URL: configured in deployment environment
 - ✅ LIVEKIT_API_KEY: Configured
 - ✅ LIVEKIT_API_SECRET: Configured
 
@@ -392,7 +392,7 @@ du -sh /var/lib/docker/volumes/gratonite-app_*
 ### Quick Commands
 ```bash
 # SSH into server
-ssh -i ~/.ssh/codex_gratonite_hetzner ferdinand@gratonite.chat
+ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host>
 
 # Check everything
 docker ps && docker compose -f /home/ferdinand/gratonite-app/docker-compose.production.yml ps

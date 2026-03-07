@@ -1,8 +1,8 @@
 # DNS Configuration for Gratonite
 
 ## Server Information
-- **Server IP (IPv4):** 178.156.253.237
-- **Server IP (IPv6):** 2a01:4ff:f4:c271::1
+- **Server IP (IPv4):** `<your-server-ipv4>`
+- **Server IP (IPv6):** `<your-server-ipv6>`
 - **Domain:** gratonite.chat
 
 ---
@@ -14,7 +14,7 @@ Add this A record to your DNS provider:
 ```
 Type: A
 Name: app
-Value: 178.156.253.237
+Value: <your-server-ipv4>
 TTL: 300 (or Auto)
 ```
 
@@ -30,7 +30,7 @@ This will make your app accessible at: **https://app.gratonite.chat**
 3. Click "Add Record"
 4. Select type: A
 5. Name: app
-6. Value: 178.156.253.237
+6. Value: <your-server-ipv4>
 7. TTL: 300
 8. Save
 
@@ -40,7 +40,7 @@ This will make your app accessible at: **https://app.gratonite.chat**
 3. Add new A record:
    - Host/Name: app
    - Type: A
-   - Value/Points to: 178.156.253.237
+   - Value/Points to: <your-server-ipv4>
    - TTL: 300 or Auto
 4. Save changes
 
@@ -105,7 +105,7 @@ If you want to support IPv6, also add an AAAA record:
 ```
 Type: AAAA
 Name: app
-Value: 2a01:4ff:f4:c271::1
+Value: <your-server-ipv6>
 TTL: 300
 ```
 
@@ -115,7 +115,7 @@ TTL: 300
 
 ### DNS not resolving after 30 minutes?
 - Check if you added the record to the correct domain
-- Verify the IP address is correct: 178.156.253.237
+- Verify the IP address is correct for your server
 - Try flushing your local DNS cache:
   ```bash
   # macOS

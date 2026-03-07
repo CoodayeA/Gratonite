@@ -2,7 +2,7 @@
 
 **Server:** gratonite.chat  
 **User:** ferdinand  
-**SSH Key:** `~/.ssh/id_ed25519_hetzner` or `~/.ssh/codex_gratonite_hetzner`  
+**SSH Key:** `~/.ssh/<your-deploy-key>`  
 **Status:** Landing page currently live
 
 ---
@@ -54,10 +54,10 @@ If using subdomains:
 
 ```bash
 # Test SSH connection
-ssh -i ~/.ssh/id_ed25519_hetzner ferdinand@gratonite.chat
+ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host>
 
 # Or if using the other key
-ssh -i ~/.ssh/codex_gratonite_hetzner ferdinand@gratonite.chat
+ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host>
 ```
 
 ### Step 2: Install Dependencies (if needed)
@@ -140,16 +140,16 @@ pnpm run build
 
 # Upload backend to server
 cd "/Volumes/Project BUS/GratoniteFinalForm/apps/api"
-rsync -avz -e "ssh -i ~/.ssh/id_ed25519_hetzner" \
+rsync -avz -e "ssh -i ~/.ssh/<your-deploy-key>" \
   --exclude 'node_modules' \
   --exclude '.env' \
   --exclude 'uploads' \
-  . ferdinand@gratonite.chat:/var/www/gratonite/api/
+  . <ssh-user>@<server-host>:/var/www/gratonite/api/
 
 # Upload frontend build to server
 cd "/Volumes/Project BUS/GratoniteFinalForm/apps/web"
-rsync -avz -e "ssh -i ~/.ssh/id_ed25519_hetzner" \
-  dist/ ferdinand@gratonite.chat:/var/www/gratonite/web/
+rsync -avz -e "ssh -i ~/.ssh/<your-deploy-key>" \
+  dist/ <ssh-user>@<server-host>:/var/www/gratonite/web/
 ```
 
 ### Step 6: Configure Environment Variables
@@ -184,9 +184,9 @@ CORS_ORIGIN=https://app.gratonite.chat
 PORT=4000
 
 # LiveKit
-LIVEKIT_URL=wss://gratonite-80q9d3up.livekit.cloud
-LIVEKIT_API_KEY=APImsBH6DEXWux9
-LIVEKIT_API_SECRET=WFdpecnQnFqs8j9m9SyOhuJOkFcLlClVRSenKBeMelBB
+LIVEKIT_URL=wss://<your-livekit-host>
+LIVEKIT_API_KEY=<your-livekit-api-key>
+LIVEKIT_API_SECRET=<your-livekit-api-secret>
 EOF
 
 # Generate JWT secrets
@@ -551,17 +551,17 @@ pnpm run build
 
 echo "Uploading to server..."
 # Upload backend
-rsync -avz -e "ssh -i ~/.ssh/id_ed25519_hetzner" \
+rsync -avz -e "ssh -i ~/.ssh/<your-deploy-key>" \
   --exclude 'node_modules' \
   --exclude '.env' \
-  apps/api/ ferdinand@gratonite.chat:/var/www/gratonite/api/
+  apps/api/ <ssh-user>@<server-host>:/var/www/gratonite/api/
 
 # Upload frontend
-rsync -avz -e "ssh -i ~/.ssh/id_ed25519_hetzner" \
-  apps/web/dist/ ferdinand@gratonite.chat:/var/www/gratonite/web/
+rsync -avz -e "ssh -i ~/.ssh/<your-deploy-key>" \
+  apps/web/dist/ <ssh-user>@<server-host>:/var/www/gratonite/web/
 
 echo "Restarting backend..."
-ssh -i ~/.ssh/id_ed25519_hetzner ferdinand@gratonite.chat "cd /var/www/gratonite/api && pnpm install --prod && pm2 restart gratonite-api"
+ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host> "cd /var/www/gratonite/api && pnpm install --prod && pm2 restart gratonite-api"
 
 echo "Deployment complete!"
 ```

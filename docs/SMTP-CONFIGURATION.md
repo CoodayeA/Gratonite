@@ -44,7 +44,7 @@ SendGrid offers 100 emails/day on their free tier, which is perfect for getting 
 
 3. **Update the Configuration**
    ```bash
-   ssh -i ~/.ssh/codex_gratonite_hetzner ferdinand@gratonite.chat
+   ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host>
    
    # Edit the docker-compose file
    nano /home/ferdinand/gratonite-app/docker-compose.production.yml
@@ -85,7 +85,7 @@ If you have a Gmail account, you can use it for testing.
 
 3. **Update Configuration**
    ```bash
-   ssh -i ~/.ssh/codex_gratonite_hetzner ferdinand@gratonite.chat
+   ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host>
    nano /home/ferdinand/gratonite-app/docker-compose.production.yml
    
    # Update these lines:
@@ -126,7 +126,7 @@ You can also use:
 Once you have your SMTP credentials, use this command to update:
 
 ```bash
-ssh -i ~/.ssh/codex_gratonite_hetzner ferdinand@gratonite.chat "sed -i 's|SMTP_PASS: YOUR_SENDGRID_API_KEY|SMTP_PASS: YOUR_ACTUAL_KEY_HERE|g' /home/ferdinand/gratonite-app/docker-compose.production.yml && docker restart gratonite-api"
+ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host> "sed -i 's|SMTP_PASS: YOUR_SENDGRID_API_KEY|SMTP_PASS: YOUR_ACTUAL_KEY_HERE|g' /home/<ssh-user>/gratonite-app/docker-compose.production.yml && docker restart gratonite-api"
 ```
 
 Replace `YOUR_ACTUAL_KEY_HERE` with your real API key.
@@ -140,7 +140,7 @@ After updating the SMTP configuration:
 1. **Register a new account** at https://gratonite.chat/app/register
 2. **Check the API logs** for email sending status:
    ```bash
-   ssh -i ~/.ssh/codex_gratonite_hetzner ferdinand@gratonite.chat "docker logs gratonite-api --tail 50 | grep -i 'email\|smtp'"
+   ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host> "docker logs gratonite-api --tail 50 | grep -i 'email\|smtp'"
    ```
 3. **Check your inbox** (and spam folder) for the verification email
 

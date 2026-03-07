@@ -50,9 +50,9 @@ SMTP_USER=apikey
 SMTP_PASS=<your-sendgrid-api-key>
 APP_URL=https://your-domain.com
 CORS_ORIGIN=https://your-domain.com
-LIVEKIT_URL=wss://gratonite-80q9d3up.livekit.cloud
-LIVEKIT_API_KEY=APImsBH6DEXWux9
-LIVEKIT_API_SECRET=WFdpecnQnFqs8j9m9SyOhuJOkFcLlClVRSenKBeMelBB
+LIVEKIT_URL=wss://<your-livekit-host>
+LIVEKIT_API_KEY=<your-livekit-api-key>
+LIVEKIT_API_SECRET=<your-livekit-api-secret>
 
 # Frontend (.env.local)
 cd apps/web
@@ -119,9 +119,9 @@ CORS_ORIGIN=https://your-domain.com
 PORT=4000
 
 # LiveKit (required for voice/video)
-LIVEKIT_URL=wss://gratonite-80q9d3up.livekit.cloud
-LIVEKIT_API_KEY=APImsBH6DEXWux9
-LIVEKIT_API_SECRET=WFdpecnQnFqs8j9m9SyOhuJOkFcLlClVRSenKBeMelBB
+LIVEKIT_URL=wss://<your-livekit-host>
+LIVEKIT_API_KEY=<your-livekit-api-key>
+LIVEKIT_API_SECRET=<your-livekit-api-secret>
 ```
 
 #### Frontend (apps/web/.env.local)

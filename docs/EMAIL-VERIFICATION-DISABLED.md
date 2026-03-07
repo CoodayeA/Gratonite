@@ -83,7 +83,7 @@ When you're ready to re-enable email verification:
 3. **Rebuild and deploy**:
    ```bash
    cd apps/api && pnpm run build
-   rsync -avz dist/ ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/api/dist/
+   rsync -avz dist/ <ssh-user>@<server-host>:/home/<ssh-user>/gratonite-app/api/dist/
    docker restart gratonite-api
    ```
 

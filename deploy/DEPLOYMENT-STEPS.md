@@ -65,16 +65,16 @@ cp -r apps/web/dist/* deploy/web/dist/
 ### 5. Upload to Server
 
 ```bash
-ssh -i ~/.ssh/codex_gratonite_hetzner ferdinand@gratonite.chat "mkdir -p /home/ferdinand/gratonite-app"
+ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host> "mkdir -p /home/<ssh-user>/gratonite-app"
 
-rsync -avz --progress -e "ssh -i ~/.ssh/codex_gratonite_hetzner" \
-  deploy/ ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/
+rsync -avz --progress -e "ssh -i ~/.ssh/<your-deploy-key>" \
+  deploy/ <ssh-user>@<server-host>:/home/<ssh-user>/gratonite-app/
 ```
 
 ### 6. SSH into Server and Deploy
 
 ```bash
-ssh -i ~/.ssh/codex_gratonite_hetzner ferdinand@gratonite.chat
+ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host>
 ```
 
 On the server:
@@ -224,4 +224,3 @@ docker compose -f docker-compose.production.yml up -d
 3. Set up monitoring (optional)
 4. Configure backups
 5. Invite users!
-
