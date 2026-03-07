@@ -23,6 +23,7 @@ type OutletContextType = {
         id?: string;
         avatarFrame?: 'none' | 'neon' | 'gold' | 'glass';
         nameplateStyle?: 'none' | 'rainbow' | 'fire' | 'ice' | 'gold' | 'glitch';
+        avatarHash?: string | null;
     };
 };
 
@@ -92,6 +93,9 @@ const VoiceChannel = () => {
     const chatEndRef = useRef<HTMLDivElement>(null);
     const chatPreviewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [manuallyDisconnected, setManuallyDisconnected] = useState(false);
+
+    // Avatar hash cache for participants
+    const [avatarHashes, setAvatarHashes] = useState<Record<string, string | null>>({});
 
     // Spatial audio state
     const [spatialMode, setSpatialMode] = useState(() => localStorage.getItem('gratonite_spatial_mode') === 'true');
@@ -552,6 +556,35 @@ const VoiceChannel = () => {
         setContextMenu({ x: e.clientX, y: e.clientY, participantId });
     };
 
+    // Fetch avatar hashes for participants we haven't cached yet
+    useEffect(() => {
+        const allIds = [
+            ...(localParticipant ? [localParticipant.id] : []),
+            ...participants.map(p => p.id),
+        ];
+        const uncached = allIds.filter(id => !(id in avatarHashes));
+        if (uncached.length === 0) return;
+
+        // Set null initially to avoid re-fetching
+        setAvatarHashes(prev => {
+            const next = { ...prev };
+            for (const id of uncached) next[id] = null;
+            return next;
+        });
+
+        for (const id of uncached) {
+            api.users.getProfile(id).then((profile) => {
+                setAvatarHashes(prev => ({ ...prev, [id]: profile.avatarHash ?? null }));
+            }).catch(() => { /* non-fatal */ });
+        }
+    }, [localParticipant?.id, participants]);
+
+    const getAvatarHash = (participantId: string): string | null => {
+        // For local user, prefer the outlet context value (always fresh)
+        if (participantId === userProfile?.id) return userProfile?.avatarHash ?? null;
+        return avatarHashes[participantId] ?? null;
+    };
+
     // Combine local and remote participants for display
     const allParticipants: (LiveKitParticipant & { bgColor: string; avatar: string })[] = [
         // Local participant first
@@ -865,6 +898,7 @@ const VoiceChannel = () => {
                                             <Avatar
                                                 userId={p.id}
                                                 displayName={p.name}
+                                                avatarHash={getAvatarHash(p.id)}
                                                 frame={p.id === localParticipant?.id ? ownAvatarFrame : 'none'}
                                                 size={100}
                                                 style={{
@@ -1002,7 +1036,7 @@ const VoiceChannel = () => {
                                                 animation: 'speakingPulse 1.2s ease-in-out infinite',
                                             }} />
                                         )}
-                                        <Avatar userId={p.id} displayName={p.name} frame={p.id === localParticipant?.id ? ownAvatarFrame : 'none'} size={40} style={{
+                                        <Avatar userId={p.id} displayName={p.name} avatarHash={getAvatarHash(p.id)} frame={p.id === localParticipant?.id ? ownAvatarFrame : 'none'} size={40} style={{
                                             boxShadow: p.isSpeaking ? '0 0 0 2px #43b581' : 'none',
                                             transition: 'box-shadow 0.2s',
                                         }} />
@@ -1048,7 +1082,7 @@ const VoiceChannel = () => {
                         padding: '12px', minWidth: '220px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid var(--stroke)' }}>
-                            <Avatar userId={p.id} displayName={p.name} frame={p.id === localParticipant?.id ? ownAvatarFrame : 'none'} size={28} />
+                            <Avatar userId={p.id} displayName={p.name} avatarHash={getAvatarHash(p.id)} frame={p.id === localParticipant?.id ? ownAvatarFrame : 'none'} size={28} />
                             <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>{p.name}</span>
                         </div>
                         <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>User Volume</div>
@@ -1100,7 +1134,7 @@ const VoiceChannel = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '200px', overflowY: 'auto' }}>
                                 {participants.map(p => (
                                     <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <Avatar userId={p.id} displayName={p.name} frame={p.id === localParticipant?.id ? ownAvatarFrame : 'none'} size={24} />
+                                        <Avatar userId={p.id} displayName={p.name} avatarHash={getAvatarHash(p.id)} frame={p.id === localParticipant?.id ? ownAvatarFrame : 'none'} size={24} />
                                         <span style={{ fontSize: '12px', color: 'var(--text-secondary)', width: '64px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>{p.name}</span>
                                         <input
                                             type="range" min={0} max={200} value={getUserVolume(p.id)}
