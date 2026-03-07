@@ -226,10 +226,11 @@ const LAUNCH_ITEMS: Array<typeof shopItems.$inferInsert> = [
     type: 'avatar_frame',
     available: true,
     assetConfig: {
+      frameStyle: 'neon',
+      glowColor: '#38bdf8',
       borderStyle: 'animated',
       borderWidth: 4,
       colors: ['#00f5ff', '#ff00ff'],
-      glow: { color: '#00f5ff', intensity: 0.8 },
       animation: 'pulse',
     },
   },
@@ -242,10 +243,11 @@ const LAUNCH_ITEMS: Array<typeof shopItems.$inferInsert> = [
     type: 'avatar_frame',
     available: true,
     assetConfig: {
+      frameStyle: 'neon',
+      glowColor: '#f9a8d4',
       borderStyle: 'animated',
       borderWidth: 3,
       colors: ['#ffb7c5', '#ff8fa3'],
-      glow: { color: '#ffb7c5', intensity: 0.4 },
       animation: 'drift',
     },
   },
@@ -258,10 +260,11 @@ const LAUNCH_ITEMS: Array<typeof shopItems.$inferInsert> = [
     type: 'avatar_frame',
     available: true,
     assetConfig: {
+      frameStyle: 'neon',
+      glowColor: '#7c3aed',
       borderStyle: 'animated',
       borderWidth: 6,
       colors: ['#1a0033', '#6b00cc'],
-      glow: { color: '#6b00cc', intensity: 1.0 },
       animation: 'swirl',
     },
   },
@@ -274,10 +277,11 @@ const LAUNCH_ITEMS: Array<typeof shopItems.$inferInsert> = [
     type: 'avatar_frame',
     available: true,
     assetConfig: {
+      frameStyle: 'glass',
+      glowColor: '#bae6fd',
       borderStyle: 'animated',
       borderWidth: 3,
       colors: ['#a8d8ea', '#ffffff'],
-      glow: { color: '#a8d8ea', intensity: 0.5 },
       animation: 'rotate',
     },
   },
@@ -362,6 +366,7 @@ const LAUNCH_ITEMS: Array<typeof shopItems.$inferInsert> = [
     type: 'profile_effect',
     available: true,
     assetConfig: {
+      effectType: 'aurora',
       animationType: 'aurora',
       colors: ['#00ff87', '#00b4d8', '#9b5de5'],
       speed: 'slow',
@@ -377,6 +382,7 @@ const LAUNCH_ITEMS: Array<typeof shopItems.$inferInsert> = [
     type: 'profile_effect',
     available: true,
     assetConfig: {
+      effectType: 'particles',
       animationType: 'particles',
       colors: ['#ff00ff', '#00f5ff', '#ff6b00'],
       speed: 'medium',
@@ -392,6 +398,7 @@ const LAUNCH_ITEMS: Array<typeof shopItems.$inferInsert> = [
     type: 'profile_effect',
     available: true,
     assetConfig: {
+      effectType: 'stars',
       animationType: 'shimmer',
       colors: ['#ffd700', '#fff8e1'],
       speed: 'slow',
@@ -409,6 +416,7 @@ const LAUNCH_ITEMS: Array<typeof shopItems.$inferInsert> = [
     type: 'nameplate',
     available: true,
     assetConfig: {
+      nameplateStyle: 'gold',
       font: 'Inter',
       size: 14,
       weight: '700',
@@ -427,6 +435,7 @@ const LAUNCH_ITEMS: Array<typeof shopItems.$inferInsert> = [
     type: 'nameplate',
     available: true,
     assetConfig: {
+      nameplateStyle: 'glitch',
       font: 'monospace',
       size: 13,
       weight: '600',
@@ -445,6 +454,7 @@ const LAUNCH_ITEMS: Array<typeof shopItems.$inferInsert> = [
     type: 'nameplate',
     available: true,
     assetConfig: {
+      nameplateStyle: 'rainbow',
       font: 'Inter',
       size: 13,
       weight: '500',
@@ -463,6 +473,7 @@ const LAUNCH_ITEMS: Array<typeof shopItems.$inferInsert> = [
     type: 'nameplate',
     available: true,
     assetConfig: {
+      nameplateStyle: 'ice',
       font: 'Inter',
       size: 13,
       weight: '500',
@@ -537,13 +548,34 @@ adminShopRouter.post(
   requireAdmin,
   async (_req: Request, res: Response): Promise<void> => {
     try {
-      const results = await seedCosmeticsCatalog();
-      const inserted = results.filter((r) => r.action === 'inserted').length;
-      const updated = results.filter((r) => r.action === 'updated').length;
+      // Seed LAUNCH_ITEMS idempotent by name
+      let launchInserted = 0;
+      let launchUpdated = 0;
+      for (const item of LAUNCH_ITEMS) {
+        const [existing] = await db
+          .select({ id: shopItems.id })
+          .from(shopItems)
+          .where(eq(shopItems.name, item.name!))
+          .limit(1);
+        if (!existing) {
+          await db.insert(shopItems).values(item);
+          launchInserted += 1;
+        } else {
+          await db.update(shopItems).set(item).where(eq(shopItems.id, existing.id));
+          launchUpdated += 1;
+        }
+      }
+
+      // Seed 100 catalog items
+      const catalogResults = await seedCosmeticsCatalog();
+      const catalogInserted = catalogResults.filter((r) => r.action === 'inserted').length;
+      const catalogUpdated = catalogResults.filter((r) => r.action === 'updated').length;
 
       res.status(200).json({
-        message: `Catalog seed complete. ${inserted} inserted, ${updated} updated.`,
-        results,
+        message: `Seed complete. Launch: ${launchInserted} inserted, ${launchUpdated} updated. Catalog: ${catalogInserted} inserted, ${catalogUpdated} updated.`,
+        launchInserted,
+        launchUpdated,
+        catalogResults,
       });
     } catch (err) {
       console.error('[admin-shop] seed error:', err);

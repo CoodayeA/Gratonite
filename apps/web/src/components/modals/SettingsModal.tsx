@@ -240,7 +240,7 @@ const SettingsModal = ({
     userTheme?: any;
     setUserTheme?: any;
 }) => {
-    const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections' | 'achievements' | 'stats'>('account');
+    const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections' | 'achievements' | 'stats' | 'wardrobe'>('account');
     const [feedbackCategory, setFeedbackCategory] = useState('general');
     const [feedbackBody, setFeedbackBody] = useState('');
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
@@ -265,6 +265,16 @@ const SettingsModal = ({
     const [savingNicknameForGuildId, setSavingNicknameForGuildId] = useState<string | null>(null);
     const [achievements, setAchievements] = useState<any[]>([]);
     const [userStats, setUserStats] = useState<any>(null);
+
+    // Wardrobe tab state
+    const [wardrobeItems, setWardrobeItems] = useState<any[]>([]);
+    const [wardrobeCategory, setWardrobeCategory] = useState<string>('avatar_frame');
+    const [wardrobePreviewFrame, setWardrobePreviewFrame] = useState<string>('none');
+    const [wardrobePreviewFrameColor, setWardrobePreviewFrameColor] = useState<string | undefined>();
+    const [wardrobePreviewNameplate, setWardrobePreviewNameplate] = useState<string>('none');
+    const [wardrobeLoading, setWardrobeLoading] = useState(false);
+    const [wardrobeSaving, setWardrobeSaving] = useState(false);
+    const [wardrobeSelectedIds, setWardrobeSelectedIds] = useState<Record<string, string>>({}); // type -> itemId
 
     // Escape to close
     useEffect(() => {
@@ -351,6 +361,33 @@ const SettingsModal = ({
                 setConnectionProfileUrls(prev => ({ ...prev, ...profileUrls }) as Record<Provider, string>);
             })
             .catch(() => {});
+    }, [activeTab]);
+
+    // Fetch wardrobe inventory
+    useEffect(() => {
+        if (activeTab !== 'wardrobe') return;
+        setWardrobeLoading(true);
+        api.inventory.get().then((data: any) => {
+            const items = data.items ?? [];
+            setWardrobeItems(items);
+            // Pre-select currently equipped items
+            const selected: Record<string, string> = {};
+            for (const item of items) {
+                if (item.equipped) selected[item.type] = item.itemId;
+            }
+            setWardrobeSelectedIds(selected);
+            const equippedFrame = items.find((i: any) => i.type === 'avatar_frame' && i.equipped);
+            const equippedNameplate = items.find((i: any) => i.type === 'nameplate' && i.equipped);
+            if (equippedFrame) {
+                const cfg = (equippedFrame.assetConfig ?? {}) as Record<string, unknown>;
+                setWardrobePreviewFrame((cfg.frameStyle as string) ?? 'neon');
+                setWardrobePreviewFrameColor(cfg.glowColor as string | undefined);
+            }
+            if (equippedNameplate) {
+                const cfg = (equippedNameplate.assetConfig ?? {}) as Record<string, unknown>;
+                setWardrobePreviewNameplate((cfg.nameplateStyle as string) ?? 'none');
+            }
+        }).catch(() => {}).finally(() => setWardrobeLoading(false));
     }, [activeTab]);
 
     // Fetch achievements and stats
@@ -662,6 +699,7 @@ const SettingsModal = ({
                             <div className={`sidebar-nav-item ${activeTab === 'connections' ? 'active' : ''}`} onClick={() => setActiveTab('connections')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Link2 size={14} />Connections</div>
                             <div className={`sidebar-nav-item ${activeTab === 'achievements' ? 'active' : ''}`} onClick={() => setActiveTab('achievements')}>🏆 Achievements</div>
                             <div className={`sidebar-nav-item ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>📊 Stats</div>
+                            <div className={`sidebar-nav-item ${activeTab === 'wardrobe' ? 'active' : ''}`} onClick={() => setActiveTab('wardrobe')}>👗 Wardrobe</div>
                         </div>
                         <div>
                             <div className="sidebar-section-label">APPEARANCE</div>
@@ -2187,6 +2225,171 @@ const SettingsModal = ({
                                 </div>
                             </div>
                         )}
+
+                        {activeTab === 'wardrobe' && (() => {
+                            const wardrobeCats = [
+                                { key: 'avatar_frame', label: 'Frames' },
+                                { key: 'nameplate', label: 'Nameplates' },
+                                { key: 'profile_effect', label: 'Effects' },
+                                { key: 'decoration', label: 'Decorations' },
+                            ];
+                            const categoryItems = wardrobeItems.filter((i: any) => i.type === wardrobeCategory);
+                            const handleWardrobeSelect = (item: any) => {
+                                const cfg = (item.assetConfig ?? {}) as Record<string, unknown>;
+                                const isAlreadySelected = wardrobeSelectedIds[item.type] === item.itemId;
+                                setWardrobeSelectedIds(prev => ({
+                                    ...prev,
+                                    [item.type]: isAlreadySelected ? '' : item.itemId,
+                                }));
+                                // Update preview state only — do NOT write to localStorage or dispatch events
+                                // until the user clicks "Apply & Save"
+                                if (item.type === 'avatar_frame') {
+                                    setWardrobePreviewFrame(isAlreadySelected ? 'none' : ((cfg.frameStyle as string) ?? 'neon'));
+                                    setWardrobePreviewFrameColor(isAlreadySelected ? undefined : (cfg.glowColor as string | undefined));
+                                }
+                                if (item.type === 'nameplate') {
+                                    setWardrobePreviewNameplate(isAlreadySelected ? 'none' : ((cfg.nameplateStyle as string) ?? 'none'));
+                                }
+                            };
+                            const handleWardrobeSave = async () => {
+                                setWardrobeSaving(true);
+                                try {
+                                    const userId = userProfile?.id || 'me';
+                                    for (const [type, itemId] of Object.entries(wardrobeSelectedIds)) {
+                                        if (!itemId) continue;
+                                        const item = wardrobeItems.find((i: any) => i.itemId === itemId && i.type === type);
+                                        if (!item) continue;
+                                        const res = item.source === 'shop'
+                                            ? await api.shop.equipItem(itemId)
+                                            : await api.cosmetics.equipCosmetic(itemId);
+                                        const cfg = (res?.assetConfig ?? item.assetConfig ?? {}) as Record<string, unknown>;
+                                        if (type === 'avatar_frame') applyGlobalAvatarFrame((cfg.frameStyle as 'none' | 'neon' | 'gold' | 'glass') ?? 'neon');
+                                        if (type === 'nameplate') {
+                                            const style = (cfg.nameplateStyle as 'none' | 'rainbow' | 'fire' | 'ice' | 'gold' | 'glitch') ?? 'none';
+                                            applyGlobalNameplateStyle(style);
+                                            api.users.updateProfile({ nameplateStyle: style }).catch(() => {});
+                                        }
+                                    }
+                                    // Unequip items of each type not selected
+                                    for (const item of wardrobeItems) {
+                                        if (item.type === 'soundboard') continue;
+                                        const selectedId = wardrobeSelectedIds[item.type];
+                                        if (item.equipped && item.itemId !== selectedId) {
+                                            if (item.source === 'shop') await api.shop.unequipItem(item.itemId).catch(() => {});
+                                            else await api.cosmetics.unequip(item.itemId).catch(() => {});
+                                        }
+                                    }
+                                    addToast({ title: 'Wardrobe saved!', description: 'Your look has been updated.', variant: 'success' });
+                                } catch {
+                                    addToast({ title: 'Failed to save wardrobe', variant: 'error' });
+                                } finally {
+                                    setWardrobeSaving(false);
+                                }
+                            };
+                            return (
+                                <div style={{ padding: '0 24px' }}>
+                                    <h2 style={{ color: 'var(--text-primary)', marginBottom: '4px' }}>Wardrobe</h2>
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '20px' }}>Mix and match your cosmetics, preview your look, then save.</p>
+                                    <div style={{ display: 'flex', gap: '20px' }}>
+                                        {/* Left: category + item grid */}
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            {/* Category tabs */}
+                                            <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                                                {wardrobeCats.map(cat => (
+                                                    <button key={cat.key} onClick={() => setWardrobeCategory(cat.key)} style={{
+                                                        padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                                                        background: wardrobeCategory === cat.key ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                                        color: wardrobeCategory === cat.key ? '#fff' : 'var(--text-secondary)',
+                                                        fontWeight: 600, fontSize: '12px',
+                                                    }}>{cat.label}</button>
+                                                ))}
+                                            </div>
+                                            {/* Items */}
+                                            {wardrobeLoading ? (
+                                                <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '32px' }}>Loading inventory...</div>
+                                            ) : categoryItems.length === 0 ? (
+                                                <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '32px', fontSize: '13px' }}>
+                                                    No {wardrobeCats.find(c => c.key === wardrobeCategory)?.label.toLowerCase()} in inventory.<br />
+                                                    <span style={{ fontSize: '12px' }}>Visit the Shop to get some!</span>
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '10px', maxHeight: '340px', overflowY: 'auto' }}>
+                                                    {categoryItems.map((item: any) => {
+                                                        const isSelected = wardrobeSelectedIds[item.type] === item.itemId;
+                                                        const rarityColors: Record<string, string> = { common: '#9ca3af', uncommon: '#22c55e', rare: '#3b82f6', epic: '#a855f7', legendary: '#f59e0b' };
+                                                        const rColor = rarityColors[item.rarity] ?? '#9ca3af';
+                                                        return (
+                                                            <div key={item.id} onClick={() => handleWardrobeSelect(item)} style={{
+                                                                padding: '10px 8px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center',
+                                                                background: isSelected ? 'rgba(82, 109, 245, 0.12)' : 'var(--bg-tertiary)',
+                                                                border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--stroke)'}`,
+                                                                transition: 'all 0.15s ease',
+                                                            }}>
+                                                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: item.imageUrl ?? 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', margin: '0 auto 6px', border: `2px solid ${rColor}` }} />
+                                                                <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                                                                <div style={{ fontSize: '9px', color: rColor, textTransform: 'uppercase', fontWeight: 700, marginTop: '2px' }}>{item.rarity}</div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                        {/* Right: live preview */}
+                                        <div style={{ width: '160px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                            <div style={{ background: 'var(--bg-elevated)', borderRadius: '12px', border: '1px solid var(--stroke)', padding: '16px', textAlign: 'center' }}>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>Preview</div>
+                                                {/* Avatar preview with frame */}
+                                                <div style={{ position: 'relative', width: '72px', height: '72px', margin: '0 auto 10px' }}>
+                                                    <div style={{
+                                                        width: '72px', height: '72px', borderRadius: '50%',
+                                                        background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        fontSize: '28px',
+                                                        boxShadow: wardrobePreviewFrame === 'neon'
+                                                            ? `0 0 14px ${wardrobePreviewFrameColor ?? '#38bdf8'}`
+                                                            : wardrobePreviewFrame === 'gold'
+                                                                ? '0 0 0 2px #f59e0b, 0 0 10px rgba(245,158,11,0.5)'
+                                                                : 'none',
+                                                        border: wardrobePreviewFrame === 'glass' ? '2px solid rgba(255,255,255,0.35)' : 'none',
+                                                    }}>
+                                                        {userProfile?.name?.[0]?.toUpperCase() || '?'}
+                                                    </div>
+                                                </div>
+                                                {/* Name with nameplate */}
+                                                <div className={wardrobePreviewNameplate !== 'none' ? `nameplate-${wardrobePreviewNameplate}` : ''} style={{ fontSize: '13px', fontWeight: 700, marginBottom: '4px' }}>
+                                                    {userProfile?.name || userProfile?.displayName || 'You'}
+                                                </div>
+                                                <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                                                    {wardrobePreviewFrame !== 'none' ? wardrobePreviewFrame + ' frame' : 'No frame'}
+                                                </div>
+                                            </div>
+                                            <button onClick={handleWardrobeSave} disabled={wardrobeSaving} style={{
+                                                width: '100%', padding: '10px', borderRadius: '8px', border: 'none',
+                                                background: 'var(--accent-primary)', color: '#fff', fontWeight: 700,
+                                                fontSize: '13px', cursor: wardrobeSaving ? 'wait' : 'pointer',
+                                                opacity: wardrobeSaving ? 0.7 : 1,
+                                            }}>
+                                                {wardrobeSaving ? 'Saving...' : 'Apply & Save'}
+                                            </button>
+                                            <button onClick={() => {
+                                                setWardrobeSelectedIds({});
+                                                setWardrobePreviewFrame('none');
+                                                setWardrobePreviewFrameColor(undefined);
+                                                setWardrobePreviewNameplate('none');
+                                                applyGlobalAvatarFrame('none');
+                                                applyGlobalNameplateStyle('none');
+                                            }} style={{
+                                                width: '100%', padding: '8px', borderRadius: '8px',
+                                                border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)',
+                                                color: 'var(--text-secondary)', fontWeight: 600, fontSize: '12px', cursor: 'pointer',
+                                            }}>
+                                                Reset
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
 
                         {activeTab === 'stats' && (
                             <div style={{ padding: '0 40px' }}>

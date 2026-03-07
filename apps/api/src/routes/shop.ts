@@ -372,6 +372,7 @@ shopRouter.patch(
         equipped: updated.equipped,
         type: item.type,
         name: item.name,
+        assetConfig: item.assetConfig,
       });
     } catch (err) {
       console.error(JSON.stringify({

@@ -5,6 +5,7 @@ import Skeleton from '../../components/ui/Skeleton';
 import { useToast } from '../../components/ui/ToastManager';
 import { TiltCard, RippleWrapper, MagneticButton } from '../../components/ui/Physics';
 import { api } from '../../lib/api';
+import { applyEquippedItem } from '../../lib/cosmetics';
 
 type ViewType = 'frames' | 'decorations' | 'effects' | 'nameplates' | 'soundboard';
 
@@ -49,6 +50,7 @@ const Shop = () => {
     const [purchasingId, setPurchasingId] = useState<string | null>(null);
     const [playingSound, setPlayingSound] = useState<string | null>(null);
     const [showBundleItems, setShowBundleItems] = useState(false);
+    const [equippingPurchased, setEquippingPurchased] = useState(false);
     const bundleItemsRef = useRef<HTMLDivElement>(null);
 
     const bundleIncludedItems = shopItems.filter(i =>
@@ -67,8 +69,8 @@ const Shop = () => {
             const rarityMap: Record<string, ShopItem['rarity']> = {
                 epic: 'epic', legendary: 'legendary', rare: 'rare', uncommon: 'uncommon',
             };
-            const mapped: ShopItem[] = items.map((item: any, idx: number) => ({
-                id: item.id ?? idx + 1,
+            const mapped: ShopItem[] = items.filter((item: any) => item.id).map((item: any) => ({
+                id: item.id,
                 type: typeMap[item.type] ?? 'frame',
                 name: item.name ?? 'Unknown',
                 price: item.price ?? 0,
@@ -116,6 +118,31 @@ const Shop = () => {
     const closeModal = () => {
         setSelectedItem(null);
         setPurchaseState('idle');
+        setEquippingPurchased(false);
+    };
+
+    const handleEquipNow = async () => {
+        if (!selectedItem || equippingPurchased) return;
+        setEquippingPurchased(true);
+        try {
+            const userId = localStorage.getItem('gratonite-user-id') ?? 'me';
+            const response = await api.shop.equipItem(String(selectedItem.id));
+            const cfg = (response?.assetConfig ?? {}) as Record<string, unknown>;
+            const itemType = selectedItem.type === 'frame' ? 'avatar_frame'
+                : selectedItem.type === 'effect' ? 'profile_effect'
+                : selectedItem.type;
+            applyEquippedItem(itemType, cfg, userId);
+            if (itemType === 'nameplate') {
+                const style = (cfg.nameplateStyle as string) ?? 'none';
+                api.users.updateProfile({ nameplateStyle: style }).catch(() => {});
+            }
+            addToast({ title: 'Equipped!', description: `${selectedItem.name} is now active.`, variant: 'success' });
+            closeModal();
+        } catch (err: any) {
+            addToast({ title: 'Failed to equip', description: err?.message ?? 'Please try again.', variant: 'error' });
+        } finally {
+            setEquippingPurchased(false);
+        }
     };
 
     const handleQuickBuy = (item: ShopItem) => {
@@ -520,26 +547,41 @@ const Shop = () => {
                         )}
 
                         {purchaseState === 'success' && (
-                            <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid var(--success)', color: 'var(--success)', padding: '12px', borderRadius: '8px', marginBottom: '24px', textAlign: 'center', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                            <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid var(--success)', color: 'var(--success)', padding: '12px', borderRadius: '8px', marginBottom: '16px', textAlign: 'center', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                                 <Check size={18} /> Purchase Successful! Added to Inventory.
                             </div>
                         )}
 
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <button onClick={closeModal} className="auth-button" style={{ flex: 1, background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', margin: 0 }}>
-                                {purchaseState === 'success' ? 'Close' : 'Cancel'}
-                            </button>
-
-                            {purchaseState !== 'success' && (
-                                <button
-                                    onClick={purchaseState === 'insufficient' ? undefined : confirmPurchase}
-                                    className="auth-button"
-                                    style={{ flex: 1, margin: 0, opacity: (purchaseState === 'insufficient' || purchaseState === 'processing') ? 0.5 : 1, cursor: (purchaseState === 'insufficient' || purchaseState === 'processing') ? 'not-allowed' : 'pointer' }}
-                                    disabled={purchaseState === 'insufficient' || purchaseState === 'processing'}>
-                                    {purchaseState === 'insufficient' ? 'Not Enough Gratonite' : purchaseState === 'processing' ? 'Processing...' : selectedItem.type === 'soundboard' ? 'Download Sound' : 'Confirm Purchase'}
+                        {purchaseState === 'success' && selectedItem.type !== 'soundboard' ? (
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button onClick={closeModal} className="auth-button" style={{ flex: 1, background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', margin: 0 }}>
+                                    Close
                                 </button>
-                            )}
-                        </div>
+                                <button
+                                    onClick={handleEquipNow}
+                                    disabled={equippingPurchased}
+                                    className="auth-button"
+                                    style={{ flex: 1, margin: 0, opacity: equippingPurchased ? 0.6 : 1, cursor: equippingPurchased ? 'wait' : 'pointer' }}>
+                                    {equippingPurchased ? 'Equipping...' : 'Equip Now'}
+                                </button>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button onClick={closeModal} className="auth-button" style={{ flex: 1, background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', margin: 0 }}>
+                                    {purchaseState === 'success' ? 'Close' : 'Cancel'}
+                                </button>
+
+                                {purchaseState !== 'success' && (
+                                    <button
+                                        onClick={purchaseState === 'insufficient' ? undefined : confirmPurchase}
+                                        className="auth-button"
+                                        style={{ flex: 1, margin: 0, opacity: (purchaseState === 'insufficient' || purchaseState === 'processing') ? 0.5 : 1, cursor: (purchaseState === 'insufficient' || purchaseState === 'processing') ? 'not-allowed' : 'pointer' }}
+                                        disabled={purchaseState === 'insufficient' || purchaseState === 'processing'}>
+                                        {purchaseState === 'insufficient' ? 'Not Enough Gratonite' : purchaseState === 'processing' ? 'Processing...' : selectedItem.type === 'soundboard' ? 'Download Sound' : 'Confirm Purchase'}
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

@@ -57,18 +57,44 @@ const Avatar = ({
     return 'none';
   };
 
+  const readStoredGlowColor = (): string | undefined => {
+    try {
+      const key = user.id ? `gratonite-avatar-frame-color:${user.id}` : 'gratonite-avatar-frame-color';
+      return localStorage.getItem(key) || localStorage.getItem('gratonite-avatar-frame-color') || undefined;
+    } catch { /* ignore */ }
+    return undefined;
+  };
+
+  const [frameState, setFrameState] = useState<{ frame: 'none' | 'neon' | 'gold' | 'glass'; glowColor?: string }>(() => ({
+    frame: isCurrentUserAvatar ? readStoredFrame() : 'none',
+    glowColor: isCurrentUserAvatar ? readStoredGlowColor() : undefined,
+  }));
+
   useEffect(() => {
     setImgError(false);
     setDidRetry(false);
     setRetryNonce(0);
   }, [avatarHash, userId]);
 
+  useEffect(() => {
+    if (!isCurrentUserAvatar) return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail ?? {};
+      const f = detail.frame as string;
+      const validFrame = (f === 'neon' || f === 'gold' || f === 'glass' || f === 'none') ? f : 'none';
+      setFrameState({ frame: validFrame, glowColor: detail.glowColor as string | undefined });
+    };
+    window.addEventListener('gratonite:avatar-frame-updated', handler);
+    return () => window.removeEventListener('gratonite:avatar-frame-updated', handler);
+  }, [isCurrentUserAvatar]);
+
   const fallbackFrame = useMemo<'none' | 'neon' | 'gold' | 'glass'>(() => {
     if (!isCurrentUserAvatar) return 'none';
-    return readStoredFrame();
-  }, [isCurrentUserAvatar, user.id, userId]);
+    return frameState.frame;
+  }, [isCurrentUserAvatar, frameState.frame]);
 
   const resolvedFrame = frame ?? fallbackFrame;
+  const resolvedGlowColor = frameState.glowColor ?? 'rgba(56, 189, 248, 0.6)';
 
   return (
     <div
@@ -98,7 +124,7 @@ const Avatar = ({
           overflow: 'hidden',
           boxShadow:
             resolvedFrame === 'neon'
-              ? '0 0 14px rgba(56, 189, 248, 0.6)'
+              ? `0 0 14px ${resolvedGlowColor}`
               : resolvedFrame === 'gold'
                 ? '0 0 0 2px #f59e0b, 0 0 10px rgba(245, 158, 11, 0.5)'
                 : undefined,
