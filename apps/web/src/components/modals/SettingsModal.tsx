@@ -255,7 +255,7 @@ const SettingsModal = ({
         () => localStorage.getItem('gratonite_ambient_mode') ?? 'off'
     );
     const [nameplateStyle, setNameplateStyle] = useState<'none' | 'rainbow' | 'fire' | 'ice' | 'gold' | 'glitch'>(userProfile?.nameplateStyle || 'none');
-    const [previewAvatarFrame, setPreviewAvatarFrame] = useState<'none' | 'neon' | 'gold' | 'glass'>(userProfile?.avatarFrame || 'none');
+    const [previewAvatarFrame, setPreviewAvatarFrame] = useState<'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse'>(userProfile?.avatarFrame || 'none');
     const [bioValue, setBioValue] = useState(userProfile?.bio || '');
     const [bioSaving, setBioSaving] = useState(false);
     const [cropTarget, setCropTarget] = useState<'avatar' | 'banner' | null>(null);
@@ -567,7 +567,7 @@ const SettingsModal = ({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const bannerInputRef = useRef<HTMLInputElement>(null);
 
-    const applyGlobalAvatarFrame = (frame: 'none' | 'neon' | 'gold' | 'glass') => {
+    const applyGlobalAvatarFrame = (frame: 'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse') => {
         setPreviewAvatarFrame(frame);
         if (setUserProfile) {
             setUserProfile((prev: any) => ({ ...prev, avatarFrame: frame }));
@@ -1202,11 +1202,13 @@ const SettingsModal = ({
                                                     { id: 'none', label: 'None' },
                                                     { id: 'neon', label: 'Neon Glow' },
                                                     { id: 'gold', label: 'Solid Gold' },
-                                                    { id: 'glass', label: 'Frosted Glass' }
+                                                    { id: 'glass', label: 'Frosted Glass' },
+                                                    { id: 'rainbow', label: 'Rainbow' },
+                                                    { id: 'pulse', label: 'Pulse' },
                                                 ].map(frame => (
                                                     <button
                                                         key={frame.id}
-                                                        onClick={() => applyGlobalAvatarFrame(frame.id as 'none' | 'neon' | 'gold' | 'glass')}
+                                                        onClick={() => applyGlobalAvatarFrame(frame.id as 'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse')}
                                                         style={{
                                                             padding: '12px',
                                                             borderRadius: '8px',
@@ -2263,7 +2265,7 @@ const SettingsModal = ({
                                             ? await api.shop.equipItem(itemId)
                                             : await api.cosmetics.equipCosmetic(itemId);
                                         const cfg = (res?.assetConfig ?? item.assetConfig ?? {}) as Record<string, unknown>;
-                                        if (type === 'avatar_frame') applyGlobalAvatarFrame((cfg.frameStyle as 'none' | 'neon' | 'gold' | 'glass') ?? 'neon');
+                                        if (type === 'avatar_frame') applyGlobalAvatarFrame((cfg.frameStyle as 'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse') ?? 'neon');
                                         if (type === 'nameplate') {
                                             const style = (cfg.nameplateStyle as 'none' | 'rainbow' | 'fire' | 'ice' | 'gold' | 'glitch') ?? 'none';
                                             applyGlobalNameplateStyle(style);

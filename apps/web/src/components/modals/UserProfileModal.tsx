@@ -234,6 +234,20 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
         }
     }, [userProfile?.id]);
 
+    // Live-update canvas when equipping from shop/inventory
+    useEffect(() => {
+        const viewingUserId = userProfile?.id;
+        const handler = () => {
+            const key = getCanvasStorageKey(viewingUserId);
+            const stored = localStorage.getItem(key) as CanvasType | null;
+            if (stored && CANVAS_OPTIONS.some(opt => opt.id === stored)) {
+                setActiveCanvas(stored);
+            }
+        };
+        window.addEventListener('gratonite:profile-canvas-updated', handler);
+        return () => window.removeEventListener('gratonite:profile-canvas-updated', handler);
+    }, [userProfile?.id]);
+
     // Merge fetched data with prop data
     const displayName = profile?.displayName || userProfile?.name || 'User';
     const username = profile?.username || userProfile?.handle || 'user';

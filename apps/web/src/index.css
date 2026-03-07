@@ -2722,6 +2722,27 @@ html .main-view.has-custom-bg .input-area {
     animation: scaleDownModal 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* ─── Avatar Frame Styles ─────────────────────────────────────────────────── */
+@keyframes avatarRainbowGlow {
+    0%   { box-shadow: 0 0 0 3px #ff0080, 0 0 10px rgba(255,0,128,0.6); }
+    16%  { box-shadow: 0 0 0 3px #ff8800, 0 0 10px rgba(255,136,0,0.6); }
+    33%  { box-shadow: 0 0 0 3px #ffff00, 0 0 10px rgba(255,255,0,0.6); }
+    50%  { box-shadow: 0 0 0 3px #00ff88, 0 0 10px rgba(0,255,136,0.6); }
+    66%  { box-shadow: 0 0 0 3px #0088ff, 0 0 10px rgba(0,136,255,0.6); }
+    83%  { box-shadow: 0 0 0 3px #8800ff, 0 0 10px rgba(136,0,255,0.6); }
+    100% { box-shadow: 0 0 0 3px #ff0080, 0 0 10px rgba(255,0,128,0.6); }
+}
+.avatar-frame-rainbow {
+    animation: avatarRainbowGlow 3s linear infinite;
+}
+@keyframes breathingGlow {
+    0%, 100% { box-shadow: 0 0 6px 2px var(--glow-color, rgba(56,189,248,0.4)); }
+    50%       { box-shadow: 0 0 18px 6px var(--glow-color, rgba(56,189,248,0.7)); }
+}
+.avatar-frame-pulse {
+    animation: breathingGlow 2s ease-in-out infinite;
+}
+
 @keyframes fadeInModal {
     from {
         opacity: 0;
