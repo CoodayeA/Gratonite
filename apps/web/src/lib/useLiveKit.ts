@@ -55,6 +55,8 @@ export interface UseLiveKitOptions {
   onParticipantJoined?: (participant: LiveKitParticipant) => void;
   onParticipantLeft?: (participantId: string) => void;
   onSpeakingChanged?: (participantId: string, speaking: boolean) => void;
+  onAudioTrackSubscribed?: (participantId: string, track: MediaStreamTrack, detach: () => void) => void;
+  onAudioTrackUnsubscribed?: (participantId: string) => void;
 }
 
 export interface UseLiveKitReturn {
@@ -62,13 +64,13 @@ export interface UseLiveKitReturn {
   isConnected: boolean;
   isConnecting: boolean;
   connectionError: string | null;
-  
+
   // Local user state
   isMuted: boolean;
   isDeafened: boolean;
   isCameraOn: boolean;
   isScreenSharing: boolean;
-  
+
   // Participants
   participants: LiveKitParticipant[];
   localParticipant: LiveKitParticipant | null;
@@ -78,7 +80,7 @@ export interface UseLiveKitReturn {
   videoInputDevices: MediaDeviceInfo[];
   selectedAudioInputId: string | null;
   selectedVideoInputId: string | null;
-  
+
   // Stream quality
   streamQuality: StreamQuality;
   setStreamQuality: (quality: StreamQuality) => void;
@@ -100,13 +102,16 @@ export interface UseLiveKitReturn {
   refreshDevices: () => Promise<void>;
   selectAudioInput: (deviceId: string) => Promise<void>;
   selectVideoInput: (deviceId: string) => Promise<void>;
+
+  // Room ref for spatial audio integration
+  roomRef: React.RefObject<Room | null>;
 }
 
 const PREFERRED_AUDIO_INPUT_KEY = 'voice.preferredAudioInputId';
 const PREFERRED_VIDEO_INPUT_KEY = 'voice.preferredVideoInputId';
 
 export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
-  const { channelId, onParticipantJoined, onParticipantLeft, onSpeakingChanged } = options;
+  const { channelId, onParticipantJoined, onParticipantLeft, onSpeakingChanged, onAudioTrackSubscribed, onAudioTrackUnsubscribed } = options;
 
   // Room reference
   const roomRef = useRef<Room | null>(null);
@@ -152,9 +157,13 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
   const onParticipantJoinedRef = useRef(onParticipantJoined);
   const onParticipantLeftRef = useRef(onParticipantLeft);
   const onSpeakingChangedRef = useRef(onSpeakingChanged);
+  const onAudioTrackSubscribedRef = useRef(onAudioTrackSubscribed);
+  const onAudioTrackUnsubscribedRef = useRef(onAudioTrackUnsubscribed);
   useEffect(() => { onParticipantJoinedRef.current = onParticipantJoined; }, [onParticipantJoined]);
   useEffect(() => { onParticipantLeftRef.current = onParticipantLeft; }, [onParticipantLeft]);
   useEffect(() => { onSpeakingChangedRef.current = onSpeakingChanged; }, [onSpeakingChanged]);
+  useEffect(() => { onAudioTrackSubscribedRef.current = onAudioTrackSubscribed; }, [onAudioTrackSubscribed]);
+  useEffect(() => { onAudioTrackUnsubscribedRef.current = onAudioTrackUnsubscribed; }, [onAudioTrackUnsubscribed]);
 
   const isDeviceNotFoundError = useCallback((err: unknown): boolean => {
     if (err instanceof DOMException) {
@@ -354,17 +363,22 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
       room.on(RoomEvent.TrackSubscribed, (
         track: RemoteTrack,
         _publication: unknown,
-        _participant: RemoteParticipant
+        participant: RemoteParticipant
       ) => {
-        // Apply volume if set
-        if (track.kind === Track.Kind.Audio) {
-          // Volume control would be applied through WebAudio API GainNode
-          // For now, just trigger participant update
+        if (track.kind === Track.Kind.Audio && track.mediaStreamTrack) {
+          onAudioTrackSubscribedRef.current?.(participant.identity, track.mediaStreamTrack, () => track.detach());
         }
         updateParticipants();
       });
-      
-      room.on(RoomEvent.TrackUnsubscribed, () => {
+
+      room.on(RoomEvent.TrackUnsubscribed, (
+        track: RemoteTrack,
+        _publication: unknown,
+        participant: RemoteParticipant
+      ) => {
+        if (track.kind === Track.Kind.Audio) {
+          onAudioTrackUnsubscribedRef.current?.(participant.identity);
+        }
         updateParticipants();
       });
       
@@ -745,5 +759,6 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
     refreshDevices,
     selectAudioInput,
     selectVideoInput,
+    roomRef,
   };
 }
