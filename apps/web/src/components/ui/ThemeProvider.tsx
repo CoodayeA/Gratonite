@@ -89,7 +89,10 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
     const [lowPower, setLowPowerState] = useState<boolean>(() => {
         const saved = localStorage.getItem('gratonite_low_power');
-        return saved !== null ? saved === 'true' : false;
+        if (saved !== null) return saved === 'true';
+        // Default on for desktop — backdrop-filter tanks Windows perf
+        if ((window as any).gratoniteDesktop?.isDesktop) return true;
+        return false;
     });
 
     const [accentColor, setAccentColorState] = useState<string>(() => {
