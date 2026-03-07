@@ -286,6 +286,36 @@ export function onChannelBackgroundUpdated(cb: ChannelBgCallback): () => void {
   return () => { channelBgListeners.delete(cb); };
 }
 
+/* ── Spatial audio position events ─────────────────────────── */
+
+export interface SpatialPositionUpdatePayload {
+  channelId: string;
+  userId: string;
+  x: number;
+  y: number;
+}
+
+export interface SpatialPositionsSyncPayload {
+  channelId: string;
+  positions: Record<string, { x: number; y: number }>;
+}
+
+type SpatialPositionUpdateCallback = (payload: SpatialPositionUpdatePayload) => void;
+type SpatialPositionsSyncCallback = (payload: SpatialPositionsSyncPayload) => void;
+
+const spatialPositionUpdateListeners = new Set<SpatialPositionUpdateCallback>();
+const spatialPositionsSyncListeners = new Set<SpatialPositionsSyncCallback>();
+
+export function onSpatialPositionUpdate(cb: SpatialPositionUpdateCallback): () => void {
+  spatialPositionUpdateListeners.add(cb);
+  return () => { spatialPositionUpdateListeners.delete(cb); };
+}
+
+export function onSpatialPositionsSync(cb: SpatialPositionsSyncCallback): () => void {
+  spatialPositionsSyncListeners.add(cb);
+  return () => { spatialPositionsSyncListeners.delete(cb); };
+}
+
 let socket: GratoniteSocket | null = null;
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 let idleTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -462,6 +492,14 @@ export function connectSocket(): GratoniteSocket {
 
   socket.on('CHANNEL_BACKGROUND_UPDATED', (data: ChannelBackgroundUpdatedPayload) => {
     channelBgListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('SPATIAL_POSITION_UPDATE', (data: SpatialPositionUpdatePayload) => {
+    spatialPositionUpdateListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('SPATIAL_POSITIONS_SYNC', (data: SpatialPositionsSyncPayload) => {
+    spatialPositionsSyncListeners.forEach(cb => cb(data));
   });
 
   socket.on('disconnect', () => {

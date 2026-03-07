@@ -318,6 +318,14 @@ const packs: Record<string, SoundPack> = {
 // Ensure unlock listeners are installed as soon as the module is evaluated.
 setupUnlockListeners();
 
+// ── Shared AudioContext for spatial audio and other subsystems ───────────────
+export function getSharedAudioContext(): AudioContext {
+    setupUnlockListeners();
+    const c = getCtx();
+    if (c.state === 'suspended') void c.resume();
+    return c;
+}
+
 // ── Public API (legacy compat) ───────────────────────────────────────────────
 
 export const SoundManager = {
