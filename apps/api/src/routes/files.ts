@@ -247,7 +247,14 @@ filesRouter.post(
  * @returns 404 File record not found in database or missing from disk
  */
 filesRouter.get('/:fileId', async (req: Request, res: Response): Promise<void> => {
-  const { fileId } = req.params as Record<string, string>;
+  let { fileId } = req.params as Record<string, string>;
+
+  // Support _static suffix: serve the first frame of an animated GIF as a static PNG.
+  // If the _static version doesn't exist on disk, fall back to serving the original.
+  const isStaticRequest = fileId.endsWith('_static');
+  if (isStaticRequest) {
+    fileId = fileId.replace(/_static$/, '');
+  }
 
   try {
     // Look up by storageKey prefix (the URL contains the storage UUID, not the DB row ID).
@@ -274,6 +281,21 @@ filesRouter.get('/:fileId', async (req: Request, res: Response): Promise<void> =
     if (!fs.existsSync(filePath)) {
       res.status(404).json({ code: 'NOT_FOUND', message: 'File not found on disk' });
       return;
+    }
+
+    // If a _static version was requested for an animated GIF, try to serve a static PNG.
+    if (isStaticRequest && fileRecord.mimeType === 'image/gif') {
+      const ext = path.extname(fileRecord.storageKey);
+      const staticKey = fileRecord.storageKey.replace(ext, '_static.png');
+      const staticPath = path.join(UPLOADS_DIR, staticKey);
+      if (fs.existsSync(staticPath)) {
+        res.setHeader('Content-Type', 'image/png');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.sendFile(staticPath);
+        return;
+      }
+      // Fall through to serve the original animated GIF if no static version exists
     }
 
     // Set Content-Type from the database record (trusted at upload time).

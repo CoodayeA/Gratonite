@@ -785,6 +785,9 @@ export const api = {
         mutualFriends: Array<{ id: string; username: string; displayName: string; avatarHash: string | null }>;
       }>(`/users/${userId}/mutuals`),
 
+    getConnections: (userId: string) =>
+      apiFetch<Array<{ provider: string; providerUsername: string; profileUrl: string | null }>>(`/users/${userId}/connections`),
+
     getNote: (userId: string) =>
       apiFetch<{ content: string }>(`/users/${userId}/note`),
 

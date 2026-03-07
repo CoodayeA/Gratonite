@@ -2107,6 +2107,8 @@ guildsRouter.get('/:guildId/insights', requireAuth, async (req: Request, res: Re
       res.status(403).json({ code: 'FORBIDDEN' }); return;
     }
 
+    const range = Math.min(Math.max(parseInt(req.query.range as string) || 7, 7), 30);
+
     const [memberCount] = await db.select({ count: sql<number>`count(*)`.mapWith(Number) }).from(guildMembers).where(eq(guildMembers.guildId, guildId));
     const [newMembers] = await db.select({ count: sql<number>`count(*)`.mapWith(Number) }).from(guildMembers).where(and(eq(guildMembers.guildId, guildId), gt(guildMembers.joinedAt, sql`now() - interval '7 days'`)));
 
@@ -2115,6 +2117,21 @@ guildsRouter.get('/:guildId/insights', requireAuth, async (req: Request, res: Re
 
     let messages7d = 0;
     let topChannels: Array<{ channelId: string; name: string; messages: number }> = [];
+    let hourlyMessages: number[] = new Array(24).fill(0);
+    let dailyMessages: number[] = [];
+    let dailyJoins: number[] = [];
+    let dailyLeaves: number[] = new Array(range).fill(0);
+    let activeUsers24h = 0;
+    let dateLabels: string[] = [];
+
+    // Build date labels
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    for (let i = range - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      dateLabels.push(dayNames[d.getDay()]);
+    }
+
     if (channelIds.length > 0) {
       const [msgCount] = await db.select({ count: sql<number>`count(*)`.mapWith(Number) }).from(messages).where(and(inArray(messages.channelId, channelIds), gt(messages.createdAt, sql`now() - interval '7 days'`)));
       messages7d = msgCount?.count ?? 0;
@@ -2123,9 +2140,64 @@ guildsRouter.get('/:guildId/insights', requireAuth, async (req: Request, res: Re
         .from(messages).where(and(inArray(messages.channelId, channelIds), gt(messages.createdAt, sql`now() - interval '7 days'`)))
         .groupBy(messages.channelId).orderBy(desc(sql`count(*)`)).limit(5);
       topChannels = channelActivity.map(r => ({ channelId: r.channelId, name: guildChannels.find(c => c.id === r.channelId)?.name ?? 'unknown', messages: r.count }));
+
+      // Hourly messages (today)
+      const hourlyResult = await db.execute(sql`SELECT EXTRACT(HOUR FROM created_at)::int as hour, COUNT(*)::int as count FROM messages WHERE channel_id = ANY(${channelIds}) AND created_at > now() - interval '1 day' GROUP BY hour`);
+      const hourlyRows: any[] = Array.isArray(hourlyResult) ? hourlyResult : (hourlyResult as any).rows ?? [];
+      for (const row of hourlyRows) {
+        hourlyMessages[row.hour] = row.count;
+      }
+
+      // Daily messages
+      const dailyMsgResult = await db.execute(sql`SELECT DATE(created_at) as day, COUNT(*)::int as count FROM messages WHERE channel_id = ANY(${channelIds}) AND created_at > now() - ${sql.raw(`interval '${range} days'`)} GROUP BY day ORDER BY day`);
+      const dailyMsgRows: any[] = Array.isArray(dailyMsgResult) ? dailyMsgResult : (dailyMsgResult as any).rows ?? [];
+      const dailyMsgMap = new Map<string, number>();
+      for (const row of dailyMsgRows) {
+        const key = typeof row.day === 'string' ? row.day.slice(0, 10) : new Date(row.day).toISOString().slice(0, 10);
+        dailyMsgMap.set(key, row.count);
+      }
+      for (let i = range - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        dailyMessages.push(dailyMsgMap.get(key) ?? 0);
+      }
+
+      // Active users 24h
+      const activeResult = await db.execute(sql`SELECT COUNT(DISTINCT author_id)::int as count FROM messages WHERE channel_id = ANY(${channelIds}) AND created_at > now() - interval '1 day'`);
+      const activeRows: any[] = Array.isArray(activeResult) ? activeResult : (activeResult as any).rows ?? [];
+      activeUsers24h = activeRows[0]?.count ?? 0;
+    } else {
+      dailyMessages = new Array(range).fill(0);
     }
 
-    res.json({ memberCount: memberCount?.count ?? 0, memberGrowth7d: newMembers?.count ?? 0, messages7d, topChannels });
+    // Daily joins
+    const joinResult = await db.execute(sql`SELECT DATE(joined_at) as day, COUNT(*)::int as count FROM guild_members WHERE guild_id = ${guildId} AND joined_at > now() - ${sql.raw(`interval '${range} days'`)} GROUP BY day ORDER BY day`);
+    const joinRows: any[] = Array.isArray(joinResult) ? joinResult : (joinResult as any).rows ?? [];
+    const joinMap = new Map<string, number>();
+    for (const row of joinRows) {
+      const key = typeof row.day === 'string' ? row.day.slice(0, 10) : new Date(row.day).toISOString().slice(0, 10);
+      joinMap.set(key, row.count);
+    }
+    for (let i = range - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      dailyJoins.push(joinMap.get(key) ?? 0);
+    }
+
+    res.json({
+      memberCount: memberCount?.count ?? 0,
+      memberGrowth7d: newMembers?.count ?? 0,
+      messages7d,
+      topChannels,
+      hourlyMessages,
+      dailyMessages,
+      dailyJoins,
+      dailyLeaves,
+      activeUsers24h,
+      dateLabels,
+    });
   } catch (err) {
     handleAppError(res, err);
   }

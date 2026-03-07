@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MoreHorizontal, MessageSquare, X, Star, Palette, Lock, Copy, ShieldOff, ShieldCheck, Flag, Check, Loader2 } from 'lucide-react';
+import { MoreHorizontal, MessageSquare, X, Star, Palette, Lock, Copy, ShieldOff, ShieldCheck, Flag, Check, Loader2, Code, Tv, Gamepad2, Play } from 'lucide-react';
 import { Tooltip } from '../ui/Tooltip';
 import { useToast } from '../ui/ToastManager';
 import { useUser } from '../../contexts/UserContext';
@@ -14,6 +14,14 @@ const BADGE_META: Record<string, { label: string; emoji: string; color: string }
     developer: { label: 'Developer', emoji: '\u{1F527}', color: '#5865f2' },
     moderator: { label: 'Moderator', emoji: '\u{1F528}', color: '#eb459e' },
     supporter: { label: 'Supporter', emoji: '\u{1F48E}', color: '#5865f2' },
+};
+
+const PROVIDER_ICONS: Record<string, React.ReactNode> = {
+    github: <Code size={14} />,
+    twitch: <Tv size={14} />,
+    steam: <Gamepad2 size={14} />,
+    twitter: <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>,
+    youtube: <Play size={14} />,
 };
 
 // ─── Live Canvas Backgrounds ─────────────────────────────────────────────────
@@ -194,12 +202,8 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
         fetchData();
 
         // Fetch connections separately (non-blocking)
-        fetch(`${API_BASE}/users/${userId}/connections`, {
-            credentials: 'include',
-            headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}` },
-        })
-            .then(r => r.ok ? r.json() : [])
-            .then((rows: any[]) => {
+        api.users.getConnections(userId)
+            .then((rows) => {
                 if (Array.isArray(rows)) setConnections(rows);
             })
             .catch(() => {});
@@ -444,8 +448,10 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                 {connections.map((conn) => {
                                     const label = conn.provider.charAt(0).toUpperCase() + conn.provider.slice(1);
+                                    const icon = PROVIDER_ICONS[conn.provider.toLowerCase()];
                                     const inner = (
                                         <>
+                                            {icon && <span style={{ display: 'flex', alignItems: 'center', color: 'var(--text-muted)' }}>{icon}</span>}
                                             <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
                                             <span style={{ color: 'var(--text-primary)' }}>{conn.providerUsername}</span>
                                         </>

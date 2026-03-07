@@ -6,6 +6,7 @@ import { useUser } from '../../contexts/UserContext';
 export interface AvatarProps {
   userId: string;
   avatarHash?: string | null;
+  avatarAnimated?: boolean;
   displayName?: string;
   size?: number;
   frame?: 'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse';
@@ -49,6 +50,7 @@ type FrameType = 'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse';
 const Avatar = ({
   userId,
   avatarHash,
+  avatarAnimated,
   displayName,
   size = 32,
   frame,
@@ -61,6 +63,7 @@ const Avatar = ({
   const [imgError, setImgError] = useState(false);
   const [didRetry, setDidRetry] = useState(false);
   const [retryNonce, setRetryNonce] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
   const label = displayName || userId.slice(0, 8);
   const letter = label.charAt(0).toUpperCase();
   const gradient = getDeterministicGradient(label);
@@ -148,6 +151,8 @@ const Avatar = ({
   return (
     <div
       onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
         width: size,
         height: size,
@@ -195,7 +200,11 @@ const Avatar = ({
       >
         {showImg ? (
           <img
-            src={`${API_BASE}/files/${avatarHash}${retryNonce ? `?r=${retryNonce}` : ''}`}
+            src={(() => {
+              const isAnimated = avatarAnimated || (avatarHash?.includes('.gif'));
+              const staticSuffix = isAnimated && !isHovered ? '_static' : '';
+              return `${API_BASE}/files/${avatarHash}${staticSuffix}${retryNonce ? `?r=${retryNonce}` : ''}`;
+            })()}
             alt={label}
             style={{
               width: '100%',

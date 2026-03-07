@@ -18,6 +18,7 @@ type ShopItem = {
     rarity: 'epic' | 'legendary' | 'rare' | 'uncommon';
     description?: string;
     color?: string;
+    assetConfig?: Record<string, unknown>;
     // Nameplate extras
     nameplateFont?: string;
     nameplateGradient?: string;
@@ -77,7 +78,24 @@ const Shop = () => {
                 image: item.previewImageUrl ?? item.image ?? 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))',
                 rarity: rarityMap[item.rarity] ?? 'uncommon',
                 description: item.description ?? '',
-                color: item.color ?? 'var(--accent-primary)',
+                assetConfig: item.assetConfig ?? {},
+                nameplateFont: (item.assetConfig as any)?.nameplateFont,
+                nameplateGradient: (item.assetConfig as any)?.nameplateGradient ?? (() => {
+                    const style = (item.assetConfig as any)?.nameplateStyle;
+                    const gradients: Record<string, string> = {
+                        rainbow: 'linear-gradient(90deg, #ff0000, #ff7700, #ffff00, #00ff00, #0000ff, #8b00ff)',
+                        fire: 'linear-gradient(90deg, #ff4500, #ff8c00, #ffd700)',
+                        ice: 'linear-gradient(90deg, #00bfff, #87ceeb, #e0ffff)',
+                        gold: 'linear-gradient(90deg, #ffd700, #daa520, #b8860b)',
+                        glitch: 'linear-gradient(90deg, #ff00ff, #00ffff, #ff00ff)',
+                    };
+                    return gradients[style] ?? 'linear-gradient(90deg, var(--accent-blue), var(--accent-purple))';
+                })(),
+                decorationEmoji: (item.assetConfig as any)?.decorationEmoji,
+                soundEmoji: (item.assetConfig as any)?.soundEmoji,
+                soundCategory: (item.assetConfig as any)?.soundCategory,
+                soundDuration: (item.assetConfig as any)?.soundDuration,
+                color: item.color ?? (item.assetConfig as any)?.glowColor ?? 'var(--accent-primary)',
             }));
             if (mapped.length > 0) setShopItems(mapped);
             setIsLoading(false);
@@ -181,6 +199,15 @@ const Shop = () => {
 
     return (
         <div style={{ flex: 1, padding: '32px 48px', overflowY: 'auto', background: 'var(--bg-primary)', position: 'relative' }}>
+            <style>{`
+                @keyframes shop-rainbow-spin { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+                @keyframes shop-pulse-glow { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.04); } }
+                @keyframes shop-gradient-pulse { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+                @keyframes shop-twinkle { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
+                @keyframes shop-float-up { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 0.7; } 100% { transform: translateY(-100px); opacity: 0; } }
+                @keyframes shop-matrix-fall { 0% { transform: translateY(-20px); opacity: 0; } 10% { opacity: 0.6; } 100% { transform: translateY(110px); opacity: 0; } }
+                @keyframes shop-aurora-shift { 0%, 100% { transform: translateY(0) scaleX(1); opacity: 0.5; } 50% { transform: translateY(-8px) scaleX(1.1); opacity: 0.8; } }
+            `}</style>
             <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
                 <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '48px' }}>
                     <div>
@@ -447,14 +474,78 @@ const Shop = () => {
                             </TiltCard>
                         ))
                     ) : (
-                        filteredItems.map(item => (
+                        filteredItems.map(item => {
+                            const cfg = item.assetConfig ?? {};
+                            const frameStyle = (cfg as any)?.frameStyle as string | undefined;
+                            const glowColor = (cfg as any)?.glowColor as string | undefined ?? item.color;
+                            const effectType = (cfg as any)?.effectType as string | undefined;
+                            const isFrame = item.type === 'frame';
+                            const isEffect = item.type === 'effect';
+
+                            // Frame style to CSS mapping
+                            const frameCSS: React.CSSProperties = isFrame ? (() => {
+                                switch (frameStyle) {
+                                    case 'neon': return { border: `3px solid ${glowColor}`, boxShadow: `0 0 12px ${glowColor}, 0 0 24px ${glowColor}60, inset 0 0 8px ${glowColor}30` };
+                                    case 'gold': return { border: '3px solid #ffd700', boxShadow: '0 0 12px #ffd70060, 0 0 24px #daa52040' };
+                                    case 'glass': return { border: '3px solid rgba(255,255,255,0.3)', boxShadow: '0 0 12px rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)' };
+                                    case 'rainbow': return { border: '3px solid transparent', backgroundImage: `linear-gradient(var(--bg-elevated), var(--bg-elevated)), linear-gradient(90deg, #ff0000, #ff7700, #ffff00, #00ff00, #0000ff, #8b00ff)`, backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box', animation: 'shop-rainbow-spin 3s linear infinite' };
+                                    case 'pulse': return { border: `3px solid ${glowColor}`, animation: 'shop-pulse-glow 2s ease-in-out infinite', boxShadow: `0 0 12px ${glowColor}80` };
+                                    default: return { border: `3px solid ${glowColor}`, boxShadow: `0 0 12px ${glowColor}60` };
+                                }
+                            })() : {};
+
+                            return (
                             <TiltCard key={item.id} maxTilt={12} scale={1.03}>
                                 <div className="hover-lift" style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '24px', border: 'var(--border-structural)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', position: 'relative', overflow: 'hidden', height: '100%', boxShadow: 'var(--shadow-panel)' }}>
                                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '80px', background: 'linear-gradient(180deg, var(--bg-tertiary) 0%, transparent 100%)', zIndex: 0 }}></div>
                                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: rarityColor[item.rarity] }} />
-                                    <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 1, boxShadow: 'var(--shadow-hover)' }}>
-                                        <div style={{ position: 'absolute', inset: -8, border: `4px solid ${item.color}`, borderRadius: '50%', boxShadow: `0 0 15px ${item.color}80` }}></div>
-                                    </div>
+
+                                    {isFrame ? (
+                                        <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 1 }}>
+                                            <div style={{ position: 'absolute', inset: -8, borderRadius: '50%', ...frameCSS }}></div>
+                                        </div>
+                                    ) : isEffect ? (
+                                        <div style={{ width: '100px', height: '100px', borderRadius: '12px', position: 'relative', zIndex: 1, overflow: 'hidden', background: 'var(--bg-tertiary)' }}>
+                                            {effectType === 'gradient-pulse' && (
+                                                <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${glowColor}, transparent, ${glowColor})`, backgroundSize: '200% 200%', animation: 'shop-gradient-pulse 3s ease infinite', opacity: 0.8 }} />
+                                            )}
+                                            {effectType === 'stars' && (
+                                                <div style={{ position: 'absolute', inset: 0 }}>
+                                                    {[...Array(8)].map((_, i) => (
+                                                        <div key={i} style={{ position: 'absolute', width: '4px', height: '4px', borderRadius: '50%', background: glowColor, left: `${12 + (i * 11) % 80}%`, top: `${8 + (i * 17) % 80}%`, animation: `shop-twinkle ${1.5 + (i % 3) * 0.5}s ease-in-out ${i * 0.2}s infinite`, boxShadow: `0 0 4px ${glowColor}` }} />
+                                                    ))}
+                                                    <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50)', width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))' }} />
+                                                </div>
+                                            )}
+                                            {effectType === 'particles' && (
+                                                <div style={{ position: 'absolute', inset: 0 }}>
+                                                    {[...Array(6)].map((_, i) => (
+                                                        <div key={i} style={{ position: 'absolute', width: '6px', height: '6px', borderRadius: '50%', background: glowColor, left: `${15 + (i * 14) % 70}%`, bottom: `-6px`, animation: `shop-float-up ${2 + (i % 3)}s ease-in-out ${i * 0.4}s infinite`, opacity: 0.7 }} />
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {effectType === 'matrix-rain' && (
+                                                <div style={{ position: 'absolute', inset: 0, fontFamily: 'monospace', fontSize: '10px', color: '#00ff41', overflow: 'hidden', opacity: 0.6 }}>
+                                                    {[...Array(5)].map((_, i) => (
+                                                        <div key={i} style={{ position: 'absolute', left: `${10 + i * 18}%`, top: '-20px', animation: `shop-matrix-fall ${1.5 + (i % 3) * 0.5}s linear ${i * 0.3}s infinite`, whiteSpace: 'pre' }}>
+                                                            {String.fromCharCode(0x30A0 + Math.random() * 96)}{'\n'}{String.fromCharCode(0x30A0 + Math.random() * 96)}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {effectType === 'aurora' && (
+                                                <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, transparent 0%, ${glowColor}40 30%, #00ffaa40 60%, transparent 100%)`, animation: 'shop-aurora-shift 4s ease-in-out infinite', opacity: 0.7 }} />
+                                            )}
+                                            {!effectType && (
+                                                <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${glowColor}40, transparent)`, opacity: 0.6 }} />
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 1, boxShadow: 'var(--shadow-hover)' }}>
+                                            <div style={{ position: 'absolute', inset: -8, border: `4px solid ${item.color}`, borderRadius: '50%', boxShadow: `0 0 15px ${item.color}80` }}></div>
+                                        </div>
+                                    )}
+
                                     <div style={{ textAlign: 'center', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', width: '100%' }}>
                                         <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px', fontFamily: 'var(--font-display)' }}>{item.name}</h3>
                                         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px', flex: 1 }}>{item.description}</p>
@@ -472,7 +563,8 @@ const Shop = () => {
                                     </div>
                                 </div>
                             </TiltCard>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             </div>
@@ -489,11 +581,26 @@ const Shop = () => {
 
                         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
                             <div style={{ width: '120px', height: '120px', margin: '0 auto 16px', background: 'var(--bg-tertiary)', borderRadius: '16px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                {selectedItem.type === 'frame' ? (
+                                {selectedItem.type === 'frame' ? (() => {
+                                    const cfg = selectedItem.assetConfig ?? {};
+                                    const fs = (cfg as any)?.frameStyle as string | undefined;
+                                    const gc = (cfg as any)?.glowColor as string | undefined ?? selectedItem.color;
+                                    const modalFrameCSS: React.CSSProperties = (() => {
+                                        switch (fs) {
+                                            case 'neon': return { border: `4px solid ${gc}`, boxShadow: `0 0 16px ${gc}, 0 0 32px ${gc}60` };
+                                            case 'gold': return { border: '4px solid #ffd700', boxShadow: '0 0 16px #ffd70060' };
+                                            case 'glass': return { border: '4px solid rgba(255,255,255,0.3)', boxShadow: '0 0 16px rgba(255,255,255,0.15)' };
+                                            case 'rainbow': return { border: '4px solid transparent', backgroundImage: `linear-gradient(var(--bg-tertiary), var(--bg-tertiary)), linear-gradient(90deg, #ff0000, #ff7700, #ffff00, #00ff00, #0000ff, #8b00ff)`, backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box' };
+                                            case 'pulse': return { border: `4px solid ${gc}`, animation: 'shop-pulse-glow 2s ease-in-out infinite', boxShadow: `0 0 16px ${gc}80` };
+                                            default: return { border: `4px solid ${gc}`, boxShadow: `0 0 16px ${gc}60` };
+                                        }
+                                    })();
+                                    return (
                                     <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', position: 'relative' }}>
-                                        <div style={{ position: 'absolute', inset: -8, border: `4px solid ${selectedItem.color}`, borderRadius: '50%', boxShadow: `0 0 15px ${selectedItem.color}80` }} />
+                                        <div style={{ position: 'absolute', inset: -8, borderRadius: '50%', ...modalFrameCSS }} />
                                     </div>
-                                ) : selectedItem.type === 'decoration' ? (
+                                    );
+                                })() : selectedItem.type === 'decoration' ? (
                                     <div style={{ position: 'relative', width: '80px', height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', fontSize: '22px' }}>{selectedItem.decorationEmoji}</div>
                                         <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', marginTop: '12px' }} />
@@ -508,12 +615,22 @@ const Shop = () => {
                                     <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: selectedItem.image, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>
                                         {selectedItem.soundEmoji}
                                     </div>
-                                ) : (
+                                ) : (() => {
+                                    const cfg = selectedItem.assetConfig ?? {};
+                                    const et = (cfg as any)?.effectType as string | undefined;
+                                    const gc = (cfg as any)?.glowColor as string | undefined ?? selectedItem.color;
+                                    return (
                                     <div style={{ width: '90%', height: '90%', background: 'var(--bg-primary)', borderRadius: '8px', overflow: 'hidden', position: 'relative' }}>
-                                        <div style={{ height: '50px', background: selectedItem.image, opacity: 0.8 }}></div>
+                                        {et === 'gradient-pulse' && <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${gc}, transparent, ${gc})`, backgroundSize: '200% 200%', animation: 'shop-gradient-pulse 3s ease infinite', opacity: 0.7 }} />}
+                                        {et === 'stars' && <div style={{ position: 'absolute', inset: 0 }}>{[...Array(6)].map((_, i) => <div key={i} style={{ position: 'absolute', width: '3px', height: '3px', borderRadius: '50%', background: gc, left: `${10 + (i * 15) % 80}%`, top: `${10 + (i * 13) % 80}%`, animation: `shop-twinkle ${1.5 + (i % 3) * 0.5}s ease-in-out ${i * 0.2}s infinite`, boxShadow: `0 0 3px ${gc}` }} />)}</div>}
+                                        {et === 'particles' && <div style={{ position: 'absolute', inset: 0 }}>{[...Array(5)].map((_, i) => <div key={i} style={{ position: 'absolute', width: '5px', height: '5px', borderRadius: '50%', background: gc, left: `${12 + (i * 16) % 70}%`, bottom: '-5px', animation: `shop-float-up ${2 + (i % 3)}s ease-in-out ${i * 0.3}s infinite`, opacity: 0.7 }} />)}</div>}
+                                        {et === 'matrix-rain' && <div style={{ position: 'absolute', inset: 0, fontFamily: 'monospace', fontSize: '9px', color: '#00ff41', overflow: 'hidden', opacity: 0.5 }}>{[...Array(4)].map((_, i) => <div key={i} style={{ position: 'absolute', left: `${10 + i * 22}%`, top: '-15px', animation: `shop-matrix-fall ${1.5 + (i % 3) * 0.5}s linear ${i * 0.3}s infinite` }}>{String.fromCharCode(0x30A0 + i * 7)}</div>)}</div>}
+                                        {et === 'aurora' && <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, transparent, ${gc}40, #00ffaa40, transparent)`, animation: 'shop-aurora-shift 4s ease-in-out infinite', opacity: 0.6 }} />}
+                                        {!et && <div style={{ height: '50px', background: selectedItem.image, opacity: 0.8 }} />}
                                         <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-elevated)', border: '2px solid var(--bg-primary)', position: 'absolute', top: '30px', left: '12px' }}></div>
                                     </div>
-                                )}
+                                    );
+                                })()}
                             </div>
                             <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '4px' }}>{selectedItem.name}</h2>
                             <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{selectedItem.description}</p>

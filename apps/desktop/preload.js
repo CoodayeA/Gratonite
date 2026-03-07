@@ -29,9 +29,20 @@ contextBridge.exposeInMainWorld('gratoniteDesktop', {
   onMuteToggled: (callback) => {
     const handler = (_event, isMuted) => callback(isMuted);
     ipcRenderer.on('mute-toggled', handler);
-    // Return cleanup function
     return () => {
       ipcRenderer.removeListener('mute-toggled', handler);
     };
+  },
+
+  // Game activity detection
+  onGameDetected: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('game-detected', handler);
+    return () => ipcRenderer.removeListener('game-detected', handler);
+  },
+  onGameStopped: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('game-stopped', handler);
+    return () => ipcRenderer.removeListener('game-stopped', handler);
   },
 });

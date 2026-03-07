@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, Settings, Users, Headphones, HeadphoneOff, Volume2, X, Loader2, MessageSquare, Send, Hash, Wifi, ChevronDown, Check, Radio, Hand, Crown, Compass } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, Settings, Users, Headphones, HeadphoneOff, Volume2, X, Loader2, MessageSquare, Send, Hash, Wifi, ChevronDown, Check, Radio, Hand, Crown, Compass, Pin, PictureInPicture2 } from 'lucide-react';
 import { useOutletContext, useParams } from 'react-router-dom';
 import { TopBarActions } from '../../components/ui/TopBarActions';
 import { useToast } from '../../components/ui/ToastManager';
@@ -28,9 +28,9 @@ type OutletContextType = {
 };
 
 // Video element component for rendering participant video
-const ParticipantVideo = ({ track }: { track: any }) => {
+const ParticipantVideo = ({ track, showPiP }: { track: any; showPiP?: boolean }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
-    
+
     useEffect(() => {
         if (track?.mediaStreamTrack && videoRef.current) {
             const stream = new MediaStream([track.mediaStreamTrack]);
@@ -42,21 +42,49 @@ const ParticipantVideo = ({ track }: { track: any }) => {
             }
         };
     }, [track]);
-    
+
+    const handlePiP = async () => {
+        try {
+            if (!videoRef.current) return;
+            if (document.pictureInPictureElement) {
+                await document.exitPictureInPicture();
+            } else {
+                await videoRef.current.requestPictureInPicture();
+            }
+        } catch (e) { console.warn('PiP not supported', e); }
+    };
+
     return (
-        <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-                background: '#000',
-                borderRadius: 'var(--radius-lg)',
-            }}
-        />
+        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+            <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    background: '#000',
+                    borderRadius: 'var(--radius-lg)',
+                }}
+            />
+            {showPiP && (
+                <button
+                    onClick={handlePiP}
+                    title="Picture-in-Picture"
+                    style={{
+                        position: 'absolute', top: 8, left: 8, zIndex: 5,
+                        width: 28, height: 28, borderRadius: 'var(--radius-sm)',
+                        background: 'rgba(0,0,0,0.6)', border: 'none',
+                        color: '#fff', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                >
+                    <PictureInPicture2 size={14} />
+                </button>
+            )}
+        </div>
     );
 };
 
@@ -93,6 +121,9 @@ const VoiceChannel = () => {
     const chatEndRef = useRef<HTMLDivElement>(null);
     const chatPreviewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [manuallyDisconnected, setManuallyDisconnected] = useState(false);
+
+    // Pinned participant for focus view
+    const [pinnedParticipant, setPinnedParticipant] = useState<string | null>(null);
 
     // Avatar hash cache for participants
     const [avatarHashes, setAvatarHashes] = useState<Record<string, string | null>>({});
@@ -851,116 +882,142 @@ const VoiceChannel = () => {
                 )}
 
                 {/* Grid Mode (default) */}
-                {isConnected && allParticipants.length > 0 && !screenSharer && !spatialMode && (
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: getGridTemplate(allParticipants.length),
-                        gap: '16px',
-                        width: '100%',
-                        maxWidth: '1200px',
-                        height: allParticipants.length <= 2 ? '50vh' : 'auto',
-                        minHeight: '400px',
-                        transition: 'all 0.3s ease-in-out'
-                    }}>
-                        {allParticipants.map(p => (
-                            <div key={p.id} className="voice-participant-card hover-lift" onContextMenu={(e) => handleParticipantContext(e, p.id)} style={{
-                                background: 'var(--bg-elevated)',
-                                borderRadius: 'var(--radius-lg)',
-                                border: p.isSpeaking ? '2px solid #43b581' : 'var(--border-structural)',
-                                boxShadow: p.isSpeaking ? '0 0 24px rgba(67, 181, 129, 0.3), var(--shadow-hover)' : 'var(--shadow-panel)',
-                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                position: 'relative', overflow: 'hidden', transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                                minHeight: allParticipants.length <= 2 ? '100%' : '240px',
-                                transform: p.isSpeaking ? 'scale(1.02)' : 'scale(1)'
-                            }}>
-                                {/* Video or Avatar */}
-                                {p.videoTrack ? (
-                                    <div style={{ position: 'absolute', inset: 0 }}>
-                                        <ParticipantVideo track={p.videoTrack} />
+                {isConnected && allParticipants.length > 0 && !screenSharer && !spatialMode && (() => {
+                    const pinned = pinnedParticipant ? allParticipants.find(p => p.id === pinnedParticipant) : null;
+                    const unpinned = pinned ? allParticipants.filter(p => p.id !== pinnedParticipant) : allParticipants;
+
+                    const renderTile = (p: typeof allParticipants[0], isPinnedTile: boolean) => (
+                        <div key={p.id} className="voice-participant-card hover-lift" onContextMenu={(e) => handleParticipantContext(e, p.id)} style={{
+                            background: 'var(--bg-elevated)',
+                            borderRadius: 'var(--radius-lg)',
+                            border: p.isSpeaking ? '2px solid #43b581' : '2px solid transparent',
+                            boxShadow: p.isSpeaking ? '0 0 24px rgba(67, 181, 129, 0.3), var(--shadow-hover)' : 'var(--shadow-panel)',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                            position: 'relative', overflow: 'hidden', transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.2s',
+                            minHeight: isPinnedTile ? '400px' : (allParticipants.length <= 2 ? '100%' : '240px'),
+                            transform: p.isSpeaking ? 'scale(1.02)' : 'scale(1)',
+                        }}>
+                            {/* Pin button */}
+                            <button
+                                onClick={() => setPinnedParticipant(prev => prev === p.id ? null : p.id)}
+                                title={pinnedParticipant === p.id ? 'Unpin' : 'Pin'}
+                                style={{
+                                    position: 'absolute', top: 8, left: 8, zIndex: 5,
+                                    width: 28, height: 28, borderRadius: 'var(--radius-sm)',
+                                    background: pinnedParticipant === p.id ? 'var(--accent-primary)' : 'rgba(0,0,0,0.5)',
+                                    border: 'none', color: pinnedParticipant === p.id ? '#000' : '#fff',
+                                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    backdropFilter: 'blur(4px)', opacity: 0.8, transition: 'opacity 0.15s',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.opacity = '1'; }}
+                                onMouseLeave={e => { e.currentTarget.style.opacity = '0.8'; }}
+                            >
+                                <Pin size={14} />
+                            </button>
+
+                            {/* Video or Avatar */}
+                            {p.videoTrack ? (
+                                <div style={{ position: 'absolute', inset: 0 }}>
+                                    <ParticipantVideo track={p.videoTrack} showPiP />
+                                </div>
+                            ) : (
+                                <>
+                                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '60px', background: p.bgColor, opacity: 0.5, filter: 'blur(20px)' }}></div>
+                                    <div style={{ position: 'relative', zIndex: 2 }}>
+                                        {p.isSpeaking && (
+                                            <div className="speaking-ring" style={{
+                                                position: 'absolute', inset: '-6px', borderRadius: '50%',
+                                                border: '3px solid #43b581', animation: 'speakingPulse 1.2s ease-in-out infinite', zIndex: 1,
+                                            }} />
+                                        )}
+                                        <Avatar
+                                            userId={p.id} displayName={p.name} avatarHash={getAvatarHash(p.id)}
+                                            frame={p.id === localParticipant?.id ? ownAvatarFrame : 'none'}
+                                            size={isPinnedTile ? 140 : 100}
+                                            style={{
+                                                boxShadow: p.isSpeaking ? '0 0 0 3px #43b581' : '0 4px 12px rgba(0,0,0,0.5)',
+                                                transition: 'box-shadow 0.2s ease-in-out',
+                                            }}
+                                        />
                                     </div>
-                                ) : (
-                                    <>
-                                        {/* Default Fallback Background Graphic */}
-                                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '60px', background: p.bgColor, opacity: 0.5, filter: 'blur(20px)' }}></div>
+                                </>
+                            )}
 
-                                        {/* Avatar with speaking indicator */}
-                                        <div style={{ position: 'relative', zIndex: 2 }}>
-                                            {p.isSpeaking && (
-                                                <div className="speaking-ring" style={{
-                                                    position: 'absolute',
-                                                    inset: '-6px',
-                                                    borderRadius: '50%',
-                                                    border: '3px solid #43b581',
-                                                    animation: 'speakingPulse 1.2s ease-in-out infinite',
-                                                    zIndex: 1,
-                                                }} />
-                                            )}
-                                            <Avatar
-                                                userId={p.id}
-                                                displayName={p.name}
-                                                avatarHash={getAvatarHash(p.id)}
-                                                frame={p.id === localParticipant?.id ? ownAvatarFrame : 'none'}
-                                                size={100}
-                                                style={{
-                                                    boxShadow: p.isSpeaking ? '0 0 0 3px #43b581' : '0 4px 12px rgba(0,0,0,0.5)',
-                                                    transition: 'box-shadow 0.2s ease-in-out',
-                                                }}
-                                            />
-                                        </div>
-                                    </>
-                                )}
-
-                                {/* Name */}
-                                <div style={{
-                                    marginTop: p.videoTrack ? 'auto' : '24px',
-                                    padding: p.videoTrack ? '12px' : '0',
-                                    background: p.videoTrack ? 'linear-gradient(transparent, rgba(0,0,0,0.8))' : 'transparent',
-                                    width: p.videoTrack ? '100%' : 'auto',
-                                    position: p.videoTrack ? 'absolute' : 'relative',
-                                    bottom: p.videoTrack ? 0 : 'auto',
-                                    fontSize: '16px',
-                                    fontWeight: 600,
-                                    zIndex: 2,
-                                    fontFamily: 'var(--font-display)',
-                                    color: p.isSpeaking ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                    textAlign: p.videoTrack ? 'left' : 'center',
-                                }}>
-                                    <span className={p.id === localParticipant?.id && ownNameplateStyle !== 'none' ? `nameplate-${ownNameplateStyle}` : undefined}>
-                                        {p.name}
-                                    </span>
-                                    {p.id === localParticipant?.id && <span style={{ opacity: 0.6, marginLeft: '8px' }}>(You)</span>}
-                                </div>
-
-                                {/* Speaking Glow Underlay */}
-                                {p.isSpeaking && !p.videoTrack && (
-                                    <div className="speaker-spotlight" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '140px', height: '140px', borderRadius: '50%', background: '#43b581', filter: 'blur(40px)', opacity: 0.15, zIndex: 1, animation: 'spotlightPulse 1.5s infinite alternate' }}></div>
-                                )}
-
-                                {/* Status Indicators */}
-                                <div style={{ position: 'absolute', bottom: '16px', right: '16px', display: 'flex', gap: '8px', zIndex: 2 }}>
-                                    {p.isMuted && <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-app)', border: 'var(--border-structural)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--error)' }}><MicOff size={16} /></div>}
-                                    {p.isDeafened && <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-app)', border: 'var(--border-structural)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--error)' }}><HeadphoneOff size={16} /></div>}
-                                    {p.isScreenSharing && <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-sm)', background: 'var(--accent-primary)', border: 'var(--border-structural)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}><MonitorUp size={16} /></div>}
-                                </div>
-
-                                {/* Connection Quality Indicator */}
-                                <div title={`Connection: ${getQualityLabel(p.connectionQuality)}`} style={{
-                                    position: 'absolute', top: '12px', right: '12px', zIndex: 3,
-                                    display: 'flex', alignItems: 'center', gap: '4px',
-                                    padding: '4px 8px', borderRadius: 'var(--radius-sm)',
-                                    background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
-                                }}>
-                                    <Wifi size={12} style={{ color: getQualityColor(p.connectionQuality) }} />
-                                    <div style={{
-                                        width: '8px', height: '8px', borderRadius: '50%',
-                                        background: getQualityColor(p.connectionQuality),
-                                        boxShadow: `0 0 6px ${getQualityColor(p.connectionQuality)}`,
-                                    }} />
-                                </div>
+                            {/* Name */}
+                            <div style={{
+                                marginTop: p.videoTrack ? 'auto' : '24px',
+                                padding: p.videoTrack ? '12px' : '0',
+                                background: p.videoTrack ? 'linear-gradient(transparent, rgba(0,0,0,0.8))' : 'transparent',
+                                width: p.videoTrack ? '100%' : 'auto',
+                                position: p.videoTrack ? 'absolute' : 'relative',
+                                bottom: p.videoTrack ? 0 : 'auto',
+                                fontSize: '16px', fontWeight: 600, zIndex: 2, fontFamily: 'var(--font-display)',
+                                color: p.isSpeaking ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                textAlign: p.videoTrack ? 'left' : 'center',
+                            }}>
+                                <span className={p.id === localParticipant?.id && ownNameplateStyle !== 'none' ? `nameplate-${ownNameplateStyle}` : undefined}>
+                                    {p.name}
+                                </span>
+                                {p.id === localParticipant?.id && <span style={{ opacity: 0.6, marginLeft: '8px' }}>(You)</span>}
                             </div>
-                        ))}
-                    </div>
-                )}
+
+                            {/* Speaking Glow Underlay */}
+                            {p.isSpeaking && !p.videoTrack && (
+                                <div className="speaker-spotlight" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '140px', height: '140px', borderRadius: '50%', background: '#43b581', filter: 'blur(40px)', opacity: 0.15, zIndex: 1, animation: 'spotlightPulse 1.5s infinite alternate' }}></div>
+                            )}
+
+                            {/* Status Indicators */}
+                            <div style={{ position: 'absolute', bottom: '16px', right: '16px', display: 'flex', gap: '8px', zIndex: 2 }}>
+                                {p.isMuted && <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-app)', border: 'var(--border-structural)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--error)' }}><MicOff size={16} /></div>}
+                                {p.isDeafened && <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-app)', border: 'var(--border-structural)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--error)' }}><HeadphoneOff size={16} /></div>}
+                                {p.isScreenSharing && <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-sm)', background: 'var(--accent-primary)', border: 'var(--border-structural)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}><MonitorUp size={16} /></div>}
+                            </div>
+
+                            {/* Connection Quality Indicator */}
+                            <div title={`Connection: ${getQualityLabel(p.connectionQuality)}`} style={{
+                                position: 'absolute', top: '12px', right: '12px', zIndex: 3,
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                padding: '4px 8px', borderRadius: 'var(--radius-sm)',
+                                background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+                            }}>
+                                <Wifi size={12} style={{ color: getQualityColor(p.connectionQuality) }} />
+                                <div style={{
+                                    width: '8px', height: '8px', borderRadius: '50%',
+                                    background: getQualityColor(p.connectionQuality),
+                                    boxShadow: `0 0 6px ${getQualityColor(p.connectionQuality)}`,
+                                }} />
+                            </div>
+                        </div>
+                    );
+
+                    return pinned ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '1200px' }}>
+                            {renderTile(pinned, true)}
+                            {unpinned.length > 0 && (
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: `repeat(${Math.min(unpinned.length, 4)}, 1fr)`,
+                                    gap: '12px',
+                                }}>
+                                    {unpinned.map(p => renderTile(p, false))}
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: getGridTemplate(allParticipants.length),
+                            gap: '16px',
+                            width: '100%',
+                            maxWidth: '1200px',
+                            height: allParticipants.length <= 2 ? '50vh' : 'auto',
+                            minHeight: '400px',
+                            transition: 'all 0.3s ease-in-out',
+                        }}>
+                            {allParticipants.map(p => renderTile(p, false))}
+                        </div>
+                    );
+                })()}
 
                 {/* Screen Share Layout: 70/30 split */}
                 {isConnected && screenSharer && (
@@ -985,7 +1042,7 @@ const VoiceChannel = () => {
                             justifyContent: 'center',
                         }}>
                             {screenSharer.screenTrack ? (
-                                <ParticipantVideo track={screenSharer.screenTrack} />
+                                <ParticipantVideo track={screenSharer.screenTrack} showPiP />
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}>
                                     <MonitorUp size={48} />

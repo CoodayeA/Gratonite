@@ -5,6 +5,7 @@ import { messageReactions } from '../db/schema/reactions';
 import { messages } from '../db/schema/messages';
 import { channels, dmChannelMembers } from '../db/schema/channels';
 import { guildMembers } from '../db/schema/guilds';
+import { guildEmojis } from '../db/schema/emojis';
 import { requireAuth } from '../middleware/auth';
 import { getIO } from '../lib/socket-io';
 
@@ -76,15 +77,46 @@ reactionsRouter.get(
     const reactions = await db.select().from(messageReactions)
       .where(eq(messageReactions.messageId, messageId));
 
+    // Resolve guild for custom emoji lookup
+    const [channel] = await db.select({ guildId: channels.guildId }).from(channels)
+      .where(eq(channels.id, channelId)).limit(1);
+    const guildId = channel?.guildId;
+
     // Group by emoji
-    const grouped: Record<string, { emoji: string; count: number; userIds: string[]; me: boolean }> = {};
+    const grouped: Record<string, { emoji: string; emojiUrl?: string; isCustom: boolean; count: number; userIds: string[]; me: boolean }> = {};
     for (const r of reactions) {
       if (!grouped[r.emoji]) {
-        grouped[r.emoji] = { emoji: r.emoji, count: 0, userIds: [], me: false };
+        grouped[r.emoji] = { emoji: r.emoji, isCustom: false, count: 0, userIds: [], me: false };
       }
       grouped[r.emoji].count++;
       grouped[r.emoji].userIds.push(r.userId);
       if (r.userId === req.userId) grouped[r.emoji].me = true;
+    }
+
+    // Resolve custom emojis (format :name:id:)
+    if (guildId) {
+      const customEmojiPattern = /^:(.+):(.+):$/;
+      const emojiIdsToResolve: string[] = [];
+      for (const key of Object.keys(grouped)) {
+        const match = key.match(customEmojiPattern);
+        if (match) emojiIdsToResolve.push(match[2]);
+      }
+      if (emojiIdsToResolve.length > 0) {
+        const emojiRows = await db.select({ id: guildEmojis.id, imageUrl: guildEmojis.imageUrl })
+          .from(guildEmojis)
+          .where(eq(guildEmojis.guildId, guildId));
+        const emojiMap = new Map(emojiRows.map(e => [e.id, e.imageUrl]));
+        for (const key of Object.keys(grouped)) {
+          const match = key.match(customEmojiPattern);
+          if (match) {
+            const url = emojiMap.get(match[2]);
+            if (url) {
+              grouped[key].isCustom = true;
+              grouped[key].emojiUrl = url;
+            }
+          }
+        }
+      }
     }
 
     res.json(Object.values(grouped));

@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import http from 'http';
+import path from 'path';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { Server as SocketIOServer } from 'socket.io';
@@ -123,6 +124,7 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Request duration tracking for metrics
 app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {

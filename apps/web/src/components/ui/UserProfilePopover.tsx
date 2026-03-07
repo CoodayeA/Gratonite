@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { MessageSquare, UserPlus, MoreHorizontal } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { MessageSquare, UserPlus, MoreHorizontal, Gamepad2, Headphones, Eye } from 'lucide-react';
 import { api, API_BASE } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
 import { useUser } from '../../contexts/UserContext';
@@ -23,6 +23,8 @@ export type PopoverUserInput = {
     status?: 'online' | 'idle' | 'dnd' | 'offline' | 'invisible';
     /** If provided, guild-specific roles/mutuals can be loaded */
     guildId?: string;
+    /** Live activity from presence system */
+    activity?: { name: string; type: string; startedAt?: string } | null;
 };
 
 /** Full profile data fetched from the API */
@@ -157,6 +159,25 @@ const UserProfilePopover = ({
         await api.users.saveNote(user.id, note).catch(() => {});
     };
 
+    // Activity elapsed time
+    const activityStartRef = useRef<number>(Date.now());
+    const [elapsed, setElapsed] = useState('0:00:00');
+
+    useEffect(() => {
+        if (!user.activity) return;
+        const start = user.activity.startedAt ? new Date(user.activity.startedAt).getTime() : activityStartRef.current;
+        const tick = () => {
+            const diff = Math.max(0, Math.floor((Date.now() - start) / 1000));
+            const h = Math.floor(diff / 3600);
+            const m = Math.floor((diff % 3600) / 60);
+            const s = diff % 60;
+            setElapsed(`${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
+        };
+        tick();
+        const iv = setInterval(tick, 1000);
+        return () => clearInterval(iv);
+    }, [user.activity]);
+
     // Use fetched profile data when available, fall back to input props
     const displayName = profile?.displayName || user.name;
     const handle = profile?.username || user.handle;
@@ -259,6 +280,55 @@ const UserProfilePopover = ({
 
                     {bio && (
                         <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', lineHeight: 1.4, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{bio}</p>
+                    )}
+
+                    {user.activity && (
+                        <div style={{
+                            marginBottom: '8px',
+                            padding: '8px 10px',
+                            background: 'var(--bg-tertiary)',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                        }}>
+                            <div style={{
+                                color: user.activity.type === 'PLAYING' ? '#10b981'
+                                    : user.activity.type === 'LISTENING' ? '#8b5cf6'
+                                    : '#3b82f6',
+                                display: 'flex',
+                                alignItems: 'center',
+                            }}>
+                                {user.activity.type === 'PLAYING' && <Gamepad2 size={14} />}
+                                {user.activity.type === 'LISTENING' && <Headphones size={14} />}
+                                {user.activity.type === 'WATCHING' && <Eye size={14} />}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.05em',
+                                    color: user.activity.type === 'PLAYING' ? '#10b981'
+                                        : user.activity.type === 'LISTENING' ? '#8b5cf6'
+                                        : '#3b82f6',
+                                    marginBottom: '2px',
+                                }}>
+                                    {user.activity.type === 'PLAYING' ? 'Playing'
+                                        : user.activity.type === 'LISTENING' ? 'Listening to'
+                                        : user.activity.type === 'WATCHING' ? 'Watching'
+                                        : user.activity.type}
+                                </div>
+                                <div style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {user.activity.name}
+                                </div>
+                                {user.activity.type === 'PLAYING' && (
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                        {elapsed}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     )}
 
                     <div style={{ height: '1px', background: 'var(--stroke)', margin: '8px 0' }} />

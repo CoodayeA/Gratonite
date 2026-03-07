@@ -161,6 +161,12 @@ export const users = pgTable('users', {
   /** Gratonite coins balance. */
   coins: integer('coins').notNull().default(0),
 
+  /** Whether the user's avatar is an animated GIF. */
+  avatarAnimated: boolean('avatar_animated').notNull().default(false),
+
+  /** Whether the user's banner is an animated GIF. */
+  bannerAnimated: boolean('banner_animated').notNull().default(false),
+
   /** Banner background color hex (e.g. '#5865F2'). */
   bannerColor: text('banner_color').default('#5865F2'),
 

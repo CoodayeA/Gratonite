@@ -12,6 +12,71 @@ let mainWindow = null;
 let tray = null;
 let isMuted = false;
 
+// --- Game Activity Detection ---
+const knownGames = require('./data/known-games.json');
+
+let currentGame = null;
+let gameCheckInterval = null;
+
+function startGameDetection() {
+  const { execFile } = require('child_process');
+
+  gameCheckInterval = setInterval(() => {
+    const isWin = process.platform === 'win32';
+    const cmd = isWin ? 'wmic' : 'ps';
+    const args = isWin ? ['process', 'get', 'name', '/format:csv'] : ['-eo', 'comm'];
+
+    execFile(cmd, args, { timeout: 5000 }, (err, stdout) => {
+      if (err) return;
+
+      const processes = stdout.toLowerCase().split('\n').map(l => l.trim()).filter(Boolean);
+
+      let detectedGame = null;
+      for (const game of knownGames) {
+        const found = game.processNames.some(pn =>
+          processes.some(p => p.includes(pn.toLowerCase()))
+        );
+        if (found) {
+          detectedGame = game;
+          break;
+        }
+      }
+
+      if (detectedGame && (!currentGame || currentGame.displayName !== detectedGame.displayName)) {
+        currentGame = { ...detectedGame, startedAt: Date.now() };
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('game-detected', {
+            name: detectedGame.displayName,
+            startedAt: currentGame.startedAt,
+          });
+        }
+      } else if (!detectedGame && currentGame) {
+        const stoppedGame = currentGame;
+        setTimeout(() => {
+          execFile(cmd, args, { timeout: 5000 }, (err2, stdout2) => {
+            if (err2) return;
+            const procs2 = stdout2.toLowerCase().split('\n').map(l => l.trim());
+            const stillRunning = stoppedGame.processNames.some(pn =>
+              procs2.some(p => p.includes(pn.toLowerCase()))
+            );
+            if (!stillRunning && currentGame && currentGame.displayName === stoppedGame.displayName) {
+              currentGame = null;
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('game-stopped');
+              }
+            }
+          });
+        }, 10000);
+      }
+    });
+  }, 5000);
+}
+
+function stopGameDetection() {
+  if (gameCheckInterval) clearInterval(gameCheckInterval);
+  gameCheckInterval = null;
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -227,6 +292,7 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
   registerGlobalShortcuts();
+  startGameDetection();
 
   // macOS: re-create window when dock icon is clicked
   app.on('activate', () => {
@@ -246,6 +312,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   app.isQuitting = true;
+  stopGameDetection();
 });
 
 app.on('will-quit', () => {

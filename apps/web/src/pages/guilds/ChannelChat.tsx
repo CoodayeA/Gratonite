@@ -57,7 +57,7 @@ type Message = {
     time: string;
     content: string;
     edited?: boolean;
-    reactions?: Array<{ emoji: string; count: number; me: boolean }>;
+    reactions?: Array<{ emoji: string; emojiUrl?: string; isCustom?: boolean; count: number; me: boolean }>;
     type?: 'text' | 'voice' | 'poll' | 'media';
     mediaUrl?: string;
     mediaAspectRatio?: number;
@@ -98,7 +98,7 @@ import { Tooltip } from '../../components/ui/Tooltip';
 import ForwardModal from '../../components/modals/ForwardModal';
 import { MemberListPanel } from '../../components/guild/MemberListPanel';
 
-const ReactionBadge = ({ emoji, count, me, messageApiId, channelId, onReaction }: { emoji: string; count: number; me: boolean; messageApiId?: string; channelId?: string; onReaction?: (apiId: string, emoji: string, me: boolean) => void }) => {
+const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApiId, channelId, onReaction }: { emoji: string; emojiUrl?: string; isCustom?: boolean; count: number; me: boolean; messageApiId?: string; channelId?: string; onReaction?: (apiId: string, emoji: string, me: boolean) => void }) => {
     const [tooltip, setTooltip] = useState<{ users: Array<{ displayName?: string; username: string }>; total: number } | null>(null);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -127,7 +127,7 @@ const ReactionBadge = ({ emoji, count, me, messageApiId, channelId, onReaction }
             onMouseLeave={handleMouseLeave}
             style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '12px', background: me ? 'rgba(var(--accent-primary-rgb, 139,92,246), 0.15)' : 'var(--bg-tertiary)', border: `1px solid ${me ? 'var(--accent-primary)' : 'var(--stroke)'}`, cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'all 0.15s', position: 'relative' }}
         >
-            <span>{emoji}</span> <span style={{ fontSize: '11px', fontWeight: 600 }}>{count}</span>
+            {isCustom && emojiUrl ? <img src={emojiUrl} width={16} height={16} alt={emoji} style={{ verticalAlign: 'middle' }} /> : <span>{emoji}</span>} <span style={{ fontSize: '11px', fontWeight: 600 }}>{count}</span>
             {tooltip && (
                 <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '6px 10px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', zIndex: 50, whiteSpace: 'nowrap', fontSize: '12px', color: 'var(--text-primary)', pointerEvents: 'none' }}>
                     {tooltip.users.map((u, i) => (
@@ -187,7 +187,7 @@ const MemoizedMessageItem = memo(({
 
     const quickReactions = ['👍', '❤️', '😂', '🔥', '👀', '🎉', '😮', '💯'];
     // Use reactions from message props (persisted via API), fall back to empty
-    const reactions: Array<{ emoji: string; count: number; me: boolean }> = msg.reactions || [];
+    const reactions: Array<{ emoji: string; emojiUrl?: string; isCustom?: boolean; count: number; me: boolean }> = msg.reactions || [];
 
     const handleGiveFAME = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -452,7 +452,7 @@ const MemoizedMessageItem = memo(({
                         {reactions.length > 0 && (
                             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
                                 {reactions.map((r: any) => (
-                                    <ReactionBadge key={r.emoji} emoji={r.emoji} count={r.count} me={r.me} messageApiId={msg.apiId} channelId={msgChannelId} onReaction={onReaction} />
+                                    <ReactionBadge key={r.emoji} emoji={r.emoji} emojiUrl={r.emojiUrl} isCustom={r.isCustom} count={r.count} me={r.me} messageApiId={msg.apiId} channelId={msgChannelId} onReaction={onReaction} />
                                 ))}
                             </div>
                         )}
