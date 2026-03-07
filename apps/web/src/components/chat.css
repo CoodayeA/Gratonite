@@ -86,7 +86,7 @@
                 border-left: 1px solid var(--stroke);
                 display: flex;
                 flex-direction: column;
-                z-index: 50;
+                z-index: 30;
                 box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
                 animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             }
@@ -222,7 +222,7 @@
                 padding: 4px 0;
                 min-width: 200px;
                 max-width: 320px;
-                z-index: 100;
+                z-index: 50;
                 box-shadow: 0 4px 16px rgba(0,0,0,0.3);
             }
             .mention-autocomplete-item {

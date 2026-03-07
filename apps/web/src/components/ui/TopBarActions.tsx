@@ -188,7 +188,7 @@ export const TopBarActions = () => {
                     position: 'absolute', top: '100%', right: 0, marginTop: '12px',
                     width: '380px', background: 'var(--bg-elevated)',
                     border: '1px solid var(--stroke)', borderRadius: 'var(--radius-lg)',
-                    boxShadow: '0 12px 40px rgba(0,0,0,0.5)', zIndex: 100,
+                    boxShadow: '0 12px 40px rgba(0,0,0,0.5)', zIndex: 40,
                     overflow: 'hidden', display: 'flex', flexDirection: 'column'
                 }}>
                     <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-tertiary)' }}>
@@ -283,7 +283,7 @@ export const TopBarActions = () => {
                     border: '1px solid var(--stroke)',
                     borderRadius: 'var(--radius-lg)',
                     boxShadow: 'var(--shadow-panel)',
-                    zIndex: 100,
+                    zIndex: 40,
                     overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column'
