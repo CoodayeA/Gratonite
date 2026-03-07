@@ -1,6 +1,6 @@
 {
   "name": "gratonite-desktop",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Gratonite Desktop — Electron wrapper for the Gratonite web app",
   "author": {
     "name": "Gratonite",
