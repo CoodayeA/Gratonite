@@ -42,9 +42,23 @@ export function applyEquippedItem(
   if (type === 'profile_effect') {
     const effectType = (cfg.effectType as string) ?? 'gradient-pulse';
     try {
+      localStorage.setItem(`gratonite-profile-canvas:${userId}`, effectType);
+      localStorage.setItem('gratonite-profile-canvas', effectType);
+      // Keep old keys for backwards compat
       localStorage.setItem(`gratonite-profile-effect:${userId}`, effectType);
       localStorage.setItem('gratonite-profile-effect', effectType);
     } catch { /* ignore */ }
+    window.dispatchEvent(new CustomEvent('gratonite:profile-canvas-updated', { detail: { effectType } }));
+  }
+
+  if (type === 'decoration') {
+    const shape = (cfg.shape as string) ?? 'star';
+    const position = (cfg.position as string) ?? 'top-right';
+    try {
+      localStorage.setItem(`gratonite-decoration:${userId}`, JSON.stringify({ shape, position }));
+      localStorage.setItem('gratonite-decoration', JSON.stringify({ shape, position }));
+    } catch { /* ignore */ }
+    window.dispatchEvent(new CustomEvent('gratonite:decoration-updated', { detail: { shape, position } }));
   }
 
   window.dispatchEvent(new Event('gratonite:cosmetics-updated'));
@@ -73,9 +87,20 @@ export function clearEquippedItem(type: string, userId: string): void {
 
   if (type === 'profile_effect') {
     try {
+      localStorage.setItem(`gratonite-profile-canvas:${userId}`, 'none');
+      localStorage.setItem('gratonite-profile-canvas', 'none');
       localStorage.removeItem(`gratonite-profile-effect:${userId}`);
       localStorage.removeItem('gratonite-profile-effect');
     } catch { /* ignore */ }
+    window.dispatchEvent(new CustomEvent('gratonite:profile-canvas-updated', { detail: { effectType: 'none' } }));
+  }
+
+  if (type === 'decoration') {
+    try {
+      localStorage.removeItem(`gratonite-decoration:${userId}`);
+      localStorage.removeItem('gratonite-decoration');
+    } catch { /* ignore */ }
+    window.dispatchEvent(new CustomEvent('gratonite:decoration-updated', { detail: null }));
   }
 
   window.dispatchEvent(new Event('gratonite:cosmetics-updated'));

@@ -75,6 +75,20 @@ const UserProfilePopover = ({
     const [note, setNote] = useState('');
     const [noteLoaded, setNoteLoaded] = useState(false);
     const { user: currentUser } = useUser();
+    const isOwnProfile = user.id === currentUser?.id;
+
+    const readCanvasEffect = () => isOwnProfile
+        ? (localStorage.getItem(`gratonite-profile-canvas:${user.id}`) || localStorage.getItem('gratonite-profile-canvas') || 'none')
+        : 'none';
+
+    const [myCanvasEffect, setMyCanvasEffect] = useState(readCanvasEffect);
+
+    useEffect(() => {
+        if (!isOwnProfile) return;
+        const handler = () => setMyCanvasEffect(readCanvasEffect());
+        window.addEventListener('gratonite:profile-canvas-updated', handler);
+        return () => window.removeEventListener('gratonite:profile-canvas-updated', handler);
+    }, [isOwnProfile, user.id]);
 
     // Fetch real profile + mutuals on mount
     useEffect(() => {
@@ -182,7 +196,16 @@ const UserProfilePopover = ({
                 }}
             >
                 {/* Mini Banner */}
-                <div style={{ height: '60px', background: bannerBg, position: 'relative' }}>
+                <div
+                    className={myCanvasEffect !== 'none' ? `canvas-${myCanvasEffect}` : ''}
+                    style={{
+                        height: '60px',
+                        background: myCanvasEffect === 'none' ? bannerBg : undefined,
+                        position: 'relative',
+                        borderRadius: '12px 12px 0 0',
+                        overflow: 'hidden',
+                    }}
+                >
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 20%, rgba(0,0,0,0.4))' }} />
                 </div>
 
