@@ -44,6 +44,10 @@ import { eq, and, isNull } from 'drizzle-orm';
 import { redis } from '../lib/redis';
 import { executeWorkflows } from '../lib/workflow-executor';
 
+// In-memory spatial positions: channelId → Map<userId, {x, y}>
+// Ephemeral — not persisted to Redis (too high frequency: ~15 updates/sec/user)
+const spatialPositions = new Map<string, Map<string, { x: number; y: number }>>();
+
 /**
  * initSocket — Wire up Socket.io authentication middleware and connection
  * handlers on the provided server instance.
@@ -398,9 +402,57 @@ export function initSocket(io: SocketIOServer): void {
     });
 
     // -------------------------------------------------------------------------
+    // SPATIAL_POSITION_UPDATE — relay spatial position to channel peers
+    // -------------------------------------------------------------------------
+    socket.on('SPATIAL_POSITION_UPDATE', (data: { channelId: string; x: number; y: number }) => {
+      if (!data?.channelId || typeof data.x !== 'number' || typeof data.y !== 'number') return;
+      if (!Number.isFinite(data.x) || !Number.isFinite(data.y)) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      // Clamp to 0–1
+      const x = Math.max(0, Math.min(1, data.x));
+      const y = Math.max(0, Math.min(1, data.y));
+      // Store in memory
+      if (!spatialPositions.has(data.channelId)) {
+        spatialPositions.set(data.channelId, new Map());
+      }
+      spatialPositions.get(data.channelId)!.set(userId, { x, y });
+      // Relay to others in the channel (exclude sender)
+      socket.to(`channel:${data.channelId}`).emit('SPATIAL_POSITION_UPDATE', {
+        channelId: data.channelId,
+        userId,
+        x,
+        y,
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // SPATIAL_POSITIONS_REQUEST — send all current positions for a channel
+    // -------------------------------------------------------------------------
+    socket.on('SPATIAL_POSITIONS_REQUEST', (data: { channelId: string }) => {
+      if (!data?.channelId) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      const channelPositions = spatialPositions.get(data.channelId);
+      const positions: Record<string, { x: number; y: number }> = {};
+      if (channelPositions) {
+        for (const [uid, pos] of channelPositions) {
+          positions[uid] = pos;
+        }
+      }
+      socket.emit('SPATIAL_POSITIONS_SYNC', {
+        channelId: data.channelId,
+        positions,
+      });
+    });
+
+    // -------------------------------------------------------------------------
     // Disconnect handler
     // -------------------------------------------------------------------------
     socket.on('disconnect', async () => {
+      // Clean up spatial positions for this user
+      for (const [channelId, posMap] of spatialPositions) {
+        posMap.delete(userId);
+        if (posMap.size === 0) spatialPositions.delete(channelId);
+      }
       console.info(`[socket.io] user ${userId} disconnected (${socket.id})`);
 
       // Check if the user has other active sockets

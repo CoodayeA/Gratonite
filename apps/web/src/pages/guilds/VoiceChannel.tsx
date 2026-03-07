@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, Settings, Users, Headphones, HeadphoneOff, Volume2, X, Loader2, MessageSquare, Send, Hash, Wifi, ChevronDown, Check, Radio, Hand, Crown } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, Settings, Users, Headphones, HeadphoneOff, Volume2, X, Loader2, MessageSquare, Send, Hash, Wifi, ChevronDown, Check, Radio, Hand, Crown, Compass } from 'lucide-react';
 import { useOutletContext, useParams } from 'react-router-dom';
 import { TopBarActions } from '../../components/ui/TopBarActions';
 import { useToast } from '../../components/ui/ToastManager';
@@ -10,6 +10,10 @@ import { getSocket, onStageStart, onStageEnd, onStageSpeakerAdd, onStageSpeakerR
 import { leaveVoiceSession } from '../../lib/voiceSession';
 import Avatar from '../../components/ui/Avatar';
 import { useVoice } from '../../contexts/VoiceContext';
+import { SpatialAudioEngine } from '../../lib/spatialAudio';
+import { useSpatialPositions } from '../../hooks/useSpatialPositions';
+import SpatialCanvas from '../../components/voice/SpatialCanvas';
+import { Track } from 'livekit-client';
 
 type OutletContextType = {
     hasCustomBg: boolean;
@@ -89,6 +93,10 @@ const VoiceChannel = () => {
     const chatPreviewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [manuallyDisconnected, setManuallyDisconnected] = useState(false);
 
+    // Spatial audio state
+    const [spatialMode, setSpatialMode] = useState(() => localStorage.getItem('gratonite_spatial_mode') === 'true');
+    const spatialEngineRef = useRef<SpatialAudioEngine | null>(null);
+
     // LiveKit hook for real-time voice/video
     const {
         isConnected,
@@ -118,6 +126,7 @@ const VoiceChannel = () => {
         selectVideoInput,
         streamQuality,
         setStreamQuality,
+        roomRef,
     } = useLiveKit({
         channelId: channelId || '',
         onParticipantJoined: useCallback((participant: LiveKitParticipant) => {
@@ -126,7 +135,87 @@ const VoiceChannel = () => {
         onParticipantLeft: useCallback((_participantId: string) => {
             addToast({ title: 'User Left', description: 'A user left the voice channel.', variant: 'info' });
         }, [addToast]),
+        onAudioTrackSubscribed: useCallback((participantId: string, track: MediaStreamTrack, detach: () => void) => {
+            if (spatialEngineRef.current) {
+                detach(); // Prevent LiveKit default <audio> playback — spatial engine handles it
+                spatialEngineRef.current.addParticipant(participantId, track);
+            }
+        }, []),
+        onAudioTrackUnsubscribed: useCallback((participantId: string) => {
+            spatialEngineRef.current?.removeParticipant(participantId);
+        }, []),
     });
+
+    // Spatial position sync
+    const { positions: spatialPositions, localPosition: spatialLocalPosition, updateLocalPosition: updateSpatialLocalPosition } = useSpatialPositions(
+        channelId,
+        localParticipant?.id,
+        spatialMode && isConnected,
+    );
+
+    // Spatial mode toggle — attach/detach audio from engine
+    const handleToggleSpatialMode = useCallback(() => {
+        const next = !spatialMode;
+        setSpatialMode(next);
+        try { localStorage.setItem('gratonite_spatial_mode', String(next)); } catch { /* ignore */ }
+
+        const room = roomRef.current;
+        if (!room) return;
+
+        if (next) {
+            // Enable spatial: create engine, detach LiveKit default playback, feed tracks to engine
+            const engine = new SpatialAudioEngine();
+            spatialEngineRef.current = engine;
+
+            room.remoteParticipants.forEach((participant) => {
+                const audioPublication = participant.getTrackPublication(Track.Source.Microphone);
+                if (audioPublication?.track?.mediaStreamTrack) {
+                    audioPublication.track.detach();
+                    engine.addParticipant(participant.identity, audioPublication.track.mediaStreamTrack);
+                }
+            });
+        } else {
+            // Disable spatial: destroy engine, re-attach LiveKit default playback
+            spatialEngineRef.current?.destroy();
+            spatialEngineRef.current = null;
+
+            room.remoteParticipants.forEach((participant) => {
+                const audioPublication = participant.getTrackPublication(Track.Source.Microphone);
+                if (audioPublication?.track) {
+                    audioPublication.track.attach();
+                }
+            });
+        }
+    }, [spatialMode, roomRef]);
+
+    // Update spatial engine positions when they change
+    useEffect(() => {
+        const engine = spatialEngineRef.current;
+        if (!engine || !spatialMode) return;
+
+        // Update listener (local user) position
+        engine.updateListenerPosition(spatialLocalPosition.x, spatialLocalPosition.y);
+
+        // Update remote participant positions
+        for (const [userId, pos] of spatialPositions) {
+            engine.updatePosition(userId, pos.x, pos.y);
+        }
+    }, [spatialMode, spatialPositions, spatialLocalPosition]);
+
+    // Cleanup spatial engine on unmount or disconnect
+    useEffect(() => {
+        if (!isConnected && spatialEngineRef.current) {
+            spatialEngineRef.current.destroy();
+            spatialEngineRef.current = null;
+        }
+    }, [isConnected]);
+
+    useEffect(() => {
+        return () => {
+            spatialEngineRef.current?.destroy();
+            spatialEngineRef.current = null;
+        };
+    }, []);
 
     // Fetch channel info
     useEffect(() => {
@@ -447,11 +536,13 @@ const VoiceChannel = () => {
     const handleMasterVolumeChange = useCallback((volume: number) => {
         setMasterVolume(volume);
         setLivekitMasterVolume(volume);
+        spatialEngineRef.current?.setMasterVolume(volume);
     }, [setLivekitMasterVolume]);
 
     const handleUserVolumeChange = useCallback((participantId: string, volume: number) => {
         setUserVolumes(prev => ({ ...prev, [participantId]: volume }));
         setParticipantVolume(participantId, volume);
+        spatialEngineRef.current?.setParticipantVolume(participantId, volume);
     }, [setParticipantVolume]);
 
     const getUserVolume = (id: string) => userVolumes[id] ?? 100;
@@ -714,7 +805,20 @@ const VoiceChannel = () => {
                     </div>
                 )}
 
-                {isConnected && allParticipants.length > 0 && !screenSharer && (
+                {/* Spatial Canvas Mode */}
+                {isConnected && allParticipants.length > 0 && !screenSharer && spatialMode && (
+                    <SpatialCanvas
+                        participants={allParticipants}
+                        localParticipantId={localParticipant?.id}
+                        positions={spatialPositions}
+                        localPosition={spatialLocalPosition}
+                        onLocalPositionChange={updateSpatialLocalPosition}
+                        ownAvatarFrame={ownAvatarFrame}
+                    />
+                )}
+
+                {/* Grid Mode (default) */}
+                {isConnected && allParticipants.length > 0 && !screenSharer && !spatialMode && (
                     <div style={{
                         display: 'grid',
                         gridTemplateColumns: getGridTemplate(allParticipants.length),
@@ -1206,6 +1310,27 @@ const VoiceChannel = () => {
                                 {q === 'medium' ? 'Med' : q.charAt(0).toUpperCase() + q.slice(1)}
                             </button>
                         ))}
+                    </div>
+
+                    <div className="tooltip-container">
+                        <button
+                            onMouseEnter={() => setHoveredBtn('spatial')}
+                            onMouseLeave={() => setHoveredBtn(null)}
+                            onClick={handleToggleSpatialMode}
+                            disabled={isConnecting}
+                            style={{
+                                width: '48px', height: '48px', borderRadius: '50%',
+                                background: spatialMode ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                border: '1px solid var(--stroke)', color: spatialMode ? '#000' : 'var(--text-primary)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isConnecting ? 'not-allowed' : 'pointer', transition: 'all 0.2s',
+                                transform: hoveredBtn === 'spatial' ? 'translateY(-2px)' : 'none',
+                                boxShadow: hoveredBtn === 'spatial' ? '0 4px 12px rgba(0,0,0,0.2)' : 'none',
+                                opacity: isConnecting ? 0.5 : 1,
+                            }}
+                        >
+                            <Compass size={20} />
+                        </button>
+                        <div className="tooltip">{spatialMode ? 'Disable Spatial Audio' : 'Enable Spatial Audio'}</div>
                     </div>
 
                     <div style={{ width: '1px', height: '32px', background: 'var(--stroke)', margin: '0 8px' }}></div>
