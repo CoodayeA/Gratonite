@@ -1,59 +1,46 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, MessageSquare, Send, Smile, Plus, Paperclip } from 'lucide-react';
+import { X, MessageSquare, Send, Smile } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
+import { api } from '../../lib/api';
+import Avatar from '../ui/Avatar';
 
 type Message = {
     id: number;
+    apiId?: string;
     author: string;
     avatar: string | React.ReactNode;
     time: string;
     content: string;
     bgColor?: string;
     createdAt?: number | string | null;
+    authorId?: string;
+    authorAvatarHash?: string | null;
 };
 
 interface ThreadPanelProps {
     originalMessage: Message | null;
+    channelId: string;
     onClose: () => void;
 }
 
-const ThreadPanel = ({ originalMessage, onClose }: ThreadPanelProps) => {
+const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) => {
     const [replies, setReplies] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
-    const [attachedFiles, setAttachedFiles] = useState<{name: string, size: string}[]>([]);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [threadId, setThreadId] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSending, setIsSending] = useState(false);
     const endRef = useRef<HTMLDivElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
 
     const EMOJI_LIST = ['😄','😂','❤️','🔥','👍','👎','😮','🎉','💀','🚀','✨','💯','👀','😢','🤔','😡'];
 
-    const formatFileSize = (bytes: number): string => {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    };
-
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (!files) return;
-        const newFiles = Array.from(files).map(f => ({ name: f.name, size: formatFileSize(f.size) }));
-        setAttachedFiles(prev => [...prev, ...newFiles]);
-        e.target.value = '';
-    };
-
-    const removeFile = (index: number) => {
-        setAttachedFiles(prev => prev.filter((_, i) => i !== index));
-    };
+    const { user: ctxUser } = useUser();
+    const currentUserName = ctxUser.name || ctxUser.handle || 'You';
 
     const handleEmojiClick = (emoji: string) => {
         setInputValue(prev => prev + emoji);
         setShowEmojiPicker(false);
     };
-
-    // Use authenticated user from UserContext
-    const { user: ctxUser } = useUser();
-    const currentUserName = ctxUser.name || ctxUser.handle || 'You';
 
     const scrollToBottom = () => {
         endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -63,25 +50,96 @@ const ThreadPanel = ({ originalMessage, onClose }: ThreadPanelProps) => {
         scrollToBottom();
     }, [replies]);
 
+    // Load existing thread replies on mount
+    useEffect(() => {
+        if (!originalMessage?.apiId || !channelId) {
+            setIsLoading(false);
+            return;
+        }
+        setIsLoading(true);
+        setReplies([]);
+        setThreadId(null);
+
+        api.threads.list(channelId)
+            .then(async (threads: any[]) => {
+                const existing = threads.find(
+                    (t: any) => t.originMessageId === originalMessage.apiId
+                );
+                if (existing) {
+                    setThreadId(existing.id);
+                    const msgs = await api.threads.listMessages(existing.id);
+                    const converted: Message[] = (msgs as any[]).map((m: any, i: number) => ({
+                        id: i + 1,
+                        apiId: m.id,
+                        author: m.author?.displayName || m.author?.username || 'Unknown',
+                        avatar: (m.author?.displayName || m.author?.username || '?').charAt(0).toUpperCase(),
+                        time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        content: m.content || '',
+                        createdAt: m.createdAt,
+                        authorId: m.authorId,
+                        authorAvatarHash: m.author?.avatarHash ?? null,
+                    }));
+                    setReplies(converted);
+                }
+            })
+            .catch(() => { /* thread may not exist yet */ })
+            .finally(() => setIsLoading(false));
+    }, [originalMessage?.apiId, channelId]);
+
+    // Escape key to close (but not when emoji picker is open)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && !showEmojiPicker) onClose();
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [onClose, showEmojiPicker]);
+
     if (!originalMessage) return null;
 
-    const handleSend = () => {
-        if (inputValue.trim() === '' && attachedFiles.length === 0) return;
-        const fileNote = attachedFiles.length > 0
-            ? '\n📎 ' + attachedFiles.map(f => `${f.name} (${f.size})`).join(', ')
-            : '';
-        const now = Date.now();
-        setReplies(prev => [...prev, {
-            id: now,
-            author: currentUserName,
-            avatar: 'E',
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            content: (inputValue + fileNote).trim(),
-            createdAt: now,
-        }]);
-        setInputValue('');
-        setAttachedFiles([]);
-        setShowEmojiPicker(false);
+    const handleSend = async () => {
+        if (inputValue.trim() === '' || !channelId || !originalMessage?.apiId) return;
+        if (isSending) return;
+        setIsSending(true);
+
+        try {
+            let currentThreadId = threadId;
+
+            // Create thread on first reply if none exists
+            if (!currentThreadId) {
+                const thread = await api.threads.create(channelId, {
+                    name: `Thread: ${(originalMessage.content || '').slice(0, 50) || 'message'}`,
+                    messageId: originalMessage.apiId,
+                });
+                currentThreadId = (thread as any).id;
+                setThreadId(currentThreadId);
+            }
+
+            const content = inputValue.trim();
+            const msg = await api.messages.send(channelId, {
+                content: content || undefined,
+                threadId: currentThreadId!,
+            });
+
+            const newReply: Message = {
+                id: Date.now(),
+                apiId: (msg as any).id,
+                author: currentUserName,
+                avatar: currentUserName.charAt(0).toUpperCase(),
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                content: (msg as any).content || content,
+                createdAt: Date.now(),
+                authorId: ctxUser.id,
+                authorAvatarHash: ctxUser.avatarHash,
+            };
+            setReplies(prev => [...prev, newReply]);
+            setInputValue('');
+            setShowEmojiPicker(false);
+        } catch (err) {
+            console.error('Failed to send thread reply:', err);
+        } finally {
+            setIsSending(false);
+        }
     };
 
     return (
@@ -91,7 +149,7 @@ const ThreadPanel = ({ originalMessage, onClose }: ThreadPanelProps) => {
                     <MessageSquare size={20} color="var(--text-muted)" />
                     <h3 style={{ fontSize: '16px', fontWeight: 600 }}>Thread</h3>
                 </div>
-                <button onClick={onClose} className="message-action-btn" style={{ width: '28px', height: '28px' }}>
+                <button onClick={onClose} className="message-action-btn" style={{ width: '28px', height: '28px' }} title="Close (Esc)">
                     <X size={18} />
                 </button>
             </div>
@@ -99,9 +157,12 @@ const ThreadPanel = ({ originalMessage, onClose }: ThreadPanelProps) => {
             <div className="thread-content">
                 {/* Original Message */}
                 <div className="message" style={{ padding: '16px', borderBottom: '1px solid var(--stroke)', background: 'rgba(0,0,0,0.2)' }}>
-                    <div className="msg-avatar" style={originalMessage.bgColor ? { background: originalMessage.bgColor, color: 'white' } : {}}>
-                        {originalMessage.avatar}
-                    </div>
+                    <Avatar
+                        userId={originalMessage.authorId || String(originalMessage.id)}
+                        displayName={originalMessage.author}
+                        avatarHash={(originalMessage as any).authorAvatarHash}
+                        size={40}
+                    />
                     <div className="msg-content">
                         <div className="msg-header">
                             <span className="msg-author">{originalMessage.author}</span>
@@ -113,32 +174,43 @@ const ThreadPanel = ({ originalMessage, onClose }: ThreadPanelProps) => {
                     </div>
                 </div>
 
-                <div style={{ padding: '16px 16px 8px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                    {replies.length} Replies
-                </div>
-
-                {/* Replies */}
-                <div style={{ flex: 1, overflowY: 'auto' }}>
-                    {replies.map(reply => (
-                        <div key={reply.id} className="message" style={{ padding: '8px 16px' }}>
-                            <div className="msg-avatar" style={{ width: '30px', height: '30px', fontSize: '14px' }}>
-                                {reply.avatar}
-                            </div>
-                            <div className="msg-content">
-                                <div className="msg-header" style={{ fontSize: '13px' }}>
-                                    <span className="msg-author">{reply.author}</span>
-                                    <span className="msg-timestamp" title={reply.createdAt ? new Date(reply.createdAt).toLocaleString() : reply.time}>
-                                        {reply.createdAt ? formatRelative(typeof reply.createdAt === "string" ? new Date(reply.createdAt).getTime() : reply.createdAt) : reply.time}
-                                    </span>
-                                </div>
-                                <div className="msg-body" style={{ fontSize: '13px' }}>
-                                    {reply.content}
-                                </div>
-                            </div>
+                {isLoading ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '32px' }}>
+                        <div style={{ width: '24px', height: '24px', border: '2px solid var(--text-muted)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    </div>
+                ) : (
+                    <>
+                        <div style={{ padding: '16px 16px 8px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                            {replies.length} {replies.length === 1 ? 'Reply' : 'Replies'}
                         </div>
-                    ))}
-                    <div ref={endRef} />
-                </div>
+
+                        {/* Replies */}
+                        <div style={{ flex: 1, overflowY: 'auto' }}>
+                            {replies.map(reply => (
+                                <div key={reply.apiId || reply.id} className="message" style={{ padding: '8px 16px' }}>
+                                    <Avatar
+                                        userId={reply.authorId || String(reply.id)}
+                                        displayName={reply.author}
+                                        avatarHash={reply.authorAvatarHash}
+                                        size={30}
+                                    />
+                                    <div className="msg-content">
+                                        <div className="msg-header" style={{ fontSize: '13px' }}>
+                                            <span className="msg-author">{reply.author}</span>
+                                            <span className="msg-timestamp" title={reply.createdAt ? new Date(typeof reply.createdAt === 'string' ? reply.createdAt : reply.createdAt).toLocaleString() : reply.time}>
+                                                {reply.createdAt ? formatRelative(typeof reply.createdAt === "string" ? new Date(reply.createdAt).getTime() : reply.createdAt) : reply.time}
+                                            </span>
+                                        </div>
+                                        <div className="msg-body" style={{ fontSize: '13px' }}>
+                                            {reply.content}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            <div ref={endRef} />
+                        </div>
+                    </>
+                )}
             </div>
 
             <div className="thread-input">
@@ -186,62 +258,7 @@ const ThreadPanel = ({ originalMessage, onClose }: ThreadPanelProps) => {
                     </div>
                 )}
 
-                {/* Attached Files Chips */}
-                {attachedFiles.length > 0 && (
-                    <div style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '6px',
-                        marginBottom: '8px',
-                    }}>
-                        {attachedFiles.map((file, index) => (
-                            <div key={index} style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '4px 8px',
-                                background: 'var(--bg-tertiary)',
-                                borderRadius: 'var(--radius-md)',
-                                fontSize: '12px',
-                                color: 'var(--text-secondary)',
-                                border: '1px solid var(--stroke)',
-                            }}>
-                                <Paperclip size={12} />
-                                <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
-                                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{file.size}</span>
-                                <button
-                                    onClick={() => removeFile(index)}
-                                    style={{
-                                        background: 'transparent',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        padding: '0',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        color: 'var(--text-muted)',
-                                    }}
-                                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--error)')}
-                                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
-                                >
-                                    <X size={12} />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    style={{ display: 'none' }}
-                    onChange={handleFileSelect}
-                />
-
                 <div className="chat-input-wrapper" style={{ minHeight: '40px', padding: '0 8px' }}>
-                    <button className="input-icon-btn" style={{ width: '28px', height: '28px' }} onClick={() => fileInputRef.current?.click()}>
-                        <Plus size={16} />
-                    </button>
                     <input
                         type="text"
                         className="chat-input"
@@ -249,7 +266,7 @@ const ThreadPanel = ({ originalMessage, onClose }: ThreadPanelProps) => {
                         style={{ fontSize: '13px' }}
                         value={inputValue}
                         onChange={e => setInputValue(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleSend()}
+                        onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
                     />
                     <button
                         className="input-icon-btn"
@@ -259,9 +276,10 @@ const ThreadPanel = ({ originalMessage, onClose }: ThreadPanelProps) => {
                         <Smile size={16} />
                     </button>
                     <button
-                        className={`input-icon-btn ${(inputValue.trim() || attachedFiles.length > 0) ? 'primary' : ''}`}
-                        style={{ width: '28px', height: '28px', opacity: (inputValue.trim() || attachedFiles.length > 0) ? 1 : 0.5 }}
+                        className={`input-icon-btn ${inputValue.trim() ? 'primary' : ''}`}
+                        style={{ width: '28px', height: '28px', opacity: isSending ? 0.3 : inputValue.trim() ? 1 : 0.5 }}
                         onClick={handleSend}
+                        disabled={isSending}
                     >
                         <Send size={14} />
                     </button>

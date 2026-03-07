@@ -473,7 +473,7 @@ const MemoizedMessageItem = memo(({
                 </div>
                 {/* Reaction Picker Popup */}
                 {showReactionPicker && (
-                    <div ref={reactionPickerRef} style={{ position: 'absolute', top: '-44px', right: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '20px', padding: '4px 8px', display: 'flex', gap: '2px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 30 }}>
+                    <div ref={reactionPickerRef} style={{ position: 'absolute', top: '-44px', right: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '20px', padding: '4px 8px', display: 'flex', gap: '2px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 20 }}>
                         {quickReactions.map(emoji => (
                             <button key={emoji} onClick={() => { onReaction?.(msg.apiId, emoji, false); setShowReactionPicker(false); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px 6px', borderRadius: '8px', transition: 'all 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                                 {emoji}
@@ -1047,7 +1047,7 @@ const ChannelChat = () => {
                     if (channelId && msg.apiId) {
                         api.messages.delete(channelId, msg.apiId).then(() => {
                             setMessages(prev => prev.filter(m => m.id !== msg.id));
-                            addToast({ title: 'Message Deleted', variant: 'error' });
+                            addToast({ title: 'Message Deleted', variant: 'success' });
                         }).catch(() => addToast({ title: 'Failed to delete message', variant: 'error' }));
                     } else {
                         setMessages(prev => prev.filter(m => m.id !== msg.id));
@@ -2590,7 +2590,7 @@ const ChannelChat = () => {
                 <div style={{
                     width: '340px', flexShrink: 0, borderLeft: '1px solid var(--stroke)',
                     background: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column',
-                    position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 5,
+                    position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 30,
                 }}>
                     <div style={{
                         padding: '16px', borderBottom: '1px solid var(--stroke)',
@@ -2627,8 +2627,11 @@ const ChannelChat = () => {
                                     const msgEl = document.querySelector(`[data-message-id="${pin.id}"]`);
                                     if (msgEl) {
                                         msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                        setHighlightedMessageId(parseInt(pin.id, 36) || 0);
-                                        setTimeout(() => setHighlightedMessageId(null), 2500);
+                                        const localMsg = messages.find(m => m.apiId === pin.id);
+                                        if (localMsg) {
+                                            setHighlightedMessageId(localMsg.id);
+                                            setTimeout(() => setHighlightedMessageId(null), 2500);
+                                        }
                                     }
                                 }}
                                 >
@@ -3166,9 +3169,10 @@ const ChannelChat = () => {
             </div>
 
             {
-                activeThreadMessage && (
+                activeThreadMessage && channelId && (
                     <ThreadPanel
                         originalMessage={activeThreadMessage}
+                        channelId={channelId}
                         onClose={() => setActiveThreadMessage(null)}
                     />
                 )
