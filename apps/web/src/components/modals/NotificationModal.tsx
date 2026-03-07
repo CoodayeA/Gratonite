@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, AtSign, CheckCircle2, X } from 'lucide-react';
+import { Bell, AtSign, CheckCircle2, Trash2, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
 import Avatar from '../ui/Avatar';
@@ -68,6 +68,12 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
             .catch(() => addToast({ title: 'Failed to mark notifications as read', variant: 'error' }));
     };
 
+    const clearAll = () => {
+        api.notifications.clearAll()
+            .then(() => setNotifications([]))
+            .catch(() => addToast({ title: 'Failed to clear notifications', variant: 'error' }));
+    };
+
     const dismissNotification = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         api.notifications.dismiss(id)
@@ -129,6 +135,9 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
                     <div style={{ flex: 1 }} />
                     <button onClick={markAllRead} style={{ background: 'transparent', border: 'none', color: 'var(--accent-blue)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <CheckCircle2 size={14} /> Mark Read
+                    </button>
+                    <button onClick={clearAll} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} title="Clear all notifications">
+                        <Trash2 size={14} /> Clear All
                     </button>
                 </div>
 
