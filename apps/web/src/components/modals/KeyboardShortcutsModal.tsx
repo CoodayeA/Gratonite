@@ -7,6 +7,7 @@ const shortcuts = [
             { label: 'Global Search', keys: ['⌘', 'K'] },
             { label: 'Next Channel', keys: ['⌥', '↓'] },
             { label: 'Previous Channel', keys: ['⌥', '↑'] },
+            { label: 'Close Modal / Overlay', keys: ['Esc'] },
             { label: 'Open Keyboard Shortcuts', keys: ['⌘', '/'] }
         ]
     },

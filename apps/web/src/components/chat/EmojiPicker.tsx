@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Clock, Smile, Image as ImageIcon, Heart, ThumbsUp, Coffee, Flag, Lightbulb, Cat, Car, Settings, Loader } from 'lucide-react';
+import { Search, Clock, Smile, Image as ImageIcon, Heart, ThumbsUp, Coffee, Flag, Lightbulb, Cat, Car, Settings, Loader, Star } from 'lucide-react';
 import { useToast } from '../ui/ToastManager';
 import { api, API_BASE } from '../../lib/api';
 
@@ -112,6 +112,34 @@ function addRecentEmoji(emoji: string) {
     localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
 }
 
+// ─── Frequently Used Emojis (localStorage) ────────────────────────────────────
+const FREQ_KEY = 'emojiUsage';
+const MAX_FREQUENT = 16;
+
+type EmojiUsageData = Record<string, { count: number; lastUsed: number }>;
+
+function getEmojiUsage(): EmojiUsageData {
+    try {
+        const raw = localStorage.getItem(FREQ_KEY);
+        return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+}
+
+function trackEmojiUsage(emoji: string) {
+    const usage = getEmojiUsage();
+    const existing = usage[emoji] || { count: 0, lastUsed: 0 };
+    usage[emoji] = { count: existing.count + 1, lastUsed: Date.now() };
+    localStorage.setItem(FREQ_KEY, JSON.stringify(usage));
+}
+
+function getFrequentEmojis(): string[] {
+    const usage = getEmojiUsage();
+    return Object.entries(usage)
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, MAX_FREQUENT)
+        .map(([emoji]) => emoji);
+}
+
 // ─── GIF Support (Tenor API v2) ──────────────────────────────────────────────
 
 const TENOR_API_KEY = import.meta.env.VITE_TENOR_API_KEY || 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ';
@@ -182,6 +210,7 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
     const [stickers, setStickers] = useState<Sticker[]>([]);
     const [stickersLoading, setStickersLoading] = useState(false);
     const [recentEmojis, setRecentEmojis] = useState<string[]>(getRecentEmojis());
+    const [frequentEmojis, setFrequentEmojis] = useState<string[]>(getFrequentEmojis());
     const [serverEmojis, setServerEmojis] = useState<ServerEmoji[]>([]);
     const [gifSearch, setGifSearch] = useState('');
     const { gifs, loading: gifsLoading } = useTenorGifs(activeTab === 'gif' ? gifSearch : '');
@@ -228,14 +257,18 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
 
     const handleSelectEmoji = (emoji: string) => {
         addRecentEmoji(emoji);
+        trackEmojiUsage(emoji);
         setRecentEmojis(getRecentEmojis());
+        setFrequentEmojis(getFrequentEmojis());
         onSelectEmoji(emoji);
     };
 
     const handleSelectCustomEmoji = (name: string) => {
         const emojiStr = `:${name}:`;
         addRecentEmoji(emojiStr);
+        trackEmojiUsage(emojiStr);
         setRecentEmojis(getRecentEmojis());
+        setFrequentEmojis(getFrequentEmojis());
         onSelectEmoji(emojiStr);
     };
 
@@ -305,6 +338,36 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
             <div ref={contentRef} style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
                 {activeTab === 'emoji' && (
                     <div style={{ padding: '8px 0' }}>
+                        {/* Frequently Used */}
+                        {!searchLower && frequentEmojis.length > 0 && (
+                            <div id="emoji-cat-frequent" style={{ padding: '0 12px', marginBottom: '12px' }}>
+                                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px', letterSpacing: '0.5px', position: 'sticky', top: 0, background: 'var(--bg-elevated)', padding: '4px 0', zIndex: 1 }}>
+                                    <Star size={12} /> Frequently Used
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '2px' }}>
+                                    {frequentEmojis.map((emoji, idx) => (
+                                        <button
+                                            key={`freq-${idx}`}
+                                            onClick={() => emoji.startsWith(':') ? handleSelectCustomEmoji(emoji.slice(1, -1)) : handleSelectEmoji(emoji)}
+                                            style={{ width: '36px', height: '36px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.1s, transform 0.1s' }}
+                                            onMouseOver={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.transform = 'scale(1.15)'; }}
+                                            onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'scale(1)'; }}
+                                        >
+                                            {emoji.startsWith(':') ? (
+                                                (() => {
+                                                    const name = emoji.slice(1, -1);
+                                                    const match = serverEmojis.find(e => e.name === name);
+                                                    return match
+                                                        ? <img src={match.url} alt={name} style={{ width: '26px', height: '26px', borderRadius: '4px', objectFit: 'contain' }} />
+                                                        : <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{emoji}</span>;
+                                                })()
+                                            ) : emoji}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Server Custom Emojis */}
                         {filteredServerEmojis.length > 0 && (
                             <div id="emoji-cat-server" style={{ padding: '0 12px', marginBottom: '12px' }}>

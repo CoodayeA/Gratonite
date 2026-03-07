@@ -36,8 +36,13 @@ async function runEmailNotifications(): Promise<void> {
     if (!user?.email) continue;
 
     const [settings] = await db.select({ emailNotifications: userSettings.emailNotifications }).from(userSettings).where(eq(userSettings.userId, row.userId)).limit(1);
-    const prefs = (settings?.emailNotifications as any) || { mentions: true };
-    if (!prefs.mentions) continue;
+    const prefs = (settings?.emailNotifications as any) || { mentions: false, dms: false, frequency: 'never' };
+
+    // Respect frequency setting — skip entirely if 'never'
+    if (prefs.frequency === 'never') continue;
+
+    // Check if user wants mention or DM notifications
+    if (!prefs.mentions && !prefs.dms) continue;
 
     await sendMail({
       to: user.email,
@@ -45,6 +50,8 @@ async function runEmailNotifications(): Promise<void> {
       html: `<p>You have <strong>${row.count}</strong> unread notification${row.count > 1 ? 's' : ''} on Gratonite.</p><p><a href="https://gratonite.chat/app">Click here to view them</a></p>`,
     });
 
-    await redis.set(redisKey, '1', 'EX', 4 * 3600);
+    // Use appropriate Redis expiry based on frequency
+    const expiry = prefs.frequency === 'daily' ? 24 * 3600 : 4 * 3600;
+    await redis.set(redisKey, '1', 'EX', expiry);
   }
 }

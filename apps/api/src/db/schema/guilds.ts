@@ -153,6 +153,12 @@ export const guilds = pgTable('guilds', {
   /** Message shown in the spotlight banner. */
   spotlightMessage: text('spotlight_message'),
 
+  /** AFK voice channel — idle users are moved here after afkTimeout seconds. */
+  afkChannelId: uuid('afk_channel_id'),
+
+  /** Seconds of voice inactivity before a user is moved to the AFK channel. */
+  afkTimeout: integer('afk_timeout').default(300),
+
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 
   /**

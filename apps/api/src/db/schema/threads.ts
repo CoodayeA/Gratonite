@@ -17,6 +17,8 @@ export const threads = pgTable('threads', {
   forumTagIds: text('forum_tag_ids').array(),
   pinned: boolean('pinned').notNull().default(false),
   messageCount: integer('message_count').notNull().default(0),
+  /** Auto-archive after N seconds of inactivity. Null = never. */
+  archiveAfter: integer('archive_after'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

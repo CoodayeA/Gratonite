@@ -6,7 +6,7 @@ import {
     Send, Smile, Image as ImageIcon, Reply, X, Play, Hash, Menu,
     Volume2, Trash2, Copy, Pin, Sparkles, Share2, Link2, FileText, Download,
     Pause, MessageSquare, MoreHorizontal, Square, Plus, Mic, BarChart2, Clock, Users,
-    ThumbsUp, Star, Flag, Edit2, Search, ChevronUp, ChevronDown
+    ThumbsUp, Star, Flag, Edit2, Search, ChevronUp, ChevronDown, Eye, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import Skeleton from '../../components/ui/Skeleton';
 import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
@@ -160,10 +160,13 @@ const MemoizedMessageItem = memo(({
     members,
     channels,
     currentUserId,
+    currentUsername,
     currentUserAvatarFrame,
     currentUserNameplateStyle,
     guildId,
     addToast,
+    compactMode,
+    isNewMessageDivider,
 }: any) => {
     const [isHovered, setIsHovered] = useState(false);
     const [famGiven, setFamGiven] = useState(false);
@@ -213,7 +216,13 @@ const MemoizedMessageItem = memo(({
         prevMsg.author === msg.author &&
         (Math.abs(msg.id - prevMsg.id) < 5 * 60 * 1000 || msg.time === prevMsg.time);
 
-    const showNewMessageDivider = false; // Divider shown dynamically via unread tracking
+    // Feature 3: Mention highlight detection
+    const isMentioned = Boolean(
+        currentUserId && currentUsername && msg.content && (
+            msg.content.includes(`@${currentUsername}`) ||
+            msg.content.includes(`<@${currentUserId}>`)
+        )
+    );
 
     // Check if message is newly added (runtime messages use Date.now() IDs)
     const isNew = msg.id > 100000 && (Date.now() - msg.id < 5000);
@@ -221,8 +230,8 @@ const MemoizedMessageItem = memo(({
 
     return (
         <React.Fragment>
-            {showNewMessageDivider && (
-                <div style={{
+            {isNewMessageDivider && (
+                <div className="new-messages-divider" style={{
                     display: 'flex', alignItems: 'center', margin: '24px 0', opacity: 0.8
                 }}>
                     <div style={{ flex: 1, height: '1px', background: 'var(--error)' }}></div>
@@ -231,7 +240,7 @@ const MemoizedMessageItem = memo(({
                         borderRadius: '12px', fontSize: '11px', fontWeight: 600,
                         textTransform: 'uppercase', letterSpacing: '0.5px', marginLeft: '8px', marginRight: '8px'
                     }}>
-                        New Messages
+                        NEW
                     </div>
                     <div style={{ flex: 1, height: '1px', background: 'var(--error)' }}></div>
                 </div>
@@ -241,14 +250,23 @@ const MemoizedMessageItem = memo(({
                 initial={isNew ? { opacity: 0, y: 20, scale: 0.98 } : false}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                className={`message ${isGrouped ? 'grouped' : ''} ${highlightedMessageId === msg.id ? 'highlighted-message' : ''} ${activeThreadMessageId === msg.id ? 'active-thread-message' : ''}`}
+                className={`message ${isGrouped ? 'grouped' : ''} ${highlightedMessageId === msg.id ? 'highlighted-message' : ''} ${activeThreadMessageId === msg.id ? 'active-thread-message' : ''} ${isMentioned ? 'mentioned-message' : ''} ${compactMode ? 'compact-message' : ''}`}
                 data-message-id={msg.apiId}
-                style={{ position: 'relative', marginTop: isGrouped ? '2px' : '16px', paddingTop: isGrouped ? '2px' : '16px', paddingBottom: isGrouped ? '2px' : '16px' }}
+                style={{
+                    position: 'relative',
+                    marginTop: isGrouped ? '2px' : (compactMode ? '1px' : '16px'),
+                    paddingTop: isGrouped ? '2px' : (compactMode ? '2px' : '16px'),
+                    paddingBottom: isGrouped ? '2px' : (compactMode ? '2px' : '16px'),
+                    ...(isMentioned ? { borderLeft: '3px solid var(--accent-primary, #526df5)', background: 'rgba(82, 109, 245, 0.06)' } : {}),
+                }}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 onContextMenu={(e) => handleMessageContext(e, msg)}
             >
-                {isGrouped ? (
+                {compactMode ? (
+                    /* Feature 13: Compact mode - no avatar, inline timestamp */
+                    null
+                ) : isGrouped ? (
                     <div style={{ width: '40px', flexShrink: 0, position: 'relative' }}>
                         <span style={{
                             position: 'absolute', right: '0', top: '2px',
@@ -297,17 +315,33 @@ const MemoizedMessageItem = memo(({
                 )}
 
                 <div className="msg-content">
-                    {!isGrouped && (
-                        <div className="msg-header">
-                            <span
-                                className={`msg-author ${msg.system ? 'system' : ''} ${msg.authorNameplateStyle && msg.authorNameplateStyle !== 'none' ? `nameplate-${msg.authorNameplateStyle}` : (isCurrentUserMessage && currentUserNameplateStyle && currentUserNameplateStyle !== 'none' ? `nameplate-${currentUserNameplateStyle}` : '')}`}
-                                onClick={(e) => { if (!msg.system) onProfileClick?.({ user: msg.author, userId: msg.authorId || '', x: e.clientX, y: e.clientY }); }}
-                                style={{ cursor: msg.system ? 'default' : 'pointer', color: msg.authorRoleColor || undefined }}
-                            >
-                                {msg.author}
-                            </span>
-                            <span className="msg-timestamp">{msg.time}</span>
-                        </div>
+                    {compactMode ? (
+                        /* Feature 13: Compact mode header — timestamp inline before author */
+                        (!isGrouped || compactMode) && (
+                            <div className="msg-header" style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                                <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>{msg.time}</span>
+                                <span
+                                    className={`msg-author ${msg.system ? 'system' : ''} ${msg.authorNameplateStyle && msg.authorNameplateStyle !== 'none' ? `nameplate-${msg.authorNameplateStyle}` : (isCurrentUserMessage && currentUserNameplateStyle && currentUserNameplateStyle !== 'none' ? `nameplate-${currentUserNameplateStyle}` : '')}`}
+                                    onClick={(e) => { if (!msg.system) onProfileClick?.({ user: msg.author, userId: msg.authorId || '', x: e.clientX, y: e.clientY }); }}
+                                    style={{ cursor: msg.system ? 'default' : 'pointer', color: msg.authorRoleColor || undefined, fontSize: '13px' }}
+                                >
+                                    {msg.author}:
+                                </span>
+                            </div>
+                        )
+                    ) : (
+                        !isGrouped && (
+                            <div className="msg-header">
+                                <span
+                                    className={`msg-author ${msg.system ? 'system' : ''} ${msg.authorNameplateStyle && msg.authorNameplateStyle !== 'none' ? `nameplate-${msg.authorNameplateStyle}` : (isCurrentUserMessage && currentUserNameplateStyle && currentUserNameplateStyle !== 'none' ? `nameplate-${currentUserNameplateStyle}` : '')}`}
+                                    onClick={(e) => { if (!msg.system) onProfileClick?.({ user: msg.author, userId: msg.authorId || '', x: e.clientX, y: e.clientY }); }}
+                                    style={{ cursor: msg.system ? 'default' : 'pointer', color: msg.authorRoleColor || undefined }}
+                                >
+                                    {msg.author}
+                                </span>
+                                <span className="msg-timestamp">{msg.time}</span>
+                            </div>
+                        )
                     )}
                     {/* Inline Reply Reference */}
                     {msg.replyToId && msg.replyToAuthor && (
@@ -653,6 +687,20 @@ const ChannelChat = () => {
 
     // Image Lightbox State
     const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+    const [lightboxZoom, setLightboxZoom] = useState(1);
+
+    // Feature 5: Markdown Preview State
+    const [showPreview, setShowPreview] = useState(false);
+
+    // Feature 9: New Messages Divider — lastReadMessageId per channel
+    const [lastReadMessageId, setLastReadMessageId] = useState<string | null>(null);
+
+    // Feature 13: Compact Mode State
+    const [compactMode, setCompactMode] = useState(() => localStorage.getItem('messageDisplay') === 'compact');
+
+    // Feature 19: Sticker Picker State
+    const [stickerPickerOpen, setStickerPickerOpen] = useState(false);
+    const [guildStickers, setGuildStickers] = useState<Array<{ id: string; name: string; url: string; packName?: string }>>([]);
 
     // Member List Panel State
     const [memberListOpen, setMemberListOpen] = useState(() => localStorage.getItem('memberListOpen') !== 'false');
@@ -764,6 +812,17 @@ const ChannelChat = () => {
     const typingTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
     const lastTypingSentRef = useRef(0);
 
+    // Feature 13: Listen for storage events to sync compact mode across tabs
+    useEffect(() => {
+        const handleStorage = (e: StorageEvent) => {
+            if (e.key === 'messageDisplay') {
+                setCompactMode(e.newValue === 'compact');
+            }
+        };
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
+    }, []);
+
     // Fetch current user info
     useEffect(() => {
         api.users.getMe().then(me => {
@@ -771,6 +830,20 @@ const ChannelChat = () => {
             setCurrentUserId(me.id);
         }).catch(() => { addToast({ title: 'Failed to load user info', variant: 'error' }); });
     }, []);
+
+    // Feature 9: Fetch last read message ID before marking as read
+    useEffect(() => {
+        if (!channelId) return;
+        fetch(`${API_BASE}/api/v1/channels/${channelId}/read-state`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        }).then(r => r.ok ? r.json() : null).then(state => {
+            if (state?.lastMessageId) {
+                setLastReadMessageId(state.lastMessageId);
+            } else {
+                setLastReadMessageId(null);
+            }
+        }).catch(() => setLastReadMessageId(null));
+    }, [channelId]);
 
     // Mark channel as read on mount
     useEffect(() => {
@@ -821,9 +894,15 @@ const ChannelChat = () => {
         api.messages.startTyping(channelId).catch(() => { /* ignore */ });
     }, [channelId]);
 
-    // Ctrl+F keyboard shortcut to open search
+    // Ctrl+F keyboard shortcut to open search + Ctrl+Shift+P for markdown preview
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Feature 5: Ctrl+Shift+P to toggle markdown preview
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'P') {
+                e.preventDefault();
+                setShowPreview(p => !p);
+                return;
+            }
             if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
                 e.preventDefault();
                 setShowSearchBar(true);
@@ -1336,6 +1415,23 @@ const ChannelChat = () => {
         }).catch(() => {});
     }, [guildId]);
 
+    // Feature 19: Fetch guild stickers
+    useEffect(() => {
+        if (!guildId) { setGuildStickers([]); return; }
+        fetch(`${API_BASE}/api/v1/guilds/${guildId}/stickers`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        }).then(r => r.ok ? r.json() : []).then(data => {
+            if (Array.isArray(data)) {
+                setGuildStickers(data.map((s: any) => ({
+                    id: s.id,
+                    name: s.name,
+                    url: s.imageHash ? `${API_BASE}/files/${s.imageHash}` : (s.url || ''),
+                    packName: s.packName || 'Stickers',
+                })).filter((s: any) => s.url));
+            }
+        }).catch(() => {});
+    }, [guildId]);
+
     // Fetch guild custom emojis for :name: rendering in messages
     useEffect(() => {
         if (!guildId) { setGuildCustomEmojis([]); return; }
@@ -1390,6 +1486,7 @@ const ChannelChat = () => {
         setActiveThreadMessage(null);
         setForwardingMessage(null);
         setLightboxUrl(null);
+        setLightboxZoom(1);
         setShowPinnedPanel(false);
         setPinnedMessages([]);
         setShowSearchBar(false);
@@ -1399,6 +1496,9 @@ const ChannelChat = () => {
         setHighlightedMessageId(null);
         setProfilePopover(null);
         setRoomVelocity(0);
+        setShowPreview(false);
+        setLastReadMessageId(null);
+        setStickerPickerOpen(false);
     }, [channelId]);
 
     // Join/leave channel rooms for real-time events
@@ -1638,6 +1738,14 @@ const ChannelChat = () => {
     }, [hasMoreMessages, isLoadingOlder, loadOlderMessages]);
 
     useEffect(() => {
+        // Feature 9: Auto-scroll to NEW divider if present, otherwise scroll to bottom
+        if (lastReadMessageId && messages.length > 0) {
+            const dividerEl = document.querySelector('.new-messages-divider');
+            if (dividerEl) {
+                dividerEl.scrollIntoView({ behavior: 'auto', block: 'center' });
+                return;
+            }
+        }
         scrollToBottom();
     }, [messages]);
 
@@ -2532,7 +2640,7 @@ const ChannelChat = () => {
                                         setActiveThreadMessage={setActiveThreadMessage}
                                         activeThreadMessageId={activeThreadMessage?.id ?? null}
                                         isHypeMode={isHypeMode}
-                                        onImageClick={(url: string) => setLightboxUrl(url)}
+                                        onImageClick={(url: string) => { setLightboxUrl(url); setLightboxZoom(1); }}
                                         onReply={(r: any) => setReplyingTo(r)}
                                         onProfileClick={(p: any) => setProfilePopover(p)}
                                         onForward={(m: Message) => setForwardingMessage(m)}
@@ -2542,10 +2650,13 @@ const ChannelChat = () => {
                                         members={guildMembers}
                                         channels={guildChannelsList}
                                         currentUserId={currentUserId || userProfile?.id || ''}
+                                        currentUsername={currentUserName}
                                         currentUserAvatarFrame={userProfile?.avatarFrame || 'none'}
                                         currentUserNameplateStyle={userProfile?.nameplateStyle || 'none'}
                                         guildId={guildId}
                                         addToast={addToast}
+                                        compactMode={compactMode}
+                                        isNewMessageDivider={!!(lastReadMessageId && prevMsg?.apiId === lastReadMessageId && msg.apiId !== lastReadMessageId)}
                                     />
                                 </div>
                             );
@@ -2752,14 +2863,33 @@ const ChannelChat = () => {
                     </div>
                 )}
 
-                {/* Reply Banner */}
+                {/* Feature 12: Reply Preview Bar */}
                 {replyingTo && !editingMessage && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'var(--bg-tertiary)', borderLeft: '3px solid var(--accent-primary)', margin: '0 16px 4px', borderRadius: '0 8px 8px 0' }}>
                         <Reply size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
                         <span style={{ fontSize: '13px', color: 'var(--text-muted)', flexShrink: 0 }}>Replying to</span>
                         <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', flexShrink: 0 }}>{replyingTo.author}</span>
-                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{replyingTo.content}</span>
-                        <button onClick={() => setReplyingTo(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex', flexShrink: 0 }}>
+                        <span
+                            onClick={() => {
+                                const apiId = replyingTo.apiId;
+                                if (apiId) {
+                                    const el = document.querySelector(`[data-message-id="${apiId}"]`);
+                                    if (el) {
+                                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        const localMsg = messages.find(m => m.apiId === apiId);
+                                        if (localMsg) {
+                                            setHighlightedMessageId(localMsg.id);
+                                            setTimeout(() => setHighlightedMessageId(null), 2500);
+                                        }
+                                    }
+                                }
+                            }}
+                            style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, cursor: 'pointer' }}
+                            title="Click to scroll to original message"
+                        >
+                            {replyingTo.content || '(click to view)'}
+                        </span>
+                        <button onClick={() => setReplyingTo(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex', flexShrink: 0 }} title="Cancel reply">
                             <X size={14} />
                         </button>
                     </div>
@@ -2778,6 +2908,21 @@ const ChannelChat = () => {
                                 </button>
                             </div>
                         ))}
+                    </div>
+                )}
+
+                {/* Feature 5: Markdown Preview Pane */}
+                {showPreview && inputValue.trim().length > 0 && (
+                    <div style={{
+                        padding: '12px 16px', margin: '0 16px 4px',
+                        background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                        borderRadius: '8px', fontSize: '15px', color: 'var(--text-primary)',
+                        lineHeight: '1.5', maxHeight: '200px', overflowY: 'auto',
+                    }}>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                            Preview
+                        </div>
+                        <RichTextRenderer content={inputValue} customEmojis={guildCustomEmojis} members={guildMembers} channels={guildChannelsList} />
                     </div>
                 )}
 
@@ -2915,10 +3060,22 @@ const ChannelChat = () => {
                             <button className="input-icon-btn" title="Record Voice Note" onClick={startRecording}>
                                 <Mic size={20} />
                             </button>
+                            {/* Feature 5: Markdown Preview Toggle */}
+                            <button
+                                className={`input-icon-btn ${showPreview ? 'primary' : ''}`}
+                                title="Toggle Markdown Preview (Ctrl+Shift+P)"
+                                onClick={() => setShowPreview(p => !p)}
+                            >
+                                <Eye size={18} />
+                            </button>
                             {inputValue.trim().length === 0 && (
                                 <>
-                                    <button className={`input-icon-btn ${isEmojiPickerOpen ? 'primary' : ''}`} title="Select Emoji" onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}>
+                                    <button className={`input-icon-btn ${isEmojiPickerOpen ? 'primary' : ''}`} title="Select Emoji" onClick={() => { setIsEmojiPickerOpen(!isEmojiPickerOpen); setStickerPickerOpen(false); }}>
                                         <Smile size={20} />
+                                    </button>
+                                    {/* Feature 19: Sticker Picker Button */}
+                                    <button className={`input-icon-btn ${stickerPickerOpen ? 'primary' : ''}`} title="Sticker Picker" onClick={() => { setStickerPickerOpen(!stickerPickerOpen); setIsEmojiPickerOpen(false); }}>
+                                        <Square size={18} />
                                     </button>
                                     <button className="input-icon-btn" title="Create Poll" onClick={() => setShowPollCreator(!showPollCreator)}>
                                         <BarChart2 size={20} />
@@ -3012,6 +3169,71 @@ const ChannelChat = () => {
                             onStickerSelect={handleSendSticker}
                             guildId={guildId}
                         />
+                    )}
+
+                    {/* Feature 19: Sticker Picker Panel */}
+                    {stickerPickerOpen && (
+                        <div style={{
+                            position: 'absolute', bottom: 'calc(100% + 12px)', right: '16px',
+                            background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+                            borderRadius: '12px', padding: '12px', width: '320px', maxHeight: '360px',
+                            boxShadow: '0 10px 30px rgba(0,0,0,0.5)', zIndex: 10,
+                            display: 'flex', flexDirection: 'column', gap: '8px',
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Stickers</span>
+                                <button onClick={() => setStickerPickerOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                                    <X size={16} />
+                                </button>
+                            </div>
+                            <div style={{ overflowY: 'auto', flex: 1 }}>
+                                {guildStickers.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                                        No stickers available in this server
+                                    </div>
+                                ) : (
+                                    (() => {
+                                        // Group stickers by pack name
+                                        const packs = new Map<string, typeof guildStickers>();
+                                        for (const s of guildStickers) {
+                                            const pack = s.packName || 'Stickers';
+                                            if (!packs.has(pack)) packs.set(pack, []);
+                                            packs.get(pack)!.push(s);
+                                        }
+                                        return Array.from(packs.entries()).map(([packName, stickers]) => (
+                                            <div key={packName}>
+                                                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '4px 0', marginBottom: '4px' }}>
+                                                    {packName}
+                                                </div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                                                    {stickers.map(sticker => (
+                                                        <div
+                                                            key={sticker.id}
+                                                            onClick={() => {
+                                                                handleSendSticker(sticker);
+                                                                setStickerPickerOpen(false);
+                                                            }}
+                                                            style={{
+                                                                cursor: 'pointer', borderRadius: '8px', padding: '4px',
+                                                                background: 'var(--bg-tertiary)', border: '1px solid transparent',
+                                                                transition: 'border-color 0.15s, background 0.15s',
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                aspectRatio: '1',
+                                                            }}
+                                                            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.background = 'var(--bg-secondary)'; }}
+                                                            onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
+                                                            title={sticker.name}
+                                                        >
+                                                            <img src={sticker.url} alt={sticker.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ));
+                                    })()
+                                )}
+                            </div>
+                        </div>
                     )}
 
                     {/* Schedule Message Popover */}
@@ -3221,34 +3443,133 @@ const ChannelChat = () => {
                 />
             )}
 
-            {/* Image Lightbox */}
-            {lightboxUrl && (
-                <div onClick={() => setLightboxUrl(null)} style={{
-                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    zIndex: 9000, cursor: 'zoom-out'
-                }}>
-                    <button onClick={(e) => { e.stopPropagation(); setLightboxUrl(null); }} style={{
-                        position: 'absolute', top: '24px', right: '24px',
-                        background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%',
-                        width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer', color: 'white', backdropFilter: 'blur(8px)',
-                        transition: 'background 0.2s'
-                    }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')} onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}>
-                        <X size={20} />
-                    </button>
-                    <img
-                        src={lightboxUrl}
-                        alt="Enlarged"
-                        onClick={e => e.stopPropagation()}
-                        style={{
-                            maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain',
-                            borderRadius: '8px', cursor: 'default',
-                            boxShadow: '0 32px 80px rgba(0,0,0,0.6)'
+            {/* Feature 4: Image Gallery Lightbox */}
+            {lightboxUrl && (() => {
+                // Collect all image URLs from messages for gallery navigation
+                const allImageUrls: string[] = [];
+                for (const m of messages) {
+                    if (m.mediaUrl && /\.(png|jpe?g|gif|webp|svg|bmp)(\?|$)/i.test(m.mediaUrl)) {
+                        allImageUrls.push(m.mediaUrl);
+                    }
+                    if (m.attachments) {
+                        for (const att of m.attachments) {
+                            if (att.mimeType?.startsWith('image/')) {
+                                allImageUrls.push(att.url);
+                            }
+                        }
+                    }
+                }
+                const currentIndex = allImageUrls.indexOf(lightboxUrl);
+                const hasGallery = allImageUrls.length > 1 && currentIndex >= 0;
+                const goToImage = (dir: number) => {
+                    if (!hasGallery) return;
+                    const nextIdx = (currentIndex + dir + allImageUrls.length) % allImageUrls.length;
+                    setLightboxUrl(allImageUrls[nextIdx]);
+                    setLightboxZoom(1);
+                };
+
+                return (
+                    <div
+                        onClick={() => { setLightboxUrl(null); setLightboxZoom(1); }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Escape') { setLightboxUrl(null); setLightboxZoom(1); }
+                            if (e.key === 'ArrowLeft') goToImage(-1);
+                            if (e.key === 'ArrowRight') goToImage(1);
                         }}
-                    />
-                </div>
-            )}
+                        tabIndex={0}
+                        ref={(el) => el?.focus()}
+                        style={{
+                            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            zIndex: 9000, cursor: 'zoom-out', outline: 'none',
+                        }}
+                    >
+                        {/* Close button */}
+                        <button onClick={(e) => { e.stopPropagation(); setLightboxUrl(null); setLightboxZoom(1); }} style={{
+                            position: 'absolute', top: '24px', right: '24px',
+                            background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%',
+                            width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', color: 'white', backdropFilter: 'blur(8px)',
+                            transition: 'background 0.2s', zIndex: 2,
+                        }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')} onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}>
+                            <X size={20} />
+                        </button>
+
+                        {/* Download button */}
+                        <a
+                            href={lightboxUrl}
+                            download
+                            onClick={e => e.stopPropagation()}
+                            style={{
+                                position: 'absolute', top: '24px', right: '80px',
+                                background: 'rgba(255,255,255,0.1)', borderRadius: '50%',
+                                width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', color: 'white', backdropFilter: 'blur(8px)',
+                                transition: 'background 0.2s', textDecoration: 'none', zIndex: 2,
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
+                        >
+                            <Download size={18} />
+                        </a>
+
+                        {/* Gallery counter */}
+                        {hasGallery && (
+                            <div style={{
+                                position: 'absolute', top: '32px', left: '50%', transform: 'translateX(-50%)',
+                                color: 'rgba(255,255,255,0.7)', fontSize: '14px', fontWeight: 600,
+                                background: 'rgba(0,0,0,0.5)', padding: '4px 12px', borderRadius: '12px',
+                                backdropFilter: 'blur(8px)', zIndex: 2,
+                            }}>
+                                {currentIndex + 1} / {allImageUrls.length}
+                            </div>
+                        )}
+
+                        {/* Left arrow */}
+                        {hasGallery && (
+                            <button onClick={(e) => { e.stopPropagation(); goToImage(-1); }} style={{
+                                position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)',
+                                background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%',
+                                width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', color: 'white', backdropFilter: 'blur(8px)',
+                                transition: 'background 0.2s', zIndex: 2,
+                            }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')} onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}>
+                                <ChevronLeft size={24} />
+                            </button>
+                        )}
+
+                        {/* Right arrow */}
+                        {hasGallery && (
+                            <button onClick={(e) => { e.stopPropagation(); goToImage(1); }} style={{
+                                position: 'absolute', right: '24px', top: '50%', transform: 'translateY(-50%)',
+                                background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%',
+                                width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', color: 'white', backdropFilter: 'blur(8px)',
+                                transition: 'background 0.2s', zIndex: 2,
+                            }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')} onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}>
+                                <ChevronRight size={24} />
+                            </button>
+                        )}
+
+                        <img
+                            src={lightboxUrl}
+                            alt="Enlarged"
+                            onClick={e => e.stopPropagation()}
+                            onWheel={(e) => {
+                                e.stopPropagation();
+                                setLightboxZoom(prev => Math.max(0.5, Math.min(5, prev + (e.deltaY < 0 ? 0.25 : -0.25))));
+                            }}
+                            style={{
+                                maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain',
+                                borderRadius: '8px', cursor: 'default',
+                                boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
+                                transform: `scale(${lightboxZoom})`,
+                                transition: 'transform 0.15s ease-out',
+                            }}
+                        />
+                    </div>
+                );
+            })()}
 
             {/* Member List Panel */}
             {memberListOpen && guildId && (

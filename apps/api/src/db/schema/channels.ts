@@ -194,6 +194,9 @@ export const channels = pgTable('channels', {
 
   /** Whether this channel is an announcement channel. */
   isAnnouncement: boolean('is_announcement').notNull().default(false),
+
+  /** Max users allowed in a voice channel. 0 = unlimited. */
+  userLimit: integer('user_limit').default(0),
 });
 
 /**

@@ -22,7 +22,7 @@ export const userSettings = pgTable('user_settings', {
   highContrast: boolean('high_contrast').notNull().default(false),
   compactMode: boolean('compact_mode').notNull().default(false),
   accentColor: varchar('accent_color', { length: 20 }),
-  emailNotifications: jsonb('email_notifications').notNull().default({ mentions: true, dms: true }),
+  emailNotifications: jsonb('email_notifications').notNull().default({ mentions: false, dms: false, frequency: 'never' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

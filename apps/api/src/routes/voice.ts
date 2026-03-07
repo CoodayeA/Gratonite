@@ -194,6 +194,15 @@ voiceRouter.post(
       }
     }
 
+    // Check voice user limit
+    if (channel.userLimit && channel.userLimit > 0) {
+      const currentStates = await getVoiceStates(channelId);
+      if (currentStates.length >= channel.userLimit) {
+        res.status(403).json({ code: 'CHANNEL_FULL', message: 'Voice channel is full' });
+        return;
+      }
+    }
+
     // Get user info for participant name
     const [user] = await db
       .select({ username: users.username, displayName: users.displayName })

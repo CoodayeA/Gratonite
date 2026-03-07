@@ -9,6 +9,8 @@ interface InviteGuild {
     name: string;
     iconHash: string | null;
     memberCount: number;
+    onlineCount?: number;
+    bannerHash?: string | null;
     description: string | null;
 }
 
@@ -293,15 +295,22 @@ function InvitePreview({
 
     const { guild, inviter } = invite;
     const gradient = getDeterministicGradient(guild.id);
+    const [hoverJoin, setHoverJoin] = useState(false);
+
+    const bannerBg = guild.bannerHash
+        ? `url(/api/files/${guild.bannerHash}) center/cover`
+        : gradient;
 
     return (
         <>
-            {/* Banner / gradient */}
+            {/* Banner */}
             <div style={{
-                height: '120px',
-                background: gradient,
+                height: '140px',
+                background: bannerBg,
                 position: 'relative',
+                overflow: 'hidden',
             }}>
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 40%, rgba(0,0,0,0.6))' }} />
                 {inviter && (
                     <div style={{
                         position: 'absolute',
@@ -323,28 +332,32 @@ function InvitePreview({
             <div style={{
                 display: 'flex',
                 justifyContent: 'center',
-                marginTop: '-36px',
+                marginTop: '-40px',
                 position: 'relative',
                 zIndex: 1,
             }}>
                 <div style={{
-                    width: '72px',
-                    height: '72px',
-                    borderRadius: '20px',
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '22px',
                     background: guild.iconHash
                         ? `url(/api/guilds/${guild.id}/icon) center/cover`
                         : gradient,
-                    border: '4px solid var(--bg-elevated)',
+                    border: '5px solid var(--bg-elevated)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '28px',
+                    fontSize: '32px',
                     fontWeight: 700,
                     fontFamily: 'var(--font-display)',
                     color: 'white',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                    boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
+                    overflow: 'hidden',
                 }}>
-                    {!guild.iconHash && guild.name.charAt(0).toUpperCase()}
+                    {guild.iconHash
+                        ? <img src={`/api/guilds/${guild.id}/icon`} alt={guild.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : guild.name.charAt(0).toUpperCase()
+                    }
                 </div>
             </div>
 
@@ -365,7 +378,7 @@ function InvitePreview({
                 </p>
 
                 <h1 style={{
-                    fontSize: '24px',
+                    fontSize: '26px',
                     fontWeight: 700,
                     fontFamily: 'var(--font-display)',
                     color: 'var(--text-primary)',
@@ -385,12 +398,12 @@ function InvitePreview({
                     </p>
                 )}
 
-                {/* Member count */}
+                {/* Member count + online count */}
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px',
+                    gap: '16px',
                     marginBottom: '24px',
                 }}>
                     <div style={{
@@ -400,7 +413,7 @@ function InvitePreview({
                         color: 'var(--text-muted)',
                         fontSize: '14px',
                     }}>
-                        <Users size={16} />
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6b7280' }} />
                         <span>
                             <strong style={{ color: 'var(--text-secondary)' }}>
                                 {guild.memberCount.toLocaleString()}
@@ -408,16 +421,35 @@ function InvitePreview({
                             {guild.memberCount === 1 ? 'member' : 'members'}
                         </span>
                     </div>
+                    {(guild.onlineCount ?? 0) > 0 && (
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            color: 'var(--text-muted)',
+                            fontSize: '14px',
+                        }}>
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />
+                            <span>
+                                <strong style={{ color: '#10b981' }}>
+                                    {(guild.onlineCount ?? 0).toLocaleString()}
+                                </strong>{' '}
+                                online
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Action button */}
                 <button
                     onClick={onJoin}
                     disabled={joining}
+                    onMouseEnter={() => setHoverJoin(true)}
+                    onMouseLeave={() => setHoverJoin(false)}
                     style={{
                         width: '100%',
-                        padding: '12px 24px',
-                        borderRadius: 'var(--radius-sm)',
+                        padding: '14px 24px',
+                        borderRadius: '12px',
                         border: 'none',
                         background: 'var(--accent-primary)',
                         color: 'white',
@@ -429,7 +461,9 @@ function InvitePreview({
                         justifyContent: 'center',
                         gap: '8px',
                         opacity: joining ? 0.7 : 1,
-                        transition: 'opacity 0.15s',
+                        transform: hoverJoin && !joining ? 'scale(1.02)' : 'scale(1)',
+                        transition: 'opacity 0.15s, transform 0.2s, box-shadow 0.2s',
+                        boxShadow: hoverJoin && !joining ? '0 4px 16px rgba(88, 101, 242, 0.4)' : 'none',
                     }}
                 >
                     {joining ? (
@@ -482,7 +516,28 @@ function JoinedState() {
             alignItems: 'center',
             gap: '16px',
             textAlign: 'center',
+            position: 'relative',
+            overflow: 'hidden',
         }}>
+            {/* Confetti particles */}
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+                {Array.from({ length: 30 }).map((_, i) => (
+                    <div
+                        key={i}
+                        style={{
+                            position: 'absolute',
+                            left: `${Math.random() * 100}%`,
+                            top: '-10px',
+                            width: `${4 + Math.random() * 6}px`,
+                            height: `${4 + Math.random() * 6}px`,
+                            borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+                            background: ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#ff71ce', '#ff9671', '#845ec2'][i % 7],
+                            animation: `confettiFall ${1.5 + Math.random() * 2}s ease-out ${Math.random() * 0.5}s forwards`,
+                            opacity: 0.9,
+                        }}
+                    />
+                ))}
+            </div>
             <div style={{
                 width: '56px',
                 height: '56px',
@@ -492,6 +547,7 @@ function JoinedState() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '28px',
+                animation: 'scaleIn 0.4s ease-out',
             }}>
                 &#10003;
             </div>
@@ -513,6 +569,17 @@ function JoinedState() {
                     You've joined the server. Redirecting...
                 </p>
             </div>
+            <style>{`
+                @keyframes confettiFall {
+                    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+                    100% { transform: translateY(250px) rotate(720deg); opacity: 0; }
+                }
+                @keyframes scaleIn {
+                    0% { transform: scale(0); }
+                    60% { transform: scale(1.2); }
+                    100% { transform: scale(1); }
+                }
+            `}</style>
         </div>
     );
 }

@@ -342,7 +342,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const { addToast } = useToast();
     const navigate = useNavigate();
     const voiceState = useVoice();
-    const [channelSettingsOpen, setChannelSettingsOpen] = useState<{ id: string; name: string; topic?: string; rateLimitPerUser?: number; isNsfw?: boolean } | null>(null);
+    const [channelSettingsOpen, setChannelSettingsOpen] = useState<{ id: string; name: string; topic?: string; rateLimitPerUser?: number; isNsfw?: boolean; channelType?: string; userLimit?: number } | null>(null);
     const unreadMap = useUnreadStore();
     const [privateToggle, setPrivateToggle] = useState(false);
     const [showCreateChannel, setShowCreateChannel] = useState<{ type: 'text' | 'voice'; parentId?: string } | null>(null);
@@ -626,13 +626,13 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
             { divider: true, id: 'div1', label: '', onClick: () => {} },
             { id: 'edit', label: 'Edit Channel', icon: Settings, onClick: () => {
                 api.channels.get(channel.id).then((ch: any) => {
-                    setChannelSettingsOpen({ id: channel.id, name: ch.name, topic: ch.topic || '', rateLimitPerUser: ch.rateLimitPerUser || 0, isNsfw: ch.isNsfw || false });
+                    setChannelSettingsOpen({ id: channel.id, name: ch.name, topic: ch.topic || '', rateLimitPerUser: ch.rateLimitPerUser || 0, isNsfw: ch.isNsfw || false, channelType: ch.type, userLimit: ch.userLimit || 0 });
                 }).catch(() => setChannelSettingsOpen({ id: channel.id, name: channel.name }));
             }},
             { id: 'duplicate', label: 'Duplicate Channel', icon: Copy, onClick: () => handleDuplicateChannel(channel.name) },
             { id: 'permissions', label: 'Channel Permissions', icon: ShieldIcon, onClick: () => {
                 api.channels.get(channel.id).then((ch: any) => {
-                    setChannelSettingsOpen({ id: channel.id, name: ch.name, topic: ch.topic || '', rateLimitPerUser: ch.rateLimitPerUser || 0, isNsfw: ch.isNsfw || false });
+                    setChannelSettingsOpen({ id: channel.id, name: ch.name, topic: ch.topic || '', rateLimitPerUser: ch.rateLimitPerUser || 0, isNsfw: ch.isNsfw || false, channelType: ch.type, userLimit: ch.userLimit || 0 });
                 }).catch(() => setChannelSettingsOpen({ id: channel.id, name: channel.name }));
             }},
             { divider: true, id: 'div2', label: '', onClick: () => {} },
@@ -650,7 +650,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
             { divider: true, id: 'div3', label: '', onClick: () => {} },
             { id: 'delete', label: 'Delete Channel', icon: Trash2, color: 'var(--error)', onClick: () => {
                 api.channels.delete(channel.id).then(() => {
-                    setGuildChannels(prev => prev.filter(c => c.id !== channel.id));
+                    setGuildChannels((prev: any[]) => prev.filter((c: any) => c.id !== channel.id));
                     addToast({ title: `#${channel.name} deleted`, variant: 'error' });
                     if (location.pathname.includes(`/channel/${channel.id}`) || location.pathname.includes(`/voice/${channel.id}`)) {
                         navigate(activeGuildId ? `/guild/${activeGuildId}` : '/');
@@ -1024,16 +1024,16 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                             <Volume2 size={18} style={{ flexShrink: 0, opacity: 0.7 }} />
                                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.name}</span>
                                         </div>
-                                        {voiceCount > 0 && (
+                                        {(voiceCount > 0 || ((ch as any).userLimit ?? 0) > 0) && (
                                             <span style={{
                                                 fontSize: '11px',
                                                 fontWeight: 600,
-                                                color: isConnectedChannel ? '#43b581' : 'var(--text-muted)',
+                                                color: ((ch as any).userLimit ?? 0) > 0 && voiceCount >= ((ch as any).userLimit ?? 0) ? 'var(--error, #ed4245)' : isConnectedChannel ? '#43b581' : 'var(--text-muted)',
                                                 background: isConnectedChannel ? 'rgba(67, 181, 129, 0.15)' : 'var(--bg-tertiary)',
                                                 padding: '1px 6px',
                                                 borderRadius: '8px', flexShrink: 0, lineHeight: '16px',
                                             }}>
-                                                {voiceCount}
+                                                {((ch as any).userLimit ?? 0) > 0 ? `${voiceCount}/${(ch as any).userLimit}` : voiceCount}
                                             </span>
                                         )}
                                     </div>
@@ -1240,13 +1240,15 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     channelId={channelSettingsOpen.id}
                     channelName={channelSettingsOpen.name}
                     channelTopic={channelSettingsOpen.topic}
+                    channelType={channelSettingsOpen.channelType}
                     guildId={activeGuildId}
                     rateLimitPerUser={channelSettingsOpen.rateLimitPerUser}
                     isNsfw={channelSettingsOpen.isNsfw}
+                    userLimit={channelSettingsOpen.userLimit}
                     onClose={() => setChannelSettingsOpen(null)}
                     onUpdate={(changes) => {
                         if (changes.name) {
-                            setGuildChannels(prev => prev.map(c => c.id === channelSettingsOpen.id ? { ...c, name: changes.name! } : c));
+                            setGuildChannels((prev: any[]) => prev.map((c: any) => c.id === channelSettingsOpen.id ? { ...c, name: changes.name! } : c));
                         }
                     }}
                 />
@@ -1736,6 +1738,7 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile }: { onOpenProfile: () =
 
 export const AppLayout = () => {
     const location = useLocation();
+    const navigate = useNavigate();
     const { addToast } = useToast();
     const [bgMedia, setBgMediaRaw] = useState<{ url: string, type: MediaType } | null>(null);
 
@@ -2160,10 +2163,49 @@ export const AppLayout = () => {
                 e.preventDefault();
                 setActiveModal(null);
             }
+
+            // Alt+ArrowUp / Alt+ArrowDown: Navigate channels
+            if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+                e.preventDefault();
+                const guildId = location.pathname.match(/\/guild\/([^/]+)/)?.[1];
+                if (!guildId) return;
+                const channelMatch = location.pathname.match(/\/(?:channel|voice)\/([^/]+)/);
+                const currentChannelId = channelMatch?.[1];
+                const sessionChannels = guildSession.enabled ? guildSession.channels : [];
+                const navigableChannels = sessionChannels.filter(
+                    (c: any) => c.type !== 'GUILD_CATEGORY' && c.type !== 'category'
+                );
+                if (navigableChannels.length === 0) return;
+                const currentIndex = currentChannelId
+                    ? navigableChannels.findIndex((c: any) => c.id === currentChannelId)
+                    : -1;
+                let nextIndex: number;
+                if (e.key === 'ArrowDown') {
+                    nextIndex = currentIndex < navigableChannels.length - 1 ? currentIndex + 1 : 0;
+                } else {
+                    nextIndex = currentIndex > 0 ? currentIndex - 1 : navigableChannels.length - 1;
+                }
+                const nextChannel = navigableChannels[nextIndex];
+                const isVoice = nextChannel.type === 'GUILD_VOICE' || nextChannel.type === 'voice' || nextChannel.type === 'GUILD_STAGE_VOICE';
+                const prefix = isVoice ? 'voice' : 'channel';
+                navigate(`/guild/${guildId}/${prefix}/${nextChannel.id}`);
+            }
+
+            // Ctrl+Shift+M: Toggle mute
+            if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'M') {
+                e.preventDefault();
+                window.dispatchEvent(new CustomEvent('gratonite:toggle-mute'));
+            }
+
+            // Ctrl+Shift+D: Toggle deafen
+            if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'D') {
+                e.preventDefault();
+                window.dispatchEvent(new CustomEvent('gratonite:toggle-deafen'));
+            }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activeModal]);
+    }, [activeModal, location.pathname, guildSession, navigate]);
 
     // Close drawers on route change
     useEffect(() => {

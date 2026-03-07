@@ -175,6 +175,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             if (Array.isArray(g.tags)) setGuildTags(g.tags);
             if (g.rulesText) setRulesText(g.rulesText);
             if (g.requireRulesAgreement) setRequireRulesAgreement(true);
+            if (g.afkChannelId) setAfkChannelId(g.afkChannelId);
+            if (g.afkTimeout != null) setAfkTimeout(g.afkTimeout);
         }).catch(() => {});
     }, [guildId]);
 
@@ -802,6 +804,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [deleteConfirm, setDeleteConfirm] = useState(false);
     const [deleteInput, setDeleteInput] = useState('');
     const [guildOwnerId, setGuildOwnerId] = useState('');
+    const [afkChannelId, setAfkChannelId] = useState<string>('');
+    const [afkTimeout, setAfkTimeout] = useState<number>(300);
     const [adminWarning, setAdminWarning] = useState<string | null>(null);
     const [draggedRole, setDraggedRole] = useState<string | null>(null);
     const [dragOverRole, setDragOverRole] = useState<string | null>(null);
@@ -1413,6 +1417,55 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                     </label>
                                 </div>
                             </div>
+
+                            {/* AFK Channel */}
+                            <div style={{ height: '1px', background: 'var(--stroke)', margin: '24px 0' }} />
+                            <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>AFK Channel</h3>
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>AFK VOICE CHANNEL</label>
+                                <select
+                                    value={afkChannelId}
+                                    onChange={e => setAfkChannelId(e.target.value)}
+                                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}
+                                >
+                                    <option value="">None</option>
+                                    {channelsList
+                                        .filter(ch => ch.type === 'GUILD_VOICE' || ch.type === 'voice')
+                                        .map(ch => (
+                                            <option key={ch.id} value={ch.id}>{ch.name}</option>
+                                        ))
+                                    }
+                                </select>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Members idle longer than the timeout will be moved to this channel.</div>
+                            </div>
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>AFK TIMEOUT</label>
+                                <select
+                                    value={afkTimeout}
+                                    onChange={e => setAfkTimeout(Number(e.target.value))}
+                                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}
+                                >
+                                    <option value={60}>1 minute</option>
+                                    <option value={300}>5 minutes</option>
+                                    <option value={900}>15 minutes</option>
+                                    <option value={1800}>30 minutes</option>
+                                    <option value={3600}>1 hour</option>
+                                </select>
+                            </div>
+                            <button
+                                onClick={async () => {
+                                    if (!guildId) return;
+                                    try {
+                                        await api.guilds.update(guildId, { afkChannelId: afkChannelId || null, afkTimeout } as any);
+                                        addToast({ title: 'AFK settings saved', variant: 'success' });
+                                    } catch {
+                                        addToast({ title: 'Failed to save AFK settings', variant: 'error' });
+                                    }
+                                }}
+                                style={{ padding: '8px 20px', borderRadius: '6px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 600, fontSize: '13px', cursor: 'pointer', marginBottom: '8px' }}
+                            >
+                                Save AFK Settings
+                            </button>
 
                             {/* Danger Zone */}
                             <div style={{ height: '1px', background: 'var(--stroke)', margin: '24px 0' }} />

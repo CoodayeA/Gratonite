@@ -11,23 +11,27 @@ import { getIO } from '../lib/socket-io';
 
 export const threadsRouter = Router({ mergeParams: true });
 
+const VALID_ARCHIVE_AFTER = [3600, 86400, 259200, 604800]; // 1h, 24h, 3d, 1w
+
 const createThreadSchema = z.object({
   name: z.string().min(1).max(100),
   messageId: z.string().uuid().optional(),
   body: z.string().optional(),
   tags: z.array(z.string()).optional(),
+  archiveAfter: z.number().int().refine(v => VALID_ARCHIVE_AFTER.includes(v)).optional(),
 });
 
 /** POST /channels/:channelId/threads */
 threadsRouter.post('/', requireAuth, validate(createThreadSchema), async (req: Request, res: Response): Promise<void> => {
   const { channelId } = req.params as Record<string, string>;
-  const { name, messageId, body } = req.body;
+  const { name, messageId, body, archiveAfter } = req.body;
 
   const [thread] = await db.insert(threads).values({
     channelId,
     name,
     creatorId: req.userId!,
     originMessageId: messageId || null,
+    archiveAfter: archiveAfter || null,
   }).returning();
 
   // Auto-join creator
@@ -55,10 +59,22 @@ threadsRouter.post('/', requireAuth, validate(createThreadSchema), async (req: R
   res.status(201).json(thread);
 });
 
-/** GET /channels/:channelId/threads?sort=latest|top */
+/** GET /channels/:channelId/threads?sort=latest|top&filter=active|archived|mine */
 threadsRouter.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { channelId } = req.params as Record<string, string>;
   const sortParam = (req.query.sort as string) || 'latest';
+  const filter = (req.query.filter as string) || 'active';
+
+  // Build filter conditions
+  const conditions = [eq(threads.channelId, channelId)];
+  if (filter === 'archived') {
+    conditions.push(eq(threads.archived, true));
+  } else if (filter === 'mine') {
+    conditions.push(eq(threads.creatorId, req.userId!));
+  } else {
+    // 'active' (default)
+    conditions.push(eq(threads.archived, false));
+  }
 
   // Fetch threads with creator info
   const threadList = await db.select({
@@ -69,13 +85,14 @@ threadsRouter.get('/', requireAuth, async (req: Request, res: Response): Promise
     originMessageId: threads.originMessageId,
     archived: threads.archived,
     locked: threads.locked,
+    archiveAfter: threads.archiveAfter,
     createdAt: threads.createdAt,
     creatorName: users.displayName,
     creatorUsername: users.username,
     creatorAvatarHash: users.avatarHash,
   }).from(threads)
     .leftJoin(users, eq(users.id, threads.creatorId))
-    .where(and(eq(threads.channelId, channelId), eq(threads.archived, false)))
+    .where(and(...conditions))
     .orderBy(desc(threads.createdAt));
 
   // Fetch message counts for each thread
@@ -110,6 +127,7 @@ threadsRouter.get('/', requireAuth, async (req: Request, res: Response): Promise
     originMessageId: t.originMessageId,
     archived: t.archived,
     locked: t.locked,
+    archiveAfter: t.archiveAfter,
     createdAt: t.createdAt,
     messageCount: messageCounts[t.id]?.messageCount ?? 0,
     lastActivity: messageCounts[t.id]?.lastActivity ?? (t.createdAt ? new Date(t.createdAt).toISOString() : null),

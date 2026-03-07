@@ -142,6 +142,20 @@ const EventScheduler = () => {
     const [newDescription, setNewDescription] = useState('');
     const [newLocation, setNewLocation] = useState('');
     const [isCreating, setIsCreating] = useState(false);
+    const [locationType, setLocationType] = useState<'voice' | 'custom'>('custom');
+    const [selectedChannelId, setSelectedChannelId] = useState('');
+    const [voiceChannels, setVoiceChannels] = useState<Array<{ id: string; name: string }>>([]);
+
+    // Fetch voice channels for location dropdown
+    useEffect(() => {
+        if (!guildId) return;
+        api.channels.getGuildChannels(guildId).then((channels: any[]) => {
+            const voice = channels.filter(
+                (ch: any) => ch.type === 'voice' || ch.type === 'GUILD_VOICE'
+            ).map((ch: any) => ({ id: ch.id, name: ch.name }));
+            setVoiceChannels(voice);
+        }).catch(() => {});
+    }, [guildId]);
 
     // Fetch events from API
     useEffect(() => {
@@ -215,12 +229,17 @@ const EventScheduler = () => {
         setIsCreating(true);
         try {
             const startTime = new Date(`${newDate}T${newTime}`).toISOString();
+            const selectedVoice = voiceChannels.find(ch => ch.id === selectedChannelId);
+            const eventLocation = locationType === 'voice' && selectedVoice
+                ? selectedVoice.name
+                : newLocation.trim() || undefined;
             const created = await api.events.create(guildId, {
                 name: newTitle.trim(),
                 description: newDescription.trim() || undefined,
                 startTime,
-                location: newLocation.trim() || undefined,
-                entityType: 'EXTERNAL',
+                location: eventLocation,
+                entityType: locationType === 'voice' && selectedVoice ? 'VOICE' : 'EXTERNAL',
+                ...(locationType === 'voice' && selectedVoice ? { channelId: selectedVoice.id } : {}),
             });
             // Refresh list
             const data = await api.events.list(guildId);
@@ -259,6 +278,8 @@ const EventScheduler = () => {
         setNewTime('');
         setNewDescription('');
         setNewLocation('');
+        setLocationType('custom');
+        setSelectedChannelId('');
     };
 
     const inputStyle: React.CSSProperties = {
@@ -335,7 +356,46 @@ const EventScheduler = () => {
 
                                 <div>
                                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>Location</label>
-                                    <input type="text" placeholder="e.g. Voice: Lounge" value={newLocation} onChange={e => setNewLocation(e.target.value)} style={inputStyle} />
+                                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setLocationType('voice')}
+                                            style={{
+                                                flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--stroke)',
+                                                background: locationType === 'voice' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                                color: locationType === 'voice' ? '#fff' : 'var(--text-secondary)',
+                                                cursor: 'pointer', fontSize: '13px', fontWeight: 600,
+                                            }}
+                                        >
+                                            Voice Channel
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setLocationType('custom')}
+                                            style={{
+                                                flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--stroke)',
+                                                background: locationType === 'custom' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                                color: locationType === 'custom' ? '#fff' : 'var(--text-secondary)',
+                                                cursor: 'pointer', fontSize: '13px', fontWeight: 600,
+                                            }}
+                                        >
+                                            Custom Location
+                                        </button>
+                                    </div>
+                                    {locationType === 'voice' ? (
+                                        <select
+                                            value={selectedChannelId}
+                                            onChange={e => setSelectedChannelId(e.target.value)}
+                                            style={{ ...inputStyle, cursor: 'pointer', appearance: 'auto' as any }}
+                                        >
+                                            <option value="">Select a voice channel...</option>
+                                            {voiceChannels.map(ch => (
+                                                <option key={ch.id} value={ch.id}>{ch.name}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <input type="text" placeholder="e.g. Voice: Lounge" value={newLocation} onChange={e => setNewLocation(e.target.value)} style={inputStyle} />
+                                    )}
                                 </div>
 
                                 <div>

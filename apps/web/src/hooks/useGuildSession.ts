@@ -22,6 +22,7 @@ export type GuildSessionChannel = {
   parentId: string | null;
   position: number;
   topic: string | null;
+  userLimit?: number;
 };
 
 type UseGuildSessionArgs = {

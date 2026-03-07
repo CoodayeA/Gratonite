@@ -37,11 +37,13 @@ interface Props {
     channelId: string;
     channelName: string;
     channelTopic?: string;
+    channelType?: string;
     guildId: string;
     rateLimitPerUser?: number;
     isNsfw?: boolean;
+    userLimit?: number;
     onClose: () => void;
-    onUpdate?: (changes: Partial<{ name: string; topic: string; rateLimitPerUser: number }>) => void;
+    onUpdate?: (changes: Partial<{ name: string; topic: string; rateLimitPerUser: number; userLimit: number }>) => void;
 }
 
 const SLOWMODE_OPTIONS = [0, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 21600];
@@ -53,7 +55,7 @@ function formatSlowmode(s: number): string {
     return `${Math.floor(s / 3600)}h`;
 }
 
-export function ChannelSettingsModal({ channelId, channelName, channelTopic, guildId, rateLimitPerUser, isNsfw, onClose, onUpdate }: Props) {
+export function ChannelSettingsModal({ channelId, channelName, channelTopic, channelType, guildId, rateLimitPerUser, isNsfw, userLimit: initialUserLimit, onClose, onUpdate }: Props) {
     const { addToast } = useToast();
     const [activeTab, setActiveTab] = useState<'overview' | 'permissions'>('overview');
 
@@ -63,7 +65,9 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, gui
     const [slowmode, setSlowmode] = useState(rateLimitPerUser || 0);
     const [nsfw, setNsfw] = useState(isNsfw || false);
     const [isAnnouncement, setIsAnnouncement] = useState(false);
+    const [userLimit, setUserLimit] = useState(initialUserLimit || 0);
     const [saving, setSaving] = useState(false);
+    const isVoice = channelType === 'GUILD_VOICE' || channelType === 'voice' || channelType === 'GUILD_STAGE_VOICE';
 
     // Permissions state
     const [roles, setRoles] = useState<Role[]>([]);
@@ -114,8 +118,8 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, gui
     async function saveOverview() {
         setSaving(true);
         try {
-            await api.channels.update(channelId, { name, topic, rateLimitPerUser: slowmode, nsfw, isAnnouncement });
-            onUpdate?.({ name, topic, rateLimitPerUser: slowmode });
+            await api.channels.update(channelId, { name, topic, rateLimitPerUser: slowmode, nsfw, isAnnouncement, ...(isVoice ? { userLimit } : {}) });
+            onUpdate?.({ name, topic, rateLimitPerUser: slowmode, ...(isVoice ? { userLimit } : {}) });
             addToast({ title: 'Channel Updated', variant: 'success' });
             onClose();
         } catch {
@@ -274,6 +278,29 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, gui
                                 <input type="checkbox" checked={isAnnouncement} onChange={e => setIsAnnouncement(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
                                 Announcement Channel
                             </label>
+
+                            {isVoice && (
+                                <div style={{ marginBottom: '24px' }}>
+                                    <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
+                                        User Limit
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={userLimit}
+                                        onChange={e => setUserLimit(Math.max(0, Math.min(99, Number(e.target.value) || 0)))}
+                                        min={0}
+                                        max={99}
+                                        style={{
+                                            width: '120px', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                            borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none',
+                                            fontFamily: 'inherit',
+                                        }}
+                                    />
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                        0 = unlimited. Max 99 users.
+                                    </div>
+                                </div>
+                            )}
 
                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                                 <button

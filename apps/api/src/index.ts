@@ -16,6 +16,7 @@ import { startExpireStatusesJob } from './jobs/expireStatuses';
 import { startEmailNotificationJob } from './jobs/emailNotifications';
 import { startScheduledMessagesJob } from './jobs/scheduledMessages';
 import { startAccountDeletionJob } from './jobs/accountDeletion';
+import { startAfkMoverJob } from './jobs/afkMover';
 import { httpRequestDuration, activeWebSocketConnections, registry } from './lib/metrics';
 
 const PLACEHOLDER_PATTERNS = [
@@ -177,6 +178,7 @@ server.listen(PORT, () => {
   startEmailNotificationJob();
   startScheduledMessagesJob();
   startAccountDeletionJob();
+  startAfkMoverJob();
 });
 
 export { io };

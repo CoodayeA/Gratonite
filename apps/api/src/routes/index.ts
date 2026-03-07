@@ -59,6 +59,7 @@ import { oauthRouter } from './oauth';
 import { wordFilterRouter } from './word-filter';
 import { channelNotifPrefsRouter } from './channel-notification-prefs';
 import { paymentsRouter } from './payments';
+import { clipsRouter } from './clips';
 import { achievementsRouter } from './achievements';
 import { activityRouter } from './activity';
 import { seasonalEventsRouter } from './seasonal-events-route';
@@ -232,6 +233,10 @@ router.use('/guilds/:guildId/word-filter', wordFilterRouter);
 
 // Per-channel notification preferences
 router.use('/channels/:channelId', channelNotifPrefsRouter);
+
+// Clips
+router.use('/guilds/:guildId/clips', clipsRouter);
+router.use('/clips', clipsRouter);
 
 // Payments (Stripe)
 router.use('/payments', paymentsRouter);

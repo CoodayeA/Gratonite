@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, MessageSquare, Send, Smile } from 'lucide-react';
+import { X, MessageSquare, Send, Smile, Filter, Clock, Archive } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { api } from '../../lib/api';
 import Avatar from '../ui/Avatar';
@@ -23,6 +23,26 @@ interface ThreadPanelProps {
     onClose: () => void;
 }
 
+const ARCHIVE_OPTIONS = [
+    { value: 60, label: '1 Hour' },
+    { value: 1440, label: '24 Hours' },
+    { value: 4320, label: '3 Days' },
+    { value: 10080, label: '1 Week' },
+];
+
+type ThreadListItem = {
+    id: string;
+    name: string;
+    messageCount: number;
+    createdAt: string;
+    archived: boolean;
+    creatorId?: string;
+    lastActivityAt?: string;
+};
+
+type ThreadFilterTab = 'active' | 'archived' | 'mine';
+type ThreadSortOption = 'recent' | 'created' | 'replies';
+
 const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) => {
     const [replies, setReplies] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
@@ -31,6 +51,12 @@ const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) 
     const [isLoading, setIsLoading] = useState(true);
     const [isSending, setIsSending] = useState(false);
     const endRef = useRef<HTMLDivElement>(null);
+    const [archiveAfter, setArchiveAfter] = useState(1440);
+    const [showThreadList, setShowThreadList] = useState(false);
+    const [threadList, setThreadList] = useState<ThreadListItem[]>([]);
+    const [threadListLoading, setThreadListLoading] = useState(false);
+    const [threadFilterTab, setThreadFilterTab] = useState<ThreadFilterTab>('active');
+    const [threadSort, setThreadSort] = useState<ThreadSortOption>('recent');
 
     const EMOJI_LIST = ['😄','😂','❤️','🔥','👍','👎','😮','🎉','💀','🚀','✨','💯','👀','😢','🤔','😡'];
 
@@ -86,6 +112,41 @@ const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) 
             .finally(() => setIsLoading(false));
     }, [originalMessage?.apiId, channelId]);
 
+    // Fetch thread list when thread list view is toggled
+    useEffect(() => {
+        if (!showThreadList || !channelId) return;
+        setThreadListLoading(true);
+        api.threads.list(channelId)
+            .then((threads: any[]) => {
+                const items: ThreadListItem[] = threads.map((t: any) => ({
+                    id: t.id,
+                    name: t.name || 'Untitled Thread',
+                    messageCount: t.messageCount ?? 0,
+                    createdAt: t.createdAt,
+                    archived: t.archived ?? false,
+                    creatorId: t.creatorId,
+                    lastActivityAt: t.lastActivityAt || t.updatedAt || t.createdAt,
+                }));
+                setThreadList(items);
+            })
+            .catch(() => setThreadList([]))
+            .finally(() => setThreadListLoading(false));
+    }, [showThreadList, channelId]);
+
+    const filteredThreads = threadList
+        .filter(t => {
+            if (threadFilterTab === 'active') return !t.archived;
+            if (threadFilterTab === 'archived') return t.archived;
+            if (threadFilterTab === 'mine') return t.creatorId === ctxUser.id;
+            return true;
+        })
+        .sort((a, b) => {
+            if (threadSort === 'recent') return new Date(b.lastActivityAt || b.createdAt).getTime() - new Date(a.lastActivityAt || a.createdAt).getTime();
+            if (threadSort === 'created') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            if (threadSort === 'replies') return b.messageCount - a.messageCount;
+            return 0;
+        });
+
     // Escape key to close (but not when emoji picker is open)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -110,6 +171,7 @@ const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) 
                 const thread = await api.threads.create(channelId, {
                     name: `Thread: ${(originalMessage.content || '').slice(0, 50) || 'message'}`,
                     messageId: originalMessage.apiId,
+                    autoArchiveDuration: archiveAfter,
                 });
                 currentThreadId = (thread as any).id;
                 setThreadId(currentThreadId);
@@ -149,10 +211,65 @@ const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) 
                     <MessageSquare size={20} color="var(--text-muted)" />
                     <h3 style={{ fontSize: '16px', fontWeight: 600 }}>Thread</h3>
                 </div>
-                <button onClick={onClose} className="message-action-btn" style={{ width: '28px', height: '28px' }} title="Close (Esc)">
-                    <X size={18} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <button
+                        onClick={() => setShowThreadList(prev => !prev)}
+                        className="message-action-btn"
+                        style={{ width: '28px', height: '28px', color: showThreadList ? 'var(--accent-primary)' : undefined }}
+                        title="All Threads"
+                    >
+                        <Filter size={16} />
+                    </button>
+                    <button onClick={onClose} className="message-action-btn" style={{ width: '28px', height: '28px' }} title="Close (Esc)">
+                        <X size={18} />
+                    </button>
+                </div>
             </div>
+
+            {/* Thread List View */}
+            {showThreadList && (
+                <div style={{ borderBottom: '1px solid var(--stroke)', padding: '8px 12px', background: 'rgba(0,0,0,0.15)' }}>
+                    <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
+                        {([['active', 'Active'], ['archived', 'Archived'], ['mine', 'My Threads']] as const).map(([key, label]) => (
+                            <button
+                                key={key}
+                                onClick={() => setThreadFilterTab(key)}
+                                style={{
+                                    padding: '4px 10px', borderRadius: '6px', border: 'none', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                                    background: threadFilterTab === key ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                    color: threadFilterTab === key ? '#fff' : 'var(--text-secondary)',
+                                }}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                        <select
+                            value={threadSort}
+                            onChange={e => setThreadSort(e.target.value as ThreadSortOption)}
+                            style={{ marginLeft: 'auto', padding: '3px 6px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '11px', cursor: 'pointer' }}
+                        >
+                            <option value="recent">Recent Activity</option>
+                            <option value="created">Creation Date</option>
+                            <option value="replies">Most Replies</option>
+                        </select>
+                    </div>
+                    {threadListLoading ? (
+                        <div style={{ textAlign: 'center', padding: '12px', color: 'var(--text-muted)', fontSize: '12px' }}>Loading threads...</div>
+                    ) : filteredThreads.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '12px', color: 'var(--text-muted)', fontSize: '12px' }}>No threads found</div>
+                    ) : (
+                        <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {filteredThreads.map(t => (
+                                <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-tertiary)', fontSize: '12px' }}>
+                                    {t.archived ? <Archive size={12} color="var(--text-muted)" /> : <MessageSquare size={12} color="var(--accent-primary)" />}
+                                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>{t.name}</span>
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '10px', flexShrink: 0 }}>{t.messageCount} replies</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div className="thread-content">
                 {/* Original Message */}
@@ -212,6 +329,23 @@ const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) 
                     </>
                 )}
             </div>
+
+            {/* Archive timer selector (shown when thread hasn't been created yet) */}
+            {!threadId && (
+                <div style={{ padding: '6px 16px', borderTop: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.1)' }}>
+                    <Clock size={13} color="var(--text-muted)" />
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>Auto-archive after:</span>
+                    <select
+                        value={archiveAfter}
+                        onChange={e => setArchiveAfter(Number(e.target.value))}
+                        style={{ padding: '2px 6px', borderRadius: '4px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '11px', cursor: 'pointer' }}
+                    >
+                        {ARCHIVE_OPTIONS.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                    </select>
+                </div>
+            )}
 
             <div className="thread-input">
                 {/* Emoji Picker */}

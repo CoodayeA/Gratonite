@@ -42,6 +42,7 @@ import { guildMembers } from '../db/schema/guilds';
 import { messageReactions } from '../db/schema/reactions';
 import { channelPins } from '../db/schema/pins';
 import { threads } from '../db/schema/threads';
+import { messageEditHistory } from '../db/schema/messageEditHistory';
 import { inArray } from 'drizzle-orm';
 import { Permissions } from '../db/schema/roles';
 import { requireAuth } from '../middleware/auth';
@@ -888,6 +889,14 @@ messagesRouter.patch(
 
       const { content } = req.body as z.infer<typeof editMessageSchema>;
 
+      // Save current content to edit history before overwriting
+      if (message.content) {
+        await db.insert(messageEditHistory).values({
+          messageId: message.id,
+          content: message.content,
+        });
+      }
+
       const [updated] = await db
         .update(messages)
         .set({ content, edited: true, editedAt: new Date() })
@@ -916,6 +925,31 @@ messagesRouter.patch(
       }
 
       res.status(200).json(payload);
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// GET /:messageId/history — Fetch edit history for a message
+// ---------------------------------------------------------------------------
+
+messagesRouter.get(
+  '/:messageId/history',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { channelId, messageId } = req.params as Record<string, string>;
+      await resolveChannel(channelId, req.userId!);
+
+      const history = await db
+        .select()
+        .from(messageEditHistory)
+        .where(eq(messageEditHistory.messageId, messageId))
+        .orderBy(desc(messageEditHistory.editedAt));
+
+      res.status(200).json(history);
     } catch (err) {
       handleAppError(res, err);
     }

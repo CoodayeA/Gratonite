@@ -22,6 +22,7 @@ const CropModal = ({
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [imgEl, setImgEl] = useState<HTMLImageElement | null>(null);
     const [zoom, setZoom] = useState(1);
+    const [minZoom, setMinZoom] = useState(0.3);
     const [offset, setOffset] = useState({ x: 0, y: 0 });
     const [dragging, setDragging] = useState(false);
     const dragStart = useRef({ mx: 0, my: 0, ox: 0, oy: 0 });
@@ -40,6 +41,7 @@ const CropModal = ({
             setImgEl(img);
             // Center image initially
             const scale = Math.max(CROP_W / img.naturalWidth, CROP_H / img.naturalHeight);
+            setMinZoom(scale);
             setZoom(scale);
             setOffset({ x: CANVAS_W / 2, y: CANVAS_H / 2 });
         };
@@ -53,23 +55,26 @@ const CropModal = ({
         const ctx = canvas.getContext('2d')!;
         ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
-        // Draw image
         const iw = imgEl.naturalWidth * zoom;
         const ih = imgEl.naturalHeight * zoom;
-        ctx.drawImage(imgEl, offset.x - iw / 2, offset.y - ih / 2, iw, ih);
+        const ix = offset.x - iw / 2;
+        const iy = offset.y - ih / 2;
 
-        // Dim outside crop
+        // Draw full image dimmed
+        ctx.globalAlpha = 0.3;
+        ctx.drawImage(imgEl, ix, iy, iw, ih);
+        ctx.globalAlpha = 1.0;
+
+        // Clip to crop area and draw bright
         ctx.save();
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
         if (aspect === 'circle') {
-            ctx.beginPath();
             ctx.arc(CANVAS_W / 2, CANVAS_H / 2, CROP_W / 2, 0, Math.PI * 2);
-            ctx.fill();
         } else {
-            ctx.fillRect(CROP_X, CROP_Y, CROP_W, CROP_H);
+            ctx.rect(CROP_X, CROP_Y, CROP_W, CROP_H);
         }
+        ctx.clip();
+        ctx.drawImage(imgEl, ix, iy, iw, ih);
         ctx.restore();
 
         // Crop border
@@ -93,10 +98,20 @@ const CropModal = ({
         dragStart.current = { mx: e.clientX, my: e.clientY, ox: offset.x, oy: offset.y };
     };
     const onMouseMove = (e: React.MouseEvent) => {
-        if (!dragging) return;
+        if (!dragging || !imgEl) return;
         const dx = e.clientX - dragStart.current.mx;
         const dy = e.clientY - dragStart.current.my;
-        setOffset({ x: dragStart.current.ox + dx, y: dragStart.current.oy + dy });
+        const iw = imgEl.naturalWidth * zoom;
+        const ih = imgEl.naturalHeight * zoom;
+        // Clamp so image always covers the crop area
+        const minX = CROP_X + CROP_W - iw / 2;
+        const maxX = CROP_X + iw / 2;
+        const minY = CROP_Y + CROP_H - ih / 2;
+        const maxY = CROP_Y + ih / 2;
+        setOffset({
+            x: Math.min(maxX, Math.max(minX, dragStart.current.ox + dx)),
+            y: Math.min(maxY, Math.max(minY, dragStart.current.oy + dy)),
+        });
     };
     const onMouseUp = () => setDragging(false);
 
@@ -145,6 +160,10 @@ const CropModal = ({
                     onMouseMove={onMouseMove}
                     onMouseUp={onMouseUp}
                     onMouseLeave={onMouseUp}
+                    onWheel={(e) => {
+                        e.preventDefault();
+                        setZoom(z => Math.min(3, Math.max(minZoom, z + e.deltaY * -0.001)));
+                    }}
                 />
 
                 {/* Zoom slider */}
@@ -152,11 +171,11 @@ const CropModal = ({
                     <ZoomOut size={16} color="var(--text-muted)" />
                     <input
                         type="range"
-                        min={0.3}
+                        min={minZoom}
                         max={3}
                         step={0.01}
                         value={zoom}
-                        onChange={e => setZoom(parseFloat(e.target.value))}
+                        onChange={e => setZoom(Math.max(minZoom, parseFloat(e.target.value)))}
                         style={{ flex: 1, accentColor: 'var(--accent-primary)' }}
                     />
                     <ZoomIn size={16} color="var(--text-muted)" />
@@ -276,12 +295,28 @@ const SettingsModal = ({
     const [wardrobeSaving, setWardrobeSaving] = useState(false);
     const [wardrobeSelectedIds, setWardrobeSelectedIds] = useState<Record<string, string>>({}); // type -> itemId
 
+    // Email notification states
+    const [emailMentions, setEmailMentions] = useState(false);
+    const [emailDms, setEmailDms] = useState(false);
+    const [emailFrequency, setEmailFrequency] = useState<'instant' | 'daily' | 'never'>('never');
+
     // Escape to close
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
         window.addEventListener('keydown', handleKey);
         return () => window.removeEventListener('keydown', handleKey);
     }, [onClose]);
+
+    // Fetch email notification settings on mount
+    useEffect(() => {
+        api.users.getSettings().then((settings: any) => {
+            if (settings?.emailNotifications) {
+                setEmailMentions(settings.emailNotifications.mentions ?? false);
+                setEmailDms(settings.emailNotifications.dms ?? false);
+                setEmailFrequency(settings.emailNotifications.frequency ?? 'never');
+            }
+        }).catch(() => {});
+    }, []);
 
     // Inline editing states for account fields
     const [editingField, setEditingField] = useState<'displayName' | 'username' | 'email' | null>(null);
@@ -1633,6 +1668,46 @@ const SettingsModal = ({
                                     ))}
                                 </div>
 
+                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Message Display</h3>
+                                <div style={{ display: 'flex', gap: '12px', marginBottom: '40px' }}>
+                                    {([
+                                        { value: false, label: 'Cozy', desc: 'Spacious layout with avatars' },
+                                        { value: true, label: 'Compact', desc: 'Condensed, more messages visible' },
+                                    ] as const).map(opt => {
+                                        const isSelected = compactMode === opt.value;
+                                        return (
+                                            <label
+                                                key={opt.label}
+                                                onClick={() => setCompactMode(opt.value)}
+                                                style={{
+                                                    flex: 1,
+                                                    background: isSelected ? 'var(--bg-tertiary)' : 'var(--bg-elevated)',
+                                                    padding: '16px',
+                                                    borderRadius: '12px',
+                                                    border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--stroke)'}`,
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '10px',
+                                                    transition: 'border-color 0.2s, background 0.2s',
+                                                }}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="messageDisplay"
+                                                    checked={isSelected}
+                                                    onChange={() => setCompactMode(opt.value)}
+                                                    style={{ accentColor: 'var(--accent-primary)' }}
+                                                />
+                                                <div>
+                                                    <div style={{ fontWeight: 600, fontSize: '14px' }}>{opt.label}</div>
+                                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{opt.desc}</div>
+                                                </div>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+
                                 <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Accent Color</h3>
                                 <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '32px' }}>
                                     {[
@@ -1981,17 +2056,35 @@ const SettingsModal = ({
                                 <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Email Notifications</h3>
                                 <div style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '12px', border: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                                        <input type="checkbox" defaultChecked={false} onChange={e => {
-                                            api.users.updateSettings({ emailNotifications: { mentions: e.target.checked } }).catch(() => {});
+                                        <input type="checkbox" checked={emailMentions} onChange={e => {
+                                            setEmailMentions(e.target.checked);
+                                            api.users.updateSettings({ emailNotifications: { mentions: e.target.checked, dms: emailDms, frequency: emailFrequency } }).catch(() => {});
                                         }} style={{ accentColor: 'var(--accent-primary)' }} />
                                         Email when mentioned while offline
                                     </label>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                                        <input type="checkbox" defaultChecked={false} onChange={e => {
-                                            api.users.updateSettings({ emailNotifications: { dms: e.target.checked } }).catch(() => {});
+                                        <input type="checkbox" checked={emailDms} onChange={e => {
+                                            setEmailDms(e.target.checked);
+                                            api.users.updateSettings({ emailNotifications: { mentions: emailMentions, dms: e.target.checked, frequency: emailFrequency } }).catch(() => {});
                                         }} style={{ accentColor: 'var(--accent-primary)' }} />
                                         Email for DMs while offline
                                     </label>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>
+                                        <span>Frequency:</span>
+                                        <select
+                                            value={emailFrequency}
+                                            onChange={e => {
+                                                const val = e.target.value as 'instant' | 'daily' | 'never';
+                                                setEmailFrequency(val);
+                                                api.users.updateSettings({ emailNotifications: { mentions: emailMentions, dms: emailDms, frequency: val } }).catch(() => {});
+                                            }}
+                                            style={{ padding: '6px 10px', borderRadius: '6px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer' }}
+                                        >
+                                            <option value="instant">Instant</option>
+                                            <option value="daily">Daily Digest</option>
+                                            <option value="never">Never</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </>
                         )}
