@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Hash as HashIcon, Mic, Users, Zap } from 'lucide-react';
+import { Hash as HashIcon, Mic, Users, Zap, Calendar } from 'lucide-react';
 import { useOutletContext, Link, useParams, useNavigate } from 'react-router-dom';
 import { api, API_BASE } from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
@@ -323,6 +323,11 @@ const GuildOverview = () => {
                                 <Link to={`/guild/${guildId}/workflows`} style={{ textDecoration: 'none' }}>
                                     <button className="auth-button" style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                                         <Zap size={16} /> Automations
+                                    </button>
+                                </Link>
+                                <Link to={`/guild/${guildId}/events`} style={{ textDecoration: 'none' }}>
+                                    <button className="auth-button" style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                        <Calendar size={16} /> Events
                                     </button>
                                 </Link>
                             </>

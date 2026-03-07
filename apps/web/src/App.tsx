@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, Navigate, Outlet, Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap } from 'lucide-react';
+import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar } from 'lucide-react';
 import './components/chat.css';
 import CommandPalette from './components/ui/CommandPalette';
 import { playSound, setSoundVolume } from './utils/SoundManager';
@@ -31,6 +31,7 @@ import VoiceChannel from './pages/guilds/VoiceChannel';
 import GuildOverview from './pages/guilds/GuildOverview';
 import AuditLog from './pages/guilds/AuditLog';
 import GuildWorkflows from './pages/guilds/GuildWorkflows';
+import EventScheduler from './pages/guilds/EventScheduler';
 import MessageRequests from './pages/app/MessageRequests';
 import AdminTeam from './pages/admin/AdminTeam';
 import AdminAuditLog from './pages/admin/AdminAuditLog';
@@ -953,6 +954,14 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
             </div>
 
             <div className="channel-list">
+                <div
+                    className={`channel-item ${location.pathname.includes('/events') ? 'active' : ''}`}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '6px 8px' }}
+                    onClick={() => navigate(`/guild/${activeGuildId}/events`)}
+                >
+                    <Calendar size={18} style={{ opacity: 0.7 }} />
+                    <span>Events</span>
+                </div>
                 {guildLoadErrorCode === 'FORBIDDEN' && (
                     <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '13px' }}>
                         You no longer have access to this server.
@@ -2361,6 +2370,7 @@ const appRouter = createBrowserRouter(
                 <Route path="guild/:guildId/overview" element={<ErrorBoundary><GuildOverview /></ErrorBoundary>} />
                 <Route path="guild/:guildId/audit-log" element={<AuditLog />} />
                 <Route path="guild/:guildId/workflows" element={<GuildWorkflows />} />
+                <Route path="guild/:guildId/events" element={<EventScheduler />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
