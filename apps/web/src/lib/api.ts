@@ -2199,6 +2199,9 @@ export const api = {
 
     dismiss: (notificationId: string) =>
       apiFetch<void>(`/notifications/${notificationId}`, { method: 'DELETE' }),
+
+    clearAll: () =>
+      apiFetch<void>('/notifications', { method: 'DELETE' }),
   },
 
   workflows: {

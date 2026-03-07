@@ -73,6 +73,12 @@ notificationsRouter.post('/:id/read', requireAuth, async (req: Request, res: Res
   res.json({ code: 'OK' });
 });
 
+/** DELETE /api/v1/notifications — clear all for current user */
+notificationsRouter.delete('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  await db.delete(notifications).where(eq(notifications.userId, req.userId!));
+  res.json({ code: 'OK' });
+});
+
 /** DELETE /api/v1/notifications/:id */
 notificationsRouter.delete('/:id', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params as Record<string, string>;
