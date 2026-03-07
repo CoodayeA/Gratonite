@@ -2299,7 +2299,7 @@ const ChannelChat = () => {
 
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, position: 'relative', zIndex: 1, background: 'transparent', overflow: 'hidden' }}>
 
-            <header className="top-bar" style={{ zIndex: 2 }}>
+            <header className="top-bar">
                 {/* Mobile Toggles */}
                 <div className="mobile-header-toggles">
                     <Menu size={20} className="mobile-toggle-btn" onClick={toggleGuildRail} />
