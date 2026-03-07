@@ -39,6 +39,47 @@ const CATEGORIES = [
 const initialPortals: PortalInfo[] = [];
 const SUPPORTED_THEMES: AppTheme[] = ['default', 'glass', 'neobrutalism', 'synthwave', 'y2k', 'memphis', 'artdeco', 'terminal', 'aurora', 'vaporwave', 'nord', 'solarized', 'bubblegum', 'obsidian', 'sakura', 'midnight', 'forest', 'cyberpunk', 'pastel', 'monochrome', 'ocean', 'fire', 'desert', 'lavender', 'coffee', 'matrix', 'rose_gold', 'emerald', 'dracula', 'monokai', 'catppuccin', 'gruvbox', 'tokyo_night', 'everforest', 'arctic', 'neon', 'midnight_blue'];
 
+// Preview colors for built-in themes (bg, accent). Used when no DB entry exists.
+const BUILTIN_THEME_PREVIEWS: Record<string, { bg: string; accent: string; label: string; tags: string[] }> = {
+    default:       { bg: '#313338', accent: '#5865f2', label: 'Default',       tags: ['Built-in', 'Dark'] },
+    glass:         { bg: '#1a1a2e', accent: '#5865f2', label: 'Glass',         tags: ['Built-in', 'Dark'] },
+    neobrutalism:  { bg: '#f0f0f0', accent: '#ff4444', label: 'Neobrutalism',  tags: ['Built-in', 'Light'] },
+    synthwave:     { bg: '#0d0221', accent: '#ff2d78', label: 'Synthwave',     tags: ['Built-in', 'Dark'] },
+    y2k:           { bg: '#ffebf5', accent: '#ff69b4', label: 'Y2K',           tags: ['Built-in', 'Light'] },
+    memphis:       { bg: '#fff9f0', accent: '#ff6b35', label: 'Memphis',       tags: ['Built-in', 'Light'] },
+    artdeco:       { bg: '#0a0a0a', accent: '#c8a951', label: 'Art Deco',      tags: ['Built-in', 'Dark'] },
+    terminal:      { bg: '#001100', accent: '#00ff00', label: 'Terminal',      tags: ['Built-in', 'Dark'] },
+    aurora:        { bg: '#0d1117', accent: '#00ffcc', label: 'Aurora',        tags: ['Built-in', 'Dark'] },
+    vaporwave:     { bg: '#1a0033', accent: '#ff71ce', label: 'Vaporwave',     tags: ['Built-in', 'Dark'] },
+    nord:          { bg: '#2e3440', accent: '#88c0d0', label: 'Nord',          tags: ['Built-in', 'Dark'] },
+    solarized:     { bg: '#002b36', accent: '#268bd2', label: 'Solarized',     tags: ['Built-in', 'Dark'] },
+    bubblegum:     { bg: '#fce4ec', accent: '#e91e8c', label: 'Bubblegum',     tags: ['Built-in', 'Light'] },
+    obsidian:      { bg: '#0a0a0a', accent: '#8b5cf6', label: 'Obsidian',      tags: ['Built-in', 'Dark'] },
+    sakura:        { bg: '#fff5f7', accent: '#ff6b9d', label: 'Sakura',        tags: ['Built-in', 'Light'] },
+    midnight:      { bg: '#0a0a1a', accent: '#6c63ff', label: 'Midnight',      tags: ['Built-in', 'Dark'] },
+    forest:        { bg: '#0d1a0d', accent: '#4caf50', label: 'Forest',        tags: ['Built-in', 'Dark'] },
+    cyberpunk:     { bg: '#0a0a0f', accent: '#00ff88', label: 'Cyberpunk',     tags: ['Built-in', 'Dark'] },
+    pastel:        { bg: '#fdf6f9', accent: '#e8a4c9', label: 'Pastel',        tags: ['Built-in', 'Light'] },
+    monochrome:    { bg: '#0d0d0d', accent: '#e0e0e0', label: 'Monochrome',    tags: ['Built-in', 'Dark'] },
+    ocean:         { bg: '#0a1628', accent: '#00b4d8', label: 'Ocean',         tags: ['Built-in', 'Dark'] },
+    fire:          { bg: '#0d0600', accent: '#ff4500', label: 'Fire',          tags: ['Built-in', 'Dark'] },
+    desert:        { bg: '#f5ede0', accent: '#c1440e', label: 'Desert',        tags: ['Built-in', 'Light'] },
+    lavender:      { bg: '#1a1228', accent: '#b48ade', label: 'Lavender',      tags: ['Built-in', 'Dark'] },
+    coffee:        { bg: '#1a1008', accent: '#c8913f', label: 'Coffee',        tags: ['Built-in', 'Dark'] },
+    matrix:        { bg: '#000000', accent: '#00ff41', label: 'Matrix',        tags: ['Built-in', 'Dark'] },
+    rose_gold:     { bg: '#2d1b1b', accent: '#e8936b', label: 'Rose Gold',     tags: ['Built-in', 'Dark'] },
+    emerald:       { bg: '#0a1a0e', accent: '#2ecc71', label: 'Emerald',       tags: ['Built-in', 'Dark'] },
+    dracula:       { bg: '#282a36', accent: '#ff79c6', label: 'Dracula',       tags: ['Built-in', 'Dark'] },
+    monokai:       { bg: '#272822', accent: '#a6e22e', label: 'Monokai',       tags: ['Built-in', 'Dark'] },
+    catppuccin:    { bg: '#1e1e2e', accent: '#cba6f7', label: 'Catppuccin',    tags: ['Built-in', 'Dark'] },
+    gruvbox:       { bg: '#282828', accent: '#fabd2f', label: 'Gruvbox',       tags: ['Built-in', 'Dark'] },
+    tokyo_night:   { bg: '#1a1b26', accent: '#7aa2f7', label: 'Tokyo Night',   tags: ['Built-in', 'Dark'] },
+    everforest:    { bg: '#2d353b', accent: '#a7c080', label: 'Everforest',    tags: ['Built-in', 'Dark'] },
+    arctic:        { bg: '#eceff4', accent: '#5e81ac', label: 'Arctic',        tags: ['Built-in', 'Light'] },
+    neon:          { bg: '#0a0010', accent: '#ff00ff', label: 'Neon',          tags: ['Built-in', 'Dark'] },
+    midnight_blue: { bg: '#0a0f1e', accent: '#00b4ff', label: 'Midnight Blue', tags: ['Built-in', 'Dark'] },
+};
+
 // Portal Check-in Modal
 const PortalCheckinModal = ({ portal, onClose }: { portal: PortalInfo; onClose: () => void }) => {
     const { addToast } = useToast();
@@ -549,23 +590,26 @@ const Discover = () => {
         </>
     );
 
-    const allThemes = (_discoverThemes ?? [])
-        .map((theme: any) => {
-            const id = String(theme.id || '').trim();
-            const normalizedId = (SUPPORTED_THEMES.includes(id as AppTheme) ? (id as AppTheme) : 'default');
-            const base = theme.variables || theme.vars || {};
-            const bg = base['--bg-app'] || base['background'] || theme.previewBackground || '#111214';
-            const accent = base['--accent-primary'] || theme.accent || '#5865f2';
-            const tags = Array.isArray(theme.tags) && theme.tags.length > 0 ? theme.tags : ['Community'];
-            return {
-                id: normalizedId,
-                name: theme.name || normalizedId,
-                bg,
-                accent,
-                tags,
-                live: true,
-            };
-        });
+    // Start with all built-in themes in SUPPORTED_THEMES order
+    const builtinThemes = SUPPORTED_THEMES.map(id => {
+        const p = BUILTIN_THEME_PREVIEWS[id] ?? { bg: '#313338', accent: '#5865f2', label: id, tags: ['Built-in'] };
+        return { id, name: p.label, bg: p.bg, accent: p.accent, tags: p.tags, builtin: true };
+    });
+
+    // Merge DB/community themes — override built-in entry if same id, else append
+    const dbThemeMap = new Map<string, { id: string; name: string; bg: string; accent: string; tags: string[]; builtin: boolean }>();
+    (_discoverThemes ?? []).forEach((theme: any) => {
+        const id = String(theme.id || '').trim();
+        const normalizedId = (SUPPORTED_THEMES.includes(id as AppTheme) ? (id as AppTheme) : id) as AppTheme;
+        const base = theme.variables || theme.vars || {};
+        const bg = base['--bg-primary'] || base['--bg-app'] || base['background'] || theme.previewBackground || '#111214';
+        const accent = base['--accent-primary'] || theme.accent || '#5865f2';
+        const tags = Array.isArray(theme.tags) && theme.tags.length > 0 ? theme.tags : ['Community'];
+        dbThemeMap.set(normalizedId, { id: normalizedId, name: theme.name || normalizedId, bg, accent, tags, builtin: false });
+    });
+
+    const allThemes = builtinThemes.map(t => dbThemeMap.has(t.id) ? dbThemeMap.get(t.id)! : t)
+        .concat([...dbThemeMap.values()].filter(t => !SUPPORTED_THEMES.includes(t.id as AppTheme)));
 
     const [hoveredTheme, setHoveredTheme] = useState<string | null>(null);
 
