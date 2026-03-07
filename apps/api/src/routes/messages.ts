@@ -202,6 +202,7 @@ const sendMessageSchema = z
     threadId: z.string().uuid().optional(),
     expiresIn: z.number().int().positive().max(60 * 60 * 24 * 30).optional(), // seconds, max 30 days
     scheduledAt: z.string().datetime().optional(), // ISO 8601 date for scheduled messages
+    forwardedFromMessageId: z.string().uuid().optional(),
   })
   .refine((d) => d.content !== undefined || (d.attachmentIds && d.attachmentIds.length > 0), {
     message: 'Message must have content or at least one attachment',
@@ -449,7 +450,7 @@ messagesRouter.post(
         }
       }
 
-      const { content, attachmentIds, replyToId, threadId, expiresIn, scheduledAt } = req.body as z.infer<typeof sendMessageSchema>;
+      const { content, attachmentIds, replyToId, threadId, expiresIn, scheduledAt, forwardedFromMessageId } = req.body as z.infer<typeof sendMessageSchema>;
 
       // Handle scheduled messages: insert into scheduled_messages instead of messages
       if (scheduledAt) {
@@ -559,6 +560,12 @@ messagesRouter.post(
         expiresAt = new Date(Date.now() + channel.disappearTimer * 1000);
       }
 
+      // Build embeds: include forwarded message reference if provided
+      const embeds: Array<Record<string, unknown>> = [];
+      if (forwardedFromMessageId) {
+        embeds.push({ type: 'forwarded', messageId: forwardedFromMessageId });
+      }
+
       // Insert the message.
       const [newMessage] = await db
         .insert(messages)
@@ -567,6 +574,7 @@ messagesRouter.post(
           authorId: req.userId!,
           content: content ?? null,
           attachments: attachmentSnapshot,
+          ...(embeds.length > 0 ? { embeds } : {}),
           ...(replyToId ? { replyToId } : {}),
           ...(threadId ? { threadId } : {}),
           ...(expiresAt ? { expiresAt } : {}),
@@ -600,6 +608,35 @@ messagesRouter.post(
       } catch {
         // Socket.io not yet initialised (e.g. test environment); non-fatal.
       }
+
+      // Award XP (non-critical, fire and forget)
+      ;(async () => {
+        try {
+          const xpKey = `xp:cooldown:${req.userId!}:${channelId}`;
+          const already = await redis.get(xpKey);
+          if (!already) {
+            await redis.set(xpKey, '1', 'EX', 60);
+            const updatedUser = await db.update(users)
+              .set({ xp: sql`xp + 5` })
+              .where(eq(users.id, req.userId!))
+              .returning({ xp: users.xp, level: users.level });
+            if (updatedUser.length > 0) {
+              const { xp, level } = updatedUser[0];
+              const newLevel = Math.floor(Math.sqrt((xp ?? 0) / 100)) + 1;
+              if (newLevel > (level ?? 1)) {
+                await db.update(users).set({ level: newLevel }).where(eq(users.id, req.userId!));
+                try {
+                  const io = getIO();
+                  io.to(`user:${req.userId!}`).emit('LEVEL_UP', { level: newLevel });
+                } catch { /* non-fatal */ }
+              }
+            }
+          }
+          // Check achievements
+          const { checkAchievements } = await import('./achievements');
+          await checkAchievements(req.userId!, 'message_sent');
+        } catch { /* non-critical */ }
+      })();
 
       // --- Notification generation (fire-and-forget) ---
       const senderName = author?.displayName || author?.username || 'Someone';
