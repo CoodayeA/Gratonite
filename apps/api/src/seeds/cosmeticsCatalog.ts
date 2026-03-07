@@ -8,7 +8,7 @@ type ShopInsert = typeof shopItems.$inferInsert;
 const rarityCycle: Array<ShopInsert['rarity']> = ['uncommon', 'rare', 'epic', 'legendary', 'rare'];
 
 const frameGlowColors = ['#38bdf8', '#f9a8d4', '#7c3aed', '#34d399', '#fbbf24', '#f87171'];
-const frameStyles = ['neon', 'gold', 'glass'] as const;
+const frameStyles = ['neon', 'gold', 'glass', 'rainbow', 'pulse'] as const;
 const nameplateStyles = ['rainbow', 'fire', 'ice', 'gold', 'glitch'] as const;
 const effectTypes = ['gradient-pulse', 'stars', 'particles', 'matrix-rain', 'aurora'] as const;
 
