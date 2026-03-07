@@ -66,6 +66,71 @@ function periodCutoff(period: string | undefined): Date | null {
  * @query   period? {string} — 'week' | 'month' | 'all' (default: 'week')
  * @returns 200 Array of leaderboard entries
  */
+// ---------------------------------------------------------------------------
+// GET /leaderboard/global — Global leaderboard with metric support (Wave 3)
+// ---------------------------------------------------------------------------
+
+leaderboardRouter.get(
+  '/leaderboard/global',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const metric = typeof req.query.metric === 'string' ? req.query.metric : 'level';
+
+      let rows: Array<{ userId: string; username: string; displayName: string; avatarHash: string | null; score: number }>;
+
+      if (metric === 'level' || metric === 'xp') {
+        rows = await db.execute(sql`
+          SELECT id as "userId", username, display_name as "displayName", avatar_hash as "avatarHash",
+                 COALESCE(level, 1) as score
+          FROM users
+          ORDER BY COALESCE(xp, 0) DESC
+          LIMIT 50
+        `) as any;
+      } else if (metric === 'coins') {
+        rows = await db.execute(sql`
+          SELECT id as "userId", username, display_name as "displayName", avatar_hash as "avatarHash",
+                 COALESCE(coins, 0) as score
+          FROM users
+          ORDER BY COALESCE(coins, 0) DESC
+          LIMIT 50
+        `) as any;
+      } else {
+        // messages — use fame transactions as proxy
+        rows = await db.execute(sql`
+          SELECT u.id as "userId", u.username, u.display_name as "displayName", u.avatar_hash as "avatarHash",
+                 COUNT(ft.id)::int as score
+          FROM users u
+          LEFT JOIN fame_transactions ft ON ft.receiver_id = u.id
+          GROUP BY u.id
+          ORDER BY COUNT(ft.id) DESC
+          LIMIT 50
+        `) as any;
+      }
+
+      const result = (Array.isArray(rows) ? rows : (rows as any).rows ?? []).map((row: any, i: number) => ({
+        rank: i + 1,
+        userId: row.userId,
+        username: row.username,
+        displayName: row.displayName,
+        avatarHash: row.avatarHash,
+        score: Number(row.score ?? 0),
+        level: metric === 'level' ? Number(row.score ?? 1) : undefined,
+        coins: metric === 'coins' ? Number(row.score ?? 0) : undefined,
+      }));
+
+      res.status(200).json(result);
+    } catch (err) {
+      console.error('[leaderboard] global/metric error:', err);
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// GET /leaderboard — Global leaderboard (legacy fame-based)
+// ---------------------------------------------------------------------------
+
 leaderboardRouter.get(
   '/leaderboard',
   requireAuth,
@@ -139,6 +204,7 @@ leaderboardRouter.get(
     try {
       const { guildId } = req.params as Record<string, string>;
       const period = typeof req.query.period === 'string' ? req.query.period : 'week';
+      const metric = typeof req.query.metric === 'string' ? req.query.metric : 'messages';
       const cutoff = periodCutoff(period);
 
       // Check membership
@@ -153,7 +219,34 @@ leaderboardRouter.get(
         return;
       }
 
-      // Build conditions: fame transactions in this guild
+      // For level/coins metrics — pull from users directly, filtered to guild members
+      if (metric === 'level' || metric === 'coins') {
+        const orderCol = metric === 'level' ? 'COALESCE(u.xp, 0)' : 'COALESCE(u.coins, 0)';
+        const scoreCol = metric === 'level' ? 'COALESCE(u.level, 1)' : 'COALESCE(u.coins, 0)';
+        const rows = await db.execute(sql`
+          SELECT u.id as "userId", u.username, u.display_name as "displayName", u.avatar_hash as "avatarHash",
+                 ${sql.raw(scoreCol)} as score, gm.joined_at as "joinedAt"
+          FROM users u
+          INNER JOIN guild_members gm ON gm.guild_id = ${guildId}::uuid AND gm.user_id = u.id
+          ORDER BY ${sql.raw(orderCol)} DESC
+          LIMIT 10
+        `) as any;
+        const data = Array.isArray(rows) ? rows : (rows as any).rows ?? [];
+        res.status(200).json(data.map((row: any, i: number) => ({
+          rank: i + 1,
+          userId: row.userId,
+          username: row.username,
+          displayName: row.displayName,
+          avatarHash: row.avatarHash,
+          score: Number(row.score ?? 0),
+          level: metric === 'level' ? Number(row.score ?? 1) : undefined,
+          coins: metric === 'coins' ? Number(row.score ?? 0) : undefined,
+          memberSince: row.joinedAt ? new Date(row.joinedAt).toISOString() : null,
+        })));
+        return;
+      }
+
+      // Default: messages — use fame transactions
       const dateCondition = cutoff
         ? gte(fameTransactions.createdAt, cutoff)
         : undefined;
@@ -187,7 +280,7 @@ leaderboardRouter.get(
           guildMembers.joinedAt,
         )
         .orderBy(desc(sql`count(*)`))
-        .limit(50);
+        .limit(10);
 
       const result = rows.map((row, i) => ({
         rank: i + 1,
@@ -195,7 +288,7 @@ leaderboardRouter.get(
         username: row.username,
         displayName: row.displayName,
         avatarHash: row.avatarHash,
-        fameReceived: row.fameReceived,
+        score: row.fameReceived,
         memberSince: row.joinedAt?.toISOString() ?? null,
       }));
 

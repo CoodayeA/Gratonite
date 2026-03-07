@@ -59,6 +59,9 @@ import { oauthRouter } from './oauth';
 import { wordFilterRouter } from './word-filter';
 import { channelNotifPrefsRouter } from './channel-notification-prefs';
 import { paymentsRouter } from './payments';
+import { achievementsRouter } from './achievements';
+import { activityRouter } from './activity';
+import { seasonalEventsRouter } from './seasonal-events-route';
 import { authRateLimit, apiRateLimit } from '../middleware/rateLimit';
 import { registry } from '../lib/metrics';
 
@@ -232,3 +235,12 @@ router.use('/channels/:channelId', channelNotifPrefsRouter);
 
 // Payments (Stripe)
 router.use('/payments', paymentsRouter);
+
+// Achievements
+router.use('/', achievementsRouter);
+
+// Activity feed
+router.use('/', activityRouter);
+
+// Seasonal events
+router.use('/', seasonalEventsRouter);

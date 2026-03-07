@@ -240,7 +240,7 @@ const SettingsModal = ({
     userTheme?: any;
     setUserTheme?: any;
 }) => {
-    const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections'>('account');
+    const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections' | 'achievements' | 'stats'>('account');
     const [feedbackCategory, setFeedbackCategory] = useState('general');
     const [feedbackBody, setFeedbackBody] = useState('');
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
@@ -263,6 +263,8 @@ const SettingsModal = ({
     const [joinedGuilds, setJoinedGuilds] = useState<Array<{ id: string; name: string; iconHash: string | null; memberCount: number; nickname?: string | null }>>([]);
     const [nicknameDrafts, setNicknameDrafts] = useState<Record<string, string>>({});
     const [savingNicknameForGuildId, setSavingNicknameForGuildId] = useState<string | null>(null);
+    const [achievements, setAchievements] = useState<any[]>([]);
+    const [userStats, setUserStats] = useState<any>(null);
 
     // Escape to close
     useEffect(() => {
@@ -349,6 +351,20 @@ const SettingsModal = ({
                 setConnectionProfileUrls(prev => ({ ...prev, ...profileUrls }) as Record<Provider, string>);
             })
             .catch(() => {});
+    }, [activeTab]);
+
+    // Fetch achievements and stats
+    useEffect(() => {
+        if (activeTab !== 'achievements' && activeTab !== 'stats') return;
+        const token = localStorage.getItem('gratonite_access_token') ?? '';
+        fetch(`${API_BASE}/users/@me/achievements`, {
+            credentials: 'include',
+            headers: { Authorization: `Bearer ${token}` },
+        }).then(r => r.ok ? r.json() : []).then((data: any[]) => { if (Array.isArray(data)) setAchievements(data); }).catch(() => {});
+        fetch(`${API_BASE}/users/@me/stats`, {
+            credentials: 'include',
+            headers: { Authorization: `Bearer ${token}` },
+        }).then(r => r.ok ? r.json() : null).then((data: any) => { if (data) setUserStats(data); }).catch(() => {});
     }, [activeTab]);
 
     const saveConnection = async (provider: Provider) => {
@@ -644,6 +660,8 @@ const SettingsModal = ({
                             <div className={`sidebar-nav-item ${activeTab === 'sessions' ? 'active' : ''}`} onClick={() => setActiveTab('sessions')}>Sessions</div>
                             <div className={`sidebar-nav-item ${activeTab === 'privacy' ? 'active' : ''}`} onClick={() => setActiveTab('privacy')}>Privacy &amp; Safety</div>
                             <div className={`sidebar-nav-item ${activeTab === 'connections' ? 'active' : ''}`} onClick={() => setActiveTab('connections')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Link2 size={14} />Connections</div>
+                            <div className={`sidebar-nav-item ${activeTab === 'achievements' ? 'active' : ''}`} onClick={() => setActiveTab('achievements')}>🏆 Achievements</div>
+                            <div className={`sidebar-nav-item ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>📊 Stats</div>
                         </div>
                         <div>
                             <div className="sidebar-section-label">APPEARANCE</div>
@@ -2136,6 +2154,83 @@ const SettingsModal = ({
                                     </div>
                                 )}
                             </>
+                        )}
+                        {activeTab === 'achievements' && (
+                            <div style={{ padding: '0 40px' }}>
+                                <h2 style={{ color: 'var(--text-primary)', marginBottom: '8px' }}>Achievements</h2>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '24px' }}>
+                                    {achievements.filter(a => a.earned).length} / {achievements.length} earned
+                                </p>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+                                    {achievements.map((a: any) => (
+                                        <div key={a.id} style={{
+                                            padding: '16px',
+                                            background: a.earned ? 'var(--bg-elevated)' : 'var(--bg-tertiary)',
+                                            borderRadius: 'var(--radius-md)',
+                                            border: `1px solid ${a.earned ? 'var(--accent-primary)' : 'var(--stroke)'}`,
+                                            opacity: a.earned ? 1 : 0.5,
+                                            display: 'flex', flexDirection: 'column', gap: '8px',
+                                        }}>
+                                            <div style={{ fontSize: '24px' }}>
+                                                {a.earned ? '🏆' : '🔒'}
+                                            </div>
+                                            <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>{a.name}</div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{a.description}</div>
+                                            {a.earned && <div style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 600 }}>+{a.points} pts</div>}
+                                        </div>
+                                    ))}
+                                    {achievements.length === 0 && (
+                                        <div style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--text-muted)', padding: '40px' }}>
+                                            Loading achievements...
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'stats' && (
+                            <div style={{ padding: '0 40px' }}>
+                                <h2 style={{ color: 'var(--text-primary)', marginBottom: '8px' }}>Your Stats</h2>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '24px' }}>Activity overview</p>
+                                {userStats ? (
+                                    <>
+                                        {/* XP Progress bar */}
+                                        <div style={{ marginBottom: '24px', padding: '16px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                                <span style={{ fontWeight: 700, fontSize: '16px', color: 'var(--accent-primary)' }}>Level {userStats.level}</span>
+                                                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{userStats.xp} / {userStats.xpToNextLevel} XP</span>
+                                            </div>
+                                            <div style={{ background: 'var(--bg-tertiary)', borderRadius: '4px', height: '8px', overflow: 'hidden' }}>
+                                                <div style={{
+                                                    height: '100%', borderRadius: '4px', background: 'var(--accent-primary)',
+                                                    width: `${Math.min(100, ((userStats.xp - userStats.xpForCurrentLevel) / (userStats.xpToNextLevel - userStats.xpForCurrentLevel)) * 100)}%`,
+                                                    transition: 'width 0.5s ease',
+                                                }} />
+                                            </div>
+                                        </div>
+                                        {/* Stats grid */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
+                                            {[
+                                                { label: '🔥 Current Streak', value: `${userStats.currentStreak} days` },
+                                                { label: '🏆 Best Streak', value: `${userStats.longestStreak} days` },
+                                                { label: '🪙 Coins', value: userStats.coins },
+                                                { label: '⭐ Achievements', value: userStats.achievementsEarned },
+                                                { label: '🔖 Bookmarks', value: userStats.bookmarks },
+                                            ].map(stat => (
+                                                <div key={stat.label} style={{
+                                                    padding: '16px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)',
+                                                    border: '1px solid var(--stroke)', textAlign: 'center',
+                                                }}>
+                                                    <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--accent-primary)', marginBottom: '4px' }}>{stat.value}</div>
+                                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{stat.label}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px' }}>Loading stats...</div>
+                                )}
+                            </div>
                         )}
                     </div>
                 </div>

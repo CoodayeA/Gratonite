@@ -21,12 +21,14 @@
 
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { eq, and, asc, count, inArray } from 'drizzle-orm';
+import { eq, and, asc, count, inArray, desc } from 'drizzle-orm';
 
 import { db } from '../db/index';
 import { channels } from '../db/schema/channels';
 import { dmChannelMembers } from '../db/schema/channels';
 import { channelFollowers } from '../db/schema/channel-followers';
+import { channelFeaturedMessages } from '../db/schema/channel-featured-messages';
+import { voiceMessages } from '../db/schema/voice-messages';
 import { messages } from '../db/schema/messages';
 import { users } from '../db/schema/users';
 import { guilds } from '../db/schema/guilds';
@@ -733,3 +735,120 @@ channelsRouter.post(
     }
   },
 );
+
+// ============================================================
+// WAVE 3: Featured Messages
+// ============================================================
+
+// GET /channels/:channelId/featured
+channelsRouter.get('/channels/:channelId/featured', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const userId = req.userId!;
+  const { channelId } = req.params as Record<string, string>;
+  try {
+    const [channel] = await db.select().from(channels).where(eq(channels.id, channelId)).limit(1);
+    if (!channel) { res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found' }); return; }
+    await canAccessChannel(channel, userId);
+    const featured = await db.select().from(channelFeaturedMessages).where(eq(channelFeaturedMessages.channelId, channelId));
+    res.json(featured);
+  } catch {
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+// POST /channels/:channelId/featured
+channelsRouter.post('/channels/:channelId/featured', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const userId = req.userId!;
+  const { channelId } = req.params as Record<string, string>;
+  const { messageId, note } = req.body;
+  if (!messageId) { res.status(400).json({ code: 'VALIDATION_ERROR', message: 'messageId is required' }); return; }
+  try {
+    const [channel] = await db.select().from(channels).where(eq(channels.id, channelId)).limit(1);
+    if (!channel) { res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found' }); return; }
+    await canAccessChannel(channel, userId);
+    const [row] = await db.insert(channelFeaturedMessages)
+      .values({ channelId, messageId, featuredBy: userId, note })
+      .onConflictDoNothing()
+      .returning();
+    res.status(201).json(row);
+  } catch {
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+// DELETE /channels/:channelId/featured/:messageId
+channelsRouter.delete('/channels/:channelId/featured/:messageId', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const userId = req.userId!;
+  const { channelId, messageId } = req.params as Record<string, string>;
+  try {
+    const [channel] = await db.select().from(channels).where(eq(channels.id, channelId)).limit(1);
+    if (!channel) { res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found' }); return; }
+    await canAccessChannel(channel, userId);
+    await db.delete(channelFeaturedMessages).where(
+      and(eq(channelFeaturedMessages.channelId, channelId), eq(channelFeaturedMessages.messageId, messageId))
+    );
+    res.status(204).send();
+  } catch {
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+// ============================================================
+// WAVE 3: Voice Channel Text Chat
+// ============================================================
+
+// GET /channels/:channelId/voice-messages
+channelsRouter.get('/channels/:channelId/voice-messages', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const userId = req.userId!;
+  const { channelId } = req.params as Record<string, string>;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+  try {
+    const [channel] = await db.select().from(channels).where(eq(channels.id, channelId)).limit(1);
+    if (!channel) { res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found' }); return; }
+    await canAccessChannel(channel, userId);
+    const msgs = await db.select({
+      id: voiceMessages.id,
+      channelId: voiceMessages.channelId,
+      content: voiceMessages.content,
+      createdAt: voiceMessages.createdAt,
+      authorId: voiceMessages.authorId,
+      authorUsername: users.username,
+      authorDisplayName: users.displayName,
+      authorAvatarHash: users.avatarHash,
+    }).from(voiceMessages)
+      .leftJoin(users, eq(voiceMessages.authorId, users.id))
+      .where(eq(voiceMessages.channelId, channelId))
+      .orderBy(desc(voiceMessages.createdAt))
+      .limit(limit);
+    res.json(msgs.reverse());
+  } catch {
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+// POST /channels/:channelId/voice-messages
+channelsRouter.post('/channels/:channelId/voice-messages', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const userId = req.userId!;
+  const { channelId } = req.params as Record<string, string>;
+  const { content } = req.body;
+  if (!content || typeof content !== 'string' || content.length > 4000) {
+    res.status(400).json({ code: 'VALIDATION_ERROR', message: 'content is required (max 4000 chars)' });
+    return;
+  }
+  try {
+    const [channel] = await db.select().from(channels).where(eq(channels.id, channelId)).limit(1);
+    if (!channel) { res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found' }); return; }
+    await canAccessChannel(channel, userId);
+    const [msg] = await db.insert(voiceMessages)
+      .values({ channelId, authorId: userId, content })
+      .returning();
+
+    try {
+      const io = getIO();
+      io.to(channelId).emit('VOICE_MESSAGE_CREATE', msg);
+    } catch { /* non-fatal */ }
+
+    res.status(201).json(msg);
+  } catch {
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
