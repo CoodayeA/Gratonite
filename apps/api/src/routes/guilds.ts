@@ -38,6 +38,7 @@ import { channels } from '../db/schema/channels';
 import { users } from '../db/schema/users';
 import { roles, memberRoles, DEFAULT_PERMISSIONS, Permissions } from '../db/schema/roles';
 import { guildMemberGroups, guildMemberGroupMembers } from '../db/schema/member-groups';
+import { guildBans } from '../db/schema/bans';
 import { auditLog } from '../db/schema/audit';
 import { files } from '../db/schema/files';
 import { guildMemberOnboarding } from '../db/schema/guild-onboarding';
@@ -197,6 +198,7 @@ const updateGuildSchema = z.object({
   tags: z.array(z.string().max(32)).max(10).optional(),
   rulesText: z.string().max(5000).nullable().optional(),
   requireRulesAgreement: z.boolean().optional(),
+  raidProtectionEnabled: z.boolean().optional(),
 });
 
 /**
@@ -886,7 +888,7 @@ guildsRouter.patch(
         throw new AppError(403, 'Missing MANAGE_GUILD permission', 'FORBIDDEN');
       }
 
-      const { name, description, isDiscoverable, accentColor, welcomeMessage, rulesChannelId, category, tags, rulesText, requireRulesAgreement } = req.body as z.infer<typeof updateGuildSchema>;
+      const { name, description, isDiscoverable, accentColor, welcomeMessage, rulesChannelId, category, tags, rulesText, requireRulesAgreement, raidProtectionEnabled } = req.body as z.infer<typeof updateGuildSchema>;
 
       const updateData: Partial<typeof guilds.$inferInsert> = { updatedAt: new Date() };
       if (name !== undefined) updateData.name = name;
@@ -904,6 +906,11 @@ guildsRouter.patch(
         .set(updateData)
         .where(eq(guilds.id, guildId))
         .returning();
+
+      // Handle raid protection (column not in schema yet, use raw SQL)
+      if (raidProtectionEnabled !== undefined) {
+        await db.execute(sql`UPDATE guilds SET raid_protection_enabled = ${raidProtectionEnabled} WHERE id = ${guildId}`);
+      }
 
       // Update tags if provided
       if (tags !== undefined) {
@@ -2071,6 +2078,170 @@ guildsRouter.get('/:guildId/insights', requireAuth, async (req: Request, res: Re
     }
 
     res.json({ memberCount: memberCount?.count ?? 0, memberGrowth7d: newMembers?.count ?? 0, messages7d, topChannels });
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /:guildId/members/bulk-kick — Batch kick members
+// ---------------------------------------------------------------------------
+
+guildsRouter.post('/:guildId/members/bulk-kick', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { guildId } = req.params as Record<string, string>;
+    const { userIds, reason } = req.body as { userIds: string[]; reason?: string };
+
+    if (!Array.isArray(userIds) || userIds.length === 0 || userIds.length > 100) {
+      res.status(400).json({ code: 'INVALID_INPUT', message: 'userIds must be 1-100 user IDs' });
+      return;
+    }
+
+    if (!(await hasPermission(req.userId!, guildId, Permissions.KICK_MEMBERS))) {
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing KICK_MEMBERS permission' });
+      return;
+    }
+
+    const results = { processed: 0, failed: [] as string[] };
+    for (const userId of userIds) {
+      if (userId === req.userId) { results.failed.push(userId); continue; }
+      try {
+        await db.delete(guildMembers).where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, userId)));
+        await db.update(guilds).set({ memberCount: sql`GREATEST(${guilds.memberCount} - 1, 0)`, updatedAt: new Date() }).where(eq(guilds.id, guildId));
+        getIO().to(`guild:${guildId}`).emit('MEMBER_REMOVE', { guildId, userId });
+        results.processed++;
+      } catch {
+        results.failed.push(userId);
+      }
+    }
+    logAuditEvent(guildId, req.userId!, AuditActionTypes.MEMBER_KICK, guildId, 'GUILD', { bulk: true, count: results.processed, reason });
+    res.json(results);
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /:guildId/members/bulk-ban — Batch ban members
+// ---------------------------------------------------------------------------
+
+guildsRouter.post('/:guildId/members/bulk-ban', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { guildId } = req.params as Record<string, string>;
+    const { userIds, reason } = req.body as { userIds: string[]; reason?: string };
+
+    if (!Array.isArray(userIds) || userIds.length === 0 || userIds.length > 100) {
+      res.status(400).json({ code: 'INVALID_INPUT', message: 'userIds must be 1-100 user IDs' });
+      return;
+    }
+
+    if (!(await hasPermission(req.userId!, guildId, Permissions.BAN_MEMBERS))) {
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing BAN_MEMBERS permission' });
+      return;
+    }
+
+    const results = { processed: 0, failed: [] as string[] };
+    for (const userId of userIds) {
+      if (userId === req.userId) { results.failed.push(userId); continue; }
+      try {
+        await db.insert(guildBans).values({ guildId, userId, reason: reason ?? null, bannedBy: req.userId! }).onConflictDoNothing();
+        await db.delete(guildMembers).where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, userId)));
+        await db.update(guilds).set({ memberCount: sql`GREATEST(${guilds.memberCount} - 1, 0)`, updatedAt: new Date() }).where(eq(guilds.id, guildId));
+        getIO().to(`guild:${guildId}`).emit('MEMBER_REMOVE', { guildId, userId });
+        results.processed++;
+      } catch {
+        results.failed.push(userId);
+      }
+    }
+    logAuditEvent(guildId, req.userId!, AuditActionTypes.MEMBER_BAN, guildId, 'GUILD', { bulk: true, count: results.processed, reason });
+    res.json(results);
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /:guildId/members/bulk-role — Batch role assignment
+// ---------------------------------------------------------------------------
+
+guildsRouter.post('/:guildId/members/bulk-role', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { guildId } = req.params as Record<string, string>;
+    const { userIds, addRoles, removeRoles } = req.body as { userIds: string[]; addRoles?: string[]; removeRoles?: string[] };
+
+    if (!Array.isArray(userIds) || userIds.length === 0 || userIds.length > 100) {
+      res.status(400).json({ code: 'INVALID_INPUT', message: 'userIds must be 1-100 user IDs' });
+      return;
+    }
+
+    if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_ROLES))) {
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_ROLES permission' });
+      return;
+    }
+
+    const results = { processed: 0, failed: [] as string[] };
+    for (const userId of userIds) {
+      try {
+        if (Array.isArray(addRoles)) {
+          for (const roleId of addRoles) {
+            await db.insert(memberRoles).values({ userId, roleId, guildId }).onConflictDoNothing();
+          }
+        }
+        if (Array.isArray(removeRoles)) {
+          for (const roleId of removeRoles) {
+            await db.delete(memberRoles).where(and(eq(memberRoles.userId, userId), eq(memberRoles.roleId, roleId), eq(memberRoles.guildId, guildId)));
+          }
+        }
+        results.processed++;
+      } catch {
+        results.failed.push(userId);
+      }
+    }
+    res.json(results);
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /:guildId/lock — Guild lockdown (raid protection)
+// ---------------------------------------------------------------------------
+
+guildsRouter.post('/:guildId/lock', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { guildId } = req.params as Record<string, string>;
+    await requireMember(guildId, req.userId!);
+
+    if (!(await hasPermission(req.userId!, guildId, Permissions.ADMINISTRATOR))) {
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing ADMINISTRATOR permission' });
+      return;
+    }
+
+    await db.execute(sql`UPDATE guilds SET locked_at = now() WHERE id = ${guildId}`);
+    getIO().to(`guild:${guildId}`).emit('GUILD_LOCKDOWN_START', { guildId });
+    res.status(200).json({ code: 'OK', message: 'Guild locked' });
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /:guildId/lock — Remove guild lockdown
+// ---------------------------------------------------------------------------
+
+guildsRouter.delete('/:guildId/lock', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { guildId } = req.params as Record<string, string>;
+    await requireMember(guildId, req.userId!);
+
+    if (!(await hasPermission(req.userId!, guildId, Permissions.ADMINISTRATOR))) {
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing ADMINISTRATOR permission' });
+      return;
+    }
+
+    await db.execute(sql`UPDATE guilds SET locked_at = NULL WHERE id = ${guildId}`);
+    getIO().to(`guild:${guildId}`).emit('GUILD_LOCKDOWN_END', { guildId });
+    res.status(200).json({ code: 'OK', message: 'Guild unlocked' });
   } catch (err) {
     handleAppError(res, err);
   }

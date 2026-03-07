@@ -52,13 +52,32 @@ import { commandsRouter } from './commands';
 import { stickersRouter } from './stickers';
 import { pushRouter } from './push';
 import { referralsRouter } from './referrals';
+import { draftsRouter } from './drafts';
+import { bookmarksRouter } from './bookmarks';
+import { mutesRouter } from './mutes';
+import { oauthRouter } from './oauth';
+import { wordFilterRouter } from './word-filter';
+import { channelNotifPrefsRouter } from './channel-notification-prefs';
+import { paymentsRouter } from './payments';
 import { authRateLimit, apiRateLimit } from '../middleware/rateLimit';
+import { registry } from '../lib/metrics';
 
 export const router = Router();
 
 // Health check
 router.get('/', (_req, res) => {
   res.status(200).json({ message: 'gratonite-api v1' });
+});
+
+// Prometheus metrics (internal only)
+router.get('/metrics', async (req, res) => {
+  const allowedIPs = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
+  const clientIP = req.ip || req.socket.remoteAddress || '';
+  if (!allowedIPs.includes(clientIP)) {
+    res.status(403).json({ error: 'Forbidden' }); return;
+  }
+  res.set('Content-Type', registry.contentType);
+  res.send(await registry.metrics());
 });
 
 router.get('/capabilities', (_req, res) => {
@@ -192,3 +211,24 @@ router.use('/guilds/:guildId/auto-moderation', automodRouter);
 // Slash commands
 router.use('/guilds/:guildId/commands', commandsRouter);
 router.use('/', commandsRouter); // for /applications/:appId/... and /channels/:channelId/interactions
+
+// Message drafts (per-channel)
+router.use('/', draftsRouter);
+
+// Message bookmarks (user-scoped)
+router.use('/', bookmarksRouter);
+
+// User mutes
+router.use('/users', mutesRouter);
+
+// OAuth2
+router.use('/oauth', oauthRouter);
+
+// Guild word filter
+router.use('/guilds/:guildId/word-filter', wordFilterRouter);
+
+// Per-channel notification preferences
+router.use('/channels/:channelId', channelNotifPrefsRouter);
+
+// Payments (Stripe)
+router.use('/payments', paymentsRouter);

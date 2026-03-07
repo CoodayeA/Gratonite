@@ -171,6 +171,7 @@ async function _sendToBot(
     const timer = setTimeout(() => controller.abort(), 3000);
 
     let responseBody: BotActionResponse = {};
+    const startTime = Date.now();
 
     try {
       const resp = await fetch(bot.webhookUrl, {
@@ -185,21 +186,30 @@ async function _sendToBot(
       });
 
       clearTimeout(timer);
+      const durationMs = Date.now() - startTime;
+      let responseText = '';
 
       if (resp.ok) {
         const contentType = resp.headers.get('content-type') ?? '';
         if (contentType.includes('application/json')) {
-          responseBody = await resp.json() as BotActionResponse;
+          responseText = await resp.text();
+          try { responseBody = JSON.parse(responseText) as BotActionResponse; } catch { /* ignore */ }
         }
+      } else {
+        responseText = await resp.text();
       }
+
+      // Delivery logged at the webhooks route level for traditional webhooks
     } catch (fetchErr: unknown) {
       clearTimeout(timer);
+      const durationMs = Date.now() - startTime;
       const isAbort = fetchErr instanceof Error && fetchErr.name === 'AbortError';
       if (isAbort) {
         console.warn('[webhook-dispatch] timeout for bot', bot.id, 'at', bot.webhookUrl);
       } else {
         console.warn('[webhook-dispatch] fetch error for bot', bot.id, fetchErr);
       }
+
       return;
     }
 
