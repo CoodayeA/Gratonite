@@ -73,7 +73,7 @@ const StoreModal = ({ open, onClose }: StoreModalProps) => {
 
       if (!res.ok) {
         if (data.code === 'STRIPE_NOT_CONFIGURED') {
-          addToast({ title: 'Payments coming soon', description: 'Payment processing is not yet configured on this server.', variant: 'info' });
+          addToast({ title: 'Payments unavailable', description: 'Payment processing is not yet configured on this server.', variant: 'info' });
         } else {
           addToast({ title: 'Purchase failed', description: data.message || 'Something went wrong.', variant: 'error' });
         }
