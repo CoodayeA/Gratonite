@@ -1547,7 +1547,7 @@ export const api = {
   },
 
   threads: {
-    create: (channelId: string, data: { name: string; body?: string; type?: string; autoArchiveDuration?: number; message?: string }) =>
+    create: (channelId: string, data: { name: string; body?: string; type?: string; autoArchiveDuration?: number; message?: string; messageId?: string }) =>
       apiFetch<Thread>(`/channels/${channelId}/threads`, {
         method: 'POST',
         body: JSON.stringify(data),
