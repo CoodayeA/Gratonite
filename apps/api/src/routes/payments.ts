@@ -13,15 +13,18 @@ const PRODUCT_PRICES: Record<string, number> = {
   premium_month: 499,
 };
 
-let Stripe: any = null;
+// Stripe is loaded lazily so the app starts without it installed
 let stripe: any = null;
-try {
-  Stripe = require('stripe');
-  if (process.env.STRIPE_SECRET_KEY) {
-    stripe = new Stripe.default(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
+async function getStripe(): Promise<any> {
+  if (stripe) return stripe;
+  if (!process.env.STRIPE_SECRET_KEY) return null;
+  try {
+    const mod = await import('stripe' as any);
+    stripe = new ((mod as any).default ?? mod)(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
+    return stripe;
+  } catch {
+    return null;
   }
-} catch {
-  // stripe package not installed
 }
 
 /**
@@ -37,7 +40,8 @@ router.post('/create-intent', requireAuth, async (req: Request, res: Response): 
     return;
   }
 
-  if (!stripe) {
+  const stripeClient = await getStripe();
+  if (!stripeClient) {
     res.status(503).json({ code: 'STRIPE_NOT_CONFIGURED', message: 'Payments not configured' });
     return;
   }
@@ -55,32 +59,32 @@ router.post('/create-intent', requireAuth, async (req: Request, res: Response): 
     if (existing) {
       stripeCustomerId = existing.stripeCustomerId;
     } else {
-      const customer = await stripe.customers.create({ metadata: { userId } });
-      stripeCustomerId = customer.id;
+      const customer = await stripeClient.customers.create({ metadata: { userId } });
+      stripeCustomerId = (customer as any).id;
       await db.insert(stripeCustomers).values({ userId, stripeCustomerId });
     }
 
     const amount = PRODUCT_PRICES[product];
 
     // Create PaymentIntent
-    const paymentIntent = await stripe.paymentIntents.create({
+    const paymentIntent = await stripeClient.paymentIntents.create({
       amount,
       currency: 'usd',
       customer: stripeCustomerId,
       metadata: { userId, product },
-    });
+    }) as any;
 
     // Record purchase
     const [purchase] = await db.insert(purchases).values({
       userId,
-      stripePaymentIntentId: paymentIntent.id,
+      stripePaymentIntentId: (paymentIntent as any).id,
       product,
       amountCents: amount,
       currency: 'usd',
       status: 'pending',
     }).returning();
 
-    res.json({ clientSecret: paymentIntent.client_secret, purchaseId: purchase.id });
+    res.json({ clientSecret: (paymentIntent as any).client_secret, purchaseId: purchase.id });
   } catch (err) {
     console.error('[payments] create-intent error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to create payment intent' });
@@ -92,7 +96,8 @@ router.post('/create-intent', requireAuth, async (req: Request, res: Response): 
  * Stripe webhook endpoint. No auth middleware.
  */
 router.post('/webhook', async (req: Request, res: Response): Promise<void> => {
-  if (!stripe) {
+  const stripeClient = await getStripe();
+  if (!stripeClient) {
     res.status(503).json({ code: 'STRIPE_NOT_CONFIGURED', message: 'Payments not configured' });
     return;
   }
@@ -107,7 +112,7 @@ router.post('/webhook', async (req: Request, res: Response): Promise<void> => {
 
   let event: any;
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    event = stripeClient.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err) {
     console.error('[payments] webhook signature verification failed:', err);
     res.status(400).json({ code: 'INVALID_SIGNATURE', message: 'Invalid signature' });
