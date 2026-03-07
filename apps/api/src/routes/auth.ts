@@ -635,7 +635,54 @@ authRouter.post('/login', asyncHandler(async (req: Request, res: Response): Prom
     path: '/',
   });
 
-  // 9. Return access token and safe user object.
+  // 9. Streak logic (non-critical)
+  try {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const lastStreak = user.lastStreakAt;
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+    let streakUpdate: Record<string, unknown> = {};
+    let coinsGrant = 0;
+
+    if (!lastStreak) {
+      // First login
+      streakUpdate = { currentStreak: 1, longestStreak: 1, lastStreakAt: today };
+      coinsGrant = 10;
+    } else if (lastStreak === yesterday) {
+      // Consecutive day
+      const newStreak = (user.currentStreak ?? 0) + 1;
+      const longestStreak = Math.max(newStreak, user.longestStreak ?? 0);
+      coinsGrant = Math.min(newStreak * 10, 200);
+      streakUpdate = { currentStreak: newStreak, longestStreak, lastStreakAt: today };
+
+      // Check streak achievements
+      if (newStreak >= 7) {
+        const { checkAchievements } = await import('./achievements');
+        await checkAchievements(user.id, 'streak_7');
+      }
+      if (newStreak >= 30) {
+        const { checkAchievements } = await import('./achievements');
+        await checkAchievements(user.id, 'streak_30');
+      }
+    } else if (lastStreak === today) {
+      // Already logged in today — no-op
+      streakUpdate = {};
+      coinsGrant = 0;
+    } else {
+      // Streak broken
+      streakUpdate = { currentStreak: 1, lastStreakAt: today };
+      coinsGrant = 10;
+    }
+
+    if (Object.keys(streakUpdate).length > 0) {
+      if (coinsGrant > 0) streakUpdate.coins = sql`coins + ${coinsGrant}`;
+      await db.update(users).set(streakUpdate as any).where(eq(users.id, user.id));
+    }
+  } catch {
+    // Non-critical
+  }
+
+  // 10. Return access token and safe user object.
   res.status(200).json({
     accessToken,
     user: safeUserResponse(user),

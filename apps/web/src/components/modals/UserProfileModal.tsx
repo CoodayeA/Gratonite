@@ -162,6 +162,10 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
     const optionsRef = useRef<HTMLDivElement>(null);
     const [note, setNote] = useState('');
     const [noteLoaded, setNoteLoaded] = useState(false);
+    const [showGiftModal, setShowGiftModal] = useState(false);
+    const [giftAmount, setGiftAmount] = useState(50);
+    const [giftMessage, setGiftMessage] = useState('');
+    const [gifting, setGifting] = useState(false);
 
     const getCanvasStorageKey = (userId?: string) => `gratonite-profile-canvas:${userId || 'me'}`;
 
@@ -271,6 +275,7 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
     };
 
     return (
+        <>
         <div className="modal-overlay" onClick={onClose}>
             <div
                 className="profile-modal"
@@ -340,7 +345,7 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                 )}
 
                 {/* Animated Banner Area */}
-                <div style={{ height: '140px', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ height: '140px', position: 'relative', overflow: 'hidden', background: !bannerHash ? (profile?.bannerColor ?? undefined) : undefined }}>
                     {/* Real banner image if available */}
                     {bannerHash ? (
                         <img src={`${API_BASE}/files/${bannerHash}`} alt="Banner" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -388,6 +393,18 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                         </div>
                     </div>
                     <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{username}</p>
+                    {profile?.level != null && profile.level > 1 && (
+                        <div style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '4px',
+                            padding: '2px 8px', borderRadius: '10px',
+                            background: 'var(--accent-primary-alpha)',
+                            color: 'var(--accent-primary)',
+                            fontSize: '12px', fontWeight: 600,
+                            marginTop: '4px',
+                        }}>
+                            ⚡ Level {profile.level}
+                        </div>
+                    )}
                     {pronouns && <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{pronouns}</p>}
 
                     {customStatus && (
@@ -518,6 +535,18 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                         <button onClick={() => { addToast({ title: 'Direct Message', description: `Opening DM with ${displayName}...`, variant: 'info' }); onClose(); }} className="auth-button" style={{ marginTop: 0, flex: 1, height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                             <MessageSquare size={16} /> Message
                         </button>
+                        {userProfile?.id !== currentUser?.id && (
+                            <button
+                                onClick={() => setShowGiftModal(true)}
+                                style={{
+                                    padding: '8px 16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+                                    borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--text-primary)',
+                                    fontSize: '13px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px',
+                                }}
+                            >
+                                🪙 Gift Coins
+                            </button>
+                        )}
                         <div ref={optionsRef} style={{ position: 'relative' }}>
                             <button onClick={() => { setShowUserOptions(prev => !prev); setShowReportConfirm(false); }} className="auth-button" style={{ marginTop: 0, width: '40px', height: '40px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <MoreHorizontal size={16} />
@@ -662,6 +691,64 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                 </div>
             </div>
         </div>
+        {showGiftModal && (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+                <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-lg)', padding: '24px', width: '320px' }}>
+                    <h3 style={{ margin: '0 0 16px', color: 'var(--text-primary)' }}>🪙 Gift Coins</h3>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                        Gift coins to <strong>{profile?.displayName}</strong>
+                    </p>
+                    <div style={{ marginBottom: '12px' }}>
+                        <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Amount (min 10)</label>
+                        <input
+                            type="number" min={10} step={10} value={giftAmount}
+                            onChange={e => setGiftAmount(parseInt(e.target.value) || 10)}
+                            style={{ width: '100%', padding: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', boxSizing: 'border-box' as const }}
+                        />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Message (optional)</label>
+                        <input
+                            value={giftMessage} onChange={e => setGiftMessage(e.target.value)}
+                            placeholder="Add a note..."
+                            style={{ width: '100%', padding: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', boxSizing: 'border-box' as const }}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => setShowGiftModal(false)} style={{ flex: 1, padding: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                            Cancel
+                        </button>
+                        <button
+                            disabled={gifting}
+                            onClick={async () => {
+                                setGifting(true);
+                                try {
+                                    await fetch(`${API_BASE}/users/@me/gift`, {
+                                        method: 'POST',
+                                        credentials: 'include',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}`,
+                                        },
+                                        body: JSON.stringify({ toUserId: profile?.id, amount: giftAmount, message: giftMessage }),
+                                    });
+                                    setShowGiftModal(false);
+                                    setGiftMessage('');
+                                } catch {
+                                    // show error
+                                } finally {
+                                    setGifting(false);
+                                }
+                            }}
+                            style={{ flex: 1, padding: '8px', background: 'var(--accent-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', color: 'white', fontWeight: 600 }}
+                        >
+                            {gifting ? 'Sending...' : 'Send Gift'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 };
 

@@ -147,6 +147,12 @@ export const guilds = pgTable('guilds', {
   boostCount: integer('boost_count').notNull().default(0),
   boostTier: integer('boost_tier').notNull().default(0),
 
+  /** Channel to spotlight in the guild header. */
+  spotlightChannelId: uuid('spotlight_channel_id'),
+
+  /** Message shown in the spotlight banner. */
+  spotlightMessage: text('spotlight_message'),
+
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 
   /**
