@@ -26,6 +26,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       spellcheck: true,
+      backgroundThrottling: false,
     },
     show: false, // Show after ready-to-show to prevent flash
   });
@@ -211,6 +212,15 @@ if (!gotTheLock) {
       mainWindow.focus();
     }
   });
+}
+
+// Windows GPU performance flags — backdrop-filter and compositing are
+// extremely slow on many Intel/AMD integrated GPUs without these.
+if (process.platform === 'win32') {
+  app.commandLine.appendSwitch('enable-gpu-rasterization');
+  app.commandLine.appendSwitch('enable-zero-copy');
+  app.commandLine.appendSwitch('ignore-gpu-blocklist');
+  app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization');
 }
 
 app.whenReady().then(() => {
