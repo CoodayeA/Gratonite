@@ -121,17 +121,7 @@ const CropModal = ({
         out.width = CROP_W;
         out.height = CROP_H;
         const ctx = out.getContext('2d')!;
-        if (aspect === 'circle') {
-            ctx.beginPath();
-            ctx.arc(CROP_W / 2, CROP_H / 2, CROP_W / 2, 0, Math.PI * 2);
-            ctx.clip();
-        }
-        // The image is drawn on the preview canvas at:
-        //   x = offset.x - iw/2,  y = offset.y - ih/2
-        // The crop region starts at (CROP_X, CROP_Y) on the preview canvas.
-        // So the image position relative to the crop region is:
-        //   imgDrawX = (offset.x - iw/2) - CROP_X
-        //   imgDrawY = (offset.y - ih/2) - CROP_Y
+        // Output as a square crop — the UI applies border-radius for circular display
         const iw = imgEl.naturalWidth * zoom;
         const ih = imgEl.naturalHeight * zoom;
         const imgDrawX = (offset.x - iw / 2) - CROP_X;
