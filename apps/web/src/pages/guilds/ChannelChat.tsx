@@ -1871,19 +1871,17 @@ const ChannelChat = () => {
         if (messages.length === 0) return;
         if (needsInitialScrollRef.current) {
             needsInitialScrollRef.current = false;
-            // Wait for DOM to render the messages before scrolling
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    if (lastReadMessageId) {
-                        const dividerEl = document.querySelector('.new-messages-divider');
-                        if (dividerEl) {
-                            dividerEl.scrollIntoView({ behavior: 'auto', block: 'center' });
-                            return;
-                        }
-                    }
-                    scrollToBottom();
-                });
-            });
+            // Always scroll to bottom on channel open — users expect to see latest messages
+            // Use setTimeout to ensure DOM has fully rendered (rAF alone isn't enough for virtualizers)
+            const doScroll = () => {
+                if (parentRef.current) {
+                    parentRef.current.scrollTop = parentRef.current.scrollHeight;
+                }
+            };
+            doScroll();
+            requestAnimationFrame(doScroll);
+            setTimeout(doScroll, 50);
+            setTimeout(doScroll, 150);
             return;
         }
         // On new message: only auto-scroll if user is near the bottom
