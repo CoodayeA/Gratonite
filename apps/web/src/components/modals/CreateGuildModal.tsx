@@ -190,9 +190,10 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
             // Navigate to the new guild
             navigate(`/guild/${guild.id}`);
         } catch (err: any) {
+            const isDuplicate = err?.status === 409 || err?.message?.includes('already exists');
             addToast({
-                title: 'Failed to create portal',
-                description: err?.message || 'Something went wrong.',
+                title: isDuplicate ? 'Name Already Taken' : 'Failed to create portal',
+                description: isDuplicate ? 'A portal with this name already exists. Please choose a different name.' : (err?.message || 'Something went wrong.'),
                 variant: 'error'
             });
         } finally {

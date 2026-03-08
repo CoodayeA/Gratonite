@@ -329,6 +329,15 @@ guildsRouter.post(
     try {
       const { name, description, isDiscoverable } = req.body as z.infer<typeof createGuildSchema>;
 
+      // Check for duplicate guild name.
+      const existing = await db.select({ id: guilds.id }).from(guilds)
+        .where(sql`LOWER(${guilds.name}) = LOWER(${name})`)
+        .limit(1);
+      if (existing.length > 0) {
+        res.status(409).json({ code: 'DUPLICATE_NAME', message: 'A server with this name already exists' });
+        return;
+      }
+
       // Insert guild.
       const [guild] = await db
         .insert(guilds)

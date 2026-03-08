@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
-import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock } from 'lucide-react';
+import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star } from 'lucide-react';
 import { getOrCreateKeyPair, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported, generateGroupKey, encryptGroupKey, decryptGroupKey } from '../../lib/e2e';
 
 import { BackgroundMedia } from '../../components/ui/BackgroundMedia';
@@ -11,7 +11,7 @@ import ForwardModal from '../../components/modals/ForwardModal';
 import { RichTextRenderer } from '../../components/chat/RichTextRenderer';
 import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
 import { ErrorState } from '../../components/ui/ErrorState';
-import { api, ApiRequestError } from '../../lib/api';
+import { api, ApiRequestError, API_BASE } from '../../lib/api';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
 import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onMessageRead, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type MessageReadPayload } from '../../lib/socket';
 import { getDeterministicGradient } from '../../utils/colors';
@@ -132,6 +132,8 @@ const DirectMessage = () => {
     const [groupParticipants, setGroupParticipants] = useState<Array<{ id: string; username: string; displayName: string; avatarHash: string | null; status: string }>>([]);
     const [memberPanelOpen, setMemberPanelOpen] = useState(false);
     const [isEditingGroupName, setIsEditingGroupName] = useState(false);
+    const [replyingTo, setReplyingTo] = useState<{ id: number; apiId?: string; author: string; content: string } | null>(null);
+    const [editingMessage, setEditingMessage] = useState<{ id: number; apiId: string; content: string } | null>(null);
     const [editGroupNameValue, setEditGroupNameValue] = useState('');
     const [addMemberInput, setAddMemberInput] = useState('');
     const [showAddMember, setShowAddMember] = useState(false);
@@ -1775,7 +1777,10 @@ const DirectMessage = () => {
                                     onMouseLeave={() => { setHoveredMessageId(null); }}
                                     onContextMenu={(e) => {
                                         e.preventDefault();
+                                        const isOwnMessage = msg.authorId === userProfile?.id;
                                         openMenu(e, [
+                                            { id: 'reply', label: 'Reply', icon: Reply, onClick: () => setReplyingTo({ id: msg.id, apiId: msg.apiId, author: msg.author, content: (msg.content || '').slice(0, 80) }) },
+                                            ...(isOwnMessage && msg.apiId ? [{ id: 'edit', label: 'Edit Message', icon: Pencil, onClick: () => setEditingMessage({ id: msg.id, apiId: msg.apiId!, content: msg.content || '' }) }] : []),
                                             { id: 'forward', label: 'Forward Message', icon: Share2, onClick: () => setForwardingMessage(msg) },
                                             {
                                                 id: 'copy', label: 'Copy Text', icon: Copy, onClick: () => {
@@ -1783,6 +1788,18 @@ const DirectMessage = () => {
                                                     addToast({ title: 'Copied to clipboard', variant: 'info' });
                                                 }
                                             },
+                                            ...(msg.apiId ? [{
+                                                id: 'bookmark', label: 'Bookmark Message', icon: Star, onClick: () => {
+                                                    fetch(`${API_BASE}/users/@me/bookmarks`, {
+                                                        method: 'POST',
+                                                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ messageId: msg.apiId }),
+                                                    }).then(r => {
+                                                        if (r.ok) addToast({ title: 'Message bookmarked', variant: 'success' });
+                                                        else addToast({ title: 'Already bookmarked', variant: 'info' });
+                                                    }).catch(() => addToast({ title: 'Failed to bookmark', variant: 'error' }));
+                                                }
+                                            }] : []),
                                             { divider: true, id: 'div1', label: '', onClick: () => { } },
                                             {
                                                 id: 'delete', label: 'Delete Message', icon: Trash2, color: 'var(--error)', onClick: () => {

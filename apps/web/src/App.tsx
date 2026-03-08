@@ -206,8 +206,18 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
         const isOwner = guild.ownerId === userProfile.id;
 
         openMenu(e, [
-            { id: 'mark-read', label: 'Mark as Read', icon: Check, onClick: () => addToast({ title: `${guild.name} marked as read`, variant: 'info' }) },
-            { id: 'mute', label: 'Mute Portal', icon: Volume1, onClick: () => addToast({ title: `${guild.name} muted`, variant: 'info' }) },
+            { id: 'mark-read', label: 'Mark as Read', icon: Check, onClick: () => {
+                api.channels.getGuildChannels(guild.id).then((channels: any[]) => {
+                    channels.forEach((ch: any) => api.messages.ack(ch.id).catch(() => {}));
+                    addToast({ title: `${guild.name} marked as read`, variant: 'info' });
+                }).catch(() => addToast({ title: 'Failed to mark as read', variant: 'error' }));
+            }},
+            { id: 'mute', label: 'Mute Portal', icon: Volume1, onClick: () => {
+                api.channels.getGuildChannels(guild.id).then((channels: any[]) => {
+                    channels.forEach((ch: any) => api.channels.setNotificationPrefs(ch.id, { level: 'none' }).catch(() => {}));
+                    addToast({ title: `${guild.name} muted`, variant: 'info' });
+                }).catch(() => addToast({ title: 'Failed to mute portal', variant: 'error' }));
+            }},
             { divider: true, id: 'div1', label: '', onClick: () => {} },
             ...(isOwner ? [{ id: 'server-settings', label: 'Portal Settings', icon: Settings, onClick: () => { navigate(`/guild/${guild.id}`); onOpenGuildSettings(); } }] : []),
             { id: 'invite', label: 'Invite People', icon: Link2, onClick: () => {
@@ -580,8 +590,21 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     }, []);
 
 
-    const handleDuplicateChannel = (channelName: string) => {
-        addToast({ title: 'Channel Duplicated', description: `#${channelName}-copy has been created with the same permissions.`, variant: 'success' });
+    const handleDuplicateChannel = async (channelId: string, channelName: string) => {
+        try {
+            await api.channels.duplicate(channelId);
+            if (activeGuildId) {
+                if (guildSession.enabled) {
+                    await guildSession.refresh();
+                } else {
+                    const chs = await api.channels.getGuildChannels(activeGuildId);
+                    setLegacyGuildChannels(chs as any);
+                }
+            }
+            addToast({ title: 'Channel Duplicated', description: `#${channelName}-copy has been created.`, variant: 'success' });
+        } catch {
+            addToast({ title: 'Failed to duplicate channel', variant: 'error' });
+        }
     };
 
     const handleCreateChannel = async () => {
@@ -610,7 +633,10 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const handleChannelContext = (e: React.MouseEvent, channel: { id: string; name: string }) => {
         const isFav = favoriteChannelIds.has(channel.id);
         openMenu(e, [
-            { id: 'mark-read', label: 'Mark as Read', icon: Circle, onClick: () => addToast({ title: 'Channel Marked as Read', variant: 'info' }) },
+            { id: 'mark-read', label: 'Mark as Read', icon: Circle, onClick: () => {
+                api.messages.ack(channel.id).catch(() => {});
+                addToast({ title: 'Channel Marked as Read', variant: 'info' });
+            }},
             { id: 'favorite', label: isFav ? 'Remove from Favorites' : 'Add to Favorites', icon: Star, onClick: () => {
                 if (isFav) {
                     setFavoriteChannelIds(prev => { const next = new Set(prev); next.delete(channel.id); return next; });
@@ -622,14 +648,18 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     addToast({ title: `Added #${channel.name} to favorites`, variant: 'success' });
                 }
             }},
-            { id: 'mute', label: 'Mute Channel', icon: Volume1, onClick: () => addToast({ title: 'Channel Muted', variant: 'info' }) },
+            { id: 'mute', label: 'Mute Channel', icon: Volume1, onClick: () => {
+                api.channels.setNotificationPrefs(channel.id, { level: 'none' }).then(() => {
+                    addToast({ title: 'Channel Muted', variant: 'info' });
+                }).catch(() => addToast({ title: 'Failed to mute channel', variant: 'error' }));
+            }},
             { divider: true, id: 'div1', label: '', onClick: () => {} },
             { id: 'edit', label: 'Edit Channel', icon: Settings, onClick: () => {
                 api.channels.get(channel.id).then((ch: any) => {
                     setChannelSettingsOpen({ id: channel.id, name: ch.name, topic: ch.topic || '', rateLimitPerUser: ch.rateLimitPerUser || 0, isNsfw: ch.isNsfw || false, channelType: ch.type, userLimit: ch.userLimit || 0 });
                 }).catch(() => setChannelSettingsOpen({ id: channel.id, name: channel.name }));
             }},
-            { id: 'duplicate', label: 'Duplicate Channel', icon: Copy, onClick: () => handleDuplicateChannel(channel.name) },
+            { id: 'duplicate', label: 'Duplicate Channel', icon: Copy, onClick: () => handleDuplicateChannel(channel.id, channel.name) },
             { id: 'permissions', label: 'Channel Permissions', icon: ShieldIcon, onClick: () => {
                 api.channels.get(channel.id).then((ch: any) => {
                     setChannelSettingsOpen({ id: channel.id, name: ch.name, topic: ch.topic || '', rateLimitPerUser: ch.rateLimitPerUser || 0, isNsfw: ch.isNsfw || false, channelType: ch.type, userLimit: ch.userLimit || 0 });
@@ -645,7 +675,16 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     addToast({ title: 'Invite link copied to clipboard', variant: 'success' });
                 }).catch(() => addToast({ title: 'Failed to create invite', variant: 'error' }));
             }},
-            { id: 'private', label: 'Make Private', icon: Lock, onClick: () => addToast({ title: `${channel.name} is now private`, description: 'Only selected roles can view this channel.', variant: 'success' }) },
+            { id: 'private', label: 'Make Private', icon: Lock, onClick: () => {
+                if (!activeGuildId) return;
+                api.guilds.getRoles(activeGuildId).then((roles: any[]) => {
+                    const everyoneRole = roles.find((r: any) => r.name === '@everyone' || r.position === 0);
+                    if (!everyoneRole) { addToast({ title: 'Could not find @everyone role', variant: 'error' }); return; }
+                    api.channels.setPermissionOverride(channel.id, everyoneRole.id, { targetType: 'role', allow: '0', deny: '256' })
+                      .then(() => addToast({ title: `#${channel.name} is now private`, description: 'Only selected roles can view this channel.', variant: 'success' }))
+                      .catch(() => addToast({ title: 'Failed to make channel private', variant: 'error' }));
+                }).catch(() => addToast({ title: 'Failed to make channel private', variant: 'error' }));
+            }},
             { id: 'settings', label: 'Notification Settings', icon: Bell, onClick: () => setNotifPrefs({ type: 'channel', id: channel.id, name: channel.name }) },
             { divider: true, id: 'div3', label: '', onClick: () => {} },
             { id: 'delete', label: 'Delete Channel', icon: Trash2, color: 'var(--error)', onClick: () => {
@@ -896,7 +935,16 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                         const groupLabel = dm.groupName || 'Group DM';
                                         const memberCount = dm.participants?.length || 0;
                                         return (
-                                            <Link key={dm.id} to={`/dm/${dm.id}`} style={{ textDecoration: 'none' }}>
+                                            <Link key={dm.id} to={`/dm/${dm.id}`} style={{ textDecoration: 'none' }} onContextMenu={(e) => {
+                                                e.preventDefault();
+                                                openMenu(e, [
+                                                    { id: 'mark-read', label: 'Mark as Read', icon: Check, onClick: () => { api.messages.ack(dm.id).catch(() => {}); addToast({ title: 'Marked as read', variant: 'info' }); }},
+                                                    { id: 'mute', label: 'Mute Conversation', icon: Volume1, onClick: () => { api.channels.setNotificationPrefs(dm.id, { level: 'none' }).then(() => addToast({ title: 'Conversation muted', variant: 'info' })).catch(() => addToast({ title: 'Failed to mute', variant: 'error' })); }},
+                                                    { divider: true, id: 'div1', label: '', onClick: () => {} },
+                                                    { id: 'copy-id', label: 'Copy Channel ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(dm.id).catch(() => {}); addToast({ title: 'Channel ID copied', variant: 'info' }); }},
+                                                    { id: 'close', label: 'Close DM', icon: X, color: 'var(--error)', onClick: () => { setDmChannels(prev => prev.filter((d: any) => d.id !== dm.id)); addToast({ title: 'Conversation closed', variant: 'info' }); }},
+                                                ]);
+                                            }}>
                                                 <div className={`channel-item ${location.pathname === `/dm/${dm.id}` ? 'active' : ''}`}>
                                                     <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                                         <Users size={16} color="var(--bg-app)" />
@@ -912,7 +960,16 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                     const recipient = dm.otherUser || dm.recipients?.[0];
                                     const displayName = recipient?.displayName || recipient?.username || 'Unknown';
                                     return (
-                                        <Link key={dm.id} to={`/dm/${dm.id}`} style={{ textDecoration: 'none' }}>
+                                        <Link key={dm.id} to={`/dm/${dm.id}`} style={{ textDecoration: 'none' }} onContextMenu={(e) => {
+                                            e.preventDefault();
+                                            openMenu(e, [
+                                                { id: 'mark-read', label: 'Mark as Read', icon: Check, onClick: () => { api.messages.ack(dm.id).catch(() => {}); addToast({ title: 'Marked as read', variant: 'info' }); }},
+                                                { id: 'mute', label: 'Mute Conversation', icon: Volume1, onClick: () => { api.channels.setNotificationPrefs(dm.id, { level: 'none' }).then(() => addToast({ title: 'Conversation muted', variant: 'info' })).catch(() => addToast({ title: 'Failed to mute', variant: 'error' })); }},
+                                                { divider: true, id: 'div1', label: '', onClick: () => {} },
+                                                { id: 'copy-id', label: 'Copy Channel ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(dm.id).catch(() => {}); addToast({ title: 'Channel ID copied', variant: 'info' }); }},
+                                                { id: 'close', label: 'Close DM', icon: X, color: 'var(--error)', onClick: () => { setDmChannels(prev => prev.filter((d: any) => d.id !== dm.id)); addToast({ title: 'Conversation closed', variant: 'info' }); }},
+                                            ]);
+                                        }}>
                                             <div className={`channel-item ${location.pathname === `/dm/${dm.id}` ? 'active' : ''}`}>
                                                 <Avatar
                                                     userId={recipient?.id || dm.id}

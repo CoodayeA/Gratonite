@@ -1465,6 +1465,18 @@ export const api = {
 
     deletePermissionOverride: (channelId: string, targetId: string) =>
       apiFetch<void>(`/channels/${channelId}/permissions/${targetId}`, { method: 'DELETE' }),
+
+    duplicate: (channelId: string) =>
+      apiFetch<Channel>(`/channels/${channelId}/duplicate`, { method: 'POST' }),
+
+    getNotificationPrefs: (channelId: string) =>
+      apiFetch<{ level: string; mutedUntil: string | null }>(`/channels/${channelId}/notification-prefs`),
+
+    setNotificationPrefs: (channelId: string, data: { level: 'all' | 'mentions' | 'none' | 'default'; mutedUntil?: string | null }) =>
+      apiFetch<any>(`/channels/${channelId}/notification-prefs`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
   },
 
   messages: {

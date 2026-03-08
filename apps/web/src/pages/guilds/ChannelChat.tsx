@@ -4,7 +4,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion } from 'framer-motion';
 import {
     Send, Smile, Image as ImageIcon, Reply, X, Play, Hash, Menu,
-    Volume2, Trash2, Copy, Pin, Sparkles, Share2, Link2, FileText, Download,
+    Volume2, Trash2, Copy, Pin, Share2, Link2, FileText, Download,
     Pause, MessageSquare, MoreHorizontal, Square, Plus, Mic, BarChart2, Clock, Users,
     ThumbsUp, Star, Flag, Edit2, Search, ChevronUp, ChevronDown, Eye, ChevronLeft, ChevronRight
 } from 'lucide-react';
@@ -1082,12 +1082,6 @@ const ChannelChat = () => {
                 }
             },
             {
-                id: 'highlight', label: 'Highlight Message (Test)', icon: Sparkles, onClick: () => {
-                    setHighlightedMessageId(msg.id);
-                    setTimeout(() => setHighlightedMessageId(null), 2500);
-                }
-            },
-            {
                 id: 'pin', label: pinnedMessages.some(p => p.id === msg.apiId) ? 'Unpin Message' : 'Pin Message', icon: Pin, onClick: () => {
                     if (!channelId || !msg.apiId) return;
                     const isPinned = pinnedMessages.some(p => p.id === msg.apiId);
@@ -1119,7 +1113,10 @@ const ChannelChat = () => {
             { divider: true, id: 'div1', label: '', onClick: () => { } },
             ...(!isOwn ? [{
                 id: 'report', label: 'Report Message', icon: Flag, color: 'var(--warning)', onClick: () => {
-                    addToast({ title: 'Report Submitted', description: `Message by ${msg.author} has been reported.`, variant: 'info' });
+                    if (!msg.apiId) return;
+                    api.reports.submit({ targetType: 'message', targetId: msg.apiId, reason: 'User reported' })
+                      .then(() => addToast({ title: 'Report Submitted', description: `Message by ${msg.author} has been reported.`, variant: 'info' }))
+                      .catch(() => addToast({ title: 'Failed to report message', variant: 'error' }));
                 }
             }] : []),
             ...((isOwn || canManageChannel) ? [{

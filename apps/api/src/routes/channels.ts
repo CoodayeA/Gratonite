@@ -852,3 +852,42 @@ channelsRouter.post('/channels/:channelId/voice-messages', requireAuth, async (r
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
+
+// POST /channels/:channelId/duplicate
+channelsRouter.post('/channels/:channelId/duplicate', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const userId = req.userId!;
+  const { channelId } = req.params as Record<string, string>;
+  try {
+    // Fetch source channel
+    const [source] = await db.select().from(channels).where(eq(channels.id, channelId)).limit(1);
+    if (!source) { res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found' }); return; }
+    if (!source.guildId) { res.status(400).json({ code: 'BAD_REQUEST', message: 'Cannot duplicate DM channels' }); return; }
+
+    // Check MANAGE_CHANNELS permission
+    const hasPerm = await hasPermission(source.guildId, userId, Permissions.MANAGE_CHANNELS);
+    if (!hasPerm) { res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_CHANNELS permission' }); return; }
+
+    // Insert duplicate
+    const [newChannel] = await db.insert(channels).values({
+      guildId: source.guildId,
+      name: `${source.name}-copy`,
+      type: source.type,
+      topic: source.topic,
+      parentId: source.parentId,
+      isNsfw: source.isNsfw,
+      rateLimitPerUser: source.rateLimitPerUser,
+      userLimit: source.userLimit,
+      position: (source.position ?? 0) + 1,
+    }).returning();
+
+    // Emit socket event
+    try {
+      const io = getIO();
+      io.to(source.guildId).emit('CHANNEL_CREATE', newChannel);
+    } catch { /* non-fatal */ }
+
+    res.status(201).json(newChannel);
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
