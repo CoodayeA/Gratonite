@@ -668,6 +668,32 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
     }
   }, [updateParticipants]);
 
+  // Re-apply encoding when streamQuality changes while actively publishing
+  const prevQualityRef = useRef(streamQuality);
+  useEffect(() => {
+    if (prevQualityRef.current === streamQuality) return;
+    prevQualityRef.current = streamQuality;
+
+    const room = roomRef.current;
+    if (!room?.localParticipant) return;
+
+    const preset = QUALITY_PRESETS[streamQuality];
+
+    // Re-publish camera with new encoding
+    if (isCameraOn) {
+      const opts: Record<string, unknown> = {};
+      if (preset) {
+        opts.videoEncoding = { maxBitrate: preset.maxBitrate, maxFramerate: preset.maxFramerate };
+      }
+      room.localParticipant.setCameraEnabled(false).then(() =>
+        room.localParticipant.setCameraEnabled(true, opts)
+      ).then(() => updateParticipants()).catch(console.warn);
+    }
+
+    // Screen share: re-enabling would trigger the browser picker again,
+    // so new quality only applies on next screen share start.
+  }, [streamQuality, isCameraOn, updateParticipants]);
+
   // Set master volume
   const setMasterVolume = useCallback((volume: number) => {
     masterVolumeRef.current = Math.max(0, Math.min(200, volume));
