@@ -48,6 +48,41 @@ import type {
   ChannelNotificationPref,
   ForumPost,
   GuildEmoji,
+  Reminder,
+  LeaderboardEntry,
+  FriendshipStreak,
+  Giveaway,
+  Confession,
+  GreetingCardTemplate,
+  GreetingCard,
+  PhotoAlbum,
+  PhotoAlbumItem,
+  Ticket,
+  TicketConfig,
+  StarboardConfig,
+  StarboardEntry,
+  OnboardingStep,
+  ShowcaseItem,
+  Quest,
+  MoodBoardItem,
+  StickyMessageData,
+  TimelineEvent,
+  MarketplaceListing,
+  AutoRole,
+  ReactionRole,
+  Workflow,
+  ActivityLogEvent,
+  DigestConfig,
+  TextReactionGroup,
+  GuildBan,
+  AutomodRule,
+  ServerTemplate,
+  Achievement,
+  Cosmetic,
+  ActivityFeedItem,
+  BotListing,
+  BotReview,
+  FeedbackItem,
 } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -344,6 +379,20 @@ export const users = {
       `/users?ids=${ids.join(',')}`
     );
   },
+
+  getPresences(ids: string[]) {
+    return apiFetch<Array<{ userId: string; status: string }>>(
+      `/users/presences?ids=${ids.join(',')}`
+    );
+  },
+
+  getMutualFriends(userId: string) {
+    return apiFetch<Array<{ id: string; username: string; displayName: string | null; avatarHash: string | null }>>(`/users/${userId}/mutual-friends`);
+  },
+
+  getMutualGuilds(userId: string) {
+    return apiFetch<Array<{ id: string; name: string; iconHash: string | null }>>(`/users/${userId}/mutual-guilds`);
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -421,6 +470,13 @@ export const channels = {
     });
   },
 
+  setDisappearTimer(channelId: string, timer: number | null) {
+    return apiFetch<void>(`/channels/${channelId}/messages/disappear-timer`, {
+      method: 'PATCH',
+      body: JSON.stringify({ disappearTimer: timer }),
+    });
+  },
+
   delete(channelId: string) {
     return apiFetch<void>(`/channels/${channelId}`, { method: 'DELETE' });
   },
@@ -436,7 +492,7 @@ export const messages = {
     return apiFetch<Message[]>(`/channels/${channelId}/messages${qs}`);
   },
 
-  send(channelId: string, content: string, opts?: { replyToId?: string; stickerId?: string }) {
+  send(channelId: string, content: string, opts?: { replyToId?: string; stickerId?: string; isEncrypted?: boolean; encryptedContent?: string }) {
     return apiFetch<Message>(`/channels/${channelId}/messages`, {
       method: 'POST',
       body: JSON.stringify({ content, ...opts }),
@@ -1016,6 +1072,17 @@ export const guildEmojis = {
   list(guildId: string) {
     return apiFetch<GuildEmoji[]>(`/guilds/${guildId}/emojis`);
   },
+
+  upload(guildId: string, formData: FormData) {
+    return apiFetch<GuildEmoji>(`/guilds/${guildId}/emojis`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  delete(guildId: string, emojiId: string) {
+    return apiFetch<void>(`/guilds/${guildId}/emojis/${emojiId}`, { method: 'DELETE' });
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -1372,5 +1439,761 @@ export const forum = {
   getReplies(postId: string, params?: CursorPaginationParams) {
     const qs = buildQuery(params);
     return apiFetch<Message[]>(`/forum-posts/${postId}/replies${qs}`);
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Reminders
+// ---------------------------------------------------------------------------
+
+export const reminders = {
+  list() {
+    return apiFetch<Reminder[]>('/reminders');
+  },
+
+  create(data: { channelId: string; messageId?: string; content: string; remindAt: string }) {
+    return apiFetch<Reminder>('/reminders', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete(reminderId: string) {
+    return apiFetch<void>(`/reminders/${reminderId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Leaderboard
+// ---------------------------------------------------------------------------
+
+export const leaderboard = {
+  get(guildId: string, period?: 'week' | 'month' | 'all') {
+    const qs = period ? `?period=${period}` : '';
+    return apiFetch<LeaderboardEntry[]>(`/guilds/${guildId}/leaderboard${qs}`);
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Friendship Streaks
+// ---------------------------------------------------------------------------
+
+export const friendshipStreaks = {
+  get(friendId: string) {
+    return apiFetch<FriendshipStreak>(`/relationships/${friendId}/streak`);
+  },
+
+  getAll() {
+    return apiFetch<FriendshipStreak[]>('/relationships/streaks');
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Giveaways
+// ---------------------------------------------------------------------------
+
+export const giveaways = {
+  list(guildId: string) {
+    return apiFetch<Giveaway[]>(`/guilds/${guildId}/giveaways`);
+  },
+
+  get(guildId: string, giveawayId: string) {
+    return apiFetch<Giveaway>(`/guilds/${guildId}/giveaways/${giveawayId}`);
+  },
+
+  create(guildId: string, data: { title: string; description?: string; prize: string; winnersCount?: number; endsAt: string; channelId: string }) {
+    return apiFetch<Giveaway>(`/guilds/${guildId}/giveaways`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  enter(guildId: string, giveawayId: string) {
+    return apiFetch<{ entered: boolean }>(`/guilds/${guildId}/giveaways/${giveawayId}/enter`, {
+      method: 'POST',
+    });
+  },
+
+  draw(guildId: string, giveawayId: string) {
+    return apiFetch<Giveaway>(`/guilds/${guildId}/giveaways/${giveawayId}/draw`, {
+      method: 'POST',
+    });
+  },
+
+  delete(guildId: string, giveawayId: string) {
+    return apiFetch<void>(`/guilds/${guildId}/giveaways/${giveawayId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Confessions
+// ---------------------------------------------------------------------------
+
+export const confessions = {
+  list(guildId: string) {
+    return apiFetch<Confession[]>(`/guilds/${guildId}/confessions`);
+  },
+
+  create(guildId: string, content: string) {
+    return apiFetch<Confession>(`/guilds/${guildId}/confessions`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Greeting Cards
+// ---------------------------------------------------------------------------
+
+export const greetingCards = {
+  getTemplates() {
+    return apiFetch<GreetingCardTemplate[]>('/greeting-cards/templates');
+  },
+
+  send(data: { templateId: string; recipientId: string; message: string }) {
+    return apiFetch<GreetingCard>('/greeting-cards', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getReceived() {
+    return apiFetch<GreetingCard[]>('/greeting-cards/received');
+  },
+
+  getSent() {
+    return apiFetch<GreetingCard[]>('/greeting-cards/sent');
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Photo Albums
+// ---------------------------------------------------------------------------
+
+export const photoAlbums = {
+  list(guildId: string) {
+    return apiFetch<PhotoAlbum[]>(`/guilds/${guildId}/albums`);
+  },
+
+  create(guildId: string, data: { name: string; description?: string }) {
+    return apiFetch<PhotoAlbum>(`/guilds/${guildId}/albums`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getItems(guildId: string, albumId: string) {
+    return apiFetch<PhotoAlbumItem[]>(`/guilds/${guildId}/albums/${albumId}/items`);
+  },
+
+  addItem(guildId: string, albumId: string, formData: FormData) {
+    return apiFetch<PhotoAlbumItem>(`/guilds/${guildId}/albums/${albumId}/items`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  deleteItem(guildId: string, albumId: string, itemId: string) {
+    return apiFetch<void>(`/guilds/${guildId}/albums/${albumId}/items/${itemId}`, { method: 'DELETE' });
+  },
+
+  delete(guildId: string, albumId: string) {
+    return apiFetch<void>(`/guilds/${guildId}/albums/${albumId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Tickets
+// ---------------------------------------------------------------------------
+
+export const tickets = {
+  list(guildId: string, status?: 'open' | 'closed') {
+    const qs = status ? `?status=${status}` : '';
+    return apiFetch<Ticket[]>(`/guilds/${guildId}/tickets${qs}`);
+  },
+
+  create(guildId: string, data: { subject: string; priority?: string }) {
+    return apiFetch<Ticket>(`/guilds/${guildId}/tickets`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  close(guildId: string, ticketId: string) {
+    return apiFetch<Ticket>(`/guilds/${guildId}/tickets/${ticketId}/close`, { method: 'POST' });
+  },
+
+  reopen(guildId: string, ticketId: string) {
+    return apiFetch<Ticket>(`/guilds/${guildId}/tickets/${ticketId}/reopen`, { method: 'POST' });
+  },
+
+  getConfig(guildId: string) {
+    return apiFetch<TicketConfig>(`/guilds/${guildId}/tickets/config`);
+  },
+
+  updateConfig(guildId: string, data: Partial<TicketConfig>) {
+    return apiFetch<TicketConfig>(`/guilds/${guildId}/tickets/config`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Starboard
+// ---------------------------------------------------------------------------
+
+export const starboard = {
+  getConfig(guildId: string) {
+    return apiFetch<StarboardConfig>(`/guilds/${guildId}/starboard/config`);
+  },
+
+  updateConfig(guildId: string, data: Partial<StarboardConfig>) {
+    return apiFetch<StarboardConfig>(`/guilds/${guildId}/starboard/config`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getEntries(guildId: string) {
+    return apiFetch<StarboardEntry[]>(`/guilds/${guildId}/starboard`);
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Onboarding
+// ---------------------------------------------------------------------------
+
+export const onboarding = {
+  getSteps(guildId: string) {
+    return apiFetch<OnboardingStep[]>(`/guilds/${guildId}/onboarding`);
+  },
+
+  updateSteps(guildId: string, steps: Partial<OnboardingStep>[]) {
+    return apiFetch<OnboardingStep[]>(`/guilds/${guildId}/onboarding`, {
+      method: 'PUT',
+      body: JSON.stringify({ steps }),
+    });
+  },
+
+  complete(guildId: string) {
+    return apiFetch<void>(`/guilds/${guildId}/onboarding/complete`, { method: 'POST' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Showcase
+// ---------------------------------------------------------------------------
+
+export const showcase = {
+  get(userId: string) {
+    return apiFetch<ShowcaseItem[]>(`/users/${userId}/showcase`);
+  },
+
+  update(items: Partial<ShowcaseItem>[]) {
+    return apiFetch<ShowcaseItem[]>('/users/@me/showcase', {
+      method: 'PUT',
+      body: JSON.stringify({ items }),
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Quests
+// ---------------------------------------------------------------------------
+
+export const quests = {
+  list(guildId: string) {
+    return apiFetch<Quest[]>(`/guilds/${guildId}/quests`);
+  },
+
+  create(guildId: string, data: { title: string; description?: string; type: string; goalAmount: number; reward?: string; endsAt?: string }) {
+    return apiFetch<Quest>(`/guilds/${guildId}/quests`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  contribute(guildId: string, questId: string, amount?: number) {
+    return apiFetch<Quest>(`/guilds/${guildId}/quests/${questId}/contribute`, {
+      method: 'POST',
+      body: JSON.stringify({ amount: amount ?? 1 }),
+    });
+  },
+
+  delete(guildId: string, questId: string) {
+    return apiFetch<void>(`/guilds/${guildId}/quests/${questId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Mood Boards
+// ---------------------------------------------------------------------------
+
+export const moodBoards = {
+  list(guildId: string) {
+    return apiFetch<MoodBoardItem[]>(`/guilds/${guildId}/mood-boards`);
+  },
+
+  create(guildId: string, data: { emoji: string; text: string; color?: string }) {
+    return apiFetch<MoodBoardItem>(`/guilds/${guildId}/mood-boards`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete(guildId: string, itemId: string) {
+    return apiFetch<void>(`/guilds/${guildId}/mood-boards/${itemId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Sticky Messages
+// ---------------------------------------------------------------------------
+
+export const stickyMessages = {
+  get(channelId: string) {
+    return apiFetch<StickyMessageData | null>(`/channels/${channelId}/sticky`);
+  },
+
+  set(channelId: string, content: string) {
+    return apiFetch<StickyMessageData>(`/channels/${channelId}/sticky`, {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
+    });
+  },
+
+  remove(channelId: string) {
+    return apiFetch<void>(`/channels/${channelId}/sticky`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Digest
+// ---------------------------------------------------------------------------
+
+export const digest = {
+  getConfig(guildId: string) {
+    return apiFetch<DigestConfig>(`/guilds/${guildId}/digest/config`);
+  },
+
+  updateConfig(guildId: string, data: Partial<DigestConfig>) {
+    return apiFetch<DigestConfig>(`/guilds/${guildId}/digest/config`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Activity Log
+// ---------------------------------------------------------------------------
+
+export const activityLog = {
+  list(guildId: string, limit?: number, before?: string) {
+    const parts: string[] = [];
+    if (limit) parts.push(`limit=${limit}`);
+    if (before) parts.push(`before=${before}`);
+    const qs = parts.length ? `?${parts.join('&')}` : '';
+    return apiFetch<ActivityLogEvent[]>(`/guilds/${guildId}/activity-log${qs}`);
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Timeline
+// ---------------------------------------------------------------------------
+
+export const timeline = {
+  list(channelId: string) {
+    return apiFetch<TimelineEvent[]>(`/channels/${channelId}/timeline`);
+  },
+
+  create(channelId: string, data: { title: string; description?: string; eventDate: string; type?: string }) {
+    return apiFetch<TimelineEvent>(`/channels/${channelId}/timeline`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete(channelId: string, eventId: string) {
+    return apiFetch<void>(`/channels/${channelId}/timeline/${eventId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Marketplace
+// ---------------------------------------------------------------------------
+
+export const marketplace = {
+  list(category?: string) {
+    const qs = category ? `?category=${encodeURIComponent(category)}` : '';
+    return apiFetch<MarketplaceListing[]>(`/marketplace/listings${qs}`);
+  },
+
+  get(listingId: string) {
+    return apiFetch<MarketplaceListing>(`/marketplace/listings/${listingId}`);
+  },
+
+  create(data: { title: string; description: string; price: number; category: string }) {
+    return apiFetch<MarketplaceListing>('/marketplace/listings', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  purchase(listingId: string) {
+    return apiFetch<{ success: boolean }>(`/marketplace/listings/${listingId}/purchase`, {
+      method: 'POST',
+    });
+  },
+
+  delete(listingId: string) {
+    return apiFetch<void>(`/marketplace/listings/${listingId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Auto Roles
+// ---------------------------------------------------------------------------
+
+export const autoRoles = {
+  list(guildId: string) {
+    return apiFetch<AutoRole[]>(`/guilds/${guildId}/auto-roles`);
+  },
+
+  create(guildId: string, data: { roleId: string; trigger: string }) {
+    return apiFetch<AutoRole>(`/guilds/${guildId}/auto-roles`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  update(guildId: string, autoRoleId: string, data: { enabled?: boolean }) {
+    return apiFetch<AutoRole>(`/guilds/${guildId}/auto-roles/${autoRoleId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete(guildId: string, autoRoleId: string) {
+    return apiFetch<void>(`/guilds/${guildId}/auto-roles/${autoRoleId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Reaction Roles
+// ---------------------------------------------------------------------------
+
+export const reactionRoles = {
+  list(guildId: string) {
+    return apiFetch<ReactionRole[]>(`/guilds/${guildId}/reaction-roles`);
+  },
+
+  create(guildId: string, data: { channelId: string; messageId: string; emoji: string; roleId: string }) {
+    return apiFetch<ReactionRole>(`/guilds/${guildId}/reaction-roles`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete(guildId: string, reactionRoleId: string) {
+    return apiFetch<void>(`/guilds/${guildId}/reaction-roles/${reactionRoleId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Workflows
+// ---------------------------------------------------------------------------
+
+export const workflows = {
+  list(guildId: string) {
+    return apiFetch<Workflow[]>(`/guilds/${guildId}/workflows`);
+  },
+
+  get(guildId: string, workflowId: string) {
+    return apiFetch<Workflow>(`/guilds/${guildId}/workflows/${workflowId}`);
+  },
+
+  update(guildId: string, workflowId: string, data: { enabled?: boolean }) {
+    return apiFetch<Workflow>(`/guilds/${guildId}/workflows/${workflowId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Translation
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Encryption
+// ---------------------------------------------------------------------------
+
+export const encryption = {
+  uploadPublicKey(publicKeyJwk: string) {
+    return apiFetch<void>('/users/@me/public-key', {
+      method: 'POST',
+      body: JSON.stringify({ publicKey: publicKeyJwk }),
+    });
+  },
+
+  getPublicKey(userId: string) {
+    return apiFetch<{ publicKey: string | null }>(`/users/${userId}/public-key`);
+  },
+
+  getGroupKey(channelId: string) {
+    return apiFetch<{ keyData: string | null; version: number | null }>(`/channels/${channelId}/group-key`);
+  },
+
+  setGroupKey(channelId: string, version: number, keyData: string) {
+    return apiFetch<void>(`/channels/${channelId}/group-key`, {
+      method: 'POST',
+      body: JSON.stringify({ version, keyData }),
+    });
+  },
+};
+
+export const translation = {
+  translate(channelId: string, messageId: string, targetLang?: string) {
+    return apiFetch<{ translatedContent: string; detectedLanguage: string; targetLanguage: string }>(
+      `/channels/${channelId}/messages/${messageId}/translate`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ targetLang }),
+      },
+    );
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Text Reactions
+// ---------------------------------------------------------------------------
+
+export const textReactions = {
+  list(channelId: string, messageId: string) {
+    return apiFetch<TextReactionGroup[]>(`/channels/${channelId}/messages/${messageId}/text-reactions`);
+  },
+
+  add(channelId: string, messageId: string, text: string) {
+    return apiFetch<void>(`/channels/${channelId}/messages/${messageId}/text-reactions`, {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    });
+  },
+
+  remove(channelId: string, messageId: string, text: string) {
+    return apiFetch<void>(`/channels/${channelId}/messages/${messageId}/text-reactions/${encodeURIComponent(text)}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Guild Bans
+// ---------------------------------------------------------------------------
+
+export const bans = {
+  list(guildId: string) {
+    return apiFetch<GuildBan[]>(`/guilds/${guildId}/bans`);
+  },
+
+  unban(guildId: string, userId: string) {
+    return apiFetch<void>(`/guilds/${guildId}/bans/${userId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Automod
+// ---------------------------------------------------------------------------
+
+export const automod = {
+  listRules(guildId: string) {
+    return apiFetch<AutomodRule[]>(`/guilds/${guildId}/automod/rules`);
+  },
+
+  createRule(guildId: string, data: { name: string; type: string; config: Record<string, unknown>; actions: Array<{ type: string; config?: Record<string, unknown> }> }) {
+    return apiFetch<AutomodRule>(`/guilds/${guildId}/automod/rules`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateRule(guildId: string, ruleId: string, data: Partial<AutomodRule>) {
+    return apiFetch<AutomodRule>(`/guilds/${guildId}/automod/rules/${ruleId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteRule(guildId: string, ruleId: string) {
+    return apiFetch<void>(`/guilds/${guildId}/automod/rules/${ruleId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Server Templates
+// ---------------------------------------------------------------------------
+
+export const templates = {
+  list(guildId: string) {
+    return apiFetch<ServerTemplate[]>(`/guilds/${guildId}/templates`);
+  },
+
+  create(guildId: string, data: { name: string; description?: string }) {
+    return apiFetch<ServerTemplate>(`/guilds/${guildId}/templates`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  preview(code: string) {
+    return apiFetch<{ template: ServerTemplate; guild: Guild }>(`/templates/${code}`);
+  },
+
+  createFromTemplate(code: string, name: string) {
+    return apiFetch<Guild>(`/templates/${code}/create`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  },
+
+  delete(guildId: string, templateId: string) {
+    return apiFetch<void>(`/guilds/${guildId}/templates/${templateId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// MFA (Two-Factor Authentication)
+// ---------------------------------------------------------------------------
+
+export const mfa = {
+  status() {
+    return apiFetch<{ enabled: boolean }>('/auth/mfa/status');
+  },
+
+  setupStart() {
+    return apiFetch<{ secret: string; otpauthUrl: string }>('/auth/mfa/setup', { method: 'POST' });
+  },
+
+  enable(code: string) {
+    return apiFetch<{ backupCodes: string[] }>('/auth/mfa/enable', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+  },
+
+  disable(password: string, code: string) {
+    return apiFetch<void>('/auth/mfa/disable', {
+      method: 'POST',
+      body: JSON.stringify({ password, code }),
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Achievements
+// ---------------------------------------------------------------------------
+
+export const achievements = {
+  list() {
+    return apiFetch<Achievement[]>('/users/@me/achievements');
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Cosmetics (Wardrobe)
+// ---------------------------------------------------------------------------
+
+export const cosmetics = {
+  catalog() {
+    return apiFetch<Cosmetic[]>('/cosmetics/catalog');
+  },
+
+  owned() {
+    return apiFetch<Cosmetic[]>('/cosmetics/owned');
+  },
+
+  equip(cosmeticId: string) {
+    return apiFetch<void>(`/cosmetics/${cosmeticId}/equip`, { method: 'POST' });
+  },
+
+  unequip(cosmeticId: string) {
+    return apiFetch<void>(`/cosmetics/${cosmeticId}/unequip`, { method: 'POST' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Activity Feed
+// ---------------------------------------------------------------------------
+
+export const activityFeed = {
+  list(cursor?: string) {
+    const qs = cursor ? `?cursor=${cursor}` : '';
+    return apiFetch<{ items: ActivityFeedItem[]; nextCursor: string | null }>(`/users/@me/activity${qs}`);
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Feedback
+// ---------------------------------------------------------------------------
+
+export const feedback = {
+  submit(data: { type: 'bug' | 'feature' | 'general'; content: string }) {
+    return apiFetch<FeedbackItem>('/feedback', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  mine() {
+    return apiFetch<FeedbackItem[]>('/feedback/mine');
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Platform Stats
+// ---------------------------------------------------------------------------
+
+export const stats = {
+  public() {
+    return apiFetch<{ totalUsers: number; totalGuilds: number; totalMessages: number; onlineNow: number }>('/stats/public');
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Bot Store
+// ---------------------------------------------------------------------------
+
+export const botStore = {
+  list(category?: string, search?: string) {
+    const parts: string[] = [];
+    if (category) parts.push(`category=${encodeURIComponent(category)}`);
+    if (search) parts.push(`search=${encodeURIComponent(search)}`);
+    const qs = parts.length ? `?${parts.join('&')}` : '';
+    return apiFetch<BotListing[]>(`/bot-store${qs}`);
+  },
+
+  get(botId: string) {
+    return apiFetch<BotListing>(`/bot-store/${botId}`);
+  },
+
+  getReviews(botId: string) {
+    return apiFetch<BotReview[]>(`/bot-store/${botId}/reviews`);
+  },
+
+  postReview(botId: string, data: { rating: number; content: string }) {
+    return apiFetch<BotReview>(`/bot-store/${botId}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  install(botId: string, guildId: string) {
+    return apiFetch<{ success: boolean }>(`/bot-store/${botId}/install`, {
+      method: 'POST',
+      body: JSON.stringify({ guildId }),
+    });
   },
 };

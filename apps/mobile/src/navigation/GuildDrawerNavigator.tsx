@@ -64,6 +64,8 @@ function CustomDrawerContent(props: DrawerContentComponentProps & { guildId: str
             case 'GUILD_ANNOUNCEMENT': return 'megaphone-outline';
             case 'GUILD_FORUM': return 'reader-outline';
             case 'GUILD_WIKI': return 'book-outline';
+            case 'GUILD_TIMELINE': return 'time-outline';
+            case 'GUILD_QA': return 'help-circle-outline';
             default: return 'chatbubble-outline';
         }
     };
@@ -150,6 +152,10 @@ function CustomDrawerContent(props: DrawerContentComponentProps & { guildId: str
                                 props.navigation.navigate('WikiChannel', { channelId: item.id, channelName: item.name });
                             } else if (item.type === 'GUILD_ANNOUNCEMENT') {
                                 props.navigation.navigate('AnnouncementChannel', { channelId: item.id, channelName: item.name, guildId: props.guildId });
+                            } else if (item.type === 'GUILD_TIMELINE') {
+                                props.navigation.navigate('TimelineChannel', { channelId: item.id, channelName: item.name });
+                            } else if (item.type === 'GUILD_QA') {
+                                props.navigation.navigate('QAChannel', { channelId: item.id, channelName: item.name });
                             } else {
                                 props.navigation.navigate('ChannelChat', { channelId: item.id, channelName: item.name, guildId: props.guildId });
                             }
@@ -175,7 +181,7 @@ function GuildLandingScreen({ navigation, guildId }: { navigation: any; guildId:
                 const channels = await channelsApi.getForGuild(guildId);
                 const textChannel = channels.find((c) => c.type === 'GUILD_TEXT' || c.type === 'GUILD_ANNOUNCEMENT');
                 if (mounted && textChannel) {
-                    navigation.replace('ChannelChat', { channelId: textChannel.id, channelName: textChannel.name, guildId });
+                    navigation.navigate('ChannelChat', { channelId: textChannel.id, channelName: textChannel.name, guildId });
                 } else if (mounted) {
                     setError(true);
                 }

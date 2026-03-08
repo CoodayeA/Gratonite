@@ -510,7 +510,9 @@ usersRouter.get('/presences', requireAuth, asyncHandler(async (req: Request, res
     ids.forEach((id, i) => {
       const statusResult = results?.[i * 2];
       const ttlResult = results?.[(i * 2) + 1];
-      const status = (statusResult && statusResult[1] as string) || 'offline';
+      const rawStatus = (statusResult && statusResult[1] as string) || 'offline';
+      // Never leak "invisible" to other users — show as "offline"
+      const status = rawStatus === 'invisible' ? 'offline' : rawStatus;
       const ttlMs = Number(ttlResult?.[1] ?? -1);
       const updatedAt = status === 'offline' || ttlMs < 0
         ? new Date(now).toISOString()

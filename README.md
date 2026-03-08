@@ -39,11 +39,13 @@ Gratonite is a multi-platform community chat app built as a privacy-first, open-
 - Member screening and server rules gate
 
 ### Privacy & Encryption 🔒
-- Optional end-to-end encryption for DMs using **ECDH (P-256) key exchange** and **AES-GCM-256** encryption
-- Users generate an ECDH keypair client-side; the private key stays in the browser (IndexedDB) and never leaves the device
-- Shared secrets are derived on-device from your private key and the recipient's public key
-- Group DMs use a shared group key wrapped per-member via ephemeral ECDH
-- **Limitations:** No forward secrecy (no per-message key rotation). No key rotation mechanism. Server sees all metadata (who, when, channel). Attachments, voice, and guild channel messages are not encrypted.
+- End-to-end encryption for all DMs and group DMs — enabled automatically
+- Private keys never leave your device
+- Encrypted message editing
+- Key rotation on group membership changes
+- Identity verification via safety numbers
+- Encryption failure warnings (never silently falls back to plaintext)
+- See the [End-to-End Encryption](#end-to-end-encryption-) section below for full details
 
 ### User Features 👤
 - User profiles with display names, bios, banners, and custom nameplate styles
@@ -157,6 +159,84 @@ More deployment docs:
 - [Quick Deploy Reference](docs/QUICK-DEPLOY-GUIDE.md)
 - [DNS Configuration](docs/DNS-CONFIGURATION.md)
 - [SMTP Configuration](docs/SMTP-CONFIGURATION.md)
+
+## End-to-End Encryption 🔐
+
+Gratonite uses **end-to-end encryption (E2E)** for all direct messages and group DMs. Messages are encrypted on your device before being sent and can only be decrypted by the intended recipients. The server never has access to plaintext message content.
+
+### How It Works
+
+#### Direct Messages (1-on-1)
+
+1. **Key generation** — When you first open a DM, your browser generates an **ECDH P-256 key pair** (a public key and a private key). The private key is stored in your browser's **IndexedDB** and never leaves your device.
+2. **Key exchange** — Your public key is uploaded to the server. When you message someone, both sides fetch the other's public key.
+3. **Shared secret derivation** — Using **ECDH (Elliptic-Curve Diffie-Hellman)**, your browser derives a shared secret from your private key and the recipient's public key. Both sides independently compute the same shared secret without it ever being transmitted.
+4. **Message encryption** — Each message is encrypted using **AES-GCM with a 256-bit key** derived from the shared secret. A unique 12-byte IV (initialization vector) is generated per message to ensure no two ciphertexts are alike.
+5. **Transmission** — The encrypted ciphertext (Base64-encoded) is sent to the server. The server stores only the ciphertext — it cannot read the message.
+6. **Decryption** — The recipient's browser derives the same shared secret and decrypts the ciphertext locally.
+
+#### Group DMs
+
+1. **Group key generation** — The group creator generates a random **AES-GCM 256-bit symmetric key** for the group.
+2. **Key wrapping** — The group key is encrypted (wrapped) individually for each member using per-member **ephemeral ECDH key pairs**. Each member receives a copy of the group key encrypted with their public key.
+3. **Key storage** — Wrapped keys are stored on the server. Each member can only unwrap the copy encrypted for them.
+4. **Encryption/decryption** — All group messages are encrypted and decrypted using the shared group key with AES-GCM-256.
+
+#### Key Rotation
+
+- **Group DMs**: When a member is added or removed from a group DM, the group owner automatically generates a new group key and distributes it to all current members. This ensures that removed members cannot decrypt future messages and new members cannot decrypt past messages.
+- **Key versioning**: Each encrypted message is tagged with the key version it was encrypted with, so messages encrypted with older keys can still be decrypted if the key history is available.
+- **Public key rotation**: If a user rotates their ECDH key pair, all DM partners are notified via a real-time `USER_KEY_CHANGED` event so they can re-derive the shared secret.
+
+#### Identity Verification (Safety Numbers)
+
+Gratonite supports **safety numbers** for verifying the identity of your DM partner:
+
+1. Both users' public keys are deterministically ordered and concatenated.
+2. A **SHA-256 hash** is computed over the combined keys.
+3. The hash is formatted as a **60-digit number** displayed in a grid.
+4. Users can compare this number out-of-band (in person, over a phone call, etc.) to verify that no man-in-the-middle attack has occurred.
+
+If a partner's key changes, a warning banner is displayed in the conversation.
+
+### What Users See
+
+| Indicator | Meaning |
+|-----------|---------|
+| Lock icon in DM header | E2E encryption is active for this conversation |
+| "Messages are not encrypted" warning | Key exchange failed — messages are sent in plaintext |
+| "Partner's encryption key has changed" banner | The other user has rotated their key — tap to re-verify |
+| Safety number grid (in DM settings) | Use to verify your partner's identity |
+
+### What Is Encrypted
+
+| Content | Encrypted? |
+|---------|------------|
+| DM text messages | Yes (AES-GCM-256) |
+| Group DM text messages | Yes (AES-GCM-256) |
+| Edited messages | Yes (re-encrypted before sending) |
+| Guild (server) channel messages | No |
+| File attachments | Not yet (planned) |
+| Voice/video calls | Encrypted by LiveKit (DTLS-SRTP), not by Gratonite E2E |
+| Message metadata (timestamps, sender, channel) | No (server needs this for delivery) |
+| Notification previews | Shows "Encrypted message" instead of content |
+
+### Technical Details
+
+- **Key agreement**: ECDH on the P-256 curve (NIST)
+- **Symmetric encryption**: AES-GCM with 256-bit keys
+- **IV**: 12 bytes, randomly generated per message
+- **Key storage**: Browser IndexedDB (private keys never transmitted)
+- **Key exchange transport**: Authenticated API calls with Bearer tokens
+- **Real-time events**: Socket.IO events for key rotation (`GROUP_KEY_ROTATION_NEEDED`) and key changes (`USER_KEY_CHANGED`)
+- **Ciphertext format**: Base64-encoded `iv:ciphertext`
+
+### Limitations
+
+- **No forward secrecy**: The same shared secret is used for all messages in a conversation until a key is rotated. Compromise of a private key exposes all past and future messages encrypted with that key.
+- **Trust on first use (TOFU)**: The server distributes public keys. A compromised server could substitute keys. Use safety numbers to verify.
+- **Device-bound keys**: Private keys are stored in IndexedDB. Clearing browser data or switching browsers requires generating a new key pair. Messages encrypted with the old key cannot be decrypted.
+- **No multi-device sync**: Each browser/device has its own key pair. E2E encryption is active on whichever device you are currently using.
 
 ## Why Gratonite 💜
 

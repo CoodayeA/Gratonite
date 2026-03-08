@@ -35,7 +35,7 @@ export default function SettingsNotificationsScreen({ navigation }: Props) {
     try {
       const data = await settingsApi.get();
       setSettings(data);
-      setPushEnabled(data.pushEnabled);
+      setPushEnabled(data.pushEnabled ?? false);
     } catch (err: any) {
       toast.error(err.message || 'Failed to load settings');
     } finally {

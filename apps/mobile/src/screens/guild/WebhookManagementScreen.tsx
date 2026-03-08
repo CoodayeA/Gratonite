@@ -48,9 +48,7 @@ export default function WebhookManagementScreen({ route, navigation }: Props) {
       setWebhookList(hooks);
       setChannelList(channels.filter((c) => c.type === 'text'));
     } catch (err: any) {
-      if (err.status !== 401) {
-        toast.error('Failed to load webhooks');
-      }
+      // silently ignore — empty state handles no data
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../lib/theme';
+import { mediumImpact } from '../lib/haptics';
 import type { Poll } from '../types';
 
 interface PollCardProps {
@@ -152,6 +153,7 @@ export default function PollCard({ poll, onVote, onRemoveVote }: PollCardProps) 
               ]}
               onPress={() => {
                 if (isExpired) return;
+                mediumImpact();
                 if (isSelected && !poll.multipleChoice) {
                   onRemoveVote(poll.id);
                 } else {

@@ -59,6 +59,8 @@ export default function SearchBar({ value, onChangeText, placeholder = 'Search..
         autoFocus={autoFocus}
         autoCapitalize="none"
         autoCorrect={false}
+        accessibilityLabel="Search"
+        accessibilityHint="Type to search"
       />
       {value.length > 0 && (
         <TouchableOpacity onPress={() => onChangeText('')} style={styles.clearBtn}>

@@ -7,6 +7,7 @@ import {
   Switch,
   StyleSheet,
   ActivityIndicator,
+  Appearance,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
@@ -24,12 +25,11 @@ import type { AppStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SettingsAppearance'>;
 
-type FontSizeOption = 'small' | 'medium' | 'large';
-
-const FONT_SIZE_OPTIONS: { value: FontSizeOption; label: string }[] = [
-  { value: 'small', label: 'Small' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'large', label: 'Large' },
+// API expects fontSize as an integer (10–24); map labels to numeric values
+const FONT_SIZE_OPTIONS: { value: number; label: string }[] = [
+  { value: 12, label: 'Small' },
+  { value: 14, label: 'Medium' },
+  { value: 18, label: 'Large' },
 ];
 
 const THEME_OPTIONS: { name: ThemeName; label: string }[] = [
@@ -45,6 +45,11 @@ export default function SettingsAppearanceScreen({ navigation }: Props) {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [autoMode, setAutoMode] = useState(false);
+
+  useEffect(() => {
+    SecureStore.getItemAsync('gratonite_auto_theme').then(v => setAutoMode(v === 'true'));
+  }, []);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -67,6 +72,10 @@ export default function SettingsAppearanceScreen({ navigation }: Props) {
     try {
       const updated = await settingsApi.update(updates);
       setSettings(updated);
+      // Apply font size change app-wide immediately
+      if (updates.fontSize !== undefined) {
+        themeStore.setFontSize(updates.fontSize);
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to save settings');
     } finally {
@@ -204,6 +213,31 @@ export default function SettingsAppearanceScreen({ navigation }: Props) {
 
   return (
     <ScrollView style={styles.container}>
+      <SectionHeader title="Auto (Follow System)" />
+      <View style={styles.section}>
+        <View style={styles.switchRow}>
+          <View style={styles.switchInfo}>
+            <Text style={styles.switchLabel}>Follow System Theme</Text>
+            <Text style={styles.switchDescription}>
+              Automatically switch between light and dark based on your device settings
+            </Text>
+          </View>
+          <Switch
+            value={autoMode}
+            onValueChange={(value) => {
+              setAutoMode(value);
+              themeStore.setAutoMode(value);
+              if (value) {
+                const colorScheme = Appearance.getColorScheme();
+                themeStore.setTheme(colorScheme === 'dark' ? 'dark' : 'light');
+              }
+            }}
+            trackColor={{ false: colors.bgElevated, true: colors.accentPrimary }}
+            thumbColor={colors.white}
+          />
+        </View>
+      </View>
+
       <SectionHeader title="Theme" />
       <View style={styles.section}>
         <View style={styles.themeGrid}>
@@ -263,7 +297,7 @@ export default function SettingsAppearanceScreen({ navigation }: Props) {
       <SectionHeader title="Font Size" />
       <View style={styles.section}>
         {FONT_SIZE_OPTIONS.map((option) => {
-          const isSelected = (settings?.fontSize ?? 'medium') === option.value;
+          const isSelected = (settings?.fontSize ?? 14) === option.value;
           return (
             <TouchableOpacity
               key={option.value}

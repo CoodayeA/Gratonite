@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, AppState, View } from 'react-native';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
@@ -17,19 +17,37 @@ import { colors } from './src/lib/theme';
 import { useTheme, themeStore } from './src/lib/themeStore';
 import { registerForPushNotifications, setupNotificationHandlers } from './src/lib/notifications';
 import { ToastProvider } from './src/contexts/ToastContext';
+import { appLockStore } from './src/lib/appLockStore';
+import { securityStore } from './src/lib/securityStore';
+import * as ScreenCapture from 'expo-screen-capture';
+import AppLockScreen from './src/screens/app/AppLockScreen';
+import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
+import { initSounds } from './src/lib/soundEngine';
+import { useSystemThemeListener } from './src/lib/useSystemTheme';
 import type { ThemeName } from './src/lib/themes';
 
 const navigationRef = createNavigationContainerRef();
 
 function RootNavigator() {
   const { user, loading } = useAuth();
+  const [onboardingDone, setOnboardingDone] = React.useState<boolean | null>(null);
 
-  if (loading) {
+  React.useEffect(() => {
+    SecureStore.getItemAsync('gratonite_onboarding_complete').then(val => {
+      setOnboardingDone(val === 'true');
+    });
+  }, []);
+
+  if (loading || onboardingDone === null) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={colors.accentPrimary} />
       </View>
     );
+  }
+
+  if (!onboardingDone && !user) {
+    return <OnboardingScreen onComplete={() => setOnboardingDone(true)} />;
   }
 
   if (!user) return <AuthNavigator />;
@@ -59,11 +77,53 @@ function ThemeInitializer() {
 
 function ThemedApp() {
   const { colors: c, isDark } = useTheme();
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockCheckDone, setLockCheckDone] = useState(false);
+  const backgroundTimestamp = useRef<number | null>(null);
+
+  useSystemThemeListener();
 
   React.useEffect(() => {
-    const sub = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') connectSocket();
-      if (nextState === 'background') disconnectSocket();
+    initSounds();
+  }, []);
+
+  // Screenshot protection
+  React.useEffect(() => {
+    (async () => {
+      const enabled = await securityStore.getScreenshotProtection();
+      if (enabled) {
+        ScreenCapture.preventScreenCaptureAsync();
+      } else {
+        ScreenCapture.allowScreenCaptureAsync();
+      }
+    })();
+  }, []);
+
+  React.useEffect(() => {
+    appLockStore.isEnabled().then(enabled => {
+      setIsLocked(enabled);
+      setLockCheckDone(true);
+    });
+  }, []);
+
+  React.useEffect(() => {
+    const sub = AppState.addEventListener('change', async (nextState) => {
+      if (nextState === 'active') {
+        connectSocket();
+        // Re-lock if enabled and away for 30+ seconds
+        if (backgroundTimestamp.current) {
+          const elapsed = Date.now() - backgroundTimestamp.current;
+          backgroundTimestamp.current = null;
+          if (elapsed >= 30000) {
+            const enabled = await appLockStore.isEnabled();
+            if (enabled) setIsLocked(true);
+          }
+        }
+      }
+      if (nextState === 'background') {
+        disconnectSocket();
+        backgroundTimestamp.current = Date.now();
+      }
     });
     return () => sub.remove();
   }, []);
@@ -112,6 +172,7 @@ function ThemedApp() {
           <RootNavigator />
         </ErrorBoundary>
         <StatusBar style={isDark ? 'light' : 'dark'} />
+        {isLocked && lockCheckDone && <AppLockScreen onUnlock={() => setIsLocked(false)} />}
       </AuthProvider>
     </NavigationContainer>
   );

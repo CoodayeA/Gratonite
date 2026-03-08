@@ -13,6 +13,10 @@ export interface User {
   pronouns: string | null;
   status: PresenceStatus;
   customStatus: string | null;
+  badges?: Array<{ id: string; name: string; icon: string; description: string }>;
+  mutualFriendCount?: number;
+  richPresence?: { type: string; name: string; details?: string; startedAt?: string } | null;
+  statusEmoji?: string | null;
 }
 
 export interface AuthResponse {
@@ -48,6 +52,8 @@ export interface Channel {
   position: number;
   backgroundUrl?: string | null;
   backgroundType?: 'image' | 'video' | null;
+  slowModeSeconds?: number;
+  disappearTimer?: number | null;
 }
 
 export interface GuildEmoji {
@@ -73,6 +79,7 @@ export interface Message {
     displayName: string | null;
     avatarHash: string | null;
   };
+  attachments?: Attachment[];
   pinned?: boolean;
   replyToId?: string | null;
   replyTo?: {
@@ -85,6 +92,9 @@ export interface Message {
       displayName: string | null;
     };
   } | null;
+  isEncrypted?: boolean;
+  encryptedContent?: string | null;
+  expiresAt?: string | null;
 }
 
 export interface GuildMember {
@@ -416,11 +426,23 @@ export interface GroupDMChannel {
 
 export interface UserSettings {
   theme: string;
+  colorMode: string;
+  fontFamily: string;
+  fontSize: number;
+  glassMode: boolean;
+  buttonShape: string;
+  soundMuted: boolean;
+  soundVolume: number;
+  soundPack: string;
+  reducedMotion: boolean;
+  lowPower: boolean;
+  highContrast: boolean;
   compactMode: boolean;
-  fontSize: string;
-  pushEnabled: boolean;
-  dmPrivacy: string;
-  friendRequestPrivacy: string;
+  accentColor: string | null;
+  // Client-side prefs (stored via notif endpoint, not main settings table)
+  pushEnabled?: boolean;
+  dmPrivacy?: string;
+  friendRequestPrivacy?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -597,4 +619,529 @@ export interface ReadState {
   channelId: string;
   lastReadMessageId: string | null;
   mentionCount: number;
+}
+
+// ---------------------------------------------------------------------------
+// Reminders
+// ---------------------------------------------------------------------------
+
+export interface Reminder {
+  id: string;
+  userId: string;
+  channelId: string;
+  messageId: string | null;
+  content: string;
+  remindAt: string;
+  fired: boolean;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Leaderboard
+// ---------------------------------------------------------------------------
+
+export interface LeaderboardEntry {
+  userId: string;
+  username: string;
+  displayName: string | null;
+  avatarHash: string | null;
+  score: number;
+  rank: number;
+}
+
+// ---------------------------------------------------------------------------
+// Friendship Streaks
+// ---------------------------------------------------------------------------
+
+export interface FriendshipStreak {
+  friendId: string;
+  streak: number;
+  lastInteraction: string;
+}
+
+// ---------------------------------------------------------------------------
+// Giveaways
+// ---------------------------------------------------------------------------
+
+export interface Giveaway {
+  id: string;
+  guildId: string;
+  channelId: string;
+  title: string;
+  description: string | null;
+  prize: string;
+  winnersCount: number;
+  endsAt: string;
+  ended: boolean;
+  entryCount: number;
+  entered: boolean;
+  winners: string[];
+  creatorId: string;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Confessions
+// ---------------------------------------------------------------------------
+
+export interface Confession {
+  id: string;
+  guildId: string;
+  content: string;
+  number: number;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Greeting Cards
+// ---------------------------------------------------------------------------
+
+export interface GreetingCardTemplate {
+  id: string;
+  name: string;
+  imageUrl: string;
+  category: string;
+}
+
+export interface GreetingCard {
+  id: string;
+  templateId: string;
+  senderId: string;
+  recipientId: string;
+  message: string;
+  template?: GreetingCardTemplate;
+  senderName?: string;
+  recipientName?: string;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Photo Albums
+// ---------------------------------------------------------------------------
+
+export interface PhotoAlbum {
+  id: string;
+  guildId: string;
+  name: string;
+  description: string | null;
+  coverUrl: string | null;
+  itemCount: number;
+  creatorId: string;
+  createdAt: string;
+}
+
+export interface PhotoAlbumItem {
+  id: string;
+  albumId: string;
+  imageUrl: string;
+  caption: string | null;
+  uploaderId: string;
+  uploaderName?: string;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Tickets
+// ---------------------------------------------------------------------------
+
+export interface Ticket {
+  id: string;
+  guildId: string;
+  channelId: string | null;
+  subject: string;
+  status: 'open' | 'closed';
+  priority: 'low' | 'medium' | 'high';
+  creatorId: string;
+  creatorName?: string;
+  assigneeId: string | null;
+  assigneeName?: string | null;
+  createdAt: string;
+  closedAt: string | null;
+}
+
+export interface TicketConfig {
+  guildId: string;
+  enabled: boolean;
+  categoryId: string | null;
+  welcomeMessage: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Starboard
+// ---------------------------------------------------------------------------
+
+export interface StarboardConfig {
+  guildId: string;
+  enabled: boolean;
+  channelId: string | null;
+  threshold: number;
+  emoji: string;
+}
+
+export interface StarboardEntry {
+  id: string;
+  messageId: string;
+  channelId: string;
+  authorId: string;
+  authorName?: string;
+  content: string;
+  starCount: number;
+  starboardMessageId: string | null;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Onboarding
+// ---------------------------------------------------------------------------
+
+export interface OnboardingStep {
+  id: string;
+  guildId: string;
+  title: string;
+  description: string | null;
+  type: string;
+  required: boolean;
+  position: number;
+  config: Record<string, unknown> | null;
+}
+
+// ---------------------------------------------------------------------------
+// Showcase
+// ---------------------------------------------------------------------------
+
+export interface ShowcaseItem {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  description: string | null;
+  imageUrl: string | null;
+  linkUrl: string | null;
+  position: number;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Quests
+// ---------------------------------------------------------------------------
+
+export interface Quest {
+  id: string;
+  guildId: string;
+  title: string;
+  description: string | null;
+  type: string;
+  goalAmount: number;
+  currentAmount: number;
+  reward: string | null;
+  status: 'active' | 'completed' | 'expired';
+  endsAt: string | null;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Mood Boards
+// ---------------------------------------------------------------------------
+
+export interface MoodBoardItem {
+  id: string;
+  guildId: string;
+  emoji: string;
+  text: string;
+  color: string | null;
+  authorId: string;
+  authorName?: string;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Timeline
+// ---------------------------------------------------------------------------
+
+export interface TimelineEvent {
+  id: string;
+  channelId: string;
+  title: string;
+  description: string | null;
+  eventDate: string;
+  type: string;
+  icon: string | null;
+  authorId: string;
+  authorName?: string;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Marketplace
+// ---------------------------------------------------------------------------
+
+export interface MarketplaceListing {
+  id: string;
+  sellerId: string;
+  sellerName?: string;
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  imageUrl: string | null;
+  status: 'active' | 'sold' | 'removed';
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Forms
+// ---------------------------------------------------------------------------
+
+export interface FormTemplate {
+  id: string;
+  guildId: string;
+  title: string;
+  description: string | null;
+  fields: Array<{ name: string; type: string; required: boolean }>;
+  createdAt: string;
+}
+
+export interface FormResponse {
+  id: string;
+  templateId: string;
+  userId: string;
+  username?: string;
+  answers: Record<string, unknown>;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Auto Roles
+// ---------------------------------------------------------------------------
+
+export interface AutoRole {
+  id: string;
+  guildId: string;
+  roleId: string;
+  roleName?: string;
+  trigger: string;
+  enabled: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Reaction Roles
+// ---------------------------------------------------------------------------
+
+export interface ReactionRole {
+  id: string;
+  guildId: string;
+  channelId: string;
+  messageId: string;
+  emoji: string;
+  roleId: string;
+  roleName?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Workflows
+// ---------------------------------------------------------------------------
+
+export interface Workflow {
+  id: string;
+  guildId: string;
+  name: string;
+  description: string | null;
+  trigger: string;
+  actions: Array<Record<string, unknown>>;
+  enabled: boolean;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Activity Log
+// ---------------------------------------------------------------------------
+
+export interface ActivityLogEvent {
+  id: string;
+  guildId: string;
+  type: string;
+  actorId: string;
+  actorName?: string;
+  description: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Digest Config
+// ---------------------------------------------------------------------------
+
+export interface DigestConfig {
+  guildId: string;
+  enabled: boolean;
+  frequency: 'daily' | 'weekly';
+  channelId: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Sticky Messages
+// ---------------------------------------------------------------------------
+
+export interface StickyMessageData {
+  id: string;
+  channelId: string;
+  content: string;
+  authorId: string;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Text Reactions
+// ---------------------------------------------------------------------------
+
+export interface TextReaction {
+  id: string;
+  messageId: string;
+  userId: string;
+  text: string;
+  username?: string;
+  createdAt: string;
+}
+
+export interface TextReactionGroup {
+  text: string;
+  count: number;
+  userIds: string[];
+  me: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Guild Bans
+// ---------------------------------------------------------------------------
+
+export interface GuildBan {
+  userId: string;
+  guildId: string;
+  reason: string | null;
+  bannedBy: string;
+  createdAt: string;
+  user?: {
+    id: string;
+    username: string;
+    displayName: string | null;
+    avatarHash: string | null;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Automod Rules
+// ---------------------------------------------------------------------------
+
+export interface AutomodRule {
+  id: string;
+  guildId: string;
+  name: string;
+  type: string;
+  enabled: boolean;
+  config: Record<string, unknown>;
+  actions: Array<{ type: string; config?: Record<string, unknown> }>;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Server Templates
+// ---------------------------------------------------------------------------
+
+export interface ServerTemplate {
+  id: string;
+  guildId: string;
+  name: string;
+  description: string | null;
+  code: string;
+  creatorId: string;
+  creatorName?: string;
+  usageCount: number;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Achievements
+// ---------------------------------------------------------------------------
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: string;
+  earned: boolean;
+  earnedAt: string | null;
+  progress?: number;
+  goal?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Cosmetics
+// ---------------------------------------------------------------------------
+
+export interface Cosmetic {
+  id: string;
+  name: string;
+  description: string;
+  type: 'avatar_frame' | 'nameplate' | 'badge';
+  imageUrl: string;
+  rarity: string;
+  equipped: boolean;
+  owned: boolean;
+  price?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Activity Feed
+// ---------------------------------------------------------------------------
+
+export interface ActivityFeedItem {
+  id: string;
+  type: string;
+  description: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Bot Store
+// ---------------------------------------------------------------------------
+
+export interface BotListing {
+  id: string;
+  name: string;
+  description: string;
+  iconUrl: string | null;
+  category: string;
+  tags: string[];
+  installCount: number;
+  rating: number;
+  verified: boolean;
+  creatorId: string;
+  creatorName?: string;
+  createdAt: string;
+}
+
+export interface BotReview {
+  id: string;
+  botId: string;
+  userId: string;
+  username?: string;
+  avatarHash?: string | null;
+  rating: number;
+  content: string;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Feedback
+// ---------------------------------------------------------------------------
+
+export interface FeedbackItem {
+  id: string;
+  userId: string;
+  type: 'bug' | 'feature' | 'general';
+  content: string;
+  status: string;
+  createdAt: string;
 }

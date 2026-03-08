@@ -147,6 +147,8 @@ export default function LoginScreen({ navigation }: Props) {
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
+            accessibilityLabel="Email or username"
+            accessibilityHint="Enter your email address or username"
           />
 
           <Text style={styles.label}>Password</Text>
@@ -157,6 +159,8 @@ export default function LoginScreen({ navigation }: Props) {
             placeholder="Enter password"
             placeholderTextColor={colors.textMuted}
             secureTextEntry
+            accessibilityLabel="Password"
+            accessibilityHint="Enter your password"
           />
 
           {mfaRequired && (
@@ -171,6 +175,8 @@ export default function LoginScreen({ navigation }: Props) {
                 keyboardType="number-pad"
                 maxLength={6}
                 autoFocus
+                accessibilityLabel="Authentication code"
+                accessibilityHint="Enter your 6-digit authentication code"
               />
             </>
           )}
@@ -179,6 +185,8 @@ export default function LoginScreen({ navigation }: Props) {
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleLogin}
             disabled={loading}
+            accessibilityRole="button"
+            accessibilityLabel="Log in"
           >
             {loading ? (
               <ActivityIndicator color={colors.white} />
@@ -190,6 +198,8 @@ export default function LoginScreen({ navigation }: Props) {
           <TouchableOpacity
             style={styles.linkButton}
             onPress={() => navigation.navigate('Register')}
+            accessibilityRole="button"
+            accessibilityLabel="Go to registration"
           >
             <Text style={styles.linkText}>
               Don't have an account? <Text style={styles.linkBold}>Register</Text>

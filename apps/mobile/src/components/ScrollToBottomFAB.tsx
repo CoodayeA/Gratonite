@@ -3,6 +3,7 @@ import { TouchableOpacity, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useColors, spacing, borderRadius } from '../lib/theme';
+import { lightImpact } from '../lib/haptics';
 
 interface ScrollToBottomFABProps {
   visible: boolean;
@@ -19,8 +20,10 @@ export default function ScrollToBottomFAB({ visible, onPress, unreadCount }: Scr
     <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={styles.container}>
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}
-        onPress={onPress}
+        onPress={() => { lightImpact(); onPress(); }}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel="Scroll to bottom"
       >
         <Ionicons name="chevron-down" size={22} color={colors.textPrimary} />
         {unreadCount != null && unreadCount > 0 && (

@@ -16,7 +16,7 @@ export type AppStackParamList = {
   GuildChannels: { guildId: string; guildName: string };
   ChannelChat: { channelId: string; channelName: string; guildId: string };
   VoiceChannel: { channelId: string; channelName: string; guildId: string };
-  DirectMessage: { channelId: string; recipientName: string };
+  DirectMessage: { channelId: string; recipientName: string; recipientId?: string; isGroupDm?: boolean };
   CreateGuild: undefined;
   GuildSettings: { guildId: string; guildName: string };
   GuildMemberList: { guildId: string; guildName: string };
@@ -69,4 +69,44 @@ export type AppStackParamList = {
   BanAppeals: { guildId: string };
   WordFilterScreen: { guildId: string };
   RaidProtection: { guildId: string };
+  // Wave B: Chat enhancements
+  Reminders: undefined;
+  // Wave C: Social & guild features
+  Leaderboard: { guildId: string };
+  GiveawayList: { guildId: string };
+  QuestBoard: { guildId: string };
+  ConfessionBoard: { guildId: string };
+  GreetingCards: undefined;
+  PhotoAlbums: { guildId: string };
+  TicketList: { guildId: string };
+  Starboard: { guildId: string };
+  // Wave D: Guild admin
+  OnboardingConfig: { guildId: string };
+  StarboardConfig: { guildId: string };
+  AutoRoleConfig: { guildId: string };
+  DigestConfig: { guildId: string };
+  ActivityLog: { guildId: string };
+  // Wave E: New channel types + marketplace
+  TimelineChannel: { channelId: string; channelName: string };
+  QAChannel: { channelId: string; channelName: string };
+  Marketplace: undefined;
+  // Wave F: Tier 2 admin
+  ReactionRoleConfig: { guildId: string };
+  WorkflowList: { guildId: string };
+  // Wave G: App Store Readiness
+  GuildBans: { guildId: string };
+  EmojiManagement: { guildId: string };
+  AutomodConfig: { guildId: string };
+  ServerTemplates: { guildId: string };
+  MFASetup: undefined;
+  SettingsAppLock: undefined;
+  SettingsSound: undefined;
+  Feedback: undefined;
+  Achievements: undefined;
+  Cosmetics: undefined;
+  ActivityFeed: undefined;
+  UserStats: undefined;
+  BotStore: undefined;
+  SettingsSecurity: undefined;
+  KeyVerification: { userId: string };
 };

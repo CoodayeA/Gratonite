@@ -35,9 +35,7 @@ export default function GuildInsightsScreen({ route }: Props) {
         setGuild(g);
         setChannelList(chs);
       } catch (err: any) {
-        if (err.status !== 401) {
-          toast.error('Failed to load insights');
-        }
+        // silently ignore — empty state handles no data
       } finally {
         setLoading(false);
       }

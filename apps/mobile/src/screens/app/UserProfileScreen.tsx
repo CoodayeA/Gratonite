@@ -7,13 +7,14 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { users as usersApi, relationships as relApi } from '../../lib/api';
+import { users as usersApi, relationships as relApi, showcase as showcaseApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import Avatar from '../../components/Avatar';
-import type { User, PresenceStatus } from '../../types';
+import type { User, PresenceStatus, ShowcaseItem } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 
@@ -34,6 +35,9 @@ export default function UserProfileScreen({ route, navigation }: Props) {
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showcaseItems, setShowcaseItems] = useState<ShowcaseItem[]>([]);
+  const [mutualFriends, setMutualFriends] = useState<Array<{ id: string; username: string; displayName: string | null; avatarHash: string | null }>>([]);
+  const [mutualGuilds, setMutualGuilds] = useState<Array<{ id: string; name: string; iconHash: string | null }>>([]);
 
   const STATUS_COLORS: Record<PresenceStatus, string> = useMemo(() => ({
     online: colors.online,
@@ -45,8 +49,16 @@ export default function UserProfileScreen({ route, navigation }: Props) {
 
   const fetchProfile = useCallback(async () => {
     try {
-      const data = await usersApi.getProfile(userId);
+      const [data, sc, friends, guilds] = await Promise.all([
+        usersApi.getProfile(userId),
+        showcaseApi.get(userId).catch(() => [] as ShowcaseItem[]),
+        usersApi.getMutualFriends(userId).catch(() => []),
+        usersApi.getMutualGuilds(userId).catch(() => []),
+      ]);
       setProfile(data);
+      setShowcaseItems(sc);
+      setMutualFriends(friends);
+      setMutualGuilds(guilds);
     } catch (err: any) {
       toast.error(err.message || 'Failed to load profile');
     } finally {
@@ -65,6 +77,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
       navigation.navigate('DirectMessage', {
         channelId: dm.id,
         recipientName: profile?.displayName || profile?.username || 'User',
+        recipientId: userId,
       });
     } catch (err: any) {
       toast.error(err.message || 'Failed to open DM');
@@ -276,6 +289,113 @@ export default function UserProfileScreen({ route, navigation }: Props) {
       fontSize: fontSize.md,
       fontWeight: '600',
     },
+    showcaseSection: {
+      marginTop: spacing.lg,
+      paddingTop: spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    showcaseItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    showcaseImage: {
+      width: 48,
+      height: 48,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.bgElevated,
+    },
+    showcaseItemInfo: {
+      flex: 1,
+    },
+    showcaseItemTitle: {
+      color: colors.textPrimary,
+      fontSize: fontSize.sm,
+      fontWeight: '600',
+    },
+    showcaseItemDesc: {
+      color: colors.textMuted,
+      fontSize: fontSize.xs,
+      marginTop: 2,
+    },
+    badgesRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+      marginTop: spacing.md,
+    },
+    badgeItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      backgroundColor: colors.bgElevated,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.full,
+    },
+    badgeText: {
+      color: colors.textSecondary,
+      fontSize: fontSize.xs,
+      fontWeight: '600',
+    },
+    mutualSection: {
+      marginTop: spacing.lg,
+      paddingTop: spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    mutualAvatarRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginTop: spacing.sm,
+    },
+    mutualGuildItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingVertical: spacing.xs,
+    },
+    mutualGuildIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: colors.bgElevated,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    mutualGuildName: {
+      color: colors.textPrimary,
+      fontSize: fontSize.sm,
+    },
+    presenceCard: {
+      marginTop: spacing.md,
+      backgroundColor: colors.bgElevated,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    presenceType: {
+      color: colors.textMuted,
+      fontSize: fontSize.xs,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    presenceName: {
+      color: colors.textPrimary,
+      fontSize: fontSize.sm,
+      fontWeight: '600',
+    },
+    presenceDetails: {
+      color: colors.textSecondary,
+      fontSize: fontSize.xs,
+    },
+    statusEmojiText: {
+      fontSize: fontSize.md,
+    },
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) {
@@ -321,6 +441,18 @@ export default function UserProfileScreen({ route, navigation }: Props) {
         <Text style={styles.displayName}>{displayName}</Text>
         <Text style={styles.username}>@{profile.username}</Text>
 
+        {/* Badges */}
+        {(profile as any).badges && (profile as any).badges.length > 0 && (
+          <View style={styles.badgesRow}>
+            {(profile as any).badges.map((badge: any) => (
+              <TouchableOpacity key={badge.id} style={styles.badgeItem} onPress={() => Alert.alert(badge.name, badge.description)}>
+                <Text>{badge.icon}</Text>
+                <Text style={styles.badgeText}>{badge.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
         {/* Status */}
         <View style={styles.statusRow}>
           <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[profile.status] }]} />
@@ -328,7 +460,23 @@ export default function UserProfileScreen({ route, navigation }: Props) {
         </View>
 
         {profile.customStatus && (
-          <Text style={styles.customStatus}>{profile.customStatus}</Text>
+          <Text style={styles.customStatus}>
+            {(profile as any).statusEmoji ? `${(profile as any).statusEmoji} ` : ''}{profile.customStatus}
+          </Text>
+        )}
+
+        {/* Rich Presence */}
+        {(profile as any).richPresence && (
+          <View style={styles.presenceCard}>
+            <Ionicons name="game-controller" size={24} color={colors.accentPrimary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.presenceType}>{(profile as any).richPresence.type}</Text>
+              <Text style={styles.presenceName}>{(profile as any).richPresence.name}</Text>
+              {(profile as any).richPresence.details && (
+                <Text style={styles.presenceDetails}>{(profile as any).richPresence.details}</Text>
+              )}
+            </View>
+          </View>
         )}
 
         {profile.pronouns && (
@@ -339,6 +487,59 @@ export default function UserProfileScreen({ route, navigation }: Props) {
           <View style={styles.bioSection}>
             <Text style={styles.sectionLabel}>ABOUT ME</Text>
             <Text style={styles.bioText}>{profile.bio}</Text>
+          </View>
+        )}
+
+        {/* Mutual Friends */}
+        {mutualFriends.length > 0 && (
+          <View style={styles.mutualSection}>
+            <Text style={styles.sectionLabel}>{mutualFriends.length} MUTUAL FRIENDS</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.mutualAvatarRow}>
+                {mutualFriends.slice(0, 10).map(f => (
+                  <TouchableOpacity key={f.id} onPress={() => navigation.push('UserProfile', { userId: f.id })}>
+                    <Avatar userId={f.id} avatarHash={f.avatarHash} name={f.displayName || f.username} size={40} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Mutual Guilds */}
+        {mutualGuilds.length > 0 && (
+          <View style={styles.mutualSection}>
+            <Text style={styles.sectionLabel}>{mutualGuilds.length} MUTUAL SERVERS</Text>
+            {mutualGuilds.slice(0, 5).map(g => (
+              <View key={g.id} style={styles.mutualGuildItem}>
+                <View style={styles.mutualGuildIcon}>
+                  <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>{g.name.charAt(0)}</Text>
+                </View>
+                <Text style={styles.mutualGuildName}>{g.name}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Showcase */}
+        {showcaseItems.length > 0 && (
+          <View style={styles.showcaseSection}>
+            <Text style={styles.sectionLabel}>SHOWCASE</Text>
+            {showcaseItems.map((item) => (
+              <View key={item.id} style={styles.showcaseItem}>
+                {item.imageUrl ? (
+                  <Image source={{ uri: item.imageUrl }} style={styles.showcaseImage} />
+                ) : (
+                  <View style={styles.showcaseImage} />
+                )}
+                <View style={styles.showcaseItemInfo}>
+                  <Text style={styles.showcaseItemTitle}>{item.title}</Text>
+                  {item.description && (
+                    <Text style={styles.showcaseItemDesc} numberOfLines={1}>{item.description}</Text>
+                  )}
+                </View>
+              </View>
+            ))}
           </View>
         )}
 
@@ -362,6 +563,14 @@ export default function UserProfileScreen({ route, navigation }: Props) {
             <Text style={styles.actionButtonSecondaryText}>Add Friend</Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          style={[styles.actionButtonSecondary, { marginTop: spacing.sm }]}
+          onPress={() => navigation.navigate('KeyVerification', { userId })}
+        >
+          <Ionicons name="shield-checkmark-outline" size={18} color={colors.accentPrimary} />
+          <Text style={styles.actionButtonSecondaryText}>Verify Identity</Text>
+        </TouchableOpacity>
 
         <View style={styles.divider} />
 

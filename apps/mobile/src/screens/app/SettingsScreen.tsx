@@ -29,6 +29,13 @@ const SETTINGS_ROWS: SettingsRow[] = [
   { icon: 'shield-outline', label: 'Privacy', screen: 'SettingsPrivacy' },
   { icon: 'phone-portrait-outline', label: 'Sessions', screen: 'SettingsSessions' },
   { icon: 'volume-mute-outline', label: 'Muted Users', screen: 'SettingsMutedUsers' },
+  { icon: 'musical-notes-outline', label: 'Sound', screen: 'SettingsSound' },
+  { icon: 'lock-closed-outline', label: 'Two-Factor Auth', screen: 'MFASetup' },
+  { icon: 'shield-checkmark-outline', label: 'Security', screen: 'SettingsSecurity' },
+  { icon: 'finger-print-outline', label: 'App Lock', screen: 'SettingsAppLock' },
+  { icon: 'chatbox-outline', label: 'Feedback', screen: 'Feedback' },
+  { icon: 'trophy-outline', label: 'Achievements', screen: 'Achievements' },
+  { icon: 'shirt-outline', label: 'Wardrobe', screen: 'Cosmetics' },
 ];
 
 export default function SettingsScreen({ navigation }: Props) {
@@ -146,6 +153,8 @@ export default function SettingsScreen({ navigation }: Props) {
             style={styles.row}
             onPress={() => navigation.navigate(row.screen as any)}
             activeOpacity={0.6}
+            accessibilityRole="button"
+            accessibilityLabel={row.label}
           >
             <Ionicons name={row.icon} size={22} color={colors.textSecondary} />
             <Text style={styles.rowLabel}>{row.label}</Text>
@@ -156,7 +165,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
       {/* Logout */}
       <View style={styles.logoutSection}>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} accessibilityRole="button" accessibilityLabel="Log out">
           <Ionicons name="log-out-outline" size={22} color={colors.error} />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>

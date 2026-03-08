@@ -35,9 +35,7 @@ export default function InviteListScreen({ route, navigation }: Props) {
       const data = await invitesApi.listForGuild(guildId);
       setInviteList(data);
     } catch (err: any) {
-      if (err.status !== 401) {
-        toast.error('Failed to load invites');
-      }
+      // silently ignore — empty state handles no data
     } finally {
       setLoading(false);
       setRefreshing(false);

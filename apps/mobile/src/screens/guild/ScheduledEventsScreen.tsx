@@ -33,9 +33,7 @@ export default function ScheduledEventsScreen({ route, navigation }: Props) {
       const data = await eventsApi.list(guildId);
       setEventList(data);
     } catch (err: any) {
-      if (err.status !== 401) {
-        toast.error('Failed to load events');
-      }
+      // silently ignore — empty state handles no data
     } finally {
       setLoading(false);
       setRefreshing(false);

@@ -5,6 +5,7 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  Switch,
   StyleSheet,
   Alert,
   ActivityIndicator,
@@ -27,6 +28,8 @@ export default function ChannelEditScreen({ route, navigation }: Props) {
   const [channel, setChannel] = useState<Channel | null>(null);
   const [name, setName] = useState('');
   const [topic, setTopic] = useState('');
+  const [slowModeSeconds, setSlowModeSeconds] = useState(0);
+  const [disappearTimer, setDisappearTimer] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -36,6 +39,8 @@ export default function ChannelEditScreen({ route, navigation }: Props) {
       setChannel(data);
       setName(data.name);
       setTopic(data.topic || '');
+      setSlowModeSeconds(data.slowModeSeconds || 0);
+      setDisappearTimer(data.disappearTimer ?? null);
     } catch (err: any) {
       if (err.status !== 401) {
         toast.error('Failed to load channel');
@@ -62,6 +67,8 @@ export default function ChannelEditScreen({ route, navigation }: Props) {
       await channelsApi.update(channelId, {
         name: trimmedName,
         topic: topic.trim() || null,
+        slowModeSeconds,
+        disappearTimer,
       });
       toast.success('Channel updated');
       navigation.goBack();
@@ -181,6 +188,43 @@ export default function ChannelEditScreen({ route, navigation }: Props) {
       fontSize: fontSize.md,
       fontWeight: '600',
     },
+    optionRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.xs,
+      marginTop: spacing.sm,
+    },
+    optionChip: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: borderRadius.sm,
+      backgroundColor: colors.bgSecondary,
+      borderWidth: 1,
+      borderColor: colors.transparent,
+    },
+    optionChipActive: {
+      borderColor: colors.accentPrimary,
+      backgroundColor: colors.accentPrimary + '20',
+    },
+    optionChipText: {
+      fontSize: fontSize.xs,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    optionChipTextActive: {
+      color: colors.accentPrimary,
+    },
+    switchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: spacing.sm,
+    },
+    switchLabel: {
+      color: colors.textPrimary,
+      fontSize: fontSize.md,
+      fontWeight: '500',
+    },
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) {
@@ -230,6 +274,57 @@ export default function ChannelEditScreen({ route, navigation }: Props) {
           numberOfLines={3}
           textAlignVertical="top"
         />
+      </View>
+
+      {/* Slow Mode */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>SLOW MODE</Text>
+        <View style={styles.optionRow}>
+          {([
+            { label: 'Off', value: 0 },
+            { label: '5s', value: 5 },
+            { label: '10s', value: 10 },
+            { label: '15s', value: 15 },
+            { label: '30s', value: 30 },
+            { label: '1m', value: 60 },
+            { label: '2m', value: 120 },
+            { label: '5m', value: 300 },
+            { label: '10m', value: 600 },
+          ] as const).map((opt) => (
+            <TouchableOpacity
+              key={opt.value}
+              style={[styles.optionChip, slowModeSeconds === opt.value && styles.optionChipActive]}
+              onPress={() => setSlowModeSeconds(opt.value)}
+            >
+              <Text style={[styles.optionChipText, slowModeSeconds === opt.value && styles.optionChipTextActive]}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* Disappearing Messages */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>DISAPPEARING MESSAGES</Text>
+        <View style={styles.optionRow}>
+          {([
+            { label: 'Off', value: null },
+            { label: '1h', value: 3600 },
+            { label: '24h', value: 86400 },
+            { label: '7d', value: 604800 },
+          ] as { label: string; value: number | null }[]).map((opt) => (
+            <TouchableOpacity
+              key={opt.label}
+              style={[styles.optionChip, disappearTimer === opt.value && styles.optionChipActive]}
+              onPress={() => setDisappearTimer(opt.value)}
+            >
+              <Text style={[styles.optionChipText, disappearTimer === opt.value && styles.optionChipTextActive]}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {/* Save button */}

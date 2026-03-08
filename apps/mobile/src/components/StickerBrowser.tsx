@@ -12,6 +12,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { stickers as stickersApi } from '../lib/api';
 import { useTheme } from '../lib/theme';
+import { lightImpact } from '../lib/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Sticker } from '../types';
 
@@ -47,6 +48,7 @@ export default function StickerBrowser({ visible, onClose, guildId, onSelect }: 
   }, [visible, fetchStickers]);
 
   const handleSelect = (sticker: Sticker) => {
+    lightImpact();
     onSelect(sticker);
     onClose();
   };

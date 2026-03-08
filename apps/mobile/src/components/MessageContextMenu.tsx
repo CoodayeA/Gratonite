@@ -20,7 +20,11 @@ interface MessageContextMenuProps {
   onUnpin: (message: Message) => void;
   onReact: (message: Message) => void;
   onBookmark: (message: Message) => void;
+  onRemind?: (message: Message) => void;
   onForward: (message: Message) => void;
+  forwardingDisabled?: boolean;
+  onTranslate?: (message: Message) => void;
+  onTextReact?: (message: Message) => void;
 }
 
 export default function MessageContextMenu({
@@ -35,7 +39,11 @@ export default function MessageContextMenu({
   onUnpin,
   onReact,
   onBookmark,
+  onRemind,
   onForward,
+  forwardingDisabled,
+  onTranslate,
+  onTextReact,
 }: MessageContextMenuProps) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const insets = useSafeAreaInsets();
@@ -153,10 +161,12 @@ export default function MessageContextMenu({
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity style={styles.item} onPress={handleCopy}>
-          <Ionicons name="copy-outline" size={22} color={colors.textPrimary} />
-          <Text style={styles.label}>Copy Text</Text>
-        </TouchableOpacity>
+        {!forwardingDisabled && (
+          <TouchableOpacity style={styles.item} onPress={handleCopy}>
+            <Ionicons name="copy-outline" size={22} color={colors.textPrimary} />
+            <Text style={styles.label}>Copy Text</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity style={styles.item} onPress={() => handleAction(onReact)}>
           <Ionicons name="happy-outline" size={22} color={colors.textPrimary} />
@@ -168,10 +178,33 @@ export default function MessageContextMenu({
           <Text style={styles.label}>Bookmark</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.item} onPress={() => handleAction(onForward)}>
-          <Ionicons name="arrow-redo-outline" size={22} color={colors.textPrimary} />
-          <Text style={styles.label}>Forward</Text>
-        </TouchableOpacity>
+        {onTranslate && (
+          <TouchableOpacity style={styles.item} onPress={() => handleAction(onTranslate)}>
+            <Ionicons name="language-outline" size={22} color={colors.textPrimary} />
+            <Text style={styles.label}>Translate</Text>
+          </TouchableOpacity>
+        )}
+
+        {onTextReact && (
+          <TouchableOpacity style={styles.item} onPress={() => handleAction(onTextReact)}>
+            <Ionicons name="text-outline" size={22} color={colors.textPrimary} />
+            <Text style={styles.label}>Text React</Text>
+          </TouchableOpacity>
+        )}
+
+        {onRemind && (
+          <TouchableOpacity style={styles.item} onPress={() => handleAction(onRemind)}>
+            <Ionicons name="alarm-outline" size={22} color={colors.textPrimary} />
+            <Text style={styles.label}>Remind Me</Text>
+          </TouchableOpacity>
+        )}
+
+        {!forwardingDisabled && (
+          <TouchableOpacity style={styles.item} onPress={() => handleAction(onForward)}>
+            <Ionicons name="arrow-redo-outline" size={22} color={colors.textPrimary} />
+            <Text style={styles.label}>Forward</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
           <Text style={styles.cancelText}>Cancel</Text>

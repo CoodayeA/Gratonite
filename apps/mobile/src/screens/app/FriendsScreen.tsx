@@ -10,10 +10,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { relationships as relApi } from '../../lib/api';
+import { relationships as relApi, friendshipStreaks as streaksApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import Avatar from '../../components/Avatar';
+import FriendshipStreakBadge from '../../components/FriendshipStreakBadge';
 import { presenceStore } from '../../lib/presenceStore';
 import type { Relationship } from '../../types';
 import type { CompositeScreenProps } from '@react-navigation/native';
@@ -35,6 +36,7 @@ export default function FriendsScreen({ navigation }: Props) {
   const [rels, setRels] = useState<Relationship[]>([]);
   const [tab, setTab] = useState<Tab>('all');
   const [refreshing, setRefreshing] = useState(false);
+  const [streaks, setStreaks] = useState<Map<string, number>>(new Map());
 
   const fetchRelationships = useCallback(async () => {
     try {
@@ -47,6 +49,16 @@ export default function FriendsScreen({ navigation }: Props) {
           presenceStore.set(r.user.id, r.user.status as any);
         }
       });
+
+      // Fetch friendship streaks
+      try {
+        const streakData = await streaksApi.getAll();
+        const map = new Map<string, number>();
+        streakData.forEach((s) => map.set(s.friendId, s.streak));
+        setStreaks(map);
+      } catch {
+        // Non-critical, ignore
+      }
     } catch (err: any) {
       if (err.status !== 401) {
         toast.error('Failed to load friends');
@@ -97,7 +109,7 @@ export default function FriendsScreen({ navigation }: Props) {
   const handleOpenDM = async (userId: string, username: string) => {
     try {
       const dm = await relApi.openDM(userId);
-      navigation.navigate('DirectMessage', { channelId: dm.id, recipientName: username });
+      navigation.navigate('DirectMessage', { channelId: dm.id, recipientName: username, recipientId: userId });
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -209,7 +221,10 @@ export default function FriendsScreen({ navigation }: Props) {
           />
         </TouchableOpacity>
         <View style={styles.friendInfo}>
-          <Text style={styles.friendName}>{name}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.friendName}>{name}</Text>
+            <FriendshipStreakBadge streak={streaks.get(item.targetId) ?? 0} />
+          </View>
           {item.type === 'pending_incoming' && (
             <Text style={styles.friendMeta}>Incoming request</Text>
           )}

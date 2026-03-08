@@ -110,9 +110,7 @@ export default function AuditLogScreen({ route, navigation }: Props) {
       const data = await moderationApi.getAuditLog(guildId, 100);
       setEntries(data);
     } catch (err: any) {
-      if (err.status !== 401) {
-        toast.error('Failed to load audit log');
-      }
+      // silently ignore — empty state handles no data
     } finally {
       setLoading(false);
     }

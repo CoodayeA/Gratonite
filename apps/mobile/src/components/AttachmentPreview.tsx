@@ -9,10 +9,12 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface AttachmentPreviewProps {
   attachment: Attachment;
-  onImagePress?: (url: string) => void;
+  onImagePress?: (url: string, allImageUrls?: string[], imageIndex?: number) => void;
+  allImageUrls?: string[];
+  imageIndex?: number;
 }
 
-export default function AttachmentPreview({ attachment, onImagePress }: AttachmentPreviewProps) {
+export default function AttachmentPreview({ attachment, onImagePress, allImageUrls, imageIndex }: AttachmentPreviewProps) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const isImage = attachment.contentType.startsWith('image/');
   const isVideo = attachment.contentType.startsWith('video/');
@@ -50,7 +52,7 @@ export default function AttachmentPreview({ attachment, onImagePress }: Attachme
     const h = w * ratio;
 
     return (
-      <TouchableOpacity onPress={() => onImagePress?.(attachment.url)} activeOpacity={0.9}>
+      <TouchableOpacity onPress={() => onImagePress?.(attachment.url, allImageUrls, imageIndex)} activeOpacity={0.9}>
         <Image
           source={{ uri: attachment.url }}
           style={{ width: w, height: h, borderRadius: borderRadius.md }}

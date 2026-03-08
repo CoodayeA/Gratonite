@@ -40,6 +40,7 @@ import { db } from '../db/index';
 import { guildMembers } from '../db/schema/guilds';
 import { channels, dmChannelMembers } from '../db/schema/channels';
 import { stageSessions, stageSpeakers } from '../db/schema/stage';
+import { users } from '../db/schema/users';
 import { eq, and, isNull } from 'drizzle-orm';
 import { redis } from '../lib/redis';
 import { executeWorkflows } from '../lib/workflow-executor';
@@ -150,12 +151,21 @@ export function initSocket(io: SocketIOServer): void {
     }
 
     // -------------------------------------------------------------------------
-    // Set presence to online in Redis and broadcast
+    // Set presence in Redis and broadcast — respect stored status (invisible)
     // -------------------------------------------------------------------------
     try {
-      await redis.set(`presence:${userId}`, 'online', 'EX', 300);
+      // Check if the user's DB status is invisible; if so, stay invisible
+      const [dbUser] = await db
+        .select({ status: users.status })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      const desiredStatus = dbUser?.status === 'invisible' ? 'invisible' : 'online';
+      await redis.set(`presence:${userId}`, desiredStatus, 'EX', 300);
+      // Broadcast — invisible appears as "offline" to others
+      const broadcastStatus = desiredStatus === 'invisible' ? 'offline' : desiredStatus;
       for (const guildId of userGuildIds) {
-        io.to(`guild:${guildId}`).emit('PRESENCE_UPDATE', { userId, status: 'online' });
+        io.to(`guild:${guildId}`).emit('PRESENCE_UPDATE', { userId, status: broadcastStatus });
       }
     } catch (err) {
       console.error(`[socket.io] failed to set presence for user ${userId}:`, err);
@@ -260,9 +270,10 @@ export function initSocket(io: SocketIOServer): void {
         } else if (data.activity === null) {
           await redis.del(`presence:${userId}:activity`);
         }
-        // Broadcast to all guilds
-        const payload: { userId: string; status: string; activity?: { name: string; type: string } | null } = { userId, status: data.status };
-        if (activity !== undefined) payload.activity = activity;
+        // Broadcast to all guilds — invisible users appear "offline" to others
+        const broadcastStatus = data.status === 'invisible' ? 'offline' : data.status;
+        const payload: { userId: string; status: string; activity?: { name: string; type: string } | null } = { userId, status: broadcastStatus };
+        if (activity !== undefined && data.status !== 'invisible') payload.activity = activity;
         for (const guildId of userGuildIds) {
           socket.to(`guild:${guildId}`).emit('PRESENCE_UPDATE', payload);
         }
@@ -443,6 +454,18 @@ export function initSocket(io: SocketIOServer): void {
       socket.emit('SPATIAL_POSITIONS_SYNC', {
         channelId: data.channelId,
         positions,
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // SCREENSHOT_TAKEN — relay screenshot notification to channel members
+    // -------------------------------------------------------------------------
+    socket.on('SCREENSHOT_TAKEN', (data: { channelId: string }) => {
+      if (!data?.channelId) return;
+      socket.to(`channel:${data.channelId}`).emit('SCREENSHOT_TAKEN', {
+        channelId: data.channelId,
+        userId,
+        timestamp: Date.now(),
       });
     });
 

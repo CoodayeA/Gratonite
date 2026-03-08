@@ -1,21 +1,51 @@
 import { useSyncExternalStore } from 'react';
-import type { ThemeName, ThemeDefinition, ThemeColors, NeoExtras } from './themes';
+import * as SecureStore from 'expo-secure-store';
+import type { ThemeName, ThemeDefinition, ThemeColors, ThemeFontSize, NeoExtras } from './themes';
 import { themes } from './themes';
+
+// Base font size the themes are designed around (API default = 14)
+const BASE_FONT_SIZE = 14;
+
+function scaleFontSizes(base: ThemeFontSize, userFontSize: number): ThemeFontSize {
+  if (userFontSize === BASE_FONT_SIZE) return base;
+  const ratio = userFontSize / BASE_FONT_SIZE;
+  return {
+    xs: Math.round(base.xs * ratio),
+    sm: Math.round(base.sm * ratio),
+    md: Math.round(base.md * ratio),
+    lg: Math.round(base.lg * ratio),
+    xl: Math.round(base.xl * ratio),
+    xxl: Math.round(base.xxl * ratio),
+    xxxl: Math.round(base.xxxl * ratio),
+  };
+}
 
 interface ThemeState {
   name: ThemeName;
   theme: ThemeDefinition;
+  userFontSize: number;
+  autoMode: boolean;
 }
 
 let state: ThemeState = {
   name: 'neobrutalism',
   theme: themes.neobrutalism,
+  userFontSize: BASE_FONT_SIZE,
+  autoMode: false,
 };
 
 const listeners = new Set<() => void>();
 
 function emit() {
   listeners.forEach((l) => l());
+}
+
+function buildThemeWithScale(base: ThemeDefinition, userFontSize: number): ThemeDefinition {
+  if (userFontSize === BASE_FONT_SIZE) return base;
+  return {
+    ...base,
+    fontSize: scaleFontSizes(base.fontSize, userFontSize),
+  };
 }
 
 export const themeStore = {
@@ -28,16 +58,33 @@ export const themeStore = {
   },
   setTheme(name: ThemeName) {
     if (state.name === name) return;
-    const theme = themes[name];
-    if (!theme) return;
-    state = { name, theme };
+    const base = themes[name];
+    if (!base) return;
+    state = { name, theme: buildThemeWithScale(base, state.userFontSize), userFontSize: state.userFontSize };
     emit();
+  },
+  setFontSize(size: number) {
+    if (state.userFontSize === size) return;
+    const base = themes[state.name];
+    state = { ...state, userFontSize: size, theme: buildThemeWithScale(base, size) };
+    emit();
+  },
+  getFontSize(): number {
+    return state.userFontSize;
   },
   getTheme(): ThemeDefinition {
     return state.theme;
   },
   getThemeName(): ThemeName {
     return state.name;
+  },
+  setAutoMode(enabled: boolean) {
+    state = { ...state, autoMode: enabled };
+    SecureStore.setItemAsync('gratonite_auto_theme', String(enabled)).catch(() => {});
+    emit();
+  },
+  getAutoMode(): boolean {
+    return state.autoMode;
   },
 };
 

@@ -176,6 +176,7 @@ export default function DMListScreen({ navigation }: Props) {
             onPress={() => navigation.navigate('DirectMessage', {
               channelId: item.id,
               recipientName: item.recipient?.displayName || item.recipient?.username || 'Unknown',
+              recipientId: item.recipientId,
             })}
           />
         )}

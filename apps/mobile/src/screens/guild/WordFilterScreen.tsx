@@ -53,9 +53,7 @@ export default function WordFilterScreen({ route, navigation }: Props) {
       const data = await wordFilterApi.list(guildId);
       setFilters(data);
     } catch (err: any) {
-      if (err.status !== 401) {
-        toast.error('Failed to load word filters');
-      }
+      // silently ignore — empty state handles no data
     } finally {
       setLoading(false);
     }

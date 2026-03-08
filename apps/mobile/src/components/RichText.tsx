@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { Text, Image, StyleSheet, Linking } from 'react-native';
+import { View, Text, Image, StyleSheet, Linking } from 'react-native';
 import { useTheme } from '../lib/theme';
 import { API_BASE } from '../lib/api';
+import LinkPreview from './LinkPreview';
 
 interface CustomEmoji {
   name: string;
@@ -19,6 +20,9 @@ export default function RichText({ content, color, customEmojis }: RichTextProps
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const resolvedColor = color ?? colors.textPrimary;
   const parts = parseContent(content, customEmojis);
+
+  // Extract URLs for link previews
+  const urls = parts.filter(p => p.type === 'link' && p.url).map(p => p.url!);
 
   const styles = useMemo(() => StyleSheet.create({
     text: {
@@ -61,32 +65,37 @@ export default function RichText({ content, color, customEmojis }: RichTextProps
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   return (
-    <Text style={[styles.text, { color: resolvedColor }]}>
-      {parts.map((part, i) => {
-        switch (part.type) {
-          case 'bold':
-            return <Text key={i} style={[styles.bold, { color: resolvedColor }]}>{part.text}</Text>;
-          case 'italic':
-            return <Text key={i} style={[styles.italic, { color: resolvedColor }]}>{part.text}</Text>;
-          case 'code':
-            return <Text key={i} style={styles.code}>{part.text}</Text>;
-          case 'link':
-            return (
-              <Text key={i} style={styles.link} onPress={() => Linking.openURL(part.url!)}>
-                {part.text}
-              </Text>
-            );
-          case 'mention':
-            return <Text key={i} style={styles.mention}>{part.text}</Text>;
-          case 'spoiler':
-            return <Text key={i} style={styles.spoiler}>{part.text}</Text>;
-          case 'emoji':
-            return <Image key={i} source={{ uri: part.url }} style={styles.emoji} resizeMode="contain" />;
-          default:
-            return <Text key={i}>{part.text}</Text>;
-        }
-      })}
-    </Text>
+    <View>
+      <Text style={[styles.text, { color: resolvedColor }]}>
+        {parts.map((part, i) => {
+          switch (part.type) {
+            case 'bold':
+              return <Text key={i} style={[styles.bold, { color: resolvedColor }]}>{part.text}</Text>;
+            case 'italic':
+              return <Text key={i} style={[styles.italic, { color: resolvedColor }]}>{part.text}</Text>;
+            case 'code':
+              return <Text key={i} style={styles.code}>{part.text}</Text>;
+            case 'link':
+              return (
+                <Text key={i} style={styles.link} onPress={() => Linking.openURL(part.url!)}>
+                  {part.text}
+                </Text>
+              );
+            case 'mention':
+              return <Text key={i} style={styles.mention}>{part.text}</Text>;
+            case 'spoiler':
+              return <Text key={i} style={styles.spoiler}>{part.text}</Text>;
+            case 'emoji':
+              return <Image key={i} source={{ uri: part.url }} style={styles.emoji} resizeMode="contain" />;
+            default:
+              return <Text key={i}>{part.text}</Text>;
+          }
+        })}
+      </Text>
+      {urls.map((url, i) => (
+        <LinkPreview key={url + i} url={url} />
+      ))}
+    </View>
   );
 }
 

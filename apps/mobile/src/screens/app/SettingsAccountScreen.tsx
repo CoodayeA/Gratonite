@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
+import { mfa } from '../../lib/api';
 import SectionHeader from '../../components/SectionHeader';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -33,6 +35,11 @@ export default function SettingsAccountScreen({ navigation }: Props) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
+  const [mfaEnabled, setMfaEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    mfa.status().then((res) => setMfaEnabled(res.enabled)).catch(() => {});
+  }, []);
 
   const handleSaveProfile = async () => {
     setSaving(true);
@@ -167,6 +174,46 @@ export default function SettingsAccountScreen({ navigation }: Props) {
       fontSize: fontSize.md,
       fontWeight: '600',
     },
+    mfaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.bgSecondary,
+      borderRadius: borderRadius.md,
+      padding: spacing.lg,
+      gap: spacing.md,
+    },
+    mfaInfo: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    mfaLabel: {
+      fontSize: fontSize.md,
+      fontWeight: '500',
+      color: colors.textPrimary,
+    },
+    mfaBadge: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 2,
+      borderRadius: borderRadius.sm,
+    },
+    mfaBadgeText: {
+      fontSize: fontSize.xs,
+      fontWeight: '700',
+    },
+    mfaButton: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: borderRadius.sm,
+      backgroundColor: colors.accentPrimary,
+    },
+    mfaButtonText: {
+      color: colors.white,
+      fontSize: fontSize.sm,
+      fontWeight: '600',
+    },
     bottomPad: {
       height: 40,
     },
@@ -260,6 +307,34 @@ export default function SettingsAccountScreen({ navigation }: Props) {
               <Text style={styles.saveButtonText}>Change Password</Text>
             )}
           </TouchableOpacity>
+        </View>
+
+        {/* Two-Factor Authentication */}
+        <SectionHeader title="Two-Factor Authentication" />
+        <View style={styles.section}>
+          <View style={styles.mfaRow}>
+            <View style={styles.mfaInfo}>
+              <Ionicons
+                name={mfaEnabled ? 'shield-checkmark' : 'shield-outline'}
+                size={20}
+                color={mfaEnabled ? colors.success : colors.textMuted}
+              />
+              <Text style={styles.mfaLabel}>2FA</Text>
+              {mfaEnabled !== null && (
+                <View style={[styles.mfaBadge, { backgroundColor: mfaEnabled ? colors.success + '30' : colors.error + '30' }]}>
+                  <Text style={[styles.mfaBadgeText, { color: mfaEnabled ? colors.success : colors.error }]}>
+                    {mfaEnabled ? 'Enabled' : 'Disabled'}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <TouchableOpacity
+              style={styles.mfaButton}
+              onPress={() => navigation.navigate('MFASetup')}
+            >
+              <Text style={styles.mfaButtonText}>Manage</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Danger zone */}

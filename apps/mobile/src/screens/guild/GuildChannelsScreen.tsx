@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { channels as channelsApi } from '../../lib/api';
+import ChannelNotificationSheet from '../../components/ChannelNotificationSheet';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import type { Channel } from '../../types';
@@ -29,6 +30,7 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
   const { guildId, guildName } = route.params;
   const [channelList, setChannelList] = useState<Channel[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [notifChannel, setNotifChannel] = useState<string | null>(null);
 
   // Add settings button to header
   React.useEffect(() => {
@@ -114,6 +116,7 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
     <TouchableOpacity
       style={styles.channelItem}
       onPress={() => handleChannelPress(item)}
+      onLongPress={() => setNotifChannel(item.id)}
     >
       <Ionicons
         name={getChannelIcon(item.type) as any}
@@ -188,6 +191,11 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
             <Text style={styles.emptyText}>No channels</Text>
           </View>
         }
+      />
+      <ChannelNotificationSheet
+        visible={!!notifChannel}
+        onClose={() => setNotifChannel(null)}
+        channelId={notifChannel || ''}
       />
     </View>
   );

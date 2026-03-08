@@ -89,6 +89,7 @@ export default function GroupDMCreateScreen({ navigation }: Props) {
       navigation.replace('DirectMessage', {
         channelId: channel.id,
         recipientName: channel.name || 'Group DM',
+        isGroupDm: true,
       });
     } catch (err: any) {
       toast.error(err.message || 'Failed to create group DM');

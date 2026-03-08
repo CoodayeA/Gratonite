@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, FlatList, StyleSheet, Modal } from 'react
 import SearchBar from './SearchBar';
 import { useTheme } from '../lib/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { lightImpact } from '../lib/haptics';
 
 const EMOJI_CATEGORIES: Record<string, string[]> = {
   'Smileys': ['\u{1F600}','\u{1F603}','\u{1F604}','\u{1F601}','\u{1F606}','\u{1F605}','\u{1F602}','\u{1F923}','\u{1F60A}','\u{1F607}','\u{1F642}','\u{1F643}','\u{1F609}','\u{1F60C}','\u{1F60D}','\u{1F970}','\u{1F618}','\u{1F617}','\u{1F619}','\u{1F61A}','\u{1F60B}','\u{1F61B}','\u{1F61C}','\u{1F92A}','\u{1F61D}','\u{1F911}','\u{1F917}','\u{1F92D}','\u{1F92B}','\u{1F914}','\u{1F910}','\u{1F928}','\u{1F610}','\u{1F611}','\u{1F636}','\u{1F60F}','\u{1F612}','\u{1F644}','\u{1F62C}','\u{1F925}','\u{1F60E}','\u{1F913}','\u{1F929}','\u{1F973}','\u{1F60E}'],
@@ -92,7 +93,7 @@ export default function EmojiPicker({ visible, onClose, onSelect }: EmojiPickerP
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
+      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose} accessibilityLabel="Close emoji picker">
         <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }]} onStartShouldSetResponder={() => true}>
           <View style={styles.handle} />
 
@@ -126,7 +127,9 @@ export default function EmojiPicker({ visible, onClose, onSelect }: EmojiPickerP
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.emojiBtn}
-                onPress={() => { onSelect(item); onClose(); }}
+                onPress={() => { lightImpact(); onSelect(item); onClose(); }}
+                accessibilityRole="button"
+                accessibilityLabel={item}
               >
                 <Text style={styles.emojiText}>{item}</Text>
               </TouchableOpacity>

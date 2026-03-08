@@ -148,6 +148,8 @@ export default function RegisterScreen({ navigation }: Props) {
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
             autoCorrect={false}
+            accessibilityLabel="Username"
+            accessibilityHint="Choose a username"
           />
 
           <Text style={styles.label}>Email</Text>
@@ -159,6 +161,8 @@ export default function RegisterScreen({ navigation }: Props) {
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
             keyboardType="email-address"
+            accessibilityLabel="Email"
+            accessibilityHint="Enter your email address"
           />
 
           <Text style={styles.label}>Password</Text>
@@ -169,6 +173,8 @@ export default function RegisterScreen({ navigation }: Props) {
             placeholder="Create a password"
             placeholderTextColor={colors.textMuted}
             secureTextEntry
+            accessibilityLabel="Password"
+            accessibilityHint="Create a password"
           />
 
           <Text style={styles.label}>Confirm Password</Text>
@@ -179,12 +185,16 @@ export default function RegisterScreen({ navigation }: Props) {
             placeholder="Confirm your password"
             placeholderTextColor={colors.textMuted}
             secureTextEntry
+            accessibilityLabel="Confirm password"
+            accessibilityHint="Re-enter your password"
           />
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleRegister}
             disabled={loading}
+            accessibilityRole="button"
+            accessibilityLabel="Create account"
           >
             {loading ? (
               <ActivityIndicator color={colors.white} />
@@ -196,6 +206,8 @@ export default function RegisterScreen({ navigation }: Props) {
           <TouchableOpacity
             style={styles.linkButton}
             onPress={() => navigation.navigate('Login')}
+            accessibilityRole="button"
+            accessibilityLabel="Go to login"
           >
             <Text style={styles.linkText}>
               Already have an account? <Text style={styles.linkBold}>Log in</Text>

@@ -34,9 +34,7 @@ export default function RoleListScreen({ route, navigation }: Props) {
       data.sort((a, b) => b.position - a.position);
       setRoleList(data);
     } catch (err: any) {
-      if (err.status !== 401) {
-        toast.error('Failed to load roles');
-      }
+      // silently ignore — empty state handles no data
     } finally {
       setLoading(false);
       setRefreshing(false);

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { guilds as guildsApi, relationships as relApi, notifications as notifApi, readState as readStateApi } from '../lib/api';
+import { AppState as RNAppState } from 'react-native';
+import { guilds as guildsApi, relationships as relApi, notifications as notifApi, readState as readStateApi, users as usersApi } from '../lib/api';
 import {
   onPresenceUpdate,
   onNotificationCreate,
@@ -55,12 +56,34 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Fetch real presence statuses for friends from the API
+  const refreshPresences = useCallback(async () => {
+    try {
+      const rels = await relApi.getAll();
+      const friendIds = rels
+        .filter((r) => r.type === 'friend' && r.user?.id)
+        .map((r) => r.user!.id);
+      if (friendIds.length === 0) return;
+      // API caps at 200 per call
+      for (let i = 0; i < friendIds.length; i += 200) {
+        const batch = friendIds.slice(i, i + 200);
+        const presences = await usersApi.getPresences(batch);
+        presenceStore.setBulk(
+          presences.map((p) => ({ userId: p.userId, status: p.status as any })),
+        );
+      }
+    } catch {
+      // ignore — presence is best-effort
+    }
+  }, []);
+
   // Load initial data when user is available
   useEffect(() => {
     if (!user) return;
     refreshGuilds();
     refreshDMs();
     refreshNotificationCount();
+    refreshPresences();
 
     // Load read states
     readStateApi.getAll().then((states) => {
@@ -68,7 +91,18 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         unreadStore.setReadState(rs.channelId, rs.lastReadMessageId, rs.mentionCount);
       }
     }).catch(() => {});
-  }, [user, refreshGuilds, refreshDMs, refreshNotificationCount]);
+  }, [user, refreshGuilds, refreshDMs, refreshNotificationCount, refreshPresences]);
+
+  // Re-fetch presences when the app returns to foreground
+  useEffect(() => {
+    if (!user) return;
+    const sub = RNAppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        refreshPresences();
+      }
+    });
+    return () => sub.remove();
+  }, [user, refreshPresences]);
 
   // Socket subscriptions
   useEffect(() => {

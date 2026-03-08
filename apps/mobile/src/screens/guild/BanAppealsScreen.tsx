@@ -40,9 +40,7 @@ export default function BanAppealsScreen({ route, navigation }: Props) {
       const data = await moderationApi.getBanAppeals(guildId);
       setAppeals(data);
     } catch (err: any) {
-      if (err.status !== 401) {
-        toast.error('Failed to load ban appeals');
-      }
+      // silently ignore — empty state handles no data
     } finally {
       setLoading(false);
     }

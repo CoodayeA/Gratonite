@@ -39,9 +39,7 @@ export default function RaidProtectionScreen({ route, navigation }: Props) {
       const data = await guildsApi.get(guildId);
       setGuild(data as GuildWithProtection);
     } catch (err: any) {
-      if (err.status !== 401) {
-        toast.error('Failed to load server info');
-      }
+      // silently ignore — empty state handles no data
     } finally {
       setLoading(false);
     }

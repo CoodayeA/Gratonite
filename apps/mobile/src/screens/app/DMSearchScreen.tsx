@@ -58,6 +58,7 @@ export default function DMSearchScreen({ navigation }: Props) {
       navigation.replace('DirectMessage', {
         channelId: dm.id,
         recipientName: username,
+        recipientId: userId,
       });
     } catch (err: any) {
       toast.error(err.message || 'Failed to open DM');

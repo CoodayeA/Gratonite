@@ -49,6 +49,7 @@ export function setupNotificationHandlers(
         navigationRef.current.navigate('DirectMessage', {
           channelId: data.channelId,
           recipientName: data.senderName || 'User',
+          recipientId: data.senderId || undefined,
         });
       } else if (data?.channelId && data?.guildId) {
         navigationRef.current.navigate('ChannelChat', {

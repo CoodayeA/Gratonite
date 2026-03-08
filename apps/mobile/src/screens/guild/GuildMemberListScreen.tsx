@@ -104,9 +104,7 @@ export default function GuildMemberListScreen({ route, navigation }: Props) {
       const updates = data.map((m: any) => ({ userId: m.userId, status: m.status ?? 'offline' }));
       presenceStore.setBulk(updates);
     } catch (err: any) {
-      if (err.status !== 401) {
-        toast.error('Failed to load members');
-      }
+      // silently ignore — empty state handles no data
     } finally {
       setLoading(false);
       setRefreshing(false);

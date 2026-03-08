@@ -15,6 +15,7 @@
 import { db } from '../db/index';
 import { notifications } from '../db/schema/notifications';
 import { getIO } from './socket-io';
+import { redis } from './redis';
 
 export interface CreateNotificationParams {
   userId: string;
@@ -27,6 +28,10 @@ export interface CreateNotificationParams {
 /**
  * Insert a notification row and emit a NOTIFICATION_CREATE socket event
  * to the target user's private room.
+ *
+ * If the target user is in DND mode, the notification is still persisted
+ * (so they see it when they leave DND) but the real-time socket event
+ * is suppressed.
  */
 export async function createNotification(params: CreateNotificationParams): Promise<void> {
   try {
@@ -41,11 +46,22 @@ export async function createNotification(params: CreateNotificationParams): Prom
       })
       .returning();
 
-    // Emit to the user's private room so they get a real-time notification
+    // Check if the user is in DND — suppress the real-time push if so
+    let suppress = false;
     try {
-      getIO().to(`user:${params.userId}`).emit('NOTIFICATION_CREATE', notif);
+      const status = await redis.get(`presence:${params.userId}`);
+      if (status === 'dnd') suppress = true;
     } catch {
-      // Socket.io not initialised (test env) — non-fatal
+      // Redis down — don't suppress
+    }
+
+    // Emit to the user's private room so they get a real-time notification
+    if (!suppress) {
+      try {
+        getIO().to(`user:${params.userId}`).emit('NOTIFICATION_CREATE', notif);
+      } catch {
+        // Socket.io not initialised (test env) — non-fatal
+      }
     }
   } catch (err) {
     console.error('[notifications] failed to create notification:', err);

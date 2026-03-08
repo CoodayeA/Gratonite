@@ -77,6 +77,52 @@ import BanAppealsScreen from '../screens/guild/BanAppealsScreen';
 import WordFilterScreen from '../screens/guild/WordFilterScreen';
 import RaidProtectionScreen from '../screens/guild/RaidProtectionScreen';
 
+// Wave B: Chat enhancements
+import RemindersScreen from '../screens/app/RemindersScreen';
+
+// Wave C: Social & guild features
+import LeaderboardScreen from '../screens/guild/LeaderboardScreen';
+import GiveawayListScreen from '../screens/guild/GiveawayListScreen';
+import QuestBoardScreen from '../screens/guild/QuestBoardScreen';
+import ConfessionBoardScreen from '../screens/guild/ConfessionBoardScreen';
+import GreetingCardsScreen from '../screens/app/GreetingCardsScreen';
+import PhotoAlbumsScreen from '../screens/guild/PhotoAlbumsScreen';
+import TicketListScreen from '../screens/guild/TicketListScreen';
+import StarboardScreen from '../screens/guild/StarboardScreen';
+
+// Wave D: Guild admin
+import OnboardingConfigScreen from '../screens/guild/OnboardingConfigScreen';
+import StarboardConfigScreen from '../screens/guild/StarboardConfigScreen';
+import AutoRoleConfigScreen from '../screens/guild/AutoRoleConfigScreen';
+import DigestConfigScreen from '../screens/guild/DigestConfigScreen';
+import ActivityLogScreen from '../screens/guild/ActivityLogScreen';
+
+// Wave E: New channel types + marketplace
+import TimelineChannelScreen from '../screens/guild/TimelineChannelScreen';
+import QAChannelScreen from '../screens/guild/QAChannelScreen';
+import MarketplaceScreen from '../screens/app/MarketplaceScreen';
+
+// Wave F: Tier 2 admin
+import ReactionRoleConfigScreen from '../screens/guild/ReactionRoleConfigScreen';
+import WorkflowListScreen from '../screens/guild/WorkflowListScreen';
+
+// Wave G: App Store Readiness
+import GuildBansScreen from '../screens/guild/GuildBansScreen';
+import EmojiManagementScreen from '../screens/guild/EmojiManagementScreen';
+import AutomodConfigScreen from '../screens/guild/AutomodConfigScreen';
+import ServerTemplatesScreen from '../screens/guild/ServerTemplatesScreen';
+import MFASetupScreen from '../screens/app/MFASetupScreen';
+import SettingsAppLockScreen from '../screens/app/SettingsAppLockScreen';
+import SettingsSoundScreen from '../screens/app/SettingsSoundScreen';
+import FeedbackScreen from '../screens/app/FeedbackScreen';
+import AchievementsScreen from '../screens/app/AchievementsScreen';
+import CosmeticsScreen from '../screens/app/CosmeticsScreen';
+import ActivityFeedScreen from '../screens/app/ActivityFeedScreen';
+import UserStatsScreen from '../screens/app/UserStatsScreen';
+import BotStoreScreen from '../screens/app/BotStoreScreen';
+import SettingsSecurityScreen from '../screens/app/SettingsSecurityScreen';
+import KeyVerificationScreen from '../screens/app/KeyVerificationScreen';
+
 const Tab = createBottomTabNavigator<AppTabParamList>();
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
@@ -117,6 +163,7 @@ function MainTabs() {
         component={GuildListScreen}
         options={{
           tabBarLabel: 'Servers',
+          tabBarAccessibilityLabel: 'Servers tab',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'planet' : 'planet-outline'} size={22} color={color} />
           ),
@@ -127,6 +174,7 @@ function MainTabs() {
         component={DMListScreen}
         options={{
           tabBarLabel: 'Chats',
+          tabBarAccessibilityLabel: 'Chats tab',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={22} color={color} />
           ),
@@ -137,6 +185,7 @@ function MainTabs() {
         component={FriendsScreen}
         options={{
           tabBarLabel: 'Friends',
+          tabBarAccessibilityLabel: 'Friends tab',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'people' : 'people-outline'} size={22} color={color} />
           ),
@@ -147,6 +196,7 @@ function MainTabs() {
         component={NotificationInboxScreen}
         options={{
           tabBarLabel: 'Alerts',
+          tabBarAccessibilityLabel: 'Alerts tab',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'notifications' : 'notifications-outline'} size={22} color={color} />
           ),
@@ -243,6 +293,52 @@ export default function AppNavigator() {
       <Stack.Screen name="BanAppeals" component={BanAppealsScreen} options={{ title: 'Ban Appeals' }} />
       <Stack.Screen name="WordFilterScreen" component={WordFilterScreen} options={{ title: 'Word Filter' }} />
       <Stack.Screen name="RaidProtection" component={RaidProtectionScreen} options={{ title: 'Raid Protection' }} />
+
+      {/* Wave B: Chat enhancements */}
+      <Stack.Screen name="Reminders" component={RemindersScreen} options={{ title: 'Reminders' }} />
+
+      {/* Wave C: Social & guild features */}
+      <Stack.Screen name="Leaderboard" component={LeaderboardScreen} options={{ title: 'Leaderboard' }} />
+      <Stack.Screen name="GiveawayList" component={GiveawayListScreen} options={{ title: 'Giveaways' }} />
+      <Stack.Screen name="QuestBoard" component={QuestBoardScreen} options={{ title: 'Quests' }} />
+      <Stack.Screen name="ConfessionBoard" component={ConfessionBoardScreen} options={{ title: 'Confessions' }} />
+      <Stack.Screen name="GreetingCards" component={GreetingCardsScreen} options={{ title: 'Greeting Cards' }} />
+      <Stack.Screen name="PhotoAlbums" component={PhotoAlbumsScreen} options={{ title: 'Photo Albums' }} />
+      <Stack.Screen name="TicketList" component={TicketListScreen} options={{ title: 'Tickets' }} />
+      <Stack.Screen name="Starboard" component={StarboardScreen} options={{ title: 'Starboard' }} />
+
+      {/* Wave D: Guild admin */}
+      <Stack.Screen name="OnboardingConfig" component={OnboardingConfigScreen} options={{ title: 'Onboarding' }} />
+      <Stack.Screen name="StarboardConfig" component={StarboardConfigScreen} options={{ title: 'Starboard Settings' }} />
+      <Stack.Screen name="AutoRoleConfig" component={AutoRoleConfigScreen} options={{ title: 'Auto Roles' }} />
+      <Stack.Screen name="DigestConfig" component={DigestConfigScreen} options={{ title: 'Digest Settings' }} />
+      <Stack.Screen name="ActivityLog" component={ActivityLogScreen} options={{ title: 'Activity Log' }} />
+
+      {/* Wave E: New channel types + marketplace */}
+      <Stack.Screen name="TimelineChannel" component={TimelineChannelScreen} options={({ route }) => ({ title: route.params.channelName })} />
+      <Stack.Screen name="QAChannel" component={QAChannelScreen} options={({ route }) => ({ title: route.params.channelName })} />
+      <Stack.Screen name="Marketplace" component={MarketplaceScreen} options={{ title: 'Marketplace' }} />
+
+      {/* Wave F: Tier 2 admin */}
+      <Stack.Screen name="ReactionRoleConfig" component={ReactionRoleConfigScreen} options={{ title: 'Reaction Roles' }} />
+      <Stack.Screen name="WorkflowList" component={WorkflowListScreen} options={{ title: 'Workflows' }} />
+
+      {/* Wave G: App Store Readiness */}
+      <Stack.Screen name="GuildBans" component={GuildBansScreen} options={{ title: 'Bans' }} />
+      <Stack.Screen name="EmojiManagement" component={EmojiManagementScreen} options={{ title: 'Custom Emojis' }} />
+      <Stack.Screen name="AutomodConfig" component={AutomodConfigScreen} options={{ title: 'Automod' }} />
+      <Stack.Screen name="ServerTemplates" component={ServerTemplatesScreen} options={{ title: 'Templates' }} />
+      <Stack.Screen name="MFASetup" component={MFASetupScreen} options={{ title: 'Two-Factor Auth' }} />
+      <Stack.Screen name="SettingsAppLock" component={SettingsAppLockScreen} options={{ title: 'App Lock' }} />
+      <Stack.Screen name="SettingsSound" component={SettingsSoundScreen} options={{ title: 'Sound' }} />
+      <Stack.Screen name="Feedback" component={FeedbackScreen} options={{ title: 'Feedback' }} />
+      <Stack.Screen name="Achievements" component={AchievementsScreen} options={{ title: 'Achievements' }} />
+      <Stack.Screen name="Cosmetics" component={CosmeticsScreen} options={{ title: 'Wardrobe' }} />
+      <Stack.Screen name="ActivityFeed" component={ActivityFeedScreen} options={{ title: 'Activity' }} />
+      <Stack.Screen name="UserStats" component={UserStatsScreen} options={{ title: 'Platform Stats' }} />
+      <Stack.Screen name="BotStore" component={BotStoreScreen} options={{ title: 'Bot Store' }} />
+      <Stack.Screen name="SettingsSecurity" component={SettingsSecurityScreen} options={{ title: 'Security' }} />
+      <Stack.Screen name="KeyVerification" component={KeyVerificationScreen} options={{ title: 'Verify Identity' }} />
     </Stack.Navigator>
   );
 }

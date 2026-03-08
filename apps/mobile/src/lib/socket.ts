@@ -24,7 +24,6 @@ export function connectSocket(): Socket {
     reconnectionDelayMax: 30000,
     reconnectionAttempts: Infinity,
     auth: token ? { token } : undefined,
-    query: token ? { token } : undefined,
   });
 
   socket.on('connect', () => {
@@ -163,4 +162,11 @@ export function onReadStateUpdate(
 ): () => void {
   socket?.on('READ_STATE_UPDATE', cb);
   return () => { socket?.off('READ_STATE_UPDATE', cb); };
+}
+
+export function onScreenshotTaken(
+  cb: (data: { channelId: string; userId: string; timestamp: number }) => void,
+): () => void {
+  socket?.on('SCREENSHOT_TAKEN', cb);
+  return () => { socket?.off('SCREENSHOT_TAKEN', cb); };
 }

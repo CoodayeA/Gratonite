@@ -5,6 +5,24 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSocket } from '../lib/socket';
 import { useTheme } from '../lib/theme';
 
+export function useIsOnline(): boolean {
+  const [isConnected, setIsConnected] = useState(true);
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+    setIsConnected(socket.connected);
+    const onConnect = () => setIsConnected(true);
+    const onDisconnect = () => setIsConnected(false);
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+    };
+  }, []);
+  return isConnected;
+}
+
 export default function OfflineBanner() {
   const [isConnected, setIsConnected] = useState(true);
   const insets = useSafeAreaInsets();

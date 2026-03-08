@@ -17,6 +17,9 @@ import {
   reactions as reactionsApi,
   bookmarks as bookmarksApi,
   files as filesApi,
+  drafts as draftsApi,
+  translation as translationApi,
+  textReactions as textReactionsApi,
 } from '../../lib/api';
 import {
   onMessageCreate,
@@ -39,12 +42,23 @@ import EditBar from '../../components/EditBar';
 import ForwardModal from '../../components/ForwardModal';
 import EmptyState from '../../components/EmptyState';
 import EmojiPicker from '../../components/EmojiPicker';
+import WhoReactedSheet from '../../components/WhoReactedSheet';
+import TextReactionSheet from '../../components/TextReactionSheet';
 import ScrollToBottomFAB from '../../components/ScrollToBottomFAB';
 import SwipeableMessage from '../../components/SwipeableMessage';
 import TypingDots from '../../components/TypingDots';
 import MessageSkeleton from '../../components/MessageSkeleton';
-import { notificationSuccess, lightImpact } from '../../lib/haptics';
-import type { Message, ReactionGroup } from '../../types';
+import { useE2E } from '../../hooks/useE2E';
+import { securityStore } from '../../lib/securityStore';
+import { channels as channelsApi } from '../../lib/api';
+import DisappearSettingsSheet from '../../components/DisappearSettingsSheet';
+import DisappearTimer from '../../components/DisappearTimer';
+import * as ScreenCapture from 'expo-screen-capture';
+import { cacheMessages, getCachedMessages, queueSend, getPendingQueue, removePending } from '../../lib/offlineDb';
+import { useIsOnline } from '../../components/OfflineBanner';
+import { mediumImpact, lightImpact } from '../../lib/haptics';
+import { playSound } from '../../lib/soundEngine';
+import type { Message, ReactionGroup, TextReactionGroup } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 
@@ -54,10 +68,32 @@ const QUICK_EMOJIS = ['\u{1F44D}', '\u{2764}\u{FE0F}', '\u{1F602}', '\u{1F60E}',
 
 export default function DirectMessageScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const { channelId, recipientName } = route.params;
+  const { channelId, recipientName, recipientId, isGroupDm } = route.params;
   const { user } = useAuth();
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const toast = useToast();
+  const isOnline = useIsOnline();
+
+  // Group DM participant IDs (for E2E group key distribution)
+  const [groupParticipantIds, setGroupParticipantIds] = useState<string[] | undefined>(undefined);
+
+  // E2E Encryption
+  const { e2eKey, isE2EReady, encryptMessage, decryptMessage } = useE2E({
+    userId: user?.id,
+    channelId,
+    recipientId,
+    isGroupDm,
+    groupParticipantIds,
+  });
+  const [decryptedMessages, setDecryptedMessages] = useState<Map<string, string>>(new Map());
+
+  // Disappearing messages
+  const [disappearTimer, setDisappearTimer] = useState<number | null>(null);
+  const [showDisappearSheet, setShowDisappearSheet] = useState(false);
+
+  // Incognito keyboard
+  const [incognitoKeyboard, setIncognitoKeyboard] = useState(false);
+
   const [messageList, setMessageList] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -88,18 +124,31 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
   // Emoji picker
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
+  // Drafts
+  const draftSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Who reacted sheet
+  const [whoReactedData, setWhoReactedData] = useState<{ users: Array<{ id: string; username?: string }>; emoji: string } | null>(null);
+
+  // Text reactions
+  const [textReactionsMap, setTextReactionsMap] = useState<Map<string, TextReactionGroup[]>>(new Map());
+  const [textReactMessage, setTextReactMessage] = useState<Message | null>(null);
+
   // Inverted data: newest first
   const invertedData = useMemo(() => [...messageList].reverse(), [messageList]);
 
   const fetchMessages = useCallback(async () => {
     try {
       const data = await messagesApi.list(channelId, { limit: 50 });
-      setMessageList(data.reverse());
+      const reversed = data.reverse();
+      setMessageList(reversed);
+      cacheMessages(channelId, reversed).catch(() => {});
       initialLoadDone.current = true;
     } catch (err: any) {
       if (err.status !== 401) {
         toast.error('Failed to load messages');
       }
+      getCachedMessages(channelId).then(cached => { if (cached.length > 0) setMessageList(cached); });
     } finally {
       setLoading(false);
     }
@@ -108,6 +157,15 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
   useEffect(() => {
     fetchMessages();
   }, [fetchMessages]);
+
+  // Load draft on mount
+  useEffect(() => {
+    try {
+      draftsApi.get(channelId).then((draft) => {
+        if (draft?.content) setInputText(draft.content);
+      }).catch(() => {});
+    } catch {}
+  }, [channelId]);
 
   // Socket: new messages
   useEffect(() => {
@@ -122,17 +180,23 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
           createdAt: data.createdAt,
           editedAt: null,
           author: data.author,
+          attachments: Array.isArray(data.attachments) ? data.attachments : undefined,
           replyToId: data.replyToId,
           replyTo: data.replyTo,
+          isEncrypted: data.isEncrypted,
+          encryptedContent: data.encryptedContent,
         };
         setMessageList((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;
           return [...prev, msg];
         });
+        if (data.authorId !== user?.id) {
+          playSound('messageReceive');
+        }
       }
     });
     return unsub;
-  }, [channelId]);
+  }, [channelId, user?.id]);
 
   // Socket: message edits
   useEffect(() => {
@@ -244,6 +308,102 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
     }
   }, [channelId]);
 
+  // Flush pending offline queue when reconnecting
+  useEffect(() => {
+    if (!isOnline) return;
+    (async () => {
+      const pending = await getPendingQueue();
+      for (const item of pending) {
+        if (item.channelId === channelId) {
+          try {
+            const sendOpts: any = {};
+            if (item.isEncrypted && item.encryptedContent) {
+              sendOpts.isEncrypted = true;
+              sendOpts.encryptedContent = item.encryptedContent;
+            }
+            await messagesApi.send(item.channelId, item.isEncrypted ? '' : item.content, sendOpts);
+            await removePending(item.id);
+          } catch { break; }
+        }
+      }
+    })();
+  }, [isOnline, channelId]);
+
+  // Decrypt encrypted messages when e2eKey becomes available
+  useEffect(() => {
+    if (!e2eKey) return;
+    const decryptAll = async () => {
+      const newDecrypted = new Map(decryptedMessages);
+      for (const msg of messageList) {
+        if (msg.isEncrypted && msg.encryptedContent && !newDecrypted.has(msg.id)) {
+          try {
+            const plaintext = await decryptMessage(msg.encryptedContent);
+            newDecrypted.set(msg.id, plaintext);
+          } catch {
+            newDecrypted.set(msg.id, '[Decryption failed]');
+          }
+        }
+      }
+      setDecryptedMessages(newDecrypted);
+    };
+    decryptAll();
+  }, [e2eKey, messageList]);
+
+  // Fetch group DM participants for E2E key distribution
+  useEffect(() => {
+    if (!isGroupDm) return;
+    channelsApi.get(channelId).then((ch: any) => {
+      if (ch.recipients) {
+        setGroupParticipantIds(ch.recipients.map((r: any) => r.id));
+      }
+    }).catch(() => {});
+  }, [channelId, isGroupDm]);
+
+  // Fetch disappear timer
+  useEffect(() => {
+    channelsApi.get(channelId).then((ch) => {
+      if (ch.disappearTimer) setDisappearTimer(ch.disappearTimer);
+    }).catch(() => {});
+  }, [channelId]);
+
+  // Load incognito keyboard pref
+  useEffect(() => {
+    securityStore.getIncognitoKeyboard().then(setIncognitoKeyboard).catch(() => {});
+  }, []);
+
+  // Screenshot detection — notify other party
+  useEffect(() => {
+    const subscription = ScreenCapture.addScreenshotListener(() => {
+      const socket = getSocket();
+      if (socket) {
+        socket.emit('SCREENSHOT_TAKEN', { channelId });
+      }
+    });
+    // Listen for partner's screenshots
+    const socket = getSocket();
+    const handleScreenshot = (data: { channelId: string; userId: string }) => {
+      if (data.channelId === channelId && data.userId !== user?.id) {
+        toast.info('The other person took a screenshot');
+      }
+    };
+    socket?.on('SCREENSHOT_TAKEN', handleScreenshot);
+    return () => {
+      subscription.remove();
+      socket?.off('SCREENSHOT_TAKEN', handleScreenshot);
+    };
+  }, [channelId, user?.id]);
+
+  // Header: disappearing messages timer button
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={() => setShowDisappearSheet(true)} style={{ padding: 8 }}>
+          <Ionicons name="time-outline" size={22} color={disappearTimer ? colors.accentPrimary : colors.textMuted} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, disappearTimer, colors]);
+
   // --- Actions ---
 
   const handleSend = async () => {
@@ -271,16 +431,32 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
       return;
     }
 
+    if (!isOnline) {
+      const encrypted = await encryptMessage(text);
+      await queueSend(channelId, text, encrypted.isEncrypted ? { isEncrypted: true, encryptedContent: encrypted.encryptedContent! } : undefined);
+      setInputText('');
+      toast.info('Message queued - will send when online');
+      return;
+    }
+
     setSending(true);
     setInputText('');
     try {
-      const msg = await messagesApi.send(channelId, text, replyingTo ? { replyToId: replyingTo.id } : undefined);
+      const encrypted = await encryptMessage(text);
+      const sendOpts: any = { ...(replyingTo ? { replyToId: replyingTo.id } : {}) };
+      if (encrypted.isEncrypted) {
+        sendOpts.isEncrypted = true;
+        sendOpts.encryptedContent = encrypted.encryptedContent;
+      }
+      const msg = await messagesApi.send(channelId, encrypted.isEncrypted ? '' : text, sendOpts);
       setMessageList((prev) => {
         if (prev.some((m) => m.id === msg.id)) return prev;
         return [...prev, msg];
       });
       setReplyingTo(null);
-      notificationSuccess();
+      draftsApi.delete(channelId).catch(() => {});
+      mediumImpact();
+      playSound('messageSend');
     } catch {
       toast.error('Failed to send message');
       setInputText(text);
@@ -306,6 +482,11 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
   };
 
   const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      toast.error('Photo library access is required to send images');
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images', 'videos'],
       allowsEditing: true,
@@ -344,6 +525,13 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
       typingThrottle.current = now;
       messagesApi.sendTyping(channelId).catch(() => {});
     }
+    // Debounced draft save
+    if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
+    draftSaveTimer.current = setTimeout(() => {
+      if (text.trim()) {
+        draftsApi.save(channelId, text).catch(() => {});
+      }
+    }, 500);
   };
 
   const handleReactionToggle = async (messageId: string, emoji: string) => {
@@ -416,6 +604,84 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
 
   const handleForward = (msg: Message) => {
     setForwardContent(msg.content);
+  };
+
+  const handleTranslate = async (msg: Message) => {
+    try {
+      const result = await translationApi.translate(channelId, msg.id);
+      Alert.alert('Translation', result.translatedContent);
+    } catch (err: any) {
+      toast.error(err.message || 'Translation failed');
+    }
+  };
+
+  const handleReactionLongPress = (messageId: string, emoji: string) => {
+    const rxns = messageReactions.get(messageId) ?? [];
+    const reaction = rxns.find((r) => r.emoji === emoji);
+    if (reaction) {
+      setWhoReactedData({
+        users: reaction.userIds.map((id) => ({ id })),
+        emoji,
+      });
+    }
+  };
+
+  const handleTextReact = (msg: Message) => {
+    setTextReactMessage(msg);
+  };
+
+  const handleTextReactSubmit = async (text: string) => {
+    if (!textReactMessage) return;
+    try {
+      await textReactionsApi.add(channelId, textReactMessage.id, text);
+      setTextReactionsMap((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(textReactMessage.id) ?? [];
+        const idx = existing.findIndex((tr) => tr.text === text);
+        if (idx >= 0) {
+          const updated = [...existing];
+          updated[idx] = { ...updated[idx], count: updated[idx].count + 1, me: true };
+          next.set(textReactMessage.id, updated);
+        } else {
+          next.set(textReactMessage.id, [...existing, { text, count: 1, userIds: [user?.id || ''], me: true }]);
+        }
+        return next;
+      });
+    } catch {
+      toast.error('Failed to add text reaction');
+    }
+  };
+
+  const handleTextReactionToggle = async (messageId: string, text: string) => {
+    const existing = textReactionsMap.get(messageId) ?? [];
+    const tr = existing.find((t) => t.text === text);
+    try {
+      if (tr?.me) {
+        await textReactionsApi.remove(channelId, messageId, text);
+        setTextReactionsMap((prev) => {
+          const next = new Map(prev);
+          const curr = next.get(messageId) ?? [];
+          const updated = curr.map((t) => t.text === text ? { ...t, count: t.count - 1, me: false } : t).filter((t) => t.count > 0);
+          next.set(messageId, updated);
+          return next;
+        });
+      } else {
+        await textReactionsApi.add(channelId, messageId, text);
+        setTextReactionsMap((prev) => {
+          const next = new Map(prev);
+          const curr = next.get(messageId) ?? [];
+          const idx = curr.findIndex((t) => t.text === text);
+          if (idx >= 0) {
+            const updated = [...curr];
+            updated[idx] = { ...updated[idx], count: updated[idx].count + 1, me: true };
+            next.set(messageId, updated);
+          }
+          return next;
+        });
+      }
+    } catch {
+      // ignore
+    }
   };
 
   const handleEmojiSelect = (emoji: string) => {
@@ -521,8 +787,13 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
       new Date(item.createdAt).getTime() - new Date(olderMsg!.createdAt).getTime() < 5 * 60000;
     const isOwn = item.authorId === user?.id;
     const rxns = messageReactions.get(item.id) ?? [];
+    const txtRxns = textReactionsMap.get(item.id) ?? [];
     const showPicker = reactionPickerMessageId === item.id;
     const isNew = initialLoadDone.current;
+
+    const resolvedContent = item.isEncrypted
+      ? (decryptedMessages.get(item.id) ?? (e2eKey ? 'Decrypting...' : '[Encrypted]'))
+      : item.content;
 
     const replyPreview = item.replyTo
       ? {
@@ -544,6 +815,12 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
             onReactionToggle={(emoji) => handleReactionToggle(item.id, emoji)}
             onReactionAdd={() => handleReact(item)}
             isNewMessage={isNew}
+            onReactionLongPress={(emoji) => handleReactionLongPress(item.id, emoji)}
+            textReactions={txtRxns}
+            onTextReactionToggle={(text) => handleTextReactionToggle(item.id, text)}
+            isEncrypted={item.isEncrypted}
+            decryptedContent={item.isEncrypted ? resolvedContent : undefined}
+            channelDisappearTimer={disappearTimer}
           />
 
           {showPicker && (
@@ -636,12 +913,14 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
 
       {/* Input bar */}
       <View style={styles.inputBar}>
-        <TouchableOpacity style={styles.attachButton} onPress={handlePickImage} disabled={sending}>
+        <TouchableOpacity style={styles.attachButton} onPress={handlePickImage} disabled={sending} accessibilityRole="button" accessibilityLabel="Attach file">
           <Ionicons name="add" size={24} color={colors.textMuted} />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.attachButton}
           onPress={() => setShowEmojiPicker(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Open emoji picker"
         >
           <Ionicons name="happy-outline" size={24} color={colors.textMuted} />
         </TouchableOpacity>
@@ -653,14 +932,21 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
           placeholderTextColor={colors.textMuted}
           multiline
           maxLength={4000}
+          autoCorrect={!incognitoKeyboard}
+          autoComplete={incognitoKeyboard ? 'off' : undefined}
+          spellCheck={!incognitoKeyboard}
           returnKeyType="send"
           blurOnSubmit={false}
           onSubmitEditing={handleSend}
+          accessibilityLabel={editingMessage ? 'Edit message' : 'Message input'}
+          accessibilityHint="Type your message"
         />
         <TouchableOpacity
           style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
           onPress={handleSend}
           disabled={!inputText.trim() || sending}
+          accessibilityRole="button"
+          accessibilityLabel={editingMessage ? 'Save edit' : 'Send message'}
         >
           <Ionicons
             name={editingMessage ? 'checkmark' : 'send'}
@@ -691,6 +977,9 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
           onReact={handleReact}
           onBookmark={handleBookmark}
           onForward={handleForward}
+          onTranslate={handleTranslate}
+          onTextReact={handleTextReact}
+          forwardingDisabled={!!disappearTimer}
         />
       )}
 
@@ -702,6 +991,27 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
           messageContent={forwardContent}
         />
       )}
+
+      <WhoReactedSheet
+        visible={!!whoReactedData}
+        onClose={() => setWhoReactedData(null)}
+        users={whoReactedData?.users ?? []}
+        emoji={whoReactedData?.emoji ?? ''}
+      />
+
+      <TextReactionSheet
+        visible={!!textReactMessage}
+        onClose={() => setTextReactMessage(null)}
+        onSubmit={handleTextReactSubmit}
+      />
+
+      <DisappearSettingsSheet
+        visible={showDisappearSheet}
+        onClose={() => setShowDisappearSheet(false)}
+        channelId={channelId}
+        currentTimer={disappearTimer}
+        onTimerChanged={setDisappearTimer}
+      />
     </KeyboardAvoidingView>
   );
 }

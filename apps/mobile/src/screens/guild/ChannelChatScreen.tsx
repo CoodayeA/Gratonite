@@ -21,6 +21,10 @@ import {
   polls as pollsApi,
   guildEmojis as guildEmojisApi,
   channels as channelsApi,
+  drafts as draftsApi,
+  scheduledMessages as scheduledMessagesApi,
+  translation as translationApi,
+  textReactions as textReactionsApi,
 } from '../../lib/api';
 import {
   onMessageCreate,
@@ -38,6 +42,8 @@ import { useToast } from '../../contexts/ToastContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MessageBubble from '../../components/MessageBubble';
 import MessageContextMenu from '../../components/MessageContextMenu';
+import StickyMessage from '../../components/StickyMessage';
+import ReminderSheet from '../../components/ReminderSheet';
 import ReplyBar from '../../components/ReplyBar';
 import EditBar from '../../components/EditBar';
 import PinnedMessages from '../../components/PinnedMessages';
@@ -47,13 +53,21 @@ import EmojiPicker from '../../components/EmojiPicker';
 import StickerBrowser from '../../components/StickerBrowser';
 import PollCreateSheet from '../../components/PollCreateSheet';
 import PollCard from '../../components/PollCard';
+import ScheduleMessageSheet from '../../components/ScheduleMessageSheet';
+import WhoReactedSheet from '../../components/WhoReactedSheet';
+import TextReactionSheet from '../../components/TextReactionSheet';
 import ScrollToBottomFAB from '../../components/ScrollToBottomFAB';
 import SwipeableMessage from '../../components/SwipeableMessage';
 import TypingDots from '../../components/TypingDots';
 import MessageSkeleton from '../../components/MessageSkeleton';
 import ChatBackground from '../../components/ChatBackground';
-import { notificationSuccess, lightImpact } from '../../lib/haptics';
-import type { Message, ReactionGroup, Sticker, Poll, GuildEmoji } from '../../types';
+import ChannelNotificationSheet from '../../components/ChannelNotificationSheet';
+import { cacheMessages, getCachedMessages, queueSend, getPendingQueue, removePending } from '../../lib/offlineDb';
+import { useIsOnline } from '../../components/OfflineBanner';
+import { mediumImpact, lightImpact } from '../../lib/haptics';
+import { playSound } from '../../lib/soundEngine';
+import { securityStore } from '../../lib/securityStore';
+import type { Message, ReactionGroup, TextReactionGroup, Sticker, Poll, GuildEmoji } from '../../types';
 
 type Props = any;
 
@@ -65,6 +79,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
   const { user } = useAuth();
   const { colors, spacing, fontSize, borderRadius } = useTheme();
   const toast = useToast();
+  const isOnline = useIsOnline();
   const [messageList, setMessageList] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -109,8 +124,33 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
   // Custom emojis for this guild
   const [customEmojis, setCustomEmojis] = useState<GuildEmoji[]>([]);
 
+  // Reminder sheet
+  const [reminderMessage, setReminderMessage] = useState<Message | null>(null);
+
   // Channel background
   const [bgMedia, setBgMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null);
+
+  // Drafts
+  const draftSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Schedule message sheet
+  const [showScheduleSheet, setShowScheduleSheet] = useState(false);
+
+  // Attach menu popup
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+
+  // Who reacted sheet
+  const [whoReactedData, setWhoReactedData] = useState<{ users: Array<{ id: string; username?: string }>; emoji: string } | null>(null);
+
+  // Text reactions
+  const [textReactionsMap, setTextReactionsMap] = useState<Map<string, TextReactionGroup[]>>(new Map());
+  const [textReactMessage, setTextReactMessage] = useState<Message | null>(null);
+
+  // Channel notification sheet
+  const [showNotifSheet, setShowNotifSheet] = useState(false);
+
+  // Incognito keyboard
+  const [incognitoKeyboard, setIncognitoKeyboard] = useState(false);
 
   // Inverted data: newest first for inverted FlatList
   const invertedData = useMemo(() => [...messageList].reverse(), [messageList]);
@@ -203,6 +243,41 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     emojiPickerText: {
       fontSize: fontSize.xl,
     },
+    attachMenuOverlay: {
+      position: 'absolute' as const,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 50,
+    },
+    attachMenu: {
+      position: 'absolute' as const,
+      bottom: 56,
+      left: spacing.md,
+      backgroundColor: colors.bgElevated,
+      borderRadius: borderRadius.lg,
+      paddingVertical: spacing.sm,
+      minWidth: 200,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 8,
+      zIndex: 51,
+    },
+    attachMenuItem: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      gap: spacing.md,
+    },
+    attachMenuLabel: {
+      color: colors.textPrimary,
+      fontSize: fontSize.md,
+      fontWeight: '500' as const,
+    },
   }), [colors, spacing, fontSize, borderRadius]);
 
   // Set header with pin and member list buttons
@@ -210,6 +285,9 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     navigation?.setOptions?.({
       headerRight: () => (
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <TouchableOpacity onPress={() => setShowNotifSheet(true)} style={{ padding: spacing.sm }}>
+            <Ionicons name="notifications-outline" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowPinned(true)} style={{ padding: spacing.sm }}>
             <Ionicons name="pin-outline" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
@@ -227,12 +305,15 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
   const fetchMessages = useCallback(async () => {
     try {
       const data = await messagesApi.list(channelId, { limit: 50 });
-      setMessageList(data.reverse());
+      const reversed = data.reverse();
+      setMessageList(reversed);
+      cacheMessages(channelId, reversed).catch(() => {});
       initialLoadDone.current = true;
     } catch (err: any) {
       if (err.status !== 401) {
         toast.error('Failed to load messages');
       }
+      getCachedMessages(channelId).then(cached => { if (cached.length > 0) setMessageList(cached); });
     } finally {
       setLoading(false);
     }
@@ -242,12 +323,26 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     fetchMessages();
   }, [fetchMessages]);
 
+  // Load draft on mount
+  useEffect(() => {
+    try {
+      draftsApi.get(channelId).then((draft) => {
+        if (draft?.content) setInputText(draft.content);
+      }).catch(() => {});
+    } catch {}
+  }, [channelId]);
+
   // Fetch custom emojis for this guild
   useEffect(() => {
     if (guildId) {
       guildEmojisApi.list(guildId).then(setCustomEmojis).catch(() => {});
     }
   }, [guildId]);
+
+  // Load incognito keyboard pref
+  useEffect(() => {
+    securityStore.getIncognitoKeyboard().then(setIncognitoKeyboard).catch(() => {});
+  }, []);
 
   // Fetch channel background
   useEffect(() => {
@@ -271,6 +366,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
           createdAt: data.createdAt,
           editedAt: null,
           author: data.author,
+          attachments: Array.isArray(data.attachments) ? data.attachments : undefined,
           replyToId: data.replyToId,
           replyTo: data.replyTo,
         };
@@ -278,10 +374,13 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
           if (prev.some((m) => m.id === msg.id)) return prev;
           return [...prev, msg];
         });
+        if (data.authorId !== user?.id) {
+          playSound('messageReceive');
+        }
       }
     });
     return unsub;
-  }, [channelId]);
+  }, [channelId, user?.id]);
 
   // Socket: message updates (edits)
   useEffect(() => {
@@ -393,6 +492,22 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     }
   }, [channelId]);
 
+  // Flush pending offline queue when reconnecting
+  useEffect(() => {
+    if (!isOnline) return;
+    (async () => {
+      const pending = await getPendingQueue();
+      for (const item of pending) {
+        if (item.channelId === channelId) {
+          try {
+            await messagesApi.send(item.channelId, item.content);
+            await removePending(item.id);
+          } catch { break; }
+        }
+      }
+    })();
+  }, [isOnline, channelId]);
+
   // --- Actions ---
 
   const handleSend = async () => {
@@ -421,6 +536,13 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       return;
     }
 
+    if (!isOnline) {
+      await queueSend(channelId, text);
+      setInputText('');
+      toast.info('Message queued - will send when online');
+      return;
+    }
+
     setSending(true);
     setInputText('');
     try {
@@ -430,7 +552,9 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
         return [...prev, msg];
       });
       setReplyingTo(null);
-      notificationSuccess();
+      draftsApi.delete(channelId).catch(() => {});
+      mediumImpact();
+      playSound('messageSend');
     } catch {
       toast.error('Failed to send message');
       setInputText(text);
@@ -456,6 +580,11 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
   };
 
   const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      toast.error('Photo library access is required to send images');
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images', 'videos'],
       allowsEditing: true,
@@ -494,6 +623,13 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       typingThrottle.current = now;
       messagesApi.sendTyping(channelId).catch(() => {});
     }
+    // Debounced draft save
+    if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
+    draftSaveTimer.current = setTimeout(() => {
+      if (text.trim()) {
+        draftsApi.save(channelId, text).catch(() => {});
+      }
+    }, 500);
   };
 
   const handleReactionToggle = async (messageId: string, emoji: string) => {
@@ -585,11 +721,86 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
   };
 
   const handleAttachPress = () => {
-    Alert.alert('Attach', 'What would you like to add?', [
-      { text: 'Image / Video', onPress: handlePickImage },
-      { text: 'Poll', onPress: () => setShowPollCreator(true) },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    setShowAttachMenu((prev) => !prev);
+  };
+
+  const handleTranslate = async (msg: Message) => {
+    try {
+      const result = await translationApi.translate(channelId, msg.id);
+      Alert.alert('Translation', result.translatedContent);
+    } catch (err: any) {
+      toast.error(err.message || 'Translation failed');
+    }
+  };
+
+  const handleReactionLongPress = (messageId: string, emoji: string) => {
+    const rxns = messageReactions.get(messageId) ?? [];
+    const reaction = rxns.find((r) => r.emoji === emoji);
+    if (reaction) {
+      setWhoReactedData({
+        users: reaction.userIds.map((id) => ({ id })),
+        emoji,
+      });
+    }
+  };
+
+  const handleTextReact = (msg: Message) => {
+    setTextReactMessage(msg);
+  };
+
+  const handleTextReactSubmit = async (text: string) => {
+    if (!textReactMessage) return;
+    try {
+      await textReactionsApi.add(channelId, textReactMessage.id, text);
+      // Optimistically update
+      setTextReactionsMap((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(textReactMessage.id) ?? [];
+        const idx = existing.findIndex((tr) => tr.text === text);
+        if (idx >= 0) {
+          const updated = [...existing];
+          updated[idx] = { ...updated[idx], count: updated[idx].count + 1, me: true };
+          next.set(textReactMessage.id, updated);
+        } else {
+          next.set(textReactMessage.id, [...existing, { text, count: 1, userIds: [user?.id || ''], me: true }]);
+        }
+        return next;
+      });
+    } catch {
+      toast.error('Failed to add text reaction');
+    }
+  };
+
+  const handleTextReactionToggle = async (messageId: string, text: string) => {
+    const existing = textReactionsMap.get(messageId) ?? [];
+    const tr = existing.find((t) => t.text === text);
+    try {
+      if (tr?.me) {
+        await textReactionsApi.remove(channelId, messageId, text);
+        setTextReactionsMap((prev) => {
+          const next = new Map(prev);
+          const curr = next.get(messageId) ?? [];
+          const updated = curr.map((t) => t.text === text ? { ...t, count: t.count - 1, me: false } : t).filter((t) => t.count > 0);
+          next.set(messageId, updated);
+          return next;
+        });
+      } else {
+        await textReactionsApi.add(channelId, messageId, text);
+        setTextReactionsMap((prev) => {
+          const next = new Map(prev);
+          const curr = next.get(messageId) ?? [];
+          const idx = curr.findIndex((t) => t.text === text);
+          if (idx >= 0) {
+            const updated = [...curr];
+            updated[idx] = { ...updated[idx], count: updated[idx].count + 1, me: true };
+            next.set(messageId, updated);
+          }
+          return next;
+        });
+      }
+    } catch {
+      // ignore
+    }
   };
 
   const handlePollVote = async (pollId: string, optionId: string) => {
@@ -629,6 +840,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       new Date(item.createdAt).getTime() - new Date(olderMsg!.createdAt).getTime() < 5 * 60000;
     const isOwn = item.authorId === user?.id;
     const rxns = messageReactions.get(item.id) ?? [];
+    const txtRxns = textReactionsMap.get(item.id) ?? [];
     const showPicker = reactionPickerMessageId === item.id;
     const isNew = initialLoadDone.current;
 
@@ -657,6 +869,9 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
             onPollRemoveVote={handlePollRemoveVote}
             isNewMessage={isNew}
             customEmojis={customEmojis}
+            onReactionLongPress={(emoji) => handleReactionLongPress(item.id, emoji)}
+            textReactions={txtRxns}
+            onTextReactionToggle={(text) => handleTextReactionToggle(item.id, text)}
           />
 
           {/* Quick emoji picker */}
@@ -694,6 +909,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     >
       <View style={styles.chatWrapper}>
         {bgMedia && <ChatBackground url={bgMedia.url} type={bgMedia.type} />}
+        <StickyMessage channelId={channelId} />
         <FlatList
           ref={flatListRef}
           data={invertedData}
@@ -749,22 +965,51 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
         <EditBar onClose={() => { setEditingMessage(null); setInputText(''); }} />
       )}
 
+      {/* Attach popup menu */}
+      {showAttachMenu && (
+        <>
+          <TouchableOpacity
+            style={styles.attachMenuOverlay}
+            activeOpacity={1}
+            onPress={() => setShowAttachMenu(false)}
+          />
+          <View style={styles.attachMenu}>
+            <TouchableOpacity style={styles.attachMenuItem} onPress={() => { setShowAttachMenu(false); handlePickImage(); }}>
+              <Ionicons name="image-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.attachMenuLabel}>Image / Video</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.attachMenuItem} onPress={() => { setShowAttachMenu(false); setShowStickerBrowser(true); }}>
+              <Ionicons name="pricetag-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.attachMenuLabel}>Stickers</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.attachMenuItem} onPress={() => { setShowAttachMenu(false); setShowPollCreator(true); }}>
+              <Ionicons name="bar-chart-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.attachMenuLabel}>Poll</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.attachMenuItem} onPress={() => {
+              setShowAttachMenu(false);
+              if (inputText.trim()) setShowScheduleSheet(true);
+              else toast.error('Type a message to schedule');
+            }}>
+              <Ionicons name="time-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.attachMenuLabel}>Schedule Message</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+
       {/* Input bar */}
       <View style={styles.inputBar}>
-        <TouchableOpacity style={styles.attachButton} onPress={handleAttachPress} disabled={sending}>
-          <Ionicons name="add" size={24} color={colors.textMuted} />
+        <TouchableOpacity style={styles.attachButton} onPress={handleAttachPress} disabled={sending} accessibilityRole="button" accessibilityLabel="Attach file">
+          <Ionicons name={showAttachMenu ? 'close' : 'add'} size={24} color={showAttachMenu ? colors.accentPrimary : colors.textMuted} />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.attachButton}
           onPress={() => setShowEmojiPicker(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Open emoji picker"
         >
           <Ionicons name="happy-outline" size={24} color={colors.textMuted} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.attachButton}
-          onPress={() => setShowStickerBrowser(true)}
-        >
-          <Ionicons name="pricetag-outline" size={22} color={colors.textMuted} />
         </TouchableOpacity>
         <TextInput
           style={styles.textInput}
@@ -774,14 +1019,21 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
           placeholderTextColor={colors.textMuted}
           multiline
           maxLength={4000}
+          autoCorrect={!incognitoKeyboard}
+          autoComplete={incognitoKeyboard ? 'off' : undefined}
+          spellCheck={!incognitoKeyboard}
           returnKeyType="send"
           blurOnSubmit={false}
           onSubmitEditing={handleSend}
+          accessibilityLabel={editingMessage ? 'Edit message' : 'Message input'}
+          accessibilityHint="Type your message"
         />
         <TouchableOpacity
           style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
           onPress={handleSend}
           disabled={!inputText.trim() || sending}
+          accessibilityRole="button"
+          accessibilityLabel={editingMessage ? 'Save edit' : 'Send message'}
         >
           <Ionicons
             name={editingMessage ? 'checkmark' : 'send'}
@@ -818,7 +1070,10 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
           onUnpin={handleUnpin}
           onReact={handleReact}
           onBookmark={handleBookmark}
+          onRemind={(msg) => setReminderMessage(msg)}
           onForward={handleForward}
+          onTranslate={handleTranslate}
+          onTextReact={handleTextReact}
         />
       )}
 
@@ -841,6 +1096,39 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       <PollCreateSheet
         visible={showPollCreator}
         onClose={() => setShowPollCreator(false)}
+        channelId={channelId}
+      />
+
+      <ReminderSheet
+        visible={!!reminderMessage}
+        onClose={() => setReminderMessage(null)}
+        message={reminderMessage!}
+        channelId={channelId}
+      />
+
+      <ScheduleMessageSheet
+        visible={showScheduleSheet}
+        onClose={() => setShowScheduleSheet(false)}
+        channelId={channelId}
+        content={inputText}
+      />
+
+      <WhoReactedSheet
+        visible={!!whoReactedData}
+        onClose={() => setWhoReactedData(null)}
+        users={whoReactedData?.users ?? []}
+        emoji={whoReactedData?.emoji ?? ''}
+      />
+
+      <TextReactionSheet
+        visible={!!textReactMessage}
+        onClose={() => setTextReactMessage(null)}
+        onSubmit={handleTextReactSubmit}
+      />
+
+      <ChannelNotificationSheet
+        visible={showNotifSheet}
+        onClose={() => setShowNotifSheet(false)}
         channelId={channelId}
       />
     </KeyboardAvoidingView>
