@@ -96,7 +96,13 @@ const MemberOptionsModal = ({ onClose, guildId, guildName }: { onClose: () => vo
                 return;
             }
             api.guilds.getMemberRoles(guildId, me).then((roles: any[]) => {
-                if (roles && roles.length > 0) setCanModerate(true);
+                const ADMINISTRATOR = 1n << 0n;
+                const MANAGE_ROLES = 1n << 3n;
+                const KICK_MEMBERS = 1n << 4n;
+                const BAN_MEMBERS = 1n << 5n;
+                const MOD_PERMS = ADMINISTRATOR | MANAGE_ROLES | KICK_MEMBERS | BAN_MEMBERS;
+                const hasMod = roles?.some((r: any) => (BigInt(r.permissions || '0') & MOD_PERMS) !== 0n);
+                if (hasMod) setCanModerate(true);
             }).catch(() => {});
         }).catch(() => {});
 

@@ -1042,13 +1042,15 @@ const ChannelChat = () => {
                 setCanManageChannel(true);
                 return;
             }
-            // For non-owners, check member roles
+            // For non-owners, check if any role grants MANAGE_CHANNELS or ADMINISTRATOR
             api.guilds.getMemberRoles(guildId, currentUserId).then((roles: any[]) => {
-                // Check if member has any roles (simplified admin check)
-                // In production, would check specific permission bits
-                if (roles && roles.length > 0) {
-                    setCanManageChannel(true);
-                }
+                const ADMINISTRATOR = 1n << 0n;
+                const MANAGE_CHANNELS = 1n << 2n;
+                const hasPermission = roles?.some((r: any) => {
+                    const perms = BigInt(r.permissions || '0');
+                    return (perms & ADMINISTRATOR) !== 0n || (perms & MANAGE_CHANNELS) !== 0n;
+                });
+                setCanManageChannel(!!hasPermission);
             }).catch(() => setCanManageChannel(false));
         }).catch(() => setCanManageChannel(false));
     }, [guildId, currentUserId]);

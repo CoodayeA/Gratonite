@@ -270,6 +270,34 @@ rolesRouter.delete('/:roleId', requireAuth, async (req: Request, res: Response):
   res.json({ code: 'OK', message: 'Role deleted' });
 });
 
+/** GET /api/v1/guilds/:guildId/members/:userId/roles — list a member's roles */
+rolesRouter.get('/members/:userId/roles', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId, userId } = req.params as Record<string, string>;
+
+  // Verify requester is a member of this guild
+  const [requester] = await db.select({ id: guildMembers.id }).from(guildMembers)
+    .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, req.userId!))).limit(1);
+  if (!requester) { res.status(403).json({ code: 'FORBIDDEN', message: 'Not a guild member' }); return; }
+
+  const userRoles = await db
+    .select({
+      id: roles.id,
+      name: roles.name,
+      color: roles.color,
+      position: roles.position,
+      permissions: roles.permissions,
+      hoist: roles.hoist,
+      mentionable: roles.mentionable,
+    })
+    .from(memberRoles)
+    .innerJoin(roles, eq(roles.id, memberRoles.roleId))
+    .where(and(eq(memberRoles.userId, userId), eq(memberRoles.guildId, guildId)))
+    .orderBy(asc(roles.position));
+
+  // Convert bigint permissions to string for JSON serialization
+  res.json(userRoles.map(r => ({ ...r, permissions: String(r.permissions) })));
+});
+
 /** PUT /api/v1/guilds/:guildId/members/:userId/roles/:roleId */
 rolesRouter.put('/members/:userId/roles/:roleId', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { guildId, userId, roleId } = req.params as Record<string, string>;
