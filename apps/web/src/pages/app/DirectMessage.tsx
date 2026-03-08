@@ -1506,7 +1506,7 @@ const DirectMessage = () => {
                                 avatarHash={recipientAvatarHash}
                                 displayName={userName || 'Unknown'}
                                 size={36}
-                                status={presenceMap[recipientId || ''] || 'offline'}
+                                status={(presenceMap[recipientId || ''] || 'offline') as 'online' | 'idle' | 'dnd' | 'invisible' | 'offline'}
                             />
                         )}
                         <div>

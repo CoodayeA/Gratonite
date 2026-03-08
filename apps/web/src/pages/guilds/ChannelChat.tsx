@@ -1641,7 +1641,7 @@ const ChannelChat = () => {
     useEffect(() => {
         if (!channelId) return;
 
-        const unsubCreate = onMessageCreate((data: MessageCreatePayload) => {
+        const unsubCreate = onMessageCreate(async (data: MessageCreatePayload) => {
             if (data.channelId !== channelId) return;
             // Don't duplicate messages we sent optimistically
             if (data.authorId === currentUserId) return;
@@ -2570,7 +2570,7 @@ const ChannelChat = () => {
 
                 <Hash size={24} className="desktop-hash-icon" style={{ color: 'var(--text-muted)' }} />
                 <h2>{channelName}</h2>
-                {channelIsEncrypted && <Lock size={14} style={{ color: 'var(--success, #22c55e)', marginLeft: '4px' }} title="End-to-end encrypted" />}
+                {channelIsEncrypted && <span title="End-to-end encrypted"><Lock size={14} style={{ color: 'var(--success, #22c55e)', marginLeft: '4px' }} /></span>}
 
                 <div style={{ flex: 1 }}></div>
 

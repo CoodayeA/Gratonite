@@ -846,7 +846,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             });
             setRoles(prev => prev.map(r => {
                 if (r.id === activeRole.id) {
-                    const updated = { ...r, name: newName, color: newColor };
+                    const updated = { ...r, name: newName, color: newColor || '' };
                     setActiveRole(updated);
                     return updated;
                 }
