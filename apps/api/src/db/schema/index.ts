@@ -98,3 +98,4 @@ export * from './study-rooms';
 export * from './guild-quests';
 export * from './guild-forms';
 export * from './confessions';
+export * from './guild-ratings';

@@ -27,7 +27,7 @@ fameRouter.post(
     try {
       const { userId: receiverId } = req.params as Record<string, string>;
       const giverId = req.userId!;
-      const { messageId, guildId } = req.body as { messageId?: string; guildId?: string };
+      const { messageId, guildId, channelId } = req.body as { messageId?: string; guildId?: string; channelId?: string };
 
       if (giverId === receiverId) {
         res.status(400).json({ code: 'BAD_REQUEST', message: 'You cannot give fame to yourself' });
@@ -92,22 +92,24 @@ fameRouter.post(
         const giverName = giver?.displayName || giver?.username || 'Someone';
         const receiverName = receiver?.displayName || receiver?.username || 'Someone';
 
-        if (messageId) {
-          // Look up the channel from the message
+        // Resolve the target channel: use channelId directly if provided, else look it up from messageId
+        let targetChannelId: string | null = channelId ?? null;
+        if (!targetChannelId && messageId) {
           const [msg] = await db.select({ channelId: messages.channelId }).from(messages).where(eq(messages.id, messageId)).limit(1);
-          if (msg?.channelId) {
-            const [sysMsg] = await db.insert(messages).values({
-              channelId: msg.channelId,
-              authorId: giverId,
-              content: `**${giverName}** gave **${receiverName}** FAME! 🌟`,
-            }).returning();
+          targetChannelId = msg?.channelId ?? null;
+        }
+        if (targetChannelId) {
+          const [sysMsg] = await db.insert(messages).values({
+            channelId: targetChannelId,
+            authorId: giverId,
+            content: `**${giverName}** gave **${receiverName}** FAME! 🌟`,
+          }).returning();
 
-            getIO().to(`channel:${msg.channelId}`).emit('MESSAGE_CREATE', {
-              ...sysMsg,
-              isSystem: true,
-              author: { id: giverId, username: giver?.username, displayName: giver?.displayName },
-            });
-          }
+          getIO().to(`channel:${targetChannelId}`).emit('MESSAGE_CREATE', {
+            ...sysMsg,
+            isSystem: true,
+            author: { id: giverId, username: giver?.username, displayName: giver?.displayName },
+          });
         }
       } catch { /* system message non-critical */ }
 

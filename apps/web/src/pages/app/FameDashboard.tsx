@@ -27,6 +27,7 @@ type FAMEUser = {
 
 type ServerRating = {
     id: number;
+    sourceGuildId: string;
     name: string;
     icon: string;
     bgColor: string;
@@ -372,11 +373,18 @@ const FameDashboard = () => {
     const [currentUserId, setCurrentUserId] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [myFameStats, setMyFameStats] = useState<{ fameReceived: number; fameGiven: number } | null>(null);
+    const [myGuildId, setMyGuildId] = useState<string | null>(null);
 
     useEffect(() => {
         Promise.allSettled([
-        // Fetch current user
-        api.users.getMe().then(me => setCurrentUserId(me.id)).catch(() => {
+        // Fetch current user + their guilds
+        api.users.getMe().then(me => {
+            setCurrentUserId(me.id);
+            // Fetch user's guilds for fame giving context
+            api.guilds.getMine().then(guilds => {
+                if (guilds.length > 0) setMyGuildId(guilds[0].id);
+            }).catch(() => {});
+        }).catch(() => {
             addToast({ title: 'Failed to load user data', description: 'Could not fetch your profile.', variant: 'error' });
         }),
         // Fetch leaderboard
@@ -387,7 +395,7 @@ const FameDashboard = () => {
                 name: entry.displayName || entry.username,
                 avatar: (entry.displayName || entry.username).charAt(0).toUpperCase(),
                 bgColor: getDeterministicGradient(entry.displayName || entry.username),
-                fameReceived: entry.gratonitesEarned || 0,
+                fameReceived: entry.fameReceived || 0,
                 fameGiven: 0,
                 weeklyChange: 0,
                 badges: entry.rank <= 3 ? ['⭐'] : [],
@@ -398,9 +406,11 @@ const FameDashboard = () => {
             addToast({ title: 'Failed to load leaderboard', description: 'Could not fetch the FAME leaderboard.', variant: 'error' });
         }),
         // Fetch discoverable guilds for server ratings
-        api.guilds.discover().then(guilds => {
-            const ratings: ServerRating[] = guilds.slice(0, 8).map((g, idx) => ({
+        api.guilds.discover().then(async guilds => {
+            const sliced = guilds.slice(0, 8);
+            const ratings: ServerRating[] = sliced.map((g, idx) => ({
                 id: idx + 1,
+                sourceGuildId: g.id,
                 name: g.name,
                 icon: g.name.charAt(0).toUpperCase(),
                 bgColor: getDeterministicGradient(g.name),
@@ -410,6 +420,34 @@ const FameDashboard = () => {
                 isJoined: false,
             }));
             setServerRatings(ratings);
+            // Fetch real ratings for each guild
+            const ratingResults = await Promise.allSettled(
+                sliced.map(g => api.guilds.getRating(g.id))
+            );
+            setServerRatings(prev => prev.map((server, idx) => {
+                const result = ratingResults[idx];
+                if (result.status === 'fulfilled' && result.value) {
+                    return {
+                        ...server,
+                        avgRating: result.value.averageRating,
+                        totalRatings: result.value.totalRatings ?? server.totalRatings,
+                    };
+                }
+                return server;
+            }));
+            // Populate existing user ratings
+            const newUserRatings: Record<number, number> = {};
+            const newRatedServers = new Set<number>();
+            ratingResults.forEach((result, idx) => {
+                if (result.status === 'fulfilled' && result.value?.userRating) {
+                    newUserRatings[idx + 1] = result.value.userRating;
+                    newRatedServers.add(idx + 1);
+                }
+            });
+            if (Object.keys(newUserRatings).length > 0) {
+                setUserRatings(newUserRatings);
+                setRatedServers(newRatedServers);
+            }
         }).catch(() => {
             addToast({ title: 'Failed to load server ratings', description: 'Could not fetch community server data.', variant: 'error' });
         }),
@@ -461,25 +499,29 @@ const FameDashboard = () => {
         return () => { document.head.removeChild(style); };
     }, []);
 
-    const handleGiveFame = (userId: number) => {
-        if (fameGivenTo.has(userId) || fameToday === 0) return;
+    const handleGiveFame = async (userId: number) => {
+        if (fameGivenTo.has(userId) || fameToday === 0 || !myGuildId) return;
+        const targetUser = leaderboardUsers.find(u => u.id === userId);
+        if (!targetUser) return;
         setGivingFame(userId);
-        setTimeout(() => {
+        try {
+            const result = await api.fame.give(targetUser.sourceUserId, { guildId: myGuildId });
             setFameGivenTo(prev => new Set([...prev, userId]));
-            setFameToday(t => {
-                const next = Math.max(0, t - 1);
-                try {
-                    const today = new Date().toISOString().slice(0, 10);
-                    const stored = JSON.parse(localStorage.getItem('gratonite-fame-tokens') || '{}');
-                    const used = (stored.date === today ? (stored.used ?? 0) : 0) + 1;
-                    localStorage.setItem('gratonite-fame-tokens', JSON.stringify({ date: today, used }));
-                } catch { /* ignore */ }
-                return next;
-            });
-            setGivingFame(null);
+            setFameToday(result.remaining);
+            try {
+                const today = new Date().toISOString().slice(0, 10);
+                localStorage.setItem('gratonite-fame-tokens', JSON.stringify({ date: today, used: result.fameGiven }));
+            } catch { /* ignore */ }
             setShowSparkle(true);
             setTimeout(() => setShowSparkle(false), 1500);
-        }, 600);
+            // Re-fetch stats to update display
+            api.fame.getStats(currentUserId).then(stats => setMyFameStats(stats)).catch(() => {});
+        } catch (err: any) {
+            const msg = err?.message || 'Failed to give FAME';
+            addToast({ title: 'FAME Error', description: msg, variant: 'error' });
+        } finally {
+            setGivingFame(null);
+        }
     };
 
     const handleRateServer = (server: ServerRating) => {
@@ -487,11 +529,23 @@ const FameDashboard = () => {
         setPendingRating(userRatings[server.id] || 0);
     };
 
-    const submitRating = () => {
+    const submitRating = async () => {
         if (!showRateModal || pendingRating === 0) return;
-        setUserRatings(prev => ({ ...prev, [showRateModal.id]: pendingRating }));
-        setRatedServers(prev => new Set([...prev, showRateModal.id]));
-        setShowRateModal(null);
+        const server = showRateModal;
+        try {
+            await api.guilds.rate(server.sourceGuildId, pendingRating);
+            setUserRatings(prev => ({ ...prev, [server.id]: pendingRating }));
+            setRatedServers(prev => new Set([...prev, server.id]));
+            // Refresh the rating for this server
+            api.guilds.getRating(server.sourceGuildId).then(result => {
+                setServerRatings(prev => prev.map(s =>
+                    s.id === server.id ? { ...s, avgRating: result.averageRating, totalRatings: result.totalRatings ?? s.totalRatings } : s
+                ));
+            }).catch(() => {});
+            setShowRateModal(null);
+        } catch {
+            addToast({ title: 'Rating Failed', description: 'Could not submit your rating.', variant: 'error' });
+        }
     };
 
     const handleUserClick = (user: FAMEUser) => {
@@ -597,9 +651,9 @@ const FameDashboard = () => {
                     display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '28px'
                 }}>
                     {[
-                        { label: 'FAME Received', value: currentUser ? currentUser.fameReceived.toLocaleString() : '—', icon: <Star size={18} color="#f59e0b" fill="#f59e0b" />, color: '#f59e0b', sub: 'synced from leaderboard data' },
-                        { label: 'Gratonite Earned', value: currentUser ? (currentUser.fameReceived * 200).toLocaleString() : '—', icon: <Zap size={18} color="#10b981" />, color: '#10b981', sub: 'from FAME rewards' },
-                        { label: 'FAME Given', value: currentUser ? currentUser.fameGiven.toLocaleString() : '—', icon: <ThumbsUp size={18} color="#8b5cf6" />, color: '#8b5cf6', sub: `${fameToday} left today` },
+                        { label: 'FAME Received', value: (myFameStats?.fameReceived ?? (currentUser?.fameReceived ?? null)) !== null ? (myFameStats?.fameReceived ?? currentUser!.fameReceived).toLocaleString() : '—', icon: <Star size={18} color="#f59e0b" fill="#f59e0b" />, color: '#f59e0b', sub: 'total FAME received' },
+                        { label: 'Gratonite Earned', value: (myFameStats?.fameReceived ?? (currentUser?.fameReceived ?? null)) !== null ? ((myFameStats?.fameReceived ?? currentUser!.fameReceived) * 200).toLocaleString() : '—', icon: <Zap size={18} color="#10b981" />, color: '#10b981', sub: 'from FAME rewards' },
+                        { label: 'FAME Given', value: (myFameStats?.fameGiven ?? (currentUser?.fameGiven ?? null)) !== null ? (myFameStats?.fameGiven ?? currentUser!.fameGiven).toLocaleString() : '—', icon: <ThumbsUp size={18} color="#8b5cf6" />, color: '#8b5cf6', sub: `${fameToday} left today` },
                         { label: 'Global Rank', value: currentUserRank > 0 ? `#${currentUserRank}` : '—', icon: <Crown size={18} color="#ec4899" />, color: '#ec4899', sub: currentUserRank > 0 ? `of ${sortedUsers.length} ranked users` : 'rank unavailable' },
                     ].map(stat => (
                         <div key={stat.label} style={{
@@ -858,7 +912,7 @@ const FameDashboard = () => {
                             </tbody>
                         </table>
                         <div style={{ padding: '12px 24px', color: 'var(--text-secondary)', fontSize: '12px', textAlign: 'center' }}>
-                            Showing top 8 of 12,403 users
+                            Showing top {leaderboardUsers.length} users
                         </div>
                     </div>
                 )}

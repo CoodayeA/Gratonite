@@ -43,6 +43,7 @@ import { auditLog } from '../db/schema/audit';
 import { files } from '../db/schema/files';
 import { guildMemberOnboarding } from '../db/schema/guild-onboarding';
 import { channelReadState } from '../db/schema/channel-read-state';
+import { guildRatings } from '../db/schema/guild-ratings';
 import { messages } from '../db/schema/messages';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
@@ -2392,4 +2393,64 @@ guildsRouter.patch('/:guildId/tags', requireAuth, async (req: Request, res: Resp
     await db.insert(guildTags).values(validatedTags.map(tag => ({ guildId, tag })));
   }
   res.json({ ok: true });
+});
+
+// ---------------------------------------------------------------------------
+// Guild Ratings
+// ---------------------------------------------------------------------------
+
+/** POST /:guildId/rating — Upsert a guild rating (1–5). */
+guildsRouter.post('/:guildId/rating', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { guildId } = req.params as Record<string, string>;
+    const userId = req.userId!;
+    await requireMember(guildId, userId);
+
+    const { rating } = req.body as { rating?: unknown };
+    if (typeof rating !== 'number' || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'rating must be an integer between 1 and 5' });
+      return;
+    }
+
+    await db
+      .insert(guildRatings)
+      .values({ guildId, userId, rating })
+      .onConflictDoUpdate({
+        target: [guildRatings.guildId, guildRatings.userId],
+        set: { rating, updatedAt: new Date() },
+      });
+
+    res.json({ ok: true });
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+/** GET /:guildId/rating — Get average rating + user's own rating (no membership required). */
+guildsRouter.get('/:guildId/rating', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { guildId } = req.params as Record<string, string>;
+    const userId = req.userId!;
+
+    const [stats] = await db
+      .select({
+        averageRating: sql<number>`coalesce(avg(${guildRatings.rating}), 0)`.mapWith(Number),
+        totalRatings: sql<number>`count(*)::int`.mapWith(Number),
+      })
+      .from(guildRatings)
+      .where(eq(guildRatings.guildId, guildId));
+
+    const [userRow] = await db
+      .select({ rating: guildRatings.rating })
+      .from(guildRatings)
+      .where(and(eq(guildRatings.guildId, guildId), eq(guildRatings.userId, userId)));
+
+    res.json({
+      averageRating: Math.round((stats?.averageRating ?? 0) * 100) / 100,
+      totalRatings: stats?.totalRatings ?? 0,
+      userRating: userRow?.rating ?? null,
+    });
+  } catch (err) {
+    handleAppError(res, err);
+  }
 });

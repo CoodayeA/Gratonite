@@ -1387,6 +1387,15 @@ export const api = {
 
     deleteEmoji: (guildId: string, emojiId: string) =>
       apiFetch<void>(`/guilds/${guildId}/emojis/${emojiId}`, { method: 'DELETE' }),
+
+    rate: (guildId: string, rating: number) =>
+      apiFetch<{ ok: boolean }>(`/guilds/${guildId}/rating`, {
+        method: 'POST',
+        body: JSON.stringify({ rating }),
+      }),
+
+    getRating: (guildId: string) =>
+      apiFetch<{ averageRating: number; totalRatings: number; userRating: number | null }>(`/guilds/${guildId}/rating`),
   },
 
   channels: {
@@ -1582,7 +1591,7 @@ export const api = {
   },
 
   threads: {
-    create: (channelId: string, data: { name: string; body?: string; type?: string; autoArchiveDuration?: number; message?: string; messageId?: string }) =>
+    create: (channelId: string, data: { name: string; body?: string; type?: string; archiveAfter?: number; message?: string; messageId?: string }) =>
       apiFetch<Thread>(`/channels/${channelId}/threads`, {
         method: 'POST',
         body: JSON.stringify(data),
@@ -1957,8 +1966,7 @@ export const api = {
         username: string;
         displayName: string;
         avatarHash: string | null;
-        messageCount: number;
-        gratonitesEarned: number;
+        fameReceived: number;
         memberSince: string;
       }>>(`/leaderboard?period=${period}`),
     getGuild: (guildId: string, period: 'week' | 'month' | 'all' = 'week') =>
@@ -1968,8 +1976,7 @@ export const api = {
         username: string;
         displayName: string;
         avatarHash: string | null;
-        messageCount: number;
-        gratonitesEarned: number;
+        fameReceived: number;
         memberSince: string;
       }>>(`/guilds/${guildId}/leaderboard?period=${period}`),
   },
@@ -2260,7 +2267,7 @@ export const api = {
   },
 
   fame: {
-    give: (userId: string, data: { messageId?: string; guildId: string }) =>
+    give: (userId: string, data: { messageId?: string; guildId: string; channelId?: string }) =>
       apiFetch<{ success: boolean; fameGiven: number; remaining: number }>(`/users/${userId}/fame`, {
         method: 'POST',
         body: JSON.stringify(data),

@@ -171,7 +171,7 @@ const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) 
                 const thread = await api.threads.create(channelId, {
                     name: `Thread: ${(originalMessage.content || '').slice(0, 50) || 'message'}`,
                     messageId: originalMessage.apiId,
-                    autoArchiveDuration: archiveAfter,
+                    archiveAfter: archiveAfter * 60,
                 });
                 currentThreadId = (thread as any).id;
                 setThreadId(currentThreadId);

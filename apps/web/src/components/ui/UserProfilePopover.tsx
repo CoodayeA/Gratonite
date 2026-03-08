@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, UserPlus, MoreHorizontal, Gamepad2, Headphones, Eye } from 'lucide-react';
+import { MessageSquare, UserPlus, MoreHorizontal, Gamepad2, Headphones, Eye, Star } from 'lucide-react';
 import { api, API_BASE } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
 import { useUser } from '../../contexts/UserContext';
@@ -76,6 +76,7 @@ const UserProfilePopover = ({
     const [badges, setBadges] = useState<string[]>([]);
     const [note, setNote] = useState('');
     const [noteLoaded, setNoteLoaded] = useState(false);
+    const [fameStats, setFameStats] = useState<{ fameReceived: number; fameGiven: number } | null>(null);
     const { user: currentUser } = useUser();
     const isOwnProfile = user.id === currentUser?.id;
 
@@ -98,9 +99,10 @@ const UserProfilePopover = ({
 
         const fetchAll = async () => {
             try {
-                const [profileRes, mutualsRes] = await Promise.all([
+                const [profileRes, mutualsRes, fameRes] = await Promise.all([
                     api.users.getProfile(user.id).catch(() => null),
                     api.users.getMutuals(user.id).catch(() => null),
+                    api.fame.getStats(user.id).catch(() => null),
                 ]);
 
                 if (cancelled) return;
@@ -121,6 +123,9 @@ const UserProfilePopover = ({
                 }
                 if (mutualsRes) {
                     setMutuals(mutualsRes);
+                }
+                if (fameRes) {
+                    setFameStats(fameRes);
                 }
 
                 // Fetch guild-specific roles if guildId provided
@@ -280,6 +285,13 @@ const UserProfilePopover = ({
 
                     {bio && (
                         <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', lineHeight: 1.4, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{bio}</p>
+                    )}
+
+                    {fameStats && fameStats.fameReceived > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', padding: '4px 8px', background: 'rgba(245,158,11,0.08)', borderRadius: '6px', width: 'fit-content' }}>
+                            <Star size={13} color="#f59e0b" fill="#f59e0b" />
+                            <span style={{ fontSize: '12px', fontWeight: 600, color: '#f59e0b' }}>{fameStats.fameReceived} FAME</span>
+                        </div>
                     )}
 
                     {user.activity && (
