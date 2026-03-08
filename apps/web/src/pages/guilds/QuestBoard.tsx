@@ -57,48 +57,48 @@ const QuestBoard = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean }
   const loadQuests = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/guilds/${guildId}/quests?status=${filter}`);
-      setQuests(res.data);
-    } catch { addToast('Failed to load quests', 'error'); }
+      const res = await api.quests.list(guildId, filter);
+      setQuests(res as Quest[]);
+    } catch { addToast({ title: 'Failed to load quests', variant: 'error' }); }
     setLoading(false);
   };
 
   const createQuest = async () => {
-    if (!newTitle || !newEndDate) { addToast('Title and end date are required', 'error'); return; }
+    if (!newTitle || !newEndDate) { addToast({ title: 'Title and end date are required', variant: 'error' }); return; }
     try {
-      await api.post(`/guilds/${guildId}/quests`, {
+      await api.quests.create(guildId, {
         title: newTitle, description: newDesc || undefined, questType: newType,
         targetValue: newTarget, reward: { coins: newReward }, endDate: newEndDate, recurring: newRecurring,
       });
       setShowCreate(false);
       setNewTitle(''); setNewDesc(''); setNewType('messages'); setNewTarget(100); setNewReward(100); setNewEndDate(''); setNewRecurring(false);
       loadQuests();
-      addToast('Quest created!', 'success');
-    } catch { addToast('Failed to create quest', 'error'); }
+      addToast({ title: 'Quest created!', variant: 'success' });
+    } catch { addToast({ title: 'Failed to create quest', variant: 'error' }); }
   };
 
   const deleteQuest = async (id: string) => {
     try {
-      await api.delete(`/guilds/${guildId}/quests/${id}`);
+      await api.quests.delete(guildId, id);
       loadQuests();
-      addToast('Quest deleted', 'info');
-    } catch { addToast('Failed to delete quest', 'error'); }
+      addToast({ title: 'Quest deleted', variant: 'info' });
+    } catch { addToast({ title: 'Failed to delete quest', variant: 'error' }); }
   };
 
   const contribute = async (id: string) => {
     try {
-      const res = await api.post(`/guilds/${guildId}/quests/${id}/contribute`, { value: 1 });
-      setQuests(prev => prev.map(q => q.id === id ? res.data : q));
-      if (res.data.completedAt) {
-        addToast('Quest completed! Rewards earned!', 'success');
+      const res = await api.quests.contribute(guildId, id, 1) as Quest;
+      setQuests(prev => prev.map(q => q.id === id ? res : q));
+      if (res.completedAt) {
+        addToast({ title: 'Quest completed! Rewards earned!', variant: 'success' });
       }
-    } catch { addToast('Failed to contribute', 'error'); }
+    } catch { addToast({ title: 'Failed to contribute', variant: 'error' }); }
   };
 
   const loadContributions = async (questId: string) => {
     try {
-      const res = await api.get(`/guilds/${guildId}/quests/${questId}/contributions`);
-      setContributions(prev => ({ ...prev, [questId]: res.data }));
+      const res = await api.quests.contributions(guildId, questId);
+      setContributions(prev => ({ ...prev, [questId]: res as Contribution[] }));
     } catch {}
   };
 

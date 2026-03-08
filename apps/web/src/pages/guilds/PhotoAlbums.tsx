@@ -43,10 +43,10 @@ export default function PhotoAlbums({ guildId }: PhotoAlbumsProps) {
 
   const fetchAlbums = useCallback(async () => {
     try {
-      const data = await api.get(`/guilds/${guildId}/albums`);
-      setAlbums(data);
+      const data = await api.photoAlbums.list(guildId);
+      setAlbums(data as Album[]);
     } catch {
-      addToast({ title: 'Failed to load albums', type: 'error' });
+      addToast({ title: 'Failed to load albums', variant: 'error' });
     }
   }, [guildId, addToast]);
 
@@ -54,60 +54,60 @@ export default function PhotoAlbums({ guildId }: PhotoAlbumsProps) {
 
   const openAlbum = async (albumId: string) => {
     try {
-      const data = await api.get(`/guilds/${guildId}/albums/${albumId}`);
-      setActiveAlbum(data);
+      const data = await api.photoAlbums.get(guildId, albumId);
+      setActiveAlbum(data as AlbumDetail);
     } catch {
-      addToast({ title: 'Failed to load album', type: 'error' });
+      addToast({ title: 'Failed to load album', variant: 'error' });
     }
   };
 
   const createAlbum = async () => {
     if (!newName.trim()) return;
     try {
-      const album = await api.post(`/guilds/${guildId}/albums`, { name: newName, description: newDesc || undefined });
+      const album = await api.photoAlbums.create(guildId, { name: newName, description: newDesc || undefined }) as any;
       setShowCreate(false);
       setNewName('');
       setNewDesc('');
       fetchAlbums();
       openAlbum(album.id);
     } catch {
-      addToast({ title: 'Failed to create album', type: 'error' });
+      addToast({ title: 'Failed to create album', variant: 'error' });
     }
   };
 
   const addPhoto = async () => {
     if (!photoUrl.trim() || !activeAlbum) return;
     try {
-      const photo = await api.post(`/guilds/${guildId}/albums/${activeAlbum.id}/photos`, {
+      const photo = await api.photoAlbums.addPhoto(guildId, activeAlbum.id, {
         fileUrl: photoUrl,
         caption: photoCaption || undefined,
-      });
+      }) as Photo;
       setActiveAlbum(prev => prev ? { ...prev, photos: [photo, ...prev.photos] } : null);
       setPhotoUrl('');
       setPhotoCaption('');
       setShowAddPhoto(false);
     } catch {
-      addToast({ title: 'Failed to add photo', type: 'error' });
+      addToast({ title: 'Failed to add photo', variant: 'error' });
     }
   };
 
   const deletePhoto = async (photoId: string) => {
     if (!activeAlbum) return;
     try {
-      await api.delete(`/guilds/${guildId}/albums/${activeAlbum.id}/photos/${photoId}`);
+      await api.photoAlbums.removePhoto(guildId, activeAlbum.id, photoId);
       setActiveAlbum(prev => prev ? { ...prev, photos: prev.photos.filter(p => p.id !== photoId) } : null);
     } catch {
-      addToast({ title: 'Failed to delete photo', type: 'error' });
+      addToast({ title: 'Failed to delete photo', variant: 'error' });
     }
   };
 
   const deleteAlbum = async (albumId: string) => {
     try {
-      await api.delete(`/guilds/${guildId}/albums/${albumId}`);
+      await api.photoAlbums.delete(guildId, albumId);
       setActiveAlbum(null);
       fetchAlbums();
     } catch {
-      addToast({ title: 'Failed to delete album', type: 'error' });
+      addToast({ title: 'Failed to delete album', variant: 'error' });
     }
   };
 

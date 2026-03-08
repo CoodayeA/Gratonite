@@ -73,31 +73,31 @@ const FormBuilder = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean 
   const loadForms = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/guilds/${guildId}/forms`);
-      setForms(res.data);
-    } catch { addToast('Failed to load forms', 'error'); }
+      const res = await api.forms.list(guildId);
+      setForms(res as Form[]);
+    } catch { addToast({ title: 'Failed to load forms', variant: 'error' }); }
     setLoading(false);
   };
 
   const createForm = async () => {
-    if (!formTitle) { addToast('Title is required', 'error'); return; }
+    if (!formTitle) { addToast({ title: 'Title is required', variant: 'error' }); return; }
     try {
-      await api.post(`/guilds/${guildId}/forms`, {
+      await api.forms.create(guildId, {
         title: formTitle, description: formDesc || undefined, fields,
       });
       setView('list');
       setFormTitle(''); setFormDesc(''); setFields([]);
       loadForms();
-      addToast('Form created!', 'success');
-    } catch { addToast('Failed to create form', 'error'); }
+      addToast({ title: 'Form created!', variant: 'success' });
+    } catch { addToast({ title: 'Failed to create form', variant: 'error' }); }
   };
 
   const deleteForm = async (id: string) => {
     try {
-      await api.delete(`/guilds/${guildId}/forms/${id}`);
+      await api.forms.delete(guildId, id);
       loadForms();
-      addToast('Form deleted', 'info');
-    } catch { addToast('Failed to delete form', 'error'); }
+      addToast({ title: 'Form deleted', variant: 'info' });
+    } catch { addToast({ title: 'Failed to delete form', variant: 'error' }); }
   };
 
   const openFill = (form: Form) => {
@@ -109,29 +109,29 @@ const FormBuilder = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean 
   const submitResponse = async () => {
     if (!selectedForm) return;
     try {
-      await api.post(`/guilds/${guildId}/forms/${selectedForm.id}/responses`, { answers });
+      await api.forms.submitResponse(guildId, selectedForm.id, answers);
       setView('list');
-      addToast('Response submitted!', 'success');
-    } catch { addToast('Failed to submit response', 'error'); }
+      addToast({ title: 'Response submitted!', variant: 'success' });
+    } catch { addToast({ title: 'Failed to submit response', variant: 'error' }); }
   };
 
   const openResponses = async (form: Form) => {
     setSelectedForm(form);
     setView('responses');
     try {
-      const res = await api.get(`/guilds/${guildId}/forms/${form.id}/responses`);
-      setResponses(res.data.responses);
-      setResponsesTotal(res.data.total);
-    } catch { addToast('Failed to load responses', 'error'); }
+      const res = await api.forms.listResponses(guildId, form.id) as any;
+      setResponses(Array.isArray(res) ? res : (res.responses ?? []));
+      setResponsesTotal(Array.isArray(res) ? res.length : (res.total ?? 0));
+    } catch { addToast({ title: 'Failed to load responses', variant: 'error' }); }
   };
 
   const reviewResponse = async (responseId: string, status: 'approved' | 'rejected') => {
     if (!selectedForm) return;
     try {
-      await api.patch(`/guilds/${guildId}/forms/${selectedForm.id}/responses/${responseId}`, { status });
+      await api.forms.reviewResponse(guildId, selectedForm.id, responseId, { status });
       setResponses(prev => prev.map(r => r.id === responseId ? { ...r, status } : r));
-      addToast(`Response ${status}`, 'success');
-    } catch { addToast('Failed to review response', 'error'); }
+      addToast({ title: `Response ${status}`, variant: 'success' });
+    } catch { addToast({ title: 'Failed to review response', variant: 'error' }); }
   };
 
   const addField = () => {
