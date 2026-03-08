@@ -53,6 +53,16 @@ function validateStartupConfig(): void {
   const isProdLike = env === 'production' || env === 'staging';
   const jwtSecret = process.env.JWT_SECRET ?? '';
   const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET ?? '';
+
+  // Auto-derive APP_URL and CORS_ORIGIN from INSTANCE_DOMAIN if not explicitly set
+  const instanceDomain = process.env.INSTANCE_DOMAIN;
+  if (instanceDomain && !process.env.APP_URL) {
+    process.env.APP_URL = `https://${instanceDomain}`;
+  }
+  if (instanceDomain && !process.env.CORS_ORIGIN) {
+    process.env.CORS_ORIGIN = `https://${instanceDomain}`;
+  }
+
   const appUrl = process.env.APP_URL ?? '';
   const corsOrigin = process.env.CORS_ORIGIN ?? '';
 
@@ -68,7 +78,7 @@ function validateStartupConfig(): void {
 
   if (isProdLike) {
     if (!appUrl || !corsOrigin) {
-      throw new Error('FATAL: APP_URL and CORS_ORIGIN are required in non-dev environments.');
+      throw new Error('FATAL: APP_URL and CORS_ORIGIN are required in non-dev environments. Set them directly or set INSTANCE_DOMAIN to auto-derive.');
     }
     if (isPlaceholderSecret(jwtSecret) || isPlaceholderSecret(jwtRefreshSecret)) {
       throw new Error('FATAL: Placeholder JWT secrets are not allowed in non-dev environments.');

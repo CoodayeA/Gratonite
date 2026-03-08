@@ -510,7 +510,9 @@ federationRouter.post('/discover/register', requireFederationAuth, async (req: R
     .where(eq(federatedInstances.id, instanceId))
     .limit(1);
 
-  const autoApprove = instance && ['verified', 'manually_trusted'].includes(instance.trustLevel);
+  // Auto-approve guilds from any active instance that completed the handshake.
+  // Admins can always manually reject via the admin panel.
+  const autoApprove = !!instance;
 
   // Sanitize and validate URLs
   const isValidHttpsUrl = (url: string): boolean => {
