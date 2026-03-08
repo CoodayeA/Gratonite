@@ -2053,6 +2053,9 @@ const ChannelChat = () => {
         setReplyingTo(null);
         setMentionSearch(null);
         setChannelSearch(null);
+        // Reset textarea height after send
+        const ta = document.querySelector('.chat-input') as HTMLTextAreaElement | null;
+        if (ta) ta.style.height = '24px';
         setEmojiSearch(null);
         setRoomVelocity(prev => Math.min(10, prev + 2));
         setHasDraft(false);
@@ -2154,7 +2157,7 @@ const ChannelChat = () => {
         }
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = e.target.value;
         setInputValue(val);
 
@@ -2255,7 +2258,7 @@ const ChannelChat = () => {
         setEmojiSearch(null);
     };
 
-    const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const handleInputKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         // Slash command navigation
         if (slashSearch !== null && filteredCommands.length > 0) {
             if (e.key === 'ArrowDown') {
@@ -2339,7 +2342,8 @@ const ChannelChat = () => {
             return;
         }
 
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
             if (editingMessage) {
                 handleEditSubmit();
             } else {
@@ -3215,14 +3219,15 @@ const ChannelChat = () => {
                             {hasDraft && !editingMessage && (
                                 <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 15%, transparent)', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0 }}>Draft</span>
                             )}
-                            <input
-                                type="text"
+                            <textarea
                                 className="chat-input"
                                 aria-label="Message input"
+                                rows={1}
                                 placeholder={editingMessage ? 'Edit your message...' : `Message #${channelName}...`}
                                 value={editingMessage ? editContent : inputValue}
                                 onChange={editingMessage ? (e) => setEditContent(e.target.value) : handleInputChange}
                                 onKeyDown={handleInputKeyDown}
+                                onInput={(e) => { const t = e.target as HTMLTextAreaElement; t.style.height = '24px'; t.style.height = Math.min(t.scrollHeight, 200) + 'px'; }}
                             />
                             <button className="input-icon-btn" title="Record Voice Note" aria-label="Record voice note" onClick={startRecording}>
                                 <Mic size={20} />

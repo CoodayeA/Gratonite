@@ -1280,7 +1280,7 @@ const DirectMessage = () => {
         (u.username.toLowerCase().includes(mentionSearch.toLowerCase()) || u.displayName.toLowerCase().includes(mentionSearch.toLowerCase()))
     );
 
-    const handleDmInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleDmInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = e.target.value;
         setInputValue(val);
         if (val.trim().length > 0) sendTypingIndicator();
@@ -1303,7 +1303,7 @@ const DirectMessage = () => {
         setMentionSearch(null);
     };
 
-    const handleDmKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const handleDmKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (mentionSearch !== null && filteredMentionUsers.length > 0) {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
@@ -1322,7 +1322,8 @@ const DirectMessage = () => {
                 return;
             }
         }
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
             if (editingMessage) { handleEditSubmit(); return; }
             handleSendMessage();
         }
@@ -2329,13 +2330,14 @@ const DirectMessage = () => {
                                 <button className="input-icon-btn" title="Upload Attachment" onClick={() => attachmentInputRef.current?.click()}>
                                     <Plus size={20} />
                                 </button>
-                                <input
-                                    type="text"
+                                <textarea
                                     className="chat-input"
+                                    rows={1}
                                     placeholder={`Message @${userName}...`}
                                     value={inputValue}
                                     onChange={handleDmInputChange}
                                     onKeyDown={handleDmKeyDown}
+                                    onInput={(e) => { const t = e.target as HTMLTextAreaElement; t.style.height = '24px'; t.style.height = Math.min(t.scrollHeight, 200) + 'px'; }}
                                 />
                                 <button className={`input-icon-btn ${isEmojiPickerOpen ? 'primary' : ''}`} title="Select Emoji" onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}>
                                     <Smile size={20} />
