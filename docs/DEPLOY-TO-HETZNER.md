@@ -1,577 +1,159 @@
-# Deploy Gratonite to Hetzner Server
+# Deploying Gratonite on a VPS
 
-**Server:** gratonite.chat  
-**User:** ferdinand  
-**SSH Key:** `~/.ssh/<your-deploy-key>`  
-**Status:** Landing page currently live
+This guide covers deploying Gratonite to a fresh VPS (Hetzner, DigitalOcean, Linode, Vultr, etc.). It uses the Docker Compose setup described in [DEPLOY-TO-OWN-SERVER.md](DEPLOY-TO-OWN-SERVER.md).
 
----
+## Server Requirements
 
-## Deployment Strategy
+- **OS:** Ubuntu 22.04 LTS (or Debian 12)
+- **RAM:** 2 GB minimum (4 GB recommended)
+- **Disk:** 20 GB minimum
+- **Ports:** 22 (SSH), 80 (HTTP), 443 (HTTPS)
 
-### Current Setup
-- Landing page at `https://gratonite.chat`
-- Login page at `https://gratonite.chat/login`
+## Step 1: Provision a Server
 
-### New Setup (Recommended)
-- Landing page at `https://gratonite.chat` (keep existing)
-- Full app at `https://app.gratonite.chat` (new subdomain)
-- API at `https://api.gratonite.chat` (new subdomain)
+Create a VPS with your provider. Most offer Ubuntu 22.04 images. Note your server's public IP address.
 
-**OR** (Alternative)
-
-- Landing page at `https://gratonite.chat` (keep existing)
-- Full app at `https://gratonite.chat/app` (replace /login)
-- API at `https://gratonite.chat/api` (new path)
-
----
-
-## Pre-Deployment Checklist
-
-### 1. Server Requirements
-- [ ] Node.js 18+ installed
-- [ ] PostgreSQL installed
-- [ ] Redis installed
-- [ ] Nginx installed (for reverse proxy)
-- [ ] PM2 installed (for process management)
-- [ ] SSL certificates (Let's Encrypt)
-
-### 2. DNS Configuration
-If using subdomains:
-- [ ] Add A record: `app.gratonite.chat` → server IP
-- [ ] Add A record: `api.gratonite.chat` → server IP
-
-### 3. Environment Preparation
-- [ ] Generate JWT secrets
-- [ ] Set up SMTP credentials
-- [ ] Prepare database credentials
-
----
-
-## Step-by-Step Deployment
-
-### Step 1: Connect to Server
+## Step 2: Initial Server Setup
 
 ```bash
-# Test SSH connection
-ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host>
+ssh root@<your-server-ip>
 
-# Or if using the other key
-ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host>
+# Create a non-root user
+adduser deploy
+usermod -aG sudo deploy
+
+# Set up SSH key auth for the new user
+mkdir -p /home/deploy/.ssh
+cp ~/.ssh/authorized_keys /home/deploy/.ssh/
+chown -R deploy:deploy /home/deploy/.ssh
+
+# Configure firewall
+ufw allow 22
+ufw allow 80
+ufw allow 443
+ufw enable
+
+# Log out and reconnect as the deploy user
+exit
 ```
 
-### Step 2: Install Dependencies (if needed)
+```bash
+ssh deploy@<your-server-ip>
+```
+
+## Step 3: Install Docker
 
 ```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
+# Install Docker Engine
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
 
-# Install Node.js 20 (LTS)
+# Log out and back in for group change to take effect
+exit
+ssh deploy@<your-server-ip>
+
+# Verify
+docker --version
+docker compose version
+```
+
+## Step 4: Install Node.js and pnpm
+
+```bash
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
-
-# Install PostgreSQL
-sudo apt install -y postgresql postgresql-contrib
-
-# Install Redis
-sudo apt install -y redis-server
-
-# Install PM2 globally
-sudo npm install -g pm2
-
-# Install pnpm
 sudo npm install -g pnpm
 
-# Verify installations
-node --version  # Should be v20.x
-psql --version
-redis-cli --version
-pm2 --version
+node --version   # should be v20.x
+pnpm --version
 ```
 
-### Step 3: Set Up Database
+## Step 5: Clone and Build
 
 ```bash
-# Switch to postgres user
-sudo -u postgres psql
+cd ~
+git clone https://github.com/CoodayeA/Gratonite.git
+cd Gratonite
 
-# In PostgreSQL prompt:
-CREATE DATABASE gratonite;
-CREATE USER gratonite WITH PASSWORD 'CHANGE_THIS_PASSWORD';
-GRANT ALL PRIVILEGES ON DATABASE gratonite TO gratonite;
-\q
-
-# Test connection
-psql -U gratonite -d gratonite -h localhost
-```
-
-### Step 4: Clone and Build Application
-
-```bash
-# Create app directory
-sudo mkdir -p /var/www/gratonite
-sudo chown ferdinand:ferdinand /var/www/gratonite
-cd /var/www/gratonite
-
-# Clone from your local machine (or use git if you have a repo)
-# For now, we'll upload the built files
-
-# Create directory structure
-mkdir -p api web
-```
-
-### Step 5: Upload Application Files
-
-From your local machine:
-
-```bash
-# Build the application first
-cd "/Volumes/Project BUS/GratoniteFinalForm"
-
-# Build backend
+# Build API
 cd apps/api
-pnpm install
-pnpm run build
+pnpm install && pnpm run build
+cd ../..
 
-# Build frontend
-cd ../web
-pnpm install
-pnpm run build
-
-# Upload backend to server
-cd "/Volumes/Project BUS/GratoniteFinalForm/apps/api"
-rsync -avz -e "ssh -i ~/.ssh/<your-deploy-key>" \
-  --exclude 'node_modules' \
-  --exclude '.env' \
-  --exclude 'uploads' \
-  . <ssh-user>@<server-host>:/var/www/gratonite/api/
-
-# Upload frontend build to server
-cd "/Volumes/Project BUS/GratoniteFinalForm/apps/web"
-rsync -avz -e "ssh -i ~/.ssh/<your-deploy-key>" \
-  dist/ <ssh-user>@<server-host>:/var/www/gratonite/web/
+# Build web client
+cd apps/web
+pnpm install && pnpm run build
+cd ../..
 ```
 
-### Step 6: Configure Environment Variables
-
-On the server:
+## Step 6: Configure
 
 ```bash
-cd /var/www/gratonite/api
-
-# Create .env file
-cat > .env << 'EOF'
-# Database
-DATABASE_URL=postgresql://gratonite:CHANGE_THIS_PASSWORD@localhost:5432/gratonite
-
-# Redis
-REDIS_URL=redis://localhost:6379
-
-# JWT Secrets (generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
-JWT_SECRET=GENERATE_32_CHAR_RANDOM_STRING
-JWT_REFRESH_SECRET=GENERATE_DIFFERENT_32_CHAR_STRING
-
-# SMTP (use your email provider)
-SMTP_HOST=smtp.sendgrid.net
-SMTP_PORT=587
-SMTP_USER=apikey
-SMTP_PASS=YOUR_SENDGRID_API_KEY
-SMTP_FROM=noreply@gratonite.chat
-
-# URLs
-APP_URL=https://app.gratonite.chat
-CORS_ORIGIN=https://app.gratonite.chat
-PORT=4000
-
-# LiveKit
-LIVEKIT_URL=wss://<your-livekit-host>
-LIVEKIT_API_KEY=<your-livekit-api-key>
-LIVEKIT_API_SECRET=<your-livekit-api-secret>
-EOF
-
-# Generate JWT secrets
-node -e "console.log('JWT_SECRET=' + require('crypto').randomBytes(32).toString('hex'))"
-node -e "console.log('JWT_REFRESH_SECRET=' + require('crypto').randomBytes(32).toString('hex')"
-
-# Edit .env and paste the generated secrets
+cp deploy/.env.example .env
 nano .env
+# Fill in DB_PASSWORD, JWT_SECRET, JWT_REFRESH_SECRET, SMTP, domain, LiveKit
+# See docs/DEPLOY-TO-OWN-SERVER.md for details on each variable
 ```
 
-### Step 7: Install Backend Dependencies and Run Migrations
+Edit the Caddyfile with your domain:
 
 ```bash
-cd /var/www/gratonite/api
-
-# Install production dependencies
-pnpm install --prod
-
-# Run database migrations
-pnpm run db:migrate
-
-# Test the backend
-node dist/index.js
-# Press Ctrl+C after verifying it starts
+nano deploy/Caddyfile
 ```
 
-### Step 8: Set Up PM2 for Backend
+## Step 7: Configure DNS
+
+Point your domain to the server IP. See [DNS-CONFIGURATION.md](DNS-CONFIGURATION.md).
+
+## Step 8: Start
 
 ```bash
-cd /var/www/gratonite/api
-
-# Start with PM2
-pm2 start dist/index.js --name gratonite-api
-
-# Save PM2 configuration
-pm2 save
-
-# Set up PM2 to start on boot
-pm2 startup
-# Follow the command it outputs
-
-# Check status
-pm2 status
-pm2 logs gratonite-api
+cd ~/Gratonite/deploy
+docker compose -f docker-compose.production.yml up -d
+docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js"
 ```
 
-### Step 9: Configure Nginx
+## Step 9: Verify
 
 ```bash
-# Create Nginx configuration for API
-sudo nano /etc/nginx/sites-available/gratonite-api
+# All containers healthy
+docker compose -f docker-compose.production.yml ps
 
-# Paste this configuration:
+# API responds
+curl https://api.yourdomain.com/health
+
+# Visit https://yourdomain.com in a browser
 ```
 
-```nginx
-server {
-    listen 80;
-    server_name api.gratonite.chat;
-
-    location / {
-        proxy_pass http://localhost:4000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-        
-        # WebSocket support
-        proxy_read_timeout 86400;
-    }
-}
-```
-
-```bash
-# Create Nginx configuration for frontend
-sudo nano /etc/nginx/sites-available/gratonite-app
-```
-
-```nginx
-server {
-    listen 80;
-    server_name app.gratonite.chat;
-    root /var/www/gratonite/web;
-    index index.html;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-}
-```
-
-```bash
-# Enable sites
-sudo ln -s /etc/nginx/sites-available/gratonite-api /etc/nginx/sites-enabled/
-sudo ln -s /etc/nginx/sites-available/gratonite-app /etc/nginx/sites-enabled/
-
-# Test Nginx configuration
-sudo nginx -t
-
-# Reload Nginx
-sudo systemctl reload nginx
-```
-
-### Step 10: Set Up SSL with Let's Encrypt
-
-```bash
-# Install Certbot
-sudo apt install -y certbot python3-certbot-nginx
-
-# Get SSL certificates
-sudo certbot --nginx -d api.gratonite.chat -d app.gratonite.chat
-
-# Certbot will automatically configure HTTPS
-# Follow the prompts
-
-# Test auto-renewal
-sudo certbot renew --dry-run
-```
-
-### Step 11: Configure Firewall
-
-```bash
-# Allow SSH, HTTP, HTTPS
-sudo ufw allow 22
-sudo ufw allow 80
-sudo ufw allow 443
-sudo ufw enable
-
-# Check status
-sudo ufw status
-```
-
-### Step 12: Verify Deployment
-
-```bash
-# Check backend is running
-curl http://localhost:4000/health
-
-# Check PM2 status
-pm2 status
-
-# Check Nginx status
-sudo systemctl status nginx
-
-# Check logs
-pm2 logs gratonite-api
-sudo tail -f /var/log/nginx/error.log
-```
-
-### Step 13: Test from Browser
-
-1. Visit `https://api.gratonite.chat/health` - Should return `{"status":"ok"}`
-2. Visit `https://app.gratonite.chat` - Should load the app
-3. Try registering a new account
-4. Test all features
-
----
-
-## Alternative: Deploy Under Existing Domain
-
-If you want to keep everything under `gratonite.chat`:
-
-### Nginx Configuration (Single Domain)
-
-```nginx
-# Main site (existing landing page)
-server {
-    listen 80;
-    server_name gratonite.chat;
-    root /var/www/gratonite/landing;  # Your existing landing page
-    index index.html;
-
-    # API endpoint
-    location /api {
-        proxy_pass http://localhost:4000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-
-    # App (replaces /login)
-    location /app {
-        alias /var/www/gratonite/web;
-        try_files $uri $uri/ /app/index.html;
-    }
-
-    # Root landing page
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-}
-```
-
-Then update frontend .env:
-```env
-VITE_API_URL=https://gratonite.chat/api
-```
-
-And backend .env:
-```env
-APP_URL=https://gratonite.chat/app
-CORS_ORIGIN=https://gratonite.chat
-```
-
----
-
-## Maintenance Commands
+## Maintenance
 
 ```bash
 # View logs
-pm2 logs gratonite-api
+docker logs -f gratonite-api
+docker logs -f gratonite-caddy
 
-# Restart backend
-pm2 restart gratonite-api
-
-# Stop backend
-pm2 stop gratonite-api
-
-# Update application
-cd /var/www/gratonite/api
-git pull  # or rsync from local
-pnpm install --prod
-pm2 restart gratonite-api
+# Restart a service
+docker restart gratonite-api
 
 # Database backup
-pg_dump -U gratonite gratonite > backup_$(date +%Y%m%d).sql
+docker exec gratonite-postgres pg_dump -U gratonite gratonite > ~/backup_$(date +%Y%m%d).sql
 
-# Check disk space
-df -h
-
-# Check memory
-free -h
-
-# Check processes
-pm2 status
+# Update to latest version
+cd ~/Gratonite
+git pull
+cd apps/api && pnpm install && pnpm run build && cd ../..
+cd apps/web && pnpm install && pnpm run build && cd ../..
+cd deploy && docker compose -f docker-compose.production.yml up -d --force-recreate api web
+docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js"
 ```
-
----
-
-## Troubleshooting
-
-### Backend won't start
-```bash
-# Check logs
-pm2 logs gratonite-api --lines 100
-
-# Check if port 4000 is in use
-sudo lsof -i :4000
-
-# Check environment variables
-cd /var/www/gratonite/api
-cat .env
-```
-
-### Database connection fails
-```bash
-# Test PostgreSQL connection
-psql -U gratonite -d gratonite -h localhost
-
-# Check PostgreSQL is running
-sudo systemctl status postgresql
-
-# Check database exists
-sudo -u postgres psql -l
-```
-
-### Nginx errors
-```bash
-# Check Nginx error log
-sudo tail -f /var/log/nginx/error.log
-
-# Test configuration
-sudo nginx -t
-
-# Restart Nginx
-sudo systemctl restart nginx
-```
-
-### SSL certificate issues
-```bash
-# Renew certificates manually
-sudo certbot renew
-
-# Check certificate status
-sudo certbot certificates
-```
-
----
 
 ## Security Checklist
 
-- [ ] Change default PostgreSQL password
-- [ ] Set strong JWT secrets
-- [ ] Configure firewall (UFW)
-- [ ] Enable SSL/HTTPS
-- [ ] Set up automatic security updates
-- [ ] Configure fail2ban for SSH protection
-- [ ] Set up database backups
-- [ ] Monitor disk space
-- [ ] Set up log rotation
-
----
-
-## Next Steps After Deployment
-
-1. **Test Everything**
-   - Register account
-   - Create guild
-   - Send messages
-   - Join voice
-   - Test all features
-
-2. **Monitor**
-   - Watch PM2 logs for errors
-   - Check Nginx access logs
-   - Monitor server resources
-
-3. **Optimize**
-   - Set up Redis persistence
-   - Configure PostgreSQL for production
-   - Enable gzip compression in Nginx
-   - Set up CDN for static assets
-
-4. **Scale** (when needed)
-   - Add more PM2 instances (cluster mode)
-   - Set up database read replicas
-   - Add Redis cluster
-   - Use load balancer
-
----
-
-## Quick Deploy Script
-
-Save this as `deploy.sh` on your local machine:
-
-```bash
-#!/bin/bash
-set -e
-
-echo "Building application..."
-cd "/Volumes/Project BUS/GratoniteFinalForm"
-
-# Build backend
-cd apps/api
-pnpm run build
-
-# Build frontend
-cd ../web
-pnpm run build
-
-echo "Uploading to server..."
-# Upload backend
-rsync -avz -e "ssh -i ~/.ssh/<your-deploy-key>" \
-  --exclude 'node_modules' \
-  --exclude '.env' \
-  apps/api/ <ssh-user>@<server-host>:/var/www/gratonite/api/
-
-# Upload frontend
-rsync -avz -e "ssh -i ~/.ssh/<your-deploy-key>" \
-  apps/web/dist/ <ssh-user>@<server-host>:/var/www/gratonite/web/
-
-echo "Restarting backend..."
-ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host> "cd /var/www/gratonite/api && pnpm install --prod && pm2 restart gratonite-api"
-
-echo "Deployment complete!"
-```
-
-Make it executable:
-```bash
-chmod +x deploy.sh
-./deploy.sh
-```
-
----
-
-**Ready to deploy? Let me know if you want me to help with any specific step!**
+- [ ] Non-root user for SSH access
+- [ ] SSH key authentication (disable password auth)
+- [ ] Firewall enabled (UFW: 22, 80, 443 only)
+- [ ] Strong DB and JWT secrets
+- [ ] HTTPS enabled (handled automatically by Caddy)
+- [ ] Automatic security updates: `sudo apt install unattended-upgrades`
+- [ ] Regular database backups
+- [ ] Optional: fail2ban for SSH brute-force protection

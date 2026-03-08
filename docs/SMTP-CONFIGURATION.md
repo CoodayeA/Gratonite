@@ -1,191 +1,95 @@
-# SMTP Configuration Guide
+# SMTP Configuration
 
-**Status:** Email verification is currently failing due to placeholder SMTP credentials
+Gratonite sends transactional emails for account verification, password resets, and optional notification digests. This guide covers setting up SMTP for your self-hosted deployment.
 
----
+## Environment Variables
 
-## Current Issue
+Set these in your `.env` file (or `docker-compose.yml` environment section):
 
-The API is configured with placeholder SMTP credentials:
-```
-SMTP_HOST: smtp.sendgrid.net
-SMTP_PORT: 587
-SMTP_USER: apikey
-SMTP_PASS: YOUR_SENDGRID_API_KEY  ← This is a placeholder!
-SMTP_FROM: noreply@gratonite.chat
-```
-
-Error in logs:
-```
-Failed to send verification email: Error: Invalid login: 535 Authentication failed
+```env
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your-smtp-username
+SMTP_PASS=your-smtp-password
+SMTP_FROM=noreply@yourdomain.com
 ```
 
----
+## Provider Examples
 
-## Solution Options
+### SendGrid (free tier: 100 emails/day)
 
-### Option 1: SendGrid (Recommended - Free Tier Available)
-
-SendGrid offers 100 emails/day on their free tier, which is perfect for getting started.
-
-**Steps:**
-
-1. **Sign up for SendGrid**
-   - Go to https://sendgrid.com/pricing/ and sign up for the free tier
-   - Verify your email address
-
-2. **Create an API Key**
-   - Log in to SendGrid dashboard
-   - Go to Settings → API Keys
-   - Click "Create API Key"
-   - Name it "Gratonite Production"
-   - Select "Full Access" or "Restricted Access" with Mail Send permissions
-   - Copy the API key (you won't be able to see it again!)
-
-3. **Update the Configuration**
-   ```bash
-   ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host>
-   
-   # Edit the docker-compose file
-   nano /home/ferdinand/gratonite-app/docker-compose.production.yml
-   
-   # Find the line:
-   #   SMTP_PASS: YOUR_SENDGRID_API_KEY
-   # Replace with:
-   #   SMTP_PASS: SG.your_actual_api_key_here
-   
-   # Save and exit (Ctrl+X, Y, Enter)
-   
-   # Restart the API
-   docker restart gratonite-api
+1. Sign up at [sendgrid.com](https://sendgrid.com)
+2. Create an API key under **Settings > API Keys**
+3. Configure:
+   ```env
+   SMTP_HOST=smtp.sendgrid.net
+   SMTP_PORT=587
+   SMTP_USER=apikey
+   SMTP_PASS=SG.your_api_key_here
+   SMTP_FROM=noreply@yourdomain.com
    ```
 
-4. **Verify Domain (Optional but Recommended)**
-   - In SendGrid dashboard, go to Settings → Sender Authentication
-   - Verify your domain (gratonite.chat) to improve deliverability
-   - Add the required DNS records to your domain
+### Gmail (free, 500 emails/day limit)
 
----
-
-### Option 2: Gmail SMTP (Quick Setup)
-
-If you have a Gmail account, you can use it for testing.
-
-**Steps:**
-
-1. **Enable 2-Factor Authentication**
-   - Go to https://myaccount.google.com/security
-   - Enable 2-Step Verification
-
-2. **Generate App Password**
-   - Go to https://myaccount.google.com/apppasswords
-   - Select "Mail" and "Other (Custom name)"
-   - Name it "Gratonite"
-   - Copy the 16-character password
-
-3. **Update Configuration**
-   ```bash
-   ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host>
-   nano /home/ferdinand/gratonite-app/docker-compose.production.yml
-   
-   # Update these lines:
-   #   SMTP_HOST: smtp.gmail.com
-   #   SMTP_PORT: 587
-   #   SMTP_USER: your.email@gmail.com
-   #   SMTP_PASS: your_16_char_app_password
-   #   SMTP_FROM: your.email@gmail.com
-   
-   # Restart the API
-   docker restart gratonite-api
+1. Enable 2-Factor Authentication on your Google account
+2. Generate an App Password at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+3. Configure:
+   ```env
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=you@gmail.com
+   SMTP_PASS=your-16-char-app-password
+   SMTP_FROM=you@gmail.com
    ```
 
-**Note:** Gmail has a sending limit of 500 emails/day for free accounts.
+### Mailgun (free tier: 100 emails/day)
 
----
+```env
+SMTP_HOST=smtp.mailgun.org
+SMTP_PORT=587
+SMTP_USER=postmaster@yourdomain.com
+SMTP_PASS=your-mailgun-password
+SMTP_FROM=noreply@yourdomain.com
+```
 
-### Option 3: Other Email Services
+### Amazon SES (free with AWS Free Tier)
 
-You can also use:
+```env
+SMTP_HOST=email-smtp.us-east-1.amazonaws.com
+SMTP_PORT=587
+SMTP_USER=your-ses-smtp-user
+SMTP_PASS=your-ses-smtp-password
+SMTP_FROM=noreply@yourdomain.com
+```
 
-- **Mailgun** (100 emails/day free)
-  - SMTP_HOST: smtp.mailgun.org
-  - SMTP_PORT: 587
-  
-- **Amazon SES** (62,000 emails/month free with AWS Free Tier)
-  - SMTP_HOST: email-smtp.us-east-1.amazonaws.com
-  - SMTP_PORT: 587
+## Applying Changes
 
-- **Postmark** (100 emails/month free)
-  - SMTP_HOST: smtp.postmarkapp.com
-  - SMTP_PORT: 587
-
----
-
-## Quick Update Command
-
-Once you have your SMTP credentials, use this command to update:
+After updating SMTP settings, restart the API container:
 
 ```bash
-ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host> "sed -i 's|SMTP_PASS: YOUR_SENDGRID_API_KEY|SMTP_PASS: YOUR_ACTUAL_KEY_HERE|g' /home/<ssh-user>/gratonite-app/docker-compose.production.yml && docker restart gratonite-api"
+docker restart gratonite-api
 ```
 
-Replace `YOUR_ACTUAL_KEY_HERE` with your real API key.
+## Testing
 
----
-
-## Testing Email Delivery
-
-After updating the SMTP configuration:
-
-1. **Register a new account** at https://gratonite.chat/app/register
-2. **Check the API logs** for email sending status:
+1. Register a new account through the web client
+2. Check API logs for email status:
    ```bash
-   ssh -i ~/.ssh/<your-deploy-key> <ssh-user>@<server-host> "docker logs gratonite-api --tail 50 | grep -i 'email\|smtp'"
+   docker logs gratonite-api --tail 50 | grep -i email
    ```
-3. **Check your inbox** (and spam folder) for the verification email
+3. Check your inbox (and spam folder) for the verification email
 
----
+## Improving Deliverability
+
+To avoid emails landing in spam:
+- Verify your sending domain with your SMTP provider
+- Add **SPF**, **DKIM**, and **DMARC** DNS records as directed by your provider
+- Use a professional `SMTP_FROM` address on your own domain
 
 ## Troubleshooting
 
-### "Authentication failed" Error
-- Double-check your API key/password is correct
-- Make sure there are no extra spaces or quotes
-- For Gmail, ensure you're using an App Password, not your regular password
-
-### Emails Going to Spam
-- Verify your domain with your email provider
-- Set up SPF, DKIM, and DMARC DNS records
-- Use a professional "from" address (e.g., noreply@gratonite.chat)
-
-### "Connection timeout" Error
-- Check that port 587 is not blocked by your firewall
-- Try port 465 (SSL) or 2525 as alternatives
-
----
-
-## Current Configuration Location
-
-The SMTP settings are in:
-```
-/home/ferdinand/gratonite-app/docker-compose.production.yml
-```
-
-Under the `api` service, in the `environment` section.
-
----
-
-## Next Steps
-
-1. Choose an email service provider (SendGrid recommended)
-2. Get your SMTP credentials
-3. Update the docker-compose.production.yml file
-4. Restart the API container
-5. Test registration with a real email address
-
----
-
-**Need Help?** Check the API logs for detailed error messages:
-```bash
-docker logs gratonite-api --tail 100 | grep -i email
-```
+| Error | Solution |
+|-------|----------|
+| `Authentication failed` | Double-check username/password; for Gmail use an App Password |
+| `Connection timeout` | Ensure port 587 is not blocked by your firewall; try port 465 or 2525 |
+| Emails going to spam | Set up SPF/DKIM/DMARC records; verify domain with provider |

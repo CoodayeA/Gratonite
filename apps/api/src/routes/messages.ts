@@ -175,6 +175,8 @@ function formatMessage(
     embeds: msg.embeds ?? [],
     expiresAt: msg.expiresAt ?? null,
     replyToId: msg.replyToId ?? null,
+    isEncrypted: msg.isEncrypted ?? false,
+    encryptedContent: msg.encryptedContent ?? null,
     author: author
       ? {
           id: author.id,
@@ -204,8 +206,10 @@ const sendMessageSchema = z
     expiresIn: z.number().int().positive().max(60 * 60 * 24 * 30).optional(), // seconds, max 30 days
     scheduledAt: z.string().datetime().optional(), // ISO 8601 date for scheduled messages
     forwardedFromMessageId: z.string().uuid().optional(),
+    isEncrypted: z.boolean().optional(),
+    encryptedContent: z.string().optional(),
   })
-  .refine((d) => d.content !== undefined || (d.attachmentIds && d.attachmentIds.length > 0), {
+  .refine((d) => d.content !== undefined || (d.attachmentIds && d.attachmentIds.length > 0) || d.isEncrypted, {
     message: 'Message must have content or at least one attachment',
   });
 
@@ -275,6 +279,8 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
         expiresAt: messages.expiresAt,
         replyToId: messages.replyToId,
         embeds: messages.embeds,
+        isEncrypted: messages.isEncrypted,
+        encryptedContent: messages.encryptedContent,
         authorId: messages.authorId,
         authorUsername: users.username,
         authorDisplayName: users.displayName,
@@ -363,6 +369,8 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
         embeds: row.embeds ?? [],
         expiresAt: row.expiresAt ?? null,
         replyToId: row.replyToId ?? null,
+        isEncrypted: row.isEncrypted ?? false,
+        encryptedContent: row.encryptedContent ?? null,
         pinned: pinnedSet.has(row.id),
         threadReplyCount: threadReplyCountMap.get(row.id) ?? 0,
         reactions,
@@ -451,7 +459,7 @@ messagesRouter.post(
         }
       }
 
-      const { content, attachmentIds, replyToId, threadId, expiresIn, scheduledAt, forwardedFromMessageId } = req.body as z.infer<typeof sendMessageSchema>;
+      const { content, attachmentIds, replyToId, threadId, expiresIn, scheduledAt, forwardedFromMessageId, isEncrypted, encryptedContent } = req.body as z.infer<typeof sendMessageSchema>;
 
       // Handle scheduled messages: insert into scheduled_messages instead of messages
       if (scheduledAt) {
@@ -579,6 +587,7 @@ messagesRouter.post(
           ...(replyToId ? { replyToId } : {}),
           ...(threadId ? { threadId } : {}),
           ...(expiresAt ? { expiresAt } : {}),
+          ...(isEncrypted ? { isEncrypted, encryptedContent: encryptedContent ?? null } : {}),
         })
         .returning();
 

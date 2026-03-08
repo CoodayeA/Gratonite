@@ -1,43 +1,110 @@
 # Gratonite
 
-Gratonite is a multi-platform community chat app built as a privacy-first, open-source alternative to Discord. The project includes web, mobile, desktop, landing, and API apps in a single repository, with real-time messaging, guilds, DMs, threads, voice, moderation tooling, and community-facing features like discovery and events.
+Gratonite is a multi-platform community chat app built as a privacy-first, open-source alternative to Discord. It includes web, mobile, desktop, and API apps in a single monorepo, with real-time messaging, voice/video, guilds, DMs, threads, moderation, and community features.
 
-## What Gratonite includes
+## Features
 
-- Real-time text chat for guild channels, DMs, and threads
-- Voice and video powered by LiveKit
-- Guild management, roles, invites, moderation, audit logs, and word filters
-- Public community discovery and scheduled events
-- Web client, mobile client, desktop wrapper, marketing site, and backend API
+### Messaging & Communication
+- Real-time text chat in guild channels, DMs, group DMs, and threads
+- Voice and video calls powered by LiveKit
+- Message editing with full edit history
+- Replies, forwarding, and message pinning
+- Emoji reactions, custom emoji, and sticker support
+- Typing indicators and read receipts
+- Disappearing messages with configurable timers
+- Scheduled messages and draft auto-save
+- Message bookmarks and global search
 
-## Repository layout
+### Guilds & Community
+- Guild (server) creation with custom icons and banners
+- Role-based permissions with per-channel overrides
+- Invite links with expiry and usage limits
+- Public server discovery with tags
+- Scheduled events
+- Server templates and vanity URLs
+- Forum and announcement channel types
+- Server folders and favorites
+- Server boost system
 
-- `apps/api`: Express + TypeScript API, Socket.IO, Drizzle, PostgreSQL, Redis, LiveKit integration
-- `apps/web`: React + Vite web client
-- `apps/mobile`: Expo / React Native mobile app
-- `apps/desktop`: Electron desktop wrapper
-- `apps/landing`: Next.js marketing site and content
-- `docs`: deployment notes, release gates, migration records, and operational references
-- `tools`: release verification and guard scripts
+### Moderation & Safety
+- Audit logs for all administrative actions
+- Automod with keyword-based filtering
+- Word filters with block/delete/warn actions
+- User timeouts and temp bans
+- Ban appeals system
+- Raid protection mode
+- Slow mode per channel
+- Member screening and server rules gate
 
-## Tech stack
+### Privacy & Encryption
+- Optional end-to-end encryption for DMs using **ECDH (P-256) key exchange** and **AES-GCM-256** encryption
+- Users generate an ECDH keypair client-side; the private key stays in the browser (IndexedDB) and never leaves the device
+- Shared secrets are derived on-device from your private key and the recipient's public key
+- Group DMs use a shared group key wrapped per-member via ephemeral ECDH
+- **Limitations:** No forward secrecy (no per-message key rotation). No key rotation mechanism. Server sees all metadata (who, when, channel). Attachments, voice, and guild channel messages are not encrypted.
 
-- Frontend: React, TypeScript, Vite
-- Mobile: Expo, React Native
-- Desktop: Electron
-- Backend: Node.js, Express, TypeScript
-- Data: PostgreSQL, Drizzle ORM, Redis
-- Realtime: Socket.IO, LiveKit
-- Deployment: Docker Compose and GitHub Actions
+### User Features
+- User profiles with display names, bios, banners, and custom nameplate styles
+- Status, custom status with emoji, and rich presence
+- Friend system with friend requests and blocking
+- User notes (private, per-user)
+- XP and leveling system
+- Achievements and badges
+- Notification preferences per channel
+- Web push notifications
+- Session management (view/revoke active sessions)
+- GDPR data export
 
-## Getting started
+### Platform & Integrations
+- OAuth2 authorization flow for third-party apps
+- Webhooks with delivery logs
+- Bot application framework with a bot store
+- Slash commands
+- Stripe payment integration
+- Referral system
 
-Gratonite is currently organized as app-level projects rather than a single workspace install, so setup is done per app.
+## Scale
+
+- **76** database schemas
+- **65** API route modules
+- **47** frontend pages
+- **53** React components
+
+## Repository Layout
+
+```
+apps/
+  api/       Express + TypeScript API, Socket.IO, Drizzle ORM, PostgreSQL, Redis, LiveKit
+  web/       React + Vite web client
+  mobile/    Expo / React Native mobile app
+  desktop/   Electron desktop wrapper
+  landing/   Next.js marketing site
+deploy/      Docker Compose, Caddyfile, deploy script
+docs/        Deployment and configuration guides
+tools/       Release verification scripts
+```
+
+## Tech Stack
+
+| Layer      | Technology                            |
+|------------|---------------------------------------|
+| Frontend   | React, TypeScript, Vite               |
+| Mobile     | Expo, React Native                    |
+| Desktop    | Electron                              |
+| Backend    | Node.js, Express, TypeScript          |
+| Database   | PostgreSQL, Drizzle ORM               |
+| Cache      | Redis                                 |
+| Realtime   | Socket.IO                             |
+| Voice      | LiveKit                               |
+| Deployment | Docker Compose, Caddy, GitHub Actions |
+
+## Getting Started
 
 ### API
 
 ```bash
 cd apps/api
+cp .env.example .env    # edit with your DB/Redis/SMTP credentials
 pnpm install
 pnpm run db:migrate
 pnpm run dev
@@ -47,14 +114,7 @@ pnpm run dev
 
 ```bash
 cd apps/web
-npm install
-npm run dev
-```
-
-### Landing site
-
-```bash
-cd apps/landing
+cp .env.example .env    # set VITE_API_URL
 npm install
 npm run dev
 ```
@@ -75,41 +135,37 @@ npm install
 npm run dev
 ```
 
-## Local services
+## Self-Hosting
 
-The project expects supporting services for full development and release verification:
+Gratonite can be self-hosted using Docker Compose. See the [Self-Hosting Guide](docs/DEPLOY-TO-OWN-SERVER.md) for full instructions.
 
-- PostgreSQL
-- Redis
-- LiveKit
-
-Deployment and environment notes live in [`docs/DEPLOY-TO-OWN-SERVER.md`](/Volumes/Project%20BUS/GratoniteFinalForm/docs/DEPLOY-TO-OWN-SERVER.md), [`docs/DEPLOY-TO-HETZNER.md`](/Volumes/Project%20BUS/GratoniteFinalForm/docs/DEPLOY-TO-HETZNER.md), and [`docs/release-runbook.md`](/Volumes/Project%20BUS/GratoniteFinalForm/docs/release-runbook.md).
-
-## Verification
-
-Top-level release verification is available from the repository root:
+Quick version:
 
 ```bash
-npm run verify:release:all
+git clone https://github.com/CoodayeA/Gratonite.git
+cd Gratonite
+cp deploy/.env.example .env   # edit with your config
+# build apps/api and apps/web, then:
+cd deploy && docker compose -f docker-compose.production.yml up -d
 ```
 
-There is also a stronger launch gate:
+More deployment docs:
+- [Self-Hosting Guide](docs/DEPLOY-TO-OWN-SERVER.md)
+- [VPS Deployment](docs/DEPLOY-TO-HETZNER.md)
+- [Quick Deploy Reference](docs/QUICK-DEPLOY-GUIDE.md)
+- [DNS Configuration](docs/DNS-CONFIGURATION.md)
+- [SMTP Configuration](docs/SMTP-CONFIGURATION.md)
 
-```bash
-npm run verify:launch:super-gate
-```
+## Why Gratonite
 
-## Why this project exists
-
-Gratonite is being built around a simple product thesis:
-
-- no phone-number gate just to join communities
-- no ad-driven engagement loop
-- no premium paywall around basic social features
-- a better default for friends, groups, guilds, and online communities
+- No phone-number gate to join communities
+- No ad-driven engagement loop
+- No premium paywall on basic social features
+- Privacy-first with optional E2E encryption
+- Fully open source and self-hostable
 
 ## Links
 
-- Product site: [gratonite.chat](https://gratonite.chat)
-- GitHub profile: [CoodayeA](https://github.com/CoodayeA)
-
+- Website: [gratonite.chat](https://gratonite.chat)
+- Main repo: [CoodayeA/Gratonite](https://github.com/CoodayeA/Gratonite)
+- Organization: [Gratonite-Labs](https://github.com/Gratonite-Labs)
