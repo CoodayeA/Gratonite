@@ -830,7 +830,7 @@ const ChannelChat = () => {
         api.users.getMe().then(me => {
             setCurrentUserName(me.profile?.displayName || me.username);
             setCurrentUserId(me.id);
-            setCurrentUserAvatarHash(me.avatarHash ?? me.profile?.avatarHash ?? null);
+            setCurrentUserAvatarHash(me.profile?.avatarHash ?? null);
         }).catch(() => { addToast({ title: 'Failed to load user info', variant: 'error' }); });
     }, []);
 
