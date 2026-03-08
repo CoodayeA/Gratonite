@@ -141,24 +141,106 @@ npm run dev
 
 ## Self-Hosting 🏠
 
-Gratonite can be self-hosted using Docker Compose. See the [Self-Hosting Guide](docs/DEPLOY-TO-OWN-SERVER.md) for full instructions.
+Run your own Gratonite instance in under 5 minutes. All you need is a server with Docker installed and a domain name.
 
-Quick version:
+### Requirements
+
+- A VPS or server with at least **1 GB RAM** (2 GB recommended)
+- **Docker Engine 24+** and **Docker Compose v2** installed
+- A **domain name** with an A record pointing to your server
+- Ports **80** and **443** open
+
+### Quick Start
 
 ```bash
-git clone https://github.com/CoodayeA/Gratonite.git
-cd Gratonite
-cp deploy/.env.example .env   # edit with your config
-# build apps/api and apps/web, then:
-cd deploy && docker compose -f docker-compose.production.yml up -d
+# 1. Clone the repo
+git clone https://github.com/CoodayeA/Gratonite.git && cd Gratonite
+
+# 2. Configure your instance
+cp deploy/self-host/.env.example deploy/self-host/.env
+nano deploy/self-host/.env   # Set your domain, admin email/password, DB password
+
+# 3. Launch
+docker compose -f deploy/self-host/docker-compose.yml up -d
+
+# 4. Verify setup completed
+docker compose -f deploy/self-host/docker-compose.yml logs setup
+# Should end with: "=== Setup complete! ==="
+
+# 5. Open https://your-domain.com and log in with your admin credentials
 ```
 
-More deployment docs:
-- [Self-Hosting Guide](docs/DEPLOY-TO-OWN-SERVER.md)
-- [VPS Deployment](docs/DEPLOY-TO-HETZNER.md)
-- [Quick Deploy Reference](docs/QUICK-DEPLOY-GUIDE.md)
-- [DNS Configuration](docs/DNS-CONFIGURATION.md)
-- [SMTP Configuration](docs/SMTP-CONFIGURATION.md)
+That's it. The setup container automatically runs all 124 database migrations, generates JWT secrets and an Ed25519 instance keypair, and creates your admin account. Caddy handles HTTPS certificates via Let's Encrypt.
+
+### What You Get
+
+| Service | Image | Purpose |
+|---------|-------|---------|
+| **setup** | `ghcr.io/coodayea/gratonite-setup` | First-run init (migrations, keys, admin account) |
+| **api** | `ghcr.io/coodayea/gratonite-api` | Node.js API + Socket.IO real-time |
+| **web** | `ghcr.io/coodayea/gratonite-web` | React SPA served by nginx |
+| **postgres** | `postgres:16-alpine` | Database |
+| **redis** | `redis:7-alpine` | Cache and rate limiting |
+| **caddy** | `caddy:2-alpine` | Reverse proxy with auto-HTTPS |
+
+### Configuration
+
+Edit `deploy/self-host/.env` — the only required values are:
+
+| Variable | What to set |
+|----------|------------|
+| `INSTANCE_DOMAIN` | Your domain (e.g. `chat.example.com`) |
+| `ADMIN_EMAIL` | Your email address |
+| `ADMIN_PASSWORD` | A strong password for the admin account |
+| `DB_PASSWORD` | A random database password (16+ characters) |
+
+Everything else has sensible defaults. See the [full configuration reference](docs/federation/self-hosting-guide.md#configuration-reference).
+
+### Voice & Video (Optional)
+
+```bash
+docker compose -f deploy/self-host/docker-compose.yml --profile voice up -d
+```
+
+Set `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, and `LIVEKIT_URL` in your `.env` file.
+
+### Updating
+
+```bash
+docker compose -f deploy/self-host/docker-compose.yml pull
+docker compose -f deploy/self-host/docker-compose.yml up -d
+```
+
+### Backups
+
+```bash
+# Database
+docker compose -f deploy/self-host/docker-compose.yml exec postgres \
+  pg_dump -U gratonite gratonite | gzip > backup-$(date +%Y%m%d).sql.gz
+
+# File uploads
+docker compose -f deploy/self-host/docker-compose.yml cp api:/app/uploads ./uploads-backup
+```
+
+### Federation (Optional)
+
+Connect your instance to other Gratonite instances and appear on the [Discover](https://gratonite.chat/app/discover) directory:
+
+```bash
+# In your .env file, set:
+FEDERATION_ENABLED=true
+FEDERATION_DISCOVER_REGISTRATION=true
+```
+
+Then restart: `docker compose -f deploy/self-host/docker-compose.yml restart api`
+
+Your public servers will sync to gratonite.chat every 30 minutes and appear in the "Self-Hosted Servers" section of Discover. See the [Federation Guide](docs/federation/federation-guide.md) for details.
+
+### Full Documentation
+
+- **[Self-Hosting Guide](docs/federation/self-hosting-guide.md)** — Complete setup, configuration, DNS, TLS, troubleshooting
+- **[Federation Guide](docs/federation/federation-guide.md)** — Connecting to other instances
+- **[Protocol Spec](docs/federation/protocol-spec.md)** — Federation protocol technical reference
 
 ## End-to-End Encryption 🔐
 
