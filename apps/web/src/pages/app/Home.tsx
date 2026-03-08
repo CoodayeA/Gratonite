@@ -115,7 +115,7 @@ const Home = () => {
                         </div>
                         <div className="action-card-text">
                             <div className="action-title">Download Desktop App</div>
-                            <div className="action-subtext">macOS &amp; Windows</div>
+                            <div className="action-subtext">macOS, Windows &amp; Linux</div>
                         </div>
                     </div>
 
