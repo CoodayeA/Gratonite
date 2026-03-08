@@ -67,9 +67,9 @@ const Leaderboard = () => {
                 color: userColor(entry.userId),
                 change: 'same' as const,
                 scores: {
-                    xp: { weekly: entry.gratonitesEarned, monthly: entry.gratonitesEarned, alltime: entry.gratonitesEarned },
-                    messages: { weekly: entry.messageCount, monthly: entry.messageCount, alltime: entry.messageCount },
-                    fame: { weekly: entry.gratonitesEarned, monthly: entry.gratonitesEarned, alltime: entry.gratonitesEarned },
+                    xp: { weekly: entry.fameReceived, monthly: entry.fameReceived, alltime: entry.fameReceived },
+                    messages: { weekly: 0, monthly: 0, alltime: 0 },
+                    fame: { weekly: entry.fameReceived, monthly: entry.fameReceived, alltime: entry.fameReceived },
                     invites: { weekly: 0, monthly: 0, alltime: 0 },
                     events: { weekly: 0, monthly: 0, alltime: 0 },
                 },

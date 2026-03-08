@@ -209,7 +209,7 @@ const AdminAnalytics = () => {
                                         </div>
                                         <div style={{ flex: 1 }}>
                                             <div style={{ fontWeight: 600, fontSize: '14px' }}>{m.displayName ?? m.username}</div>
-                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{(m.messageCount ?? 0).toLocaleString()} msgs • {(m.gratonitesEarned ?? 0).toLocaleString()} Gratonites</div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{(m.fameReceived ?? 0).toLocaleString()} FAME • {((m.fameReceived ?? 0) * 200).toLocaleString()} Gratonites</div>
                                         </div>
                                     </div>
                                 ))}
