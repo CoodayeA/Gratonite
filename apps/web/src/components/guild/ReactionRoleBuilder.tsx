@@ -49,16 +49,16 @@ export default function ReactionRoleBuilder({ guildId, roles, channels }: Reacti
 
   async function loadReactionRoles() {
     try {
-      const res = await api.get(`/guilds/${guildId}/reaction-roles`);
-      setReactionRoles(res.data);
+      const res = await api.get(`/guilds/${guildId}/reaction-roles`) as ReactionRoleMessage[];
+      setReactionRoles(res);
     } catch {
-      addToast('Failed to load reaction roles', 'error');
+      addToast({ title: 'Failed to load reaction roles', variant: 'error' });
     }
   }
 
   async function handleCreate() {
     if (!messageId || !channelId || mappings.some(m => !m.roleId)) {
-      addToast('Fill in all fields', 'error');
+      addToast({ title: 'Fill in all fields', variant: 'error' });
       return;
     }
     try {
@@ -68,24 +68,24 @@ export default function ReactionRoleBuilder({ guildId, roles, channels }: Reacti
         mode,
         mappings: mappings.map(m => ({ emoji: m.emoji, roleId: m.roleId })),
       });
-      addToast('Reaction role created', 'success');
+      addToast({ title: 'Reaction role created', variant: 'success' });
       setShowCreate(false);
       setMessageId('');
       setChannelId('');
       setMappings([{ emoji: '✅', roleId: '' }]);
       loadReactionRoles();
     } catch {
-      addToast('Failed to create reaction role', 'error');
+      addToast({ title: 'Failed to create reaction role', variant: 'error' });
     }
   }
 
   async function handleDelete(id: string) {
     try {
       await api.delete(`/guilds/${guildId}/reaction-roles/${id}`);
-      addToast('Reaction role deleted', 'success');
+      addToast({ title: 'Reaction role deleted', variant: 'success' });
       loadReactionRoles();
     } catch {
-      addToast('Failed to delete', 'error');
+      addToast({ title: 'Failed to delete', variant: 'error' });
     }
   }
 

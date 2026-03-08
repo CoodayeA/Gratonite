@@ -81,7 +81,7 @@ export default function TicketPanel({ guildId, isStaff, onNavigateToChannel }: {
       });
       if (res.ok) {
         const ticket = await res.json();
-        addToast('Ticket created', 'success');
+        addToast({ title: 'Ticket created', variant: 'success' });
         setShowCreate(false);
         setSubject('');
         setPriority('medium');
@@ -90,10 +90,10 @@ export default function TicketPanel({ guildId, isStaff, onNavigateToChannel }: {
           onNavigateToChannel(ticket.channel.id);
         }
       } else {
-        addToast('Failed to create ticket', 'error');
+        addToast({ title: 'Failed to create ticket', variant: 'error' });
       }
     } catch {
-      addToast('Failed to create ticket', 'error');
+      addToast({ title: 'Failed to create ticket', variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -119,7 +119,7 @@ export default function TicketPanel({ guildId, isStaff, onNavigateToChannel }: {
         headers: authHeaders(),
       });
       if (res.ok) {
-        addToast('Ticket closed', 'success');
+        addToast({ title: 'Ticket closed', variant: 'success' });
         fetchTickets();
       }
     } catch { /* ignore */ }

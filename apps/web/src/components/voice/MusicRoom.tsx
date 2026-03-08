@@ -43,11 +43,11 @@ export default function MusicRoom({ channelId }: MusicRoomProps) {
 
   const fetchData = useCallback(async () => {
     try {
-      const data = await api.get(`/channels/${channelId}/music`);
+      const data = await api.get(`/channels/${channelId}/music`) as { settings: MusicSettings; queue: Track[] };
       setSettings(data.settings);
       setQueue(data.queue);
     } catch {
-      addToast({ title: 'Failed to load music room', type: 'error' });
+      addToast({ title: 'Failed to load music room', variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -58,37 +58,37 @@ export default function MusicRoom({ channelId }: MusicRoomProps) {
   const addTrack = async () => {
     if (!addUrl.trim() || !addTitle.trim()) return;
     try {
-      await api.post(`/channels/${channelId}/music/queue`, { url: addUrl, title: addTitle });
+      await api.post<void>(`/channels/${channelId}/music/queue`, { url: addUrl, title: addTitle });
       setAddUrl('');
       setAddTitle('');
       setShowAddModal(false);
       fetchData();
     } catch {
-      addToast({ title: 'Failed to add track', type: 'error' });
+      addToast({ title: 'Failed to add track', variant: 'error' });
     }
   };
 
   const removeTrack = async (trackId: string) => {
     try {
-      await api.delete(`/channels/${channelId}/music/queue/${trackId}`);
+      await api.delete<void>(`/channels/${channelId}/music/queue/${trackId}`);
       setQueue(q => q.filter(t => t.id !== trackId));
     } catch {
-      addToast({ title: 'Failed to remove track', type: 'error' });
+      addToast({ title: 'Failed to remove track', variant: 'error' });
     }
   };
 
   const voteSkip = async () => {
     try {
-      await api.post(`/channels/${channelId}/music/skip`, {});
+      await api.post<void>(`/channels/${channelId}/music/skip`, {});
       setSkipVotes(v => v + 1);
     } catch {
-      addToast({ title: 'Failed to vote skip', type: 'error' });
+      addToast({ title: 'Failed to vote skip', variant: 'error' });
     }
   };
 
   const nextTrack = async () => {
     try {
-      const data = await api.post(`/channels/${channelId}/music/next`, {});
+      const data = await api.post(`/channels/${channelId}/music/next`, {}) as { next: Track | null };
       if (data.next) {
         fetchData();
       } else {
@@ -96,7 +96,7 @@ export default function MusicRoom({ channelId }: MusicRoomProps) {
       }
       setSkipVotes(0);
     } catch {
-      addToast({ title: 'Failed to advance track', type: 'error' });
+      addToast({ title: 'Failed to advance track', variant: 'error' });
     }
   };
 

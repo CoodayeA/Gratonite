@@ -54,7 +54,7 @@ export default function Whiteboard({ channelId }: WhiteboardProps) {
 
   const fetchBoards = useCallback(async () => {
     try {
-      const data = await api.get(`/channels/${channelId}/whiteboards`);
+      const data = await api.get(`/channels/${channelId}/whiteboards`) as BoardSummary[];
       setBoards(data);
     } catch {
       // ignore
@@ -65,26 +65,26 @@ export default function Whiteboard({ channelId }: WhiteboardProps) {
 
   const loadBoard = async (boardId: string) => {
     try {
-      const data = await api.get(`/channels/${channelId}/whiteboards/${boardId}`);
+      const data = await api.get(`/channels/${channelId}/whiteboards/${boardId}`) as { data?: { strokes?: Stroke[] } };
       setActiveBoardId(boardId);
       setStrokes(data.data?.strokes || []);
       setRedoStack([]);
       setShowGallery(false);
     } catch {
-      addToast({ title: 'Failed to load board', type: 'error' });
+      addToast({ title: 'Failed to load board', variant: 'error' });
     }
   };
 
   const createBoard = async () => {
     try {
-      const data = await api.post(`/channels/${channelId}/whiteboards`, { name: 'Untitled Board' });
+      const data = await api.post(`/channels/${channelId}/whiteboards`, { name: 'Untitled Board' }) as { id: string };
       setActiveBoardId(data.id);
       setStrokes([]);
       setRedoStack([]);
       setShowGallery(false);
       fetchBoards();
     } catch {
-      addToast({ title: 'Failed to create board', type: 'error' });
+      addToast({ title: 'Failed to create board', variant: 'error' });
     }
   };
 
@@ -94,9 +94,9 @@ export default function Whiteboard({ channelId }: WhiteboardProps) {
       await api.put(`/channels/${channelId}/whiteboards/${activeBoardId}`, {
         data: { strokes, shapes: [], texts: [] },
       });
-      addToast({ title: 'Board saved', type: 'success' });
+      addToast({ title: 'Board saved', variant: 'success' });
     } catch {
-      addToast({ title: 'Failed to save board', type: 'error' });
+      addToast({ title: 'Failed to save board', variant: 'error' });
     }
   };
 

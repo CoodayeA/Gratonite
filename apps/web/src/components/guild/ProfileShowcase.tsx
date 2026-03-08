@@ -58,8 +58,8 @@ export default function ProfileShowcase({ userId, isOwn }: ProfileShowcaseProps)
 
   async function loadShowcase() {
     try {
-      const res = await api.get(`/users/${userId}/showcase`);
-      setItems(res.data);
+      const res = await api.get(`/users/${userId}/showcase`) as ShowcaseItem[];
+      setItems(res);
     } catch { /* no items */ }
   }
 
@@ -71,11 +71,11 @@ export default function ProfileShowcase({ userId, isOwn }: ProfileShowcaseProps)
           itemType: item.itemType,
           referenceId: item.referenceId,
         })),
-      });
-      setItems(res.data);
-      addToast('Showcase updated', 'success');
+      }) as ShowcaseItem[];
+      setItems(res);
+      addToast({ title: 'Showcase updated', variant: 'success' });
     } catch {
-      addToast('Failed to save', 'error');
+      addToast({ title: 'Failed to save', variant: 'error' });
     }
   }
 
@@ -83,9 +83,9 @@ export default function ProfileShowcase({ userId, isOwn }: ProfileShowcaseProps)
     try {
       await api.delete(`/users/@me/showcase/${slot}`);
       setItems(items.filter(i => i.slot !== slot));
-      addToast('Item removed', 'success');
+      addToast({ title: 'Item removed', variant: 'success' });
     } catch {
-      addToast('Failed to remove', 'error');
+      addToast({ title: 'Failed to remove', variant: 'error' });
     }
   }
 

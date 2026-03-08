@@ -44,16 +44,16 @@ export default function AutoRoleConfig({ guildId, roles }: AutoRoleConfigProps) 
 
   async function loadRules() {
     try {
-      const res = await api.get(`/guilds/${guildId}/auto-roles`);
-      setRules(res.data);
+      const res = await api.get(`/guilds/${guildId}/auto-roles`) as AutoRoleRule[];
+      setRules(res);
     } catch {
-      addToast('Failed to load auto-role rules', 'error');
+      addToast({ title: 'Failed to load auto-role rules', variant: 'error' });
     }
   }
 
   async function handleCreate() {
     if (!roleId) {
-      addToast('Select a role', 'error');
+      addToast({ title: 'Select a role', variant: 'error' });
       return;
     }
     try {
@@ -62,12 +62,12 @@ export default function AutoRoleConfig({ guildId, roles }: AutoRoleConfigProps) 
         triggerType,
         triggerValue,
       });
-      addToast('Auto-role rule created', 'success');
+      addToast({ title: 'Auto-role rule created', variant: 'success' });
       setShowAdd(false);
       resetForm();
       loadRules();
     } catch {
-      addToast('Failed to create rule', 'error');
+      addToast({ title: 'Failed to create rule', variant: 'error' });
     }
   }
 
@@ -78,12 +78,12 @@ export default function AutoRoleConfig({ guildId, roles }: AutoRoleConfigProps) 
         triggerType,
         triggerValue,
       });
-      addToast('Rule updated', 'success');
+      addToast({ title: 'Rule updated', variant: 'success' });
       setEditingId(null);
       resetForm();
       loadRules();
     } catch {
-      addToast('Failed to update rule', 'error');
+      addToast({ title: 'Failed to update rule', variant: 'error' });
     }
   }
 
@@ -94,17 +94,17 @@ export default function AutoRoleConfig({ guildId, roles }: AutoRoleConfigProps) 
       });
       loadRules();
     } catch {
-      addToast('Failed to toggle rule', 'error');
+      addToast({ title: 'Failed to toggle rule', variant: 'error' });
     }
   }
 
   async function handleDelete(id: string) {
     try {
       await api.delete(`/guilds/${guildId}/auto-roles/${id}`);
-      addToast('Rule deleted', 'success');
+      addToast({ title: 'Rule deleted', variant: 'success' });
       loadRules();
     } catch {
-      addToast('Failed to delete rule', 'error');
+      addToast({ title: 'Failed to delete rule', variant: 'error' });
     }
   }
 

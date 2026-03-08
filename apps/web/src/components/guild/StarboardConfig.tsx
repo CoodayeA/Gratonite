@@ -29,12 +29,12 @@ export default function StarboardConfig({ guildId, channels }: StarboardConfigPr
 
   async function loadConfig() {
     try {
-      const res = await api.get(`/guilds/${guildId}/starboard/config`);
-      if (res.data) {
-        setTargetChannelId(res.data.targetChannelId || '');
-        setEmoji(res.data.emoji || '⭐');
-        setThreshold(res.data.threshold ?? 5);
-        setEnabled(res.data.enabled ?? true);
+      const res = await api.get(`/guilds/${guildId}/starboard/config`) as { targetChannelId: string; emoji: string; threshold: number; enabled: boolean } | null;
+      if (res) {
+        setTargetChannelId(res.targetChannelId || '');
+        setEmoji(res.emoji || '⭐');
+        setThreshold(res.threshold ?? 5);
+        setEnabled(res.enabled ?? true);
       }
     } catch { /* no config yet */ }
   }
@@ -48,9 +48,9 @@ export default function StarboardConfig({ guildId, channels }: StarboardConfigPr
         threshold,
         enabled,
       });
-      addToast('Starboard config saved', 'success');
+      addToast({ title: 'Starboard config saved', variant: 'success' });
     } catch {
-      addToast('Failed to save config', 'error');
+      addToast({ title: 'Failed to save config', variant: 'error' });
     } finally {
       setLoading(false);
     }

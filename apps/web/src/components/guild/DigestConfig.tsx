@@ -79,9 +79,9 @@ export default function DigestConfig({ guildId, channels }: {
         headers: authHeaders(),
         body: JSON.stringify({ enabled, targetChannelId: targetChannelId || null, sections, dayOfWeek }),
       });
-      if (res.ok) addToast('Digest config saved', 'success');
-      else addToast('Failed to save', 'error');
-    } catch { addToast('Failed to save', 'error'); }
+      if (res.ok) addToast({ title: 'Digest config saved', variant: 'success' });
+      else addToast({ title: 'Failed to save', variant: 'error' });
+    } catch { addToast({ title: 'Failed to save', variant: 'error' }); }
   };
 
   const loadPreview = async () => {
@@ -91,7 +91,7 @@ export default function DigestConfig({ guildId, channels }: {
         headers: authHeaders(),
       });
       if (res.ok) setPreview(await res.json());
-    } catch { addToast('Failed to load preview', 'error'); }
+    } catch { addToast({ title: 'Failed to load preview', variant: 'error' }); }
   };
 
   const loadHistory = async () => {

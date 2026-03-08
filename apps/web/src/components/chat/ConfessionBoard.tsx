@@ -30,9 +30,9 @@ const ConfessionBoard = ({ channelId, guildId, isOwnerOrAdmin }: { channelId: st
   const loadConfessions = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/channels/${channelId}/confessions`);
-      setConfessions(res.data.reverse());
-    } catch { addToast('Failed to load confessions', 'error'); }
+      const res = await api.get(`/channels/${channelId}/confessions`) as Confession[];
+      setConfessions([...res].reverse());
+    } catch { addToast({ title: 'Failed to load confessions', variant: 'error' }); }
     setLoading(false);
   };
 
@@ -40,10 +40,10 @@ const ConfessionBoard = ({ channelId, guildId, isOwnerOrAdmin }: { channelId: st
     if (!content.trim() || sending) return;
     setSending(true);
     try {
-      const res = await api.post(`/channels/${channelId}/confessions`, { content: content.trim() });
-      setConfessions(prev => [...prev, res.data]);
+      const res = await api.post(`/channels/${channelId}/confessions`, { content: content.trim() }) as Confession;
+      setConfessions(prev => [...prev, res]);
       setContent('');
-    } catch { addToast('Failed to post confession', 'error'); }
+    } catch { addToast({ title: 'Failed to post confession', variant: 'error' }); }
     setSending(false);
   };
 
@@ -56,10 +56,10 @@ const ConfessionBoard = ({ channelId, guildId, isOwnerOrAdmin }: { channelId: st
 
   const revealAuthor = async (confessionId: string) => {
     try {
-      const res = await api.post(`/guilds/${guildId}/confessions/${confessionId}/reveal`);
-      addToast(`Author revealed: ${res.data.authorId}`, 'info');
+      const res = await api.post(`/guilds/${guildId}/confessions/${confessionId}/reveal`) as { authorId: string };
+      addToast({ title: `Author revealed: ${res.authorId}`, variant: 'info' });
       setRevealConfirm(null);
-    } catch { addToast('Failed to reveal author', 'error'); }
+    } catch { addToast({ title: 'Failed to reveal author', variant: 'error' }); }
   };
 
   const formatTime = (dateStr: string) => {

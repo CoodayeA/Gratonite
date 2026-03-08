@@ -58,7 +58,7 @@ export default function ActivityLogConfig({ guildId, channels }: {
 
   const save = async () => {
     if (!channelId) {
-      addToast('Please select a log channel', 'error');
+      addToast({ title: 'Please select a log channel', variant: 'error' });
       return;
     }
     try {
@@ -68,9 +68,9 @@ export default function ActivityLogConfig({ guildId, channels }: {
         headers: authHeaders(),
         body: JSON.stringify({ channelId, events: enabledEvents }),
       });
-      if (res.ok) addToast('Activity log config saved', 'success');
-      else addToast('Failed to save config', 'error');
-    } catch { addToast('Failed to save', 'error'); }
+      if (res.ok) addToast({ title: 'Activity log config saved', variant: 'success' });
+      else addToast({ title: 'Failed to save config', variant: 'error' });
+    } catch { addToast({ title: 'Failed to save', variant: 'error' }); }
   };
 
   if (loading) return <div className="text-gray-400 p-4">Loading...</div>;

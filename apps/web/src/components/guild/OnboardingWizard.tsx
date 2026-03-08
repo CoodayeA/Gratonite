@@ -64,10 +64,10 @@ export default function OnboardingWizard({ guildId, guildName, onComplete }: {
         headers: authHeaders(),
         body: JSON.stringify({ selections: finalSelections }),
       });
-      addToast('Welcome aboard!', 'success');
+      addToast({ title: 'Welcome aboard!', variant: 'success' });
       onComplete();
     } catch {
-      addToast('Failed to complete onboarding', 'error');
+      addToast({ title: 'Failed to complete onboarding', variant: 'error' });
     }
   };
 
@@ -231,9 +231,9 @@ export function OnboardingConfig({ guildId }: { guildId: string }) {
         headers: authHeaders(),
         body: JSON.stringify({ steps: steps.map((s, i) => ({ ...s, displayOrder: i })) }),
       });
-      if (res.ok) addToast('Onboarding config saved', 'success');
-      else addToast('Failed to save config', 'error');
-    } catch { addToast('Failed to save config', 'error'); }
+      if (res.ok) addToast({ title: 'Onboarding config saved', variant: 'success' });
+      else addToast({ title: 'Failed to save config', variant: 'error' });
+    } catch { addToast({ title: 'Failed to save config', variant: 'error' }); }
   };
 
   if (loading) return <div className="text-gray-400 p-4">Loading...</div>;

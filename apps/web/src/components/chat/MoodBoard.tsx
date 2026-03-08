@@ -38,7 +38,7 @@ export default function MoodBoard({ channelId }: MoodBoardProps) {
 
   const fetchItems = useCallback(async () => {
     try {
-      const data = await api.get(`/channels/${channelId}/mood-board`);
+      const data = await api.get(`/channels/${channelId}/mood-board`) as MoodItem[];
       setItems(data);
     } catch {
       // ignore
@@ -54,12 +54,12 @@ export default function MoodBoard({ channelId }: MoodBoardProps) {
         itemType: addType,
         content: addContent,
         position: { x: Math.random() * 300, y: Math.random() * 200, w: 200, h: 200 },
-      });
+      }) as MoodItem;
       setItems(prev => [...prev, item]);
       setAddContent('');
       setShowAddPopover(false);
     } catch {
-      addToast({ title: 'Failed to add item', type: 'error' });
+      addToast({ title: 'Failed to add item', variant: 'error' });
     }
   };
 
@@ -68,7 +68,7 @@ export default function MoodBoard({ channelId }: MoodBoardProps) {
       await api.delete(`/channels/${channelId}/mood-board/${id}`);
       setItems(prev => prev.filter(i => i.id !== id));
     } catch {
-      addToast({ title: 'Failed to delete item', type: 'error' });
+      addToast({ title: 'Failed to delete item', variant: 'error' });
     }
   };
 

@@ -89,12 +89,12 @@ export default function GiveawayCard({ guildId, isAdmin, channels }: {
         }),
       });
       if (res.ok) {
-        addToast('Giveaway created!', 'success');
+        addToast({ title: 'Giveaway created!', variant: 'success' });
         setShowCreate(false);
         setForm({ channelId: '', prize: '', description: '', winnersCount: 1, endsAt: '' });
         fetchGiveaways();
       }
-    } catch { addToast('Failed to create giveaway', 'error'); }
+    } catch { addToast({ title: 'Failed to create giveaway', variant: 'error' }); }
   };
 
   const enterGiveaway = async (id: string) => {
@@ -105,7 +105,7 @@ export default function GiveawayCard({ guildId, isAdmin, channels }: {
         headers: authHeaders(),
       });
       if (res.ok) {
-        addToast('Entered giveaway!', 'success');
+        addToast({ title: 'Entered giveaway!', variant: 'success' });
         fetchGiveaways();
       }
     } catch { /* ignore */ }
@@ -118,7 +118,7 @@ export default function GiveawayCard({ guildId, isAdmin, channels }: {
         credentials: 'include',
         headers: authHeaders(),
       });
-      addToast('Left giveaway', 'success');
+      addToast({ title: 'Left giveaway', variant: 'success' });
       fetchGiveaways();
     } catch { /* ignore */ }
   };
@@ -131,7 +131,7 @@ export default function GiveawayCard({ guildId, isAdmin, channels }: {
         headers: authHeaders(),
       });
       if (res.ok) {
-        addToast('Giveaway ended!', 'success');
+        addToast({ title: 'Giveaway ended!', variant: 'success' });
         fetchGiveaways();
       }
     } catch { /* ignore */ }
@@ -144,7 +144,7 @@ export default function GiveawayCard({ guildId, isAdmin, channels }: {
         credentials: 'include',
         headers: authHeaders(),
       });
-      addToast('Giveaway cancelled', 'success');
+      addToast({ title: 'Giveaway cancelled', variant: 'success' });
       fetchGiveaways();
     } catch { /* ignore */ }
   };

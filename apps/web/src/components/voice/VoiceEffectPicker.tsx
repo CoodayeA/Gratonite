@@ -40,8 +40,8 @@ export default function VoiceEffectPicker({ isOpen, onClose, onEffectChange }: V
   const fetchData = useCallback(async () => {
     try {
       const [effectsList, currentSettings] = await Promise.all([
-        api.get('/voice/effects'),
-        api.get('/users/@me/voice-settings'),
+        api.get('/voice/effects') as Promise<VoiceEffect[]>,
+        api.get('/users/@me/voice-settings') as Promise<VoiceSettings>,
       ]);
       setEffects(effectsList);
       setSettings(currentSettings);
@@ -60,12 +60,12 @@ export default function VoiceEffectPicker({ isOpen, onClose, onEffectChange }: V
       const updated = await api.put('/users/@me/voice-settings', {
         activeEffect: effectId,
         effectVolume: settings?.effectVolume ?? 100,
-      });
+      }) as VoiceSettings;
       setSettings(updated);
       onEffectChange?.(effectId);
-      addToast({ title: effectId ? `${effectId.charAt(0).toUpperCase() + effectId.slice(1)} effect enabled` : 'Effect disabled', type: 'success' });
+      addToast({ title: effectId ? `${effectId.charAt(0).toUpperCase() + effectId.slice(1)} effect enabled` : 'Effect disabled', variant: 'success' });
     } catch {
-      addToast({ title: 'Failed to update voice effect', type: 'error' });
+      addToast({ title: 'Failed to update voice effect', variant: 'error' });
     } finally {
       setSaving(false);
     }
@@ -75,7 +75,7 @@ export default function VoiceEffectPicker({ isOpen, onClose, onEffectChange }: V
     if (!settings) return;
     setSettings(prev => prev ? { ...prev, effectVolume: vol } : null);
     try {
-      await api.put('/users/@me/voice-settings', {
+      await api.put<VoiceSettings>('/users/@me/voice-settings', {
         activeEffect: settings.activeEffect,
         effectVolume: vol,
       });

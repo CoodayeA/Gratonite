@@ -43,9 +43,9 @@ const StudyRoom = ({ channelId, guildId }: { channelId: string; guildId: string 
   const { addToast } = useToast();
 
   useEffect(() => {
-    api.get(`/channels/${channelId}/study`).then(r => {
-      setSettings(r.data);
-      setAmbient((r.data.ambientSound as AmbientSound) || 'silence');
+    (api.get(`/channels/${channelId}/study`) as Promise<Settings>).then(r => {
+      setSettings(r);
+      setAmbient((r.ambientSound as AmbientSound) || 'silence');
     }).catch(() => {});
     loadStats();
     loadLeaderboard();
@@ -53,18 +53,18 @@ const StudyRoom = ({ channelId, guildId }: { channelId: string; guildId: string 
 
   const loadStats = async () => {
     try {
-      const weekRes = await api.get(`/guilds/${guildId}/study/stats?period=week`);
-      setWeekMinutes(Math.round(weekRes.data.totalHours * 60));
+      const weekRes = await api.get(`/guilds/${guildId}/study/stats?period=week`) as { totalHours: number };
+      setWeekMinutes(Math.round(weekRes.totalHours * 60));
       // Rough today estimate from week data
-      const dayRes = await api.get(`/guilds/${guildId}/study/stats?period=week`);
-      setTodayMinutes(Math.round(dayRes.data.totalHours * 60 / 7));
+      const dayRes = await api.get(`/guilds/${guildId}/study/stats?period=week`) as { totalHours: number };
+      setTodayMinutes(Math.round(dayRes.totalHours * 60 / 7));
     } catch {}
   };
 
   const loadLeaderboard = async () => {
     try {
-      const res = await api.get(`/guilds/${guildId}/study/leaderboard`);
-      setLeaderboard(res.data);
+      const res = await api.get(`/guilds/${guildId}/study/leaderboard`) as LeaderboardEntry[];
+      setLeaderboard(res);
     } catch {}
   };
 
@@ -87,21 +87,21 @@ const StudyRoom = ({ channelId, guildId }: { channelId: string; guildId: string 
   const handlePhaseComplete = useCallback(() => {
     setIsRunning(false);
     if (phase === 'work') {
-      addToast('Work session complete! Time for a break.', 'success');
+      addToast({ title: 'Work session complete! Time for a break.', variant: 'success' });
       setPhase('break');
       const breakSec = settings.pomodoroBreak * 60;
       setTimeLeft(breakSec);
       setTotalTime(breakSec);
       setIsRunning(true);
     } else if (phase === 'break') {
-      addToast('Break is over! Ready for another round?', 'info');
+      addToast({ title: 'Break is over! Ready for another round?', variant: 'info' });
       setPhase('idle');
     }
   }, [phase, settings]);
 
   const startSession = async () => {
     try {
-      await api.post(`/channels/${channelId}/study/start`, { sessionType });
+      await api.post<void>(`/channels/${channelId}/study/start`, { sessionType });
       if (sessionType === 'pomodoro') {
         const workSec = settings.pomodoroWork * 60;
         setTimeLeft(workSec);
@@ -114,22 +114,22 @@ const StudyRoom = ({ channelId, guildId }: { channelId: string; guildId: string 
       }
       setIsRunning(true);
     } catch {
-      addToast('Failed to start session', 'error');
+      addToast({ title: 'Failed to start session', variant: 'error' });
     }
   };
 
   const stopSession = async () => {
     try {
-      await api.post(`/channels/${channelId}/study/end`);
+      await api.post<void>(`/channels/${channelId}/study/end`, {});
       setIsRunning(false);
       setPhase('idle');
       setTimeLeft(0);
       if (timerRef.current) clearInterval(timerRef.current);
       loadStats();
       loadLeaderboard();
-      addToast('Session ended!', 'info');
+      addToast({ title: 'Session ended!', variant: 'info' });
     } catch {
-      addToast('Failed to end session', 'error');
+      addToast({ title: 'Failed to end session', variant: 'error' });
     }
   };
 
@@ -137,11 +137,11 @@ const StudyRoom = ({ channelId, guildId }: { channelId: string; guildId: string 
 
   const saveSettings = async (newSettings: Partial<Settings>) => {
     try {
-      const res = await api.put(`/channels/${channelId}/study/settings`, { ...settings, ...newSettings });
-      setSettings(res.data);
-      addToast('Settings saved', 'success');
+      const res = await api.put(`/channels/${channelId}/study/settings`, { ...settings, ...newSettings }) as Settings;
+      setSettings(res);
+      addToast({ title: 'Settings saved', variant: 'success' });
     } catch {
-      addToast('Failed to save settings', 'error');
+      addToast({ title: 'Failed to save settings', variant: 'error' });
     }
   };
 

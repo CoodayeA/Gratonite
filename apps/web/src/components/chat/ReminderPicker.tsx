@@ -33,17 +33,17 @@ export default function ReminderPicker({ messageId, channelId, guildId, onClose 
 
   async function createReminder(remindAt: Date) {
     try {
-      await api.post('/reminders', {
+      await api.post<void>('/reminders', {
         messageId,
         channelId,
         guildId,
         remindAt: remindAt.toISOString(),
         note: note || undefined,
       });
-      addToast('Reminder set', 'success');
+      addToast({ title: 'Reminder set', variant: 'success' });
       onClose();
     } catch {
-      addToast('Failed to set reminder', 'error');
+      addToast({ title: 'Failed to set reminder', variant: 'error' });
     }
   }
 
@@ -57,12 +57,12 @@ export default function ReminderPicker({ messageId, channelId, guildId, onClose 
 
   function handleCustomSubmit() {
     if (!customDate || !customTime) {
-      addToast('Pick a date and time', 'error');
+      addToast({ title: 'Pick a date and time', variant: 'error' });
       return;
     }
     const dt = new Date(`${customDate}T${customTime}`);
     if (isNaN(dt.getTime()) || dt <= new Date()) {
-      addToast('Must be a future date', 'error');
+      addToast({ title: 'Must be a future date', variant: 'error' });
       return;
     }
     createReminder(dt);
