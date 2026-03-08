@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,15 @@ import {
   StyleSheet,
   RefreshControl,
   Alert,
-  TextInput,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { relationships as relApi, users as usersApi } from '../../lib/api';
-import { colors, spacing, fontSize, borderRadius } from '../../lib/theme';
-import type { Relationship, User } from '../../types';
+import { relationships as relApi } from '../../lib/api';
+import { useToast } from '../../contexts/ToastContext';
+import { useTheme } from '../../lib/theme';
+import Avatar from '../../components/Avatar';
+import { presenceStore } from '../../lib/presenceStore';
+import type { Relationship } from '../../types';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -26,28 +29,27 @@ type Props = CompositeScreenProps<
 type Tab = 'all' | 'pending' | 'blocked';
 
 export default function FriendsScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const toast = useToast();
   const [rels, setRels] = useState<Relationship[]>([]);
-  const [userMap, setUserMap] = useState<Record<string, User>>({});
   const [tab, setTab] = useState<Tab>('all');
   const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchRelationships = useCallback(async () => {
     try {
       const data = await relApi.getAll();
       setRels(data);
 
-      // Fetch user info for all relationship targets
-      const targetIds = data.map((r) => r.targetId).filter(Boolean);
-      if (targetIds.length > 0) {
-        const users = await usersApi.getBatch(targetIds);
-        const map: Record<string, any> = {};
-        users.forEach((u) => { map[u.id] = u; });
-        setUserMap(map);
-      }
+      // Feed statuses into presence store
+      data.forEach((r) => {
+        if (r.user?.id && r.user.status) {
+          presenceStore.set(r.user.id, r.user.status as any);
+        }
+      });
     } catch (err: any) {
       if (err.status !== 401) {
-        Alert.alert('Error', 'Failed to load friends');
+        toast.error('Failed to load friends');
       }
     } finally {
       setRefreshing(false);
@@ -70,7 +72,7 @@ export default function FriendsScreen({ navigation }: Props) {
       await relApi.acceptFriend(userId);
       fetchRelationships();
     } catch (err: any) {
-      Alert.alert('Error', err.message);
+      toast.error(err.message);
     }
   };
 
@@ -85,31 +87,127 @@ export default function FriendsScreen({ navigation }: Props) {
             await relApi.removeFriend(userId);
             fetchRelationships();
           } catch (err: any) {
-            Alert.alert('Error', err.message);
+            toast.error(err.message);
           }
         },
       },
     ]);
   };
 
-  const handleOpenDM = async (userId: string) => {
+  const handleOpenDM = async (userId: string, username: string) => {
     try {
       const dm = await relApi.openDM(userId);
-      navigation.navigate('DirectMessage', { channelId: dm.id, recipientName: userMap[userId]?.username || 'User' });
+      navigation.navigate('DirectMessage', { channelId: dm.id, recipientName: username });
     } catch (err: any) {
-      Alert.alert('Error', err.message);
+      toast.error(err.message);
     }
   };
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bgPrimary,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.sm,
+      ...(neo ? { borderBottomWidth: neo.borderWidth, borderBottomColor: colors.border } : {}),
+    },
+    headerTitle: {
+      fontSize: fontSize.xl,
+      fontWeight: neo ? '800' : '700',
+      color: colors.textPrimary,
+      ...(neo ? { textTransform: 'uppercase' as const } : {}),
+    },
+    tabs: {
+      flexDirection: 'row',
+      paddingHorizontal: spacing.lg,
+      gap: spacing.sm,
+      marginTop: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    tab: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.bgSecondary,
+      ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
+    },
+    tabActive: {
+      backgroundColor: colors.accentPrimary,
+    },
+    tabText: {
+      color: colors.textSecondary,
+      fontSize: fontSize.sm,
+      fontWeight: neo ? '700' : '500',
+      ...(neo ? { textTransform: 'uppercase' as const } : {}),
+    },
+    tabTextActive: {
+      color: colors.white,
+    },
+    list: {
+      paddingTop: spacing.sm,
+    },
+    friendItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+    },
+    friendInfo: {
+      flex: 1,
+      marginLeft: spacing.md,
+    },
+    friendName: {
+      color: colors.textPrimary,
+      fontSize: fontSize.md,
+      fontWeight: '500',
+    },
+    friendMeta: {
+      color: colors.textMuted,
+      fontSize: fontSize.xs,
+      marginTop: 2,
+    },
+    actions: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    actionBtn: {
+      padding: spacing.sm,
+    },
+    acceptBtn: {
+      padding: spacing.sm,
+    },
+    empty: {
+      alignItems: 'center',
+      paddingTop: 80,
+      gap: spacing.md,
+    },
+    emptyText: {
+      color: colors.textMuted,
+      fontSize: fontSize.md,
+    },
+  }), [colors, spacing, fontSize, borderRadius, neo]);
+
   const renderItem = ({ item }: { item: Relationship }) => {
-    const user = userMap[item.targetId];
+    const user = item.user;
     const name = user?.displayName || user?.username || item.targetId.slice(0, 8);
 
     return (
       <View style={styles.friendItem}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
-        </View>
+        <TouchableOpacity onPress={() => navigation.navigate('UserProfile', { userId: item.targetId })}>
+          <Avatar
+            userId={item.targetId}
+            avatarHash={user?.avatarHash}
+            name={name}
+            size={40}
+            showStatus
+          />
+        </TouchableOpacity>
         <View style={styles.friendInfo}>
           <Text style={styles.friendName}>{name}</Text>
           {item.type === 'pending_incoming' && (
@@ -126,7 +224,7 @@ export default function FriendsScreen({ navigation }: Props) {
             </TouchableOpacity>
           )}
           {item.type === 'friend' && (
-            <TouchableOpacity style={styles.actionBtn} onPress={() => handleOpenDM(item.targetId)}>
+            <TouchableOpacity style={styles.actionBtn} onPress={() => handleOpenDM(item.targetId, user?.username || 'User')}>
               <Ionicons name="chatbubble-outline" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
@@ -141,12 +239,19 @@ export default function FriendsScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Friends</Text>
+        <View style={{ flexDirection: 'row', gap: spacing.md }}>
+          <TouchableOpacity onPress={() => navigation.navigate('MessageRequests')}>
+            <Ionicons name="mail-outline" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('FriendAdd')}>
+            <Ionicons name="person-add-outline" size={24} color={colors.accentPrimary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Tabs */}
       <View style={styles.tabs}>
         {(['all', 'pending', 'blocked'] as Tab[]).map((t) => (
           <TouchableOpacity
@@ -184,98 +289,3 @@ export default function FriendsScreen({ navigation }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bgPrimary,
-  },
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  headerTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  tabs: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  tab: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.bgSecondary,
-  },
-  tabActive: {
-    backgroundColor: colors.accentPrimary,
-  },
-  tabText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    fontWeight: '500',
-  },
-  tabTextActive: {
-    color: colors.white,
-  },
-  list: {
-    paddingTop: spacing.sm,
-  },
-  friendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.bgElevated,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    color: colors.textPrimary,
-    fontSize: fontSize.md,
-    fontWeight: '600',
-  },
-  friendInfo: {
-    flex: 1,
-    marginLeft: spacing.md,
-  },
-  friendName: {
-    color: colors.textPrimary,
-    fontSize: fontSize.md,
-    fontWeight: '500',
-  },
-  friendMeta: {
-    color: colors.textMuted,
-    fontSize: fontSize.xs,
-    marginTop: 2,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  actionBtn: {
-    padding: spacing.sm,
-  },
-  acceptBtn: {
-    padding: spacing.sm,
-  },
-  empty: {
-    alignItems: 'center',
-    paddingTop: 80,
-    gap: spacing.md,
-  },
-  emptyText: {
-    color: colors.textMuted,
-    fontSize: fontSize.md,
-  },
-});

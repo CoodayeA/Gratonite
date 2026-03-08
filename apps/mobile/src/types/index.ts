@@ -46,6 +46,17 @@ export interface Channel {
   topic: string | null;
   parentId: string | null;
   position: number;
+  backgroundUrl?: string | null;
+  backgroundType?: 'image' | 'video' | null;
+}
+
+export interface GuildEmoji {
+  id: string;
+  guildId: string;
+  name: string;
+  imageHash: string;
+  uploadedBy: string;
+  createdAt: string;
 }
 
 export interface Message {
@@ -62,6 +73,18 @@ export interface Message {
     displayName: string | null;
     avatarHash: string | null;
   };
+  pinned?: boolean;
+  replyToId?: string | null;
+  replyTo?: {
+    id: string;
+    content: string;
+    authorId: string;
+    author?: {
+      id: string;
+      username: string;
+      displayName: string | null;
+    };
+  } | null;
 }
 
 export interface GuildMember {
@@ -295,4 +318,283 @@ export interface Notification {
   preview: string | null;
   read: boolean;
   createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Attachments
+// ---------------------------------------------------------------------------
+
+export interface Attachment {
+  id: string;
+  messageId: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  url: string;
+  width?: number | null;
+  height?: number | null;
+}
+
+// ---------------------------------------------------------------------------
+// Stickers
+// ---------------------------------------------------------------------------
+
+export interface Sticker {
+  id: string;
+  guildId: string | null;
+  name: string;
+  url: string;
+  creatorId: string;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Bookmarks
+// ---------------------------------------------------------------------------
+
+export interface Bookmark {
+  id: string;
+  messageId: string;
+  note: string | null;
+  createdAt: string;
+  messageContent: string | null;
+  messageAuthorId: string | null;
+  channelId: string;
+  channelName: string | null;
+  guildId: string | null;
+  guildName: string | null;
+  authorUsername: string | null;
+  authorDisplayName: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Drafts
+// ---------------------------------------------------------------------------
+
+export interface Draft {
+  id: string;
+  userId: string;
+  channelId: string;
+  content: string;
+  updatedAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Scheduled Messages
+// ---------------------------------------------------------------------------
+
+export interface ScheduledMessage {
+  id: string;
+  channelId: string;
+  content: string;
+  scheduledFor: string;
+  status: string;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Group DMs
+// ---------------------------------------------------------------------------
+
+export interface GroupDMChannel {
+  id: string;
+  name: string | null;
+  ownerId: string;
+  iconHash: string | null;
+  recipients: Array<{
+    id: string;
+    username: string;
+    displayName: string | null;
+    avatarHash: string | null;
+  }>;
+  lastMessageAt: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// User Settings
+// ---------------------------------------------------------------------------
+
+export interface UserSettings {
+  theme: string;
+  compactMode: boolean;
+  fontSize: string;
+  pushEnabled: boolean;
+  dmPrivacy: string;
+  friendRequestPrivacy: string;
+}
+
+// ---------------------------------------------------------------------------
+// Sessions
+// ---------------------------------------------------------------------------
+
+export interface Session {
+  id: string;
+  device: string;
+  ip: string;
+  lastActive: string;
+  current: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// User Mutes
+// ---------------------------------------------------------------------------
+
+export interface UserMute {
+  id: string;
+  userId: string;
+  mutedUserId: string;
+  mutedUser?: {
+    id: string;
+    username: string;
+    displayName: string | null;
+    avatarHash: string | null;
+  };
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Audit Log
+// ---------------------------------------------------------------------------
+
+export interface AuditLogEntry {
+  id: string;
+  guildId: string;
+  actorId: string;
+  actorName?: string;
+  action: string;
+  targetType: string;
+  targetId: string | null;
+  changes: Record<string, unknown> | null;
+  reason: string | null;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Webhooks
+// ---------------------------------------------------------------------------
+
+export interface Webhook {
+  id: string;
+  guildId: string;
+  channelId: string;
+  name: string;
+  avatarHash: string | null;
+  token: string;
+  creatorId: string;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Word Filter
+// ---------------------------------------------------------------------------
+
+export interface WordFilter {
+  id: string;
+  guildId: string;
+  word: string;
+  action: 'block' | 'delete' | 'warn';
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Ban Appeal
+// ---------------------------------------------------------------------------
+
+export interface BanAppeal {
+  id: string;
+  guildId: string;
+  userId: string;
+  username?: string;
+  reason: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  reviewedBy: string | null;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Server Folder
+// ---------------------------------------------------------------------------
+
+export interface ServerFolder {
+  id: string;
+  userId: string;
+  name: string;
+  color: string | null;
+  guildIds: string[];
+  position: number;
+}
+
+// ---------------------------------------------------------------------------
+// Economy / Shop
+// ---------------------------------------------------------------------------
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+  price: number;
+  imageUrl: string | null;
+  rarity: string;
+  available: boolean;
+}
+
+export interface InventoryItem {
+  id: string;
+  itemId: string;
+  item: ShopItem;
+  equipped: boolean;
+  acquiredAt: string;
+}
+
+export interface WalletInfo {
+  balance: number;
+  lifetimeEarned: number;
+  lastClaimAt: string | null;
+}
+
+export interface LedgerEntry {
+  id: string;
+  amount: number;
+  type: string;
+  description: string;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Forum
+// ---------------------------------------------------------------------------
+
+export interface ForumPost {
+  id: string;
+  channelId: string;
+  title: string;
+  content: string;
+  authorId: string;
+  authorName?: string;
+  tags: string[];
+  pinned: boolean;
+  locked: boolean;
+  replyCount: number;
+  createdAt: string;
+  lastReplyAt: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Channel Notification Prefs
+// ---------------------------------------------------------------------------
+
+export interface ChannelNotificationPref {
+  channelId: string;
+  level: 'all' | 'mentions' | 'none';
+}
+
+// ---------------------------------------------------------------------------
+// Read State
+// ---------------------------------------------------------------------------
+
+export interface ReadState {
+  channelId: string;
+  lastReadMessageId: string | null;
+  mentionCount: number;
 }

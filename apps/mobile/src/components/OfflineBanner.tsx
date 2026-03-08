@@ -1,55 +1,66 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import Animated, { SlideInUp, SlideOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSocket } from '../lib/socket';
-import { colors, fontSize } from '../lib/theme';
+import { useTheme } from '../lib/theme';
 
 export default function OfflineBanner() {
   const [isConnected, setIsConnected] = useState(true);
   const insets = useSafeAreaInsets();
+  const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
 
   useEffect(() => {
-    // Poll socket connection state
-    const interval = setInterval(() => {
-      const socket = getSocket();
-      if (socket) {
-        setIsConnected(socket.connected);
-      } else {
-        setIsConnected(true); // Don't show if socket isn't even initialized (e.g. not logged in)
-      }
-    }, 1000);
+    const socket = getSocket();
+    if (!socket) return;
 
-    return () => clearInterval(interval);
+    setIsConnected(socket.connected);
+
+    const onConnect = () => setIsConnected(true);
+    const onDisconnect = () => setIsConnected(false);
+
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+    };
   }, []);
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 999,
+    },
+    banner: {
+      backgroundColor: colors.error,
+      paddingVertical: 4,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...(neo ? { borderBottomWidth: 2, borderBottomColor: colors.border } : {}),
+    },
+    text: {
+      color: colors.white,
+      fontSize: fontSize.sm,
+      fontWeight: neo ? '700' : '600',
+    },
+  }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (isConnected) return null;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <Animated.View
+      entering={SlideInUp.duration(300)}
+      exiting={SlideOutUp.duration(300)}
+      style={[styles.container, { paddingTop: insets.top }]}
+    >
       <View style={styles.banner}>
         <Text style={styles.text}>Connecting...</Text>
       </View>
-    </View>
+    </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 999,
-  },
-  banner: {
-    backgroundColor: colors.error,
-    paddingVertical: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  text: {
-    color: colors.white,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-  },
-});

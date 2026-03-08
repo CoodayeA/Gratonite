@@ -17,6 +17,11 @@ import { startEmailNotificationJob } from './jobs/emailNotifications';
 import { startScheduledMessagesJob } from './jobs/scheduledMessages';
 import { startAccountDeletionJob } from './jobs/accountDeletion';
 import { startAfkMoverJob } from './jobs/afkMover';
+import { startRemindersJob } from './jobs/reminders';
+import { startAutoRolesJob } from './jobs/autoRoles';
+import { startFriendshipStreaksJob } from './jobs/friendshipStreaks';
+import { startGiveawaysJob } from './jobs/giveaways';
+import { startGuildDigestJob } from './jobs/guildDigest';
 import { httpRequestDuration, activeWebSocketConnections, registry } from './lib/metrics';
 
 const PLACEHOLDER_PATTERNS = [
@@ -179,6 +184,11 @@ server.listen(PORT, () => {
   startScheduledMessagesJob();
   startAccountDeletionJob();
   startAfkMoverJob();
+  startRemindersJob();
+  startAutoRolesJob();
+  startFriendshipStreaksJob();
+  startGiveawaysJob();
+  startGuildDigestJob();
 });
 
 export { io };

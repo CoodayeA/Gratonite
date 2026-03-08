@@ -5,15 +5,17 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "scheme": "gratonite",
+    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1a1a2e"
+      "backgroundColor": "#0f172a"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "chat.gratonite.mobile",
+      "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "Allow Gratonite to access your camera for video calls.",
         "NSMicrophoneUsageDescription": "Allow Gratonite to access your microphone for voice channels."
@@ -21,6 +23,7 @@
     },
     "android": {
       "package": "chat.gratonite.mobile",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#1a1a2e",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -42,7 +45,9 @@
         {
           "photosPermission": "Allow Gratonite to access your photos so you can share images in chat."
         }
-      ]
+      ],
+      "expo-image",
+      "expo-notifications"
     ]
   }
 }

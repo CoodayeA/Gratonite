@@ -2277,6 +2277,280 @@ export const api = {
     unsubscribe: (endpoint: string) => apiFetch<any>('/push/subscribe', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
   },
 
+  // === Wave 25 Features ===
+
+  reactionRoles: {
+    list: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/reaction-roles`),
+    create: (guildId: string, data: { messageId: string; channelId: string; mode: string; mappings: Array<{ emoji: string; roleId: string }> }) =>
+      apiFetch<any>(`/guilds/${guildId}/reaction-roles`, { method: 'POST', body: JSON.stringify(data) }),
+    delete: (guildId: string, id: string) =>
+      apiFetch<void>(`/guilds/${guildId}/reaction-roles/${id}`, { method: 'DELETE' }),
+    apply: (guildId: string, id: string, data: { emoji: string; userId: string }) =>
+      apiFetch<any>(`/guilds/${guildId}/reaction-roles/${id}/apply`, { method: 'POST', body: JSON.stringify(data) }),
+  },
+
+  stickyMessages: {
+    get: (channelId: string) => apiFetch<any>(`/channels/${channelId}/sticky`),
+    set: (channelId: string, data: { content: string }) =>
+      apiFetch<any>(`/channels/${channelId}/sticky`, { method: 'POST', body: JSON.stringify(data) }),
+    remove: (channelId: string) =>
+      apiFetch<void>(`/channels/${channelId}/sticky`, { method: 'DELETE' }),
+  },
+
+  reminders: {
+    create: (data: { messageId: string; channelId: string; guildId?: string; remindAt: string; note?: string }) =>
+      apiFetch<any>('/reminders', { method: 'POST', body: JSON.stringify(data) }),
+    list: () => apiFetch<any[]>('/reminders'),
+    delete: (id: string) => apiFetch<void>(`/reminders/${id}`, { method: 'DELETE' }),
+  },
+
+  starboard: {
+    getConfig: (guildId: string) => apiFetch<any>(`/guilds/${guildId}/starboard/config`),
+    setConfig: (guildId: string, data: { targetChannelId: string; emoji?: string; threshold?: number; enabled?: boolean }) =>
+      apiFetch<any>(`/guilds/${guildId}/starboard/config`, { method: 'PUT', body: JSON.stringify(data) }),
+    list: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/starboard`),
+    check: (guildId: string, data: { messageId: string; reactionCount: number }) =>
+      apiFetch<any>(`/guilds/${guildId}/starboard/check`, { method: 'POST', body: JSON.stringify(data) }),
+  },
+
+  autoRoles: {
+    list: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/auto-roles`),
+    create: (guildId: string, data: { roleId: string; triggerType: string; triggerValue: number }) =>
+      apiFetch<any>(`/guilds/${guildId}/auto-roles`, { method: 'POST', body: JSON.stringify(data) }),
+    update: (guildId: string, id: string, data: any) =>
+      apiFetch<any>(`/guilds/${guildId}/auto-roles/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (guildId: string, id: string) =>
+      apiFetch<void>(`/guilds/${guildId}/auto-roles/${id}`, { method: 'DELETE' }),
+  },
+
+  showcase: {
+    get: (userId: string) => apiFetch<any[]>(`/users/${userId}/showcase`),
+    set: (items: Array<{ slot: number; itemType: string; referenceId: string }>) =>
+      apiFetch<any>('/users/@me/showcase', { method: 'PUT', body: JSON.stringify({ items }) }),
+    removeSlot: (slot: number) =>
+      apiFetch<void>(`/users/@me/showcase/${slot}`, { method: 'DELETE' }),
+  },
+
+  friendshipStreaks: {
+    getStreak: (friendId: string) => apiFetch<any>(`/relationships/${friendId}/streak`),
+    listStreaks: () => apiFetch<any[]>('/relationships/streaks'),
+    getMilestones: (friendId: string) => apiFetch<any[]>(`/relationships/${friendId}/milestones`),
+    interact: (friendId: string) =>
+      apiFetch<any>(`/relationships/${friendId}/interact`, { method: 'POST', body: '{}' }),
+  },
+
+  interestTags: {
+    listTags: () => apiFetch<any[]>('/interest-tags'),
+    getMyInterests: () => apiFetch<any[]>('/users/@me/interests'),
+    setInterests: (tags: string[]) =>
+      apiFetch<any>('/users/@me/interests', { method: 'PUT', body: JSON.stringify({ tags }) }),
+    getMatches: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/interest-matches`),
+  },
+
+  greetingCards: {
+    getTemplates: () => apiFetch<any[]>('/greeting-cards/templates'),
+    send: (data: { templateId: string; recipientId: string; message: string; stickers?: any[] }) =>
+      apiFetch<any>('/greeting-cards', { method: 'POST', body: JSON.stringify(data) }),
+    getInbox: () => apiFetch<any[]>('/greeting-cards/inbox'),
+    markViewed: (id: string) =>
+      apiFetch<any>(`/greeting-cards/${id}/view`, { method: 'PATCH' }),
+  },
+
+  textReactions: {
+    add: (channelId: string, messageId: string, text: string) =>
+      apiFetch<any>(`/channels/${channelId}/messages/${messageId}/text-reactions`, { method: 'POST', body: JSON.stringify({ text }) }),
+    remove: (channelId: string, messageId: string, text: string) =>
+      apiFetch<void>(`/channels/${channelId}/messages/${messageId}/text-reactions/${encodeURIComponent(text)}`, { method: 'DELETE' }),
+    get: (channelId: string, messageId: string) =>
+      apiFetch<any[]>(`/channels/${channelId}/messages/${messageId}/text-reactions`),
+    popular: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/text-reactions/popular`),
+  },
+
+  timeline: {
+    get: (guildId: string, params?: { before?: string; limit?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.before) qs.set('before', params.before);
+      if (params?.limit) qs.set('limit', String(params.limit));
+      return apiFetch<any[]>(`/guilds/${guildId}/timeline?${qs.toString()}`);
+    },
+    addEvent: (guildId: string, data: { title: string; description?: string; iconUrl?: string }) =>
+      apiFetch<any>(`/guilds/${guildId}/timeline`, { method: 'POST', body: JSON.stringify(data) }),
+    deleteEvent: (guildId: string, id: string) =>
+      apiFetch<void>(`/guilds/${guildId}/timeline/${id}`, { method: 'DELETE' }),
+  },
+
+  tickets: {
+    list: (guildId: string, params?: { status?: string; assignee?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.status) qs.set('status', params.status);
+      if (params?.assignee) qs.set('assignee', params.assignee);
+      return apiFetch<any[]>(`/guilds/${guildId}/tickets?${qs.toString()}`);
+    },
+    create: (guildId: string, data: { subject: string; priority?: string }) =>
+      apiFetch<any>(`/guilds/${guildId}/tickets`, { method: 'POST', body: JSON.stringify(data) }),
+    update: (guildId: string, id: string, data: any) =>
+      apiFetch<any>(`/guilds/${guildId}/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    close: (guildId: string, id: string) =>
+      apiFetch<any>(`/guilds/${guildId}/tickets/${id}/close`, { method: 'POST', body: '{}' }),
+    getConfig: (guildId: string) => apiFetch<any>(`/guilds/${guildId}/tickets/config`),
+    setConfig: (guildId: string, data: any) =>
+      apiFetch<any>(`/guilds/${guildId}/tickets/config`, { method: 'PUT', body: JSON.stringify(data) }),
+  },
+
+  giveaways: {
+    list: (guildId: string, status?: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/giveaways${status ? `?status=${status}` : ''}`),
+    create: (guildId: string, data: { channelId: string; prize: string; description?: string; winnersCount: number; endsAt: string; requiredRoleId?: string }) =>
+      apiFetch<any>(`/guilds/${guildId}/giveaways`, { method: 'POST', body: JSON.stringify(data) }),
+    enter: (guildId: string, id: string) =>
+      apiFetch<any>(`/guilds/${guildId}/giveaways/${id}/enter`, { method: 'POST', body: '{}' }),
+    leave: (guildId: string, id: string) =>
+      apiFetch<void>(`/guilds/${guildId}/giveaways/${id}/enter`, { method: 'DELETE' }),
+    end: (guildId: string, id: string) =>
+      apiFetch<any>(`/guilds/${guildId}/giveaways/${id}/end`, { method: 'POST', body: '{}' }),
+    reroll: (guildId: string, id: string) =>
+      apiFetch<any>(`/guilds/${guildId}/giveaways/${id}/reroll`, { method: 'POST', body: '{}' }),
+    cancel: (guildId: string, id: string) =>
+      apiFetch<void>(`/guilds/${guildId}/giveaways/${id}`, { method: 'DELETE' }),
+  },
+
+  onboarding: {
+    getConfig: (guildId: string) => apiFetch<any>(`/guilds/${guildId}/onboarding/config`),
+    setConfig: (guildId: string, data: any) =>
+      apiFetch<any>(`/guilds/${guildId}/onboarding/config`, { method: 'PUT', body: JSON.stringify(data) }),
+    complete: (guildId: string, selections: any) =>
+      apiFetch<any>(`/guilds/${guildId}/onboarding/complete`, { method: 'POST', body: JSON.stringify({ selections }) }),
+    getStatus: (guildId: string) => apiFetch<any>(`/guilds/${guildId}/onboarding/status`),
+  },
+
+  guildLog: {
+    getConfig: (guildId: string) => apiFetch<any>(`/guilds/${guildId}/log-config`),
+    setConfig: (guildId: string, data: { channelId: string; events: string[] }) =>
+      apiFetch<any>(`/guilds/${guildId}/log-config`, { method: 'PUT', body: JSON.stringify(data) }),
+  },
+
+  guildDigest: {
+    getConfig: (guildId: string) => apiFetch<any>(`/guilds/${guildId}/digest/config`),
+    setConfig: (guildId: string, data: any) =>
+      apiFetch<any>(`/guilds/${guildId}/digest/config`, { method: 'PUT', body: JSON.stringify(data) }),
+    preview: (guildId: string) => apiFetch<any>(`/guilds/${guildId}/digest/preview`),
+    list: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/digest/history`),
+  },
+
+  musicRooms: {
+    get: (channelId: string) => apiFetch<any>(`/channels/${channelId}/music`),
+    updateSettings: (channelId: string, data: { mode?: string; volume?: number }) =>
+      apiFetch<any>(`/channels/${channelId}/music/settings`, { method: 'PUT', body: JSON.stringify(data) }),
+    addTrack: (channelId: string, data: { url: string; title: string; thumbnail?: string; duration?: number }) =>
+      apiFetch<any>(`/channels/${channelId}/music/queue`, { method: 'POST', body: JSON.stringify(data) }),
+    removeTrack: (channelId: string, id: string) =>
+      apiFetch<void>(`/channels/${channelId}/music/queue/${id}`, { method: 'DELETE' }),
+    skip: (channelId: string) =>
+      apiFetch<any>(`/channels/${channelId}/music/skip`, { method: 'POST', body: '{}' }),
+    next: (channelId: string) =>
+      apiFetch<any>(`/channels/${channelId}/music/next`, { method: 'POST', body: '{}' }),
+  },
+
+  whiteboards: {
+    list: (channelId: string) => apiFetch<any[]>(`/channels/${channelId}/whiteboards`),
+    create: (channelId: string, data?: { name?: string }) =>
+      apiFetch<any>(`/channels/${channelId}/whiteboards`, { method: 'POST', body: JSON.stringify(data ?? {}) }),
+    get: (channelId: string, id: string) => apiFetch<any>(`/channels/${channelId}/whiteboards/${id}`),
+    save: (channelId: string, id: string, data: { data: any; name?: string }) =>
+      apiFetch<any>(`/channels/${channelId}/whiteboards/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (channelId: string, id: string) =>
+      apiFetch<void>(`/channels/${channelId}/whiteboards/${id}`, { method: 'DELETE' }),
+  },
+
+  moodBoard: {
+    get: (channelId: string) => apiFetch<any[]>(`/channels/${channelId}/mood-board`),
+    addItem: (channelId: string, data: { itemType: string; content: string; position?: any }) =>
+      apiFetch<any>(`/channels/${channelId}/mood-board`, { method: 'POST', body: JSON.stringify(data) }),
+    updateItem: (channelId: string, id: string, data: any) =>
+      apiFetch<any>(`/channels/${channelId}/mood-board/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    removeItem: (channelId: string, id: string) =>
+      apiFetch<void>(`/channels/${channelId}/mood-board/${id}`, { method: 'DELETE' }),
+  },
+
+  photoAlbums: {
+    list: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/albums`),
+    create: (guildId: string, data: { name: string; description?: string }) =>
+      apiFetch<any>(`/guilds/${guildId}/albums`, { method: 'POST', body: JSON.stringify(data) }),
+    get: (guildId: string, id: string) => apiFetch<any>(`/guilds/${guildId}/albums/${id}`),
+    update: (guildId: string, id: string, data: any) =>
+      apiFetch<any>(`/guilds/${guildId}/albums/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (guildId: string, id: string) =>
+      apiFetch<void>(`/guilds/${guildId}/albums/${id}`, { method: 'DELETE' }),
+    addPhoto: (guildId: string, albumId: string, data: { fileUrl: string; caption?: string; messageId?: string }) =>
+      apiFetch<any>(`/guilds/${guildId}/albums/${albumId}/photos`, { method: 'POST', body: JSON.stringify(data) }),
+    removePhoto: (guildId: string, albumId: string, photoId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/albums/${albumId}/photos/${photoId}`, { method: 'DELETE' }),
+  },
+
+  voiceEffects: {
+    listEffects: () => apiFetch<any[]>('/voice/effects'),
+    getSettings: () => apiFetch<any>('/users/@me/voice-settings'),
+    setSettings: (data: { activeEffect: string | null; effectVolume?: number }) =>
+      apiFetch<any>('/users/@me/voice-settings', { method: 'PUT', body: JSON.stringify(data) }),
+  },
+
+  studyRooms: {
+    getSettings: (channelId: string) => apiFetch<any>(`/channels/${channelId}/study`),
+    updateSettings: (channelId: string, data: any) =>
+      apiFetch<any>(`/channels/${channelId}/study/settings`, { method: 'PUT', body: JSON.stringify(data) }),
+    startSession: (channelId: string, data: { sessionType: string }) =>
+      apiFetch<any>(`/channels/${channelId}/study/start`, { method: 'POST', body: JSON.stringify(data) }),
+    endSession: (channelId: string) =>
+      apiFetch<any>(`/channels/${channelId}/study/end`, { method: 'POST', body: '{}' }),
+    getStats: (guildId: string, period?: string) =>
+      apiFetch<any>(`/guilds/${guildId}/study/stats${period ? `?period=${period}` : ''}`),
+    getLeaderboard: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/study/leaderboard`),
+  },
+
+  quests: {
+    list: (guildId: string, status?: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/quests${status ? `?status=${status}` : ''}`),
+    create: (guildId: string, data: any) =>
+      apiFetch<any>(`/guilds/${guildId}/quests`, { method: 'POST', body: JSON.stringify(data) }),
+    update: (guildId: string, id: string, data: any) =>
+      apiFetch<any>(`/guilds/${guildId}/quests/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (guildId: string, id: string) =>
+      apiFetch<void>(`/guilds/${guildId}/quests/${id}`, { method: 'DELETE' }),
+    contribute: (guildId: string, id: string, value?: number) =>
+      apiFetch<any>(`/guilds/${guildId}/quests/${id}/contribute`, { method: 'POST', body: JSON.stringify({ value }) }),
+    contributions: (guildId: string, id: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/quests/${id}/contributions`),
+  },
+
+  forms: {
+    list: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/forms`),
+    create: (guildId: string, data: any) =>
+      apiFetch<any>(`/guilds/${guildId}/forms`, { method: 'POST', body: JSON.stringify(data) }),
+    get: (guildId: string, id: string) => apiFetch<any>(`/guilds/${guildId}/forms/${id}`),
+    update: (guildId: string, id: string, data: any) =>
+      apiFetch<any>(`/guilds/${guildId}/forms/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (guildId: string, id: string) =>
+      apiFetch<void>(`/guilds/${guildId}/forms/${id}`, { method: 'DELETE' }),
+    submitResponse: (guildId: string, formId: string, answers: any) =>
+      apiFetch<any>(`/guilds/${guildId}/forms/${formId}/responses`, { method: 'POST', body: JSON.stringify({ answers }) }),
+    listResponses: (guildId: string, formId: string) =>
+      apiFetch<any[]>(`/guilds/${guildId}/forms/${formId}/responses`),
+    reviewResponse: (guildId: string, formId: string, responseId: string, data: { status: string }) =>
+      apiFetch<any>(`/guilds/${guildId}/forms/${formId}/responses/${responseId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  },
+
+  confessions: {
+    designateChannel: (guildId: string, channelId: string) =>
+      apiFetch<any>(`/guilds/${guildId}/confession-channels`, { method: 'POST', body: JSON.stringify({ channelId }) }),
+    undesignateChannel: (guildId: string, channelId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/confession-channels/${channelId}`, { method: 'DELETE' }),
+    list: (channelId: string) => apiFetch<any[]>(`/channels/${channelId}/confessions`),
+    post: (channelId: string, content: string) =>
+      apiFetch<any>(`/channels/${channelId}/confessions`, { method: 'POST', body: JSON.stringify({ content }) }),
+    reveal: (guildId: string, id: string) =>
+      apiFetch<any>(`/guilds/${guildId}/confessions/${id}/reveal`, { method: 'POST', body: '{}' }),
+  },
+
   // Generic helpers for custom endpoints not covered by typed methods above
   get: <T = unknown>(path: string) => apiFetch<T>(path),
   post: <T = unknown>(path: string, data: unknown) =>

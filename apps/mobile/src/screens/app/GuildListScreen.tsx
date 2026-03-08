@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,16 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
-  Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
-import { guilds as guildsApi } from '../../lib/api';
-import { colors, spacing, fontSize, borderRadius } from '../../lib/theme';
-import type { Guild } from '../../types';
+import { useAppState } from '../../contexts/AppStateContext';
+import Avatar from '../../components/Avatar';
+import StatusPicker from '../../components/StatusPicker';
+import { useChannelUnread } from '../../lib/unreadStore';
+import { useTheme, useNeo } from '../../lib/theme';
+import type { Guild, PresenceStatus } from '../../types';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -23,82 +26,203 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<AppStackParamList>
 >;
 
+const NEO_PALETTE_KEYS = ['coral', 'mint', 'butter', 'lavender', 'sky', 'peach'] as const;
+
 export default function GuildListScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
-  const [guildList, setGuildList] = useState<Guild[]>([]);
+  const { guilds, refreshGuilds } = useAppState();
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [statusPickerVisible, setStatusPickerVisible] = useState(false);
+  const { colors, spacing, fontSize, borderRadius } = useTheme();
+  const neo = useNeo();
 
-  const fetchGuilds = useCallback(async () => {
-    try {
-      const data = await guildsApi.getMine();
-      setGuildList(data);
-    } catch (err: any) {
-      if (err.status !== 401) {
-        Alert.alert('Error', 'Failed to load servers');
-      }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bgPrimary,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.md,
+    },
+    headerTitle: {
+      fontSize: fontSize.xl,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    headerBtn: {
+      padding: spacing.xs,
+    },
+    userBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.bgSecondary,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      gap: spacing.md,
+    },
+    userInfo: {
+      flex: 1,
+    },
+    userName: {
+      color: colors.textPrimary,
+      fontSize: fontSize.md,
+      fontWeight: '600',
+    },
+    userStatus: {
+      fontSize: fontSize.xs,
+      marginTop: 1,
+    },
+    list: {
+      paddingTop: spacing.sm,
+    },
+    guildItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      ...(neo !== null ? {
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+        backgroundColor: colors.bgElevated,
+      } : {}),
+    },
+    guildIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: neo !== null ? 0 : borderRadius.lg,
+      backgroundColor: colors.bgElevated,
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'hidden',
+    },
+    guildIconText: {
+      color: colors.textPrimary,
+      fontSize: fontSize.xl,
+      fontWeight: '600',
+    },
+    guildInfo: {
+      flex: 1,
+      marginLeft: spacing.md,
+    },
+    guildName: {
+      color: colors.textPrimary,
+      fontSize: fontSize.md,
+      fontWeight: '600',
+    },
+    guildMeta: {
+      color: colors.textMuted,
+      fontSize: fontSize.sm,
+      marginTop: 2,
+    },
+    empty: {
+      alignItems: 'center',
+      paddingTop: 80,
+      gap: spacing.md,
+    },
+    emptyText: {
+      color: colors.textSecondary,
+      fontSize: fontSize.lg,
+      fontWeight: '600',
+    },
+    emptySubtext: {
+      color: colors.textMuted,
+      fontSize: fontSize.sm,
+    },
+  }), [colors, neo, spacing, fontSize, borderRadius]);
 
-  useEffect(() => {
-    fetchGuilds();
-  }, [fetchGuilds]);
-
-  const onRefresh = () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    fetchGuilds();
+    await refreshGuilds();
+    setRefreshing(false);
+  }, [refreshGuilds]);
+
+  const getStatusColor = (status?: PresenceStatus): string => {
+    switch (status) {
+      case 'online': return colors.online;
+      case 'idle': return colors.idle;
+      case 'dnd': return colors.dnd;
+      case 'invisible': return colors.offline;
+      default: return colors.online;
+    }
   };
 
-  const renderGuild = ({ item }: { item: Guild }) => (
-    <TouchableOpacity
-      style={styles.guildItem}
-      onPress={() => navigation.navigate('GuildDrawer', { guildId: item.id, guildName: item.name })}
-    >
-      <View style={styles.guildIcon}>
-        <Text style={styles.guildIconText}>
-          {item.name.charAt(0).toUpperCase()}
-        </Text>
-      </View>
-      <View style={styles.guildInfo}>
-        <Text style={styles.guildName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.guildMeta}>
-          {item.memberCount} member{item.memberCount !== 1 ? 's' : ''}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-    </TouchableOpacity>
-  );
+  const renderGuild = ({ item, index }: { item: Guild; index: number }) => {
+    const neoItemStyle = neo !== null
+      ? { backgroundColor: neo.palette[NEO_PALETTE_KEYS[index % 6]] }
+      : undefined;
+
+    return (
+      <TouchableOpacity
+        style={[styles.guildItem, neoItemStyle]}
+        onPress={() => navigation.navigate('GuildDrawer', { guildId: item.id, guildName: item.name })}
+      >
+        <View style={styles.guildIcon}>
+          {item.iconHash ? (
+            <Avatar userId={item.id} avatarHash={item.iconHash} name={item.name} size={48} />
+          ) : (
+            <Text style={styles.guildIconText}>{item.name.charAt(0).toUpperCase()}</Text>
+          )}
+        </View>
+        <View style={styles.guildInfo}>
+          <Text style={styles.guildName} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.guildMeta}>
+            {item.memberCount} member{item.memberCount !== 1 ? 's' : ''}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Servers</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('CreateGuild')}>
-          <Ionicons name="add-circle-outline" size={28} color={colors.accentPrimary} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => navigation.navigate('ServerDiscover')} style={styles.headerBtn}>
+            <Ionicons name="compass-outline" size={26} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('CreateGuild')} style={styles.headerBtn}>
+            <Ionicons name="add-circle-outline" size={26} color={colors.accentPrimary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* User info bar */}
-      <View style={styles.userBar}>
-        <View style={styles.userAvatar}>
-          <Text style={styles.userAvatarText}>
-            {(user?.displayName || user?.username || '?').charAt(0).toUpperCase()}
-          </Text>
-        </View>
+      <TouchableOpacity style={styles.userBar} onPress={() => setStatusPickerVisible(true)}>
+        <Avatar
+          userId={user?.id}
+          avatarHash={user?.avatarHash}
+          name={user?.displayName || user?.username || '?'}
+          size={36}
+          showStatus
+          statusOverride={user?.status}
+        />
         <View style={styles.userInfo}>
           <Text style={styles.userName}>{user?.displayName || user?.username}</Text>
-          <Text style={styles.userStatus}>Online</Text>
+          <Text style={[styles.userStatus, { color: getStatusColor(user?.status) }]}>
+            {user?.customStatus || formatStatus(user?.status)}
+          </Text>
         </View>
-        <TouchableOpacity onPress={logout}>
-          <Ionicons name="log-out-outline" size={24} color={colors.textMuted} />
+        <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
+          <Ionicons name="settings-outline" size={22} color={colors.textMuted} />
         </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
 
       <FlatList
-        data={guildList}
+        data={guilds}
         keyExtractor={(item) => item.id}
         renderItem={renderGuild}
         contentContainerStyle={styles.list}
@@ -106,120 +230,29 @@ export default function GuildListScreen({ navigation }: Props) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentPrimary} />
         }
         ListEmptyComponent={
-          !loading ? (
-            <View style={styles.empty}>
-              <Ionicons name="planet-outline" size={48} color={colors.textMuted} />
-              <Text style={styles.emptyText}>No servers yet</Text>
-              <Text style={styles.emptySubtext}>Create or join a server to get started</Text>
-            </View>
-          ) : null
+          <View style={styles.empty}>
+            <Ionicons name="planet-outline" size={48} color={colors.textMuted} />
+            <Text style={styles.emptyText}>No servers yet</Text>
+            <Text style={styles.emptySubtext}>Create or join a server to get started</Text>
+          </View>
         }
+      />
+
+      <StatusPicker
+        visible={statusPickerVisible}
+        onClose={() => setStatusPickerVisible(false)}
+        currentStatus={user?.status ?? 'online'}
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bgPrimary,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
-  },
-  headerTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  userBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.bgSecondary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  userAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.accentPrimary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  userAvatarText: {
-    color: colors.white,
-    fontSize: fontSize.md,
-    fontWeight: '600',
-  },
-  userInfo: {
-    flex: 1,
-    marginLeft: spacing.md,
-  },
-  userName: {
-    color: colors.textPrimary,
-    fontSize: fontSize.md,
-    fontWeight: '600',
-  },
-  userStatus: {
-    color: colors.online,
-    fontSize: fontSize.xs,
-  },
-  list: {
-    paddingTop: spacing.sm,
-  },
-  guildItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  guildIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.bgElevated,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  guildIconText: {
-    color: colors.textPrimary,
-    fontSize: fontSize.xl,
-    fontWeight: '600',
-  },
-  guildInfo: {
-    flex: 1,
-    marginLeft: spacing.md,
-  },
-  guildName: {
-    color: colors.textPrimary,
-    fontSize: fontSize.md,
-    fontWeight: '600',
-  },
-  guildMeta: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    marginTop: 2,
-  },
-  empty: {
-    alignItems: 'center',
-    paddingTop: 80,
-    gap: spacing.md,
-  },
-  emptyText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-  },
-  emptySubtext: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-  },
-});
+function formatStatus(status?: PresenceStatus): string {
+  switch (status) {
+    case 'online': return 'Online';
+    case 'idle': return 'Idle';
+    case 'dnd': return 'Do Not Disturb';
+    case 'invisible': return 'Invisible';
+    default: return 'Online';
+  }
+}

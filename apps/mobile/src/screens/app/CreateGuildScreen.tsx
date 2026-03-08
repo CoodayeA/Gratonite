@@ -1,30 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { guilds as guildsApi } from '../../lib/api';
-import { colors, spacing, fontSize, borderRadius } from '../../lib/theme';
+import { useToast } from '../../contexts/ToastContext';
+import { useTheme } from '../../lib/theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'CreateGuild'>;
 
 export default function CreateGuildScreen({ navigation }: Props) {
+  const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const toast = useToast();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleCreate = async () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'Server name is required');
+      toast.error('Server name is required');
       return;
     }
 
@@ -36,11 +38,81 @@ export default function CreateGuildScreen({ navigation }: Props) {
       });
       navigation.replace('GuildChannels', { guildId: guild.id, guildName: guild.name });
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to create server');
+      toast.error(err.message || 'Failed to create server');
     } finally {
       setLoading(false);
     }
   };
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bgPrimary,
+    },
+    inner: {
+      flex: 1,
+      paddingHorizontal: spacing.xxxl,
+      paddingTop: spacing.xxxl,
+    },
+    title: {
+      fontSize: fontSize.xxl,
+      fontWeight: neo ? '800' : '700',
+      color: colors.textPrimary,
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+      ...(neo ? { textTransform: 'uppercase' as const } : {}),
+    },
+    subtitle: {
+      fontSize: fontSize.md,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: spacing.xxxl,
+      lineHeight: 22,
+    },
+    form: {
+      gap: spacing.md,
+    },
+    label: {
+      fontSize: fontSize.sm,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginBottom: spacing.xs,
+    },
+    input: {
+      backgroundColor: colors.inputBg,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      borderRadius: borderRadius.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      fontSize: fontSize.md,
+      color: colors.textPrimary,
+      marginBottom: spacing.md,
+      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border } : {}),
+    },
+    inputMultiline: {
+      minHeight: 80,
+      textAlignVertical: 'top',
+    },
+    button: {
+      backgroundColor: colors.accentPrimary,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing.lg,
+      alignItems: 'center',
+      marginTop: spacing.md,
+      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border, shadowColor: neo.shadowColor, shadowOffset: neo.shadowOffset, shadowOpacity: neo.shadowOpacity, shadowRadius: neo.shadowRadius } : {}),
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    buttonText: {
+      color: colors.white,
+      fontSize: fontSize.md,
+      fontWeight: '600',
+    },
+  }), [colors, spacing, fontSize, borderRadius, neo]);
 
   return (
     <KeyboardAvoidingView
@@ -92,70 +164,3 @@ export default function CreateGuildScreen({ navigation }: Props) {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bgPrimary,
-  },
-  inner: {
-    flex: 1,
-    paddingHorizontal: spacing.xxxl,
-    paddingTop: spacing.xxxl,
-  },
-  title: {
-    fontSize: fontSize.xxl,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.xxxl,
-    lineHeight: 22,
-  },
-  form: {
-    gap: spacing.md,
-  },
-  label: {
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    backgroundColor: colors.inputBg,
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    fontSize: fontSize.md,
-    color: colors.textPrimary,
-    marginBottom: spacing.md,
-  },
-  inputMultiline: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  button: {
-    backgroundColor: colors.accentPrimary,
-    borderRadius: borderRadius.md,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: colors.white,
-    fontSize: fontSize.md,
-    fontWeight: '600',
-  },
-});

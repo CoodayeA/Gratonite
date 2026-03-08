@@ -131,6 +131,24 @@ export default function PricingPage() {
               <p className="font-display text-2xl font-bold text-black">
                 Built by friends, for friends.
               </p>
+              <div className="mt-6 neo-border rounded-xl bg-white/60 px-4 py-4">
+                <p className="font-display font-bold text-black mb-2">
+                  Want to support the project?
+                </p>
+                <p className="text-black/75 leading-relaxed mb-3">
+                  Gratonite is free forever. If you want to help keep it going,
+                  you can support development with a donation.
+                </p>
+                <a
+                  href="https://buymeacoffee.com/codya"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 font-display font-bold text-black hover:text-purple transition-colors"
+                >
+                  Buy me a coffee
+                  <span aria-hidden="true">↗</span>
+                </a>
+              </div>
             </div>
           </ScrollReveal>
         </section>

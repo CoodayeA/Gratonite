@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
-  Alert,
   SectionList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { channels as channelsApi } from '../../lib/api';
-import { colors, spacing, fontSize, borderRadius } from '../../lib/theme';
+import { useToast } from '../../contexts/ToastContext';
+import { useTheme } from '../../lib/theme';
 import type { Channel } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -24,6 +24,8 @@ interface Section {
 }
 
 export default function GuildChannelsScreen({ route, navigation }: Props) {
+  const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const toast = useToast();
   const { guildId, guildName } = route.params;
   const [channelList, setChannelList] = useState<Channel[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -47,7 +49,7 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
       const data = await channelsApi.getForGuild(guildId);
       setChannelList(data);
     } catch (err: any) {
-      Alert.alert('Error', 'Failed to load channels');
+      toast.error('Failed to load channels');
     } finally {
       setRefreshing(false);
     }
@@ -128,6 +130,48 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
     </View>
   );
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bgPrimary,
+    },
+    list: {
+      paddingBottom: spacing.xxxl,
+    },
+    sectionHeader: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.sm,
+    },
+    sectionTitle: {
+      fontSize: fontSize.xs,
+      fontWeight: '700',
+      color: colors.textMuted,
+      letterSpacing: 1,
+    },
+    channelItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.md,
+      gap: spacing.sm,
+    },
+    channelName: {
+      color: colors.textSecondary,
+      fontSize: fontSize.md,
+      fontWeight: '500',
+      flex: 1,
+    },
+    empty: {
+      alignItems: 'center',
+      paddingTop: 80,
+    },
+    emptyText: {
+      color: colors.textMuted,
+      fontSize: fontSize.md,
+    },
+  }), [colors, spacing, fontSize, borderRadius, neo]);
+
   return (
     <View style={styles.container}>
       <SectionList
@@ -148,45 +192,3 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bgPrimary,
-  },
-  list: {
-    paddingBottom: spacing.xxxl,
-  },
-  sectionHeader: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: fontSize.xs,
-    fontWeight: '700',
-    color: colors.textMuted,
-    letterSpacing: 1,
-  },
-  channelItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    gap: spacing.sm,
-  },
-  channelName: {
-    color: colors.textSecondary,
-    fontSize: fontSize.md,
-    fontWeight: '500',
-    flex: 1,
-  },
-  empty: {
-    alignItems: 'center',
-    paddingTop: 80,
-  },
-  emptyText: {
-    color: colors.textMuted,
-    fontSize: fontSize.md,
-  },
-});

@@ -1,0 +1,31 @@
+{
+  "cli": { "version": ">= 5.0.0" },
+  "build": {
+    "preview": {
+      "android": { "buildType": "apk" },
+      "ios": { "simulator": true }
+    },
+    "production": {
+      "distribution": "store",
+      "channel": "production",
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "buildConfiguration": "Release"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "FILL_IN_AFTER_CREATING_APP"
+      },
+      "android": {
+        "track": "production",
+        "releaseStatus": "completed"
+      }
+    }
+  }
+}

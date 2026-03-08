@@ -85,6 +85,22 @@ export const refreshTokens = pgTable('refresh_tokens', {
    * When the token record was created. Useful for auditing active sessions.
    */
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+
+  /**
+   * Human-readable device description derived from the User-Agent header
+   * at login time (e.g. "Chrome on macOS", "Gratonite Mobile on iOS").
+   */
+  device: varchar('device', { length: 255 }).default('Unknown Device'),
+
+  /**
+   * IP address of the client that created this session.
+   */
+  ip: varchar('ip', { length: 45 }).default(''),
+
+  /**
+   * Last time this session was active (updated on token refresh).
+   */
+  lastActiveAt: timestamp('last_active_at', { withTimezone: true }).defaultNow(),
 });
 
 /**

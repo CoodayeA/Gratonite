@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,13 +13,14 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, spacing, fontSize, borderRadius } from '../../lib/theme';
+import { useTheme } from '../../lib/theme';
 import type { AuthStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 export default function RegisterScreen({ navigation }: Props) {
   const { register } = useAuth();
+  const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,6 +50,84 @@ export default function RegisterScreen({ navigation }: Props) {
       setLoading(false);
     }
   };
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bgPrimary,
+    },
+    inner: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      paddingHorizontal: spacing.xxxl,
+      paddingVertical: spacing.xxxl,
+    },
+    logo: {
+      fontSize: fontSize.xxxl,
+      fontWeight: neo ? '800' : '700',
+      color: colors.accentPrimary,
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+      ...(neo ? { textTransform: 'uppercase' as const } : {}),
+    },
+    subtitle: {
+      fontSize: fontSize.lg,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: spacing.xxxl,
+    },
+    form: {
+      gap: spacing.md,
+    },
+    label: {
+      fontSize: fontSize.sm,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginBottom: spacing.xs,
+    },
+    input: {
+      backgroundColor: colors.inputBg,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      borderRadius: borderRadius.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      fontSize: fontSize.md,
+      color: colors.textPrimary,
+      marginBottom: spacing.md,
+      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border } : {}),
+    },
+    button: {
+      backgroundColor: colors.accentPrimary,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing.lg,
+      alignItems: 'center',
+      marginTop: spacing.md,
+      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border, shadowColor: neo.shadowColor, shadowOffset: neo.shadowOffset, shadowOpacity: neo.shadowOpacity, shadowRadius: neo.shadowRadius } : {}),
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    buttonText: {
+      color: colors.white,
+      fontSize: fontSize.md,
+      fontWeight: '600',
+    },
+    linkButton: {
+      alignItems: 'center',
+      marginTop: spacing.lg,
+    },
+    linkText: {
+      color: colors.textSecondary,
+      fontSize: fontSize.sm,
+    },
+    linkBold: {
+      color: colors.accentPrimary,
+      fontWeight: '600',
+    },
+  }), [colors, spacing, fontSize, borderRadius, neo]);
 
   return (
     <KeyboardAvoidingView
@@ -127,78 +206,3 @@ export default function RegisterScreen({ navigation }: Props) {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bgPrimary,
-  },
-  inner: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xxxl,
-    paddingVertical: spacing.xxxl,
-  },
-  logo: {
-    fontSize: fontSize.xxxl,
-    fontWeight: '700',
-    color: colors.accentPrimary,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    fontSize: fontSize.lg,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.xxxl,
-  },
-  form: {
-    gap: spacing.md,
-  },
-  label: {
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    backgroundColor: colors.inputBg,
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    fontSize: fontSize.md,
-    color: colors.textPrimary,
-    marginBottom: spacing.md,
-  },
-  button: {
-    backgroundColor: colors.accentPrimary,
-    borderRadius: borderRadius.md,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: colors.white,
-    fontSize: fontSize.md,
-    fontWeight: '600',
-  },
-  linkButton: {
-    alignItems: 'center',
-    marginTop: spacing.lg,
-  },
-  linkText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-  },
-  linkBold: {
-    color: colors.accentPrimary,
-    fontWeight: '600',
-  },
-});

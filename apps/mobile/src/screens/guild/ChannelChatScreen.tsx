@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,54 +12,226 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { messages as messagesApi, reactions as reactionsApi } from '../../lib/api';
+import {
+  messages as messagesApi,
+  reactions as reactionsApi,
+  pins as pinsApi,
+  bookmarks as bookmarksApi,
+  files as filesApi,
+  polls as pollsApi,
+  guildEmojis as guildEmojisApi,
+  channels as channelsApi,
+} from '../../lib/api';
 import {
   onMessageCreate,
+  onMessageUpdate,
+  onMessageDelete,
   onTypingStart,
   onMessageReactionAdd,
   onMessageReactionRemove,
   getSocket,
 } from '../../lib/socket';
-import { files as filesApi } from '../../lib/api';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, spacing, fontSize, borderRadius } from '../../lib/theme';
-import type { Message, ReactionGroup } from '../../types';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { AppStackParamList } from '../../navigation/types';
+import { useTheme } from '../../lib/theme';
+import { useToast } from '../../contexts/ToastContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import MessageBubble from '../../components/MessageBubble';
+import MessageContextMenu from '../../components/MessageContextMenu';
+import ReplyBar from '../../components/ReplyBar';
+import EditBar from '../../components/EditBar';
+import PinnedMessages from '../../components/PinnedMessages';
+import ForwardModal from '../../components/ForwardModal';
+import EmptyState from '../../components/EmptyState';
+import EmojiPicker from '../../components/EmojiPicker';
+import StickerBrowser from '../../components/StickerBrowser';
+import PollCreateSheet from '../../components/PollCreateSheet';
+import PollCard from '../../components/PollCard';
+import ScrollToBottomFAB from '../../components/ScrollToBottomFAB';
+import SwipeableMessage from '../../components/SwipeableMessage';
+import TypingDots from '../../components/TypingDots';
+import MessageSkeleton from '../../components/MessageSkeleton';
+import ChatBackground from '../../components/ChatBackground';
+import { notificationSuccess, lightImpact } from '../../lib/haptics';
+import type { Message, ReactionGroup, Sticker, Poll, GuildEmoji } from '../../types';
 
 type Props = any;
 
-// Common emojis for the quick-reaction picker
 const QUICK_EMOJIS = ['\u{1F44D}', '\u{2764}\u{FE0F}', '\u{1F602}', '\u{1F60E}', '\u{1F525}', '\u{1F389}'];
 
-export default function ChannelChatScreen({ route }: Props) {
-  const { channelId, channelName } = route.params;
+export default function ChannelChatScreen({ route, navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const { channelId, channelName, guildId } = route.params;
   const { user } = useAuth();
+  const { colors, spacing, fontSize, borderRadius } = useTheme();
+  const toast = useToast();
   const [messageList, setMessageList] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const [showScrollFAB, setShowScrollFAB] = useState(false);
+  const initialLoadDone = useRef(false);
 
   // Typing indicator state
   const [typingUsers, setTypingUsers] = useState<Map<string, { username: string; timeout: ReturnType<typeof setTimeout> }>>(new Map());
   const typingThrottle = useRef<number>(0);
 
-  // Reactions state: messageId -> ReactionGroup[]
+  // Reactions state
   const [messageReactions, setMessageReactions] = useState<Map<string, ReactionGroup[]>>(new Map());
-
-  // Reaction picker state
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState<string | null>(null);
+
+  // Context menu state
+  const [contextMenuMessage, setContextMenuMessage] = useState<Message | null>(null);
+
+  // Reply state
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+
+  // Edit state
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+
+  // Pinned messages modal
+  const [showPinned, setShowPinned] = useState(false);
+
+  // Forward modal
+  const [forwardContent, setForwardContent] = useState<string | null>(null);
+
+  // Emoji picker
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  // Sticker browser
+  const [showStickerBrowser, setShowStickerBrowser] = useState(false);
+
+  // Poll creator
+  const [showPollCreator, setShowPollCreator] = useState(false);
+
+  // Custom emojis for this guild
+  const [customEmojis, setCustomEmojis] = useState<GuildEmoji[]>([]);
+
+  // Channel background
+  const [bgMedia, setBgMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null);
+
+  // Inverted data: newest first for inverted FlatList
+  const invertedData = useMemo(() => [...messageList].reverse(), [messageList]);
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bgPrimary,
+    },
+    loadingContainer: {
+      flex: 1,
+      backgroundColor: colors.bgPrimary,
+    },
+    messageList: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+    },
+    loadingMore: {
+      paddingVertical: spacing.md,
+    },
+    chatWrapper: {
+      flex: 1,
+    },
+    inputBar: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.bgSecondary,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      gap: spacing.sm,
+    },
+    attachButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.bgElevated,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    textInput: {
+      flex: 1,
+      backgroundColor: colors.inputBg,
+      borderRadius: borderRadius.lg,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      fontSize: fontSize.md,
+      color: colors.textPrimary,
+      maxHeight: 120,
+    },
+    sendButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.accentPrimary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    sendButtonDisabled: {
+      backgroundColor: colors.bgElevated,
+    },
+    typingBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.xs,
+      backgroundColor: colors.bgSecondary,
+      gap: spacing.sm,
+    },
+    typingText: {
+      color: colors.textMuted,
+      fontSize: fontSize.xs,
+      fontStyle: 'italic',
+    },
+    emojiPicker: {
+      flexDirection: 'row',
+      marginLeft: 40,
+      marginTop: spacing.xs,
+      marginBottom: spacing.sm,
+      backgroundColor: colors.bgElevated,
+      borderRadius: borderRadius.lg,
+      padding: spacing.xs,
+      gap: spacing.xs,
+    },
+    emojiPickerBtn: {
+      padding: spacing.xs,
+    },
+    emojiPickerText: {
+      fontSize: fontSize.xl,
+    },
+  }), [colors, spacing, fontSize, borderRadius]);
+
+  // Set header with pin and member list buttons
+  useEffect(() => {
+    navigation?.setOptions?.({
+      headerRight: () => (
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <TouchableOpacity onPress={() => setShowPinned(true)} style={{ padding: spacing.sm }}>
+            <Ionicons name="pin-outline" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => {
+            const guildId = route.params?.guildId;
+            if (guildId) navigation.navigate('GuildMemberList', { guildId });
+          }} style={{ padding: spacing.sm }}>
+            <Ionicons name="people-outline" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+      ),
+    });
+  }, [navigation, route.params?.guildId, colors, spacing]);
 
   const fetchMessages = useCallback(async () => {
     try {
       const data = await messagesApi.list(channelId, { limit: 50 });
-      setMessageList(data.reverse()); // API returns newest first, we want oldest first
+      setMessageList(data.reverse());
+      initialLoadDone.current = true;
     } catch (err: any) {
       if (err.status !== 401) {
-        Alert.alert('Error', 'Failed to load messages');
+        toast.error('Failed to load messages');
       }
     } finally {
       setLoading(false);
@@ -70,7 +242,23 @@ export default function ChannelChatScreen({ route }: Props) {
     fetchMessages();
   }, [fetchMessages]);
 
-  // Listen for new messages via socket
+  // Fetch custom emojis for this guild
+  useEffect(() => {
+    if (guildId) {
+      guildEmojisApi.list(guildId).then(setCustomEmojis).catch(() => {});
+    }
+  }, [guildId]);
+
+  // Fetch channel background
+  useEffect(() => {
+    channelsApi.get(channelId).then((ch) => {
+      if (ch.backgroundUrl) {
+        setBgMedia({ url: ch.backgroundUrl, type: ch.backgroundType || 'image' });
+      }
+    }).catch(() => {});
+  }, [channelId]);
+
+  // Socket: new messages
   useEffect(() => {
     const unsub = onMessageCreate((data: any) => {
       if (data.channelId === channelId) {
@@ -83,24 +271,52 @@ export default function ChannelChatScreen({ route }: Props) {
           createdAt: data.createdAt,
           editedAt: null,
           author: data.author,
+          replyToId: data.replyToId,
+          replyTo: data.replyTo,
         };
-        setMessageList((prev) => [...prev, msg]);
+        setMessageList((prev) => {
+          if (prev.some((m) => m.id === msg.id)) return prev;
+          return [...prev, msg];
+        });
       }
     });
     return unsub;
   }, [channelId]);
 
-  // Listen for typing events
+  // Socket: message updates (edits)
+  useEffect(() => {
+    const unsub = onMessageUpdate((data: any) => {
+      if (data.channelId === channelId) {
+        setMessageList((prev) =>
+          prev.map((m) =>
+            m.id === data.id
+              ? { ...m, content: data.content, editedAt: data.editedAt || new Date().toISOString() }
+              : m,
+          ),
+        );
+      }
+    });
+    return unsub;
+  }, [channelId]);
+
+  // Socket: message deletes
+  useEffect(() => {
+    const unsub = onMessageDelete((data) => {
+      if (data.channelId === channelId) {
+        setMessageList((prev) => prev.filter((m) => m.id !== data.id));
+      }
+    });
+    return unsub;
+  }, [channelId]);
+
+  // Socket: typing
   useEffect(() => {
     const unsub = onTypingStart((data) => {
       if (data.channelId !== channelId || data.userId === user?.id) return;
-
       setTypingUsers((prev) => {
         const next = new Map(prev);
-        // Clear existing timeout for this user
         const existing = next.get(data.userId);
         if (existing) clearTimeout(existing.timeout);
-
         const timeout = setTimeout(() => {
           setTypingUsers((p) => {
             const n = new Map(p);
@@ -108,7 +324,6 @@ export default function ChannelChatScreen({ route }: Props) {
             return n;
           });
         }, 5000);
-
         next.set(data.userId, { username: data.username, timeout });
         return next;
       });
@@ -116,7 +331,7 @@ export default function ChannelChatScreen({ route }: Props) {
     return unsub;
   }, [channelId, user?.id]);
 
-  // Listen for reaction add/remove via socket
+  // Socket: reactions
   useEffect(() => {
     const unsubAdd = onMessageReactionAdd((data) => {
       if (data.channelId !== channelId) return;
@@ -167,7 +382,7 @@ export default function ChannelChatScreen({ route }: Props) {
     return () => { unsubAdd(); unsubRemove(); };
   }, [channelId, user?.id]);
 
-  // Join the channel room for socket events
+  // Join channel room
   useEffect(() => {
     const socket = getSocket();
     if (socket) {
@@ -178,23 +393,47 @@ export default function ChannelChatScreen({ route }: Props) {
     }
   }, [channelId]);
 
+  // --- Actions ---
+
   const handleSend = async () => {
     const text = inputText.trim();
     if (!text || sending) return;
 
+    // If editing, update the message instead
+    if (editingMessage) {
+      setSending(true);
+      try {
+        await messagesApi.edit(channelId, editingMessage.id, text);
+        setMessageList((prev) =>
+          prev.map((m) =>
+            m.id === editingMessage.id
+              ? { ...m, content: text, editedAt: new Date().toISOString() }
+              : m,
+          ),
+        );
+      } catch {
+        toast.error('Failed to edit message');
+      } finally {
+        setSending(false);
+        setEditingMessage(null);
+        setInputText('');
+      }
+      return;
+    }
+
     setSending(true);
     setInputText('');
     try {
-      const msg = await messagesApi.send(channelId, text);
-      // Don't add locally — socket will deliver it (or we add it if no socket msg arrives)
-      // Actually for safety, check if it already arrived via socket
+      const msg = await messagesApi.send(channelId, text, replyingTo ? { replyToId: replyingTo.id } : undefined);
       setMessageList((prev) => {
         if (prev.some((m) => m.id === msg.id)) return prev;
         return [...prev, msg];
       });
-    } catch (err: any) {
-      Alert.alert('Error', 'Failed to send message');
-      setInputText(text); // Restore input on failure
+      setReplyingTo(null);
+      notificationSuccess();
+    } catch {
+      toast.error('Failed to send message');
+      setInputText(text);
     } finally {
       setSending(false);
     }
@@ -218,7 +457,7 @@ export default function ChannelChatScreen({ route }: Props) {
 
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images', 'videos'],// ImagePicker.MediaTypeOptions.Images, (using older SDK strings is safer or explicitly mediaTypes 'images' if expo 50+)
+      mediaTypes: ['images', 'videos'],
       allowsEditing: true,
       quality: 0.8,
     });
@@ -229,42 +468,36 @@ export default function ChannelChatScreen({ route }: Props) {
       try {
         const formData = new FormData();
         const filename = asset.uri.split('/').pop() || 'upload.jpg';
-
-        // React Native FormData requires this specific object structure for files
         formData.append('file', {
           uri: asset.uri,
           name: filename,
           type: asset.mimeType || 'image/jpeg',
         } as any);
-
         const uploadRes = await filesApi.upload(formData);
-
-        // Once string is returned, send message
         const msg = await messagesApi.send(channelId, uploadRes.url);
         setMessageList((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;
           return [...prev, msg];
         });
-      } catch (err) {
-        Alert.alert('Upload failed', 'There was an error uploading your file.');
+      } catch {
+        toast.error('There was an error uploading your file.');
       } finally {
         setSending(false);
       }
     }
   };
 
-  // Send typing indicator (throttled to every 3s)
   const handleInputChange = (text: string) => {
     setInputText(text);
     const now = Date.now();
     if (text.length > 0 && now - typingThrottle.current > 3000) {
       typingThrottle.current = now;
-      messagesApi.sendTyping(channelId).catch(() => { });
+      messagesApi.sendTyping(channelId).catch(() => {});
     }
   };
 
-  // Toggle a reaction on a message
   const handleReactionToggle = async (messageId: string, emoji: string) => {
+    lightImpact();
     const existing = messageReactions.get(messageId) ?? [];
     const reaction = existing.find((r) => r.emoji === emoji);
     try {
@@ -279,93 +512,176 @@ export default function ChannelChatScreen({ route }: Props) {
     setReactionPickerMessageId(null);
   };
 
-  const formatTime = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const now = new Date();
-    const isToday = d.toDateString() === now.toDateString();
-    if (isToday) {
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) +
-      ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  // --- Context menu handlers ---
+
+  const handleReply = (msg: Message) => {
+    setReplyingTo(msg);
+    setEditingMessage(null);
   };
 
+  const handleEdit = (msg: Message) => {
+    setEditingMessage(msg);
+    setInputText(msg.content);
+    setReplyingTo(null);
+  };
+
+  const handleDelete = (msg: Message) => {
+    Alert.alert('Delete Message', 'Are you sure you want to delete this message?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await messagesApi.delete(channelId, msg.id);
+            setMessageList((prev) => prev.filter((m) => m.id !== msg.id));
+          } catch {
+            toast.error('Failed to delete message');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handlePin = async (msg: Message) => {
+    try {
+      await pinsApi.add(channelId, msg.id);
+      setMessageList((prev) => prev.map((m) => m.id === msg.id ? { ...m, pinned: true } : m));
+      toast.success('Message has been pinned.');
+    } catch {
+      toast.error('Failed to pin message');
+    }
+  };
+
+  const handleUnpin = async (msg: Message) => {
+    try {
+      await pinsApi.remove(channelId, msg.id);
+      setMessageList((prev) => prev.map((m) => m.id === msg.id ? { ...m, pinned: false } : m));
+      toast.success('Message unpinned.');
+    } catch {
+      toast.error('Failed to unpin message');
+    }
+  };
+
+  const handleReact = (msg: Message) => {
+    setReactionPickerMessageId(reactionPickerMessageId === msg.id ? null : msg.id);
+  };
+
+  const handleBookmark = async (msg: Message) => {
+    try {
+      await bookmarksApi.create(msg.id);
+      toast.success('Message bookmarked.');
+    } catch {
+      toast.error('Failed to bookmark message');
+    }
+  };
+
+  const handleForward = (msg: Message) => {
+    setForwardContent(msg.content);
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    setInputText(prev => prev + emoji);
+  };
+
+  const handleAttachPress = () => {
+    Alert.alert('Attach', 'What would you like to add?', [
+      { text: 'Image / Video', onPress: handlePickImage },
+      { text: 'Poll', onPress: () => setShowPollCreator(true) },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const handlePollVote = async (pollId: string, optionId: string) => {
+    try {
+      await pollsApi.vote(pollId, optionId);
+    } catch {
+      toast.error('Failed to vote');
+    }
+  };
+
+  const handlePollRemoveVote = async (pollId: string) => {
+    try {
+      await pollsApi.removeVote(pollId);
+    } catch {
+      toast.error('Failed to remove vote');
+    }
+  };
+
+  const handleStickerSelect = async (sticker: Sticker) => {
+    try {
+      const msg = await messagesApi.send(channelId, ' ', { stickerId: sticker.id });
+      setMessageList((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+    } catch {
+      toast.error('Failed to send sticker');
+    }
+  };
+
+  // --- Render ---
+
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
-    const prev = index > 0 ? messageList[index - 1] : null;
-    const isGrouped = prev?.authorId === item.authorId &&
-      new Date(item.createdAt).getTime() - new Date(prev!.createdAt).getTime() < 5 * 60000;
+    // With inverted list, data is newest-first. index+1 is the chronologically older message.
+    const olderMsg = index < invertedData.length - 1 ? invertedData[index + 1] : null;
+    const isGrouped = olderMsg?.authorId === item.authorId &&
+      new Date(item.createdAt).getTime() - new Date(olderMsg!.createdAt).getTime() < 5 * 60000;
     const isOwn = item.authorId === user?.id;
-    const authorName = item.author?.displayName || item.author?.username || item.authorId.slice(0, 8);
     const rxns = messageReactions.get(item.id) ?? [];
     const showPicker = reactionPickerMessageId === item.id;
+    const isNew = initialLoadDone.current;
+
+    // Build reply preview if message has replyTo
+    const replyPreview = item.replyTo
+      ? {
+          authorName: item.replyTo.author?.displayName || item.replyTo.author?.username || 'Unknown',
+          content: item.replyTo.content || '',
+        }
+      : null;
 
     return (
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onLongPress={() => setReactionPickerMessageId(showPicker ? null : item.id)}
-        style={[styles.messageRow, isGrouped && styles.messageGrouped]}
-      >
-        {!isGrouped && (
-          <View style={styles.messageHeader}>
-            <View style={[styles.msgAvatar, isOwn && styles.msgAvatarOwn]}>
-              <Text style={styles.msgAvatarText}>{authorName.charAt(0).toUpperCase()}</Text>
+      <SwipeableMessage onReply={() => handleReply(item)}>
+        <View>
+          <MessageBubble
+            message={item}
+            isOwn={isOwn}
+            isGrouped={isGrouped}
+            reactions={rxns}
+            replyPreview={replyPreview}
+            onLongPress={() => setContextMenuMessage(item)}
+            onReactionToggle={(emoji) => handleReactionToggle(item.id, emoji)}
+            onReactionAdd={() => handleReact(item)}
+            poll={(item as any).poll}
+            onPollVote={handlePollVote}
+            onPollRemoveVote={handlePollRemoveVote}
+            isNewMessage={isNew}
+            customEmojis={customEmojis}
+          />
+
+          {/* Quick emoji picker */}
+          {showPicker && (
+            <View style={styles.emojiPicker}>
+              {QUICK_EMOJIS.map((emoji) => (
+                <TouchableOpacity
+                  key={emoji}
+                  style={styles.emojiPickerBtn}
+                  onPress={() => handleReactionToggle(item.id, emoji)}
+                >
+                  <Text style={styles.emojiPickerText}>{emoji}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
-            <Text style={styles.authorName}>{authorName}</Text>
-            <Text style={styles.messageTime}>{formatTime(item.createdAt)}</Text>
-          </View>
-        )}
-        <View style={[styles.messageBubbleWrapper, isOwn && styles.messageBubbleWrapperOwn, isGrouped && styles.messageGroupedWrapper]}>
-          <View style={[styles.messageBubble, isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther]}>
-            <Text style={[styles.messageContent, isOwn && styles.messageContentOwn]}>
-              {item.content}
-            </Text>
-          </View>
+          )}
         </View>
-
-        {/* Reaction display */}
-        {rxns.length > 0 && (
-          <View style={styles.reactionsRow}>
-            {rxns.map((r) => (
-              <TouchableOpacity
-                key={r.emoji}
-                style={[styles.reactionChip, r.me && styles.reactionChipActive]}
-                onPress={() => handleReactionToggle(item.id, r.emoji)}
-              >
-                <Text style={styles.reactionEmoji}>{r.emoji}</Text>
-                <Text style={[styles.reactionCount, r.me && styles.reactionCountActive]}>{r.count}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={styles.reactionAddBtn}
-              onPress={() => setReactionPickerMessageId(showPicker ? null : item.id)}
-            >
-              <Ionicons name="add-outline" size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Quick emoji picker */}
-        {showPicker && (
-          <View style={styles.emojiPicker}>
-            {QUICK_EMOJIS.map((emoji) => (
-              <TouchableOpacity
-                key={emoji}
-                style={styles.emojiPickerBtn}
-                onPress={() => handleReactionToggle(item.id, emoji)}
-              >
-                <Text style={styles.emojiPickerText}>{emoji}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </TouchableOpacity>
+      </SwipeableMessage>
     );
   };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.accentPrimary} />
+        <MessageSkeleton />
       </View>
     );
   }
@@ -374,52 +690,87 @@ export default function ChannelChatScreen({ route }: Props) {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}
     >
-      <FlatList
-        ref={flatListRef}
-        data={messageList}
-        keyExtractor={(item) => item.id}
-        renderItem={renderMessage}
-        contentContainerStyle={styles.messageList}
-        onEndReachedThreshold={0.1}
-        inverted={false}
-        onContentSizeChange={() => {
-          flatListRef.current?.scrollToEnd({ animated: false });
-        }}
-        ListHeaderComponent={
-          loadingMore ? (
-            <ActivityIndicator style={styles.loadingMore} color={colors.accentPrimary} />
-          ) : null
-        }
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="chatbubble-outline" size={48} color={colors.textMuted} />
-            <Text style={styles.emptyText}>No messages yet</Text>
-            <Text style={styles.emptySubtext}>Be the first to send a message!</Text>
-          </View>
-        }
-      />
+      <View style={styles.chatWrapper}>
+        {bgMedia && <ChatBackground url={bgMedia.url} type={bgMedia.type} />}
+        <FlatList
+          ref={flatListRef}
+          data={invertedData}
+          keyExtractor={(item) => item.id}
+          renderItem={renderMessage}
+          contentContainerStyle={styles.messageList}
+          inverted
+          keyboardDismissMode="interactive"
+          scrollEventThrottle={16}
+          onScroll={(e) => setShowScrollFAB(e.nativeEvent.contentOffset.y > 200)}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            loadingMore ? (
+              <ActivityIndicator style={styles.loadingMore} color={colors.accentPrimary} />
+            ) : null
+          }
+          ListEmptyComponent={
+            <EmptyState
+              icon="chatbubble-outline"
+              title="No messages yet"
+              subtitle="Be the first to send a message!"
+            />
+          }
+        />
+        <ScrollToBottomFAB
+          visible={showScrollFAB}
+          onPress={() => flatListRef.current?.scrollToOffset({ offset: 0, animated: true })}
+        />
+      </View>
 
       {/* Typing indicator */}
       {typingUsers.size > 0 && (
         <View style={styles.typingBar}>
+          <TypingDots />
           <Text style={styles.typingText}>
             {Array.from(typingUsers.values()).map((t) => t.username).join(', ')}{' '}
-            {typingUsers.size === 1 ? 'is' : 'are'} typing...
+            {typingUsers.size === 1 ? 'is' : 'are'} typing
           </Text>
         </View>
       )}
 
+      {/* Reply bar */}
+      {replyingTo && (
+        <ReplyBar
+          username={replyingTo.author?.displayName || replyingTo.author?.username || 'Unknown'}
+          onClose={() => setReplyingTo(null)}
+        />
+      )}
+
+      {/* Edit bar */}
+      {editingMessage && (
+        <EditBar onClose={() => { setEditingMessage(null); setInputText(''); }} />
+      )}
+
+      {/* Input bar */}
       <View style={styles.inputBar}>
-        <TouchableOpacity style={styles.attachButton} onPress={handlePickImage} disabled={sending}>
+        <TouchableOpacity style={styles.attachButton} onPress={handleAttachPress} disabled={sending}>
           <Ionicons name="add" size={24} color={colors.textMuted} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.attachButton}
+          onPress={() => setShowEmojiPicker(true)}
+        >
+          <Ionicons name="happy-outline" size={24} color={colors.textMuted} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.attachButton}
+          onPress={() => setShowStickerBrowser(true)}
+        >
+          <Ionicons name="pricetag-outline" size={22} color={colors.textMuted} />
         </TouchableOpacity>
         <TextInput
           style={styles.textInput}
           value={inputText}
           onChangeText={handleInputChange}
-          placeholder={`Message #${channelName}`}
+          placeholder={editingMessage ? 'Edit message...' : `Message #${channelName}`}
           placeholderTextColor={colors.textMuted}
           multiline
           maxLength={4000}
@@ -433,229 +784,65 @@ export default function ChannelChatScreen({ route }: Props) {
           disabled={!inputText.trim() || sending}
         >
           <Ionicons
-            name="send"
+            name={editingMessage ? 'checkmark' : 'send'}
             size={20}
             color={inputText.trim() && !sending ? colors.white : colors.textMuted}
           />
         </TouchableOpacity>
       </View>
+
+      <EmojiPicker
+        visible={showEmojiPicker}
+        onClose={() => setShowEmojiPicker(false)}
+        onSelect={handleEmojiSelect}
+      />
+
+      <StickerBrowser
+        visible={showStickerBrowser}
+        onClose={() => setShowStickerBrowser(false)}
+        guildId={route.params.guildId}
+        onSelect={handleStickerSelect}
+      />
+
+      {/* Context menu */}
+      {contextMenuMessage && (
+        <MessageContextMenu
+          visible={!!contextMenuMessage}
+          onClose={() => setContextMenuMessage(null)}
+          message={contextMenuMessage}
+          isOwn={contextMenuMessage.authorId === user?.id}
+          onReply={handleReply}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onPin={handlePin}
+          onUnpin={handleUnpin}
+          onReact={handleReact}
+          onBookmark={handleBookmark}
+          onForward={handleForward}
+        />
+      )}
+
+      {/* Pinned messages */}
+      <PinnedMessages
+        visible={showPinned}
+        onClose={() => setShowPinned(false)}
+        channelId={channelId}
+      />
+
+      {/* Forward modal */}
+      {forwardContent !== null && (
+        <ForwardModal
+          visible={forwardContent !== null}
+          onClose={() => setForwardContent(null)}
+          messageContent={forwardContent}
+        />
+      )}
+
+      <PollCreateSheet
+        visible={showPollCreator}
+        onClose={() => setShowPollCreator(false)}
+        channelId={channelId}
+      />
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bgPrimary,
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: colors.bgPrimary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  messageList: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    flexGrow: 1,
-    justifyContent: 'flex-end',
-  },
-  messageRow: {
-    marginBottom: spacing.md,
-  },
-  messageGrouped: {
-    marginBottom: spacing.xs,
-  },
-  messageHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-    gap: spacing.sm,
-  },
-  msgAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.bgElevated,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  msgAvatarOwn: {
-    backgroundColor: colors.accentPrimary,
-  },
-  msgAvatarText: {
-    color: colors.white,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-  },
-  authorName: {
-    color: colors.textPrimary,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-  },
-  messageTime: {
-    color: colors.textMuted,
-    fontSize: fontSize.xs,
-  },
-  messageContent: {
-    color: colors.textPrimary,
-    fontSize: fontSize.md,
-    lineHeight: 22,
-  },
-  messageContentOwn: {
-    color: colors.white,
-  },
-  messageBubbleWrapper: {
-    marginLeft: 40,
-    alignItems: 'flex-start',
-  },
-  messageBubbleWrapperOwn: {
-    marginLeft: 0, // Reset for own messages if handled globally, but here we keep typical left-align
-    // Wait, in standard chat, own messages might be right aligned. If we want that:
-    // width: '100%', alignItems: 'flex-end', marginLeft: 0
-  },
-  messageGroupedWrapper: {
-    marginTop: -spacing.xs,
-  },
-  messageBubble: {
-    backgroundColor: colors.bgElevated,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.lg,
-    maxWidth: '85%',
-  },
-  messageBubbleOther: {
-    borderTopLeftRadius: 4,
-  },
-  messageBubbleOwn: {
-    backgroundColor: colors.accentPrimary,
-    borderTopRightRadius: 4,
-  },
-  loadingMore: {
-    paddingVertical: spacing.md,
-  },
-  empty: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingTop: 80,
-  },
-  emptyText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-  },
-  emptySubtext: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-  },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.bgSecondary,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    gap: spacing.sm,
-  },
-  attachButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.bgElevated,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  textInput: {
-    flex: 1,
-    backgroundColor: colors.inputBg,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    fontSize: fontSize.md,
-    color: colors.textPrimary,
-    maxHeight: 120,
-  },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.accentPrimary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: colors.bgElevated,
-  },
-  // Typing indicator
-  typingBar: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xs,
-    backgroundColor: colors.bgSecondary,
-  },
-  typingText: {
-    color: colors.textMuted,
-    fontSize: fontSize.xs,
-    fontStyle: 'italic',
-  },
-  // Reactions
-  reactionsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginLeft: 40,
-    marginTop: spacing.xs,
-    gap: spacing.xs,
-  },
-  reactionChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.bgElevated,
-    borderRadius: borderRadius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: colors.transparent,
-  },
-  reactionChipActive: {
-    borderColor: colors.accentPrimary,
-    backgroundColor: colors.accentLight,
-  },
-  reactionEmoji: {
-    fontSize: fontSize.sm,
-  },
-  reactionCount: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-  },
-  reactionCountActive: {
-    color: colors.accentPrimary,
-  },
-  reactionAddBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.bgElevated,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  // Emoji picker
-  emojiPicker: {
-    flexDirection: 'row',
-    marginLeft: 40,
-    marginTop: spacing.xs,
-    backgroundColor: colors.bgElevated,
-    borderRadius: borderRadius.lg,
-    padding: spacing.xs,
-    gap: spacing.xs,
-  },
-  emojiPickerBtn: {
-    padding: spacing.xs,
-  },
-  emojiPickerText: {
-    fontSize: fontSize.xl,
-  },
-});

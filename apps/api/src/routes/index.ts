@@ -67,6 +67,33 @@ import { statsRouter } from './stats';
 import { authRateLimit, apiRateLimit } from '../middleware/rateLimit';
 import { registry } from '../lib/metrics';
 
+// Wave 25 imports
+import { reactionRolesRouter } from './reaction-roles';
+import { stickyMessagesRouter } from './sticky-messages';
+import { remindersRouter } from './reminders';
+import { starboardRouter } from './starboard';
+import { autoRolesRouter } from './auto-roles';
+import { showcaseRouter } from './showcase';
+import { friendshipStreaksRouter } from './friendship-streaks';
+import { interestTagsRouter } from './interest-tags';
+import { greetingCardsRouter } from './greeting-cards';
+import { textReactionsRouter, textReactionPopularRouter } from './text-reactions';
+import { timelineRouter } from './timeline';
+import { ticketsRouter } from './tickets';
+import { giveawaysRouter } from './giveaways';
+import { onboardingRouter } from './onboarding';
+import { guildLogRouter } from './guild-log';
+import { guildDigestRouter } from './guild-digest';
+import { musicRoomsRouter } from './music-rooms';
+import { whiteboardsRouter } from './whiteboards';
+import { moodBoardsRouter } from './mood-boards';
+import { photoAlbumsRouter } from './photo-albums';
+import { voiceEffectsRouter } from './voice-effects';
+import { studyRoomsRouter } from './study-rooms';
+import { guildQuestsRouter } from './guild-quests';
+import { guildFormsRouter } from './guild-forms';
+import { confessionsRouter } from './confessions';
+
 export const router = Router();
 
 // Health check
@@ -253,3 +280,31 @@ router.use('/', activityRouter);
 
 // Seasonal events
 router.use('/', seasonalEventsRouter);
+
+// Wave 25 features
+router.use('/guilds/:guildId/reaction-roles', reactionRolesRouter);
+router.use('/channels/:channelId/sticky', stickyMessagesRouter);
+router.use('/reminders', remindersRouter);
+router.use('/guilds/:guildId/starboard', starboardRouter);
+router.use('/guilds/:guildId/auto-roles', autoRolesRouter);
+router.use('/', showcaseRouter);
+router.use('/relationships', friendshipStreaksRouter);
+router.use('/', interestTagsRouter);
+router.use('/greeting-cards', greetingCardsRouter);
+router.use('/channels/:channelId/messages/:messageId/text-reactions', textReactionsRouter);
+router.use('/guilds/:guildId/text-reactions', textReactionPopularRouter);
+router.use('/guilds/:guildId/timeline', timelineRouter);
+router.use('/guilds/:guildId/tickets', ticketsRouter);
+router.use('/guilds/:guildId/giveaways', giveawaysRouter);
+router.use('/guilds/:guildId/onboarding', onboardingRouter);
+router.use('/guilds/:guildId/log-config', guildLogRouter);
+router.use('/guilds/:guildId/digest', guildDigestRouter);
+router.use('/channels/:channelId/music', musicRoomsRouter);
+router.use('/channels/:channelId/whiteboards', whiteboardsRouter);
+router.use('/channels/:channelId/mood-board', moodBoardsRouter);
+router.use('/guilds/:guildId/albums', photoAlbumsRouter);
+router.use('/', voiceEffectsRouter);
+router.use('/', studyRoomsRouter);
+router.use('/guilds/:guildId/quests', guildQuestsRouter);
+router.use('/guilds/:guildId/forms', guildFormsRouter);
+router.use('/', confessionsRouter);

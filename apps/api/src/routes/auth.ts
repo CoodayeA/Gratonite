@@ -29,7 +29,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import * as argon2 from 'argon2';
 import crypto from 'crypto';
-import { eq, or, sql } from 'drizzle-orm';
+import { eq, or, and, ne, sql } from 'drizzle-orm';
 
 import { db } from '../db/index';
 import { users } from '../db/schema/users';
@@ -97,6 +97,39 @@ const MFA_TOTP_DIGITS = 6;
  */
 function hashToken(raw: string): string {
   return crypto.createHash('sha256').update(raw).digest('hex');
+}
+
+/**
+ * parseDevice — Extract a human-readable device description from the User-Agent.
+ */
+function parseDevice(ua: string | undefined): string {
+  if (!ua) return 'Unknown Device';
+  if (ua.includes('Gratonite')) {
+    if (ua.includes('iOS')) return 'Gratonite Mobile on iOS';
+    if (ua.includes('Android')) return 'Gratonite Mobile on Android';
+    return 'Gratonite Mobile';
+  }
+  let browser = 'Browser';
+  if (ua.includes('Firefox')) browser = 'Firefox';
+  else if (ua.includes('Edg/')) browser = 'Edge';
+  else if (ua.includes('Chrome')) browser = 'Chrome';
+  else if (ua.includes('Safari')) browser = 'Safari';
+  let os = '';
+  if (ua.includes('Windows')) os = 'Windows';
+  else if (ua.includes('Mac OS X') || ua.includes('macOS')) os = 'macOS';
+  else if (ua.includes('Linux')) os = 'Linux';
+  else if (ua.includes('Android')) os = 'Android';
+  else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
+  return os ? `${browser} on ${os}` : browser;
+}
+
+/**
+ * getClientIp — Extract client IP, respecting X-Forwarded-For behind a proxy.
+ */
+function getClientIp(req: Request): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string') return forwarded.split(',')[0].trim();
+  return req.ip || req.socket.remoteAddress || '';
 }
 
 /**
@@ -619,6 +652,9 @@ authRouter.post('/login', asyncHandler(async (req: Request, res: Response): Prom
     userId: user.id,
     tokenHash,
     expiresAt,
+    device: parseDevice(req.headers['user-agent']),
+    ip: getClientIp(req),
+    lastActiveAt: new Date(),
   });
 
   // 8. Set the refresh token as an httpOnly cookie.
@@ -746,7 +782,12 @@ authRouter.post('/refresh', asyncHandler(async (req: Request, res: Response): Pr
     return;
   }
 
-  // 4. Issue a new access token.
+  // 4. Update last-active timestamp for session tracking.
+  await db.update(refreshTokens)
+    .set({ lastActiveAt: new Date() })
+    .where(eq(refreshTokens.tokenHash, tokenHash));
+
+  // 5. Issue a new access token.
   const accessToken = signAccessToken(userId);
 
   res.status(200).json({ accessToken });
@@ -780,6 +821,94 @@ authRouter.post('/logout', asyncHandler(async (req: Request, res: Response): Pro
   // Always clear the cookie, regardless of whether a token was found.
   res.clearCookie(REFRESH_COOKIE, { path: '/' });
   res.status(200).json({ message: 'Logged out' });
+}));
+
+// ---------------------------------------------------------------------------
+// Session management routes
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /sessions — List all active sessions for the authenticated user.
+ */
+authRouter.get('/sessions', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const now = new Date();
+  const rows = await db
+    .select({
+      id: refreshTokens.id,
+      tokenHash: refreshTokens.tokenHash,
+      device: refreshTokens.device,
+      ip: refreshTokens.ip,
+      lastActive: refreshTokens.lastActiveAt,
+      createdAt: refreshTokens.createdAt,
+      expiresAt: refreshTokens.expiresAt,
+    })
+    .from(refreshTokens)
+    .where(eq(refreshTokens.userId, req.userId!));
+
+  // Determine which session is the current one by matching the cookie or header.
+  const rawToken: string | undefined = req.cookies[REFRESH_COOKIE]
+    || (req.headers['x-refresh-token'] as string | undefined);
+  const currentHash = rawToken ? hashToken(rawToken) : null;
+
+  const sessions = rows
+    .filter((r) => r.expiresAt > now)
+    .map((r) => ({
+      id: r.id,
+      device: r.device || 'Unknown Device',
+      ip: r.ip || '',
+      lastActive: (r.lastActive || r.createdAt).toISOString(),
+      current: r.tokenHash === currentHash,
+    }));
+
+  res.json(sessions);
+}));
+
+/**
+ * DELETE /sessions/:id — Revoke a specific session (by refresh token row id).
+ */
+authRouter.delete('/sessions/:id', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const sessionId = req.params.id as string;
+
+  // Only allow deleting your own sessions.
+  const [row] = await db
+    .select({ id: refreshTokens.id, tokenHash: refreshTokens.tokenHash })
+    .from(refreshTokens)
+    .where(and(eq(refreshTokens.id, sessionId), eq(refreshTokens.userId, req.userId!)))
+    .limit(1);
+
+  if (!row) {
+    res.status(404).json({ code: 'NOT_FOUND', message: 'Session not found' });
+    return;
+  }
+
+  // Don't allow revoking the current session via this endpoint (use /logout).
+  const rawToken: string | undefined = req.cookies[REFRESH_COOKIE]
+    || (req.headers['x-refresh-token'] as string | undefined);
+  if (rawToken && hashToken(rawToken) === row.tokenHash) {
+    res.status(400).json({ code: 'CANNOT_REVOKE_CURRENT', message: 'Use /logout to end the current session' });
+    return;
+  }
+
+  await db.delete(refreshTokens).where(eq(refreshTokens.id, sessionId));
+  res.json({ message: 'Session revoked' });
+}));
+
+/**
+ * DELETE /sessions — Revoke all sessions except the current one.
+ */
+authRouter.delete('/sessions', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const rawToken: string | undefined = req.cookies[REFRESH_COOKIE]
+    || (req.headers['x-refresh-token'] as string | undefined);
+  const currentHash = rawToken ? hashToken(rawToken) : null;
+
+  if (currentHash) {
+    await db.delete(refreshTokens)
+      .where(and(eq(refreshTokens.userId, req.userId!), ne(refreshTokens.tokenHash, currentHash)));
+  } else {
+    await db.delete(refreshTokens).where(eq(refreshTokens.userId, req.userId!));
+  }
+
+  res.json({ message: 'All other sessions revoked' });
 }));
 
 // ---------------------------------------------------------------------------

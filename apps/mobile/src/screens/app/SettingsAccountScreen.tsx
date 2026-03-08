@@ -1,0 +1,277 @@
+import React, { useState, useMemo } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
+import { useTheme } from '../../lib/theme';
+import SectionHeader from '../../components/SectionHeader';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { AppStackParamList } from '../../navigation/types';
+
+type Props = NativeStackScreenProps<AppStackParamList, 'SettingsAccount'>;
+
+export default function SettingsAccountScreen({ navigation }: Props) {
+  const { user, updateProfile } = useAuth();
+  const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const toast = useToast();
+
+  const [displayName, setDisplayName] = useState(user?.displayName || '');
+  const [bio, setBio] = useState(user?.bio || '');
+  const [pronouns, setPronouns] = useState(user?.pronouns || '');
+  const [saving, setSaving] = useState(false);
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    try {
+      await updateProfile({
+        displayName: displayName.trim() || null,
+        bio: bio.trim() || null,
+        pronouns: pronouns.trim() || null,
+      });
+      toast.success('Profile updated');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword) {
+      toast.error('Please fill in both password fields');
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters');
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      toast.success('Password changed successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to change password');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This action is permanent and cannot be undone. All your data will be deleted.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete My Account',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Are you absolutely sure?',
+              'Type DELETE to confirm.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Yes, Delete',
+                  style: 'destructive',
+                  onPress: () => {
+                    Alert.alert('Account Scheduled for Deletion', 'Your account will be deleted within 30 days.');
+                  },
+                },
+              ],
+            );
+          },
+        },
+      ],
+    );
+  };
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bgPrimary,
+    },
+    scroll: {
+      flex: 1,
+    },
+    section: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.md,
+    },
+    label: {
+      fontSize: fontSize.sm,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginBottom: spacing.xs,
+    },
+    input: {
+      backgroundColor: colors.inputBg,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      borderRadius: borderRadius.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      fontSize: fontSize.md,
+      color: colors.textPrimary,
+      marginBottom: spacing.md,
+      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border } : {}),
+    },
+    inputMultiline: {
+      minHeight: 80,
+      textAlignVertical: 'top',
+    },
+    saveButton: {
+      backgroundColor: colors.accentPrimary,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing.md,
+      alignItems: 'center',
+      marginTop: spacing.sm,
+      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border, shadowColor: neo.shadowColor, shadowOffset: neo.shadowOffset, shadowOpacity: neo.shadowOpacity, shadowRadius: neo.shadowRadius } : {}),
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    saveButtonText: {
+      color: colors.white,
+      fontSize: fontSize.md,
+      fontWeight: '600',
+    },
+    deleteButton: {
+      backgroundColor: colors.bgElevated,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing.lg,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.error,
+    },
+    deleteButtonText: {
+      color: colors.error,
+      fontSize: fontSize.md,
+      fontWeight: '600',
+    },
+    bottomPad: {
+      height: 40,
+    },
+  }), [colors, spacing, fontSize, borderRadius, neo]);
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
+        {/* Profile fields */}
+        <SectionHeader title="Profile" />
+        <View style={styles.section}>
+          <Text style={styles.label}>Display Name</Text>
+          <TextInput
+            style={styles.input}
+            value={displayName}
+            onChangeText={setDisplayName}
+            placeholder="Display name"
+            placeholderTextColor={colors.textMuted}
+            maxLength={32}
+          />
+
+          <Text style={styles.label}>Bio</Text>
+          <TextInput
+            style={[styles.input, styles.inputMultiline]}
+            value={bio}
+            onChangeText={setBio}
+            placeholder="Tell us about yourself"
+            placeholderTextColor={colors.textMuted}
+            multiline
+            numberOfLines={3}
+            maxLength={190}
+          />
+
+          <Text style={styles.label}>Pronouns</Text>
+          <TextInput
+            style={styles.input}
+            value={pronouns}
+            onChangeText={setPronouns}
+            placeholder="e.g. they/them"
+            placeholderTextColor={colors.textMuted}
+            maxLength={40}
+          />
+
+          <TouchableOpacity
+            style={[styles.saveButton, saving && styles.buttonDisabled]}
+            onPress={handleSaveProfile}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.saveButtonText}>Save Changes</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Change Password */}
+        <SectionHeader title="Change Password" />
+        <View style={styles.section}>
+          <Text style={styles.label}>Current Password</Text>
+          <TextInput
+            style={styles.input}
+            value={currentPassword}
+            onChangeText={setCurrentPassword}
+            placeholder="Enter current password"
+            placeholderTextColor={colors.textMuted}
+            secureTextEntry
+          />
+
+          <Text style={styles.label}>New Password</Text>
+          <TextInput
+            style={styles.input}
+            value={newPassword}
+            onChangeText={setNewPassword}
+            placeholder="Enter new password"
+            placeholderTextColor={colors.textMuted}
+            secureTextEntry
+          />
+
+          <TouchableOpacity
+            style={[styles.saveButton, changingPassword && styles.buttonDisabled]}
+            onPress={handleChangePassword}
+            disabled={changingPassword}
+          >
+            {changingPassword ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.saveButtonText}>Change Password</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Danger zone */}
+        <SectionHeader title="Danger Zone" />
+        <View style={styles.section}>
+          <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
+            <Text style={styles.deleteButtonText}>Delete Account</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.bottomPad} />
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}

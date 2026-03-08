@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { guilds as guildsApi, invites as invitesApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, spacing, fontSize, borderRadius } from '../../lib/theme';
+import { useToast } from '../../contexts/ToastContext';
+import { useTheme } from '../../lib/theme';
 import type { Guild } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -20,6 +21,8 @@ import type { AppStackParamList } from '../../navigation/types';
 type Props = NativeStackScreenProps<AppStackParamList, 'GuildSettings'>;
 
 export default function GuildSettingsScreen({ route, navigation }: Props) {
+  const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const toast = useToast();
   const { guildId, guildName } = route.params;
   const { user } = useAuth();
   const [guild, setGuild] = useState<Guild | null>(null);
@@ -32,7 +35,7 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
       setGuild(data);
     } catch (err: any) {
       if (err.status !== 401) {
-        Alert.alert('Error', 'Failed to load server info');
+        toast.error('Failed to load server info');
       }
     } finally {
       setLoading(false);
@@ -58,7 +61,7 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
               // Navigate back to guild list
               navigation.popToTop();
             } catch (err: any) {
-              Alert.alert('Error', err.message || 'Failed to leave server');
+              toast.error(err.message || 'Failed to leave server');
             }
           },
         },
@@ -75,7 +78,7 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
         message: `Join ${guildName} on Gratonite! ${inviteUrl}`,
       });
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to create invite');
+      toast.error(err.message || 'Failed to create invite');
     } finally {
       setCreatingInvite(false);
     }
@@ -84,6 +87,110 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
   const handleViewMembers = () => {
     navigation.navigate('GuildMemberList', { guildId, guildName });
   };
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bgPrimary,
+    },
+    content: {
+      paddingBottom: spacing.xxxl,
+    },
+    loadingContainer: {
+      flex: 1,
+      backgroundColor: colors.bgPrimary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    guildHeader: {
+      alignItems: 'center',
+      paddingVertical: spacing.xxl,
+      paddingHorizontal: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    guildIcon: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: colors.accentPrimary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    guildIconText: {
+      color: colors.white,
+      fontSize: fontSize.xxxl,
+      fontWeight: '700',
+    },
+    guildName: {
+      color: colors.textPrimary,
+      fontSize: fontSize.xxl,
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+    guildDescription: {
+      color: colors.textSecondary,
+      fontSize: fontSize.sm,
+      textAlign: 'center',
+      marginTop: spacing.sm,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      marginTop: spacing.md,
+      gap: spacing.lg,
+    },
+    stat: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    statText: {
+      color: colors.textMuted,
+      fontSize: fontSize.sm,
+    },
+    section: {
+      marginTop: spacing.xl,
+    },
+    sectionTitle: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.sm,
+      fontSize: fontSize.xs,
+      fontWeight: '700',
+      color: colors.textMuted,
+      letterSpacing: 1,
+    },
+    actionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.lg,
+      gap: spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    actionText: {
+      flex: 1,
+      color: colors.textPrimary,
+      fontSize: fontSize.md,
+      fontWeight: '500',
+    },
+    dangerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.lg,
+      gap: spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    dangerText: {
+      flex: 1,
+      color: colors.error,
+      fontSize: fontSize.md,
+      fontWeight: '500',
+    },
+  }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) {
     return (
@@ -137,6 +244,60 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
           </Text>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('RoleList', { guildId })}>
+          <Ionicons name="shield-outline" size={22} color={colors.textSecondary} />
+          <Text style={styles.actionText}>Roles</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('InviteList', { guildId })}>
+          <Ionicons name="mail-outline" size={22} color={colors.textSecondary} />
+          <Text style={styles.actionText}>Invites</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('ScheduledEvents', { guildId })}>
+          <Ionicons name="calendar-outline" size={22} color={colors.textSecondary} />
+          <Text style={styles.actionText}>Events</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('AuditLog', { guildId })}>
+          <Ionicons name="document-text-outline" size={22} color={colors.textSecondary} />
+          <Text style={styles.actionText}>Audit Log</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('WebhookManagement', { guildId })}>
+          <Ionicons name="code-outline" size={22} color={colors.textSecondary} />
+          <Text style={styles.actionText}>Webhooks</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('WordFilterScreen', { guildId })}>
+          <Ionicons name="funnel-outline" size={22} color={colors.textSecondary} />
+          <Text style={styles.actionText}>Word Filter</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('RaidProtection', { guildId })}>
+          <Ionicons name="shield-checkmark-outline" size={22} color={colors.textSecondary} />
+          <Text style={styles.actionText}>Raid Protection</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('BanAppeals', { guildId })}>
+          <Ionicons name="hand-left-outline" size={22} color={colors.textSecondary} />
+          <Text style={styles.actionText}>Ban Appeals</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('GuildInsights', { guildId })}>
+          <Ionicons name="analytics-outline" size={22} color={colors.textSecondary} />
+          <Text style={styles.actionText}>Server Insights</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
       </View>
 
       {/* Danger zone */}
@@ -152,107 +313,3 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bgPrimary,
-  },
-  content: {
-    paddingBottom: spacing.xxxl,
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: colors.bgPrimary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  guildHeader: {
-    alignItems: 'center',
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  guildIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.accentPrimary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  guildIconText: {
-    color: colors.white,
-    fontSize: fontSize.xxxl,
-    fontWeight: '700',
-  },
-  guildName: {
-    color: colors.textPrimary,
-    fontSize: fontSize.xxl,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  guildDescription: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    marginTop: spacing.md,
-    gap: spacing.lg,
-  },
-  stat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  statText: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-  },
-  section: {
-    marginTop: spacing.xl,
-  },
-  sectionTitle: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-    fontSize: fontSize.xs,
-    fontWeight: '700',
-    color: colors.textMuted,
-    letterSpacing: 1,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    gap: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  actionText: {
-    flex: 1,
-    color: colors.textPrimary,
-    fontSize: fontSize.md,
-    fontWeight: '500',
-  },
-  dangerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    gap: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  dangerText: {
-    flex: 1,
-    color: colors.error,
-    fontSize: fontSize.md,
-    fontWeight: '500',
-  },
-});

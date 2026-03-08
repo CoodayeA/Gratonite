@@ -77,3 +77,7 @@ export const borderRadius = {
   xl: 16,
   full: 9999,
 };
+
+export { useTheme, useColors, useNeo } from './themeStore';
+export { themeStore } from './themeStore';
+export type { ThemeName, ThemeDefinition, NeoExtras } from './themes';

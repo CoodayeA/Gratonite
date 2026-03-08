@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,32 +12,120 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, spacing, fontSize, borderRadius } from '../../lib/theme';
+import { useTheme } from '../../lib/theme';
 import type { AuthStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   const { login } = useAuth();
+  const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const [loginInput, setLoginInput] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
 
   const handleLogin = async () => {
     if (!loginInput.trim() || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
+    if (mfaRequired && !mfaCode.trim()) {
+      Alert.alert('Error', 'Please enter your authentication code');
+      return;
+    }
 
     setLoading(true);
     try {
-      await login(loginInput.trim(), password);
+      await login(loginInput.trim(), password, mfaRequired ? mfaCode.trim() : undefined);
     } catch (err: any) {
-      Alert.alert('Login Failed', err.message || 'Invalid credentials');
+      if (err.mfaRequired) {
+        setMfaRequired(true);
+      } else {
+        Alert.alert('Login Failed', err.message || 'Invalid credentials');
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bgPrimary,
+    },
+    inner: {
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: spacing.xxxl,
+    },
+    logo: {
+      fontSize: fontSize.xxxl,
+      fontWeight: neo ? '800' : '700',
+      color: colors.accentPrimary,
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+      ...(neo ? { textTransform: 'uppercase' as const } : {}),
+    },
+    subtitle: {
+      fontSize: fontSize.lg,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: spacing.xxxl,
+    },
+    form: {
+      gap: spacing.md,
+    },
+    label: {
+      fontSize: fontSize.sm,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginBottom: spacing.xs,
+    },
+    input: {
+      backgroundColor: colors.inputBg,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      borderRadius: borderRadius.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      fontSize: fontSize.md,
+      color: colors.textPrimary,
+      marginBottom: spacing.md,
+      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border } : {}),
+    },
+    button: {
+      backgroundColor: colors.accentPrimary,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing.lg,
+      alignItems: 'center',
+      marginTop: spacing.md,
+      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border, shadowColor: neo.shadowColor, shadowOffset: neo.shadowOffset, shadowOpacity: neo.shadowOpacity, shadowRadius: neo.shadowRadius } : {}),
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    buttonText: {
+      color: colors.white,
+      fontSize: fontSize.md,
+      fontWeight: '600',
+    },
+    linkButton: {
+      alignItems: 'center',
+      marginTop: spacing.lg,
+    },
+    linkText: {
+      color: colors.textSecondary,
+      fontSize: fontSize.sm,
+    },
+    linkBold: {
+      color: colors.accentPrimary,
+      fontWeight: '600',
+    },
+  }), [colors, spacing, fontSize, borderRadius, neo]);
 
   return (
     <KeyboardAvoidingView
@@ -71,6 +159,22 @@ export default function LoginScreen({ navigation }: Props) {
             secureTextEntry
           />
 
+          {mfaRequired && (
+            <>
+              <Text style={styles.label}>Authentication Code</Text>
+              <TextInput
+                style={styles.input}
+                value={mfaCode}
+                onChangeText={setMfaCode}
+                placeholder="Enter 6-digit code"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="number-pad"
+                maxLength={6}
+                autoFocus
+              />
+            </>
+          )}
+
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleLogin}
@@ -96,77 +200,3 @@ export default function LoginScreen({ navigation }: Props) {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bgPrimary,
-  },
-  inner: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xxxl,
-  },
-  logo: {
-    fontSize: fontSize.xxxl,
-    fontWeight: '700',
-    color: colors.accentPrimary,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    fontSize: fontSize.lg,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.xxxl,
-  },
-  form: {
-    gap: spacing.md,
-  },
-  label: {
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    backgroundColor: colors.inputBg,
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    fontSize: fontSize.md,
-    color: colors.textPrimary,
-    marginBottom: spacing.md,
-  },
-  button: {
-    backgroundColor: colors.accentPrimary,
-    borderRadius: borderRadius.md,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: colors.white,
-    fontSize: fontSize.md,
-    fontWeight: '600',
-  },
-  linkButton: {
-    alignItems: 'center',
-    marginTop: spacing.lg,
-  },
-  linkText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-  },
-  linkBold: {
-    color: colors.accentPrimary,
-    fontWeight: '600',
-  },
-});

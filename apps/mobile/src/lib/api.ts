@@ -27,6 +27,27 @@ import type {
   WikiPage,
   WikiRevision,
   Notification,
+  Bookmark,
+  Draft,
+  ScheduledMessage,
+  UserMute,
+  Sticker,
+  GroupDMChannel,
+  UserSettings,
+  Session,
+  ShopItem,
+  InventoryItem,
+  WalletInfo,
+  LedgerEntry,
+  ReadState,
+  AuditLogEntry,
+  Webhook,
+  WordFilter,
+  BanAppeal,
+  ServerFolder,
+  ChannelNotificationPref,
+  ForumPost,
+  GuildEmoji,
 } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -35,9 +56,7 @@ import type {
 
 // For local dev, use your machine's LAN IP (not localhost) so the phone can reach it.
 // In production, this should be https://api.gratonite.chat
-const API_BASE = __DEV__
-  ? 'http://192.168.68.103:4000/api/v1'  // Change to your LAN IP
-  : 'https://api.gratonite.chat/api/v1';
+const API_BASE = 'https://api.gratonite.chat/api/v1';
 
 export { API_BASE };
 
@@ -272,16 +291,36 @@ export const auth = {
 // Users
 // ---------------------------------------------------------------------------
 
+function flattenUserProfile(raw: any): User {
+  const profile = raw.profile ?? {};
+  return {
+    id: raw.id,
+    username: raw.username,
+    email: raw.email ?? '',
+    emailVerified: raw.emailVerified ?? false,
+    isAdmin: raw.isAdmin ?? false,
+    displayName: profile.displayName ?? raw.displayName ?? null,
+    avatarHash: profile.avatarHash ?? raw.avatarHash ?? null,
+    bannerHash: profile.bannerHash ?? raw.bannerHash ?? null,
+    bio: profile.bio ?? raw.bio ?? null,
+    pronouns: profile.pronouns ?? raw.pronouns ?? null,
+    status: raw.status ?? 'online',
+    customStatus: raw.customStatus ?? null,
+  };
+}
+
 export const users = {
-  getMe() {
-    return apiFetch<User>('/users/@me');
+  async getMe() {
+    const raw = await apiFetch<any>('/users/@me');
+    return flattenUserProfile(raw);
   },
 
-  updateMe(data: Partial<Pick<User, 'displayName' | 'bio' | 'pronouns'>>) {
-    return apiFetch<User>('/users/@me', {
+  async updateMe(data: Partial<Pick<User, 'displayName' | 'bio' | 'pronouns'>>) {
+    const raw = await apiFetch<any>('/users/@me', {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
+    return flattenUserProfile(raw);
   },
 
   updatePresence(status: PresenceStatus) {
@@ -291,8 +330,9 @@ export const users = {
     });
   },
 
-  getProfile(userId: string) {
-    return apiFetch<User>(`/users/${userId}/profile`);
+  async getProfile(userId: string) {
+    const raw = await apiFetch<any>(`/users/${userId}/profile`);
+    return flattenUserProfile(raw);
   },
 
   search(query: string) {
@@ -348,6 +388,10 @@ export const guilds = {
   discover() {
     return apiFetch<Guild[]>('/guilds/discover');
   },
+
+  join(guildId: string) {
+    return apiFetch<Guild>(`/guilds/${guildId}/join`, { method: 'POST' });
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -392,10 +436,10 @@ export const messages = {
     return apiFetch<Message[]>(`/channels/${channelId}/messages${qs}`);
   },
 
-  send(channelId: string, content: string) {
+  send(channelId: string, content: string, opts?: { replyToId?: string; stickerId?: string }) {
     return apiFetch<Message>(`/channels/${channelId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, ...opts }),
     });
   },
 
@@ -424,8 +468,15 @@ export const messages = {
 // ---------------------------------------------------------------------------
 
 export const relationships = {
-  getAll() {
-    return apiFetch<Relationship[]>('/relationships');
+  async getAll() {
+    const raw = await apiFetch<any[]>('/relationships');
+    return raw.map((r): Relationship => ({
+      id: r.id,
+      userId: r.user?.id ?? '',
+      targetId: r.user?.id ?? '',
+      type: (r.type as string).toLowerCase() as Relationship['type'],
+      user: r.user ?? undefined,
+    }));
   },
 
   sendFriendRequest(userId: string) {
@@ -451,15 +502,27 @@ export const relationships = {
     return apiFetch<void>(`/relationships/blocks/${userId}`, { method: 'DELETE' });
   },
 
-  getDMChannels() {
-    return apiFetch<DMChannel[]>('/relationships/channels');
+  async getDMChannels() {
+    const raw = await apiFetch<any[]>('/relationships/channels');
+    return raw.map((ch): DMChannel => ({
+      id: ch.id,
+      recipientId: ch.otherUser?.id ?? '',
+      recipient: ch.otherUser ?? undefined,
+      lastMessageAt: ch.lastMessage?.createdAt ?? null,
+    }));
   },
 
-  openDM(recipientId: string) {
-    return apiFetch<DMChannel>('/relationships/channels', {
+  async openDM(recipientId: string) {
+    const raw = await apiFetch<any>('/relationships/channels', {
       method: 'POST',
-      body: JSON.stringify({ recipientId }),
+      body: JSON.stringify({ userId: recipientId }),
     });
+    return {
+      id: raw.id,
+      recipientId,
+      recipient: raw.otherUser ?? undefined,
+      lastMessageAt: raw.lastMessage?.createdAt ?? null,
+    } as DMChannel;
   },
 };
 
@@ -840,5 +903,474 @@ export const notifications = {
     return apiFetch<{ code: string }>(`/notifications/${notificationId}`, {
       method: 'DELETE',
     });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Bookmarks
+// ---------------------------------------------------------------------------
+
+export const bookmarks = {
+  list() {
+    return apiFetch<Bookmark[]>('/users/@me/bookmarks');
+  },
+
+  create(messageId: string, note?: string) {
+    return apiFetch<Bookmark>('/users/@me/bookmarks', {
+      method: 'POST',
+      body: JSON.stringify({ messageId, note }),
+    });
+  },
+
+  delete(messageId: string) {
+    return apiFetch<void>(`/users/@me/bookmarks/${messageId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Drafts
+// ---------------------------------------------------------------------------
+
+export const drafts = {
+  get(channelId: string) {
+    return apiFetch<Draft | null>(`/drafts/${channelId}`);
+  },
+
+  save(channelId: string, content: string) {
+    return apiFetch<Draft>('/drafts', {
+      method: 'PUT',
+      body: JSON.stringify({ channelId, content }),
+    });
+  },
+
+  delete(channelId: string) {
+    return apiFetch<void>(`/drafts/${channelId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Scheduled Messages
+// ---------------------------------------------------------------------------
+
+export const scheduledMessages = {
+  list(channelId: string) {
+    return apiFetch<ScheduledMessage[]>(`/channels/${channelId}/scheduled-messages`);
+  },
+
+  create(channelId: string, content: string, scheduledFor: string) {
+    return apiFetch<ScheduledMessage>(`/channels/${channelId}/scheduled-messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content, scheduledFor }),
+    });
+  },
+
+  delete(messageId: string) {
+    return apiFetch<void>(`/scheduled-messages/${messageId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// User Mutes
+// ---------------------------------------------------------------------------
+
+export const userMutes = {
+  list() {
+    return apiFetch<UserMute[]>('/users/@me/mutes');
+  },
+
+  mute(userId: string) {
+    return apiFetch<UserMute>(`/users/@me/mutes/${userId}`, { method: 'PUT' });
+  },
+
+  unmute(userId: string) {
+    return apiFetch<void>(`/users/@me/mutes/${userId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Stickers
+// ---------------------------------------------------------------------------
+
+export const stickers = {
+  listForGuild(guildId: string) {
+    return apiFetch<Sticker[]>(`/guilds/${guildId}/stickers`);
+  },
+
+  create(guildId: string, formData: FormData) {
+    return apiFetch<Sticker>(`/guilds/${guildId}/stickers`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  delete(guildId: string, stickerId: string) {
+    return apiFetch<void>(`/guilds/${guildId}/stickers/${stickerId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Guild Emojis
+// ---------------------------------------------------------------------------
+
+export const guildEmojis = {
+  list(guildId: string) {
+    return apiFetch<GuildEmoji[]>(`/guilds/${guildId}/emojis`);
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Group DMs
+// ---------------------------------------------------------------------------
+
+export const groupDms = {
+  create(recipientIds: string[], name?: string) {
+    return apiFetch<GroupDMChannel>('/relationships/group-channels', {
+      method: 'POST',
+      body: JSON.stringify({ recipientIds, name }),
+    });
+  },
+
+  update(channelId: string, data: { name?: string }) {
+    return apiFetch<GroupDMChannel>(`/relationships/group-channels/${channelId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  addMember(channelId: string, userId: string) {
+    return apiFetch<void>(`/relationships/group-channels/${channelId}/members/${userId}`, {
+      method: 'PUT',
+    });
+  },
+
+  removeMember(channelId: string, userId: string) {
+    return apiFetch<void>(`/relationships/group-channels/${channelId}/members/${userId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  leave(channelId: string) {
+    return apiFetch<void>(`/relationships/group-channels/${channelId}/members/@me`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Moderation
+// ---------------------------------------------------------------------------
+
+export const moderation = {
+  kick(guildId: string, userId: string, reason?: string) {
+    return apiFetch<void>(`/guilds/${guildId}/members/${userId}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  ban(guildId: string, userId: string, reason?: string, deleteMessageDays?: number) {
+    return apiFetch<void>(`/guilds/${guildId}/bans/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ reason, deleteMessageDays }),
+    });
+  },
+
+  unban(guildId: string, userId: string) {
+    return apiFetch<void>(`/guilds/${guildId}/bans/${userId}`, { method: 'DELETE' });
+  },
+
+  timeout(guildId: string, userId: string, duration: number, reason?: string) {
+    return apiFetch<void>(`/guilds/${guildId}/members/${userId}/timeout`, {
+      method: 'POST',
+      body: JSON.stringify({ duration, reason }),
+    });
+  },
+
+  warn(guildId: string, userId: string, reason: string) {
+    return apiFetch<void>(`/guilds/${guildId}/members/${userId}/warn`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  getAuditLog(guildId: string, limit?: number) {
+    const qs = limit ? `?limit=${limit}` : '';
+    return apiFetch<AuditLogEntry[]>(`/guilds/${guildId}/audit-log${qs}`);
+  },
+
+  getBanAppeals(guildId: string) {
+    return apiFetch<BanAppeal[]>(`/guilds/${guildId}/ban-appeals`);
+  },
+
+  reviewBanAppeal(guildId: string, appealId: string, status: 'accepted' | 'rejected') {
+    return apiFetch<BanAppeal>(`/guilds/${guildId}/ban-appeals/${appealId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Channel Notification Overrides
+// ---------------------------------------------------------------------------
+
+export const channelOverrides = {
+  list() {
+    return apiFetch<ChannelNotificationPref[]>('/users/@me/channel-notification-prefs');
+  },
+
+  set(channelId: string, level: 'all' | 'mentions' | 'none') {
+    return apiFetch<ChannelNotificationPref>(`/users/@me/channel-notification-prefs/${channelId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ level }),
+    });
+  },
+
+  delete(channelId: string) {
+    return apiFetch<void>(`/users/@me/channel-notification-prefs/${channelId}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// User Settings
+// ---------------------------------------------------------------------------
+
+export const userSettings = {
+  get() {
+    return apiFetch<UserSettings>('/users/@me/settings');
+  },
+
+  update(data: Partial<UserSettings>) {
+    return apiFetch<UserSettings>('/users/@me/settings', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async getSessions() {
+    const rt = await SecureStore.getItemAsync(REFRESH_KEY);
+    return apiFetch<Session[]>('/auth/sessions', {
+      headers: rt ? { 'X-Refresh-Token': rt } : {},
+    });
+  },
+
+  async logoutSession(sessionId: string) {
+    const rt = await SecureStore.getItemAsync(REFRESH_KEY);
+    return apiFetch<void>(`/auth/sessions/${sessionId}`, {
+      method: 'DELETE',
+      headers: rt ? { 'X-Refresh-Token': rt } : {},
+    });
+  },
+
+  async logoutAllSessions() {
+    const rt = await SecureStore.getItemAsync(REFRESH_KEY);
+    return apiFetch<void>('/auth/sessions', {
+      method: 'DELETE',
+      headers: rt ? { 'X-Refresh-Token': rt } : {},
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Push Notifications
+// ---------------------------------------------------------------------------
+
+export const push = {
+  register(token: string, platform: string) {
+    return apiFetch<{ code: string }>('/push/register', {
+      method: 'POST',
+      body: JSON.stringify({ token, platform }),
+    });
+  },
+
+  unregister(token: string) {
+    return apiFetch<void>('/push/unregister', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Economy / Shop
+// ---------------------------------------------------------------------------
+
+export const economy = {
+  getWallet() {
+    return apiFetch<WalletInfo>('/economy/wallet');
+  },
+
+  claimDaily() {
+    return apiFetch<{ amount: number; balance: number }>('/economy/claim-daily', {
+      method: 'POST',
+    });
+  },
+
+  getLedger(limit?: number) {
+    const qs = limit ? `?limit=${limit}` : '';
+    return apiFetch<LedgerEntry[]>(`/economy/ledger${qs}`);
+  },
+};
+
+export const shop = {
+  list() {
+    return apiFetch<ShopItem[]>('/shop');
+  },
+
+  purchase(itemId: string) {
+    return apiFetch<InventoryItem>(`/shop/${itemId}/purchase`, { method: 'POST' });
+  },
+
+  getInventory() {
+    return apiFetch<InventoryItem[]>('/shop/inventory');
+  },
+
+  equip(inventoryItemId: string) {
+    return apiFetch<void>(`/shop/inventory/${inventoryItemId}/equip`, { method: 'POST' });
+  },
+
+  unequip(inventoryItemId: string) {
+    return apiFetch<void>(`/shop/inventory/${inventoryItemId}/unequip`, { method: 'POST' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Read State
+// ---------------------------------------------------------------------------
+
+export const readState = {
+  getAll() {
+    return apiFetch<ReadState[]>('/users/@me/read-states');
+  },
+
+  ack(channelId: string, messageId: string) {
+    return apiFetch<void>(`/users/@me/read-states/${channelId}/ack`, {
+      method: 'POST',
+      body: JSON.stringify({ messageId }),
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// User Notes
+// ---------------------------------------------------------------------------
+
+export const userNotes = {
+  get(userId: string) {
+    return apiFetch<{ note: string }>(`/users/${userId}/notes`);
+  },
+
+  set(userId: string, note: string) {
+    return apiFetch<void>(`/users/${userId}/notes`, {
+      method: 'PUT',
+      body: JSON.stringify({ note }),
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Webhooks
+// ---------------------------------------------------------------------------
+
+export const webhooks = {
+  listForGuild(guildId: string) {
+    return apiFetch<Webhook[]>(`/guilds/${guildId}/webhooks`);
+  },
+
+  create(guildId: string, data: { name: string; channelId: string }) {
+    return apiFetch<Webhook>(`/guilds/${guildId}/webhooks`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  update(webhookId: string, data: { name?: string; channelId?: string }) {
+    return apiFetch<Webhook>(`/webhooks/${webhookId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete(webhookId: string) {
+    return apiFetch<void>(`/webhooks/${webhookId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Word Filter
+// ---------------------------------------------------------------------------
+
+export const wordFilter = {
+  list(guildId: string) {
+    return apiFetch<WordFilter[]>(`/guilds/${guildId}/word-filter`);
+  },
+
+  add(guildId: string, word: string, action: 'block' | 'delete' | 'warn') {
+    return apiFetch<WordFilter>(`/guilds/${guildId}/word-filter`, {
+      method: 'POST',
+      body: JSON.stringify({ word, action }),
+    });
+  },
+
+  remove(guildId: string, filterId: string) {
+    return apiFetch<void>(`/guilds/${guildId}/word-filter/${filterId}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Server Folders
+// ---------------------------------------------------------------------------
+
+export const serverFolders = {
+  list() {
+    return apiFetch<ServerFolder[]>('/users/@me/server-folders');
+  },
+
+  create(data: { name: string; guildIds: string[]; color?: string }) {
+    return apiFetch<ServerFolder>('/users/@me/server-folders', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  update(folderId: string, data: Partial<Pick<ServerFolder, 'name' | 'color' | 'guildIds' | 'position'>>) {
+    return apiFetch<ServerFolder>(`/users/@me/server-folders/${folderId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete(folderId: string) {
+    return apiFetch<void>(`/users/@me/server-folders/${folderId}`, { method: 'DELETE' });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Forum
+// ---------------------------------------------------------------------------
+
+export const forum = {
+  listPosts(channelId: string) {
+    return apiFetch<ForumPost[]>(`/channels/${channelId}/forum-posts`);
+  },
+
+  createPost(channelId: string, data: { title: string; content: string; tags?: string[] }) {
+    return apiFetch<ForumPost>(`/channels/${channelId}/forum-posts`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getPost(postId: string) {
+    return apiFetch<ForumPost>(`/forum-posts/${postId}`);
+  },
+
+  getReplies(postId: string, params?: CursorPaginationParams) {
+    const qs = buildQuery(params);
+    return apiFetch<Message[]>(`/forum-posts/${postId}/replies${qs}`);
   },
 };

@@ -10,13 +10,12 @@ let socket: Socket | null = null;
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
 // Derive the socket URL from API_BASE (strip /api/v1)
-const SOCKET_URL = __DEV__
-  ? 'http://192.168.68.103:4000'
-  : 'https://api.gratonite.chat';
+const SOCKET_URL = 'https://api.gratonite.chat';
 
 export function connectSocket(): Socket {
   if (socket?.connected) return socket;
 
+  const token = getAccessToken();
   socket = io(SOCKET_URL, {
     autoConnect: false,
     transports: ['websocket', 'polling'],
@@ -24,6 +23,8 @@ export function connectSocket(): Socket {
     reconnectionDelay: 1000,
     reconnectionDelayMax: 30000,
     reconnectionAttempts: Infinity,
+    auth: token ? { token } : undefined,
+    query: token ? { token } : undefined,
   });
 
   socket.on('connect', () => {
@@ -127,4 +128,39 @@ export function onMessageReactionRemove(
 ): () => void {
   socket?.on('MESSAGE_REACTION_REMOVE', cb);
   return () => { socket?.off('MESSAGE_REACTION_REMOVE', cb); };
+}
+
+export function onChannelUpdate(
+  cb: (data: { id: string; guildId: string; name?: string; topic?: string; position?: number }) => void,
+): () => void {
+  socket?.on('CHANNEL_UPDATE', cb);
+  return () => { socket?.off('CHANNEL_UPDATE', cb); };
+}
+
+export function onGuildUpdate(
+  cb: (data: { id: string; name?: string; iconHash?: string | null }) => void,
+): () => void {
+  socket?.on('GUILD_UPDATE', cb);
+  return () => { socket?.off('GUILD_UPDATE', cb); };
+}
+
+export function onMemberJoin(
+  cb: (data: { guildId: string; userId: string; username: string }) => void,
+): () => void {
+  socket?.on('GUILD_MEMBER_ADD', cb);
+  return () => { socket?.off('GUILD_MEMBER_ADD', cb); };
+}
+
+export function onMemberLeave(
+  cb: (data: { guildId: string; userId: string }) => void,
+): () => void {
+  socket?.on('GUILD_MEMBER_REMOVE', cb);
+  return () => { socket?.off('GUILD_MEMBER_REMOVE', cb); };
+}
+
+export function onReadStateUpdate(
+  cb: (data: { channelId: string; lastReadMessageId: string; mentionCount: number }) => void,
+): () => void {
+  socket?.on('READ_STATE_UPDATE', cb);
+  return () => { socket?.off('READ_STATE_UPDATE', cb); };
 }

@@ -1,23 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LiveKitRoom } from '@livekit/react-native';
 import { voice as voiceApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, spacing, fontSize, borderRadius } from '../../lib/theme';
+import { useToast } from '../../contexts/ToastContext';
+import { useTheme } from '../../lib/theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 
 type Props = any;
 
 export default function VoiceChannelScreen({ route, navigation }: Props) {
+  const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const toast = useToast();
   const { channelId, channelName } = route.params;
   const { user } = useAuth();
   const [connected, setConnected] = useState(false);
@@ -37,7 +38,7 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
       // Note: Full LiveKit connection would use @livekit/react-native here
       // For now we show the connected state with controls
     } catch (err: any) {
-      Alert.alert('Voice Error', err.message || 'Failed to join voice channel');
+      toast.error(err.message || 'Failed to join voice channel');
     } finally {
       setConnecting(false);
     }
@@ -136,122 +137,111 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
     </>
   );
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bgPrimary,
+    },
+    content: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.xxxl,
+    },
+    channelInfo: {
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginBottom: spacing.xxxl,
+    },
+    channelName: {
+      fontSize: fontSize.xxl,
+      fontWeight: '700',
+      color: colors.textPrimary,
+    },
+    statusText: {
+      fontSize: fontSize.md,
+      color: colors.online,
+    },
+    participant: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      backgroundColor: colors.bgSecondary,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      borderRadius: borderRadius.lg,
+      width: '100%',
+    },
+    avatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.accentPrimary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatarMuted: {
+      opacity: 0.6,
+    },
+    avatarText: {
+      color: colors.white,
+      fontSize: fontSize.md,
+      fontWeight: '600',
+    },
+    participantName: {
+      color: colors.textPrimary,
+      fontSize: fontSize.md,
+      fontWeight: '500',
+      flex: 1,
+    },
+    loader: {
+      marginTop: spacing.xxxl,
+    },
+    controls: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: spacing.xl,
+      paddingVertical: spacing.xxxl,
+      paddingHorizontal: spacing.lg,
+      backgroundColor: colors.bgSecondary,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    controlBtn: {
+      alignItems: 'center',
+      gap: spacing.xs,
+      padding: spacing.md,
+      borderRadius: borderRadius.lg,
+    },
+    controlBtnActive: {
+      backgroundColor: 'rgba(240, 71, 71, 0.15)',
+    },
+    controlLabel: {
+      color: colors.textSecondary,
+      fontSize: fontSize.xs,
+    },
+    controlLabelActive: {
+      color: colors.error,
+    },
+    hangupBtn: {
+      alignItems: 'center',
+      gap: spacing.xs,
+      padding: spacing.md,
+      borderRadius: borderRadius.lg,
+      backgroundColor: colors.error,
+      paddingHorizontal: spacing.xl,
+    },
+    hangupLabel: {
+      color: colors.white,
+      fontSize: fontSize.xs,
+      fontWeight: '600',
+    },
+  }), [colors, spacing, fontSize, borderRadius, neo]);
+
   return (
     <View style={styles.container}>
-      {token && endpoint ? (
-        <LiveKitRoom
-          serverUrl={endpoint}
-          token={token}
-          connect={true}
-          audio={!muted}
-        >
-          {renderContent()}
-        </LiveKitRoom>
-      ) : (
-        renderContent()
-      )}
+      {renderContent()}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bgPrimary,
-  },
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xxxl,
-  },
-  channelInfo: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.xxxl,
-  },
-  channelName: {
-    fontSize: fontSize.xxl,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  statusText: {
-    fontSize: fontSize.md,
-    color: colors.online,
-  },
-  participant: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.bgSecondary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-    width: '100%',
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.accentPrimary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarMuted: {
-    opacity: 0.6,
-  },
-  avatarText: {
-    color: colors.white,
-    fontSize: fontSize.md,
-    fontWeight: '600',
-  },
-  participantName: {
-    color: colors.textPrimary,
-    fontSize: fontSize.md,
-    fontWeight: '500',
-    flex: 1,
-  },
-  loader: {
-    marginTop: spacing.xxxl,
-  },
-  controls: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.xl,
-    paddingVertical: spacing.xxxl,
-    paddingHorizontal: spacing.lg,
-    backgroundColor: colors.bgSecondary,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  controlBtn: {
-    alignItems: 'center',
-    gap: spacing.xs,
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
-  },
-  controlBtnActive: {
-    backgroundColor: 'rgba(240, 71, 71, 0.15)',
-  },
-  controlLabel: {
-    color: colors.textSecondary,
-    fontSize: fontSize.xs,
-  },
-  controlLabelActive: {
-    color: colors.error,
-  },
-  hangupBtn: {
-    alignItems: 'center',
-    gap: spacing.xs,
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.error,
-    paddingHorizontal: spacing.xl,
-  },
-  hangupLabel: {
-    color: colors.white,
-    fontSize: fontSize.xs,
-    fontWeight: '600',
-  },
-});
