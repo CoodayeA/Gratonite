@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bell, Search, HelpCircle, X, Users, MessageSquare, Hash, Loader2 } from 'lucide-react';
+import { Bell, Search, HelpCircle, X, Users, MessageSquare, Hash, Loader2, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from './ToastManager';
 import { api } from '../../lib/api';
 import { onNotificationCreate } from '../../lib/socket';
+import { clearAllUnread } from '../../store/unreadStore';
 import Avatar from './Avatar';
 import { buildDmRoute, buildGuildChannelRoute, normalizeLegacyRoute } from '../../lib/routes';
 
@@ -290,7 +291,10 @@ export const TopBarActions = () => {
                 }}>
                     <div style={{ padding: '16px', borderBottom: '1px solid var(--stroke)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)' }}>
                         <h3 style={{ fontSize: '14px', fontWeight: 600, margin: 0, fontFamily: 'var(--font-display)' }}>Notifications</h3>
-                        <span onClick={() => { api.notifications.markAllRead().catch(() => {}); setNotifications([]); setUnreadCount(0); addToast({ title: 'Notifications Cleared', description: 'All notifications marked as read.', variant: 'success' }); setIsOpen(false); }} style={{ fontSize: '12px', color: 'var(--accent-blue)', cursor: 'pointer', fontWeight: 500 }}>Mark all read</span>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <span onClick={() => { api.notifications.markAllRead().catch(() => {}); setNotifications(prev => prev.map(n => ({ ...n, unread: false }))); setUnreadCount(0); clearAllUnread(); addToast({ title: 'All marked as read', variant: 'success' }); }} style={{ fontSize: '12px', color: 'var(--accent-blue)', cursor: 'pointer', fontWeight: 500 }}>Mark all read</span>
+                            <span onClick={() => { api.notifications.clearAll().catch(() => {}); setNotifications([]); setUnreadCount(0); clearAllUnread(); addToast({ title: 'All notifications cleared', variant: 'success' }); setIsOpen(false); }} style={{ fontSize: '12px', color: 'var(--error)', cursor: 'pointer', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '3px' }}><Trash2 size={11} /> Clear all</span>
+                        </div>
                     </div>
 
                     <div style={{ maxHeight: '300px', overflowY: 'auto', padding: '8px' }}>
