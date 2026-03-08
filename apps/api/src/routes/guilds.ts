@@ -563,6 +563,23 @@ guildsRouter.get(
         }
       }
 
+      // Fetch average ratings for returned guilds
+      const ratingsByGuildId: Record<string, { avg: number; count: number }> = {};
+      if (guildIds.length > 0) {
+        const ratingRows = await db
+          .select({
+            guildId: guildRatings.guildId,
+            avg: sql<number>`coalesce(avg(${guildRatings.rating}), 0)`.mapWith(Number),
+            count: sql<number>`count(*)::int`.mapWith(Number),
+          })
+          .from(guildRatings)
+          .where(inArray(guildRatings.guildId, guildIds))
+          .groupBy(guildRatings.guildId);
+        for (const r of ratingRows) {
+          ratingsByGuildId[r.guildId] = { avg: Math.round(r.avg * 100) / 100, count: r.count };
+        }
+      }
+
       const enriched = rows.map((row) => {
         const extractedTags = extractTags(row.name, row.description);
         const dbTags = tagsByGuildId[row.id] ?? [];
@@ -584,6 +601,8 @@ guildsRouter.get(
           isPublic: row.isDiscoverable,
           isPinned: row.isPinned,
           createdAt: row.createdAt,
+          averageRating: ratingsByGuildId[row.id]?.avg ?? 0,
+          totalRatings: ratingsByGuildId[row.id]?.count ?? 0,
         };
       });
 
@@ -606,6 +625,9 @@ guildsRouter.get(
 
       filtered.sort((a, b) => {
         if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+        if (sortParam === 'rating') {
+          return (b.averageRating - a.averageRating) || (b.totalRatings - a.totalRatings);
+        }
         if (sortParam === 'activity' || sortParam === 'trending') {
           const timeDiff = b.createdAt.getTime() - a.createdAt.getTime();
           if (timeDiff !== 0) return timeDiff;

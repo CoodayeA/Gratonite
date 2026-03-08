@@ -74,6 +74,7 @@ import { useTheme } from './components/ui/ThemeProvider';
 import { ContextMenuProvider, useContextMenu } from './components/ui/ContextMenu';
 import { ToastProvider, useToast } from './components/ui/ToastManager';
 import { Shield as ShieldIcon } from 'lucide-react';
+import { StarRating } from './components/ui/StarRating';
 import AchievementToastProvider from './components/ui/AchievementToast';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { SkeletonChannelGroup, SkeletonDmList, SkeletonMemberList } from './components/ui/SkeletonLoader';
@@ -173,6 +174,10 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
     const { openMenu } = useContextMenu();
     const { addToast } = useToast();
     const [notifPrefs, setNotifPrefs] = useState<{ type: 'guild' | 'channel'; id: string; name: string } | null>(null);
+    const [ratingGuild, setRatingGuild] = useState<{ id: string; name: string } | null>(null);
+    const [ratingValue, setRatingValue] = useState(0);
+    const [ratingInfo, setRatingInfo] = useState<{ avg: number; total: number } | null>(null);
+    const [ratingSubmitting, setRatingSubmitting] = useState(false);
     const [guildFolders, setGuildFolders] = useState<Array<{ id: string; name: string; color: string; guildIds: string[]; collapsed: boolean }>>([]);
     useUnreadStore(); // subscribe to re-render on unread changes
 
@@ -233,6 +238,15 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                 api.guilds.boost(guild.id).then(() => {
                     addToast({ title: `Boosted ${guild.name}!`, variant: 'success' });
                 }).catch(() => addToast({ title: 'Failed to boost', variant: 'error' }));
+            }},
+            { id: 'rate-portal', label: 'Rate Portal', icon: Star, onClick: () => {
+                setRatingGuild({ id: guild.id, name: guild.name });
+                setRatingValue(0);
+                setRatingInfo(null);
+                api.guilds.getRating(guild.id).then((data) => {
+                    setRatingInfo({ avg: data.averageRating, total: data.totalRatings });
+                    if (data.userRating) setRatingValue(data.userRating);
+                }).catch(() => {});
             }},
             { id: 'activity-toggle', label: activityEnabled ? 'Disable Activity Status' : 'Enable Activity Status', icon: Activity, onClick: () => {
                 const newOverrides = { ...overrides, [guild.id]: !activityEnabled };
@@ -343,6 +357,42 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                     name={notifPrefs.name}
                     onClose={() => setNotifPrefs(null)}
                 />
+            )}
+            {ratingGuild && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }} onClick={() => setRatingGuild(null)}>
+                    <div style={{ width: '360px', background: 'var(--bg-elevated)', borderRadius: '16px', padding: '24px', border: '1px solid var(--stroke)', boxShadow: '0 24px 48px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 style={{ fontSize: '18px', fontWeight: 700 }}>Rate {ratingGuild.name}</h3>
+                            <button onClick={() => setRatingGuild(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}><X size={18} /></button>
+                        </div>
+                        {ratingInfo && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', padding: '10px 12px', background: 'var(--bg-tertiary)', borderRadius: '10px', border: '1px solid var(--stroke)' }}>
+                                <StarRating value={ratingInfo.avg} readOnly size={16} />
+                                <span style={{ fontSize: '14px', fontWeight: 600, color: '#f59e0b' }}>{ratingInfo.avg.toFixed(1)}</span>
+                                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>({ratingInfo.total} ratings)</span>
+                            </div>
+                        )}
+                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>How would you rate this portal?</p>
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+                            <StarRating value={ratingValue} onChange={setRatingValue} size={32} />
+                        </div>
+                        <button
+                            disabled={ratingValue === 0 || ratingSubmitting}
+                            onClick={() => {
+                                setRatingSubmitting(true);
+                                api.guilds.rate(ratingGuild.id, ratingValue).then(() => {
+                                    addToast({ title: `Rated ${ratingGuild.name} ${ratingValue} stars`, variant: 'success' });
+                                    setRatingGuild(null);
+                                }).catch(() => {
+                                    addToast({ title: 'Failed to submit rating', variant: 'error' });
+                                }).finally(() => setRatingSubmitting(false));
+                            }}
+                            style={{ width: '100%', padding: '12px', borderRadius: '10px', background: ratingValue > 0 ? 'var(--accent-primary)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: ratingValue > 0 ? '#111' : 'var(--text-muted)', cursor: ratingValue > 0 ? 'pointer' : 'default', fontWeight: 700, fontSize: '14px', transition: 'background 0.2s' }}
+                        >
+                            {ratingSubmitting ? 'Submitting...' : ratingValue > 0 ? `Submit ${ratingValue} Star${ratingValue > 1 ? 's' : ''}` : 'Select a rating'}
+                        </button>
+                    </div>
+                </div>
             )}
         </nav>
     );

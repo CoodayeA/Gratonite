@@ -1175,6 +1175,8 @@ export const api = {
       isPublic?: boolean;
       isPinned?: boolean;
       verified?: boolean;
+      averageRating?: number;
+      totalRatings?: number;
     }>>(`/guilds/discover${suffix}`);
     },
 

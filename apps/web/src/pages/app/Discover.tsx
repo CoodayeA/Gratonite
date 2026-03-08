@@ -4,6 +4,7 @@ import { Search, Compass, Bot, Palette, Star, Users, ArrowRight, X, Shield, Mess
 import { useToast } from '../../components/ui/ToastManager';
 import { useTheme, AppTheme } from '../../components/ui/ThemeProvider';
 import { api, API_BASE } from '../../lib/api';
+import { StarRating } from '../../components/ui/StarRating';
 
 type Tab = 'portals' | 'bots' | 'themes';
 
@@ -22,6 +23,8 @@ type PortalInfo = {
     isPinned: boolean;
     isPublic: boolean;
     mutualFriends: { name: string; avatar: string }[];
+    averageRating: number;
+    totalRatings: number;
 };
 
 const CATEGORIES = [
@@ -156,6 +159,14 @@ const PortalCheckinModal = ({ portal, onClose }: { portal: PortalInfo; onClose: 
                             <span style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)' }}>{portal.mutualFriends.length}</span>
                             <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><MessageSquare size={12} /> Mutual Friends</span>
                         </div>
+                        <div style={{ width: '1px', background: 'var(--stroke)' }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <StarRating value={portal.averageRating} readOnly size={14} />
+                                <span style={{ fontSize: '16px', fontWeight: 700, color: '#f59e0b' }}>{portal.averageRating.toFixed(1)}</span>
+                            </div>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><Star size={12} /> {portal.totalRatings} Ratings</span>
+                        </div>
                     </div>
 
                     {/* Mutual friends */}
@@ -197,14 +208,13 @@ const PortalCheckinModal = ({ portal, onClose }: { portal: PortalInfo; onClose: 
 const Discover = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<Tab>('portals');
-    const [portalView, setPortalView] = useState<'all' | 'featured'>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [joiningPortal, setJoiningPortal] = useState<PortalInfo | null>(null);
     const [portals, setPortals] = useState<PortalInfo[]>(initialPortals);
     const [selectedCategory, setSelectedCategory] = useState('');
     const [tagFilters, setTagFilters] = useState<string[]>([]);
     const [tagInputValue, setTagInputValue] = useState('');
-    const [sortOption, setSortOption] = useState<'members' | 'activity' | 'trending'>('members');
+    const [sortOption, setSortOption] = useState<'members' | 'activity' | 'trending' | 'rating'>('members');
     const [_discoverBots, setDiscoverBots] = useState<any[]>([]);
     const [_discoverThemes, setDiscoverThemes] = useState<any[]>([]);
     const { addToast } = useToast();
@@ -252,7 +262,6 @@ const Discover = () => {
                         const batch = await api.guilds.discover({
                             q: textQuery || undefined,
                             hashtag: hashtag || undefined,
-                            featured: portalView === 'featured' ? true : undefined,
                             category: selectedCategory || undefined,
                             tag: tagFilters.length > 0 ? tagFilters[0] : undefined,
                             sort: sortOption,
@@ -284,10 +293,13 @@ const Discover = () => {
                     isPinned: Boolean(g.isPinned),
                     isPublic: g.isPublic !== false,
                     mutualFriends: [],
+                    averageRating: g.averageRating ?? 0,
+                    totalRatings: g.totalRatings ?? 0,
                 }));
 
                 mapped.sort((a, b) => {
                     if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+                    if (sortOption === 'rating') return (b.averageRating - a.averageRating) || (b.totalRatings - a.totalRatings);
                     if (a.featured !== b.featured) return a.featured ? -1 : 1;
                     return b.members - a.members;
                 });
@@ -300,7 +312,7 @@ const Discover = () => {
             }
         }, 200);
         return () => clearTimeout(timer);
-    }, [activeTab, addToast, portalView, searchQuery, selectedCategory, tagFilters, sortOption]);
+    }, [activeTab, addToast, searchQuery, selectedCategory, tagFilters, sortOption]);
 
     const renderTabs = () => (
         <div style={{ display: 'flex', gap: '24px', borderBottom: '1px solid var(--stroke)', marginBottom: '32px' }}>
@@ -351,8 +363,69 @@ const Discover = () => {
         setTagInputValue('');
     };
 
+    const featuredPortals = portals
+        .filter(p => p.featured || (p.averageRating >= 4.0 && p.totalRatings >= 3))
+        .sort((a, b) => b.averageRating - a.averageRating)
+        .slice(0, 8);
+
     const renderPortals = () => (
         <>
+            {/* Featured Portals hero section */}
+            {featuredPortals.length > 0 && (
+                <div style={{ marginBottom: '28px' }}>
+                    <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+                        <Star size={18} color="#f59e0b" fill="#f59e0b" /> Featured Portals
+                    </h2>
+                    <div style={{
+                        display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px',
+                        scrollbarWidth: 'thin', scrollbarColor: 'var(--stroke) transparent',
+                    }}>
+                        {featuredPortals.map(portal => (
+                            <div
+                                key={portal.id}
+                                className="portal-card hover-lift"
+                                onClick={() => setJoiningPortal(portal)}
+                                style={{ minWidth: '300px', flex: '0 0 auto', cursor: 'pointer' }}
+                            >
+                                <div style={{
+                                    height: '180px', position: 'relative',
+                                    background: portal.bannerUrl
+                                        ? `url(${portal.bannerUrl}) center/cover`
+                                        : 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(56, 189, 248, 0.25))',
+                                }}>
+                                    <div style={{ position: 'absolute', bottom: '-20px', left: '16px', width: '44px', height: '44px', borderRadius: '10px', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.5)', border: '2px solid var(--stroke)', fontSize: '18px', overflow: 'hidden' }}>
+                                        {portal.iconHash ? (
+                                            <img src={`${API_BASE}/files/${portal.iconHash}`} alt={portal.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            portal.name.charAt(0).toUpperCase()
+                                        )}
+                                    </div>
+                                    {portal.featured && (
+                                        <div style={{ position: 'absolute', top: '10px', left: '10px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(245,158,11,0.85)', color: '#fff', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <Star size={10} fill="#fff" /> Featured
+                                        </div>
+                                    )}
+                                </div>
+                                <div style={{ padding: '28px 16px 16px' }}>
+                                    <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>{portal.name}</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                                        <StarRating value={portal.averageRating} readOnly size={14} />
+                                        <span style={{ fontSize: '13px', color: '#f59e0b', fontWeight: 600 }}>{portal.averageRating.toFixed(1)}</span>
+                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>({portal.totalRatings})</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <Users size={12} /> {portal.members.toLocaleString()} members
+                                        </span>
+                                        <span style={{ padding: '6px 16px', fontSize: '12px', background: 'var(--accent-primary)', color: '#111', fontWeight: 600, borderRadius: '8px' }}>Join</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Filter bar */}
             <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {/* Category buttons */}
@@ -419,6 +492,7 @@ const Discover = () => {
                         <option value="members">Most Members</option>
                         <option value="activity">Active</option>
                         <option value="trending">Trending</option>
+                        <option value="rating">Top Rated</option>
                     </select>
 
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flex: 1 }}>
@@ -437,29 +511,6 @@ const Discover = () => {
                             </span>
                         ))}
                     </div>
-
-                    <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
-                        <button
-                            onClick={() => setPortalView('all')}
-                            style={{
-                                borderRadius: '999px', border: '1px solid var(--stroke)', padding: '5px 12px',
-                                background: portalView === 'all' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                                color: portalView === 'all' ? '#111' : 'var(--text-secondary)',
-                                fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-                            }}
-                        >All</button>
-                        <button
-                            onClick={() => setPortalView('featured')}
-                            style={{
-                                borderRadius: '999px', border: '1px solid var(--stroke)', padding: '5px 12px',
-                                background: portalView === 'featured' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                                color: portalView === 'featured' ? '#111' : 'var(--text-secondary)',
-                                fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-                            }}
-                        >
-                            <Star size={11} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />Featured
-                        </button>
-                    </div>
                 </div>
             </div>
 
@@ -470,9 +521,9 @@ const Discover = () => {
                     <p style={{ fontSize: '13px' }}>Public portals will appear here as the community grows.</p>
                 </div>
             )}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '40px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', marginBottom: '40px' }}>
                 {portals.map(portal => (
-                    <div key={portal.id} className="portal-card hover-lift" onClick={() => setJoiningPortal(portal)} style={{ width: '300px', flex: '0 0 auto', cursor: 'pointer' }}>
+                    <div key={portal.id} className="portal-card hover-lift" onClick={() => setJoiningPortal(portal)} style={{ cursor: 'pointer' }}>
                         <div
                             style={{
                                 height: '140px',
@@ -515,6 +566,21 @@ const Discover = () => {
                                     ))}
                                 </div>
                             )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', marginBottom: '10px' }}>
+                                {portal.averageRating > 0 ? (
+                                    <>
+                                        <StarRating value={portal.averageRating} readOnly size={12} />
+                                        <span style={{ fontSize: '12px', color: '#f59e0b', fontWeight: 600 }}>
+                                            {portal.averageRating.toFixed(1)}
+                                        </span>
+                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                            ({portal.totalRatings})
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>No ratings yet</span>
+                                )}
+                            </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     <Users size={12} /> {portal.members.toLocaleString()} members
@@ -686,7 +752,7 @@ const Discover = () => {
     return (
         <>
             <div className="main-content-wrapper" style={{ flex: 1, overflowY: 'auto' }}>
-                <div style={{ maxWidth: '900px', margin: '0 auto', padding: '48px 24px', width: '100%' }}>
+                <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '48px 24px', width: '100%' }}>
                     <h1 style={{ fontSize: '32px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '8px' }}>Discover</h1>
                     <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '32px' }}>Find communities, bots, and themes to enhance your experience.</p>
 
