@@ -47,7 +47,7 @@ import InviteAccept from './pages/InviteAccept';
 import { NotFound } from './pages/ErrorStates';
 import { getDeterministicGradient } from './utils/colors';
 import { api, API_BASE, getAccessToken, ApiRequestError } from './lib/api';
-import { connectSocket, disconnectSocket, getSocket, onPresenceUpdate, onVoiceStateUpdate, onSocketReconnect } from './lib/socket';
+import { connectSocket, disconnectSocket, getSocket, onPresenceUpdate, onVoiceStateUpdate, onSocketReconnect, onCallInvite, onCallCancel, type CallInvitePayload } from './lib/socket';
 import { useMobileSwipe } from './hooks/useMobileSwipe';
 
 import SettingsModal from './components/modals/SettingsModal';
@@ -58,6 +58,7 @@ import ScreenShareModal from './components/modals/ScreenShareModal';
 import GuildSettingsModal from './components/modals/GuildSettingsModal';
 import { ChannelSettingsModal } from './components/modals/ChannelSettingsModal';
 import MemberOptionsModal from './components/modals/MemberOptionsModal';
+import IncomingCallModal from './components/modals/IncomingCallModal';
 import InviteModal from './components/modals/InviteModal';
 import DMSearchModal from './components/modals/DMSearchModal';
 import GroupDmCreateModal from './components/modals/GroupDmCreateModal';
@@ -1833,6 +1834,7 @@ export const AppLayout = () => {
         }
     }, [channelBgKey]);
     const [activeModal, setActiveModal] = useState<ModalType>(null);
+    const [incomingCall, setIncomingCall] = useState<CallInvitePayload | null>(null);
     const [isGuildRailOpen, setIsGuildRailOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const mainContentRef = useRef<HTMLDivElement>(null);
@@ -2144,6 +2146,40 @@ export const AppLayout = () => {
         return unsubscribe;
     }, [activeGuildId, guildFetchV2Enabled, refreshEquippedCosmetics, refreshGuildSession]);
 
+    // ── Incoming call listener ──────────────────────────────────────
+    useEffect(() => {
+        const unsubInvite = onCallInvite((payload) => {
+            setIncomingCall(payload);
+        });
+        const unsubCancel = onCallCancel(() => {
+            setIncomingCall(null);
+        });
+        return () => { unsubInvite(); unsubCancel(); };
+    }, []);
+
+    const handleAnswerCall = useCallback(async (withVideo: boolean) => {
+        if (!incomingCall) return;
+        try {
+            await api.voice.callAnswer(incomingCall.channelId);
+            setIncomingCall(null);
+            // Navigate to the DM channel with call param
+            navigate(`/dm/${incomingCall.callerId}?call=${withVideo ? 'video' : 'voice'}`);
+        } catch {
+            addToast({ title: 'Failed to answer call', variant: 'error' });
+            setIncomingCall(null);
+        }
+    }, [incomingCall, navigate, addToast]);
+
+    const handleDeclineCall = useCallback(async () => {
+        if (!incomingCall) return;
+        try {
+            await api.voice.callReject(incomingCall.channelId);
+        } catch {
+            // best-effort
+        }
+        setIncomingCall(null);
+    }, [incomingCall]);
+
     useEffect(() => {
         const onAuthExpired = () => {
             addToast({
@@ -2415,6 +2451,18 @@ export const AppLayout = () => {
             <ModalWrapper isOpen={activeModal === 'onboarding'}>
                 <OnboardingModal onClose={() => setActiveModal(null)} />
             </ModalWrapper>
+            {incomingCall && (
+                <IncomingCallModal
+                    channelId={incomingCall.channelId}
+                    callerId={incomingCall.callerId}
+                    callerName={incomingCall.callerName}
+                    callerAvatar={incomingCall.callerAvatar}
+                    withVideo={incomingCall.withVideo}
+                    onAnswerAudio={() => handleAnswerCall(false)}
+                    onAnswerVideo={() => handleAnswerCall(true)}
+                    onDecline={handleDeclineCall}
+                />
+            )}
         </ContextMenuProvider>
     );
 };

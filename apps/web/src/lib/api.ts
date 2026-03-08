@@ -1123,6 +1123,26 @@ export const api = {
       }),
     deleteStageInstance: (channelId: string) =>
       apiFetch<void>(`/stage-instances/${channelId}`, { method: 'DELETE' }),
+    callInvite: (channelId: string, withVideo: boolean) =>
+      apiFetch<void>('/voice/call-invite', {
+        method: 'POST',
+        body: JSON.stringify({ channelId, withVideo }),
+      }),
+    callAnswer: (channelId: string) =>
+      apiFetch<{ token: string; endpoint: string }>('/voice/call-answer', {
+        method: 'POST',
+        body: JSON.stringify({ channelId }),
+      }),
+    callReject: (channelId: string) =>
+      apiFetch<void>('/voice/call-reject', {
+        method: 'POST',
+        body: JSON.stringify({ channelId }),
+      }),
+    callCancel: (channelId: string) =>
+      apiFetch<void>('/voice/call-cancel', {
+        method: 'POST',
+        body: JSON.stringify({ channelId }),
+      }),
   },
 
   guilds: {

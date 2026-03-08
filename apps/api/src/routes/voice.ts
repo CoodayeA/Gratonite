@@ -384,6 +384,274 @@ voiceStatesRouter.get(
 );
 
 // ---------------------------------------------------------------------------
+// POST /call-invite — Invite DM/GROUP_DM participants to a call
+// ---------------------------------------------------------------------------
+
+const callInviteSchema = z.object({
+  channelId: z.string().uuid(),
+  withVideo: z.boolean().optional(),
+});
+
+voiceRouter.post(
+  '/call-invite',
+  requireAuth,
+  validate(callInviteSchema),
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { channelId, withVideo } = req.body;
+    const userId = req.userId!;
+
+    // Verify channel exists and is DM/GROUP_DM
+    const [channel] = await db
+      .select()
+      .from(channels)
+      .where(eq(channels.id, channelId))
+      .limit(1);
+
+    if (!channel) {
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found' });
+      return;
+    }
+
+    if (!isDmLikeType(channel.type)) {
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'Call invites are only for DM/GROUP_DM channels' });
+      return;
+    }
+
+    // Verify caller is a member
+    const [membership] = await db
+      .select({ id: dmChannelMembers.id })
+      .from(dmChannelMembers)
+      .where(and(
+        eq(dmChannelMembers.channelId, channelId),
+        eq(dmChannelMembers.userId, userId),
+      ))
+      .limit(1);
+
+    if (!membership) {
+      res.status(403).json({ code: 'FORBIDDEN', message: 'You are not a member of this channel' });
+      return;
+    }
+
+    // Get caller info
+    const [caller] = await db
+      .select({ username: users.username, displayName: users.displayName, avatarHash: users.avatarHash })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    // Store pending call in Redis (60s TTL)
+    await redis.set(`pendingCall:${channelId}`, JSON.stringify({
+      callerId: userId,
+      withVideo: withVideo ?? false,
+      startedAt: Date.now(),
+    }), 'EX', 60);
+
+    // Get all other members to notify
+    const members = await db
+      .select({ userId: dmChannelMembers.userId })
+      .from(dmChannelMembers)
+      .where(and(
+        eq(dmChannelMembers.channelId, channelId),
+      ));
+
+    // Emit CALL_INVITE to each recipient's personal room
+    try {
+      const io = getIO();
+      const payload = {
+        channelId,
+        callerId: userId,
+        callerName: caller?.displayName || caller?.username || 'Unknown',
+        callerAvatar: caller?.avatarHash ?? null,
+        withVideo: withVideo ?? false,
+      };
+      for (const member of members) {
+        if (member.userId !== userId) {
+          io.to(`user:${member.userId}`).emit('CALL_INVITE', payload);
+        }
+      }
+    } catch {
+      // Socket.io may not be initialised in tests
+    }
+
+    res.json({ ok: true });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// POST /call-answer — Accept an incoming call
+// ---------------------------------------------------------------------------
+
+const callAnswerSchema = z.object({
+  channelId: z.string().uuid(),
+});
+
+voiceRouter.post(
+  '/call-answer',
+  requireAuth,
+  validate(callAnswerSchema),
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { channelId } = req.body;
+    const userId = req.userId!;
+
+    // Verify membership
+    const [answerMembership] = await db
+      .select({ id: dmChannelMembers.id })
+      .from(dmChannelMembers)
+      .where(and(
+        eq(dmChannelMembers.channelId, channelId),
+        eq(dmChannelMembers.userId, userId),
+      ))
+      .limit(1);
+
+    if (!answerMembership) {
+      res.status(403).json({ code: 'FORBIDDEN', message: 'You are not a member of this channel' });
+      return;
+    }
+
+    // Check pending call exists
+    const pendingRaw = await redis.get(`pendingCall:${channelId}`);
+    if (!pendingRaw) {
+      res.status(404).json({ code: 'NOT_FOUND', message: 'No pending call for this channel' });
+      return;
+    }
+
+    const pending = JSON.parse(pendingRaw);
+
+    // Clear pending call
+    await redis.del(`pendingCall:${channelId}`);
+
+    // Notify the caller
+    try {
+      const io = getIO();
+      io.to(`user:${pending.callerId}`).emit('CALL_ANSWER', { channelId, userId });
+    } catch {
+      // Socket.io may not be initialised in tests
+    }
+
+    // Generate LiveKit token for the answerer
+    if (!LIVEKIT_ENABLED) {
+      res.status(503).json({ code: 'SERVICE_UNAVAILABLE', message: 'Voice features are not configured' });
+      return;
+    }
+
+    const [user] = await db
+      .select({ username: users.username, displayName: users.displayName })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const participantName = user?.displayName || user?.username || userId.slice(0, 8);
+    const at = new AccessToken(process.env.LIVEKIT_API_KEY!, process.env.LIVEKIT_API_SECRET!, {
+      identity: userId,
+      name: participantName,
+    });
+    at.addGrant({ room: channelId, roomJoin: true, canPublish: true, canSubscribe: true, canPublishData: true });
+    const token = await at.toJwt();
+    const endpoint = process.env.LIVEKIT_URL || 'ws://localhost:7880';
+
+    res.json({ token, endpoint });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// POST /call-reject — Decline an incoming call
+// ---------------------------------------------------------------------------
+
+const callRejectSchema = z.object({
+  channelId: z.string().uuid(),
+});
+
+voiceRouter.post(
+  '/call-reject',
+  requireAuth,
+  validate(callRejectSchema),
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { channelId } = req.body;
+    const userId = req.userId!;
+
+    // Verify membership
+    const [rejectMembership] = await db
+      .select({ id: dmChannelMembers.id })
+      .from(dmChannelMembers)
+      .where(and(
+        eq(dmChannelMembers.channelId, channelId),
+        eq(dmChannelMembers.userId, userId),
+      ))
+      .limit(1);
+
+    if (!rejectMembership) {
+      res.status(403).json({ code: 'FORBIDDEN', message: 'You are not a member of this channel' });
+      return;
+    }
+
+    const pendingRaw = await redis.get(`pendingCall:${channelId}`);
+    if (pendingRaw) {
+      const pending = JSON.parse(pendingRaw);
+      await redis.del(`pendingCall:${channelId}`);
+
+      // Notify caller
+      try {
+        const io = getIO();
+        io.to(`user:${pending.callerId}`).emit('CALL_REJECT', { channelId, userId });
+      } catch {
+        // Socket.io may not be initialised in tests
+      }
+    }
+
+    res.json({ ok: true });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// POST /call-cancel — Caller cancels outgoing call
+// ---------------------------------------------------------------------------
+
+const callCancelSchema = z.object({
+  channelId: z.string().uuid(),
+});
+
+voiceRouter.post(
+  '/call-cancel',
+  requireAuth,
+  validate(callCancelSchema),
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { channelId } = req.body;
+    const userId = req.userId!;
+
+    // Verify the canceller is the original caller
+    const cancelPendingRaw = await redis.get(`pendingCall:${channelId}`);
+    if (cancelPendingRaw) {
+      const cancelPending = JSON.parse(cancelPendingRaw);
+      if (cancelPending.callerId !== userId) {
+        res.status(403).json({ code: 'FORBIDDEN', message: 'Only the caller can cancel the call' });
+        return;
+      }
+    }
+
+    await redis.del(`pendingCall:${channelId}`);
+
+    // Notify all members in the channel
+    const members = await db
+      .select({ userId: dmChannelMembers.userId })
+      .from(dmChannelMembers)
+      .where(eq(dmChannelMembers.channelId, channelId));
+
+    try {
+      const io = getIO();
+      for (const member of members) {
+        if (member.userId !== userId) {
+          io.to(`user:${member.userId}`).emit('CALL_CANCEL', { channelId, userId });
+        }
+      }
+    } catch {
+      // Socket.io may not be initialised in tests
+    }
+
+    res.json({ ok: true });
+  }),
+);
+
+// ---------------------------------------------------------------------------
 // GET /channels/:channelId/call-history — Call history for a channel
 // ---------------------------------------------------------------------------
 

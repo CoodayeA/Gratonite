@@ -12,7 +12,7 @@ export const userSettings = pgTable('user_settings', {
   colorMode: varchar('color_mode', { length: 20 }).notNull().default('dark'),
   fontFamily: varchar('font_family', { length: 50 }).notNull().default('Inter'),
   fontSize: integer('font_size').notNull().default(14),
-  glassMode: boolean('glass_mode').notNull().default(false),
+  glassMode: varchar('glass_mode', { length: 10 }).notNull().default('full'),
   buttonShape: varchar('button_shape', { length: 20 }).notNull().default('rounded'),
   soundMuted: boolean('sound_muted').notNull().default(false),
   soundVolume: integer('sound_volume').notNull().default(50),

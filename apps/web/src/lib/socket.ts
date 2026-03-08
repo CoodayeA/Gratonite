@@ -286,6 +286,61 @@ export function onChannelBackgroundUpdated(cb: ChannelBgCallback): () => void {
   return () => { channelBgListeners.delete(cb); };
 }
 
+/* ── Call signaling events ─────────────────────────────────── */
+
+export interface CallInvitePayload {
+  channelId: string;
+  callerId: string;
+  callerName: string;
+  callerAvatar: string | null;
+  withVideo: boolean;
+}
+
+export interface CallAnswerPayload {
+  channelId: string;
+  userId: string;
+}
+
+export interface CallRejectPayload {
+  channelId: string;
+  userId: string;
+}
+
+export interface CallCancelPayload {
+  channelId: string;
+  userId: string;
+}
+
+type CallInviteCallback = (payload: CallInvitePayload) => void;
+type CallAnswerCallback = (payload: CallAnswerPayload) => void;
+type CallRejectCallback = (payload: CallRejectPayload) => void;
+type CallCancelCallback = (payload: CallCancelPayload) => void;
+
+const callInviteListeners = new Set<CallInviteCallback>();
+const callAnswerListeners = new Set<CallAnswerCallback>();
+const callRejectListeners = new Set<CallRejectCallback>();
+const callCancelListeners = new Set<CallCancelCallback>();
+
+export function onCallInvite(cb: CallInviteCallback): () => void {
+  callInviteListeners.add(cb);
+  return () => { callInviteListeners.delete(cb); };
+}
+
+export function onCallAnswer(cb: CallAnswerCallback): () => void {
+  callAnswerListeners.add(cb);
+  return () => { callAnswerListeners.delete(cb); };
+}
+
+export function onCallReject(cb: CallRejectCallback): () => void {
+  callRejectListeners.add(cb);
+  return () => { callRejectListeners.delete(cb); };
+}
+
+export function onCallCancel(cb: CallCancelCallback): () => void {
+  callCancelListeners.add(cb);
+  return () => { callCancelListeners.delete(cb); };
+}
+
 /* ── Spatial audio position events ─────────────────────────── */
 
 export interface SpatialPositionUpdatePayload {
@@ -492,6 +547,22 @@ export function connectSocket(): GratoniteSocket {
 
   socket.on('CHANNEL_BACKGROUND_UPDATED', (data: ChannelBackgroundUpdatedPayload) => {
     channelBgListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('CALL_INVITE', (data: CallInvitePayload) => {
+    callInviteListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('CALL_ANSWER', (data: CallAnswerPayload) => {
+    callAnswerListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('CALL_REJECT', (data: CallRejectPayload) => {
+    callRejectListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('CALL_CANCEL', (data: CallCancelPayload) => {
+    callCancelListeners.forEach(cb => cb(data));
   });
 
   socket.on('SPATIAL_POSITION_UPDATE', (data: SpatialPositionUpdatePayload) => {

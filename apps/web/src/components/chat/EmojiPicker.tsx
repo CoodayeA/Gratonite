@@ -244,7 +244,7 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
             const all = results.flat().map((s: any) => ({
                 id: s.id,
                 name: s.name,
-                url: s.url || (s.imageHash ? `${API_BASE}/files/${s.imageHash}` : ''),
+                url: s.assetUrl || '',
             }));
             setStickers(all);
         }).finally(() => setStickersLoading(false));

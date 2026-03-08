@@ -1424,7 +1424,7 @@ const ChannelChat = () => {
                 setGuildStickers(data.map((s: any) => ({
                     id: s.id,
                     name: s.name,
-                    url: s.imageHash ? `${API_BASE}/files/${s.imageHash}` : (s.url || ''),
+                    url: s.assetUrl || '',
                     packName: s.packName || 'Stickers',
                 })).filter((s: any) => s.url));
             }

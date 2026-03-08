@@ -13,7 +13,7 @@ import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { api, ApiRequestError, API_BASE } from '../../lib/api';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
-import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onMessageRead, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type MessageReadPayload } from '../../lib/socket';
+import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onMessageRead, onCallAnswer, onCallReject, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type MessageReadPayload } from '../../lib/socket';
 import { getDeterministicGradient } from '../../utils/colors';
 import { useLiveKit, type LiveKitParticipant } from '../../lib/useLiveKit';
 import Avatar from '../../components/ui/Avatar';
@@ -120,6 +120,9 @@ const DirectMessage = () => {
 
     // Call history state
     const [callHistory, setCallHistory] = useState<Array<{ id: string; startedAt: string; endedAt?: string; duration?: number; participants: string[]; missed?: boolean }>>([]);
+
+    // Calling/ringing state
+    const [isRinging, setIsRinging] = useState(false);
 
     // Mention autocomplete state (for group DMs)
     const [mentionSearch, setMentionSearch] = useState<string | null>(null);
@@ -1018,21 +1021,65 @@ const DirectMessage = () => {
         }
     }, [toggleCamera, isCameraOn, addToast]);
 
-    // Start call
+    // Start call — send invite, wait for answer
     const handleStartCall = async (withVideo: boolean = false) => {
         if (isResolvingDmChannel || !dmChannelId) {
             addToast({ title: 'Call unavailable', description: 'Still resolving this DM channel. Please retry in a moment.', variant: 'error' });
             return;
         }
         setStartWithVideo(withVideo);
+        setIsRinging(true);
         try {
-            await connect();
-            lastCallErrorRef.current = null;
-            addToast({ title: 'Call Started', description: `Starting ${withVideo ? 'video' : 'voice'} call with ${userName}...`, variant: 'info' });
+            await api.voice.callInvite(dmChannelId, withVideo);
+            addToast({ title: 'Calling...', description: `Ringing ${userName}...`, variant: 'info' });
         } catch (err) {
+            setIsRinging(false);
             showCallErrorToast(err);
         }
     };
+
+    // Cancel outgoing call
+    const handleCancelCall = async () => {
+        if (!dmChannelId) return;
+        setIsRinging(false);
+        try {
+            await api.voice.callCancel(dmChannelId);
+        } catch {
+            // best-effort
+        }
+        addToast({ title: 'Call Cancelled', variant: 'info' });
+    };
+
+    // Auto-cancel ringing after 60s (matches Redis TTL)
+    useEffect(() => {
+        if (!isRinging) return;
+        const timeout = setTimeout(() => {
+            setIsRinging(false);
+            addToast({ title: 'No Answer', description: `${userName} didn't pick up.`, variant: 'info' });
+        }, 60_000);
+        return () => clearTimeout(timeout);
+    }, [isRinging, userName, addToast]);
+
+    // Listen for call answer/reject
+    useEffect(() => {
+        const unsubAnswer = onCallAnswer(async (payload) => {
+            if (payload.channelId !== dmChannelId) return;
+            setIsRinging(false);
+            try {
+                await connect();
+                lastCallErrorRef.current = null;
+                addToast({ title: 'Call Connected', description: `${userName} answered the call.`, variant: 'success' });
+            } catch (err) {
+                showCallErrorToast(err);
+            }
+        });
+        const unsubReject = onCallReject((payload) => {
+            if (payload.channelId !== dmChannelId) return;
+            setIsRinging(false);
+            addToast({ title: 'Call Declined', description: `${userName} declined the call.`, variant: 'info' });
+        });
+        return () => { unsubAnswer(); unsubReject(); };
+    }, [dmChannelId, userName, connect, addToast]);
 
     // Auto-start call when navigated with ?call=voice or ?call=video
     const autoCallHandled = useRef(false);
@@ -1328,6 +1375,11 @@ const DirectMessage = () => {
                                         In Call
                                     </span>
                                 )}
+                                {isRinging && (
+                                    <span style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: 500, animation: 'pulse 1.5s ease-in-out infinite' }}>
+                                        Calling...
+                                    </span>
+                                )}
                             </h2>
                             <div style={{ fontSize: '0.75rem', color: userGame ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
                                 {isGroupDm ? `${groupParticipants.length} members` : (userGame ? <span style={{ fontWeight: 600 }}>{userGame}</span> : userStatus)}
@@ -1342,13 +1394,19 @@ const DirectMessage = () => {
                         <ImageIcon size={20} style={{ cursor: 'pointer', transition: 'color 0.2s' }} onClick={() => bgInputRef.current?.click()} onMouseOver={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = 'var(--text-secondary)'} />
                         {hasCustomBg && <X size={18} style={{ cursor: 'pointer', color: 'var(--error)', transition: 'opacity 0.2s' }} onClick={() => setBgMedia(null)} />}
 
-                        {!isConnected && !isConnecting && (
+                        {!isConnected && !isConnecting && !isRinging && (
                             <>
                                 <Phone size={20} style={{ cursor: 'pointer', transition: 'color 0.2s' }} onClick={() => handleStartCall(false)} onMouseOver={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = 'var(--text-secondary)'} />
                                 <Video size={20} style={{ cursor: 'pointer', transition: 'color 0.2s' }} onClick={() => handleStartCall(true)} onMouseOver={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = 'var(--text-secondary)'} />
                             </>
                         )}
-                        {isConnecting && (
+                        {isRinging && (
+                            <>
+                                <span style={{ fontSize: 12, color: 'var(--accent-primary)', animation: 'pulse 1.5s ease-in-out infinite' }}>Ringing...</span>
+                                <PhoneOff size={20} style={{ cursor: 'pointer', color: 'var(--error)' }} onClick={handleCancelCall} />
+                            </>
+                        )}
+                        {isConnecting && !isRinging && (
                             <Loader2 size={20} style={{ color: 'var(--accent-primary)', animation: 'spin 1s linear infinite' }} />
                         )}
 
