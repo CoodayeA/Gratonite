@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { X, MessageSquare, Send, Smile, Filter, Clock, Archive } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { api } from '../../lib/api';
+import { onThreadCreate } from '../../lib/socket';
 import Avatar from '../ui/Avatar';
 
 type Message = {
@@ -132,6 +133,27 @@ const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) 
             .catch(() => setThreadList([]))
             .finally(() => setThreadListLoading(false));
     }, [showThreadList, channelId]);
+
+    // Listen for new threads created via socket
+    useEffect(() => {
+        if (!channelId) return;
+        const unsub = onThreadCreate((data) => {
+            if (data.channelId !== channelId) return;
+            setThreadList(prev => {
+                if (prev.some(t => t.id === data.id)) return prev;
+                return [{
+                    id: data.id,
+                    name: data.name || 'Untitled Thread',
+                    messageCount: 0,
+                    createdAt: data.createdAt || new Date().toISOString(),
+                    archived: false,
+                    creatorId: data.creatorId,
+                    lastActivityAt: data.createdAt || new Date().toISOString(),
+                }, ...prev];
+            });
+        });
+        return unsub;
+    }, [channelId]);
 
     const filteredThreads = threadList
         .filter(t => {

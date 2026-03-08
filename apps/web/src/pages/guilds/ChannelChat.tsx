@@ -20,7 +20,7 @@ import { playSound } from '../../utils/SoundManager';
 import { api, API_BASE } from '../../lib/api';
 import { markRead } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
-import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onMessageDeleteBulk, onReactionAdd, onReactionRemove, onChannelPinsUpdate, onSocketReconnect, onChannelBackgroundUpdated, onGroupKeyRotationNeeded, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type MessageDeleteBulkPayload, type ReactionPayload, type ChannelPinsUpdatePayload, type GroupKeyRotationNeededPayload } from '../../lib/socket';
+import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onMessageDeleteBulk, onReactionAdd, onReactionRemove, onChannelPinsUpdate, onSocketReconnect, onChannelBackgroundUpdated, onGroupKeyRotationNeeded, onThreadCreate, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type MessageDeleteBulkPayload, type ReactionPayload, type ChannelPinsUpdatePayload, type GroupKeyRotationNeededPayload } from '../../lib/socket';
 import Avatar from '../../components/ui/Avatar';
 import { encrypt, decrypt, getOrCreateKeyPair, decryptGroupKey, generateGroupKey, encryptGroupKey, importPublicKey } from '../../lib/e2e';
 import { Lock } from 'lucide-react';
@@ -1759,7 +1759,20 @@ const ChannelChat = () => {
             }));
         });
 
-        return () => { unsubCreate(); unsubUpdate(); unsubDelete(); unsubDeleteBulk(); unsubReactionAdd(); unsubReactionRemove(); };
+        // Listen for new thread creation — update the origin message to show thread indicator
+        const unsubThreadCreate = onThreadCreate((data) => {
+            if (data.channelId !== channelId || !data.originMessageId) return;
+            setMessages(prev => prev.map(msg => {
+                if (msg.apiId !== data.originMessageId) return msg;
+                // Mark origin message as having a thread (set to 1 if it was 0)
+                if ((msg.threadReplyCount ?? 0) === 0) {
+                    return { ...msg, threadReplyCount: 1 };
+                }
+                return msg;
+            }));
+        });
+
+        return () => { unsubCreate(); unsubUpdate(); unsubDelete(); unsubDeleteBulk(); unsubReactionAdd(); unsubReactionRemove(); unsubThreadCreate(); };
     }, [channelId, currentUserId]);
 
     // Socket listener for embed updates (URL unfurling)

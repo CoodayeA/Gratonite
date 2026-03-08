@@ -300,6 +300,10 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
       .where(
         and(
           eq(messages.channelId, channelId),
+          or(
+            isNull(messages.threadId),
+            sql`${messages.id} IN (SELECT origin_message_id FROM threads WHERE origin_message_id IS NOT NULL)`,
+          ),
           or(isNull(messages.expiresAt), gt(messages.expiresAt, new Date())),
           ...(cursorCondition ? [cursorCondition] : []),
         ),

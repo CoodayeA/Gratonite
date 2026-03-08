@@ -1,11 +1,12 @@
 import { Router, Request, Response } from 'express';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, inArray } from 'drizzle-orm';
 import { db } from '../db/index';
 import { messageReactions } from '../db/schema/reactions';
 import { messages } from '../db/schema/messages';
 import { channels, dmChannelMembers } from '../db/schema/channels';
 import { guildMembers } from '../db/schema/guilds';
 import { guildEmojis } from '../db/schema/emojis';
+import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
 import { getIO } from '../lib/socket-io';
 
@@ -64,6 +65,39 @@ reactionsRouter.delete(
     } catch {}
 
     res.json({ code: 'OK' });
+  },
+);
+
+/** GET /channels/:channelId/messages/:messageId/reactions/:emoji — users who reacted with this emoji */
+reactionsRouter.get(
+  '/:emoji',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    const { messageId, emoji } = req.params as Record<string, string>;
+    const decodedEmoji = decodeURIComponent(emoji);
+
+    const rows = await db
+      .select({
+        userId: messageReactions.userId,
+        username: users.username,
+        displayName: users.displayName,
+        avatarHash: users.avatarHash,
+      })
+      .from(messageReactions)
+      .innerJoin(users, eq(users.id, messageReactions.userId))
+      .where(
+        and(
+          eq(messageReactions.messageId, messageId),
+          eq(messageReactions.emoji, decodedEmoji),
+        ),
+      );
+
+    res.json(rows.map(r => ({
+      id: r.userId,
+      username: r.username,
+      displayName: r.displayName,
+      avatarHash: r.avatarHash,
+    })));
   },
 );
 
