@@ -30,8 +30,8 @@ export default function StickyMessage({ channelId, guildId, canManage }: StickyM
 
   async function loadSticky() {
     try {
-      const res = await api.get(`/channels/${channelId}/sticky`);
-      setSticky(res.data);
+      const res = await api.get(`/channels/${channelId}/sticky`) as StickyData | null;
+      setSticky(res);
     } catch {
       setSticky(null);
     }

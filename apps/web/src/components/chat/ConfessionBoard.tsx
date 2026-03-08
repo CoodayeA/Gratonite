@@ -56,7 +56,7 @@ const ConfessionBoard = ({ channelId, guildId, isOwnerOrAdmin }: { channelId: st
 
   const revealAuthor = async (confessionId: string) => {
     try {
-      const res = await api.post(`/guilds/${guildId}/confessions/${confessionId}/reveal`) as { authorId: string };
+      const res = await api.post(`/guilds/${guildId}/confessions/${confessionId}/reveal`, {}) as { authorId: string };
       addToast({ title: `Author revealed: ${res.authorId}`, variant: 'info' });
       setRevealConfirm(null);
     } catch { addToast({ title: 'Failed to reveal author', variant: 'error' }); }
