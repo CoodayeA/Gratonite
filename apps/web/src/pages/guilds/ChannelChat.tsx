@@ -1858,20 +1858,35 @@ const ChannelChat = () => {
         return () => el.removeEventListener('scroll', handleScroll);
     }, [hasMoreMessages, isLoadingOlder, loadOlderMessages]);
 
-    // On channel change: scroll to NEW divider or bottom
-    useEffect(() => {
-        if (lastReadMessageId && messages.length > 0) {
-            const dividerEl = document.querySelector('.new-messages-divider');
-            if (dividerEl) {
-                dividerEl.scrollIntoView({ behavior: 'auto', block: 'center' });
-                return;
-            }
-        }
-        scrollToBottom();
-    }, [channelId]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Track whether we need to scroll to bottom after initial load
+    const needsInitialScrollRef = useRef(false);
 
-    // On new message: only auto-scroll if user is near the bottom
+    // On channel change: flag that we need to scroll once messages arrive
     useEffect(() => {
+        needsInitialScrollRef.current = true;
+    }, [channelId]);
+
+    // After messages load/change: scroll to bottom if this is initial load, or if near bottom
+    useEffect(() => {
+        if (messages.length === 0) return;
+        if (needsInitialScrollRef.current) {
+            needsInitialScrollRef.current = false;
+            // Wait for DOM to render the messages before scrolling
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    if (lastReadMessageId) {
+                        const dividerEl = document.querySelector('.new-messages-divider');
+                        if (dividerEl) {
+                            dividerEl.scrollIntoView({ behavior: 'auto', block: 'center' });
+                            return;
+                        }
+                    }
+                    scrollToBottom();
+                });
+            });
+            return;
+        }
+        // On new message: only auto-scroll if user is near the bottom
         if (!parentRef.current) return;
         const el = parentRef.current;
         const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
