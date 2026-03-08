@@ -68,7 +68,7 @@ const DMSearchModal = ({ onClose }: { onClose: () => void }) => {
     };
 
     return (
-        <div style={{
+        <div role="dialog" aria-modal="true" aria-label="Search direct messages" style={{
             position: 'fixed', inset: 0, zIndex: 9999,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',

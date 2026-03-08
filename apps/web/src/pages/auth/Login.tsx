@@ -19,30 +19,23 @@ const Login = () => {
     const { refetchUser } = useUser();
 
     const handleLogin = async (overrideMfaCode?: string) => {
-        console.log('[Login] handleLogin called');
         if (!login.trim() || !password) {
-            console.log('[Login] Validation failed - login or password empty');
-            alert('DEBUG: Login or password is empty');
+            addToast({ title: 'Please enter your email/username and password.', variant: 'error' });
             return;
         }
         const code = overrideMfaCode ?? mfaCode;
         if (mfaRequired && code.length !== 6) {
-            console.log('[Login] MFA validation failed');
             return;
         }
         setLoading(true);
         try {
             const payload: { login: string; password: string; mfaCode?: string } = { login: login.trim(), password };
             if (code) payload.mfaCode = code;
-            console.log('[Login] Attempting login with payload:', { login: payload.login, hasPassword: !!payload.password, hasMfaCode: !!payload.mfaCode });
             const res = await api.auth.login(payload);
-            console.log('[Login] Login successful, setting token');
             setAccessToken(res.accessToken);
             await refetchUser();
             navigate('/');
         } catch (err: any) {
-            console.error('[Login] Login failed:', err);
-            alert(`DEBUG: Login failed - ${err?.code || err?.message || 'Unknown error'}`);
             const errCode = err?.code || err?.message || '';
             if (errCode === 'MFA_REQUIRED') {
                 setMfaRequired(true);

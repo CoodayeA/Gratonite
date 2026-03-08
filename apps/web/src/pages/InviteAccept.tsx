@@ -413,7 +413,7 @@ function InvitePreview({
                         color: 'var(--text-muted)',
                         fontSize: '14px',
                     }}>
-                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6b7280' }} />
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--text-muted)' }} />
                         <span>
                             <strong style={{ color: 'var(--text-secondary)' }}>
                                 {guild.memberCount.toLocaleString()}
@@ -429,9 +429,9 @@ function InvitePreview({
                             color: 'var(--text-muted)',
                             fontSize: '14px',
                         }}>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)' }} />
                             <span>
-                                <strong style={{ color: '#10b981' }}>
+                                <strong style={{ color: 'var(--success)' }}>
                                     {(guild.onlineCount ?? 0).toLocaleString()}
                                 </strong>{' '}
                                 online

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { eq, and, sql, desc, lt, gt } from 'drizzle-orm';
+import { eq, and, sql, desc, lt, gt, inArray } from 'drizzle-orm';
 import { db } from '../db/index';
 import { messages } from '../db/schema/messages';
 import { users } from '../db/schema/users';
@@ -48,13 +48,13 @@ searchRouter.get('/messages', requireAuth, async (req: Request, res: Response): 
     .orderBy(desc(messages.createdAt))
     .limit(limit);
 
-  // Fetch guild names
+  // Fetch guild names in a single batch query
   const guildIds = [...new Set(results.filter(r => r.guildId).map(r => r.guildId!))];
   const guildNames: Record<string, string> = {};
   if (guildIds.length > 0) {
-    for (const gId of guildIds) {
-      const [g] = await db.select({ name: guilds.name }).from(guilds).where(eq(guilds.id, gId)).limit(1);
-      if (g) guildNames[gId] = g.name;
+    const guildRows = await db.select({ id: guilds.id, name: guilds.name }).from(guilds).where(inArray(guilds.id, guildIds));
+    for (const g of guildRows) {
+      guildNames[g.id] = g.name;
     }
   }
 

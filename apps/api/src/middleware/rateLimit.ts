@@ -186,6 +186,39 @@ export const apiRateLimit = createRateLimiter({
 });
 
 /**
+ * publicInviteRateLimit — 30 requests per 60 seconds, keyed by IP.
+ * Apply to GET /invites/:code to prevent brute-force enumeration.
+ */
+export const publicInviteRateLimit = createRateLimiter({
+  prefix: 'rl:invite',
+  maxRequests: 30,
+  windowSeconds: 60,
+  keyFn: (req) => req.ip ?? req.socket.remoteAddress ?? null,
+});
+
+/**
+ * publicFileRateLimit — 60 requests per 60 seconds, keyed by IP.
+ * Apply to GET /files/:fileId to prevent bandwidth abuse.
+ */
+export const publicFileRateLimit = createRateLimiter({
+  prefix: 'rl:file',
+  maxRequests: 60,
+  windowSeconds: 60,
+  keyFn: (req) => req.ip ?? req.socket.remoteAddress ?? null,
+});
+
+/**
+ * usernameCheckRateLimit — 10 requests per 60 seconds, keyed by IP.
+ * Apply to GET /auth/username-available to prevent user enumeration.
+ */
+export const usernameCheckRateLimit = createRateLimiter({
+  prefix: 'rl:uname',
+  maxRequests: 10,
+  windowSeconds: 60,
+  keyFn: (req) => req.ip ?? req.socket.remoteAddress ?? null,
+});
+
+/**
  * messageRateLimit — 5 messages per 5 seconds, keyed by userId + channelId.
  * Apply to the POST /channels/:channelId/messages endpoint to prevent spam.
  */

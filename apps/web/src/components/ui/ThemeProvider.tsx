@@ -84,7 +84,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
     const [reducedEffects, setReducedEffectsState] = useState<boolean>(() => {
         const saved = localStorage.getItem('gratonite_reduced_effects');
-        return saved !== null ? saved === 'true' : false;
+        if (saved !== null) return saved === 'true';
+        return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     });
 
     const [lowPower, setLowPowerState] = useState<boolean>(() => {
@@ -213,19 +214,21 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         const resolvedFont = fontMap[fontFamily] || fontMap['inter'];
         document.documentElement.style.setProperty('--font-sans', resolvedFont);
 
-        // Font size scaling logic
-        const scaleMap: Record<FontSize, number> = {
-            'small': 0.85,
-            'medium': 1.0,
-            'large': 1.15,
-            'extra-large': 1.3
+        // Font size scaling — use root font-size percentage (rem-based)
+        const fontSizeMap: Record<FontSize, string> = {
+            'small': '87.5%',
+            'medium': '100%',
+            'large': '112.5%',
+            'extra-large': '125%'
         };
-        const scale = scaleMap[fontSize] ?? 1.0;
-        document.documentElement.style.setProperty('--font-scale', scale.toString());
-        // We override the root font size which rem sizes are based on
-        document.documentElement.style.fontSize = `${scale * 100}%`;
-        // Apply zoom to body so inline px units scale
-        (document.body.style as any).zoom = scale.toString();
+        const scaleMap: Record<FontSize, number> = {
+            'small': 0.875,
+            'medium': 1.0,
+            'large': 1.125,
+            'extra-large': 1.25
+        };
+        document.documentElement.style.fontSize = fontSizeMap[fontSize] ?? '100%';
+        document.documentElement.style.setProperty('--font-scale', (scaleMap[fontSize] ?? 1.0).toString());
 
     }, [theme, colorMode, fontFamily, fontSize, glassMode, reducedEffects, lowPower, accentColor, highContrast, compactMode, buttonShape]);
 

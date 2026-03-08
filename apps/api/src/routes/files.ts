@@ -36,6 +36,7 @@ import { eq, or, like } from 'drizzle-orm';
 import { db } from '../db/index';
 import { files } from '../db/schema/files';
 import { requireAuth } from '../middleware/auth';
+import { publicFileRateLimit } from '../middleware/rateLimit';
 
 export const filesRouter = Router();
 
@@ -88,6 +89,37 @@ function extensionMatchesMime(ext: string, mimeType: string): boolean {
   const expected = EXT_MIME_MAP[ext.toLowerCase()];
   if (!expected) return true; // unknown extension — rely on allowlist only
   return expected.includes(mimeType.toLowerCase());
+}
+
+/**
+ * Magic byte signatures for common file types.
+ * Maps MIME type prefixes to arrays of [offset, expected bytes].
+ */
+const MAGIC_BYTES: Array<{ mime: string; bytes: number[]; offset?: number }> = [
+  { mime: 'image/png',  bytes: [0x89, 0x50, 0x4E, 0x47] },           // ‰PNG
+  { mime: 'image/jpeg', bytes: [0xFF, 0xD8, 0xFF] },                  // ÿØÿ
+  { mime: 'image/gif',  bytes: [0x47, 0x49, 0x46, 0x38] },           // GIF8
+  { mime: 'image/webp', bytes: [0x57, 0x45, 0x42, 0x50], offset: 8 }, // WEBP at offset 8
+  { mime: 'application/pdf', bytes: [0x25, 0x50, 0x44, 0x46] },      // %PDF
+];
+
+/**
+ * Validate that a file's leading bytes match its claimed MIME type.
+ * Returns true if the magic bytes match or if we don't have a signature for this type.
+ */
+function validateMagicBytes(filePath: string, claimedMime: string): boolean {
+  const entry = MAGIC_BYTES.find(m => claimedMime.toLowerCase().startsWith(m.mime));
+  if (!entry) return true; // no signature to check — allow
+
+  const fd = fs.openSync(filePath, 'r');
+  try {
+    const buf = Buffer.alloc(entry.bytes.length);
+    const bytesRead = fs.readSync(fd, buf, 0, entry.bytes.length, entry.offset ?? 0);
+    if (bytesRead < entry.bytes.length) return false;
+    return entry.bytes.every((b, i) => buf[i] === b);
+  } finally {
+    fs.closeSync(fd);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -194,6 +226,16 @@ filesRouter.post(
       return;
     }
 
+    // Validate magic bytes match claimed MIME type
+    if (!validateMagicBytes(req.file.path, claimedMime)) {
+      fs.unlink(req.file.path, () => {});
+      res.status(400).json({
+        code: 'VALIDATION_ERROR',
+        message: 'File content does not match its claimed type.',
+      });
+      return;
+    }
+
     try {
       // Build the public URL using the request's own protocol and host.
       // This works for both local development and production without
@@ -246,7 +288,7 @@ filesRouter.post(
  * @returns 200 File contents with correct Content-Type header
  * @returns 404 File record not found in database or missing from disk
  */
-filesRouter.get('/:fileId', async (req: Request, res: Response): Promise<void> => {
+filesRouter.get('/:fileId', publicFileRateLimit, async (req: Request, res: Response): Promise<void> => {
   let { fileId } = req.params as Record<string, string>;
 
   // Support _static suffix: serve the first frame of an animated GIF as a static PNG.

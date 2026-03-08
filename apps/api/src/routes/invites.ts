@@ -12,12 +12,13 @@ import { validate } from '../middleware/validate';
 import { getIO } from '../lib/socket-io';
 import { hasPermission } from './roles';
 import { redis } from '../lib/redis';
+import { publicInviteRateLimit } from '../middleware/rateLimit';
 import crypto from 'crypto';
 
 export const invitesRouter = Router();
 
 function generateCode(): string {
-  return crypto.randomBytes(4).toString('hex').slice(0, 8);
+  return crypto.randomBytes(8).toString('base64url');
 }
 
 const createInviteSchema = z.object({
@@ -97,7 +98,7 @@ invitesRouter.get('/guilds/:guildId/invites', requireAuth, async (req: Request, 
 });
 
 /** GET /api/v1/invites/:code — public preview */
-invitesRouter.get('/invites/:code', async (req: Request, res: Response): Promise<void> => {
+invitesRouter.get('/invites/:code', publicInviteRateLimit, async (req: Request, res: Response): Promise<void> => {
   const { code } = req.params as Record<string, string>;
   const [invite] = await db.select().from(guildInvites).where(eq(guildInvites.code, code)).limit(1);
   if (!invite) { res.status(404).json({ code: 'NOT_FOUND', message: 'Invite not found or expired' }); return; }

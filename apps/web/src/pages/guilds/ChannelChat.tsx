@@ -257,7 +257,7 @@ const MemoizedMessageItem = memo(({
                     marginTop: isGrouped ? '2px' : (compactMode ? '1px' : '16px'),
                     paddingTop: isGrouped ? '2px' : (compactMode ? '2px' : '16px'),
                     paddingBottom: isGrouped ? '2px' : (compactMode ? '2px' : '16px'),
-                    ...(isMentioned ? { borderLeft: '3px solid var(--accent-primary, #526df5)', background: 'rgba(82, 109, 245, 0.06)' } : {}),
+                    ...(isMentioned ? { borderLeft: '3px solid var(--accent-primary)', background: 'color-mix(in srgb, var(--accent-primary) 6%, transparent)' } : {}),
                 }}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
@@ -287,7 +287,7 @@ const MemoizedMessageItem = memo(({
                                 frame={isCurrentUserMessage ? currentUserAvatarFrame : 'none'}
                                 size={40}
                                 style={{
-                                    boxShadow: showFameSparkle ? '0 0 0 3px #f59e0b, 0 0 20px rgba(245,158,11,0.6)' : undefined,
+                                    boxShadow: showFameSparkle ? '0 0 0 3px var(--warning), 0 0 20px color-mix(in srgb, var(--warning) 60%, transparent)' : undefined,
                                     transition: 'box-shadow 0.3s',
                                 }}
                             />
@@ -303,7 +303,7 @@ const MemoizedMessageItem = memo(({
                         {famGiven && (
                             <div style={{
                                 position: 'absolute', bottom: '-2px', right: '-4px',
-                                background: '#f59e0b', borderRadius: '50%',
+                                background: 'var(--warning)', borderRadius: '50%',
                                 width: '16px', height: '16px', display: 'flex',
                                 alignItems: 'center', justifyContent: 'center',
                                 border: '2px solid var(--bg-primary)'
@@ -541,11 +541,11 @@ const MemoizedMessageItem = memo(({
                                     className="message-action-btn"
                                     onClick={handleGiveFAME}
                                     style={{
-                                        color: famGiven ? '#f59e0b' : undefined,
-                                        background: famGiven ? 'rgba(245,158,11,0.15)' : undefined
+                                        color: famGiven ? 'var(--warning)' : undefined,
+                                        background: famGiven ? 'color-mix(in srgb, var(--warning) 15%, transparent)' : undefined
                                     }}
                                 >
-                                    <ThumbsUp size={16} fill={famGiven ? '#f59e0b' : 'none'} />
+                                    <ThumbsUp size={16} fill={famGiven ? 'var(--warning)' : 'none'} />
                                 </button>
                             </Tooltip>
                         )}
@@ -2409,7 +2409,7 @@ const ChannelChat = () => {
             <header className="top-bar">
                 {/* Mobile Toggles */}
                 <div className="mobile-header-toggles">
-                    <Menu size={20} className="mobile-toggle-btn" onClick={toggleGuildRail} />
+                    <Menu size={20} className="mobile-toggle-btn" role="button" aria-label="Toggle sidebar" tabIndex={0} onClick={toggleGuildRail} />
                     <Hash size={24} style={{ color: 'var(--text-muted)', marginLeft: '8px' }} />
                 </div>
 
@@ -2819,8 +2819,8 @@ const ChannelChat = () => {
 
                 {/* Edit Banner */}
                 {editingMessage && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'var(--bg-tertiary)', borderLeft: '3px solid var(--warning, #f59e0b)', margin: '0 16px 4px', borderRadius: '0 8px 8px 0' }}>
-                        <Edit2 size={14} style={{ color: 'var(--warning, #f59e0b)', flexShrink: 0 }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'var(--bg-tertiary)', borderLeft: '3px solid var(--warning)', margin: '0 16px 4px', borderRadius: '0 8px 8px 0' }}>
+                        <Edit2 size={14} style={{ color: 'var(--warning)', flexShrink: 0 }} />
                         <span style={{ fontSize: '13px', color: 'var(--text-muted)', flexShrink: 0 }}>Editing message</span>
                         <span style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{editingMessage.content}</span>
                         <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>Esc to cancel</span>
@@ -3040,21 +3040,22 @@ const ChannelChat = () => {
                                 setChatAttachedFiles(prev => [...prev, ...newFiles]);
                                 e.target.value = '';
                             }} />
-                            <button className="input-icon-btn" title="Upload Attachment" onClick={() => chatFileInputRef.current?.click()}>
+                            <button className="input-icon-btn" title="Upload Attachment" aria-label="Upload attachment" onClick={() => chatFileInputRef.current?.click()}>
                                 <Plus size={20} />
                             </button>
                             {hasDraft && !editingMessage && (
-                                <span style={{ fontSize: '10px', fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.15)', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0 }}>Draft</span>
+                                <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 15%, transparent)', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0 }}>Draft</span>
                             )}
                             <input
                                 type="text"
                                 className="chat-input"
+                                aria-label="Message input"
                                 placeholder={editingMessage ? 'Edit your message...' : `Message #${channelName}...`}
                                 value={editingMessage ? editContent : inputValue}
                                 onChange={editingMessage ? (e) => setEditContent(e.target.value) : handleInputChange}
                                 onKeyDown={handleInputKeyDown}
                             />
-                            <button className="input-icon-btn" title="Record Voice Note" onClick={startRecording}>
+                            <button className="input-icon-btn" title="Record Voice Note" aria-label="Record voice note" onClick={startRecording}>
                                 <Mic size={20} />
                             </button>
                             {/* Feature 5: Markdown Preview Toggle */}
@@ -3067,7 +3068,7 @@ const ChannelChat = () => {
                             </button>
                             {inputValue.trim().length === 0 && (
                                 <>
-                                    <button className={`input-icon-btn ${isEmojiPickerOpen ? 'primary' : ''}`} title="Select Emoji" onClick={() => { setIsEmojiPickerOpen(!isEmojiPickerOpen); setStickerPickerOpen(false); }}>
+                                    <button className={`input-icon-btn ${isEmojiPickerOpen ? 'primary' : ''}`} title="Select Emoji" aria-label="Open emoji picker" onClick={() => { setIsEmojiPickerOpen(!isEmojiPickerOpen); setStickerPickerOpen(false); }}>
                                         <Smile size={20} />
                                     </button>
                                     {/* Feature 19: Sticker Picker Button */}
@@ -3096,6 +3097,7 @@ const ChannelChat = () => {
                                     )}
                                     <button
                                         className="input-icon-btn primary"
+                                        aria-label="Send message"
                                         onClick={editingMessage ? handleEditSubmit : handleSendMessage}
                                     >
                                         <Send size={18} />

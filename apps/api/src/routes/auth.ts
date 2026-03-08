@@ -38,6 +38,7 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../lib/jw
 import { sendVerificationEmail, sendPasswordResetEmail } from '../lib/mailer';
 import { requireAuth } from '../middleware/auth';
 import { redis } from '../lib/redis';
+import { usernameCheckRateLimit } from '../middleware/rateLimit';
 import { referrals as referralsTable } from '../db/schema/referrals';
 
 export const authRouter = Router();
@@ -519,7 +520,7 @@ authRouter.post('/register', asyncHandler(async (req: Request, res: Response): P
  * can do real-time availability checks.  Rate limiting should be applied at
  * the infrastructure level (nginx / reverse proxy) to prevent enumeration.
  */
-authRouter.get('/username-available', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+authRouter.get('/username-available', usernameCheckRateLimit, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { username } = req.query;
 
   if (typeof username !== 'string' || username.trim() === '') {

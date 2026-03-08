@@ -86,7 +86,7 @@ const GroupDmCreateModal = ({ onClose }: Props) => {
     });
 
     return (
-        <div style={{
+        <div role="dialog" aria-modal="true" aria-label="Create group message" style={{
             position: 'fixed', inset: 0, zIndex: 1000,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'rgba(0,0,0,0.6)',

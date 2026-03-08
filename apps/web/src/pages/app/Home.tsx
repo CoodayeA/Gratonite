@@ -140,11 +140,11 @@ const Home = () => {
                     </div>
 
                     <div className="action-card hover-lift" onClick={() => navigate('/fame')} style={{ cursor: 'pointer', gridColumn: 'span 2', background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.04))', border: '1px solid rgba(245,158,11,0.2)' }}>
-                        <div className="action-card-icon" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
+                        <div className="action-card-icon" style={{ background: 'linear-gradient(135deg, var(--warning), #d97706)' }}>
                             <Star size={24} color="#111" fill="#111" />
                         </div>
                         <div className="action-card-text">
-                            <div className="action-title" style={{ color: '#f59e0b' }}>FAME Dashboard</div>
+                            <div className="action-title" style={{ color: 'var(--warning)' }}>FAME Dashboard</div>
                             <div className="action-subtext">Give FAME, view leaderboards, and rate servers · You have 5 FAME tokens to give today</div>
                         </div>
                     </div>

@@ -184,7 +184,7 @@ const PortalCheckinModal = ({ portal, onClose }: { portal: PortalInfo; onClose: 
                         <button
                             onClick={handleJoin}
                             disabled={joining || joined}
-                            style={{ flex: 2, padding: '12px', borderRadius: '10px', background: joined ? '#10b981' : 'var(--accent-primary)', border: 'none', color: '#000', cursor: joining || joined ? 'default' : 'pointer', fontWeight: 700, fontSize: '14px', transition: 'background 0.3s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                            style={{ flex: 2, padding: '12px', borderRadius: '10px', background: joined ? 'var(--success)' : 'var(--accent-primary)', border: 'none', color: '#111', cursor: joining || joined ? 'default' : 'pointer', fontWeight: 700, fontSize: '14px', transition: 'background 0.3s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                             {joined ? '✓ Joined!' : joining ? 'Joining...' : `Join ${portal.name}`}
                         </button>
                     </div>
@@ -396,7 +396,7 @@ const Discover = () => {
                                     borderRadius: '999px',
                                     border: tagFilters.includes(tag) ? '1px solid var(--accent-primary)' : '1px solid var(--stroke)',
                                     padding: '4px 10px',
-                                    background: tagFilters.includes(tag) ? 'rgba(82,109,245,0.15)' : 'var(--bg-tertiary)',
+                                    background: tagFilters.includes(tag) ? 'color-mix(in srgb, var(--accent-primary) 15%, transparent)' : 'var(--bg-tertiary)',
                                     color: tagFilters.includes(tag) ? 'var(--accent-primary)' : 'var(--text-secondary)',
                                     fontSize: '11px',
                                     fontWeight: 600,
@@ -431,7 +431,7 @@ const Discover = () => {
                             style={{ padding: '6px 10px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', width: '140px' }}
                         />
                         {tagFilters.map(tag => (
-                            <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', background: 'rgba(82,109,245,0.15)', border: '1px solid var(--accent-primary)', borderRadius: '999px', fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                            <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', background: 'color-mix(in srgb, var(--accent-primary) 15%, transparent)', border: '1px solid var(--accent-primary)', borderRadius: '999px', fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 600 }}>
                                 #{tag}
                                 <button onClick={() => setTagFilters(prev => prev.filter(t => t !== tag))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--accent-primary)', fontSize: '14px', lineHeight: 1 }}>×</button>
                             </span>
@@ -495,7 +495,7 @@ const Discover = () => {
                                 </div>
                             )}
                             {portal.category && (
-                                <div style={{ position: 'absolute', top: '10px', right: '10px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(82,109,245,0.8)', color: '#fff', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}>
+                                <div style={{ position: 'absolute', top: '10px', right: '10px', padding: '2px 8px', borderRadius: '999px', background: 'var(--accent-primary)', color: '#111', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}>
                                     {portal.category}
                                 </div>
                             )}
