@@ -182,6 +182,20 @@ export const users = pgTable('users', {
    * keep the DB portable).
    */
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+
+  // -- Federation columns (added by migration 0118) --
+
+  /** Federation address, e.g. "alice@gratonite.chat". Null for pre-federation users. */
+  federationAddress: varchar('federation_address', { length: 255 }).unique(),
+
+  /** Home instance FK (set for imported/federated accounts). */
+  homeInstanceId: uuid('home_instance_id'),
+
+  /** True if this is a shadow user representing a remote federated user. */
+  isFederated: boolean('is_federated').notNull().default(false),
+
+  /** Public key PEM for signing federation activities (set for federated users). */
+  federationPublicKeyPem: text('federation_public_key_pem'),
 });
 
 /**

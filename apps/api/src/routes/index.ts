@@ -93,6 +93,7 @@ import { studyRoomsRouter } from './study-rooms';
 import { guildQuestsRouter } from './guild-quests';
 import { guildFormsRouter } from './guild-forms';
 import { confessionsRouter } from './confessions';
+import { federationRouter } from './federation';
 
 export const router = Router();
 
@@ -308,3 +309,6 @@ router.use('/', studyRoomsRouter);
 router.use('/guilds/:guildId/quests', guildQuestsRouter);
 router.use('/guilds/:guildId/forms', guildFormsRouter);
 router.use('/', confessionsRouter);
+
+// Federation
+router.use('/federation', federationRouter);

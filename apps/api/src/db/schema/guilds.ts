@@ -30,6 +30,7 @@ import {
   text,
   boolean,
   integer,
+  jsonb,
   timestamp,
   unique,
 } from 'drizzle-orm/pg-core';
@@ -166,6 +167,20 @@ export const guilds = pgTable('guilds', {
    * etc.). Updated in application code on every guild settings change.
    */
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+
+  // -- Federation columns (added by migration 0119) --
+
+  /** Federation address for this guild. Null until federation is enabled. */
+  federationAddress: varchar('federation_address', { length: 255 }).unique(),
+
+  /** Whether this guild is available for federation. */
+  federationEnabled: boolean('federation_enabled').notNull().default(false),
+
+  /** Home instance FK (set if this is a replicated guild from another instance). */
+  homeInstanceId: uuid('home_instance_id'),
+
+  /** Federation settings (allowRemoteJoins, maxRemoteMembers, etc.). */
+  federationSettings: jsonb('federation_settings').default({}),
 });
 
 /**
@@ -241,6 +256,14 @@ export const guildMembers = pgTable(
 
     /** When the member agreed to the guild's rules. Null = not yet agreed. */
     agreedRulesAt: timestamp('agreed_rules_at', { withTimezone: true }),
+
+    // -- Federation columns (added by migration 0121) --
+
+    /** FK to remote_users for federated guild members. */
+    remoteUserId: uuid('remote_user_id'),
+
+    /** FK to federated_instances — which instance this member joined via. */
+    viaInstanceId: uuid('via_instance_id'),
   },
   (table) => [
     /**

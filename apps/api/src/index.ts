@@ -23,6 +23,15 @@ import { startFriendshipStreaksJob } from './jobs/friendshipStreaks';
 import { startGiveawaysJob } from './jobs/giveaways';
 import { startGuildDigestJob } from './jobs/guildDigest';
 import { httpRequestDuration, activeWebSocketConnections, registry } from './lib/metrics';
+import { initFederation, isFederationEnabled } from './federation/index';
+import { initFederationNamespace } from './federation/realtime';
+import { wellKnownHandler } from './routes/federation';
+import { startFederationDeliveryJob } from './jobs/federationDelivery';
+import { startFederationHeartbeatJob } from './jobs/federationHeartbeat';
+import { startFederationCleanupJob } from './jobs/federationCleanup';
+import { startReplicaSyncJob } from './jobs/replicaSync';
+import { startUpdateCheckJob } from './jobs/updateCheck';
+import { startFederationDiscoverSyncJob } from './jobs/federationDiscoverSync';
 
 const PLACEHOLDER_PATTERNS = [
   'changeme',
@@ -145,12 +154,22 @@ app.use((req: express.Request, res: express.Response, next: express.NextFunction
 });
 
 // ---------------------------------------------------------------------------
-// Health check
+// Health check (extended with federation status)
 // ---------------------------------------------------------------------------
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', ts: Date.now() });
+  const health: Record<string, unknown> = { status: 'ok', ts: Date.now() };
+  if (isFederationEnabled()) {
+    health.federation = { enabled: true };
+  }
+  res.json(health);
 });
+
+// ---------------------------------------------------------------------------
+// Federation well-known endpoint (public discovery, no auth)
+// ---------------------------------------------------------------------------
+
+app.get('/.well-known/gratonite', wellKnownHandler);
 
 // ---------------------------------------------------------------------------
 // API routes
@@ -173,8 +192,9 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 
 const PORT = Number(process.env.PORT) || 4000;
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.info(`API running on port ${PORT}`);
+
   // Start background jobs after server is listening
   startAuctionCron();
   startMessageExpiryCron();
@@ -189,6 +209,24 @@ server.listen(PORT, () => {
   startFriendshipStreaksJob();
   startGiveawaysJob();
   startGuildDigestJob();
+
+  // Initialize federation subsystem (gated behind FEDERATION_ENABLED)
+  try {
+    await initFederation();
+    if (isFederationEnabled()) {
+      initFederationNamespace(io);
+      startFederationDeliveryJob();
+      startFederationHeartbeatJob();
+      startFederationCleanupJob();
+      startReplicaSyncJob();
+      startFederationDiscoverSyncJob();
+    }
+  } catch (err) {
+    console.error('[federation] Failed to initialize:', err);
+  }
+
+  // Update check runs regardless of federation status
+  startUpdateCheckJob();
 });
 
 export { io };

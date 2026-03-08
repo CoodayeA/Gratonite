@@ -99,3 +99,13 @@ export * from './guild-quests';
 export * from './guild-forms';
 export * from './confessions';
 export * from './guild-ratings';
+
+// Federation schemas
+export * from './federation-instances';
+export * from './federation-key-pairs';
+export * from './remote-users';
+export * from './remote-guilds';
+export * from './guild-replicas';
+export * from './federation-activities';
+export * from './instance-blocks';
+export * from './account-imports';

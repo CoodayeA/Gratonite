@@ -166,6 +166,20 @@ export const messages = pgTable(
      *   { url: string, title?: string, description?: string, image?: string, siteName?: string }
      */
     embeds: jsonb('embeds').default([]),
+
+    // -- Federation columns (added by migration 0120) --
+
+    /** Source instance for federated messages. Null for local messages. */
+    originInstanceId: uuid('origin_instance_id'),
+
+    /** Remote message ID for deduplication of federated messages. */
+    remoteMessageId: uuid('remote_message_id'),
+
+    /** Remote author reference for federated messages. */
+    remoteAuthorId: uuid('remote_author_id'),
+
+    /** Stored HTTP signature for audit of federated messages. */
+    federationSignature: text('federation_signature'),
   },
   (table) => [
     /**

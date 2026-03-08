@@ -2622,6 +2622,53 @@ export const api = {
       }),
   },
 
+  federation: {
+    discoverGuilds: (params?: { q?: string; category?: string; sort?: string; limit?: number; offset?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.q) qs.set('q', params.q);
+      if (params?.category) qs.set('category', params.category);
+      if (params?.sort) qs.set('sort', params.sort);
+      if (params?.limit) qs.set('limit', String(params.limit));
+      if (params?.offset) qs.set('offset', String(params.offset));
+      const query = qs.toString();
+      return apiFetch<Array<{
+        id: string;
+        remoteGuildId: string;
+        federationAddress: string;
+        name: string;
+        description: string | null;
+        iconUrl: string | null;
+        bannerUrl: string | null;
+        memberCount: number;
+        onlineCount: number;
+        category: string | null;
+        tags: string[];
+        averageRating: number;
+        totalRatings: number;
+        instance: {
+          id: string;
+          baseUrl: string;
+          trustLevel: string;
+          trustScore: number;
+          softwareVersion: string | null;
+          lastSeenAt: string | null;
+        };
+      }>>(`/federation/discover/remote-guilds${query ? `?${query}` : ''}`);
+    },
+
+    joinRemoteGuild: (remoteGuildId: string) =>
+      apiFetch<{
+        federationAddress: string;
+        instanceUrl: string;
+        joinUrl: string;
+        guildName: string;
+        instanceTrustLevel: string;
+      }>(`/federation/discover/remote-guilds/${remoteGuildId}/join`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      }),
+  },
+
   // Generic helpers for custom endpoints not covered by typed methods above
   get: <T = unknown>(path: string) => apiFetch<T>(path),
   post: <T = unknown>(path: string, data: unknown) =>

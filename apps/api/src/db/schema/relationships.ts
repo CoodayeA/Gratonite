@@ -113,6 +113,14 @@ export const relationships = pgTable(
      * or friendship accepted, depending on type).
      */
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+
+    // -- Federation columns (added by migration 0122) --
+
+    /** FK to remote_users if the requester is a federated user. */
+    remoteRequesterId: uuid('remote_requester_id'),
+
+    /** FK to remote_users if the addressee is a federated user. */
+    remoteAddresseeId: uuid('remote_addressee_id'),
   },
   (table) => [
     /**

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Compass, Bot, Palette, Star, Users, ArrowRight, X, Shield, MessageSquare, Globe } from 'lucide-react';
+import { Search, Compass, Bot, Palette, Star, Users, ArrowRight, X, Shield, MessageSquare, Globe, ExternalLink } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { useTheme, AppTheme } from '../../components/ui/ThemeProvider';
 import { api, API_BASE } from '../../lib/api';
@@ -205,6 +205,147 @@ const PortalCheckinModal = ({ portal, onClose }: { portal: PortalInfo; onClose: 
     );
 };
 
+// Federated guild info from remote instances
+type FederatedPortalInfo = {
+    id: string;
+    remoteGuildId: string;
+    federationAddress: string;
+    name: string;
+    description: string | null;
+    iconUrl: string | null;
+    bannerUrl: string | null;
+    memberCount: number;
+    onlineCount: number;
+    category: string | null;
+    tags: string[];
+    averageRating: number;
+    totalRatings: number;
+    instance: {
+        id: string;
+        baseUrl: string;
+        trustLevel: string;
+        trustScore: number;
+        softwareVersion: string | null;
+        lastSeenAt: string | null;
+    };
+};
+
+// Sanitize a URL for safe use in CSS url() — strips parens and quotes
+const safeCssUrl = (url: string): string => url.replace(/[()'"\\]/g, '');
+
+const TRUST_BADGE: Record<string, { color: string; label: string }> = {
+    verified: { color: '#10b981', label: 'Verified' },
+    manually_trusted: { color: '#3b82f6', label: 'Trusted' },
+    auto_discovered: { color: '#6b7280', label: 'Community' },
+};
+
+// Federated Join Modal
+const FederatedJoinModal = ({ portal, onClose }: { portal: FederatedPortalInfo; onClose: () => void }) => {
+    const instanceDomain = (() => {
+        try { return new URL(portal.instance.baseUrl).hostname; } catch { return portal.instance.baseUrl; }
+    })();
+    const trustInfo = TRUST_BADGE[portal.instance.trustLevel] || TRUST_BADGE.auto_discovered;
+
+    return (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }} onClick={onClose}>
+            <div style={{ width: '520px', background: 'var(--bg-elevated)', borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--stroke)', boxShadow: '0 32px 64px rgba(0,0,0,0.6)', animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }} onClick={e => e.stopPropagation()}>
+                {/* Banner */}
+                <div
+                    style={{
+                        height: '180px',
+                        position: 'relative',
+                        background: portal.bannerUrl
+                            ? `url(${safeCssUrl(portal.bannerUrl)}) center/cover`
+                            : 'linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(139, 92, 246, 0.3))',
+                    }}
+                >
+                    <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }}>
+                        <X size={16} />
+                    </button>
+                    {/* Trust badge */}
+                    <div style={{ position: 'absolute', top: 16, left: 16, background: trustInfo.color, borderRadius: '20px', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700, color: 'white' }}>
+                        <Shield size={12} /> {trustInfo.label}
+                    </div>
+                    {/* Instance domain badge */}
+                    <div style={{ position: 'absolute', bottom: 16, right: 16, background: 'rgba(0,0,0,0.6)', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Globe size={11} /> {instanceDomain}
+                    </div>
+                    {/* Guild icon */}
+                    <div style={{ position: 'absolute', bottom: -28, left: 24, width: '56px', height: '56px', borderRadius: '14px', background: 'var(--bg-elevated)', border: '3px solid var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+                        {portal.iconUrl ? (
+                            <img src={portal.iconUrl} alt={portal.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                            portal.name.charAt(0).toUpperCase()
+                        )}
+                    </div>
+                </div>
+
+                {/* Content */}
+                <div style={{ padding: '40px 28px 28px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                        <h2 style={{ fontSize: '22px', fontWeight: 700, fontFamily: 'var(--font-display)' }}>{portal.name}</h2>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                            {portal.tags.map(tag => (
+                                <span key={tag} style={{ fontSize: '11px', padding: '3px 8px', background: 'var(--bg-tertiary)', borderRadius: '6px', color: 'var(--text-secondary)' }}>{tag}</span>
+                            ))}
+                        </div>
+                    </div>
+
+                    {portal.description && (
+                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '20px' }}>{portal.description}</p>
+                    )}
+
+                    {/* Stats */}
+                    <div style={{ display: 'flex', gap: '24px', marginBottom: '20px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)' }}>{portal.memberCount.toLocaleString()}</span>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><Users size={12} /> Members</span>
+                        </div>
+                        {portal.onlineCount > 0 && (
+                            <>
+                                <div style={{ width: '1px', background: 'var(--stroke)' }} />
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <span style={{ fontSize: '20px', fontWeight: 700, color: '#10b981' }}>{portal.onlineCount.toLocaleString()}</span>
+                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Online</span>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Instance info bar */}
+                    <div style={{ background: 'var(--bg-tertiary)', borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', border: '1px solid var(--stroke)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                            <Globe size={16} color="var(--text-muted)" />
+                            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{instanceDomain}</span>
+                            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: `${trustInfo.color}22`, color: trustInfo.color, fontWeight: 600 }}>{trustInfo.label}</span>
+                        </div>
+                        {portal.instance.softwareVersion && (
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                Gratonite v{portal.instance.softwareVersion}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Warning */}
+                    <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '12px 16px', marginBottom: '24px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                        This server is hosted on <strong style={{ color: 'var(--text-primary)' }}>{instanceDomain}</strong>. You'll need an account there to join.
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                        <button onClick={onClose} style={{ flex: 1, padding: '12px', borderRadius: '10px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600, fontSize: '14px' }}>Cancel</button>
+                        <button
+                            onClick={() => window.open(portal.instance.baseUrl + '/app/', '_blank')}
+                            style={{ flex: 2, padding: '12px', borderRadius: '10px', background: 'var(--accent-primary)', border: 'none', color: '#111', cursor: 'pointer', fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                        >
+                            Visit {instanceDomain} <ExternalLink size={14} />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const Discover = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<Tab>('portals');
@@ -221,6 +362,9 @@ const Discover = () => {
     const { setTheme } = useTheme();
     const [isLoading, setIsLoading] = useState(false);
     const [availableTags, setAvailableTags] = useState<string[]>([]);
+    const [federatedPortals, setFederatedPortals] = useState<FederatedPortalInfo[]>([]);
+    const [federatedLoading, setFederatedLoading] = useState(false);
+    const [selectedFederated, setSelectedFederated] = useState<FederatedPortalInfo | null>(null);
 
     useEffect(() => {
         api.get<string[]>('/guilds/tags').then(tags => {
@@ -244,6 +388,16 @@ const Discover = () => {
         }),
         ]);
     }, []);
+
+    // Fetch federated portals from remote instances
+    useEffect(() => {
+        if (activeTab !== 'portals') return;
+        setFederatedLoading(true);
+        api.federation.discoverGuilds({ limit: 20, sort: 'members' })
+            .then(results => setFederatedPortals(results))
+            .catch(() => { /* Graceful degradation — federation may not be available */ })
+            .finally(() => setFederatedLoading(false));
+    }, [activeTab]);
 
     useEffect(() => {
         if (activeTab !== 'portals') return;
@@ -422,6 +576,82 @@ const Discover = () => {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Self-Hosted Servers from federated instances */}
+            {federatedPortals.length > 0 && (
+                <div style={{ marginBottom: '28px' }}>
+                    <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+                        <Globe size={18} color="var(--accent-primary)" /> Self-Hosted Servers
+                    </h2>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>
+                        Communities running on independent Gratonite instances
+                    </p>
+                    <div style={{
+                        display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px',
+                        scrollbarWidth: 'thin', scrollbarColor: 'var(--stroke) transparent',
+                    }}>
+                        {federatedPortals.map(portal => {
+                            const instanceDomain = (() => { try { return new URL(portal.instance.baseUrl).hostname; } catch { return portal.instance.baseUrl; } })();
+                            const trustInfo = TRUST_BADGE[portal.instance.trustLevel] || TRUST_BADGE.auto_discovered;
+                            return (
+                                <div
+                                    key={portal.id}
+                                    className="portal-card hover-lift"
+                                    onClick={() => setSelectedFederated(portal)}
+                                    style={{ minWidth: '300px', flex: '0 0 auto', cursor: 'pointer' }}
+                                >
+                                    <div style={{
+                                        height: '140px', position: 'relative',
+                                        background: portal.bannerUrl
+                                            ? `url(${safeCssUrl(portal.bannerUrl)}) center/cover`
+                                            : 'linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(139, 92, 246, 0.3))',
+                                    }}>
+                                        {/* Instance domain badge */}
+                                        <div style={{ position: 'absolute', top: '10px', left: '10px', padding: '2px 10px', borderRadius: '999px', background: 'rgba(0,0,0,0.55)', color: 'rgba(255,255,255,0.9)', fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <Globe size={10} /> {instanceDomain}
+                                        </div>
+                                        {/* Trust indicator */}
+                                        <div style={{ position: 'absolute', top: '10px', right: '10px', padding: '2px 8px', borderRadius: '999px', background: trustInfo.color, color: '#fff', fontSize: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                            <Shield size={9} /> {trustInfo.label}
+                                        </div>
+                                        {/* Guild icon */}
+                                        <div style={{ position: 'absolute', bottom: '-20px', left: '16px', width: '44px', height: '44px', borderRadius: '10px', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.5)', border: '2px solid var(--stroke)', fontSize: '18px', overflow: 'hidden' }}>
+                                            {portal.iconUrl ? (
+                                                <img src={portal.iconUrl} alt={portal.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : (
+                                                portal.name.charAt(0).toUpperCase()
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div style={{ padding: '28px 16px 16px' }}>
+                                        <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: '4px' }}>{portal.name}</div>
+                                        {portal.description && (
+                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                {portal.description}
+                                            </div>
+                                        )}
+                                        {portal.tags.length > 0 && (
+                                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                                                {portal.tags.slice(0, 3).map(tag => (
+                                                    <span key={tag} style={{ fontSize: '10px', padding: '2px 7px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '999px', color: 'var(--text-muted)' }}>#{tag}</span>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <Users size={12} /> {portal.memberCount.toLocaleString()} members
+                                            </span>
+                                            <span style={{ padding: '6px 16px', fontSize: '12px', background: 'var(--accent-primary)', color: '#111', fontWeight: 600, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                Visit <ExternalLink size={10} />
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -789,6 +1019,10 @@ const Discover = () => {
 
             {joiningPortal && (
                 <PortalCheckinModal portal={joiningPortal} onClose={() => setJoiningPortal(null)} />
+            )}
+
+            {selectedFederated && (
+                <FederatedJoinModal portal={selectedFederated} onClose={() => setSelectedFederated(null)} />
             )}
         </>
     );
