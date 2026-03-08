@@ -108,7 +108,7 @@ const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApiId, cha
         if (!messageApiId || !channelId) return;
         timerRef.current = setTimeout(() => {
             fetch(`${API_BASE}/api/v1/channels/${channelId}/messages/${messageApiId}/reactions/${encodeURIComponent(emoji)}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+                headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
             }).then(r => r.ok ? r.json() : []).then(data => {
                 if (Array.isArray(data) && data.length > 0) {
                     setTooltip({ users: data.slice(0, 5), total: count });
@@ -399,7 +399,7 @@ const MemoizedMessageItem = memo(({
                             />
                         ) : msg.type === 'media' && msg.mediaUrl ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {msg.content && (
+                                {msg.content && msg.content !== msg.mediaUrl && (
                                     <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.5' }}>
                                         <RichTextRenderer content={msg.content} customEmojis={customEmojis} members={members} channels={channels} />
                                     </div>
