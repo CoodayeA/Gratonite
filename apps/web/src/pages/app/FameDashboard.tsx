@@ -21,6 +21,7 @@ type FAMEUser = {
     fameGiven: number;
     weeklyChange: number; // delta rank
     badges: string[];
+    bgColor: string;
     isCurrentUser?: boolean;
     serverName?: string;
 };
@@ -378,6 +379,7 @@ const FameDashboard = () => {
                 fameGiven: 0,
                 weeklyChange: 0,
                 badges: entry.rank <= 3 ? ['⭐'] : [],
+                bgColor: getDeterministicGradient(entry.displayName || entry.username),
                 isCurrentUser: false, // will be set after getMe resolves
             }));
             setLeaderboardUsers(users);

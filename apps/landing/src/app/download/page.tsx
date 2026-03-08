@@ -25,7 +25,7 @@ const platforms = [
     description: "macOS desktop app for Apple Silicon (M1 and later).",
     format: ".dmg",
     accent: "purple" as const,
-    href: "https://gratonite.chat/downloads/Gratonite-1.0.3-arm64.dmg",
+    href: "https://gratonite.chat/downloads/Gratonite-1.0.4-arm64.dmg",
   },
   {
     icon: "⊞",
@@ -33,15 +33,23 @@ const platforms = [
     description: "Windows installer — NSIS setup, installs like any app.",
     format: ".exe",
     accent: "blue" as const,
-    href: "https://gratonite.chat/downloads/Gratonite%20Setup%201.0.3.exe",
+    href: "https://gratonite.chat/downloads/Gratonite%20Setup%201.0.4.exe",
   },
   {
     icon: "🐧",
-    name: "Linux",
-    description: "Pick your Linux build: AppImage, DEB, or RPM.",
-    format: "soon",
+    name: "Linux (x64)",
+    description: "AppImage for most Linux distros. Also available as .deb.",
+    format: ".AppImage",
     accent: "gold" as const,
-    variants: ["AppImage", "DEB", "RPM"],
+    href: "https://gratonite.chat/downloads/Gratonite-1.0.4.AppImage",
+  },
+  {
+    icon: "🐧",
+    name: "Linux (ARM64)",
+    description: "AppImage for ARM64 Linux. Also available as .deb.",
+    format: ".AppImage",
+    accent: "gold" as const,
+    href: "https://gratonite.chat/downloads/Gratonite-1.0.4-arm64.AppImage",
   },
   {
     icon: "📱",
@@ -92,7 +100,7 @@ export default function DownloadPage() {
             <span className="px-4 py-2 font-display font-bold text-sm rounded-lg neo-border-2 bg-charcoal text-white neo-shadow-sm">
               Stable
               <span className="ml-2 text-[10px] font-mono font-normal text-white/60">
-                v1.0.3
+                v1.0.4
               </span>
             </span>
           </div>
@@ -123,23 +131,6 @@ export default function DownloadPage() {
                 <p className="text-foreground/60 text-sm mb-6 flex-1">
                   {platform.description}
                 </p>
-                {platform.variants && (
-                  <label className="mb-4 block">
-                    <span className="text-xs font-bold text-foreground/45 uppercase tracking-wider">
-                      Build Type
-                    </span>
-                    <select
-                      className="mt-2 w-full neo-border-2 rounded-lg bg-surface px-3 py-2 text-sm font-medium"
-                      defaultValue={platform.variants[0]}
-                    >
-                      {platform.variants.map((variant) => (
-                        <option key={variant} value={variant}>
-                          {variant}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-foreground/40 uppercase tracking-wider">
                     {platform.format}
