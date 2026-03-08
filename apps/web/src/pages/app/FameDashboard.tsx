@@ -4,7 +4,7 @@ import {
     Info, Sparkles, Shield,
     ArrowUpRight, ArrowDownRight, X
 } from 'lucide-react';
-import { api } from '../../lib/api';
+import { api, API_BASE } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
 import { useToast } from '../../components/ui/ToastManager';
 import Avatar from '../../components/ui/Avatar';
@@ -16,8 +16,7 @@ type FAMEUser = {
     id: number;
     sourceUserId: string;
     name: string;
-    avatar: string;
-    bgColor: string;
+    avatarHash: string | null;
     fameReceived: number;
     fameGiven: number;
     weeklyChange: number; // delta rank
@@ -31,6 +30,7 @@ type ServerRating = {
     sourceGuildId: string;
     name: string;
     icon: string;
+    iconHash: string | null;
     bgColor: string;
     avgRating: number;
     totalRatings: number;
@@ -286,7 +286,7 @@ const UserDetailPane = ({
 
 const PodiumPlace = ({ user, rank, onClickName }: { user: FAMEUser; rank: number; onClickName: (user: FAMEUser) => void }) => {
     const colors = { 1: '#f59e0b', 2: '#94a3b8', 3: '#cd7f32' };
-    const heights = { 1: 100, 2: 80, 3: 64 };
+    const heights = { 1: 80, 2: 60, 3: 48 };
     const order = { 1: 1, 2: 0, 3: 2 };
     const color = colors[rank as 1 | 2 | 3];
     const height = heights[rank as 1 | 2 | 3];
@@ -295,8 +295,9 @@ const PodiumPlace = ({ user, rank, onClickName }: { user: FAMEUser; rank: number
         <div style={{ order: order[rank as 1 | 2 | 3], display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
             <div style={{ fontSize: '20px' }}>{user.badges[0] || ''}</div>
             <Avatar
-                userId={String(user.id)}
+                userId={user.sourceUserId}
                 displayName={user.name}
+                avatarHash={user.avatarHash}
                 size={52}
                 style={{
                     border: `3px solid ${color}`,
@@ -308,7 +309,7 @@ const PodiumPlace = ({ user, rank, onClickName }: { user: FAMEUser; rank: number
             </ClickableName>
             <div style={{ fontSize: '11px', color: color, fontWeight: 700 }}>⭐ {user.fameReceived.toLocaleString()}</div>
             <div style={{
-                width: '72px', height: `${height}px`,
+                width: '80px', height: `${height}px`, marginTop: '4px',
                 background: `linear-gradient(to top, ${color}88, ${color}22)`,
                 borderRadius: '6px 6px 0 0', display: 'flex', alignItems: 'flex-start',
                 justifyContent: 'center', paddingTop: '8px',
@@ -371,8 +372,7 @@ const FameDashboard = () => {
                 id: typeof entry.userId === 'string' ? idx + 1 : Number(entry.userId),
                 sourceUserId: String(entry.userId ?? ''),
                 name: entry.displayName || entry.username,
-                avatar: (entry.displayName || entry.username).charAt(0).toUpperCase(),
-                bgColor: getDeterministicGradient(entry.displayName || entry.username),
+                avatarHash: entry.avatarHash || null,
                 fameReceived: entry.fameReceived || 0,
                 fameGiven: 0,
                 weeklyChange: 0,
@@ -391,6 +391,7 @@ const FameDashboard = () => {
                 sourceGuildId: g.id,
                 name: g.name,
                 icon: g.name.charAt(0).toUpperCase(),
+                iconHash: g.iconHash || null,
                 bgColor: getDeterministicGradient(g.name),
                 avgRating: 0,
                 totalRatings: g.memberCount || 0,
@@ -437,6 +438,15 @@ const FameDashboard = () => {
         if (!currentUserId) return;
         api.fame.getStats(currentUserId).then(stats => {
             setMyFameStats(stats);
+        }).catch(() => {});
+    }, [currentUserId]);
+
+    useEffect(() => {
+        if (!currentUserId) return;
+        api.fame.getRemaining().then(r => {
+            setFameToday(r.remaining);
+            const today = new Date().toISOString().slice(0, 10);
+            localStorage.setItem('gratonite-fame-tokens', JSON.stringify({ date: today, used: r.used }));
         }).catch(() => {});
     }, [currentUserId]);
 
@@ -746,7 +756,7 @@ const FameDashboard = () => {
                                             background: 'var(--bg-tertiary)',
                                             border: given ? '1px solid rgba(245,158,11,0.3)' : '1px solid transparent'
                                         }}>
-                                            <Avatar userId={String(user.id)} displayName={user.name} size={36} />
+                                            <Avatar userId={user.sourceUserId} displayName={user.name} avatarHash={user.avatarHash} size={36} />
                                             <div style={{ flex: 1 }}>
                                                 <ClickableName onClick={() => handleUserClick(user)}>
                                                     <div style={{ fontWeight: 600, fontSize: '14px' }}>{user.name}</div>
@@ -846,8 +856,9 @@ const FameDashboard = () => {
                                             <td style={{ padding: '12px 16px' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                     <Avatar
-                                                        userId={String(user.id)}
+                                                        userId={user.sourceUserId}
                                                         displayName={user.name}
+                                                        avatarHash={user.avatarHash}
                                                         size={32}
                                                         style={{ border: isYou ? '2px solid #f59e0b' : '2px solid transparent' }}
                                                     />
@@ -918,12 +929,23 @@ const FameDashboard = () => {
                                     <div style={{ width: '6px', background: server.bgColor, flexShrink: 0 }} />
                                     <div style={{ flex: 1, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
                                         {/* Icon */}
-                                        <div style={{
-                                            width: '52px', height: '52px', borderRadius: '14px',
-                                            background: server.bgColor, display: 'flex',
-                                            alignItems: 'center', justifyContent: 'center', fontSize: '24px',
-                                            flexShrink: 0
-                                        }}>{server.icon}</div>
+                                        {server.iconHash ? (
+                                            <img
+                                                src={`${API_BASE}/files/${server.iconHash}`}
+                                                alt={server.name}
+                                                style={{
+                                                    width: '52px', height: '52px', borderRadius: '14px',
+                                                    objectFit: 'cover', flexShrink: 0
+                                                }}
+                                            />
+                                        ) : (
+                                            <div style={{
+                                                width: '52px', height: '52px', borderRadius: '14px',
+                                                background: server.bgColor, display: 'flex',
+                                                alignItems: 'center', justifyContent: 'center', fontSize: '24px',
+                                                flexShrink: 0
+                                            }}>{server.icon}</div>
+                                        )}
                                         {/* Info */}
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>

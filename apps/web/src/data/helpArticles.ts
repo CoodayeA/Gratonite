@@ -7,7 +7,9 @@ export type Category =
   | 'Billing & Premium'
   | 'Cosmetics & Shop'
   | 'Creator Tools'
-  | 'Marketplace & Auctions';
+  | 'Marketplace & Auctions'
+  | 'Messaging & Chat'
+  | 'Privacy & Safety';
 
 export interface Article {
   id: string;
@@ -399,6 +401,204 @@ export const ARTICLES: Article[] = [
       'Install the adapter with npm install @gratonite/discord-bridge, then replace your Discord client initialization with the GratoniteClient provided by the adapter, passing in your webhookSecret and apiToken. The adapter exposes the same client.on("messageCreate", handler) API you are already using.',
       'The majority of Discord.js features work out of the box after migration: text commands, slash command responses, role assignment and removal, and message sending and editing are all fully supported. Voice and audio playback requires a separate integration with Gratonite\'s LiveKit-based voice infrastructure — consult the LiveKit Integration guide for details.',
       'To test your migrated bot, register a webhook URL pointing to your adapter server in the Bot Builder, install the bot on a private test server, and send a command. Check the Bot Builder > Logs tab to inspect the raw event payloads Gratonite sent and the action responses your server returned, which makes debugging straightforward.',
+    ],
+  },
+
+  // ── Messaging & Chat ──────────────────────────────────────────────────────
+
+  {
+    id: 'threads',
+    title: 'Using Threads',
+    description: 'Keep conversations organized with threaded replies.',
+    category: 'Messaging & Chat',
+    body: [
+      'Start a thread by hovering over any message and clicking the thread icon, or right-click a message and select "Create Thread".',
+      'Threads open in a side panel, keeping the main channel clean while allowing focused discussions on a specific topic.',
+      'Reply within a thread to keep related messages grouped together — thread replies do not clutter the main channel view.',
+      'Threads auto-archive after a configurable period of inactivity. Server admins can set the auto-archive duration in channel settings.',
+      'You can follow or unfollow threads to control which ones send you notifications. Followed threads appear in your thread inbox.',
+    ],
+  },
+  {
+    id: 'keyboard-shortcuts',
+    title: 'Keyboard Shortcuts',
+    description: 'Navigate faster with keyboard shortcuts.',
+    category: 'Getting Started',
+    body: [
+      'Press Shift+Enter to insert a new line in your message without sending it. Press Enter alone to send.',
+      'Press Escape to close any open panel, modal, or popover — including threads, settings, and search results.',
+      'Use Ctrl+K (or Cmd+K on Mac) to open the command palette for quick navigation to channels, servers, and DMs.',
+      'Press Ctrl+Shift+M to toggle the mute state of your microphone in a voice channel.',
+      'Arrow Up on an empty message input edits your most recently sent message in the current channel.',
+    ],
+  },
+  {
+    id: 'message-reactions',
+    title: 'Message Reactions',
+    description: 'React to messages with emoji to express yourself.',
+    category: 'Messaging & Chat',
+    body: [
+      'Hover over a message and click the emoji face icon to open the reaction picker. Select any emoji to add your reaction.',
+      'Click an existing reaction beneath a message to add your own — the counter increments and your avatar appears in the reaction tooltip.',
+      'Hover over a reaction to see the list of users who reacted with that emoji.',
+      'Click your own reaction again to remove it. Server moderators can remove reactions from any message.',
+      'Servers can restrict which roles are allowed to add reactions in specific channels via channel permission settings.',
+    ],
+  },
+  {
+    id: 'drafts-scheduled',
+    title: 'Drafts & Scheduled Messages',
+    description: 'Auto-saved drafts and scheduling messages for later.',
+    category: 'Messaging & Chat',
+    body: [
+      'Drafts are saved automatically as you type. If you switch channels or close the app, your in-progress message is preserved and restored when you return.',
+      'To schedule a message, click the clock icon next to the send button and choose a date and time for delivery.',
+      'Scheduled messages are sent automatically at the specified time, even if you are offline. They appear as regular messages to recipients.',
+      'View and manage all your scheduled messages from Settings > Drafts & Scheduled, where you can edit, reschedule, or cancel pending messages.',
+      'Drafts are per-channel — each channel stores its own draft independently, so you can have multiple works-in-progress across different conversations.',
+    ],
+  },
+  {
+    id: 'bookmarks-saved',
+    title: 'Bookmarks & Saved Messages',
+    description: 'Save important messages for quick access later.',
+    category: 'Messaging & Chat',
+    body: [
+      'Right-click any message and select "Bookmark" to save it to your personal bookmarks collection.',
+      'Access all your saved messages from the Saved Messages page, accessible from the sidebar or by pressing Ctrl+Shift+B.',
+      'Bookmarks are private — only you can see your saved messages. They are not visible to other users or server admins.',
+      'Organize bookmarks by searching or filtering by server and channel to quickly find the message you need.',
+      'Remove a bookmark by right-clicking the message again and selecting "Remove Bookmark", or from the Saved Messages page.',
+    ],
+  },
+  {
+    id: 'direct-messages',
+    title: 'Direct Messages',
+    description: 'Send private messages to individuals or groups.',
+    category: 'Messaging & Chat',
+    body: [
+      'Start a DM by clicking the DM icon in the sidebar, then select a friend or search for any user by username.',
+      'Group DMs allow up to 10 participants. Create one by selecting multiple users when starting a new conversation.',
+      'DM conversations support all the same features as server channels — file uploads, reactions, embeds, and message editing.',
+      'Use the DM search bar to find specific messages, users, or files within your direct message conversations.',
+      'You can close a DM conversation to remove it from your sidebar without deleting the message history. Reopen it anytime from the user\'s profile.',
+    ],
+  },
+  {
+    id: 'server-discovery',
+    title: 'Server Discovery',
+    description: 'Find and join new communities on Gratonite.',
+    category: 'Servers & Channels',
+    body: [
+      'Open the Discover page from the sidebar to browse public servers across all categories.',
+      'Use search, category filters, and tags to narrow down servers that match your interests.',
+      'Featured servers are highlighted at the top of Discover — these are highly rated communities curated by ratings and activity.',
+      'Click any server card to see its description, member count, rating, and category before joining.',
+      'Join a server directly from Discover with one click. You can leave at any time by right-clicking the server icon.',
+    ],
+  },
+  {
+    id: 'server-ratings-reviews',
+    title: 'Server Ratings & Reviews',
+    description: 'Rate servers and help the community find great portals.',
+    category: 'Servers & Channels',
+    body: [
+      'Rate any server you\'ve joined by right-clicking its icon in the sidebar and selecting "Rate Portal".',
+      'Choose a star rating from 1 to 5 and confirm. Your rating is anonymous and contributes to the server\'s average score.',
+      'You can also rate servers from the FAME Dashboard\'s Server Ratings tab, which shows all discoverable servers.',
+      'Servers with consistently high ratings are prioritized in the Discover Featured section, helping great communities grow.',
+      'Update your rating at any time — your latest rating replaces your previous one.',
+    ],
+  },
+  {
+    id: 'themes-customization',
+    title: 'Themes & Customization',
+    description: 'Personalize your Gratonite experience with themes and display settings.',
+    category: 'Getting Started',
+    body: [
+      'Navigate to Settings > Appearance to access all visual customization options.',
+      'Choose from multiple built-in themes including dark, light, midnight, and community-created themes.',
+      'Enable Glass Mode for a translucent, frosted-glass UI effect that shows your background media through panels.',
+      'Toggle Compact Mode to reduce spacing and show more messages on screen — ideal for power users.',
+      'Adjust font size, font family, and message display density to match your reading preference.',
+    ],
+  },
+  {
+    id: 'word-filters',
+    title: 'Word Filters',
+    description: 'Configure automated word filtering for your server.',
+    category: 'Servers & Channels',
+    body: [
+      'Open Server Settings > Moderation > Word Filters to set up content filtering rules.',
+      'Add words or phrases to the filter list. Each filter can be configured with a specific action: block, delete, or warn.',
+      'Block prevents the message from being sent entirely. Delete removes it after sending. Warn sends a private notice to the user.',
+      'Use wildcards to catch variations of filtered words — for example, filtering "spam*" catches "spam", "spammer", and "spamming".',
+      'Exempt specific roles from word filters to allow moderators and trusted members to bypass filtering rules.',
+    ],
+  },
+  {
+    id: 'notification-preferences',
+    title: 'Notification Preferences',
+    description: 'Control how and when you receive notifications.',
+    category: 'Account & Security',
+    body: [
+      'Set per-channel notification levels by right-clicking a channel and selecting "Notification Settings". Options include all messages, mentions only, or none.',
+      'Mute specific users to suppress their messages from triggering notifications — go to Settings > Muted Users to manage your mute list.',
+      'Enable web push notifications in Settings > Notifications to receive alerts even when Gratonite is not in the foreground.',
+      'Clear all unread notifications for a server by right-clicking its icon and selecting "Mark as Read".',
+      'Configure email notification preferences in Settings > Notifications > Email to control which events send emails.',
+    ],
+  },
+  {
+    id: 'rich-presence-status',
+    title: 'Rich Presence & Status',
+    description: 'Set custom status messages and activity displays.',
+    category: 'Getting Started',
+    body: [
+      'Click your avatar in the sidebar to set your status: Online, Idle, Do Not Disturb, or Invisible.',
+      'Set a custom status message with optional emoji that appears next to your name in member lists and profile popover.',
+      'Rich Presence shows what you\'re currently doing — such as playing a game, listening to music, or coding — if the activity shares data with Gratonite.',
+      'Custom statuses can have an expiration time — choose "Don\'t clear", "30 minutes", "1 hour", "4 hours", or "Today" when setting one.',
+      'Your status syncs across all devices. Changing it on desktop immediately updates mobile and web sessions.',
+    ],
+  },
+  {
+    id: 'server-boosts',
+    title: 'Server Boosts',
+    description: 'Boost servers to unlock perks and support communities.',
+    category: 'Servers & Channels',
+    body: [
+      'Boost a server by right-clicking its icon and selecting "Boost Portal". Each boost contributes to the server\'s boost level.',
+      'Server boost levels unlock perks: higher upload limits, more emoji slots, improved audio quality, and a special boost badge.',
+      'Boosters receive a unique badge next to their name in the boosted server and appear in the server\'s Boost tab.',
+      'Boosting costs Gratonite currency, not real money — earn it through activity, FAME, and daily rewards.',
+      'View a server\'s current boost level, perks, and contributors in Server Settings > Boosts.',
+    ],
+  },
+  {
+    id: 'data-export-privacy',
+    title: 'Data Export & Privacy',
+    description: 'Request your data export or account deletion.',
+    category: 'Privacy & Safety',
+    body: [
+      'Request a full data export from Settings > Privacy & Safety > Request Data Export. Gratonite will compile all your data into a downloadable archive.',
+      'Data exports include your messages, profile information, server memberships, uploads, and activity history in a machine-readable format.',
+      'Exports are processed within 48 hours. You will receive a notification when your archive is ready to download.',
+      'To request account deletion, go to Settings > Account > Delete Account. Your account enters a 30-day grace period before permanent deletion.',
+      'During the grace period, you can cancel the deletion request by logging in and clicking "Cancel Deletion" on the warning banner.',
+    ],
+  },
+  {
+    id: 'federation',
+    title: 'Federation',
+    description: 'Connect with servers across federated Gratonite instances.',
+    category: 'Servers & Channels',
+    body: [
+      'Federation allows separate Gratonite instances to share servers, enabling cross-instance communities.',
+      'Browse federated servers from Discover > Federated tab to see servers hosted on other Gratonite instances.',
+      'Join a federated server just like a local one — click "Join" and your account creates a federated membership automatically.',
+      'Messages in federated servers are relayed between instances in real-time, so the experience feels seamless.',
+      'Server admins can enable federation in Server Settings > Federation to make their server visible to other instances.',
     ],
   },
 ];

@@ -168,7 +168,7 @@ const LegacyGuildVoiceRedirect = () => {
 
 // BackgroundMedia moved to src/components/ui/BackgroundMedia.tsx
 
-const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugReport, onOpenProfile, onOpenSettings, onOpenGuildSettings, onOpenInvite, onGuildsRefresh, guilds, userProfile }: { isOpen: boolean, onOpenCreateGuild: () => void, onOpenNotifications: () => void, onOpenBugReport: () => void, onOpenProfile: () => void, onOpenSettings: () => void, onOpenGuildSettings: () => void, onOpenInvite: () => void, onGuildsRefresh?: () => void, guilds: Array<{ id: string; name: string; ownerId: string; iconHash: string | null; description: string | null; memberCount: number }>, userProfile: { id?: string; name: string; avatarHash?: string | null; avatarFrame?: 'none' | 'neon' | 'gold' | 'glass' } }) => {
+const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugReport, onOpenProfile, onOpenSettings, onOpenGuildSettings, onOpenInvite, onGuildsRefresh, onGuildLeave, guilds, userProfile }: { isOpen: boolean, onOpenCreateGuild: () => void, onOpenNotifications: () => void, onOpenBugReport: () => void, onOpenProfile: () => void, onOpenSettings: () => void, onOpenGuildSettings: () => void, onOpenInvite: () => void, onGuildsRefresh?: () => void, onGuildLeave?: (guildId: string) => void, guilds: Array<{ id: string; name: string; ownerId: string; iconHash: string | null; description: string | null; memberCount: number }>, userProfile: { id?: string; name: string; avatarHash?: string | null; avatarFrame?: 'none' | 'neon' | 'gold' | 'glass' } }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const { openMenu } = useContextMenu();
@@ -264,11 +264,15 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                 addToast({ title: 'Folder created', variant: 'success' });
             }},
             { id: 'leave', label: 'Leave Portal', icon: LogOut, color: 'var(--error)', onClick: () => {
-                api.guilds.leave(guild.id).then(() => {
-                    onGuildsRefresh?.();
+                const guildId = guild.id;
+                onGuildLeave?.(guildId);
+                if (location.pathname.startsWith(`/guild/${guildId}`)) navigate('/');
+                api.guilds.leave(guildId).then(() => {
                     addToast({ title: `Left ${guild.name}`, variant: 'info' });
-                    if (location.pathname.startsWith(`/guild/${guild.id}`)) navigate('/');
-                }).catch(() => addToast({ title: 'Failed to leave portal', variant: 'error' }));
+                }).catch(() => {
+                    onGuildsRefresh?.();
+                    addToast({ title: 'Failed to leave portal', variant: 'error' });
+                });
             }},
         ]);
     };
@@ -2117,6 +2121,10 @@ export const AppLayout = () => {
         }).catch(() => {});
     }, []);
 
+    const handleGuildLeave = useCallback((guildId: string) => {
+        setGuilds(prev => prev.filter(g => g.id !== guildId));
+    }, []);
+
     useEffect(() => {
         refreshGuilds();
         if (!isAuthRuntimeExpired()) {
@@ -2502,6 +2510,7 @@ export const AppLayout = () => {
                     onOpenGuildSettings={() => setActiveModal('guildSettings')}
                     onOpenInvite={() => setActiveModal('invite')}
                     onGuildsRefresh={refreshGuilds}
+                    onGuildLeave={handleGuildLeave}
                     guilds={guilds}
                     userProfile={userProfile}
                 />

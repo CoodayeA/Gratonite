@@ -137,6 +137,30 @@ fameRouter.post(
 );
 
 /**
+ * GET /remaining — Get remaining daily FAME tokens for the current user
+ */
+fameRouter.get(
+  '/remaining',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const today = todayDateString();
+      const [row] = await db
+        .select({ count: fameDailyLimits.count })
+        .from(fameDailyLimits)
+        .where(and(eq(fameDailyLimits.userId, userId), eq(fameDailyLimits.date, today)))
+        .limit(1);
+      const used = row?.count ?? 0;
+      res.json({ remaining: Math.max(0, DAILY_FAME_LIMIT - used), used });
+    } catch (err) {
+      console.error('[fame] remaining error:', err);
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+    }
+  },
+);
+
+/**
  * GET /api/v1/users/:userId/fame — Get fame stats for a user
  */
 fameRouter.get(

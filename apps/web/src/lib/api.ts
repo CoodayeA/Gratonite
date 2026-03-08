@@ -2287,6 +2287,9 @@ export const api = {
 
     getStats: (userId: string) =>
       apiFetch<{ fameReceived: number; fameGiven: number }>(`/users/${userId}/fame`),
+
+    getRemaining: () =>
+      apiFetch<{ remaining: number; used: number }>('/users/@me/fame/remaining'),
   },
 
   stage: {
