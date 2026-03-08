@@ -151,12 +151,13 @@ const UserDetailPane = ({
                 {/* Avatar */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px' }}>
                     <Avatar
-                        userId={String(user.id)}
+                        userId={user.sourceUserId}
                         displayName={user.name}
+                        avatarHash={user.avatarHash}
                         size={80}
                         style={{
-                            border: `3px solid ${user.bgColor}`,
-                            boxShadow: `0 0 24px ${user.bgColor}44`,
+                            border: '3px solid #f59e0b',
+                            boxShadow: '0 0 24px #f59e0b44',
                             marginBottom: '12px',
                         }}
                     />
