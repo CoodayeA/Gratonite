@@ -22,7 +22,7 @@ export function Hero() {
               className="hero-enter font-display text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[0.95] tracking-tight mb-6"
               style={{ animationDelay: "0.1s" }}
             >
-              BUILT BY FRIENDS.
+              GRATONITE CHAT.
               <br />
               <span className="text-purple">FOR FRIENDS.</span>
             </h1>
@@ -47,10 +47,10 @@ export function Hero() {
               className="hero-enter text-lg sm:text-xl text-foreground/60 max-w-lg mb-8 leading-relaxed"
               style={{ animationDelay: "0.28s" }}
             >
-              Gratonite was built for a better place to hang out with friends.
-              Chat, hop in voice, play games, study together, collect cool
-              cosmetics, and just exist online without being farmed for
-              engagement.
+              Gratonite is a free, open-source Discord alternative built for a
+              better way to hang out with friends. Chat, hop in spatial voice,
+              play games, study together, collect cool cosmetics, and just
+              exist online without being farmed for engagement.
             </p>
 
             <div
@@ -60,8 +60,8 @@ export function Hero() {
               <Button variant="primary" size="lg" href="/download">
                 Get Gratonite
               </Button>
-              <Button variant="outline" size="lg" href="/discover">
-                Explore Communities
+              <Button variant="outline" size="lg" href="/app">
+                Open in Browser
               </Button>
             </div>
 

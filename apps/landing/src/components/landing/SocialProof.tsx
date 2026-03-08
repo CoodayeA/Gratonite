@@ -1,18 +1,18 @@
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
 
-const communities = [
-  "Arclight Guild",
-  "Flux Studio",
-  "Northstar Study Hall",
-  "Crafted Systems",
-  "Playable Labs",
-  "Nightshift Friends",
+const categories = [
+  "Gaming",
+  "Study",
+  "Creative",
+  "Music",
+  "Startups",
+  "Anime",
 ];
 
 const stats = [
-  { label: "Communities hanging out", value: "2,800+" },
-  { label: "Collectibles in circulation", value: "41K" },
   { label: "Open source", value: "100%" },
+  { label: "Self-hostable", value: "Yes" },
+  { label: "Tracking", value: "None" },
 ];
 
 export function SocialProof() {
@@ -23,12 +23,12 @@ export function SocialProof() {
         <ScrollReveal>
           <div className="bg-surface neo-border rounded-2xl p-8 md:p-10">
             <p className="font-display text-sm sm:text-base font-bold uppercase tracking-wider text-foreground/50 mb-6">
-              Shaped with the community
+              Built for every kind of community
             </p>
 
             <div className="grid md:grid-cols-2 gap-8 md:gap-10">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {communities.map((name) => (
+                {categories.map((name) => (
                   <div
                     key={name}
                     className="neo-border-2 rounded-lg px-3 py-2 text-sm font-semibold bg-off-white/60 dark:bg-charcoal/40 odd:rotate-[-1deg] even:rotate-[1deg]"

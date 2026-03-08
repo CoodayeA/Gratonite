@@ -5,12 +5,24 @@ import { Showcase } from "@/components/landing/Showcase";
 import { SocialProof } from "@/components/landing/SocialProof";
 import { FAQ, faqs } from "@/components/landing/FAQ";
 import { CTA } from "@/components/landing/CTA";
+import { SITE_URL, createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Gratonite — Free, Open-Source Discord Alternative Built for Friends",
+export const metadata: Metadata = createPageMetadata({
+  title: "Gratonite Chat | Free, Open-Source Discord Alternative",
   description:
-    "Gratonite is a free, open-source alternative to Discord. Real-time chat, spatial voice, cosmetics, and an auction house — built by friends, for friends. No ads, no tracking.",
-};
+    "Gratonite Chat is a free, open-source Discord alternative for friends, gaming communities, guilds, and study groups. Real-time chat, spatial voice, cosmetics, and an auction house with no ads or tracking.",
+  path: "/",
+  keywords: [
+    "Gratonite",
+    "Gratonite Chat",
+    "Discord alternative",
+    "free open source Discord alternative",
+    "chat app for friends",
+    "gaming voice chat",
+    "spatial voice chat",
+    "community platform",
+  ],
+});
 
 const softwareJsonLd = {
   "@context": "https://schema.org",
@@ -25,7 +37,10 @@ const softwareJsonLd = {
     price: "0",
     priceCurrency: "USD",
   },
-  url: "https://gratonite.chat",
+  url: SITE_URL,
+  publisher: {
+    "@id": `${SITE_URL}#organization`,
+  },
 };
 
 const faqJsonLd = {

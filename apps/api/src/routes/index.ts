@@ -63,6 +63,7 @@ import { clipsRouter } from './clips';
 import { achievementsRouter } from './achievements';
 import { activityRouter } from './activity';
 import { seasonalEventsRouter } from './seasonal-events-route';
+import { statsRouter } from './stats';
 import { authRateLimit, apiRateLimit } from '../middleware/rateLimit';
 import { registry } from '../lib/metrics';
 
@@ -98,6 +99,9 @@ router.get('/capabilities', (_req, res) => {
     source: 'server',
   });
 });
+
+// Public stats (no auth, before rate limiter)
+router.use('/stats', statsRouter);
 
 // Global API rate limit (60 req/min per authenticated user).
 // Applied before feature routers so every authenticated endpoint is covered.

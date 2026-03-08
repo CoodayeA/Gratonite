@@ -1,7 +1,26 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
 import { Badge } from "@/components/ui/Badge";
 
+interface PlatformStats {
+  guilds: number;
+  users: number;
+  messages: number;
+}
+
 export function Showcase() {
+  const [stats, setStats] = useState<PlatformStats | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    fetch("https://api.gratonite.chat/api/v1/stats/public")
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then(setStats)
+      .catch(() => setError(true));
+  }, []);
+
   return (
     <section className="py-16 lg:py-20 px-6 bg-charcoal text-white relative overflow-hidden">
       <div className="neo-burst neo-burst-purple top-8 left-[-70px] opacity-70" />
@@ -22,49 +41,55 @@ export function Showcase() {
           </div>
         </ScrollReveal>
 
-        {/* Showcase grid — neobrutalist panels */}
+        {/* Showcase grid */}
         <div className="grid md:grid-cols-3 gap-6">
+          {/* Panel 1 — Live platform stats */}
           <ScrollReveal delay={0.1}>
             <div className="bg-white/5 border-3 border-white/20 rounded-xl p-6 hover:border-purple transition-colors rotate-[-1deg]">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-display font-bold text-lg">Live Rooms</h3>
-                <span className="text-sm text-white/40">3 active</span>
+                <h3 className="font-display font-bold text-lg">
+                  Platform Stats
+                </h3>
+                <span className="text-sm text-white/40">live</span>
               </div>
-              <div className="space-y-3">
-                {[
-                  {
-                    name: "Arclight",
-                    count: "142 online",
-                    color: "bg-purple",
-                  },
-                  {
-                    name: "Flux Studio",
-                    count: "Voice Live",
-                    color: "bg-gold",
-                  },
-                  {
-                    name: "Nightshift",
-                    count: "2 events",
-                    color: "bg-blue-light",
-                  },
-                ].map((room) => (
-                  <div
-                    key={room.name}
-                    className="flex items-center justify-between bg-white/5 rounded-lg px-4 py-3 border border-white/10"
-                  >
-                    <div className="flex items-center gap-3">
+              <div className="space-y-4">
+                {stats ? (
+                  <>
+                    <StatRow
+                      label="Communities"
+                      value={stats.guilds.toLocaleString()}
+                      color="bg-purple"
+                    />
+                    <StatRow
+                      label="Users"
+                      value={stats.users.toLocaleString()}
+                      color="bg-gold"
+                    />
+                    <StatRow
+                      label="Messages sent"
+                      value={stats.messages.toLocaleString()}
+                      color="bg-blue-light"
+                    />
+                  </>
+                ) : error ? (
+                  <p className="text-white/40 text-sm py-4">
+                    Stats unavailable right now.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
                       <div
-                        className={`w-3 h-3 rounded-full ${room.color}`}
+                        key={i}
+                        className="h-12 bg-white/5 rounded-lg animate-pulse"
                       />
-                      <span className="font-medium">{room.name}</span>
-                    </div>
-                    <span className="text-sm text-white/40">{room.count}</span>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </ScrollReveal>
 
+          {/* Panel 2 — Testimonial (kept) */}
           <ScrollReveal delay={0.2}>
             <div className="bg-purple neo-border rounded-xl p-6 neo-shadow text-white md:translate-y-[-20px] rotate-[1.2deg]">
               <h3 className="font-display font-bold text-lg mb-2">
@@ -86,38 +111,25 @@ export function Showcase() {
             </div>
           </ScrollReveal>
 
+          {/* Panel 3 — Built in the open */}
           <ScrollReveal delay={0.3}>
             <div className="bg-white/5 border-3 border-white/20 rounded-xl p-6 hover:border-gold transition-colors rotate-[-0.8deg]">
               <h3 className="font-display font-bold text-lg mb-4">
-                Community Pulse
+                Built in the open
               </h3>
               <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-white/60">Cosmetics owned</span>
-                    <span className="font-bold">41K</span>
-                  </div>
-                  <div className="h-3 bg-white/10 rounded-full overflow-hidden border border-white/20">
-                    <div className="h-full bg-gold rounded-full w-[78%]" />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-white/60">Auction house trades</span>
-                    <span className="font-bold">9.8K</span>
-                  </div>
-                  <div className="h-3 bg-white/10 rounded-full overflow-hidden border border-white/20">
-                    <div className="h-full bg-purple rounded-full w-[62%]" />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-white/60">Live voice hours</span>
-                    <span className="font-bold">48K</span>
-                  </div>
-                  <div className="h-3 bg-white/10 rounded-full overflow-hidden border border-white/20">
-                    <div className="h-full bg-blue-light rounded-full w-[45%]" />
-                  </div>
+                <OpenStatRow label="Database schemas" value="76" />
+                <OpenStatRow label="API routes" value="65+" />
+                <div className="flex items-center justify-between bg-white/5 rounded-lg px-4 py-3 border border-white/10">
+                  <span className="font-medium">100% Open source</span>
+                  <a
+                    href="https://github.com/CoodayeA/Gratonite"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm text-purple font-bold hover:underline"
+                  >
+                    GitHub
+                  </a>
                 </div>
               </div>
             </div>
@@ -125,5 +137,34 @@ export function Showcase() {
         </div>
       </div>
     </section>
+  );
+}
+
+function StatRow({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string;
+  color: string;
+}) {
+  return (
+    <div className="flex items-center justify-between bg-white/5 rounded-lg px-4 py-3 border border-white/10">
+      <div className="flex items-center gap-3">
+        <div className={`w-3 h-3 rounded-full ${color}`} />
+        <span className="font-medium">{label}</span>
+      </div>
+      <span className="text-sm font-bold text-white/80">{value}</span>
+    </div>
+  );
+}
+
+function OpenStatRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between bg-white/5 rounded-lg px-4 py-3 border border-white/10">
+      <span className="text-white/60">{label}</span>
+      <span className="font-bold">{value}</span>
+    </div>
   );
 }

@@ -2,12 +2,20 @@ import { Metadata } from "next";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Pricing — Gratonite Is Free Forever | Discord Alternative",
+export const metadata: Metadata = createPageMetadata({
+  title: "Gratonite Pricing | Free Forever Discord Alternative",
   description:
-    "Gratonite is 100% free with no ads, no tracking, and no microtransactions. An open-source Discord alternative that puts community over profit.",
-};
+    "See Gratonite pricing: 100% free forever with no ads, no tracking, and no paywalled core features. An open-source Discord alternative that puts community over profit.",
+  path: "/pricing/",
+  keywords: [
+    "Gratonite pricing",
+    "is Gratonite free",
+    "free Discord alternative",
+    "Discord alternative no ads",
+  ],
+});
 
 const included = [
   "Unlimited messages",
@@ -86,8 +94,8 @@ export default function PricingPage() {
               <Button variant="primary" size="lg" href="/download">
                 Get Gratonite
               </Button>
-              <Button variant="outline" size="lg" href="/discover">
-                Explore Communities
+              <Button variant="outline" size="lg" href="/app">
+                Open in Browser
               </Button>
             </div>
           </section>

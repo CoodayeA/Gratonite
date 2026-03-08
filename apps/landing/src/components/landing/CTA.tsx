@@ -26,8 +26,8 @@ export function CTA() {
               <Button variant="primary" size="lg" href="/download">
                 Get Gratonite
               </Button>
-              <Button variant="outline" size="lg" href="/discover">
-                Explore Communities
+              <Button variant="outline" size="lg" href="/app">
+                Open in Browser
               </Button>
             </div>
           </div>

@@ -2,11 +2,14 @@ import { Metadata } from "next";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "About Gratonite — The Open-Source Community Platform",
-  description: "The story behind Gratonite, a free and open-source alternative to Discord. Built by friends who wanted a better place to hang out online.",
-};
+export const metadata: Metadata = createPageMetadata({
+  title: "About Gratonite | The Open-Source Community Platform",
+  description:
+    "Learn the story behind Gratonite Chat, the free and open-source Discord alternative built by friends who wanted a better place to hang out online.",
+  path: "/about/",
+});
 
 const team = [
   {

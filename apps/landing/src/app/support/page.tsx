@@ -2,12 +2,14 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Support — Gratonite",
+export const metadata: Metadata = createPageMetadata({
+  title: "Gratonite Support | Help From the Team Building It",
   description:
-    "Real human support from the people building Gratonite.",
-};
+    "Get Gratonite support, report bugs, and contact the team behind Gratonite Chat.",
+  path: "/support/",
+});
 
 const cards = [
   {

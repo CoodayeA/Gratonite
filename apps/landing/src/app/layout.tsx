@@ -2,6 +2,13 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Manrope } from "next/font/google";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_OG_IMAGE,
+  SITE_BRAND,
+  SITE_NAME,
+  SITE_URL,
+} from "@/lib/seo";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -17,35 +24,67 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://gratonite.chat"),
-  title: "Gratonite — Built by friends, for friends.",
-  description:
-    "Gratonite is a free, open-source Discord alternative for friends, guilds, and study groups. Real-time chat, voice, collectibles, cosmetics, and an auction house — no ads, no tracking.",
+  metadataBase: new URL(SITE_URL),
+  applicationName: SITE_BRAND,
+  title: {
+    default: "Gratonite Chat | Free, Open-Source Discord Alternative",
+    template: "%s | Gratonite Chat",
+  },
+  description: DEFAULT_DESCRIPTION,
+  keywords: [
+    "Gratonite",
+    "Gratonite Chat",
+    "Discord alternative",
+    "open source Discord alternative",
+    "free chat app",
+    "spatial voice chat",
+    "community chat app",
+    "gaming community platform",
+    "privacy-first chat app",
+  ],
+  category: "technology",
+  creator: "Gratonite Labs",
+  publisher: "Gratonite Labs",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
   openGraph: {
-    title: "Gratonite — Built by friends, for friends.",
-    description:
-      "A free, open-source Discord alternative with real-time chat, spatial voice, cosmetics, and an auction house. Built by friends, for friends.",
+    title: "Gratonite Chat | Free, Open-Source Discord Alternative",
+    description: DEFAULT_DESCRIPTION,
     type: "website",
-    siteName: "Gratonite",
-    url: "https://gratonite.chat",
+    locale: "en_US",
+    siteName: SITE_NAME,
+    url: SITE_URL,
     images: [
       {
-        url: "/Gratonite_logo.png",
+        url: DEFAULT_OG_IMAGE,
         width: 512,
         height: 512,
-        alt: "Gratonite Logo",
+        alt: "Gratonite Chat logo",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Gratonite — Built by friends, for friends.",
-    description:
-      "A free, open-source Discord alternative with real-time chat, spatial voice, cosmetics, and an auction house.",
-    images: ["/Gratonite_logo.png"],
+    title: "Gratonite Chat | Free, Open-Source Discord Alternative",
+    description: DEFAULT_DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
   },
   alternates: {
     canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
   icons: {
     icon: "/Gratonite_logo.png",
@@ -80,10 +119,33 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Organization",
-              name: "Gratonite",
-              url: "https://gratonite.chat",
-              logo: "https://gratonite.chat/Gratonite_logo.png",
-              sameAs: ["https://github.com/CoodayeA/Gratonite"],
+              "@id": `${SITE_URL}#organization`,
+              name: SITE_NAME,
+              alternateName: SITE_BRAND,
+              url: SITE_URL,
+              logo: DEFAULT_OG_IMAGE,
+              description: DEFAULT_DESCRIPTION,
+              sameAs: [
+                "https://github.com/Gratonite-Labs",
+                "https://github.com/CoodayeA/Gratonite",
+              ],
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              "@id": `${SITE_URL}#website`,
+              url: SITE_URL,
+              name: SITE_BRAND,
+              alternateName: SITE_NAME,
+              description: DEFAULT_DESCRIPTION,
+              publisher: {
+                "@id": `${SITE_URL}#organization`,
+              },
             }),
           }}
         />

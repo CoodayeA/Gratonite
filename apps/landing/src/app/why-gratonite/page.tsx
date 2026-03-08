@@ -3,12 +3,21 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Why Gratonite? A Free, Open-Source Alternative to Discord",
+export const metadata: Metadata = createPageMetadata({
+  title: "Gratonite vs Discord | Free, Open-Source Discord Alternative",
   description:
-    "Compare Gratonite vs Discord. Free, open-source, no tracking, no phone verification. Spatial voice, cosmetics, auction house, and community-first design.",
-};
+    "Compare Gratonite vs Discord side by side. See why Gratonite Chat stands out with open source transparency, no tracking, no phone verification, spatial voice, and community-first design.",
+  path: "/why-gratonite/",
+  keywords: [
+    "Gratonite vs Discord",
+    "Gratonite alternative to Discord",
+    "Discord competitor",
+    "free Discord alternative",
+    "open source Discord alternative",
+  ],
+});
 
 const comparisonRows = [
   { feature: "Price", gratonite: "Free forever", discord: "Free tier + Nitro ($9.99/mo)", win: true },
@@ -234,8 +243,8 @@ export default function WhyGratonitePage() {
               <Button variant="primary" size="lg" href="/download">
                 Download Gratonite
               </Button>
-              <Button variant="outline" size="lg" href="/discover" className="text-white border-white/20">
-                Explore Communities
+              <Button variant="outline" size="lg" href="/app" className="text-white border-white/20">
+                Open in Browser
               </Button>
             </div>
           </div>

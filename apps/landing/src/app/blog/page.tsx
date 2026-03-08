@@ -4,18 +4,41 @@ import { getAllPosts } from "@/lib/blog";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
+import { SITE_URL, createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Gratonite Blog — Updates on the Open-Source Discord Alternative",
+export const metadata: Metadata = createPageMetadata({
+  title: "Gratonite Blog | Open-Source Discord Alternative Updates",
   description:
-    "Follow the development of Gratonite: product updates, community insights, and honest progress on building a better alternative to Discord.",
-};
+    "Follow Gratonite development with product updates, Discord alternative guides, comparison articles, and community insights from the team building Gratonite Chat.",
+  path: "/blog/",
+  keywords: [
+    "Gratonite blog",
+    "Gratonite Chat updates",
+    "Discord alternative blog",
+    "open source chat app blog",
+    "Gratonite comparison",
+  ],
+});
 
 export default function BlogPage() {
   const posts = getAllPosts();
+  const itemListJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    itemListElement: posts.map((post, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      url: `${SITE_URL}/blog/${post.slug}/`,
+      name: post.title,
+    })),
+  };
 
   return (
     <div className="pt-28 pb-16 px-6 relative overflow-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
       <div className="neo-burst neo-burst-gold top-24 right-[-70px]" />
       <div className="neo-burst neo-burst-purple bottom-5 left-[-90px]" />
 

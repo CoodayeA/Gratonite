@@ -2,12 +2,21 @@ import { Metadata } from "next";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Download Gratonite — Free Discord Alternative for Desktop & Mobile",
+export const metadata: Metadata = createPageMetadata({
+  title: "Download Gratonite | Free Discord Alternative for Desktop",
   description:
-    "Download Gratonite free for macOS, Windows, and Linux. A privacy-first, open-source Discord alternative with real-time chat, voice, and community features.",
-};
+    "Download Gratonite Chat for macOS and Windows. A privacy-first, open-source Discord alternative with real-time chat, voice, and community features.",
+  path: "/download/",
+  keywords: [
+    "download Gratonite",
+    "Gratonite app download",
+    "Gratonite Chat download",
+    "Discord alternative download",
+    "open source chat app download",
+  ],
+});
 
 const platforms = [
   {
@@ -77,30 +86,28 @@ export default function DownloadPage() {
           </div>
         </ScrollReveal>
 
-        {/* Build channels */}
+        {/* Build channel */}
         <ScrollReveal>
-          <div className="flex gap-3 mb-10">
-            {[
-              { label: "Stable", version: "v1.0.3" },
-              { label: "Canary", version: null },
-              { label: "Legacy", version: null },
-            ].map(({ label, version }, i) => (
-              <button
-                key={label}
-                className={`px-4 py-2 font-display font-bold text-sm rounded-lg neo-border-2 transition-all ${
-                  i === 0
-                    ? "bg-charcoal text-white neo-shadow-sm"
-                    : "bg-surface text-foreground hover:bg-gray-warm/30"
-                }`}
-              >
-                {label}
-                {version && (
-                  <span className={`ml-2 text-[10px] font-mono font-normal ${i === 0 ? "text-white/60" : "text-foreground/40"}`}>
-                    {version}
-                  </span>
-                )}
-              </button>
-            ))}
+          <div className="flex gap-3 mb-6">
+            <span className="px-4 py-2 font-display font-bold text-sm rounded-lg neo-border-2 bg-charcoal text-white neo-shadow-sm">
+              Stable
+              <span className="ml-2 text-[10px] font-mono font-normal text-white/60">
+                v1.0.3
+              </span>
+            </span>
+          </div>
+        </ScrollReveal>
+
+        {/* Windows SmartScreen notice */}
+        <ScrollReveal>
+          <div className="mb-10 neo-border-2 rounded-xl px-5 py-4 bg-surface flex gap-3 items-start max-w-2xl">
+            <span className="text-lg mt-0.5">⊞</span>
+            <div>
+              <p className="text-sm font-bold text-foreground/80 mb-1">Windows users: SmartScreen warning</p>
+              <p className="text-sm text-foreground/55">
+                Windows may show a &ldquo;Windows protected your PC&rdquo; message when you run the installer. This is normal for new apps without an expensive publisher certificate. Click <strong className="text-foreground/80">More info</strong> then <strong className="text-foreground/80">Run anyway</strong> to continue.
+              </p>
+            </div>
           </div>
         </ScrollReveal>
 
@@ -156,19 +163,6 @@ export default function DownloadPage() {
           ))}
         </div>
 
-        {/* Windows SmartScreen notice */}
-        <ScrollReveal>
-          <div className="mt-10 neo-border-2 rounded-xl px-5 py-4 bg-surface flex gap-3 items-start max-w-2xl">
-            <span className="text-lg mt-0.5">⊞</span>
-            <div>
-              <p className="text-sm font-bold text-foreground/80 mb-1">Windows users: SmartScreen warning</p>
-              <p className="text-sm text-foreground/55">
-                Windows may show a &ldquo;Windows protected your PC&rdquo; message when you run the installer. This is normal for new apps without an expensive publisher certificate. Click <strong className="text-foreground/80">More info</strong> then <strong className="text-foreground/80">Run anyway</strong> to continue.
-              </p>
-            </div>
-          </div>
-        </ScrollReveal>
-
         {/* Release notes link */}
         <ScrollReveal>
           <div className="mt-12 text-center">
@@ -177,7 +171,7 @@ export default function DownloadPage() {
             </p>
             <p className="text-foreground/40 text-sm">
               Want to see what changed?{" "}
-              <a href="#" className="text-purple font-bold hover:underline">
+              <a href="https://github.com/CoodayeA/Gratonite/releases" target="_blank" rel="noreferrer" className="text-purple font-bold hover:underline">
                 Read the release notes
               </a>
             </p>

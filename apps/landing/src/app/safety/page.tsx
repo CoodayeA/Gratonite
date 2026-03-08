@@ -1,12 +1,20 @@
 import { Metadata } from "next";
 import { Badge } from "@/components/ui/Badge";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Safety — Gratonite",
+export const metadata: Metadata = createPageMetadata({
+  title: "Gratonite Safety and Privacy",
   description:
-    "Safety tools and privacy protections for real communities.",
-};
+    "Learn how Gratonite protects privacy with no tracking, strong safety tools, and optional end-to-end encrypted DMs.",
+  path: "/safety/",
+  keywords: [
+    "Gratonite privacy",
+    "Gratonite safety",
+    "private Discord alternative",
+    "no tracking chat app",
+  ],
+});
 
 const points = [
   {
@@ -18,7 +26,7 @@ const points = [
   {
     title: "Private by default",
     description:
-      "Your messages stay your messages. We do not treat your conversations like an ad-targeting feed.",
+      "Your messages stay your messages. DMs support optional end-to-end encryption \u2014 the server never sees the content. Guild messages are delivered through our servers, never sold or mined.",
     color: "bg-gold",
   },
   {
@@ -30,8 +38,14 @@ const points = [
   {
     title: "No tracking",
     description:
-      "We don't track what you type, where you click, or who you talk to. That's the point.",
+      "No analytics SDKs. No ad trackers. No behavioral profiling. We process messages to deliver them \u2014 that's it.",
     color: "bg-yellow",
+  },
+  {
+    title: "End-to-end encryption",
+    description:
+      "DMs can be end-to-end encrypted using ECDH key exchange and AES-GCM. Your private key never leaves your device.",
+    color: "bg-charcoal",
   },
 ];
 
