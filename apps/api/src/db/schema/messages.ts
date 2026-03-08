@@ -44,6 +44,7 @@ import {
   jsonb,
   boolean,
   timestamp,
+  integer,
   index,
 } from 'drizzle-orm/pg-core';
 import { channels } from './channels';
@@ -151,6 +152,13 @@ export const messages = pgTable(
      * and returned as-is; only the recipient can decrypt it.
      */
     encryptedContent: text('encrypted_content'),
+
+    /**
+     * Version of the encryption key used to encrypt this message.
+     * Null for plain-text messages. Used to fetch the correct key version
+     * when decrypting after a key rotation.
+     */
+    keyVersion: integer('key_version'),
 
     /**
      * JSON array of OpenGraph embed objects for URLs found in the message.

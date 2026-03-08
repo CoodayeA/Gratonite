@@ -286,6 +286,33 @@ export function onChannelBackgroundUpdated(cb: ChannelBgCallback): () => void {
   return () => { channelBgListeners.delete(cb); };
 }
 
+/* ── E2E encryption events ─────────────────────────────────── */
+
+export interface GroupKeyRotationNeededPayload {
+  channelId: string;
+  reason: 'member_added' | 'member_removed';
+}
+
+export interface UserKeyChangedPayload {
+  userId: string;
+}
+
+type GroupKeyRotationNeededCallback = (payload: GroupKeyRotationNeededPayload) => void;
+type UserKeyChangedCallback = (payload: UserKeyChangedPayload) => void;
+
+const groupKeyRotationNeededListeners = new Set<GroupKeyRotationNeededCallback>();
+const userKeyChangedListeners = new Set<UserKeyChangedCallback>();
+
+export function onGroupKeyRotationNeeded(cb: GroupKeyRotationNeededCallback): () => void {
+  groupKeyRotationNeededListeners.add(cb);
+  return () => { groupKeyRotationNeededListeners.delete(cb); };
+}
+
+export function onUserKeyChanged(cb: UserKeyChangedCallback): () => void {
+  userKeyChangedListeners.add(cb);
+  return () => { userKeyChangedListeners.delete(cb); };
+}
+
 /* ── Call signaling events ─────────────────────────────────── */
 
 export interface CallInvitePayload {
@@ -571,6 +598,14 @@ export function connectSocket(): GratoniteSocket {
 
   socket.on('SPATIAL_POSITIONS_SYNC', (data: SpatialPositionsSyncPayload) => {
     spatialPositionsSyncListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('GROUP_KEY_ROTATION_NEEDED', (data: GroupKeyRotationNeededPayload) => {
+    groupKeyRotationNeededListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('USER_KEY_CHANGED', (data: UserKeyChangedPayload) => {
+    userKeyChangedListeners.forEach(cb => cb(data));
   });
 
   socket.on('disconnect', () => {

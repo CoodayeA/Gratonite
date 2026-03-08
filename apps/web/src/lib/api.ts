@@ -1505,13 +1505,13 @@ export const api = {
         `/channels/${channelId}/messages${params ? '?' + buildQuery(params) : ''}`,
       ),
 
-    send: (channelId: string, data: { content?: string; nonce?: string; messageReference?: { messageId: string }; attachmentIds?: string[]; replyToId?: string; threadId?: string; expiresIn?: number }) =>
+    send: (channelId: string, data: { content?: string; nonce?: string; messageReference?: { messageId: string }; attachmentIds?: string[]; replyToId?: string; threadId?: string; expiresIn?: number; isEncrypted?: boolean; encryptedContent?: string; keyVersion?: number }) =>
       apiFetch<Message>(`/channels/${channelId}/messages`, {
         method: 'POST',
         body: JSON.stringify(data),
       }),
 
-    edit: (channelId: string, messageId: string, data: { content: string }) =>
+    edit: (channelId: string, messageId: string, data: { content?: string; encryptedContent?: string; isEncrypted?: boolean; keyVersion?: number }) =>
       apiFetch<Message>(`/channels/${channelId}/messages/${messageId}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
@@ -2581,6 +2581,26 @@ export const api = {
       apiFetch<any>(`/channels/${channelId}/confessions`, { method: 'POST', body: JSON.stringify({ content }) }),
     reveal: (guildId: string, id: string) =>
       apiFetch<any>(`/guilds/${guildId}/confessions/${id}/reveal`, { method: 'POST', body: '{}' }),
+  },
+
+  encryption: {
+    getPublicKey: (userId: string) =>
+      apiFetch<{ publicKeyJwk: string | null }>(`/users/${userId}/public-key`),
+
+    uploadPublicKey: (publicKeyJwk: string) =>
+      apiFetch<void>('/users/@me/public-key', {
+        method: 'POST',
+        body: JSON.stringify({ publicKeyJwk }),
+      }),
+
+    getGroupKey: (channelId: string) =>
+      apiFetch<{ version: number | null; encryptedKey: string | null }>(`/channels/${channelId}/group-key`),
+
+    postGroupKey: (channelId: string, data: { version: number; keyData: Record<string, string> }) =>
+      apiFetch<void>(`/channels/${channelId}/group-key`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 
   // Generic helpers for custom endpoints not covered by typed methods above

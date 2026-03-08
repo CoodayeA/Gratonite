@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
 import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star } from 'lucide-react';
-import { getOrCreateKeyPair, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported, generateGroupKey, encryptGroupKey, decryptGroupKey } from '../../lib/e2e';
+import { getOrCreateKeyPair, exportPublicKey, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported, generateGroupKey, encryptGroupKey, decryptGroupKey } from '../../lib/e2e';
+import { onGroupKeyRotationNeeded, onUserKeyChanged } from '../../lib/socket';
+import type { GroupKeyRotationNeededPayload, UserKeyChangedPayload } from '../../lib/socket';
 
 import { BackgroundMedia } from '../../components/ui/BackgroundMedia';
 import { useToast } from '../../components/ui/ToastManager';
@@ -369,10 +371,16 @@ const DirectMessage = () => {
     // E2E encryption state
     const [e2eKey, setE2eKey] = useState<CryptoKey | null>(null);
     const [e2eSupported, setE2eSupported] = useState(false);
+    const [e2eError, setE2eError] = useState<string | null>(null);
+    const [partnerKeyChanged, setPartnerKeyChanged] = useState(false);
     // Whether all GROUP_DM members have registered public keys (controls lock icon)
     const [groupE2eAllMembersHaveKeys, setGroupE2eAllMembersHaveKeys] = useState(false);
+    // Current group key version (for tagging outgoing messages)
+    const [groupKeyVersion, setGroupKeyVersion] = useState<number | null>(null);
     // Map of messageId -> decrypted plaintext (populated asynchronously)
     const [decryptedContents, setDecryptedContents] = useState<Map<number, string>>(new Map());
+    // Store key pair ref for group key rotation
+    const e2eKeyPairRef = useRef<{ publicKey: CryptoKey; privateKey: CryptoKey } | null>(null);
     const [showDisappearMenu, setShowDisappearMenu] = useState(false);
     const disappearMenuRef = useRef<HTMLDivElement>(null);
 
@@ -696,9 +704,33 @@ const DirectMessage = () => {
 
         unsubs.push(onMessageUpdate((data: MessageUpdatePayload) => {
             if (data.channelId !== dmChannelId) return;
-            setMessages(prev => prev.map(m =>
-                m.apiId === data.id ? { ...m, content: data.content || m.content, edited: true } : m
-            ));
+            const isEncryptedUpdate = (data as any).isEncrypted ?? false;
+            const encryptedContent = (data as any).encryptedContent ?? null;
+            setMessages(prev => {
+                let editedMsgNumericId: number | null = null;
+                const updated = prev.map(m => {
+                    if (m.apiId !== data.id) return m;
+                    editedMsgNumericId = m.id;
+                    return {
+                        ...m,
+                        content: isEncryptedUpdate ? '' : (data.content || m.content),
+                        edited: true,
+                        isEncrypted: isEncryptedUpdate,
+                        encryptedContent: isEncryptedUpdate ? encryptedContent : null,
+                    };
+                });
+                // Invalidate decrypted cache so the decrypt effect re-runs for this message
+                if (isEncryptedUpdate && editedMsgNumericId !== null) {
+                    const numId = editedMsgNumericId;
+                    setDecryptedContents(prev => {
+                        if (!prev.has(numId)) return prev;
+                        const next = new Map(prev);
+                        next.delete(numId);
+                        return next;
+                    });
+                }
+                return updated;
+            });
         }));
 
         unsubs.push(onMessageDelete((data: MessageDeletePayload) => {
@@ -800,22 +832,32 @@ const DirectMessage = () => {
     useEffect(() => {
         if (!isE2ESupported() || !currentUserId || !recipientId || isGroupDm) return;
         setE2eSupported(true);
+        setE2eError(null);
 
         let cancelled = false;
-        getOrCreateKeyPair(currentUserId).then(async (myKeyPair) => {
-            if (!myKeyPair || cancelled) return;
+        (async () => {
             try {
-                const res = await fetch(`/api/v1/users/${recipientId}/public-key`, { credentials: 'include' });
-                if (!res.ok || cancelled) return;
-                const data = await res.json() as { publicKeyJwk: string | null };
-                if (!data.publicKeyJwk || cancelled) return;
+                const result = await getOrCreateKeyPair(currentUserId);
+                if (!result || cancelled) { if (!cancelled) setE2eError('Failed to initialize encryption keys'); return; }
+                const { keyPair: myKeyPair, isNew } = result;
+                e2eKeyPairRef.current = myKeyPair;
+
+                // Upload public key if newly generated
+                if (isNew) {
+                    const jwk = await exportPublicKey(myKeyPair.publicKey);
+                    await api.encryption.uploadPublicKey(jwk);
+                }
+
+                const data = await api.encryption.getPublicKey(recipientId);
+                if (cancelled) return;
+                if (!data.publicKeyJwk) { setE2eError('Partner has not set up encryption yet'); return; }
                 const theirKey = await importPublicKey(data.publicKeyJwk);
                 const sharedKey = await deriveSharedKey(myKeyPair.privateKey, theirKey);
                 if (!cancelled) setE2eKey(sharedKey);
             } catch {
-                // Partner has no key yet or network error — silently fall back to plaintext
+                if (!cancelled) setE2eError('Key exchange failed — messages are not encrypted');
             }
-        });
+        })();
 
         return () => { cancelled = true; };
     }, [currentUserId, recipientId, isGroupDm]);
@@ -824,29 +866,33 @@ const DirectMessage = () => {
     useEffect(() => {
         if (!isE2ESupported() || !currentUserId || !dmChannelId || !isGroupDm || groupParticipants.length === 0) return;
         setE2eSupported(true);
+        setE2eError(null);
 
         let cancelled = false;
         (async () => {
             try {
-                const myKeyPair = await getOrCreateKeyPair(currentUserId);
-                if (!myKeyPair || cancelled) return;
+                const result = await getOrCreateKeyPair(currentUserId);
+                if (!result || cancelled) { if (!cancelled) setE2eError('Failed to initialize encryption keys'); return; }
+                const { keyPair: myKeyPair, isNew } = result;
+                e2eKeyPairRef.current = myKeyPair;
+
+                if (isNew) {
+                    const jwk = await exportPublicKey(myKeyPair.publicKey);
+                    await api.encryption.uploadPublicKey(jwk);
+                }
 
                 // Attempt to fetch the existing group key for this user.
-                const keyRes = await fetch(`/api/v1/channels/${dmChannelId}/group-key`, { credentials: 'include' });
-                if (!keyRes.ok || cancelled) return;
-                const keyData = await keyRes.json() as { version: number | null; encryptedKey: string | null };
+                const keyData = await api.encryption.getGroupKey(dmChannelId);
+                if (cancelled) return;
 
                 if (keyData.version !== null && keyData.encryptedKey) {
-                    // Decrypt the stored group key using our private key.
                     const groupKey = await decryptGroupKey(keyData.encryptedKey, myKeyPair.privateKey);
                     if (!cancelled && groupKey) {
                         setE2eKey(groupKey);
-                        // We have the group key — check if all members have public keys for the lock icon.
+                        setGroupKeyVersion(keyData.version);
                         const publicKeyChecks = await Promise.all(
                             groupParticipants.map(async (p) => {
-                                const r = await fetch(`/api/v1/users/${p.id}/public-key`, { credentials: 'include' });
-                                if (!r.ok) return false;
-                                const d = await r.json() as { publicKeyJwk: string | null };
+                                const d = await api.encryption.getPublicKey(p.id);
                                 return d.publicKeyJwk !== null;
                             }),
                         );
@@ -859,12 +905,9 @@ const DirectMessage = () => {
                 const isOwner = groupParticipants[0]?.id === currentUserId || groupParticipants.length === 0;
                 if (!isOwner || cancelled) return;
 
-                // Fetch public keys for all members.
                 const memberKeys = await Promise.all(
                     groupParticipants.map(async (p) => {
-                        const r = await fetch(`/api/v1/users/${p.id}/public-key`, { credentials: 'include' });
-                        if (!r.ok) return { id: p.id, key: null };
-                        const d = await r.json() as { publicKeyJwk: string | null };
+                        const d = await api.encryption.getPublicKey(p.id);
                         if (!d.publicKeyJwk) return { id: p.id, key: null };
                         const key = await importPublicKey(d.publicKeyJwk).catch(() => null);
                         return { id: p.id, key };
@@ -874,12 +917,10 @@ const DirectMessage = () => {
 
                 const allHaveKeys = memberKeys.every((m) => m.key !== null);
                 if (!allHaveKeys) {
-                    // Not all members have set up E2E yet — skip group key creation.
                     setGroupE2eAllMembersHaveKeys(false);
                     return;
                 }
 
-                // Generate the group key and encrypt it for each member.
                 const groupKey = await generateGroupKey();
                 const encryptedKeys: Record<string, string> = {};
                 for (const { id, key } of memberKeys) {
@@ -887,27 +928,18 @@ const DirectMessage = () => {
                         encryptedKeys[id] = await encryptGroupKey(groupKey, key);
                     }
                 }
-
-                // Also encrypt for the current user using their own public key.
                 if (!encryptedKeys[currentUserId]) {
                     encryptedKeys[currentUserId] = await encryptGroupKey(groupKey, myKeyPair.publicKey);
                 }
 
-                // POST the new key version to the server.
-                const postRes = await fetch(`/api/v1/channels/${dmChannelId}/group-key`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ version: 1, keyData: encryptedKeys }),
-                });
-                if (!postRes.ok || cancelled) return;
+                await api.encryption.postGroupKey(dmChannelId, { version: 1, keyData: encryptedKeys });
+                if (cancelled) return;
 
-                if (!cancelled) {
-                    setE2eKey(groupKey);
-                    setGroupE2eAllMembersHaveKeys(true);
-                }
+                setE2eKey(groupKey);
+                setGroupKeyVersion(1);
+                setGroupE2eAllMembersHaveKeys(true);
             } catch {
-                // Network error or crypto failure — silently fall back to plaintext
+                if (!cancelled) setE2eError('Group key exchange failed — messages are not encrypted');
             }
         })();
 
@@ -939,6 +971,89 @@ const DirectMessage = () => {
             });
         });
     }, [e2eKey, messages]);
+
+    // Group key rotation listener — when a member is added/removed, re-generate the group key
+    useEffect(() => {
+        if (!isGroupDm || !dmChannelId || !currentUserId) return;
+        const unsub = onGroupKeyRotationNeeded(async (payload: GroupKeyRotationNeededPayload) => {
+            if (payload.channelId !== dmChannelId) return;
+            const myKeyPair = e2eKeyPairRef.current;
+            if (!myKeyPair) return;
+
+            // Only the group owner generates a new key
+            if (groupParticipants[0]?.id !== currentUserId) {
+                // Non-owner: wait for the owner to generate & upload the new key, then fetch it
+                await new Promise(r => setTimeout(r, 3000));
+                try {
+                    const keyData = await api.encryption.getGroupKey(dmChannelId);
+                    if (keyData.version !== null && keyData.encryptedKey) {
+                        const groupKey = await decryptGroupKey(keyData.encryptedKey, myKeyPair.privateKey);
+                        if (groupKey) {
+                            setE2eKey(groupKey);
+                            setGroupKeyVersion(keyData.version);
+                        }
+                    }
+                } catch { /* will retry on next event */ }
+                return;
+            }
+
+            // Owner: generate new group key and distribute
+            try {
+                const memberKeys = await Promise.all(
+                    groupParticipants.map(async (p) => {
+                        const d = await api.encryption.getPublicKey(p.id);
+                        if (!d.publicKeyJwk) return { id: p.id, key: null };
+                        const key = await importPublicKey(d.publicKeyJwk).catch(() => null);
+                        return { id: p.id, key };
+                    }),
+                );
+
+                const allHaveKeys = memberKeys.every((m) => m.key !== null);
+                if (!allHaveKeys) { setGroupE2eAllMembersHaveKeys(false); return; }
+
+                const newGroupKey = await generateGroupKey();
+                const encryptedKeys: Record<string, string> = {};
+                for (const { id, key } of memberKeys) {
+                    if (key) encryptedKeys[id] = await encryptGroupKey(newGroupKey, key);
+                }
+                if (!encryptedKeys[currentUserId]) {
+                    encryptedKeys[currentUserId] = await encryptGroupKey(newGroupKey, myKeyPair.publicKey);
+                }
+
+                const newVersion = (groupKeyVersion ?? 0) + 1;
+                await api.encryption.postGroupKey(dmChannelId, { version: newVersion, keyData: encryptedKeys });
+                setE2eKey(newGroupKey);
+                setGroupKeyVersion(newVersion);
+                setGroupE2eAllMembersHaveKeys(true);
+            } catch {
+                setE2eError('Group key rotation failed');
+            }
+        });
+        return unsub;
+    }, [isGroupDm, dmChannelId, currentUserId, groupParticipants, groupKeyVersion]);
+
+    // User key change warning — when a DM partner rotates their key
+    useEffect(() => {
+        if (isGroupDm || !recipientId) return;
+        const unsub = onUserKeyChanged((payload: UserKeyChangedPayload) => {
+            if (payload.userId === recipientId) {
+                setPartnerKeyChanged(true);
+                // Re-derive the shared key with the new public key
+                (async () => {
+                    try {
+                        const myKeyPair = e2eKeyPairRef.current;
+                        if (!myKeyPair) return;
+                        const d = await api.encryption.getPublicKey(recipientId);
+                        if (!d.publicKeyJwk) return;
+                        const theirKey = await importPublicKey(d.publicKeyJwk);
+                        const sharedKey = await deriveSharedKey(myKeyPair.privateKey, theirKey);
+                        setE2eKey(sharedKey);
+                    } catch { /* keep showing warning */ }
+                })();
+            }
+        });
+        return unsub;
+    }, [isGroupDm, recipientId]);
 
     const handleSetDisappearTimer = async (seconds: number | null) => {
         if (!dmChannelId) return;
@@ -1198,7 +1313,45 @@ const DirectMessage = () => {
                 return;
             }
         }
-        if (e.key === 'Enter') handleSendMessage();
+        if (e.key === 'Enter') {
+            if (editingMessage) { handleEditSubmit(); return; }
+            handleSendMessage();
+        }
+        if (e.key === 'Escape' && editingMessage) { setEditingMessage(null); setInputValue(''); return; }
+    };
+
+    // Populate input when editing a message
+    useEffect(() => {
+        if (editingMessage) {
+            // If encrypted, use decrypted content if available
+            const decrypted = decryptedContents.get(editingMessage.id);
+            setInputValue(decrypted || editingMessage.content);
+        }
+    }, [editingMessage]);
+
+    const handleEditSubmit = async () => {
+        if (!editingMessage || !dmChannelId) return;
+        const newContent = inputValue.trim();
+        if (!newContent) return;
+
+        try {
+            let editPayload: { content?: string; encryptedContent?: string; isEncrypted?: boolean; keyVersion?: number };
+            if (e2eKey) {
+                const encryptedContent = await encrypt(e2eKey, newContent);
+                editPayload = { encryptedContent, isEncrypted: true, ...(groupKeyVersion != null ? { keyVersion: groupKeyVersion } : {}) };
+                // Update decrypted cache optimistically
+                setDecryptedContents(prev => { const next = new Map(prev); next.set(editingMessage.id, newContent); return next; });
+            } else {
+                editPayload = { content: newContent };
+            }
+
+            await api.messages.edit(dmChannelId, editingMessage.apiId, editPayload);
+            setMessages(prev => prev.map(m => m.id === editingMessage.id ? { ...m, content: e2eKey ? '' : newContent, edited: true } : m));
+        } catch {
+            addToast({ title: 'Failed to edit message', variant: 'error' });
+        }
+        setEditingMessage(null);
+        setInputValue('');
     };
 
     const handleSendMessage = async () => {
@@ -1233,12 +1386,12 @@ const DirectMessage = () => {
             const firstImage = uploadedFiles.find(f => f.mimeType?.startsWith('image/'));
 
             // Encrypt if E2E key is available (only text content is encrypted; attachments remain unencrypted)
-            let sendPayload: { content?: string | null; encryptedContent?: string; isEncrypted?: boolean; attachmentIds?: string[] };
+            let sendPayload: { content?: string | null; encryptedContent?: string; isEncrypted?: boolean; attachmentIds?: string[]; keyVersion?: number };
             let optimisticContent = content;
             if (e2eKey && content) {
                 try {
                     const encryptedContent = await encrypt(e2eKey, content);
-                    sendPayload = { content: null, encryptedContent, isEncrypted: true, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined };
+                    sendPayload = { content: null, encryptedContent, isEncrypted: true, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined, ...(groupKeyVersion != null ? { keyVersion: groupKeyVersion } : {}) };
                     // Store decrypted version optimistically so sender sees plaintext immediately
                     setDecryptedContents(prev => { const next = new Map(prev); next.set(optimisticId, content); return next; });
                 } catch {
@@ -1259,7 +1412,7 @@ const DirectMessage = () => {
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 content: isOptimisticEncrypted ? '' : optimisticContent,
                 isEncrypted: isOptimisticEncrypted,
-                encryptedContent: isOptimisticEncrypted ? (sendPayload as any).encryptedContent : null,
+                encryptedContent: isOptimisticEncrypted ? sendPayload.encryptedContent ?? null : null,
                 attachments,
                 ...(firstImage ? {
                     type: 'media' as const,
@@ -1268,7 +1421,7 @@ const DirectMessage = () => {
                 } : {})
             }]);
 
-            api.messages.send(dmChannelId, sendPayload as any).then((res: any) => {
+            api.messages.send(dmChannelId, sendPayload).then((res: any) => {
                 if (res?.id) {
                     setMessages(prev => prev.map(m => m.id === optimisticId ? { ...m, apiId: res.id, authorId: res.authorId } : m));
                     // Move decrypted content to real message id
@@ -1441,6 +1594,21 @@ const DirectMessage = () => {
                         <Info size={20} style={{ cursor: 'pointer', transition: 'color 0.2s', color: infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }} onClick={() => { setInfoPanelOpen(!infoPanelOpen); if (isGroupDm) setMemberPanelOpen(false); }} onMouseOver={e => e.currentTarget.style.color = infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
                     </div>
                 </header>
+
+                {/* E2E encryption warning banners */}
+                {e2eSupported && !e2eKey && e2eError && (
+                    <div style={{ padding: '8px 16px', background: 'var(--warning-bg, rgba(234,179,8,0.15))', borderBottom: '1px solid var(--warning, #eab308)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--warning, #eab308)' }}>
+                        <Lock size={14} />
+                        <span>Messages are not encrypted — {e2eError}</span>
+                    </div>
+                )}
+                {partnerKeyChanged && (
+                    <div style={{ padding: '8px 16px', background: 'var(--warning-bg, rgba(234,179,8,0.15))', borderBottom: '1px solid var(--warning, #eab308)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--warning, #eab308)', cursor: 'pointer' }} onClick={() => setPartnerKeyChanged(false)}>
+                        <Lock size={14} />
+                        <span>Your partner&apos;s encryption key has changed. Verify their identity to ensure security.</span>
+                        <X size={14} style={{ marginLeft: 'auto' }} />
+                    </div>
+                )}
 
                 {/* Call Area / Chat Area */}
                 {isConnected || isConnecting ? (
@@ -2038,6 +2206,15 @@ const DirectMessage = () => {
 
                         {/* Input Area */}
                         <div className="input-area" style={{ position: 'relative' }}>
+                            {editingMessage && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 16px', fontSize: '12px', color: 'var(--accent-primary)', background: 'var(--bg-tertiary)', borderBottom: '1px solid var(--stroke)' }}>
+                                    <Pencil size={12} />
+                                    <span>Editing message</span>
+                                    <button onClick={() => { setEditingMessage(null); setInputValue(''); }} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px' }}>
+                                        ESC to cancel
+                                    </button>
+                                </div>
+                            )}
                             {typingUsers.size > 0 && (
                                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', paddingLeft: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <span style={{ display: 'flex', gap: '4px' }}>
@@ -2145,11 +2322,11 @@ const DirectMessage = () => {
                                 </button>
                                 <button
                                     className={`input-icon-btn ${inputValue.trim().length > 0 ? 'primary' : ''}`}
-                                    onClick={handleSendMessage}
+                                    onClick={editingMessage ? handleEditSubmit : handleSendMessage}
                                     disabled={inputValue.trim().length === 0 && (!dmAttachedFiles || dmAttachedFiles.length === 0)}
                                     style={{ opacity: (inputValue.trim().length > 0 || (dmAttachedFiles && dmAttachedFiles.length > 0)) ? 1 : 0.5, cursor: (inputValue.trim().length > 0 || (dmAttachedFiles && dmAttachedFiles.length > 0)) ? 'pointer' : 'default' }}
                                 >
-                                    <Send size={18} />
+                                    {editingMessage ? <Check size={18} /> : <Send size={18} />}
                                 </button>
                             </div>
                         </div>

@@ -137,17 +137,20 @@ function openKeyDB(): Promise<IDBDatabase> {
 // ---------------------------------------------------------------------------
 
 /**
- * Load the user's ECDH key pair from IndexedDB, or generate a new one and
- * upload the public key to the server.
+ * Load the user's ECDH key pair from IndexedDB, or generate a new one.
+ *
+ * Returns `{ keyPair, isNew }` where `isNew` is true when a fresh key pair
+ * was generated (the caller is responsible for uploading the public key to
+ * the server via `api.encryption.uploadPublicKey()`).
  *
  * Returns null if the operation fails for any reason (unsupported browser,
- * network error, etc.) — the caller should fall back to unencrypted mode.
+ * IndexedDB error, etc.) — the caller should fall back to unencrypted mode.
  *
  * @param userId — The authenticated user's ID (used as the IndexedDB key).
  */
 export async function getOrCreateKeyPair(
   userId: string,
-): Promise<{ publicKey: CryptoKey; privateKey: CryptoKey } | null> {
+): Promise<{ keyPair: { publicKey: CryptoKey; privateKey: CryptoKey }; isNew: boolean } | null> {
   try {
     const db = await openKeyDB();
 
@@ -162,25 +165,16 @@ export async function getOrCreateKeyPair(
       },
     );
 
-    if (existing) return existing;
+    if (existing) return { keyPair: existing, isNew: false };
 
     // Generate a new key pair.
     const keyPair = await generateKeyPair();
-    const publicKeyJwk = await exportPublicKey(keyPair.publicKey);
 
     // Persist in IndexedDB.
     const writeTx = db.transaction(STORE_NAME, 'readwrite');
     writeTx.objectStore(STORE_NAME).put(keyPair, userId);
 
-    // Upload the public key to the server (best-effort).
-    await fetch('/api/v1/users/@me/public-key', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ publicKeyJwk }),
-      credentials: 'include',
-    });
-
-    return keyPair;
+    return { keyPair, isNew: true };
   } catch {
     return null;
   }
@@ -196,6 +190,87 @@ export async function getOrCreateKeyPair(
  */
 export function isE2ESupported(): boolean {
   return !!(window.crypto?.subtle && window.indexedDB);
+}
+
+// ---------------------------------------------------------------------------
+// File encryption / decryption
+// ---------------------------------------------------------------------------
+
+/**
+ * Encrypt a File or Blob with AES-GCM using the given key.
+ * Returns the encrypted blob, a random IV, and the encrypted original filename.
+ * Max recommended size: ~25 MB (reads entire file into memory).
+ */
+export async function encryptFile(
+  key: CryptoKey,
+  file: File,
+): Promise<{ encryptedBlob: Blob; encryptedFilename: string; iv: string }> {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const buffer = await file.arrayBuffer();
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, buffer);
+
+  // Encrypt the filename so it's not visible in transit/storage
+  const filenameEncrypted = await encrypt(key, file.name);
+
+  return {
+    encryptedBlob: new Blob([ciphertext], { type: 'application/octet-stream' }),
+    encryptedFilename: filenameEncrypted,
+    iv: btoa(String.fromCharCode(...iv)),
+  };
+}
+
+/**
+ * Decrypt an encrypted blob back into a File.
+ * @param key    — AES-GCM key used to encrypt the file.
+ * @param blob   — The encrypted blob.
+ * @param ivB64  — Base64-encoded 12-byte IV.
+ * @param encryptedFilename — Encrypted original filename (from encryptFile).
+ */
+export async function decryptFile(
+  key: CryptoKey,
+  blob: Blob,
+  ivB64: string,
+  encryptedFilename: string,
+): Promise<File> {
+  const iv = Uint8Array.from(atob(ivB64), (c) => c.charCodeAt(0));
+  const ciphertext = await blob.arrayBuffer();
+  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+  const filename = await decrypt(key, encryptedFilename);
+  return new File([plaintext], filename);
+}
+
+// ---------------------------------------------------------------------------
+// Safety number computation (key verification)
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute a safety number for verifying identities between two users.
+ * SHA-256 of deterministically-ordered raw public keys, formatted as a 60-digit number.
+ */
+export async function computeSafetyNumber(
+  myPublicKey: CryptoKey,
+  theirPublicKey: CryptoKey,
+): Promise<string> {
+  const myRaw = new Uint8Array(await crypto.subtle.exportKey('raw', myPublicKey));
+  const theirRaw = new Uint8Array(await crypto.subtle.exportKey('raw', theirPublicKey));
+
+  // Deterministic ordering: smaller raw key first
+  let first: Uint8Array, second: Uint8Array;
+  for (let i = 0; i < myRaw.length; i++) {
+    if (myRaw[i] < theirRaw[i]) { first = myRaw; second = theirRaw; break; }
+    if (myRaw[i] > theirRaw[i]) { first = theirRaw; second = myRaw; break; }
+  }
+  first ??= myRaw;
+  second ??= theirRaw;
+
+  const combined = new Uint8Array(first.length + second.length);
+  combined.set(first, 0);
+  combined.set(second, first.length);
+
+  const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', combined));
+  // Convert to decimal digits and take first 60
+  const digits = Array.from(hash).map(b => b.toString().padStart(3, '0')).join('');
+  return digits.slice(0, 60);
 }
 
 // ---------------------------------------------------------------------------

@@ -177,6 +177,7 @@ function formatMessage(
     replyToId: msg.replyToId ?? null,
     isEncrypted: msg.isEncrypted ?? false,
     encryptedContent: msg.encryptedContent ?? null,
+    keyVersion: msg.keyVersion ?? null,
     author: author
       ? {
           id: author.id,
@@ -208,16 +209,22 @@ const sendMessageSchema = z
     forwardedFromMessageId: z.string().uuid().optional(),
     isEncrypted: z.boolean().optional(),
     encryptedContent: z.string().optional(),
+    keyVersion: z.number().int().optional(),
   })
-  .refine((d) => d.content !== undefined || (d.attachmentIds && d.attachmentIds.length > 0) || d.isEncrypted, {
-    message: 'Message must have content or at least one attachment',
+  .refine((d) => d.content !== undefined || (d.attachmentIds && d.attachmentIds.length > 0) || (d.isEncrypted && d.encryptedContent), {
+    message: 'Message must have content, at least one attachment, or encrypted content',
   });
 
 /**
  * Schema for PATCH /:messageId — edit message.
  */
 const editMessageSchema = z.object({
-  content: z.string().min(1).max(2000),
+  content: z.string().min(1).max(2000).optional(),
+  encryptedContent: z.string().optional(),
+  isEncrypted: z.boolean().optional(),
+  keyVersion: z.number().int().optional(),
+}).refine((d) => d.content !== undefined || d.isEncrypted, {
+  message: 'Edit must have content or be an encrypted update',
 });
 
 // ---------------------------------------------------------------------------
@@ -281,6 +288,7 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
         embeds: messages.embeds,
         isEncrypted: messages.isEncrypted,
         encryptedContent: messages.encryptedContent,
+        keyVersion: messages.keyVersion,
         authorId: messages.authorId,
         authorUsername: users.username,
         authorDisplayName: users.displayName,
@@ -371,6 +379,7 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
         replyToId: row.replyToId ?? null,
         isEncrypted: row.isEncrypted ?? false,
         encryptedContent: row.encryptedContent ?? null,
+        keyVersion: row.keyVersion ?? null,
         pinned: pinnedSet.has(row.id),
         threadReplyCount: threadReplyCountMap.get(row.id) ?? 0,
         reactions,
@@ -459,7 +468,7 @@ messagesRouter.post(
         }
       }
 
-      const { content, attachmentIds, replyToId, threadId, expiresIn, scheduledAt, forwardedFromMessageId, isEncrypted, encryptedContent } = req.body as z.infer<typeof sendMessageSchema>;
+      const { content, attachmentIds, replyToId, threadId, expiresIn, scheduledAt, forwardedFromMessageId, isEncrypted, encryptedContent, keyVersion } = req.body as z.infer<typeof sendMessageSchema>;
 
       // Handle scheduled messages: insert into scheduled_messages instead of messages
       if (scheduledAt) {
@@ -587,7 +596,7 @@ messagesRouter.post(
           ...(replyToId ? { replyToId } : {}),
           ...(threadId ? { threadId } : {}),
           ...(expiresAt ? { expiresAt } : {}),
-          ...(isEncrypted ? { isEncrypted, encryptedContent: encryptedContent ?? null } : {}),
+          ...(isEncrypted ? { isEncrypted, encryptedContent: encryptedContent ?? null, ...(keyVersion !== undefined ? { keyVersion } : {}) } : {}),
         })
         .returning();
 
@@ -650,7 +659,7 @@ messagesRouter.post(
 
       // --- Notification generation (fire-and-forget) ---
       const senderName = author?.displayName || author?.username || 'Someone';
-      const preview = (content ?? '').slice(0, 100);
+      const preview = isEncrypted ? 'Encrypted message' : (content ?? '').slice(0, 100);
 
       // Resolve the channel to check if it's a DM or guild channel.
       const [chan] = await db
@@ -896,7 +905,7 @@ messagesRouter.patch(
         return;
       }
 
-      const { content } = req.body as z.infer<typeof editMessageSchema>;
+      const { content, encryptedContent, isEncrypted, keyVersion } = req.body as z.infer<typeof editMessageSchema>;
 
       // Save current content to edit history before overwriting
       if (message.content) {
@@ -906,9 +915,21 @@ messagesRouter.patch(
         });
       }
 
+      const updateFields: Record<string, unknown> = { edited: true, editedAt: new Date() };
+      if (isEncrypted) {
+        updateFields.content = null;
+        updateFields.encryptedContent = encryptedContent ?? null;
+        updateFields.isEncrypted = true;
+        if (keyVersion !== undefined) updateFields.keyVersion = keyVersion;
+      } else {
+        updateFields.content = content;
+        updateFields.isEncrypted = false;
+        updateFields.encryptedContent = null;
+      }
+
       const [updated] = await db
         .update(messages)
-        .set({ content, edited: true, editedAt: new Date() })
+        .set(updateFields)
         .where(eq(messages.id, messageId))
         .returning();
 

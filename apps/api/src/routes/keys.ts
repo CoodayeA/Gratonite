@@ -18,8 +18,10 @@ import { eq } from 'drizzle-orm';
 
 import { db } from '../db/index';
 import { userPublicKeys } from '../db/schema/encryption';
+import { dmChannelMembers } from '../db/schema/channels';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { getIO } from '../lib/socket-io';
 
 export const keysRouter = Router();
 
@@ -96,6 +98,13 @@ keysRouter.post(
     const userId = req.userId!;
     const now = new Date();
 
+    // Check if user already had a key (to detect key rotation vs first upload)
+    const [existing] = await db
+      .select({ userId: userPublicKeys.userId })
+      .from(userPublicKeys)
+      .where(eq(userPublicKeys.userId, userId))
+      .limit(1);
+
     await db
       .insert(userPublicKeys)
       .values({ userId, publicKeyJwk, createdAt: now, updatedAt: now })
@@ -103,6 +112,23 @@ keysRouter.post(
         target: userPublicKeys.userId,
         set: { publicKeyJwk, updatedAt: now },
       });
+
+    // If this was a key rotation (not first upload), notify all DM partners
+    if (existing) {
+      try {
+        const dmPartners = await db
+          .select({ channelId: dmChannelMembers.channelId })
+          .from(dmChannelMembers)
+          .where(eq(dmChannelMembers.userId, userId));
+
+        const io = getIO();
+        for (const { channelId } of dmPartners) {
+          io.to(`channel:${channelId}`).emit('USER_KEY_CHANGED', { userId });
+        }
+      } catch {
+        // Non-fatal
+      }
+    }
 
     res.status(200).json({ success: true });
   }),

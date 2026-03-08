@@ -22,6 +22,7 @@ import { dmChannelMembers } from '../db/schema/channels';
 import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { getIO } from '../lib/socket-io';
 
 export const groupDmsRouter = Router();
 
@@ -221,6 +222,16 @@ groupDmsRouter.post(
         .where(inArray(users.id, allMemberIds));
 
       res.status(200).json({ members: memberInfo });
+
+      // Emit key rotation event so the group owner can re-wrap the group key
+      try {
+        getIO().to(`channel:${channelId}`).emit('GROUP_KEY_ROTATION_NEEDED', {
+          channelId,
+          reason: 'member_added',
+        });
+      } catch {
+        // Non-fatal if Socket.io not initialised.
+      }
     } catch (err) {
       handleAppError(res, err);
     }
@@ -291,6 +302,18 @@ groupDmsRouter.delete(
       }
 
       res.status(200).json({ code: 'OK', message: 'Member removed' });
+
+      // Emit key rotation event so the group owner can re-wrap with a new key
+      if (remaining.length > 0) {
+        try {
+          getIO().to(`channel:${channelId}`).emit('GROUP_KEY_ROTATION_NEEDED', {
+            channelId,
+            reason: 'member_removed',
+          });
+        } catch {
+          // Non-fatal if Socket.io not initialised.
+        }
+      }
     } catch (err) {
       handleAppError(res, err);
     }
