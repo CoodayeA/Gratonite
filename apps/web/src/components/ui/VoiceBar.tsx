@@ -1,11 +1,13 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mic, MicOff, Headphones, Volume2, PhoneOff } from 'lucide-react';
+import { Mic, MicOff, Headphones, HeadphoneOff, PhoneOff } from 'lucide-react';
 import { useVoice } from '../../contexts/VoiceContext';
 import { leaveVoiceSession } from '../../lib/voiceSession';
 
 export default function VoiceBar() {
   const { connected, channelName, guildName, guildId, channelId, muted, deafened, toggleMute, toggleDeafen, leaveVoice } = useVoice();
   const navigate = useNavigate();
+  const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
 
   if (!connected) return null;
 
@@ -19,25 +21,41 @@ export default function VoiceBar() {
     await leaveVoiceSession({ clearVoiceState: leaveVoice });
   };
 
+  const btnBase: React.CSSProperties = {
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
+    border: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'background 0.15s, color 0.15s, transform 0.15s, box-shadow 0.15s',
+  };
+
   return (
     <div style={{
       position: 'fixed',
       bottom: 0,
       left: 0,
       right: 0,
-      height: '48px',
-      background: 'var(--bg-elevated, var(--bg-secondary))',
-      borderTop: '1px solid var(--stroke, var(--border-color, rgba(255,255,255,0.08)))',
+      height: '52px',
+      background: 'rgba(var(--bg-elevated-rgb, 30, 31, 34), 0.85)',
+      backdropFilter: 'blur(16px)',
+      WebkitBackdropFilter: 'blur(16px)',
+      borderTop: '1px solid rgba(255, 255, 255, 0.06)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: '0 16px',
       zIndex: 100,
-      gap: '12px',
+      boxShadow: '0 -2px 12px rgba(0, 0, 0, 0.15)',
     }}>
       {/* Left: connection status + channel info */}
       <div
         onClick={handleNavigate}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -45,16 +63,29 @@ export default function VoiceBar() {
           cursor: 'pointer',
           flex: 1,
           minWidth: 0,
+          padding: '6px 10px',
+          borderRadius: '8px',
+          marginLeft: '-10px',
+          transition: 'background 0.15s',
         }}
       >
-        {/* Green dot indicator */}
-        <div style={{
-          width: '8px',
-          height: '8px',
-          borderRadius: '50%',
-          background: '#43b581',
-          flexShrink: 0,
-        }} />
+        {/* Pulsing signal indicator */}
+        <div style={{ position: 'relative', width: '18px', height: '18px', flexShrink: 0 }}>
+          <div style={{
+            position: 'absolute',
+            inset: '3px',
+            borderRadius: '50%',
+            background: '#43b581',
+          }} />
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: '50%',
+            border: '2px solid #43b581',
+            animation: 'voiceBarPulse 2s ease-in-out infinite',
+            opacity: 0.6,
+          }} />
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', minWidth: 0 }}>
           <span style={{
             fontSize: '13px',
@@ -78,70 +109,89 @@ export default function VoiceBar() {
       </div>
 
       {/* Right: controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
         {/* Mute toggle */}
         <button
           onClick={toggleMute}
+          onMouseEnter={() => setHoveredBtn('mute')}
+          onMouseLeave={() => setHoveredBtn(null)}
           title={muted ? 'Unmute' : 'Mute'}
           style={{
-            background: muted ? 'rgba(255,255,255,0.1)' : 'transparent',
-            border: 'none',
-            borderRadius: '6px',
-            width: '36px',
-            height: '36px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            color: muted ? 'var(--accent-red, #ed4245)' : 'var(--text-secondary)',
-            transition: 'background 0.15s, color 0.15s',
+            ...btnBase,
+            background: muted
+              ? 'rgba(237, 66, 69, 0.15)'
+              : hoveredBtn === 'mute' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+            color: muted ? '#ed4245' : 'var(--text-secondary)',
+            transform: hoveredBtn === 'mute' ? 'scale(1.08)' : 'scale(1)',
           }}
         >
-          {muted ? <MicOff size={18} /> : <Mic size={18} />}
+          {muted ? <MicOff size={19} /> : <Mic size={19} />}
         </button>
 
         {/* Deafen toggle */}
         <button
           onClick={toggleDeafen}
+          onMouseEnter={() => setHoveredBtn('deafen')}
+          onMouseLeave={() => setHoveredBtn(null)}
           title={deafened ? 'Undeafen' : 'Deafen'}
           style={{
-            background: deafened ? 'rgba(255,255,255,0.1)' : 'transparent',
-            border: 'none',
-            borderRadius: '6px',
-            width: '36px',
-            height: '36px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            color: deafened ? 'var(--accent-red, #ed4245)' : 'var(--text-secondary)',
-            transition: 'background 0.15s, color 0.15s',
+            ...btnBase,
+            background: deafened
+              ? 'rgba(237, 66, 69, 0.15)'
+              : hoveredBtn === 'deafen' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+            color: deafened ? '#ed4245' : 'var(--text-secondary)',
+            transform: hoveredBtn === 'deafen' ? 'scale(1.08)' : 'scale(1)',
           }}
         >
-          {deafened ? <Volume2 size={18} /> : <Headphones size={18} />}
+          {deafened ? <HeadphoneOff size={19} /> : <Headphones size={19} />}
         </button>
+
+        {/* Divider */}
+        <div style={{
+          width: '1px',
+          height: '24px',
+          background: 'rgba(255, 255, 255, 0.08)',
+          margin: '0 2px',
+        }} />
 
         {/* Disconnect */}
         <button
           onClick={handleDisconnect}
+          onMouseEnter={() => setHoveredBtn('disconnect')}
+          onMouseLeave={() => setHoveredBtn(null)}
           title="Disconnect"
           style={{
-            background: 'var(--accent-red, #ed4245)',
-            border: 'none',
-            borderRadius: '6px',
-            width: '36px',
             height: '36px',
+            padding: '0 14px',
+            borderRadius: '18px',
+            border: 'none',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            gap: '6px',
             cursor: 'pointer',
+            background: hoveredBtn === 'disconnect' ? '#d83c3e' : '#ed4245',
             color: '#fff',
-            transition: 'opacity 0.15s',
+            transition: 'background 0.15s, transform 0.15s, box-shadow 0.15s',
+            transform: hoveredBtn === 'disconnect' ? 'scale(1.04)' : 'scale(1)',
+            boxShadow: hoveredBtn === 'disconnect'
+              ? '0 4px 16px rgba(237, 66, 69, 0.5)'
+              : '0 2px 8px rgba(237, 66, 69, 0.3)',
+            fontWeight: 600,
+            fontSize: '13px',
           }}
         >
-          <PhoneOff size={18} />
+          <PhoneOff size={16} />
         </button>
       </div>
+
+      {/* Animations */}
+      <style>{`
+        @keyframes voiceBarPulse {
+          0%, 100% { transform: scale(1); opacity: 0.6; }
+          50% { transform: scale(1.5); opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 }

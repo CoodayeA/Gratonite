@@ -553,12 +553,17 @@ const VoiceChannel = () => {
     }, [isCameraOn, toggleCamera, addToast]);
 
     const handleToggleScreenShare = useCallback(async () => {
-        if (isScreenSharing) {
-            await stopScreenShare();
-            addToast({ title: 'Screen Share Stopped', variant: 'info' });
-        } else {
-            await startScreenShare();
-            addToast({ title: 'Screen Sharing Started', variant: 'info' });
+        try {
+            if (isScreenSharing) {
+                await stopScreenShare();
+                addToast({ title: 'Screen Share Stopped', variant: 'info' });
+            } else {
+                await startScreenShare();
+                addToast({ title: 'Screen Sharing Started', variant: 'info' });
+            }
+        } catch (err) {
+            const description = err instanceof Error ? err.message : 'Could not toggle screen share.';
+            addToast({ title: 'Screen Share Error', description, variant: 'error' });
         }
     }, [isScreenSharing, startScreenShare, stopScreenShare, addToast]);
 
@@ -878,6 +883,7 @@ const VoiceChannel = () => {
                         localPosition={spatialLocalPosition}
                         onLocalPositionChange={updateSpatialLocalPosition}
                         ownAvatarFrame={ownAvatarFrame}
+                        getAvatarHash={getAvatarHash}
                     />
                 )}
 

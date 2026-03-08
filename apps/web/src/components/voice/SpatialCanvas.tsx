@@ -9,6 +9,7 @@ interface SpatialCanvasProps {
   localPosition: { x: number; y: number };
   onLocalPositionChange: (x: number, y: number) => void;
   ownAvatarFrame?: 'none' | 'neon' | 'gold' | 'glass';
+  getAvatarHash: (id: string) => string | null;
 }
 
 const AVATAR_SIZE = 56;
@@ -21,6 +22,7 @@ export default function SpatialCanvas({
   localPosition,
   onLocalPositionChange,
   ownAvatarFrame = 'none',
+  getAvatarHash,
 }: SpatialCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
@@ -128,6 +130,7 @@ export default function SpatialCanvas({
               <Avatar
                 userId={p.id}
                 displayName={p.name}
+                avatarHash={getAvatarHash(p.id)}
                 frame={isLocal ? ownAvatarFrame : 'none'}
                 size={AVATAR_SIZE}
                 style={{
