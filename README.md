@@ -141,104 +141,190 @@ npm run dev
 
 ## Self-Hosting 🏠
 
-Run your own Gratonite instance in under 5 minutes. All you need is a server with Docker installed and a domain name.
+Run your own Gratonite instance. You'll need a Linux server, Docker, and a domain name. No coding required — everything runs in Docker containers.
 
-### Requirements
+### What You Need Before Starting
 
-- A VPS or server with at least **1 GB RAM** (2 GB recommended)
-- **Docker Engine 24+** and **Docker Compose v2** installed
-- A **domain name** with an A record pointing to your server
-- Ports **80** and **443** open
+1. **A Linux server** — A VPS from any provider (Hetzner, DigitalOcean, Linode, etc.) with at least 1 GB RAM. Ubuntu 22.04 or Debian 12 recommended.
+2. **A domain name** — Buy one from any registrar (Namecheap, Cloudflare, etc.). You'll point it at your server's IP address.
+3. **SSH access** — You need to be able to log into your server via terminal/command line.
 
-### Quick Start
+> **Don't have a server yet?** Sign up for a VPS provider, create the cheapest Linux server they offer (1 GB RAM is enough), and note the IP address they give you. Then buy a domain and create an **A record** pointing your domain to that IP address. Wait 5-10 minutes for DNS to propagate.
+
+### Step 1: Install Docker on Your Server
+
+SSH into your server and run:
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/CoodayeA/Gratonite.git && cd Gratonite
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+```
 
-# 2. Configure your instance
+**Log out and log back in** (this is required for the group change to take effect), then verify:
+
+```bash
+docker --version          # Should show Docker Engine 24+
+docker compose version    # Should show Docker Compose v2.x
+```
+
+### Step 2: Open Firewall Ports
+
+Your server needs ports 80 (HTTP) and 443 (HTTPS) open for web traffic:
+
+```bash
+# On Ubuntu/Debian:
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+```
+
+### Step 3: Clone and Configure
+
+```bash
+git clone https://github.com/CoodayeA/Gratonite.git
+cd Gratonite
 cp deploy/self-host/.env.example deploy/self-host/.env
-nano deploy/self-host/.env   # Set your domain, admin email/password, DB password
+```
 
-# 3. Launch
+Now open the config file in a text editor:
+
+```bash
+nano deploy/self-host/.env
+```
+
+You only need to change **4 lines**. Find and replace these values:
+
+```bash
+# Change "chat.example.com" to YOUR domain (no https://, no trailing slash)
+INSTANCE_DOMAIN=your-domain.com
+
+# Change to YOUR email and pick a strong password
+ADMIN_EMAIL=you@gmail.com
+ADMIN_PASSWORD=MyStr0ngP@ssword!
+
+# Generate a random database password (run: openssl rand -base64 24)
+DB_PASSWORD=paste-your-random-password-here
+```
+
+**To generate a random DB password**, run this in a separate terminal:
+```bash
+openssl rand -base64 24
+```
+Copy the output and paste it as your `DB_PASSWORD`.
+
+Save the file (`Ctrl+O`, then `Enter`, then `Ctrl+X` in nano).
+
+> **That's all you need to set.** JWT secrets, HTTPS certificates, and everything else is handled automatically.
+
+### Step 4: Launch
+
+```bash
 docker compose -f deploy/self-host/docker-compose.yml up -d
+```
 
-# 4. Verify setup completed
+This pulls the Docker images and starts all services. It takes 1-2 minutes on first run.
+
+### Step 5: Verify Everything Started
+
+Check that the setup container completed successfully:
+
+```bash
 docker compose -f deploy/self-host/docker-compose.yml logs setup
-# Should end with: "=== Setup complete! ==="
-
-# 5. Open https://your-domain.com and log in with your admin credentials
 ```
 
-That's it. The setup container automatically runs all 124 database migrations, generates JWT secrets and an Ed25519 instance keypair, and creates your admin account. Caddy handles HTTPS certificates via Let's Encrypt.
-
-### What You Get
-
-| Service | Image | Purpose |
-|---------|-------|---------|
-| **setup** | `ghcr.io/coodayea/gratonite-setup` | First-run init (migrations, keys, admin account) |
-| **api** | `ghcr.io/coodayea/gratonite-api` | Node.js API + Socket.IO real-time |
-| **web** | `ghcr.io/coodayea/gratonite-web` | React SPA served by nginx |
-| **postgres** | `postgres:16-alpine` | Database |
-| **redis** | `redis:7-alpine` | Cache and rate limiting |
-| **caddy** | `caddy:2-alpine` | Reverse proxy with auto-HTTPS |
-
-### Configuration
-
-Edit `deploy/self-host/.env` — the only required values are:
-
-| Variable | What to set |
-|----------|------------|
-| `INSTANCE_DOMAIN` | Your domain (e.g. `chat.example.com`) |
-| `ADMIN_EMAIL` | Your email address |
-| `ADMIN_PASSWORD` | A strong password for the admin account |
-| `DB_PASSWORD` | A random database password (16+ characters) |
-
-Everything else has sensible defaults. See the [full configuration reference](docs/federation/self-hosting-guide.md#configuration-reference).
-
-### Voice & Video (Optional)
-
-```bash
-docker compose -f deploy/self-host/docker-compose.yml --profile voice up -d
+You should see output ending with:
+```
+=== Gratonite Instance Setup ===
+Running database migrations... done.
+Generated JWT secrets.
+Generating Ed25519 instance keypair... done.
+Creating admin account... done.
+=== Setup complete! ===
 ```
 
-Set `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, and `LIVEKIT_URL` in your `.env` file.
+Check all containers are running:
+```bash
+docker compose -f deploy/self-host/docker-compose.yml ps
+```
 
-### Updating
+All services should show `Up` or `running`.
+
+### Step 6: Log In
+
+Open **https://your-domain.com** in your browser. Log in with the email and password you set in Step 3.
+
+**First things to do:**
+- Create your first server (called a "guild") by clicking the **+** button in the sidebar
+- Invite friends by right-clicking your server and creating an invite link
+- Explore **Settings > Admin** for instance-wide settings
+
+### Updating to New Versions
 
 ```bash
+cd Gratonite
+git pull
 docker compose -f deploy/self-host/docker-compose.yml pull
 docker compose -f deploy/self-host/docker-compose.yml up -d
 ```
 
+Database migrations run automatically on every update. Your data is preserved.
+
 ### Backups
 
 ```bash
-# Database
+# Database backup (do this regularly!)
 docker compose -f deploy/self-host/docker-compose.yml exec postgres \
   pg_dump -U gratonite gratonite | gzip > backup-$(date +%Y%m%d).sql.gz
 
-# File uploads
+# File uploads backup
 docker compose -f deploy/self-host/docker-compose.yml cp api:/app/uploads ./uploads-backup
 ```
 
-### Federation (Optional)
+### Federation: List Your Server on Gratonite Discover (Optional)
 
-Connect your instance to other Gratonite instances and appear on the [Discover](https://gratonite.chat/app/discover) directory:
+Federation lets your instance connect with other Gratonite instances. Your public servers can appear on the [Discover](https://gratonite.chat/app/discover) directory so anyone can find them.
+
+**Step 1:** Open your `.env` file and add these two lines:
 
 ```bash
-# In your .env file, set:
+nano deploy/self-host/.env
+```
+
+Find the federation section and uncomment/set:
+```bash
 FEDERATION_ENABLED=true
 FEDERATION_DISCOVER_REGISTRATION=true
 ```
 
-Then restart: `docker compose -f deploy/self-host/docker-compose.yml restart api`
+**Step 2:** Restart the API to apply changes:
 
-Your public servers will sync to gratonite.chat every 30 minutes and appear in the "Self-Hosted Servers" section of Discover. See the [Federation Guide](docs/federation/federation-guide.md) for details.
+```bash
+docker compose -f deploy/self-host/docker-compose.yml restart api
+```
+
+**Step 3:** Create a server and make it discoverable. Log into your instance, create a server (guild), then go to **Server Settings > Overview** and enable the **"Listed in Server Discovery"** toggle.
+
+**Step 4:** Verify federation is working:
+
+```bash
+curl https://your-domain.com/.well-known/gratonite
+```
+
+You should see a JSON response with your instance's public key and endpoints. If you see this, federation is active.
+
+**Step 5:** Wait up to 30 minutes. Your discoverable servers will automatically sync to gratonite.chat and appear in the "Self-Hosted Servers" section of the Discover page.
+
+### Troubleshooting
+
+| Problem | How to fix |
+|---------|-----------|
+| **Can't access my instance** | Check DNS: `dig your-domain.com +short` should return your server's IP. Check ports 80/443 are open. Check containers are running with `docker compose ps`. |
+| **Setup container failed** | Run `docker compose -f deploy/self-host/docker-compose.yml logs setup` and check the error. Most common: wrong DB_PASSWORD. |
+| **HTTPS certificate error** | Caddy gets certificates automatically, but your domain must resolve to your server's public IP first. Check `docker compose logs caddy`. |
+| **Federation not working** | Make sure `FEDERATION_ENABLED=true` is set, and you restarted the API. Verify with `curl https://your-domain.com/.well-known/gratonite`. |
 
 ### Full Documentation
 
-- **[Self-Hosting Guide](docs/federation/self-hosting-guide.md)** — Complete setup, configuration, DNS, TLS, troubleshooting
+- **[Self-Hosting Guide](docs/federation/self-hosting-guide.md)** — Complete reference with all configuration options, architecture details, advanced troubleshooting
 - **[Federation Guide](docs/federation/federation-guide.md)** — Connecting to other instances
 - **[Protocol Spec](docs/federation/protocol-spec.md)** — Federation protocol technical reference
 
