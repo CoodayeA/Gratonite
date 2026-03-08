@@ -1273,13 +1273,13 @@ export const api = {
     getRoles: (guildId: string) =>
       apiFetch<any[]>(`/guilds/${guildId}/roles`),
 
-    createRole: (guildId: string, data: { name: string; color?: number; mentionable?: boolean; permissions?: number }) =>
+    createRole: (guildId: string, data: { name: string; color?: string; mentionable?: boolean; permissions?: string }) =>
       apiFetch<any>(`/guilds/${guildId}/roles`, {
         method: 'POST',
         body: JSON.stringify(data),
       }),
 
-    updateRole: (guildId: string, roleId: string, data: { name?: string; color?: number; mentionable?: boolean; permissions?: number }) =>
+    updateRole: (guildId: string, roleId: string, data: { name?: string; color?: string; mentionable?: boolean; permissions?: string }) =>
       apiFetch<any>(`/guilds/${guildId}/roles/${roleId}`, {
         method: 'PATCH',
         body: JSON.stringify(data),

@@ -199,7 +199,8 @@ const MemoizedMessageItem = memo(({
         if (msg.authorId === currentUserId) return;
         setFameLoading(true);
         try {
-            await api.fame.give(msg.authorId, { messageId: msg.apiId, guildId: guildId || '' });
+            if (!guildId) return;
+            await api.fame.give(msg.authorId, { messageId: msg.apiId, guildId });
             setFamGiven(true);
             setShowFameSparkle(true);
             setTimeout(() => setShowFameSparkle(false), 1400);
@@ -789,6 +790,7 @@ const ChannelChat = () => {
     const { addToast } = useToast();
     const [currentUserName, setCurrentUserName] = useState('');
     const [currentUserId, setCurrentUserId] = useState('');
+    const [currentUserAvatarHash, setCurrentUserAvatarHash] = useState<string | null>(null);
     const [channelName, setChannelName] = useState('general');
     const [rateLimitPerUser, setRateLimitPerUser] = useState(0);
     const [lastSentAt, setLastSentAt] = useState<number | null>(null);
@@ -828,6 +830,7 @@ const ChannelChat = () => {
         api.users.getMe().then(me => {
             setCurrentUserName(me.profile?.displayName || me.username);
             setCurrentUserId(me.id);
+            setCurrentUserAvatarHash(me.avatarHash ?? me.profile?.avatarHash ?? null);
         }).catch(() => { addToast({ title: 'Failed to load user info', variant: 'error' }); });
     }, []);
 
@@ -1556,8 +1559,8 @@ const ChannelChat = () => {
                 id: typeof data.id === 'string' ? parseInt(data.id, 36) || Date.now() : data.id,
                 apiId: data.id,
                 authorId: data.authorId,
-                author: authorName,
-                system: false,
+                author: data.isSystem ? 'System' : authorName,
+                system: data.isSystem ?? false,
                 avatar: authorName.charAt(0).toUpperCase(),
                 time: new Date(data.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 content: data.content || '',
@@ -1866,6 +1869,7 @@ const ChannelChat = () => {
             content: processedContent,
             ...(replyToApiId ? { replyToId: replyToApiId, replyToAuthor, replyToContent } : {}),
             authorRoleColor: currentUserId ? roleColorCacheRef.current.get(currentUserId) : undefined,
+            authorAvatarHash: currentUserAvatarHash,
         }]);
 
         // Track slowmode
@@ -1884,6 +1888,7 @@ const ChannelChat = () => {
                         ...m,
                         apiId: sent.id,
                         authorId: sent.authorId,
+                        authorAvatarHash: sent.author?.avatarHash ?? m.authorAvatarHash,
                         attachments: sent.attachments?.length > 0 ? sent.attachments : undefined,
                     } : m
                 ));
@@ -1949,18 +1954,30 @@ const ChannelChat = () => {
     }, [channelId]);
 
     const handleSendGif = (url: string, _previewUrl: string) => {
+        const optimisticId = Date.now();
         setMessages(prev => [...prev, {
-            id: Date.now(),
+            id: optimisticId,
+            authorId: currentUserId,
             author: currentUserName,
             system: false,
             avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            content: '',
+            content: url,
             type: 'media' as const,
             mediaUrl: url,
             mediaAspectRatio: 16 / 9
         }]);
         setIsEmojiPickerOpen(false);
+        if (channelId) {
+            api.messages.send(channelId, { content: url } as any).then((sent: any) => {
+                if (sent?.id) {
+                    setMessages(prev => prev.map(m => m.id === optimisticId ? { ...m, apiId: sent.id } : m));
+                }
+            }).catch(() => {
+                setMessages(prev => prev.filter(m => m.id !== optimisticId));
+                addToast({ title: 'Failed to send GIF', variant: 'error' });
+            });
+        }
     };
 
     const handleSendSticker = (sticker: { id: string; name: string; url: string }) => {

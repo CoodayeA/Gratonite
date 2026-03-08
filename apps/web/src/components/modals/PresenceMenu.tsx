@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { User, Smile, Check, Paintbrush, LogOut, Gamepad2, Headphones, Eye } from 'lucide-react';
 import { useTheme, AppTheme } from '../ui/ThemeProvider';
 import { api } from '../../lib/api';
+import { getSocket } from '../../lib/socket';
 
 export type PresenceType = 'online' | 'idle' | 'dnd' | 'invisible';
 
@@ -40,10 +41,13 @@ const STATUS_EXPIRY_OPTIONS = [
     { label: 'Clear this week', value: 'week' },
 ] as const;
 
+const STATUS_EMOJIS = ['😀','😊','😎','🤔','😴','🎮','💻','🎵','📚','🏃','🍕','☕','🎉','❤️','🔥','✨','👀','💯','🌙','🤖'];
+
 const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, customStatus, onChangeStatus, onOpenProfile, onLogout, userName, avatarUrl }: PresenceMenuProps) => {
     const [isEditingStatus, setIsEditingStatus] = useState(false);
     const [statusInput, setStatusInput] = useState(customStatus || '');
     const [statusEmoji, setStatusEmoji] = useState('');
+    const [showEmojiGrid, setShowEmojiGrid] = useState(false);
     const [statusExpiry, setStatusExpiry] = useState('');
     const [mounted, setMounted] = useState(false);
     const { theme, setTheme } = useTheme();
@@ -89,9 +93,15 @@ const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, cust
 
     const handleSetActivity = () => {
         if (activityName.trim()) {
-            api.users.setActivity({ type: activityType, name: activityName.trim() }).catch(() => {});
+            const activity = { type: activityType, name: activityName.trim() };
+            api.users.setActivity(activity).catch(() => {});
+            // Also emit via socket so presence updates in real-time
+            const socket = getSocket();
+            socket?.emit('PRESENCE_UPDATE', { status: currentPresence === 'invisible' ? 'invisible' : currentPresence, activity });
         } else {
             api.users.clearActivity().catch(() => {});
+            const socket = getSocket();
+            socket?.emit('PRESENCE_UPDATE', { status: currentPresence === 'invisible' ? 'invisible' : currentPresence, activity: null });
         }
         setShowActivityEditor(false);
     };
@@ -151,16 +161,25 @@ const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, cust
                 {isEditingStatus ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-sm)' }}>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Set a custom status</div>
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                            <input
-                                type="text"
-                                className="chat-input"
-                                style={{ padding: '8px', fontSize: '16px', background: 'var(--bg-primary)', width: '40px', textAlign: 'center' }}
-                                value={statusEmoji}
-                                onChange={e => setStatusEmoji(e.target.value)}
-                                placeholder="😀"
-                                maxLength={2}
-                            />
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', position: 'relative' }}>
+                            <button
+                                type="button"
+                                onClick={() => setShowEmojiGrid(prev => !prev)}
+                                style={{ padding: '6px', fontSize: '18px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', width: '40px', height: '36px', cursor: 'pointer', textAlign: 'center', lineHeight: 1 }}
+                            >
+                                {statusEmoji || '😀'}
+                            </button>
+                            {showEmojiGrid && (
+                                <div style={{ position: 'absolute', top: '40px', left: 0, zIndex: 10, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', padding: '6px', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '2px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
+                                    {STATUS_EMOJIS.map(em => (
+                                        <button key={em} type="button" onClick={() => { setStatusEmoji(em); setShowEmojiGrid(false); }}
+                                            style={{ width: '32px', height: '32px', fontSize: '18px', background: 'transparent', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                            onMouseOver={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                                            onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                                        >{em}</button>
+                                    ))}
+                                </div>
+                            )}
                             <input
                                 autoFocus
                                 type="text"

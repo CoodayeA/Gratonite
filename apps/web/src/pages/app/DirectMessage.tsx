@@ -1449,18 +1449,29 @@ const DirectMessage = () => {
     };
 
     const handleSendGif = (url: string, _previewUrl: string) => {
+        const optimisticId = Date.now();
         setMessages(prev => [...prev, {
-            id: Date.now(),
+            id: optimisticId,
+            authorId: currentUserId,
             author: currentUserName || 'You',
             system: false,
             avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            content: '',
+            content: url,
             type: 'media' as const,
             mediaUrl: url,
             mediaAspectRatio: 16 / 9
         }]);
         setIsEmojiPickerOpen(false);
+        if (dmChannelId) {
+            api.messages.send(dmChannelId, { content: url }).then((sent: any) => {
+                if (sent?.id) {
+                    setMessages(prev => prev.map(m => m.id === optimisticId ? { ...m, apiId: sent.id } : m));
+                }
+            }).catch(() => {
+                setMessages(prev => prev.filter(m => m.id !== optimisticId));
+            });
+        }
     };
 
     // Get the other participant for display

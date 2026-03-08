@@ -38,6 +38,7 @@ export interface MessageCreatePayload {
   editedAt: string | null;
   createdAt: string;
   expiresAt?: string | null;
+  isSystem?: boolean;
   author: {
     id: string;
     username: string;

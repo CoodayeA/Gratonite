@@ -824,7 +824,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         setRoles(prev => prev.map(r => r.id === roleId ? updated : r));
         if (activeRole?.id === roleId) setActiveRole(updated);
         try {
-            await api.guilds.updateRole(guildId, roleId, { permissions: permissionsRecordToInt(newPerms) });
+            await api.guilds.updateRole(guildId, roleId, { permissions: String(permissionsRecordToInt(newPerms)) });
         } catch {
             // Revert on failure
             setRoles(prev => prev.map(r => r.id === roleId ? role : r));
@@ -841,7 +841,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         try {
             await api.guilds.updateRole(guildId, activeRole.id, {
                 name: newName,
-                color: colorHexToInt(newColor),
+                color: newColor,
                 ...(editRoleEmojiVal !== undefined ? { unicodeEmoji: editRoleEmojiVal || null } : {}),
             });
             setRoles(prev => prev.map(r => {
@@ -1702,7 +1702,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                             onClick={async () => {
                                                 if (!guildId) return;
                                                 try {
-                                                    const created = await api.guilds.createRole(guildId, { name: 'New Role', color: colorHexToInt('#71717a') }) as any;
+                                                    const created = await api.guilds.createRole(guildId, { name: 'New Role', color: '#71717a' }) as any;
                                                     const newRole: Role = {
                                                         id: created.id,
                                                         name: created.name || 'New Role',

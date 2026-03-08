@@ -401,12 +401,20 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                                     {cat.emojis.map((emoji, idx) => (
                                         <button
                                             key={`${cat.id}-${idx}`}
-                                            onClick={() => handleSelectEmoji(emoji)}
+                                            onClick={() => emoji.startsWith(':') ? handleSelectCustomEmoji(emoji.slice(1, -1)) : handleSelectEmoji(emoji)}
                                             style={{ width: '36px', height: '36px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.1s, transform 0.1s' }}
                                             onMouseOver={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.transform = 'scale(1.15)'; }}
                                             onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'scale(1)'; }}
                                         >
-                                            {emoji}
+                                            {emoji.startsWith(':') ? (
+                                                (() => {
+                                                    const name = emoji.slice(1, -1);
+                                                    const match = serverEmojis.find(e => e.name === name);
+                                                    return match
+                                                        ? <img src={match.url} alt={name} style={{ width: '26px', height: '26px', borderRadius: '4px', objectFit: 'contain' }} />
+                                                        : <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{emoji}</span>;
+                                                })()
+                                            ) : emoji}
                                         </button>
                                     ))}
                                 </div>

@@ -299,10 +299,12 @@ channelsRouter.post(
 
         logAuditEvent(guildId, req.userId!, AuditActionTypes.CHANNEL_CREATE, textChannel.id, 'CHANNEL', { name: linkedName, type: 'GUILD_TEXT' });
 
+        getIO().to(`guild:${guildId}`).emit('CHANNEL_CREATE', { ...updated, linkedTextChannel: textChannel });
         res.status(201).json({ ...updated, linkedTextChannel: textChannel });
         return;
       }
 
+      getIO().to(`guild:${guildId}`).emit('CHANNEL_CREATE', channel);
       res.status(201).json(channel);
     } catch (err) {
       handleAppError(res, err);
@@ -864,7 +866,7 @@ channelsRouter.post('/channels/:channelId/duplicate', requireAuth, async (req: R
     if (!source.guildId) { res.status(400).json({ code: 'BAD_REQUEST', message: 'Cannot duplicate DM channels' }); return; }
 
     // Check MANAGE_CHANNELS permission
-    const hasPerm = await hasPermission(source.guildId, userId, Permissions.MANAGE_CHANNELS);
+    const hasPerm = await hasPermission(userId, source.guildId, Permissions.MANAGE_CHANNELS);
     if (!hasPerm) { res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_CHANNELS permission' }); return; }
 
     // Insert duplicate

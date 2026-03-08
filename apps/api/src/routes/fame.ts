@@ -3,7 +3,11 @@ import { eq, and, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import { fameTransactions } from '../db/schema/fameTransactions';
 import { fameDailyLimits } from '../db/schema/fameDailyLimits';
+import { userWallets } from '../db/schema/economy';
+import { users } from '../db/schema/users';
+import { messages } from '../db/schema/messages';
 import { requireAuth } from '../middleware/auth';
+import { getIO } from '../lib/socket-io';
 
 export const fameRouter = Router({ mergeParams: true });
 
@@ -66,6 +70,46 @@ fameRouter.post(
           target: [fameDailyLimits.userId, fameDailyLimits.date],
           set: { count: sql`${fameDailyLimits.count} + 1` },
         });
+
+      // Award +200 Gratonite to receiver
+      try {
+        await db
+          .insert(userWallets)
+          .values({ userId: receiverId, balance: 200, lifetimeEarned: 200 })
+          .onConflictDoUpdate({
+            target: [userWallets.userId],
+            set: {
+              balance: sql`${userWallets.balance} + 200`,
+              lifetimeEarned: sql`${userWallets.lifetimeEarned} + 200`,
+            },
+          });
+      } catch { /* wallet reward non-critical */ }
+
+      // Create system message in the channel & emit socket event
+      try {
+        const [giver] = await db.select({ username: users.username, displayName: users.displayName }).from(users).where(eq(users.id, giverId)).limit(1);
+        const [receiver] = await db.select({ username: users.username, displayName: users.displayName }).from(users).where(eq(users.id, receiverId)).limit(1);
+        const giverName = giver?.displayName || giver?.username || 'Someone';
+        const receiverName = receiver?.displayName || receiver?.username || 'Someone';
+
+        if (messageId) {
+          // Look up the channel from the message
+          const [msg] = await db.select({ channelId: messages.channelId }).from(messages).where(eq(messages.id, messageId)).limit(1);
+          if (msg?.channelId) {
+            const [sysMsg] = await db.insert(messages).values({
+              channelId: msg.channelId,
+              authorId: giverId,
+              content: `**${giverName}** gave **${receiverName}** FAME! 🌟`,
+            }).returning();
+
+            getIO().to(`channel:${msg.channelId}`).emit('MESSAGE_CREATE', {
+              ...sysMsg,
+              isSystem: true,
+              author: { id: giverId, username: giver?.username, displayName: giver?.displayName },
+            });
+          }
+        }
+      } catch { /* system message non-critical */ }
 
       const newCount = currentCount + 1;
       res.status(200).json({ success: true, fameGiven: newCount, remaining: DAILY_FAME_LIMIT - newCount });

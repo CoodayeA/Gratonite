@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react';
 import { useTheme } from './ThemeProvider';
 
 export type MediaType = 'image' | 'video';
@@ -27,6 +28,17 @@ const overlayStyle: React.CSSProperties = {
 
 export const BackgroundMedia = ({ media }: { media: { url: string, type: MediaType } | null }) => {
     const { showChannelBackgrounds, playMovingBackgrounds } = useTheme();
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+        if (playMovingBackgrounds) {
+            video.play().catch(() => {});
+        } else {
+            video.pause();
+        }
+    }, [playMovingBackgrounds]);
 
     if (!media || !showChannelBackgrounds) return null;
 
@@ -34,6 +46,7 @@ export const BackgroundMedia = ({ media }: { media: { url: string, type: MediaTy
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0, pointerEvents: 'none' }}>
             {media.type === 'video' ? (
                 <video
+                    ref={videoRef}
                     src={media.url}
                     autoPlay={playMovingBackgrounds}
                     loop

@@ -513,6 +513,7 @@ messagesRouter.post(
       }
 
       // Word filter check
+      let wordFilterDeleteAfterInsert = false;
       if (channel.guildId && content) {
         try {
           const [wordFilter] = await db.select().from(guildWordFilters)
@@ -520,9 +521,18 @@ messagesRouter.post(
           if (wordFilter && wordFilter.words && wordFilter.words.length > 0) {
             const contentLower = content.toLowerCase();
             const matched = wordFilter.words.some((w: string) => contentLower.includes(w.toLowerCase()));
-            if (matched && wordFilter.action === 'block') {
-              res.status(400).json({ code: 'BLOCKED_CONTENT', message: 'Your message contains blocked words' });
-              return;
+            if (matched) {
+              if (wordFilter.action === 'block') {
+                res.status(400).json({ code: 'BLOCKED_CONTENT', message: 'Your message contains blocked words' });
+                return;
+              }
+              if (wordFilter.action === 'warn') {
+                res.status(400).json({ code: 'WORD_FILTER_WARN', message: 'Your message was blocked for containing filtered words. This is a warning.' });
+                return;
+              }
+              if (wordFilter.action === 'delete') {
+                wordFilterDeleteAfterInsert = true;
+              }
             }
           }
         } catch { /* word filter should not break message sending */ }
@@ -626,6 +636,16 @@ messagesRouter.post(
         messagesSentTotal.inc();
       } catch {
         // Socket.io not yet initialised (e.g. test environment); non-fatal.
+      }
+
+      // Word filter "delete" action: let the message appear briefly, then auto-delete
+      if (wordFilterDeleteAfterInsert) {
+        setTimeout(async () => {
+          try {
+            await db.delete(messages).where(eq(messages.id, newMessage.id));
+            getIO().to(`channel:${channelId}`).emit('MESSAGE_DELETE', { id: newMessage.id, channelId });
+          } catch { /* non-fatal */ }
+        }, 5000);
       }
 
       // Award XP (non-critical, fire and forget)

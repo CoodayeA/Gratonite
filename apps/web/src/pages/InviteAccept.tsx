@@ -77,6 +77,7 @@ export default function InviteAccept() {
         try {
             const guild = await api.invites.accept(code);
             setState({ kind: 'joined', guildId: guild.id });
+            window.dispatchEvent(new CustomEvent('gratonite:guild-updated', { detail: { guildId: guild.id } }));
             setTimeout(() => navigate(`/guild/${guild.id}`), 1200);
         } catch (err: any) {
             const msg = err?.message || 'Failed to join server. Please try again.';

@@ -16,6 +16,7 @@ export interface UserProfile {
     badges: string[];
     isAdmin: boolean;
     onboardingCompleted: boolean;
+    createdAt: string | null;
 }
 
 interface UserContextType {
@@ -40,6 +41,7 @@ const defaultUser: UserProfile = {
     badges: [],
     isAdmin: false,
     onboardingCompleted: true, // default true to avoid flash on load
+    createdAt: null,
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -92,6 +94,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
                     badges: [],
                     isAdmin: me.isAdmin,
                     onboardingCompleted: me.onboardingCompleted ?? false,
+                    createdAt: me.createdAt ?? null,
                 });
 
                 const wallet = await api.economy.getWallet().catch(() => null);

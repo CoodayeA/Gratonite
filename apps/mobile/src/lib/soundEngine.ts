@@ -1,5 +1,12 @@
-import { Audio } from 'expo-av';
 import * as SecureStore from 'expo-secure-store';
+
+// expo-av requires native linking — gracefully degrade if unavailable
+let Audio: any = null;
+try {
+  Audio = require('expo-av').Audio;
+} catch {
+  // Native module not available (e.g. Expo Go without dev client)
+}
 
 export type SoundName =
   | 'messageSend'
@@ -45,7 +52,7 @@ const SOUND_NAMES: SoundName[] = [
   'uiToggle',
 ];
 
-let loadedSounds: Map<SoundName, Audio.Sound> = new Map();
+let loadedSounds: Map<SoundName, any> = new Map();
 let currentPack = 'default';
 
 async function unloadAll(): Promise<void> {
@@ -58,6 +65,7 @@ async function unloadAll(): Promise<void> {
 }
 
 async function loadPack(pack: string): Promise<void> {
+  if (!Audio) return;
   const files = SOUND_FILES[pack];
   if (!files) return;
 
@@ -73,6 +81,7 @@ async function loadPack(pack: string): Promise<void> {
 }
 
 export async function initSounds(): Promise<void> {
+  if (!Audio) return;
   try {
     await Audio.setAudioModeAsync({
       playsInSilentModeIOS: false,
@@ -88,6 +97,7 @@ export async function initSounds(): Promise<void> {
 }
 
 export async function playSound(name: SoundName): Promise<void> {
+  if (!Audio) return;
   try {
     const mutedStr = await SecureStore.getItemAsync('gratonite_sound_muted');
     if (mutedStr === 'true') return;
@@ -107,6 +117,7 @@ export async function playSound(name: SoundName): Promise<void> {
 }
 
 export async function switchSoundPack(pack: string): Promise<void> {
+  if (!Audio) return;
   if (pack === currentPack) return;
   await unloadAll();
   await loadPack(pack);

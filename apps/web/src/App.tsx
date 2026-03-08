@@ -1923,6 +1923,19 @@ export const AppLayout = () => {
         };
     }, [location.pathname]);
 
+    // Listen for CHANNEL_CREATE to refresh sidebar channels
+    useEffect(() => {
+        const socket = getSocket();
+        if (!socket) return;
+
+        const onChannelCreate = () => {
+            window.dispatchEvent(new CustomEvent('gratonite:guild-updated'));
+        };
+
+        socket.on('CHANNEL_CREATE', onChannelCreate);
+        return () => { socket.off('CHANNEL_CREATE', onChannelCreate); };
+    }, []);
+
     // Browser tab title with unread count
     const tabTitleUnreadMap = useUnreadStore();
     useEffect(() => {

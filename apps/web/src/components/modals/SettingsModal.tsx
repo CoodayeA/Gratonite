@@ -551,8 +551,9 @@ const SettingsModal = ({
             if (s?.reducedMotion !== undefined) setReducedEffects(s.reducedMotion);
             if (s?.lowPower !== undefined) setLowPower(s.lowPower);
             if (s?.soundVolume !== undefined) {
-                setSoundVolumeState(s.soundVolume);
-                setSoundVolume(s.soundVolume);
+                const vol = s.soundVolume > 1 ? s.soundVolume / 100 : s.soundVolume;
+                setSoundVolumeState(vol);
+                setSoundVolume(vol);
             }
         }).catch(() => { /* settings may not exist yet */ });
 
@@ -1469,7 +1470,7 @@ const SettingsModal = ({
                                                 {/* Member Since */}
                                                 <div>
                                                     <h4 style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '6px', letterSpacing: '0.05em' }}>Member Since</h4>
-                                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Feb 28, 2026</p>
+                                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{ctxUser.createdAt ? new Date(ctxUser.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Unknown'}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -1896,7 +1897,7 @@ const SettingsModal = ({
                                                 const v = parseFloat(e.target.value);
                                                 setSoundVolumeState(v);
                                                 setSoundVolume(v);
-                                                saveSettingsToApi({ soundVolume: v });
+                                                saveSettingsToApi({ soundVolume: Math.round(v * 100) });
                                             }}
                                             style={{ flex: 1, accentColor: 'var(--accent-primary)', height: '4px', cursor: 'pointer' }}
                                             disabled={soundMuted}
