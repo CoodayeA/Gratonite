@@ -186,12 +186,15 @@ channelsRouter.get(
         .orderBy(asc(channels.position));
 
       // Filter channels by VIEW_CHANNEL permission (categories are always visible
-      // if they contain at least one visible child)
+      // if they contain at least one visible child, or if the user can manage channels)
       const visibleChannelIds = new Set<string>();
       const categoryIds = new Set<string>();
+      const canManage = await hasPermission(req.userId!, guildId, Permissions.MANAGE_CHANNELS);
       for (const ch of rows) {
         if (ch.type === 'GUILD_CATEGORY') {
           categoryIds.add(ch.id);
+          // Users with MANAGE_CHANNELS can always see categories (even empty ones)
+          if (canManage) visibleChannelIds.add(ch.id);
           continue;
         }
         const canView = await hasChannelPermission(req.userId!, guildId, ch.id, Permissions.VIEW_CHANNEL);
@@ -200,16 +203,8 @@ channelsRouter.get(
           if (ch.parentId) visibleChannelIds.add(ch.parentId); // include parent category
         }
       }
-      // Include categories that have visible children (or are themselves visible)
-      for (const catId of categoryIds) {
-        if (visibleChannelIds.has(catId)) continue;
-        // Category with no visible children is hidden
-      }
 
-      const filtered = rows.filter(ch => {
-        if (ch.type === 'GUILD_CATEGORY') return visibleChannelIds.has(ch.id);
-        return visibleChannelIds.has(ch.id);
-      });
+      const filtered = rows.filter(ch => visibleChannelIds.has(ch.id));
 
       res.status(200).json(filtered);
     } catch (err) {
