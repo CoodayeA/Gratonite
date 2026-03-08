@@ -177,7 +177,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName }: { onClose: () => vo
     const handleCopyInvite = async () => {
         if (!guildId) return;
         try {
-            const invite = await api.invites.create(guildId, { channelId: '' });
+            const invite = await api.invites.create(guildId, {});
             const link = `${window.location.origin}/invite/${invite.code}`;
             await navigator.clipboard.writeText(link);
             setCopied(true);

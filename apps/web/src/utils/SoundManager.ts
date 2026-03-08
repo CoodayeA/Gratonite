@@ -52,7 +52,7 @@ function ensureAudioContextReady(): AudioContext | null {
 // ── Volume-aware primitives ──────────────────────────────────────────────────
 
 function getVolume(): number {
-    return parseFloat(localStorage.getItem('gratonite_sound_volume') || '0.7');
+    return parseFloat(localStorage.getItem('gratonite_notification_volume') || localStorage.getItem('gratonite_sound_volume') || '0.7');
 }
 
 function playTone(
@@ -355,11 +355,11 @@ export function setSoundMuted(muted: boolean) {
 }
 
 export function getSoundVolume(): number {
-    return parseFloat(localStorage.getItem('gratonite_sound_volume') || '0.7');
+    return parseFloat(localStorage.getItem('gratonite_notification_volume') || localStorage.getItem('gratonite_sound_volume') || '0.7');
 }
 
 export function setSoundVolume(v: number) {
-    localStorage.setItem('gratonite_sound_volume', v.toString());
+    localStorage.setItem('gratonite_notification_volume', v.toString());
 }
 
 export function getSoundPack(): string {

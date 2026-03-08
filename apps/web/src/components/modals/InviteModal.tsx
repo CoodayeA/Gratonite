@@ -43,9 +43,8 @@ const InviteModal = ({ onClose, guildId }: { onClose: () => void; guildId: strin
         setLoading(true);
         try {
             const result = await api.invites.create(guildId, {
-                channelId: '', // backend will use default channel
                 maxUses: USES_MAP[maxUses],
-                maxAgeSeconds: EXPIRE_MAP[expireAfter] ?? undefined,
+                expiresIn: EXPIRE_MAP[expireAfter] ?? undefined,
             });
             setInviteLink(`${window.location.origin}/invite/${result.code}`);
             setCopied(false);

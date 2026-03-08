@@ -49,6 +49,7 @@ const GuildOverview = () => {
     const [legacyLoading, setLegacyLoading] = useState(false);
     const [voiceParticipants, setVoiceParticipants] = useState<Record<string, number>>({});
     const [iconImgError, setIconImgError] = useState(false);
+    const [ownerUser, setOwnerUser] = useState<{ id: string; username: string; displayName: string | null } | null>(null);
     const [showWelcomeModal, setShowWelcomeModal] = useState(false);
     const [onboardingData, setOnboardingData] = useState<{ welcomeMessage: string | null; rulesChannelId: string | null } | null>(null);
     
@@ -76,6 +77,12 @@ const GuildOverview = () => {
             })
             .catch(() => {});
     }, [guildId]);
+
+    // Fetch guild owner info
+    useEffect(() => {
+        if (!guild?.ownerId) return;
+        api.users.get(guild.ownerId).then((u: any) => setOwnerUser({ id: u.id, username: u.username, displayName: u.displayName })).catch(() => {});
+    }, [guild?.ownerId]);
 
     useEffect(() => {
         if (guildFetchEnabled || !guildId) return;
@@ -306,6 +313,11 @@ const GuildOverview = () => {
                                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)' }}></span>
                                 {guild?.memberCount ?? 0} Members
                             </span>
+                            {ownerUser && (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    Owned by <span style={{ color: 'var(--accent-primary)', cursor: 'pointer', fontWeight: 600 }}>@{ownerUser.displayName || ownerUser.username}</span>
+                                </span>
+                            )}
                         </div>
                     </div>
 

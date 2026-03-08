@@ -512,6 +512,12 @@ messagesRouter.post(
         } catch { /* automod should not break message sending */ }
       }
 
+      // Phase E: Block file attachments if disabled for this channel
+      if (attachmentIds && attachmentIds.length > 0 && channel.attachmentsEnabled === false) {
+        res.status(403).json({ code: 'FORBIDDEN', message: 'File attachments are disabled in this channel' });
+        return;
+      }
+
       // Word filter check
       let wordFilterDeleteAfterInsert = false;
       if (channel.guildId && content) {

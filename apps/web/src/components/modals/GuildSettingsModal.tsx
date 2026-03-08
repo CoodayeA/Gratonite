@@ -837,11 +837,11 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         if (!activeRole || !guildId) return;
         setRolesSaving(true);
         const newName = editRoleNameVal || activeRole.name;
-        const newColor = editRoleColorVal || activeRole.color;
+        const newColor = editRoleColorVal || activeRole.color || null;
         try {
             await api.guilds.updateRole(guildId, activeRole.id, {
                 name: newName,
-                color: newColor,
+                ...(newColor ? { color: newColor } : {}),
                 ...(editRoleEmojiVal !== undefined ? { unicodeEmoji: editRoleEmojiVal || null } : {}),
             });
             setRoles(prev => prev.map(r => {
@@ -1781,7 +1781,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                     <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: activeRole.color }} />
                                                     <span style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600 }}>{activeRole.memberCount} Members</span>
                                                     {activeRole.id !== '1' && (
-                                                        <button onClick={() => { setEditingRoleName(true); setEditRoleNameVal(activeRole.name); setEditRoleColorVal(activeRole.color); }}
+                                                        <button onClick={() => { setEditingRoleName(true); setEditRoleNameVal(activeRole.name); setEditRoleColorVal(activeRole.color || '#99aab5'); }}
                                                             onMouseEnter={() => setHoveredBtn('edit-role')} onMouseLeave={() => setHoveredBtn(null)}
                                                             style={{ background: 'none', border: 'none', color: hoveredBtn === 'edit-role' ? 'var(--text-primary)' : 'var(--text-muted)', cursor: 'pointer' }}>
                                                             <Edit2 size={14} />

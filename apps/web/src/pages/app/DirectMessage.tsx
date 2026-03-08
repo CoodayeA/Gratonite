@@ -15,7 +15,7 @@ import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { api, ApiRequestError, API_BASE } from '../../lib/api';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
-import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onMessageRead, onCallAnswer, onCallReject, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type MessageReadPayload } from '../../lib/socket';
+import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onMessageRead, onCallAnswer, onCallReject, onPresenceUpdate, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type MessageReadPayload, type PresenceUpdatePayload } from '../../lib/socket';
 import { getDeterministicGradient } from '../../utils/colors';
 import { useLiveKit, type LiveKitParticipant } from '../../lib/useLiveKit';
 import Avatar from '../../components/ui/Avatar';
@@ -482,6 +482,15 @@ const DirectMessage = () => {
     const [initial, setInitial] = useState('?');
     const [recipientId, setRecipientId] = useState<string>('');
     const [recipientAvatarHash, setRecipientAvatarHash] = useState<string | null>(null);
+    const [presenceMap, setPresenceMap] = useState<Record<string, string>>({});
+
+    // Subscribe to presence updates for DM recipients
+    useEffect(() => {
+        const unsub = onPresenceUpdate((payload: PresenceUpdatePayload) => {
+            setPresenceMap(prev => ({ ...prev, [payload.userId]: payload.status }));
+        });
+        return () => { unsub(); };
+    }, []);
 
     useEffect(() => {
         if (!dmChannelId) return;
@@ -1497,7 +1506,7 @@ const DirectMessage = () => {
                                 avatarHash={recipientAvatarHash}
                                 displayName={userName || 'Unknown'}
                                 size={36}
-                                status="online"
+                                status={presenceMap[recipientId || ''] || 'offline'}
                             />
                         )}
                         <div>

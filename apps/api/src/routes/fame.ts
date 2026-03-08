@@ -54,6 +54,20 @@ fameRouter.post(
         return;
       }
 
+      // Per-recipient daily limit: only 1 fame per person per day
+      const [alreadyGave] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(fameTransactions)
+        .where(and(
+          eq(fameTransactions.giverId, giverId),
+          eq(fameTransactions.receiverId, receiverId),
+          sql`${fameTransactions.createdAt}::date = CURRENT_DATE`
+        ));
+      if ((alreadyGave?.count ?? 0) > 0) {
+        res.status(429).json({ code: 'RATE_LIMIT', message: 'You already gave this person fame today' });
+        return;
+      }
+
       // Insert fame transaction
       await db.insert(fameTransactions).values({
         giverId,

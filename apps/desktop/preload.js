@@ -46,3 +46,9 @@ contextBridge.exposeInMainWorld('gratoniteDesktop', {
     return () => ipcRenderer.removeListener('game-stopped', handler);
   },
 });
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (process.platform === 'darwin') {
+    document.body.classList.add('electron-mac');
+  }
+});

@@ -197,8 +197,11 @@ const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) 
             setReplies(prev => [...prev, newReply]);
             setInputValue('');
             setShowEmojiPicker(false);
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to send thread reply:', err);
+            // Surface the error to the user
+            const detail = err?.message || err?.code || 'Unknown error';
+            alert(`Failed to send thread reply: ${detail}`);
         } finally {
             setIsSending(false);
         }

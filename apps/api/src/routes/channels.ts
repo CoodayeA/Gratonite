@@ -27,6 +27,7 @@ import { db } from '../db/index';
 import { channels } from '../db/schema/channels';
 import { dmChannelMembers } from '../db/schema/channels';
 import { channelFollowers } from '../db/schema/channel-followers';
+import { groupEncryptionKeys } from '../db/schema/group-encryption';
 import { channelFeaturedMessages } from '../db/schema/channel-featured-messages';
 import { voiceMessages } from '../db/schema/voice-messages';
 import { messages } from '../db/schema/messages';
@@ -149,6 +150,10 @@ const updateChannelSchema = z.object({
   linkedTextChannelId: z.string().uuid().nullable().optional(),
   isAnnouncement: z.boolean().optional(),
   forumTags: z.array(z.object({ id: z.string(), name: z.string(), color: z.string().optional() })).optional(),
+  isEncrypted: z.boolean().optional(),
+  attachmentsEnabled: z.boolean().optional(),
+  permissionSynced: z.boolean().optional(),
+  parentId: z.string().uuid().nullable().optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -517,7 +522,7 @@ channelsRouter.patch(
         throw new AppError(403, 'Missing MANAGE_CHANNELS permission', 'FORBIDDEN');
       }
 
-      const { name, topic, isNsfw, rateLimitPerUser, position, backgroundUrl, backgroundType, linkedTextChannelId, isAnnouncement, forumTags } = req.body as z.infer<
+      const { name, topic, isNsfw, rateLimitPerUser, position, backgroundUrl, backgroundType, linkedTextChannelId, isAnnouncement, forumTags, isEncrypted, attachmentsEnabled, permissionSynced, parentId } = req.body as z.infer<
         typeof updateChannelSchema
       >;
 
@@ -532,6 +537,10 @@ channelsRouter.patch(
       if (linkedTextChannelId !== undefined) updateData.linkedTextChannelId = linkedTextChannelId;
       if (isAnnouncement !== undefined) updateData.isAnnouncement = isAnnouncement;
       if (forumTags !== undefined) updateData.forumTags = forumTags;
+      if (isEncrypted !== undefined) updateData.isEncrypted = isEncrypted;
+      if (attachmentsEnabled !== undefined) updateData.attachmentsEnabled = attachmentsEnabled;
+      if (permissionSynced !== undefined) updateData.permissionSynced = permissionSynced;
+      if (parentId !== undefined) updateData.parentId = parentId;
 
       const [updated] = await db
         .update(channels)
@@ -893,3 +902,86 @@ channelsRouter.post('/channels/:channelId/duplicate', requireAuth, async (req: R
     handleAppError(res, err);
   }
 });
+
+// ---------------------------------------------------------------------------
+// POST /guilds/:guildId/channels/:channelId/encryption-keys — Upload group E2E key
+// ---------------------------------------------------------------------------
+channelsRouter.post(
+  '/guilds/:guildId/channels/:channelId/encryption-keys',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { guildId, channelId } = req.params as Record<string, string>;
+      await requireMember(guildId, req.userId!);
+
+      // Require guild owner or MANAGE_CHANNELS permission
+      const [guild] = await db.select({ ownerId: guilds.ownerId }).from(guilds).where(eq(guilds.id, guildId)).limit(1);
+      const isOwner = guild?.ownerId === req.userId!;
+      if (!isOwner && !(await hasPermission(req.userId!, guildId, Permissions.MANAGE_CHANNELS))) {
+        throw new AppError(403, 'Missing MANAGE_CHANNELS permission', 'FORBIDDEN');
+      }
+
+      // Verify channel belongs to this guild
+      const [channel] = await db.select({ id: channels.id }).from(channels).where(and(eq(channels.id, channelId), eq(channels.guildId, guildId))).limit(1);
+      if (!channel) {
+        res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found in this guild' });
+        return;
+      }
+
+      const { version, keyData } = req.body as { version: number; keyData: Record<string, string> };
+
+      if (!version || !keyData || typeof keyData !== 'object') {
+        res.status(400).json({ code: 'VALIDATION_ERROR', message: 'version and keyData are required' });
+        return;
+      }
+
+      const [inserted] = await db.insert(groupEncryptionKeys).values({
+        channelId,
+        version,
+        keyData,
+      }).returning();
+
+      res.status(201).json(inserted);
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// GET /guilds/:guildId/channels/:channelId/encryption-keys — Get latest E2E key
+// ---------------------------------------------------------------------------
+channelsRouter.get(
+  '/guilds/:guildId/channels/:channelId/encryption-keys',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { guildId, channelId } = req.params as Record<string, string>;
+      await requireMember(guildId, req.userId!);
+
+      // Verify channel belongs to this guild
+      const [channel] = await db.select({ id: channels.id }).from(channels).where(and(eq(channels.id, channelId), eq(channels.guildId, guildId))).limit(1);
+      if (!channel) {
+        res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found in this guild' });
+        return;
+      }
+
+      const keys = await db
+        .select()
+        .from(groupEncryptionKeys)
+        .where(eq(groupEncryptionKeys.channelId, channelId))
+        .orderBy(desc(groupEncryptionKeys.version))
+        .limit(1);
+
+      if (keys.length === 0) {
+        res.status(404).json({ code: 'NOT_FOUND', message: 'No encryption keys found' });
+        return;
+      }
+
+      res.json(keys[0]);
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+

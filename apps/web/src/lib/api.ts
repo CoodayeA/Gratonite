@@ -1279,7 +1279,7 @@ export const api = {
         body: JSON.stringify(data),
       }),
 
-    updateRole: (guildId: string, roleId: string, data: { name?: string; color?: string; mentionable?: boolean; permissions?: string }) =>
+    updateRole: (guildId: string, roleId: string, data: { name?: string; color?: string; mentionable?: boolean; permissions?: string; unicodeEmoji?: string | null }) =>
       apiFetch<any>(`/guilds/${guildId}/roles/${roleId}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
@@ -1443,7 +1443,7 @@ export const api = {
       });
     },
 
-    update: (channelId: string, data: { name?: string; topic?: string; nsfw?: boolean; rateLimitPerUser?: number; backgroundUrl?: string | null; backgroundType?: 'image' | 'video' | null; isAnnouncement?: boolean }) =>
+    update: (channelId: string, data: { name?: string; topic?: string; nsfw?: boolean; rateLimitPerUser?: number; backgroundUrl?: string | null; backgroundType?: 'image' | 'video' | null; isAnnouncement?: boolean; isEncrypted?: boolean; attachmentsEnabled?: boolean; permissionSynced?: boolean; parentId?: string | null; userLimit?: number }) =>
       apiFetch<Channel>(`/channels/${channelId}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
@@ -1497,6 +1497,16 @@ export const api = {
 
     duplicate: (channelId: string) =>
       apiFetch<Channel>(`/channels/${channelId}/duplicate`, { method: 'POST' }),
+
+    getEncryptionKeys: (guildId: string, channelId: string) =>
+      apiFetch<{ id: string; channelId: string; version: number; keyData: Record<string, string> }>(`/guilds/${guildId}/channels/${channelId}/encryption-keys`),
+
+    uploadEncryptionKeys: (guildId: string, channelId: string, data: { version: number; keyData: Record<string, string> }) =>
+      apiFetch<any>(`/guilds/${guildId}/channels/${channelId}/encryption-keys`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
 
     getNotificationPrefs: (channelId: string) =>
       apiFetch<{ level: string; mutedUntil: string | null }>(`/channels/${channelId}/notification-prefs`),
@@ -1619,7 +1629,7 @@ export const api = {
     accept: (code: string) =>
       apiFetch<Guild>(`/invites/${code}`, { method: 'POST' }),
 
-    create: (guildId: string, data: { channelId: string; maxUses?: number; maxAgeSeconds?: number }) =>
+    create: (guildId: string, data: { maxUses?: number; expiresIn?: number }) =>
       apiFetch<{ code: string; expiresAt: string | null }>(`/guilds/${guildId}/invites`, {
         method: 'POST',
         body: JSON.stringify(data),

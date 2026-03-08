@@ -20,8 +20,10 @@ import { playSound } from '../../utils/SoundManager';
 import { api, API_BASE } from '../../lib/api';
 import { markRead } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
-import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onMessageDeleteBulk, onReactionAdd, onReactionRemove, onChannelPinsUpdate, onSocketReconnect, onChannelBackgroundUpdated, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type MessageDeleteBulkPayload, type ReactionPayload, type ChannelPinsUpdatePayload } from '../../lib/socket';
+import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onMessageDeleteBulk, onReactionAdd, onReactionRemove, onChannelPinsUpdate, onSocketReconnect, onChannelBackgroundUpdated, onGroupKeyRotationNeeded, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type MessageDeleteBulkPayload, type ReactionPayload, type ChannelPinsUpdatePayload, type GroupKeyRotationNeededPayload } from '../../lib/socket';
 import Avatar from '../../components/ui/Avatar';
+import { encrypt, decrypt, getOrCreateKeyPair, decryptGroupKey, generateGroupKey, encryptGroupKey, importPublicKey } from '../../lib/e2e';
+import { Lock } from 'lucide-react';
 
 type MediaType = 'image' | 'video';
 
@@ -421,10 +423,13 @@ const MemoizedMessageItem = memo(({
                                 {msg.edited && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '4px' }}>(edited)</span>}
                             </div>
                         )}
-                        {/* Attachment rendering */}
-                        {msg.attachments && msg.attachments.length > 0 && (
+                        {/* Attachment rendering — skip duplicates of mediaUrl */}
+                        {msg.attachments && msg.attachments.length > 0 && (() => {
+                            const filteredAttachments = msg.attachments.filter((att: Attachment) => att.url !== msg.mediaUrl);
+                            if (filteredAttachments.length === 0) return null;
+                            return (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
-                                {msg.attachments.map((att: Attachment) => {
+                                {filteredAttachments.map((att: Attachment) => {
                                     const isImage = att.mimeType?.startsWith('image/');
                                     const isVideo = att.mimeType?.startsWith('video/') || /\.(mp4|webm|mov|ogg)$/i.test(att.filename);
                                     const isAudio = att.mimeType?.startsWith('audio/') || /\.(mp3|wav|flac|m4a|aac)$/i.test(att.filename);
@@ -476,7 +481,8 @@ const MemoizedMessageItem = memo(({
                                     );
                                 })}
                             </div>
-                        )}
+                            );
+                        })()}
                         {/* URL Embeds */}
                         {msg.embeds && msg.embeds.length > 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
@@ -710,6 +716,13 @@ const ChannelChat = () => {
     const chatFileInputRef = useRef<HTMLInputElement>(null);
     const [chatAttachedFiles, setChatAttachedFiles] = useState<{name: string, size: string, file: File}[]>([]);
     const [isDragOver, setIsDragOver] = useState(false);
+
+    // E2E Encryption state for guild channels
+    const [channelE2EKey, setChannelE2EKey] = useState<CryptoKey | null>(null);
+    const [channelIsEncrypted, setChannelIsEncrypted] = useState(false);
+    const [channelAttachmentsEnabled, setChannelAttachmentsEnabled] = useState(true);
+    const [channelKeyVersion, setChannelKeyVersion] = useState<number | null>(null);
+    const e2eKeyPairRef = useRef<{ publicKey: CryptoKey; privateKey: CryptoKey } | null>(null);
 
     // Voice Recording State
     const [isRecording, setIsRecording] = useState(false);
@@ -1022,19 +1035,105 @@ const ChannelChat = () => {
     // Fetch channel info for name
     useEffect(() => {
         if (channelId) {
-            api.channels.get(channelId).then(ch => {
+            api.channels.get(channelId).then(async (ch) => {
                 setChannelName(ch.name);
                 setRateLimitPerUser((ch as any).rateLimitPerUser || 0);
+                setChannelIsEncrypted(!!(ch as any).isEncrypted);
+                setChannelAttachmentsEnabled((ch as any).attachmentsEnabled !== false);
                 // Load channel background if set (for all users to see same theme)
                 if ((ch as any).backgroundUrl) {
-                    setBgMedia({ 
-                        url: (ch as any).backgroundUrl, 
-                        type: (ch as any).backgroundType || 'image' 
+                    setBgMedia({
+                        url: (ch as any).backgroundUrl,
+                        type: (ch as any).backgroundType || 'image'
                     });
+                }
+                // Load E2E encryption key if channel is encrypted
+                if ((ch as any).isEncrypted && guildId && currentUserId) {
+                    try {
+                        const result = await getOrCreateKeyPair(currentUserId);
+                        if (result) {
+                            e2eKeyPairRef.current = result.keyPair;
+                            const encKeyData = await api.channels.getEncryptionKeys(guildId, channelId);
+                            setChannelKeyVersion(encKeyData.version ?? null);
+                            const myWrappedKey = (encKeyData.keyData as Record<string, string>)[currentUserId];
+                            if (myWrappedKey) {
+                                const groupKey = await decryptGroupKey(myWrappedKey, result.keyPair.privateKey);
+                                setChannelE2EKey(groupKey);
+                            }
+                        }
+                    } catch { /* No key available yet — show placeholder */ }
+                } else {
+                    setChannelE2EKey(null);
+                    setChannelKeyVersion(null);
                 }
             }).catch(() => { addToast({ title: 'Failed to load channel info', variant: 'error' }); });
         }
     }, [channelId, setBgMedia]);
+
+    // Group key rotation listener — when a member is added/removed, re-generate the group key
+    useEffect(() => {
+        if (!channelId || !guildId || !currentUserId || !channelIsEncrypted) return;
+        const unsub = onGroupKeyRotationNeeded(async (payload: GroupKeyRotationNeededPayload) => {
+            if (payload.channelId !== channelId) return;
+            const myKeyPair = e2eKeyPairRef.current;
+            if (!myKeyPair) return;
+
+            // Check if current user is guild owner (responsible for generating the new key)
+            let isOwner = false;
+            try {
+                const guild = await api.guilds.get(guildId);
+                isOwner = guild.ownerId === currentUserId;
+            } catch { return; }
+
+            if (!isOwner) {
+                // Non-owner: wait for the owner to generate & upload the new key, then fetch it
+                await new Promise(r => setTimeout(r, 3000));
+                try {
+                    const encKeyData = await api.channels.getEncryptionKeys(guildId, channelId);
+                    const myWrappedKey = (encKeyData.keyData as Record<string, string>)[currentUserId];
+                    if (myWrappedKey) {
+                        const groupKey = await decryptGroupKey(myWrappedKey, myKeyPair.privateKey);
+                        if (groupKey) {
+                            setChannelE2EKey(groupKey);
+                            setChannelKeyVersion(encKeyData.version ?? null);
+                        }
+                    }
+                } catch { /* will retry on next event */ }
+                return;
+            }
+
+            // Owner: generate new group key and distribute to all guild members
+            try {
+                const members = await api.guilds.getMembers(guildId);
+                const memberKeys = await Promise.all(
+                    members.map(async (m: any) => {
+                        const d = await api.encryption.getPublicKey(m.userId);
+                        if (!d.publicKeyJwk) return { id: m.userId, key: null };
+                        const key = await importPublicKey(d.publicKeyJwk).catch(() => null);
+                        return { id: m.userId, key };
+                    }),
+                );
+
+                const newGroupKey = await generateGroupKey();
+                const encryptedKeys: Record<string, string> = {};
+                for (const { id, key } of memberKeys) {
+                    if (key) encryptedKeys[id] = await encryptGroupKey(newGroupKey, key);
+                }
+                // Ensure current user's key is included
+                if (!encryptedKeys[currentUserId]) {
+                    encryptedKeys[currentUserId] = await encryptGroupKey(newGroupKey, myKeyPair.publicKey);
+                }
+
+                const newVersion = (channelKeyVersion ?? 0) + 1;
+                await api.channels.uploadEncryptionKeys(guildId, channelId, { version: newVersion, keyData: encryptedKeys });
+                setChannelE2EKey(newGroupKey);
+                setChannelKeyVersion(newVersion);
+            } catch {
+                // Key rotation failed — will retry on next event
+            }
+        });
+        return unsub;
+    }, [channelId, guildId, currentUserId, channelIsEncrypted, channelKeyVersion]);
 
     // Check if current user can manage channel (owner or has MANAGE_CHANNELS permission)
     useEffect(() => {
@@ -1323,6 +1422,9 @@ const ChannelChat = () => {
     const loadOlderMessages = useCallback(async () => {
         if (!channelId || !hasMoreMessages || isLoadingOlder || !oldestMessageIdRef.current) return;
         setIsLoadingOlder(true);
+        const el = parentRef.current;
+        const prevScrollHeight = el ? el.scrollHeight : 0;
+        const prevScrollTop = el ? el.scrollTop : 0;
         try {
             const olderMessages = await api.messages.list(channelId, { limit: 50, before: oldestMessageIdRef.current });
             if (olderMessages.length === 0) {
@@ -1339,6 +1441,12 @@ const ChannelChat = () => {
             if (olderMessages.length < 50) {
                 setHasMoreMessages(false);
             }
+            // Preserve scroll position after prepending older messages
+            requestAnimationFrame(() => {
+                if (el) {
+                    el.scrollTop = el.scrollHeight - prevScrollHeight + prevScrollTop;
+                }
+            });
         } catch {
             addToast({ title: 'Failed to load older messages', variant: 'error' });
         } finally {
@@ -1555,6 +1663,17 @@ const ChannelChat = () => {
             const incomingPollData = (data as any).pollData;
             const incomingAttachments = Array.isArray((data as any).attachments) && (data as any).attachments.length > 0 ? (data as any).attachments : undefined;
             const isVoiceMsg = incomingAttachments?.length === 1 && incomingAttachments[0]?.mimeType?.startsWith('audio/');
+            // Decrypt E2E encrypted messages if we have the key
+            let decryptedContent = data.content || '';
+            if ((data as any).isEncrypted && (data as any).encryptedContent && channelE2EKey) {
+                try {
+                    decryptedContent = await decrypt(channelE2EKey, (data as any).encryptedContent);
+                } catch {
+                    decryptedContent = '[Encrypted message - unable to decrypt]';
+                }
+            } else if ((data as any).isEncrypted && !channelE2EKey) {
+                decryptedContent = '[Encrypted message]';
+            }
             setMessages(prev => [...prev, {
                 id: typeof data.id === 'string' ? parseInt(data.id, 36) || Date.now() : data.id,
                 apiId: data.id,
@@ -1563,7 +1682,7 @@ const ChannelChat = () => {
                 system: data.isSystem ?? false,
                 avatar: authorName.charAt(0).toUpperCase(),
                 time: new Date(data.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                content: data.content || '',
+                content: decryptedContent,
                 edited: data.edited || false,
                 replyToId: (data as any).replyToId || undefined,
                 replyToAuthor,
@@ -1739,8 +1858,8 @@ const ChannelChat = () => {
         return () => el.removeEventListener('scroll', handleScroll);
     }, [hasMoreMessages, isLoadingOlder, loadOlderMessages]);
 
+    // On channel change: scroll to NEW divider or bottom
     useEffect(() => {
-        // Feature 9: Auto-scroll to NEW divider if present, otherwise scroll to bottom
         if (lastReadMessageId && messages.length > 0) {
             const dividerEl = document.querySelector('.new-messages-divider');
             if (dividerEl) {
@@ -1749,7 +1868,15 @@ const ChannelChat = () => {
             }
         }
         scrollToBottom();
-    }, [messages]);
+    }, [channelId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // On new message: only auto-scroll if user is near the bottom
+    useEffect(() => {
+        if (!parentRef.current) return;
+        const el = parentRef.current;
+        const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        if (distFromBottom < 300) scrollToBottom();
+    }, [messages.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         if (isRecording) {
@@ -1875,12 +2002,21 @@ const ChannelChat = () => {
         // Track slowmode
         if (rateLimitPerUser > 0) setLastSentAt(Date.now());
 
-        // Send to API
-        api.messages.send(channelId, {
+        // Send to API — encrypt if channel has E2E enabled
+        const sendPayload: any = {
             content: processedContent || ' ',
             ...(replyToApiId ? { replyToId: replyToApiId } : {}),
             ...(attachmentIds.length > 0 ? { attachmentIds } : {}),
-        }).then((sent: any) => {
+        };
+        if (channelE2EKey && channelIsEncrypted) {
+            try {
+                const encrypted = await encrypt(channelE2EKey, processedContent || ' ');
+                sendPayload.content = '[Encrypted message]';
+                sendPayload.isEncrypted = true;
+                sendPayload.encryptedContent = encrypted;
+            } catch { /* fall back to plaintext */ }
+        }
+        api.messages.send(channelId, sendPayload).then((sent: any) => {
             // Patch optimistic message with real API ID and attachments
             if (sent?.id) {
                 setMessages(prev => prev.map(m =>
@@ -2434,6 +2570,7 @@ const ChannelChat = () => {
 
                 <Hash size={24} className="desktop-hash-icon" style={{ color: 'var(--text-muted)' }} />
                 <h2>{channelName}</h2>
+                {channelIsEncrypted && <Lock size={14} style={{ color: 'var(--success, #22c55e)', marginLeft: '4px' }} title="End-to-end encrypted" />}
 
                 <div style={{ flex: 1 }}></div>
 
@@ -3059,7 +3196,7 @@ const ChannelChat = () => {
                                 setChatAttachedFiles(prev => [...prev, ...newFiles]);
                                 e.target.value = '';
                             }} />
-                            <button className="input-icon-btn" title="Upload Attachment" aria-label="Upload attachment" onClick={() => chatFileInputRef.current?.click()}>
+                            <button className="input-icon-btn" title={channelAttachmentsEnabled ? "Upload Attachment" : "Attachments disabled in this channel"} aria-label="Upload attachment" onClick={() => channelAttachmentsEnabled && chatFileInputRef.current?.click()} style={channelAttachmentsEnabled ? {} : { opacity: 0.3, cursor: 'not-allowed' }}>
                                 <Plus size={20} />
                             </button>
                             {hasDraft && !editingMessage && (

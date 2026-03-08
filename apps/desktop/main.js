@@ -85,6 +85,7 @@ function createWindow() {
     minHeight: 600,
     title: 'Gratonite',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    trafficLightPosition: { x: 12, y: 12 },
     backgroundColor: '#1a1a2e',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -92,6 +93,7 @@ function createWindow() {
       nodeIntegration: false,
       spellcheck: true,
       backgroundThrottling: false,
+      enableBlinkFeatures: 'OverlayScrollbars',
     },
     show: false, // Show after ready-to-show to prevent flash
   });
@@ -104,6 +106,16 @@ function createWindow() {
   // Load the app
   const url = isDev ? DEV_URL : PROD_URL;
   mainWindow.loadURL(url);
+
+  // Fix chat bar button clicks on Windows (overlay/compositing hint)
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.insertCSS(`
+      .emoji-picker-container, .sticker-picker-container, .soundboard-container, .poll-modal-container {
+        will-change: transform;
+        -webkit-transform: translateZ(0);
+      }
+    `);
+  });
 
   // Open external links in default browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { API_BASE } from '../../lib/api';
+import { api, API_BASE } from '../../lib/api';
 
 type NotifLevel = 'all' | 'mentions' | 'nothing';
 interface MuteDuration { label: string; minutes: number | null; }
@@ -26,7 +26,7 @@ export function NotificationPrefsModal({ type, id, name, onClose }: Props) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('gratonite_access_token');
     if (!token) return;
     fetch(`${API_BASE}/users/@me/settings/notif?key=${encodeURIComponent(settingKey)}`, {
       headers: { Authorization: `Bearer ${token}` }
@@ -42,7 +42,7 @@ export function NotificationPrefsModal({ type, id, name, onClose }: Props) {
 
   async function save() {
     setSaving(true);
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('gratonite_access_token');
     const mutedUntil = muted
       ? (muteDuration ? new Date(Date.now() + muteDuration * 60000).toISOString() : '9999-12-31T00:00:00Z')
       : null;
@@ -51,6 +51,13 @@ export function NotificationPrefsModal({ type, id, name, onClose }: Props) {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ key: settingKey, value: { level, mutedUntil } }),
     });
+    // Also persist to channel_notification_prefs table for channel-level settings
+    if (type === 'channel') {
+      try {
+        const apiLevel = level === 'nothing' ? 'none' : level === 'mentions' ? 'mentions' : level === 'all' ? 'all' : 'default';
+        await api.channels.setNotificationPrefs(id, { level: apiLevel as any, mutedUntil });
+      } catch { /* non-critical */ }
+    }
     setSaving(false);
     onClose();
   }

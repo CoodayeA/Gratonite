@@ -244,6 +244,17 @@ function buildSpace(ctx: AudioContext, master: GainNode): (() => void) {
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 const AMBIENT_STORAGE_KEY = 'gratonite_ambient_mode';
+const AMBIENT_VOLUME_KEY = 'gratonite_ambient_volume';
+const DEFAULT_AMBIENT_VOLUME = 0.5;
+
+function getAmbientVolume(): number {
+    const stored = localStorage.getItem(AMBIENT_VOLUME_KEY);
+    if (stored !== null) {
+        const v = parseFloat(stored);
+        if (!isNaN(v) && v >= 0 && v <= 1) return v;
+    }
+    return DEFAULT_AMBIENT_VOLUME;
+}
 
 export const AmbientPlayer = () => {
     const savedMode = (localStorage.getItem(AMBIENT_STORAGE_KEY) as AmbientMode) || 'off';
@@ -283,8 +294,9 @@ export const AmbientPlayer = () => {
         const ctx = ensureCtx();
 
         const master = ctx.createGain();
+        const vol = getAmbientVolume();
         master.gain.setValueAtTime(0, ctx.currentTime);
-        master.gain.linearRampToValueAtTime(0.6, ctx.currentTime + 1.5);
+        master.gain.linearRampToValueAtTime(vol, ctx.currentTime + 1.5);
         master.connect(ctx.destination);
         masterRef.current = master;
 
@@ -332,6 +344,21 @@ export const AmbientPlayer = () => {
         };
         window.addEventListener('ambient-mode-change', handler);
         return () => window.removeEventListener('ambient-mode-change', handler);
+    }, []);
+
+    // Listen for volume changes from Settings modal
+    useEffect(() => {
+        const handler = (e: StorageEvent) => {
+            if (e.key === AMBIENT_VOLUME_KEY && masterRef.current && ctxRef.current) {
+                const vol = getAmbientVolume();
+                try {
+                    masterRef.current.gain.setValueAtTime(masterRef.current.gain.value, ctxRef.current.currentTime);
+                    masterRef.current.gain.linearRampToValueAtTime(vol, ctxRef.current.currentTime + 0.3);
+                } catch { /* context may be closed */ }
+            }
+        };
+        window.addEventListener('storage', handler);
+        return () => window.removeEventListener('storage', handler);
     }, []);
 
     // Cleanup on unmount

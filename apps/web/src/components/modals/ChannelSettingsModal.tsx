@@ -66,6 +66,10 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
     const [nsfw, setNsfw] = useState(isNsfw || false);
     const [isAnnouncement, setIsAnnouncement] = useState(false);
     const [userLimit, setUserLimit] = useState(initialUserLimit || 0);
+    const [isEncrypted, setIsEncrypted] = useState(false);
+    const [attachmentsEnabled, setAttachmentsEnabled] = useState(true);
+    const [permissionSynced, setPermissionSynced] = useState(true);
+    const [parentId, setParentId] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const isVoice = channelType === 'GUILD_VOICE' || channelType === 'voice' || channelType === 'GUILD_STAGE_VOICE';
 
@@ -81,6 +85,10 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
         api.channels.getPermissionOverrides(channelId).then((o: any[]) => setOverrides(o)).catch(() => {});
         api.channels.get(channelId).then((ch: any) => {
             if (ch.isAnnouncement) setIsAnnouncement(true);
+            if (ch.isEncrypted) setIsEncrypted(true);
+            if (ch.attachmentsEnabled === false) setAttachmentsEnabled(false);
+            if (ch.parentId) setParentId(ch.parentId);
+            if (ch.permissionSynced === false) setPermissionSynced(false);
         }).catch(() => {});
     }, [channelId, guildId]);
 
@@ -118,7 +126,7 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
     async function saveOverview() {
         setSaving(true);
         try {
-            await api.channels.update(channelId, { name, topic, rateLimitPerUser: slowmode, nsfw, isAnnouncement, ...(isVoice ? { userLimit } : {}) });
+            await api.channels.update(channelId, { name, topic, rateLimitPerUser: slowmode, nsfw, isAnnouncement, isEncrypted, attachmentsEnabled, permissionSynced, ...(isVoice ? { userLimit } : {}) });
             onUpdate?.({ name, topic, rateLimitPerUser: slowmode, ...(isVoice ? { userLimit } : {}) });
             addToast({ title: 'Channel Updated', variant: 'success' });
             onClose();
@@ -280,26 +288,71 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                             </label>
 
                             {isVoice && (
-                                <div style={{ marginBottom: '24px' }}>
-                                    <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
-                                        User Limit
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={userLimit}
-                                        onChange={e => setUserLimit(Math.max(0, Math.min(99, Number(e.target.value) || 0)))}
-                                        min={0}
-                                        max={99}
-                                        style={{
-                                            width: '120px', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
-                                            borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none',
-                                            fontFamily: 'inherit',
-                                        }}
-                                    />
-                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                        0 = unlimited. Max 99 users.
+                                <>
+                                    <div style={{ marginBottom: '24px' }}>
+                                        <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
+                                            User Limit
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={userLimit}
+                                            onChange={e => setUserLimit(Math.max(0, Math.min(99, Number(e.target.value) || 0)))}
+                                            min={0}
+                                            max={99}
+                                            style={{
+                                                width: '120px', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                                borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none',
+                                                fontFamily: 'inherit',
+                                            }}
+                                        />
+                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                            0 = unlimited. Max 99 users.
+                                        </div>
                                     </div>
-                                </div>
+
+                                    {parentId && (
+                                        <div style={{ marginBottom: '24px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '4px' }}>
+                                                <input type="checkbox" checked={permissionSynced} onChange={e => setPermissionSynced(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
+                                                Sync Permissions with Category
+                                            </label>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '24px' }}>
+                                                When enabled, this channel inherits permission overrides from its parent category.
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {!isVoice && (
+                                <>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '12px' }}>
+                                        <input type="checkbox" checked={attachmentsEnabled} onChange={e => setAttachmentsEnabled(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
+                                        Allow File Attachments
+                                    </label>
+
+                                    <div style={{ marginBottom: '12px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '4px' }}>
+                                            <input type="checkbox" checked={isEncrypted} onChange={e => setIsEncrypted(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
+                                            Enable End-to-End Encryption
+                                        </label>
+                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '24px' }}>
+                                            Existing messages won't be retroactively encrypted. New messages will be encrypted.
+                                        </div>
+                                    </div>
+
+                                    {parentId && (
+                                        <div style={{ marginBottom: '24px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '4px' }}>
+                                                <input type="checkbox" checked={permissionSynced} onChange={e => setPermissionSynced(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
+                                                Sync Permissions with Category
+                                            </label>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '24px' }}>
+                                                When enabled, this channel inherits permission overrides from its parent category.
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
                             )}
 
                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>

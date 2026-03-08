@@ -263,6 +263,12 @@ const SettingsModal = ({
     const [ambientMode, setAmbientMode] = useState<string>(
         () => localStorage.getItem('gratonite_ambient_mode') ?? 'off'
     );
+    const [ambientVolume, setAmbientVolume] = useState<number>(
+        () => parseFloat(localStorage.getItem('gratonite_ambient_volume') ?? '0.5')
+    );
+    const [notificationVolume, setNotificationVolume] = useState<number>(
+        () => parseFloat(localStorage.getItem('gratonite_notification_volume') ?? '0.7')
+    );
     const [nameplateStyle, setNameplateStyle] = useState<'none' | 'rainbow' | 'fire' | 'ice' | 'gold' | 'glitch'>(userProfile?.nameplateStyle || 'none');
     const [previewAvatarFrame, setPreviewAvatarFrame] = useState<'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse'>(userProfile?.avatarFrame || 'none');
     const [bioValue, setBioValue] = useState(userProfile?.bio || '');
@@ -1870,7 +1876,7 @@ const SettingsModal = ({
                                 <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Sound</h2>
                                 <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Configure UI sounds, notifications, and ambient audio.</p>
 
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Master Volume</h3>
+                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Volume Controls</h3>
                                 <div style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '12px', border: '1px solid var(--stroke)', marginBottom: '32px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                                         <div>
@@ -1888,22 +1894,55 @@ const SettingsModal = ({
                                             <div style={{ position: 'absolute', height: '16px', width: '16px', left: soundMuted ? '20px' : '4px', bottom: '4px', backgroundColor: 'white', transition: '.4s', borderRadius: '50%' }}></div>
                                         </div>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                        <VolumeX size={16} color="var(--text-muted)" />
-                                        <input
-                                            type="range" min="0" max="1" step="0.05"
-                                            value={soundVolume}
-                                            onChange={(e) => {
-                                                const v = parseFloat(e.target.value);
-                                                setSoundVolumeState(v);
-                                                setSoundVolume(v);
-                                                saveSettingsToApi({ soundVolume: Math.round(v * 100) });
-                                            }}
-                                            style={{ flex: 1, accentColor: 'var(--accent-primary)', height: '4px', cursor: 'pointer' }}
-                                            disabled={soundMuted}
-                                        />
-                                        <Volume2 size={16} color="var(--text-muted)" />
-                                        <span style={{ fontSize: '13px', color: 'var(--text-muted)', minWidth: '32px', textAlign: 'right' }}>{Math.round(soundVolume * 100)}%</span>
+
+                                    {/* Ambient Volume */}
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>Ambient Volume</div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>Controls background ambient sounds (lo-fi, nature, space).</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                            <VolumeX size={16} color="var(--text-muted)" />
+                                            <input
+                                                type="range" min="0" max="1" step="0.05"
+                                                value={ambientVolume}
+                                                onChange={(e) => {
+                                                    const v = parseFloat(e.target.value);
+                                                    setAmbientVolume(v);
+                                                    localStorage.setItem('gratonite_ambient_volume', String(v));
+                                                    window.dispatchEvent(new StorageEvent('storage', { key: 'gratonite_ambient_volume', newValue: String(v) }));
+                                                }}
+                                                style={{ flex: 1, accentColor: '#8b5cf6', height: '4px', cursor: 'pointer' }}
+                                                disabled={soundMuted}
+                                            />
+                                            <Volume2 size={16} color="var(--text-muted)" />
+                                            <span style={{ fontSize: '13px', color: 'var(--text-muted)', minWidth: '32px', textAlign: 'right' }}>{Math.round(ambientVolume * 100)}%</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Notification Volume */}
+                                    <div>
+                                        <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>Notification Volume</div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>Controls message, mention, and join/leave sounds.</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                            <VolumeX size={16} color="var(--text-muted)" />
+                                            <input
+                                                type="range" min="0" max="1" step="0.05"
+                                                value={notificationVolume}
+                                                onChange={(e) => {
+                                                    const v = parseFloat(e.target.value);
+                                                    setNotificationVolume(v);
+                                                    localStorage.setItem('gratonite_notification_volume', String(v));
+                                                    window.dispatchEvent(new StorageEvent('storage', { key: 'gratonite_notification_volume', newValue: String(v) }));
+                                                    // Also sync to the global sound volume for backward compatibility
+                                                    setSoundVolumeState(v);
+                                                    setSoundVolume(v);
+                                                    saveSettingsToApi({ soundVolume: Math.round(v * 100) });
+                                                }}
+                                                style={{ flex: 1, accentColor: 'var(--accent-primary)', height: '4px', cursor: 'pointer' }}
+                                                disabled={soundMuted}
+                                            />
+                                            <Volume2 size={16} color="var(--text-muted)" />
+                                            <span style={{ fontSize: '13px', color: 'var(--text-muted)', minWidth: '32px', textAlign: 'right' }}>{Math.round(notificationVolume * 100)}%</span>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -2426,9 +2465,15 @@ const SettingsModal = ({
                                                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>Preview</div>
                                                 {/* Avatar preview with frame */}
                                                 <div style={{ position: 'relative', width: '72px', height: '72px', margin: '0 auto 10px' }}>
-                                                    <div style={{
+                                                    <div
+                                                        className={
+                                                            wardrobePreviewFrame === 'rainbow' ? 'avatar-frame-rainbow'
+                                                            : wardrobePreviewFrame === 'pulse' ? 'avatar-frame-pulse'
+                                                            : undefined
+                                                        }
+                                                        style={{
                                                         width: '72px', height: '72px', borderRadius: '50%',
-                                                        background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))',
+                                                        overflow: 'hidden',
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                         fontSize: '28px',
                                                         boxShadow: wardrobePreviewFrame === 'neon'
@@ -2438,7 +2483,22 @@ const SettingsModal = ({
                                                                 : 'none',
                                                         border: wardrobePreviewFrame === 'glass' ? '2px solid rgba(255,255,255,0.35)' : 'none',
                                                     }}>
-                                                        {userProfile?.name?.[0]?.toUpperCase() || '?'}
+                                                        {ctxUser.avatarHash ? (
+                                                            <img
+                                                                src={`${API_BASE}/files/${ctxUser.avatarHash}`}
+                                                                alt="Avatar preview"
+                                                                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                                                            />
+                                                        ) : (
+                                                            <div style={{
+                                                                width: '100%', height: '100%', borderRadius: '50%',
+                                                                background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))',
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                fontSize: '28px', color: 'white',
+                                                            }}>
+                                                                {userProfile?.name?.[0]?.toUpperCase() || '?'}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 {/* Name with nameplate */}

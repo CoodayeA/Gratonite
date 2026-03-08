@@ -5805,3 +5805,9 @@ button:active:not(:disabled) {
     --radius-xl: 16px;
 }
 
+/* macOS desktop title bar spacing */
+body.electron-mac .app-sidebar,
+body.electron-mac .sidebar-header {
+  padding-top: 28px;
+}
+

@@ -197,6 +197,15 @@ export const channels = pgTable('channels', {
 
   /** Max users allowed in a voice channel. 0 = unlimited. */
   userLimit: integer('user_limit').default(0),
+
+  /** Whether end-to-end encryption is enabled for this channel. */
+  isEncrypted: boolean('is_encrypted').notNull().default(false),
+
+  /** Whether file attachments are allowed in this channel. */
+  attachmentsEnabled: boolean('attachments_enabled').notNull().default(true),
+
+  /** Whether this channel's permissions are synced with its parent category. */
+  permissionSynced: boolean('permission_synced').notNull().default(true),
 });
 
 /**

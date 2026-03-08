@@ -28,6 +28,21 @@ Your privacy matters to us. Here is how we handle your data:
 
 For questions about this policy, contact privacy@gratonite.app.`;
 
+const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+const isValidUsername = (v: string) => /^[a-zA-Z0-9_]{3,32}$/.test(v);
+
+const getPasswordStrength = (pw: string): { label: string; color: string } => {
+    if (pw.length < 8) return { label: '', color: '' };
+    let variety = 0;
+    if (/[a-z]/.test(pw)) variety++;
+    if (/[A-Z]/.test(pw)) variety++;
+    if (/[0-9]/.test(pw)) variety++;
+    if (/[^a-zA-Z0-9]/.test(pw)) variety++;
+    if (pw.length >= 12 && variety >= 3) return { label: 'Strong', color: '#22c55e' };
+    if (pw.length >= 8 && variety >= 2) return { label: 'Medium', color: '#eab308' };
+    return { label: 'Weak', color: '#ef4444' };
+};
+
 const Register = () => {
     const [showPw, setShowPw] = useState(false);
     const [activeModal, setActiveModal] = useState<'terms' | 'privacy' | null>(null);
@@ -36,11 +51,29 @@ const Register = () => {
     const [password, setPassword] = useState('');
     const [agreed, setAgreed] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [touched, setTouched] = useState<Record<string, boolean>>({});
     const { addToast } = useToast();
     const navigate = useNavigate();
 
+    const markTouched = (field: string) => setTouched(prev => ({ ...prev, [field]: true }));
+
+    const emailError = email.trim() && !isValidEmail(email.trim()) ? 'Must be a valid email' : '';
+    const usernameError = username.trim().length > 0 && !isValidUsername(username.trim())
+        ? 'Must be 3-32 characters (letters, numbers, underscores)' : '';
+    const passwordError = password.length > 0 && password.length < 8
+        ? 'Must be at least 8 characters' : '';
+    const passwordStrength = getPasswordStrength(password);
+
     const handleRegister = async () => {
-        if (!email.trim() || !username.trim() || !password || !agreed) return;
+        // Mark all fields as touched so errors show
+        setTouched({ email: true, username: true, password: true });
+
+        // Client-side validation — return early if any field is invalid
+        if (!email.trim() || !isValidEmail(email.trim())) return;
+        if (!username.trim() || !isValidUsername(username.trim())) return;
+        if (!password || password.length < 8) return;
+        if (!agreed) return;
+
         setLoading(true);
         try {
             await api.auth.register({ email: email.trim(), username: username.trim(), password });
@@ -76,7 +109,12 @@ const Register = () => {
                 placeholder="Enter your email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
+                onBlur={() => markTouched('email')}
+                style={touched.email && emailError ? { borderColor: 'var(--danger, #ef4444)' } : undefined}
             />
+            {touched.email && emailError && (
+                <p style={{ color: 'var(--danger, #ef4444)', fontSize: '12px', margin: '4px 0 0 0' }}>{emailError}</p>
+            )}
 
             <label className="auth-label">Username</label>
             <input
@@ -85,7 +123,12 @@ const Register = () => {
                 placeholder="Choose a username"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
+                onBlur={() => markTouched('username')}
+                style={touched.username && usernameError ? { borderColor: 'var(--danger, #ef4444)' } : undefined}
             />
+            {touched.username && usernameError && (
+                <p style={{ color: 'var(--danger, #ef4444)', fontSize: '12px', margin: '4px 0 0 0' }}>{usernameError}</p>
+            )}
 
             <label className="auth-label">Password</label>
             <div style={{ position: 'relative' }}>
@@ -95,7 +138,9 @@ const Register = () => {
                     placeholder="Create a strong password"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
+                    onBlur={() => markTouched('password')}
                     onKeyDown={e => { if (e.key === 'Enter') handleRegister(); }}
+                    style={touched.password && passwordError ? { borderColor: 'var(--danger, #ef4444)' } : undefined}
                 />
                 <button
                     onClick={() => setShowPw(!showPw)}
@@ -104,6 +149,14 @@ const Register = () => {
                     {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
             </div>
+            {touched.password && passwordError && (
+                <p style={{ color: 'var(--danger, #ef4444)', fontSize: '12px', margin: '4px 0 0 0' }}>{passwordError}</p>
+            )}
+            {password.length >= 8 && passwordStrength.label && (
+                <p style={{ color: passwordStrength.color, fontSize: '12px', margin: '4px 0 0 0', fontWeight: 500 }}>
+                    Strength: {passwordStrength.label}
+                </p>
+            )}
 
             <div className="auth-checkbox-wrapper">
                 <input type="checkbox" id="terms" checked={agreed} onChange={e => setAgreed(e.target.checked)} />

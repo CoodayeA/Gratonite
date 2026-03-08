@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, Navigate, Outlet, Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar } from 'lucide-react';
+import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar } from 'lucide-react';
 import './components/chat.css';
 import CommandPalette from './components/ui/CommandPalette';
 import { playSound, setSoundVolume } from './utils/SoundManager';
@@ -222,7 +222,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
             { divider: true, id: 'div1', label: '', onClick: () => {} },
             ...(isOwner ? [{ id: 'server-settings', label: 'Portal Settings', icon: Settings, onClick: () => { navigate(`/guild/${guild.id}`); onOpenGuildSettings(); } }] : []),
             { id: 'invite', label: 'Invite People', icon: Link2, onClick: () => {
-                api.invites.create(guild.id, { channelId: guild.id }).then((invite) => {
+                api.invites.create(guild.id, {}).then((invite) => {
                     const link = `${window.location.origin}/invite/${invite.code}`;
                     navigator.clipboard.writeText(link).catch(() => {});
                     addToast({ title: 'Invite link copied to clipboard', variant: 'success' });
@@ -377,6 +377,8 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const [legacyGuildInfo, setLegacyGuildInfo] = useState<{ id: string; name: string; iconHash: string | null; description: string | null; memberCount: number } | null>(null);
     const [legacyGuildChannels, setLegacyGuildChannels] = useState<Array<{ id: string; name: string; type: string; parentId: string | null; position: number; topic: string | null }>>([]);
     const [legacyChannelsLoading, setLegacyChannelsLoading] = useState(false);
+    const [canManageChannels, setCanManageChannels] = useState(false);
+    const [mutedChannelIds, setMutedChannelIds] = useState<Set<string>>(new Set());
     const guildInfo = guildSession.enabled ? guildSession.guildInfo : legacyGuildInfo;
     const guildChannels = guildSession.enabled ? guildSession.channels : legacyGuildChannels;
     const setGuildChannels = guildSession.enabled ? guildSession.setChannels : setLegacyGuildChannels;
@@ -466,6 +468,44 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
             setLegacyChannelsLoading(false);
         }
     }, [activeGuildId, guildSession.enabled]);
+
+    // Check if current user can manage channels (owner or has MANAGE_CHANNELS/ADMINISTRATOR)
+    useEffect(() => {
+        if (!activeGuildId || !userProfile?.id) { setCanManageChannels(false); return; }
+        const checkPerms = async () => {
+            try {
+                const guild = guildInfo as any;
+                if (guild?.ownerId === userProfile.id) { setCanManageChannels(true); return; }
+                const roles: any[] = await api.guilds.getMemberRoles(activeGuildId, userProfile.id);
+                const ADMINISTRATOR = 1n << 0n;
+                const MANAGE_CHANNELS = 1n << 2n;
+                const has = roles?.some((r: any) => {
+                    const perms = BigInt(r.permissions || '0');
+                    return (perms & ADMINISTRATOR) !== 0n || (perms & MANAGE_CHANNELS) !== 0n;
+                });
+                setCanManageChannels(!!has);
+            } catch { setCanManageChannels(false); }
+        };
+        checkPerms();
+    }, [activeGuildId, userProfile?.id, guildInfo]);
+
+    // Fetch muted channels for sidebar indicators
+    useEffect(() => {
+        if (!activeGuildId || guildChannels.length === 0) { setMutedChannelIds(new Set()); return; }
+        const fetchMuted = async () => {
+            const muted = new Set<string>();
+            await Promise.all(guildChannels.map(async (ch) => {
+                try {
+                    const prefs = await api.channels.getNotificationPrefs(ch.id);
+                    if (prefs.level === 'none' || (prefs.mutedUntil && new Date(prefs.mutedUntil) > new Date())) {
+                        muted.add(ch.id);
+                    }
+                } catch { /* ignore */ }
+            }));
+            setMutedChannelIds(muted);
+        };
+        fetchMuted();
+    }, [activeGuildId, guildChannels.length]);
 
     useEffect(() => {
         if (!enableVoiceSidebarSync) return;
@@ -631,6 +671,60 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         }
     };
 
+    const handleCategoryContext = (e: React.MouseEvent, category: { id: string; name: string }, childChannelIds: string[]) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const allChildrenMuted = childChannelIds.length > 0 && childChannelIds.every(id => mutedChannelIds.has(id));
+        openMenu(e, [
+            { id: 'mark-read', label: 'Mark Category as Read', icon: Check, onClick: () => {
+                childChannelIds.forEach(id => { api.messages.ack(id).catch(() => {}); markReadStore(id); });
+                addToast({ title: `${category.name} marked as read`, variant: 'info' });
+            }},
+            { id: 'mute', label: allChildrenMuted ? 'Unmute Category' : 'Mute Category', icon: allChildrenMuted ? Bell : BellOff, onClick: () => {
+                if (allChildrenMuted) {
+                    childChannelIds.forEach(id => { api.channels.setNotificationPrefs(id, { level: 'default' }).catch(() => {}); });
+                    setMutedChannelIds(prev => { const next = new Set(prev); childChannelIds.forEach(id => next.delete(id)); return next; });
+                    addToast({ title: `${category.name} unmuted`, variant: 'info' });
+                } else {
+                    childChannelIds.forEach(id => { api.channels.setNotificationPrefs(id, { level: 'none' }).catch(() => {}); });
+                    setMutedChannelIds(prev => { const next = new Set(prev); childChannelIds.forEach(id => next.add(id)); return next; });
+                    addToast({ title: `${category.name} muted`, variant: 'info' });
+                }
+            }},
+            { divider: true, id: 'div1', label: '', onClick: () => {} },
+            ...(canManageChannels ? [
+                { id: 'edit', label: 'Edit Category', icon: Settings, onClick: () => {
+                    const newName = prompt('Rename category:', category.name);
+                    if (newName && newName.trim() && newName.trim() !== category.name) {
+                        api.channels.update(category.id, { name: newName.trim() }).then(() => {
+                            if (guildSession.enabled) {
+                                guildSession.refresh();
+                            } else if (activeGuildId) {
+                                api.channels.getGuildChannels(activeGuildId).then((chs) => setLegacyGuildChannels(chs as any)).catch(() => {});
+                            }
+                            addToast({ title: 'Category renamed', variant: 'success' });
+                        }).catch(() => addToast({ title: 'Failed to rename category', variant: 'error' }));
+                    }
+                }},
+            ] : []),
+            { id: 'copy-id', label: 'Copy Category ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(category.id).catch(() => {}); addToast({ title: 'Category ID copied', variant: 'info' }); } },
+            ...(canManageChannels ? [
+                { divider: true, id: 'div2', label: '', onClick: () => {} },
+                { id: 'delete', label: 'Delete Category', icon: Trash2, color: 'var(--error)', onClick: () => {
+                    if (!confirm(`Delete category "${category.name}"? Channels inside will become uncategorized.`)) return;
+                    api.channels.delete(category.id).then(() => {
+                        if (guildSession.enabled) {
+                            guildSession.refresh();
+                        } else if (activeGuildId) {
+                            api.channels.getGuildChannels(activeGuildId).then((chs) => setLegacyGuildChannels(chs as any)).catch(() => {});
+                        }
+                        addToast({ title: `Category "${category.name}" deleted`, variant: 'error' });
+                    }).catch(() => addToast({ title: 'Failed to delete category', variant: 'error' }));
+                }},
+            ] : []),
+        ]);
+    };
+
     const handleChannelContext = (e: React.MouseEvent, channel: { id: string; name: string }) => {
         const isFav = favoriteChannelIds.has(channel.id);
         openMenu(e, [
@@ -670,7 +764,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
             { id: 'copy-id', label: 'Copy Channel ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(channel.id).catch(() => {}); addToast({ title: 'Channel ID copied', variant: 'info' }); } },
             { id: 'invite', label: 'Create Invite Link', icon: Link2, onClick: () => {
                 if (!activeGuildId) return;
-                api.invites.create(activeGuildId, { channelId: channel.id }).then((invite) => {
+                api.invites.create(activeGuildId, {}).then((invite) => {
                     const link = `${window.location.origin}/invite/${invite.code}`;
                     navigator.clipboard.writeText(link).catch(() => {});
                     addToast({ title: 'Invite link copied to clipboard', variant: 'success' });
@@ -1126,12 +1220,15 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         const unreadEntry = unreadMap.get(ch.id);
                         const hasUnread = !!unreadEntry?.hasUnread && !isActive;
                         const mentions = unreadEntry?.mentionCount ?? 0;
+                        const isMuted = mutedChannelIds.has(ch.id);
+                        const isPrivate = ch.type === 'GUILD_PRIVATE';
                         return (
                             <Link key={ch.id} to={linkTo} style={{ textDecoration: 'none' }} onContextMenu={(e) => handleChannelContext(e, ch)}>
-                                <div className={`channel-item ${isActive ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div className={`channel-item ${isActive ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: isMuted ? 0.5 : undefined }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                                        <HashIcon size={18} style={{ flexShrink: 0, opacity: 0.7 }} />
+                                        {isPrivate ? <Lock size={18} style={{ flexShrink: 0, opacity: 0.7 }} /> : <HashIcon size={18} style={{ flexShrink: 0, opacity: 0.7 }} />}
                                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: hasUnread ? 600 : undefined, color: hasUnread ? 'var(--text-primary)' : undefined }}>{ch.name}</span>
+                                        {isMuted && <BellOff size={12} style={{ flexShrink: 0, opacity: 0.5, color: 'var(--text-muted)' }} />}
                                     </div>
                                     {mentions > 0 && !isActive && (
                                         <span style={{ background: '#ed4245', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px', flexShrink: 0 }}>
@@ -1147,12 +1244,14 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         return (
                             <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
                                 <p>No channels yet.</p>
+                                {canManageChannels && (
                                 <button
                                     onClick={() => { setShowCreateChannel({ type: 'text' }); setNewChannelName(''); }}
                                     style={{ marginTop: '8px', padding: '8px 16px', background: 'var(--accent-primary)', color: '#000', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
                                 >
                                     Create a Channel
                                 </button>
+                                )}
                             </div>
                         );
                     }
@@ -1187,13 +1286,13 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         const children = channelsByParent.get(cat.id) || [];
                         return (
                             <div key={cat.id}>
-                                <div className="channel-category" style={{ marginTop: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <div className="channel-category" style={{ marginTop: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} onContextMenu={(e) => handleCategoryContext(e, cat, children.map(c => c.id))}>
                                     <div onClick={() => toggleCategory(cat.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
                                         {collapsed[cat.id] ? <ChevronRight size={14} /> : <ChevronDown size={14} />} {cat.name.toUpperCase()}
                                     </div>
-                                    <Plus size={14} style={{ cursor: 'pointer', color: 'var(--text-muted)', opacity: 0.7 }}
+                                    {canManageChannels && <Plus size={14} style={{ cursor: 'pointer', color: 'var(--text-muted)', opacity: 0.7 }}
                                         onClick={(e) => { e.stopPropagation(); setShowCreateChannel({ type: defaultType, parentId: cat.id }); setNewChannelName(''); }}
-                                    />
+                                    />}
                                 </div>
                                 {!collapsed[cat.id] && children.map(renderChannel)}
                             </div>
@@ -1230,9 +1329,9 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                     {collapsed['__text_channels__'] ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
                                     <span>Text Channels</span>
                                 </div>
-                                <Plus size={14} style={{ cursor: 'pointer', opacity: 0.7 }}
+                                {canManageChannels && <Plus size={14} style={{ cursor: 'pointer', opacity: 0.7 }}
                                     onClick={(e) => { e.stopPropagation(); setShowCreateChannel({ type: 'text' }); setNewChannelName(''); }}
-                                />
+                                />}
                             </div>
                             {!collapsed['__text_channels__'] && (
                                 <>
@@ -1250,9 +1349,9 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                     {collapsed['__voice_channels__'] ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
                                     <span>Voice Channels</span>
                                 </div>
-                                <Plus size={14} style={{ cursor: 'pointer', opacity: 0.7 }}
+                                {canManageChannels && <Plus size={14} style={{ cursor: 'pointer', opacity: 0.7 }}
                                     onClick={(e) => { e.stopPropagation(); setShowCreateChannel({ type: 'voice' }); setNewChannelName(''); }}
-                                />
+                                />}
                             </div>
                             {!collapsed['__voice_channels__'] && (
                                 <>

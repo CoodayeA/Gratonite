@@ -77,6 +77,35 @@ const guildMediaUpload = multer({
 // ---------------------------------------------------------------------------
 
 /**
+ * Emit GROUP_KEY_ROTATION_NEEDED for every encrypted channel in a guild.
+ * Called after a member is added or removed so that the guild owner can
+ * re-wrap the channel key for the new member set.
+ */
+async function emitKeyRotationForEncryptedChannels(
+  guildId: string,
+  reason: 'member_added' | 'member_removed',
+): Promise<void> {
+  try {
+    const encryptedChannels = await db
+      .select({ id: channels.id })
+      .from(channels)
+      .where(and(eq(channels.guildId, guildId), eq(channels.isEncrypted, true)));
+
+    if (encryptedChannels.length === 0) return;
+
+    const io = getIO();
+    for (const ch of encryptedChannels) {
+      io.to(`guild:${guildId}`).emit('GROUP_KEY_ROTATION_NEEDED', {
+        channelId: ch.id,
+        reason,
+      });
+    }
+  } catch {
+    // Non-critical — rotation will be triggered on next membership change
+  }
+}
+
+/**
  * AppError — A lightweight error subclass that carries an HTTP status code.
  *
  * Thrown by `requireMember` and `requireOwner` and caught in each handler's
@@ -685,6 +714,9 @@ guildsRouter.post(
           .insert(guildMemberOnboarding)
           .values({ guildId, userId: req.userId!, completedAt: null })
           .onConflictDoNothing();
+
+        // Trigger E2E key rotation for any encrypted channels in this guild
+        await emitKeyRotationForEncryptedChannels(guildId, 'member_added');
       }
 
       const [fresh] = await db
@@ -1724,6 +1756,55 @@ guildsRouter.patch(
  *   - Deletes `guild_members` row for (guildId, userId).
  *   - Decrements `guilds.memberCount`.
  */
+// Leave server (current user leaves voluntarily)
+guildsRouter.delete(
+  '/:guildId/members/@me',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const guildId = req.params.guildId as string;
+      const userId = req.userId!;
+
+      // Block owner from leaving (must transfer ownership first)
+      const [guild] = await db
+        .select({ ownerId: guilds.ownerId })
+        .from(guilds)
+        .where(eq(guilds.id, guildId))
+        .limit(1);
+
+      if (!guild) {
+        res.status(404).json({ code: 'NOT_FOUND', message: 'Guild not found' });
+        return;
+      }
+
+      if (guild.ownerId === userId) {
+        res.status(403).json({ code: 'FORBIDDEN', message: 'Transfer ownership before leaving' });
+        return;
+      }
+
+      await db
+        .delete(guildMembers)
+        .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, userId)));
+
+      // Decrement member count
+      await db
+        .update(guilds)
+        .set({ memberCount: sql`GREATEST(${guilds.memberCount} - 1, 0)`, updatedAt: new Date() })
+        .where(eq(guilds.id, guildId));
+
+      getIO().to(`guild:${guildId}`).emit('GUILD_MEMBER_REMOVE', { guildId, userId });
+
+      // Trigger E2E key rotation for any encrypted channels in this guild
+      await emitKeyRotationForEncryptedChannels(guildId, 'member_removed');
+
+      res.status(200).json({ code: 'OK' });
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+
+// Kick member (requires KICK_MEMBERS permission)
 guildsRouter.delete(
   '/:guildId/members/:userId',
   requireAuth,
@@ -1767,6 +1848,9 @@ guildsRouter.delete(
 
       // Audit log
       logAuditEvent(guildId, req.userId!, AuditActionTypes.MEMBER_KICK, targetUserId, 'USER');
+
+      // Trigger E2E key rotation for any encrypted channels in this guild
+      await emitKeyRotationForEncryptedChannels(guildId, 'member_removed');
 
       res.status(200).json({ code: 'OK', message: 'Member removed' });
     } catch (err) {
