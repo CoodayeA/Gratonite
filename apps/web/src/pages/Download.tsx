@@ -1,7 +1,7 @@
-import { Monitor, Apple, ArrowLeft } from 'lucide-react';
+import { Monitor, Apple, ArrowLeft, Terminal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const VERSION = '1.0.1';
+const VERSION = '1.0.4';
 const BASE_URL = 'https://gratonite.chat/downloads';
 
 export default function Download() {
@@ -148,6 +148,110 @@ export default function Download() {
                                     </div>
                                     <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                                         .exe installer · Windows 10+
+                                    </div>
+                                </div>
+                                <div style={{
+                                    fontSize: '12px',
+                                    fontWeight: 700,
+                                    color: 'var(--accent-primary)',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px',
+                                }}>
+                                    Download
+                                </div>
+                            </div>
+                        </a>
+
+                        {/* Linux x64 */}
+                        <a
+                            href={`${BASE_URL}/Gratonite-${VERSION}.AppImage`}
+                            download
+                            style={{ textDecoration: 'none' }}
+                        >
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '16px',
+                                padding: '20px 24px',
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--stroke)',
+                                borderRadius: 'var(--radius-md)',
+                                cursor: 'pointer',
+                                transition: 'border-color 0.15s',
+                            }}
+                                onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent-primary)')}
+                                onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--stroke)')}
+                            >
+                                <div style={{
+                                    width: '48px',
+                                    height: '48px',
+                                    borderRadius: '12px',
+                                    background: 'linear-gradient(135deg, #e95420, #c7431a)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0,
+                                }}>
+                                    <Terminal size={24} color="white" />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '2px' }}>
+                                        Linux (x64)
+                                    </div>
+                                    <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                                        .AppImage · Also available as <a href={`${BASE_URL}/gratonite-desktop_${VERSION}_amd64.deb`} style={{ color: 'var(--accent-primary)' }} onClick={e => e.stopPropagation()}>.deb</a>
+                                    </div>
+                                </div>
+                                <div style={{
+                                    fontSize: '12px',
+                                    fontWeight: 700,
+                                    color: 'var(--accent-primary)',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px',
+                                }}>
+                                    Download
+                                </div>
+                            </div>
+                        </a>
+
+                        {/* Linux ARM64 */}
+                        <a
+                            href={`${BASE_URL}/Gratonite-${VERSION}-arm64.AppImage`}
+                            download
+                            style={{ textDecoration: 'none' }}
+                        >
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '16px',
+                                padding: '20px 24px',
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--stroke)',
+                                borderRadius: 'var(--radius-md)',
+                                cursor: 'pointer',
+                                transition: 'border-color 0.15s',
+                            }}
+                                onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent-primary)')}
+                                onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--stroke)')}
+                            >
+                                <div style={{
+                                    width: '48px',
+                                    height: '48px',
+                                    borderRadius: '12px',
+                                    background: 'linear-gradient(135deg, #e95420, #c7431a)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0,
+                                }}>
+                                    <Terminal size={24} color="white" />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '2px' }}>
+                                        Linux (ARM64)
+                                    </div>
+                                    <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                                        .AppImage · Also available as <a href={`${BASE_URL}/gratonite-desktop_${VERSION}_arm64.deb`} style={{ color: 'var(--accent-primary)' }} onClick={e => e.stopPropagation()}>.deb</a>
                                     </div>
                                 </div>
                                 <div style={{

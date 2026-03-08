@@ -1,6 +1,14 @@
 # Main landing page (keep existing)
 gratonite.chat {
-    reverse_proxy gratonite-web-1:80
+    handle /downloads/* {
+        root * /srv/releases
+        uri strip_prefix /downloads
+        file_server
+        header Access-Control-Allow-Origin *
+    }
+    handle {
+        reverse_proxy gratonite-web-1:80
+    }
 }
 
 # API subdomain
