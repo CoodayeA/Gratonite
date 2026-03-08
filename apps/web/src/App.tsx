@@ -476,7 +476,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
             try {
                 const guild = guildInfo as any;
                 if (guild?.ownerId === userProfile.id) { setCanManageChannels(true); return; }
-                const roles: any[] = await api.guilds.getMemberRoles(activeGuildId!, userProfile.id);
+                const roles: any[] = await api.guilds.getMemberRoles(activeGuildId!, userProfile.id!);
                 const ADMINISTRATOR = 1n << 0n;
                 const MANAGE_CHANNELS = 1n << 2n;
                 const has = roles?.some((r: any) => {
