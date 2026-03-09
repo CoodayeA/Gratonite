@@ -3,6 +3,7 @@ import express from 'express';
 import http from 'http';
 import path from 'path';
 import cors from 'cors';
+import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { Server as SocketIOServer } from 'socket.io';
 
@@ -140,6 +141,9 @@ initSocket(io);
 
 // Trust the reverse proxy (Caddy) so req.protocol reflects https
 app.set('trust proxy', 1);
+
+// Security headers (HSTS, X-Content-Type-Options, X-Frame-Options, etc.)
+app.use(helmet({ contentSecurityPolicy: false }));
 
 app.use(
   cors({

@@ -16,17 +16,29 @@ Gratonite is a multi-platform community chat app built as a privacy-first, open-
 - Disappearing messages with configurable timers
 - Scheduled messages and draft auto-save
 - Message bookmarks and global search
+- Polls with multiple choice and expiry
+- Voice messages
+- Message reminders
+- Sticky messages
+- Inline media player (video/audio)
 
 ### Guilds & Community 🌐
 - Guild (server) creation with custom icons and banners
 - Role-based permissions with per-channel overrides
 - Invite links with expiry and usage limits
-- Public server discovery with tags
+- Public server discovery with interest tags
 - Scheduled events
 - Server templates and vanity URLs
-- Forum and announcement channel types
+- Forum, announcement, wiki, and Q&A channel types
 - Server folders and favorites
 - Server boost system
+- Guild timeline and digest
+- Onboarding wizard for new members
+- Photo albums
+- Confession boards
+- Guild forms and workflows
+- Guild quests
+- Server ratings and reviews
 
 ### Moderation & Safety 🛡️
 - Audit logs for all administrative actions
@@ -37,6 +49,10 @@ Gratonite is a multi-platform community chat app built as a privacy-first, open-
 - Raid protection mode
 - Slow mode per channel
 - Member screening and server rules gate
+- Starboard (highlight popular messages)
+- Reaction roles and auto roles
+- Ticket system
+- Account deletion (GDPR compliance)
 
 ### Privacy & Encryption 🔒
 - End-to-end encryption for all DMs and group DMs — enabled automatically
@@ -58,6 +74,69 @@ Gratonite is a multi-platform community chat app built as a privacy-first, open-
 - Web push notifications
 - Session management (view/revoke active sessions)
 - GDPR data export
+- FAME system (give and receive fame)
+- Friendship streaks
+- Greeting cards
+- Profile showcase
+- Cosmetics (frames, effects, decorations)
+- Inventory system
+- Theme builder
+- Message requests
+- Activity feed
+- Connected accounts
+- Status presets
+
+### Gamification & Economy 🎮
+- XP and leveling with per-server leaderboards
+- FAME system with profile stats
+- Achievements and badge collection
+- Server-wide leaderboards and analytics
+- Virtual currency and economy system
+- Cosmetics shop (frames, effects, decorations)
+- User marketplace and auctions
+- Server boosts with perks
+
+### Voice & Media 🎙️
+- LiveKit-powered voice and video channels
+- Screen sharing
+- Stage channels for presentations
+- Voice effects
+- Music rooms
+- Study rooms (co-working spaces)
+- Soundboard with custom sounds
+- Clips (short recordings)
+
+### Creative & Collaboration 🎨
+- Whiteboards for collaborative drawing
+- Mood boards
+- Photo albums
+- Wiki channels for persistent docs
+- Form builder for applications and surveys
+- Greeting cards
+- Theme builder with custom CSS
+
+### Community Tools 🏆
+- Giveaways with automatic winner selection
+- Seasonal events
+- Ticket system for support
+- Starboard for community highlights
+- Guild quests and challenges
+- Confession boards
+- Reaction roles and auto roles
+- Server analytics and insights
+- Guild timeline and weekly digest
+
+### Security 🔐
+- HTTP security headers via Helmet.js (HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy)
+- JWT authentication with refresh tokens
+- Argon2id password hashing
+- TOTP-based two-factor authentication
+- Redis rate limiting (6 configurable limiters)
+- Zod request validation on all endpoints
+- File upload checks (MIME type + magic bytes)
+- OAuth2 authorization flow
+- CORS configuration
+- Federation HTTP signatures (Ed25519)
 
 ### Platform & Integrations 🔌
 - OAuth2 authorization flow for third-party apps
@@ -69,10 +148,10 @@ Gratonite is a multi-platform community chat app built as a privacy-first, open-
 
 ## Scale 📊
 
-- **76** database schemas
-- **65** API route modules
-- **47** frontend pages
-- **53** React components
+- **109** database schemas
+- **91** API route modules
+- **51** frontend pages
+- **77** React components
 
 ## Repository Layout 🗂️
 
@@ -100,6 +179,11 @@ tools/       Release verification scripts
 | Cache      | Redis                                 |
 | Realtime   | Socket.IO                             |
 | Voice      | LiveKit                               |
+| Auth       | JWT, Argon2id, TOTP MFA               |
+| Federation | HTTP Signatures, Ed25519              |
+| Search     | PostgreSQL full-text search            |
+| Metrics    | Prometheus                            |
+| Email      | Nodemailer                            |
 | Deployment | Docker Compose, Caddy, GitHub Actions |
 
 ## Getting Started 🛠️
@@ -406,6 +490,10 @@ If a partner's key changes, a warning banner is displayed in the conversation.
 - **Device-bound keys**: Private keys are stored in IndexedDB. Clearing browser data or switching browsers requires generating a new key pair. Messages encrypted with the old key cannot be decrypted.
 - **No multi-device sync**: Each browser/device has its own key pair. E2E encryption is active on whichever device you are currently using.
 
+## Roadmap 🗺️
+
+See [ROADMAP.md](ROADMAP.md) for planned features and long-term direction.
+
 ## Why Gratonite 💜
 
 - No phone-number gate to join communities
@@ -419,3 +507,4 @@ If a partner's key changes, a warning banner is displayed in the conversation.
 - Website: [gratonite.chat](https://gratonite.chat)
 - Main repo: [CoodayeA/Gratonite](https://github.com/CoodayeA/Gratonite)
 - Organization: [Gratonite-Labs](https://github.com/Gratonite-Labs)
+- Releases: [v1.0.0](https://github.com/CoodayeA/Gratonite/releases)
