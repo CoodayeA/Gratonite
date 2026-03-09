@@ -24,7 +24,8 @@
     "files": [
       "main.js",
       "preload.js",
-      "assets/**/*"
+      "assets/**/*",
+      "data/**/*"
     ],
     "mac": {
       "category": "public.app-category.social-networking",
