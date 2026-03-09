@@ -355,6 +355,25 @@ const FameDashboard = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [myFameStats, setMyFameStats] = useState<{ fameReceived: number; fameGiven: number } | null>(null);
     const [myGuildId, setMyGuildId] = useState<string | null>(null);
+    const [brokenServerIcons, setBrokenServerIcons] = useState<Set<number>>(new Set());
+
+    const fetchLeaderboard = (currentId?: string) => {
+        return api.leaderboard.get('week').then(entries => {
+            const users: FAMEUser[] = entries.map((entry, idx) => ({
+                id: typeof entry.userId === 'string' ? idx + 1 : Number(entry.userId),
+                sourceUserId: String(entry.userId ?? ''),
+                name: entry.displayName || entry.username,
+                avatarHash: entry.avatarHash || null,
+                fameReceived: entry.fameReceived || 0,
+                fameGiven: 0,
+                weeklyChange: 0,
+                badges: entry.rank <= 3 ? ['⭐'] : [],
+                bgColor: getDeterministicGradient(entry.displayName || entry.username),
+                isCurrentUser: currentId ? String(entry.userId) === currentId : false,
+            }));
+            setLeaderboardUsers(users);
+        });
+    };
 
     useEffect(() => {
         Promise.allSettled([
@@ -369,21 +388,7 @@ const FameDashboard = () => {
             addToast({ title: 'Failed to load user data', description: 'Could not fetch your profile.', variant: 'error' });
         }),
         // Fetch leaderboard
-        api.leaderboard.get('week').then(entries => {
-            const users: FAMEUser[] = entries.map((entry, idx) => ({
-                id: typeof entry.userId === 'string' ? idx + 1 : Number(entry.userId),
-                sourceUserId: String(entry.userId ?? ''),
-                name: entry.displayName || entry.username,
-                avatarHash: entry.avatarHash || null,
-                fameReceived: entry.fameReceived || 0,
-                fameGiven: 0,
-                weeklyChange: 0,
-                badges: entry.rank <= 3 ? ['⭐'] : [],
-                bgColor: getDeterministicGradient(entry.displayName || entry.username),
-                isCurrentUser: false, // will be set after getMe resolves
-            }));
-            setLeaderboardUsers(users);
-        }).catch(() => {
+        fetchLeaderboard().catch(() => {
             addToast({ title: 'Failed to load leaderboard', description: 'Could not fetch the FAME leaderboard.', variant: 'error' });
         }),
         // Fetch discoverable guilds for server ratings
@@ -503,10 +508,15 @@ const FameDashboard = () => {
                 const today = new Date().toISOString().slice(0, 10);
                 localStorage.setItem('gratonite-fame-tokens', JSON.stringify({ date: today, used: result.fameGiven }));
             } catch { /* ignore */ }
+            // Optimistic update: bump target user's fameReceived in local state
+            setLeaderboardUsers(prev => prev.map(u =>
+                u.id === userId ? { ...u, fameReceived: u.fameReceived + 1 } : u
+            ));
             setShowSparkle(true);
             setTimeout(() => setShowSparkle(false), 1500);
-            // Re-fetch stats to update display
+            // Re-fetch stats and leaderboard to sync with server
             api.fame.getStats(currentUserId).then(stats => setMyFameStats(stats)).catch(() => {});
+            fetchLeaderboard(currentUserId).catch(() => {});
         } catch (err: any) {
             const msg = err?.message || 'Failed to give FAME';
             addToast({ title: 'FAME Error', description: msg, variant: 'error' });
@@ -578,8 +588,15 @@ const FameDashboard = () => {
                             height: '90px', borderRadius: '12px', marginBottom: '20px',
                             background: showRateModal.bgColor, display: 'flex',
                             alignItems: 'center', justifyContent: 'center', fontSize: '40px',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                        }}>{showRateModal.icon}</div>
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.2)', overflow: 'hidden'
+                        }}>
+                            {showRateModal.iconHash && !brokenServerIcons.has(showRateModal.id) ? (
+                                <img src={`${API_BASE}/files/${showRateModal.iconHash}`} alt={showRateModal.name}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    onError={() => setBrokenServerIcons(prev => new Set([...prev, showRateModal.id]))}
+                                />
+                            ) : showRateModal.icon}
+                        </div>
                         <h3 style={{ fontWeight: 700, marginBottom: '6px', fontSize: '20px', color: 'var(--text-primary)' }}>{showRateModal.name}</h3>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '24px' }}>
                             {showRateModal.totalRatings.toLocaleString()} members{showRateModal.avgRating > 0 ? ` · avg ${showRateModal.avgRating.toFixed(1)} ⭐` : ''}
@@ -932,7 +949,7 @@ const FameDashboard = () => {
                                     <div style={{ width: '6px', background: server.bgColor, flexShrink: 0 }} />
                                     <div style={{ flex: 1, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
                                         {/* Icon */}
-                                        {server.iconHash ? (
+                                        {server.iconHash && !brokenServerIcons.has(server.id) ? (
                                             <img
                                                 src={`${API_BASE}/files/${server.iconHash}`}
                                                 alt={server.name}
@@ -940,6 +957,7 @@ const FameDashboard = () => {
                                                     width: '52px', height: '52px', borderRadius: '14px',
                                                     objectFit: 'cover', flexShrink: 0
                                                 }}
+                                                onError={() => setBrokenServerIcons(prev => new Set([...prev, server.id]))}
                                             />
                                         ) : (
                                             <div style={{
