@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
-import { api, API_BASE } from '../../lib/api';
+import { api } from '../../lib/api';
 import { onPresenceUpdate } from '../../lib/socket';
+import Avatar from '../ui/Avatar';
 
 interface Member {
   id: string;
@@ -19,13 +20,6 @@ interface Props {
   onMemberClick?: (userId: string, displayName: string, e: React.MouseEvent) => void;
 }
 
-function statusColor(status?: string) {
-  if (status === 'online') return '#3ba55c';
-  if (status === 'idle') return '#faa61a';
-  if (status === 'dnd') return '#ed4245';
-  return '#747f8d';
-}
-
 function activityLabel(type: string): string {
   if (type === 'PLAYING') return 'Playing';
   if (type === 'WATCHING') return 'Watching';
@@ -36,7 +30,6 @@ function activityLabel(type: string): string {
 
 function MemberRow({ member, onMemberClick }: { member: Member; onMemberClick?: Props['onMemberClick'] }) {
   const name = member.nickname || member.displayName || member.username;
-  const avatarUrl = member.avatarHash ? `${API_BASE}/files/${member.avatarHash}` : null;
 
   return (
     <div
@@ -44,16 +37,12 @@ function MemberRow({ member, onMemberClick }: { member: Member; onMemberClick?: 
       onClick={(e) => onMemberClick?.(member.userId, name, e)}
     >
       <div className="member-avatar-wrap">
-        {avatarUrl ? (
-          <img src={avatarUrl} className="member-avatar" alt="" />
-        ) : (
-          <div className="member-avatar member-avatar-default">
-            {(name || '?')[0].toUpperCase()}
-          </div>
-        )}
-        <div
-          className="member-status-dot"
-          style={{ background: statusColor(member.status) }}
+        <Avatar
+          userId={member.userId}
+          avatarHash={member.avatarHash}
+          displayName={name}
+          size={32}
+          status={member.status || 'offline'}
         />
       </div>
       <div className="member-info">
