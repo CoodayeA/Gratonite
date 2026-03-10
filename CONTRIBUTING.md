@@ -33,23 +33,17 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 3. **Set up environment variables**
 
    ```bash
-   cp .env.example .env
-   # Edit .env with your local database credentials and settings
+   cp apps/api/.env.example apps/api/.env
+   cp apps/web/.env.example apps/web/.env.local
+   # Edit both with your local database credentials and settings
    ```
 
-4. **Set up the database**
+4. **Start the development servers**
 
    ```bash
-   pnpm db:migrate
+   pnpm --dir apps/api dev     # API server
+   pnpm --dir apps/web dev     # Web client (in another terminal)
    ```
-
-5. **Start the development servers**
-
-   ```bash
-   pnpm dev
-   ```
-
-   This starts both the API server and web client in development mode.
 
 ### Project Structure
 
@@ -61,7 +55,6 @@ Gratonite/
 │   ├── desktop/      # Electron desktop app
 │   ├── mobile/       # React Native mobile app
 │   └── landing/      # Marketing site
-├── packages/         # Shared packages
 ├── deploy/           # Deployment configs
 │   └── self-host/    # Self-hosting guide
 └── docs/             # Documentation
@@ -93,8 +86,10 @@ Gratonite/
 
 3. **Test your changes**:
    ```bash
-   pnpm typecheck    # TypeScript checks
-   pnpm lint         # Linting
+   pnpm --dir apps/api run build    # TypeScript checks (API)
+   pnpm --dir apps/web run build    # TypeScript + Vite build (Web)
+   pnpm --dir apps/api run lint     # Lint API
+   pnpm --dir apps/web run lint     # Lint Web
    ```
 
 4. **Commit with a clear message**:
@@ -115,7 +110,7 @@ Gratonite/
 
 - **TypeScript**: All code must be typed. Avoid `any` where possible.
 - **Express 5**: `req.params` fields are `string | string[]` — always cast: `req.params.id as string`
-- **Formatting**: We use Prettier defaults. Run `pnpm format` before committing.
+- **Formatting**: We use Prettier defaults.
 - **Naming**: camelCase for variables/functions, PascalCase for components/types, snake_case for database columns.
 - **Database**: Use Drizzle ORM for queries. Migrations go in `apps/api/src/db/migrations/`.
 
