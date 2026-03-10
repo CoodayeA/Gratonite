@@ -1,0 +1,76 @@
+---
+title: "How to Use Encrypted DMs in Gratonite"
+description: "A quick guide to sending end-to-end encrypted messages, files, and verifying your conversation is secure."
+date: "2026-03-10"
+author: "Gratonite Team"
+tag: "Guide"
+---
+
+## What are encrypted DMs?
+
+When you enable end-to-end encryption (E2EE) on a DM, your messages are encrypted on your device before they leave your browser. The server only ever sees scrambled data — it can't read your messages, see your files, or even know what filenames you're sending.
+
+Only you and the person you're talking to can decrypt the conversation.
+
+## Getting started
+
+### 1. Generate your encryption keys
+
+The first time you open an encrypted DM, Gratonite will generate a key pair for you automatically. Your **private key** stays in your browser (stored in IndexedDB) and is **never uploaded anywhere**. Your public key is shared with the server so other users can find it.
+
+> **Heads up:** If you clear your browser data, your private key is deleted. You'll need to generate a new one, and old encrypted messages won't be decryptable. Treat your browser profile like a password manager — don't wipe it without thinking.
+
+### 2. Start an encrypted DM
+
+Open a DM with someone. If both of you have encryption keys, the conversation will automatically be encrypted. You'll see a **green lock icon** next to the chat header — that's your confirmation that E2EE is active.
+
+If the other person hasn't generated keys yet, the conversation will stay unencrypted until they do.
+
+### 3. Send messages
+
+Just type and send like normal. Behind the scenes, every message is encrypted with a unique random value before it leaves your browser. The recipient's browser decrypts it on arrival. You don't need to do anything special.
+
+### 4. Send files
+
+File encryption works the same way — attach a file and send it. Gratonite encrypts the **entire file** and the **filename** before uploading. The server stores an opaque blob it can't read. The recipient's browser decrypts the file and restores the original name.
+
+This works best for files up to about 25 MB. Larger files need to be read entirely into memory for encryption, which can be slow on phones or older machines.
+
+### 5. Verify your conversation (safety numbers)
+
+Want to make sure nobody is intercepting your messages? Click the **green lock icon** in the chat header. You'll see a **60-digit safety number** — a code that's unique to the combination of your key and the other person's key.
+
+Compare this number with the other person — in person, over a phone call, or through any trusted channel. If the numbers match, your conversation is verified. If they don't, someone may have swapped a key.
+
+## Encrypted group DMs
+
+E2EE also works in group DMs. When encryption is enabled on a group conversation:
+
+- The person who enables it generates a **group key** and securely distributes it to every member
+- Each member gets their own encrypted copy of the group key, so the server can't read any of them
+- If someone is removed from the group, the key is **rotated** — a new key is generated and distributed to remaining members
+
+You don't need to manage any of this yourself. It all happens automatically.
+
+## Things to know
+
+- **One browser = one key.** Your encryption key lives in your browser's local storage. If you use Gratonite on a different browser or device, you'll have a different key, and you won't be able to decrypt messages from the other one.
+
+- **Clearing browser data deletes your key.** If your key is gone, it's gone. There's no recovery. Old encrypted messages will show as "[Encrypted message]" and can't be decrypted.
+
+- **No forward secrecy (yet).** If someone gets your private key and has recorded your encrypted traffic, they could decrypt past messages. We plan to add key rotation per-message in the future.
+
+- **Server channels aren't encrypted.** E2EE applies to DMs and group DMs only. Server (guild) channels need features like search, moderation, and link previews that don't work with E2EE.
+
+## Quick reference
+
+| Action | How |
+|--------|-----|
+| Check if a DM is encrypted | Look for the **green lock icon** |
+| Verify the other person's identity | Click the lock icon → compare **safety numbers** |
+| Send an encrypted file | Just attach and send — encryption is automatic |
+| Rotate your key | Clear your browser data and reopen the app (generates a new key) |
+
+## Want the technical details?
+
+Read our engineering deep-dive: [How End-to-End Encryption Works in Gratonite](/blog/how-e2e-encryption-works-in-gratonite) for the full cryptographic breakdown — key exchange, AES-GCM, group key distribution, and more.
