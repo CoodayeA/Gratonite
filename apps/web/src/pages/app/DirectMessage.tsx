@@ -1611,7 +1611,7 @@ const DirectMessage = () => {
                                             <Pencil size={14} style={{ cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => { setEditGroupNameValue(groupName); setIsEditingGroupName(true); }} />
                                         )}
                                         {e2eKey && !isGroupDm && (
-                                            <span title="View safety number"><Lock size={14} style={{ color: 'var(--success, #22c55e)', cursor: 'pointer' }} aria-label="End-to-end encrypted" onClick={handleShowSafetyNumber} /></span>
+                                            <span title="View safety number" onClick={handleShowSafetyNumber} style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}><Lock size={14} style={{ color: 'var(--success, #22c55e)' }} aria-label="End-to-end encrypted" /></span>
                                         )}
                                         {e2eKey && isGroupDm && groupE2eAllMembersHaveKeys && (
                                             <Lock size={14} style={{ color: 'var(--success, #22c55e)' }} aria-label="End-to-end encrypted (group)" />

@@ -53,7 +53,7 @@ export async function importPublicKey(jwkString: string): Promise<CryptoKey> {
     'jwk',
     jwk,
     { name: 'ECDH', namedCurve: 'P-256' },
-    false,
+    true,
     [],
   );
 }
