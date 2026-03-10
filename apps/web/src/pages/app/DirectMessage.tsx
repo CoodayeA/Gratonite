@@ -386,6 +386,8 @@ const DirectMessage = () => {
     const [safetyNumber, setSafetyNumber] = useState<string | null>(null);
     // Map of attachmentId -> decrypted blob URL + metadata (for E2E-encrypted files)
     const [decryptedFileUrls, setDecryptedFileUrls] = useState<Map<string, { url: string; filename: string; mimeType: string }>>(new Map());
+    const decryptInFlightRef = useRef(new Set<string>());
+    const blobUrlsRef = useRef<string[]>([]);
     const [showDisappearMenu, setShowDisappearMenu] = useState(false);
     const disappearMenuRef = useRef<HTMLDivElement>(null);
 
@@ -981,16 +983,18 @@ const DirectMessage = () => {
                             if (Array.isArray(parsed.files) && parsed.files.length > 0 && m.attachments) {
                                 for (const fileMeta of parsed.files) {
                                     const att = m.attachments.find((a: MessageAttachment) => a.id === fileMeta.id);
-                                    if (att && !decryptedFileUrls.has(fileMeta.id)) {
+                                    if (att && !decryptInFlightRef.current.has(fileMeta.id)) {
+                                        decryptInFlightRef.current.add(fileMeta.id);
                                         fetch(att.url).then(r => r.blob()).then(async (blob) => {
                                             const decrypted = await decryptFile(e2eKey, blob, fileMeta.iv, fileMeta.ef);
                                             const blobUrl = URL.createObjectURL(decrypted);
+                                            blobUrlsRef.current.push(blobUrl);
                                             setDecryptedFileUrls(prev => {
                                                 const next = new Map(prev);
                                                 next.set(fileMeta.id, { url: blobUrl, filename: decrypted.name, mimeType: fileMeta.mt });
                                                 return next;
                                             });
-                                        }).catch(() => { /* file decrypt failed — show as generic attachment */ });
+                                        }).catch(() => { decryptInFlightRef.current.delete(fileMeta.id); });
                                     }
                                 }
                             }
@@ -1374,7 +1378,9 @@ const DirectMessage = () => {
     // Cleanup decrypted file blob URLs on unmount
     useEffect(() => {
         return () => {
-            decryptedFileUrls.forEach(({ url }) => URL.revokeObjectURL(url));
+            blobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+            blobUrlsRef.current = [];
+            decryptInFlightRef.current.clear();
         };
     }, []);
 

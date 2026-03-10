@@ -85,6 +85,7 @@ type Message = {
     authorNameplateStyle?: string | null;
     embeds?: Array<{ url: string; title?: string; description?: string; image?: string; siteName?: string }>;
     isEncrypted?: boolean;
+    encryptedContent?: string | null;
     expiresAt?: string | null;
     createdAt?: string | null;
 };
@@ -740,13 +741,18 @@ const ChannelChat = () => {
     const [channelKeyVersion, setChannelKeyVersion] = useState<number | null>(null);
     const e2eKeyPairRef = useRef<{ publicKey: CryptoKey; privateKey: CryptoKey } | null>(null);
     const [decryptedFileUrls, setDecryptedFileUrls] = useState<Map<string, { url: string; filename: string; mimeType: string }>>(new Map());
+    const decryptInFlightRef = useRef(new Set<string>());
+    const blobUrlsRef = useRef<string[]>([]);
 
     // Clean up blob URLs when channel changes or component unmounts
     useEffect(() => {
         return () => {
-            decryptedFileUrls.forEach(({ url }) => URL.revokeObjectURL(url));
+            blobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+            blobUrlsRef.current = [];
+            decryptInFlightRef.current.clear();
+            setDecryptedFileUrls(new Map());
         };
-    }, [channelId]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [channelId]);
 
     // Voice Recording State
     const [isRecording, setIsRecording] = useState(false);
@@ -1159,6 +1165,57 @@ const ChannelChat = () => {
         return unsub;
     }, [channelId, guildId, currentUserId, channelIsEncrypted, channelKeyVersion]);
 
+    // Batch-decrypt encrypted messages when E2E key becomes available (for history messages)
+    useEffect(() => {
+        if (!channelE2EKey) return;
+        const encryptedMsgs = messages.filter(m => m.isEncrypted && m.encryptedContent && m.content === '[Encrypted message]');
+        if (encryptedMsgs.length === 0) return;
+
+        (async () => {
+            const updates: Array<{ id: number; content: string }> = [];
+            for (const m of encryptedMsgs) {
+                try {
+                    const plain = await decrypt(channelE2EKey, m.encryptedContent!);
+                    let text = plain;
+                    try {
+                        const parsed = JSON.parse(plain);
+                        if (parsed && parsed._e2e === 2) {
+                            text = parsed.text || '';
+                            // Trigger file decryption for v2 payloads
+                            if (Array.isArray(parsed.files) && parsed.files.length > 0 && m.attachments) {
+                                for (const fileMeta of parsed.files) {
+                                    const att = m.attachments.find((a: any) => a.id === fileMeta.id);
+                                    if (att && !decryptInFlightRef.current.has(fileMeta.id)) {
+                                        decryptInFlightRef.current.add(fileMeta.id);
+                                        fetch(att.url).then(r => r.blob()).then(async (blob) => {
+                                            const decrypted = await decryptFile(channelE2EKey, blob, fileMeta.iv, fileMeta.ef);
+                                            const blobUrl = URL.createObjectURL(decrypted);
+                                            blobUrlsRef.current.push(blobUrl);
+                                            setDecryptedFileUrls(prev => {
+                                                const next = new Map(prev);
+                                                next.set(fileMeta.id, { url: blobUrl, filename: decrypted.name, mimeType: fileMeta.mt });
+                                                return next;
+                                            });
+                                        }).catch(() => { decryptInFlightRef.current.delete(fileMeta.id); });
+                                    }
+                                }
+                            }
+                        }
+                    } catch { /* not JSON — plain text */ }
+                    updates.push({ id: m.id, content: text });
+                } catch {
+                    updates.push({ id: m.id, content: '[Encrypted message - unable to decrypt]' });
+                }
+            }
+            if (updates.length > 0) {
+                setMessages(prev => prev.map(m => {
+                    const u = updates.find(u => u.id === m.id);
+                    return u ? { ...m, content: u.content } : m;
+                }));
+            }
+        })();
+    }, [channelE2EKey, messages]);
+
     // Check if current user can manage channel (owner or has MANAGE_CHANNELS permission)
     useEffect(() => {
         if (!guildId || !currentUserId) return;
@@ -1307,6 +1364,8 @@ const ChannelChat = () => {
             edited: m.edited || false,
             replyToId: m.replyToId || undefined,
             threadReplyCount: m.threadReplyCount ?? 0,
+            isEncrypted: m.isEncrypted ?? false,
+            encryptedContent: m.encryptedContent ?? null,
             attachments,
             ...(isVoice ? { type: 'voice' as const } : {}),
             reactions: Array.isArray(m.reactions) && m.reactions.length > 0 ? m.reactions : undefined,
@@ -1701,16 +1760,18 @@ const ChannelChat = () => {
                             if (Array.isArray(parsed.files) && parsed.files.length > 0 && incomingAttachments) {
                                 for (const fileMeta of parsed.files) {
                                     const att = incomingAttachments.find((a: any) => a.id === fileMeta.id);
-                                    if (att && !decryptedFileUrls.has(fileMeta.id)) {
+                                    if (att && !decryptInFlightRef.current.has(fileMeta.id)) {
+                                        decryptInFlightRef.current.add(fileMeta.id);
                                         fetch(att.url).then(r => r.blob()).then(async (blob) => {
                                             const decrypted = await decryptFile(channelE2EKey, blob, fileMeta.iv, fileMeta.ef);
                                             const blobUrl = URL.createObjectURL(decrypted);
+                                            blobUrlsRef.current.push(blobUrl);
                                             setDecryptedFileUrls(prev => {
                                                 const next = new Map(prev);
                                                 next.set(fileMeta.id, { url: blobUrl, filename: decrypted.name, mimeType: fileMeta.mt });
                                                 return next;
                                             });
-                                        }).catch(() => { /* file decrypt failed */ });
+                                        }).catch(() => { decryptInFlightRef.current.delete(fileMeta.id); });
                                     }
                                 }
                             }
