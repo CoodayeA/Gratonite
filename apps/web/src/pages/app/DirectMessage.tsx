@@ -1725,6 +1725,9 @@ const DirectMessage = () => {
                             <button onClick={() => { navigator.clipboard.writeText(safetyNumber); addToast({ title: 'Safety number copied', variant: 'info' }); }} style={{ marginTop: '12px', width: '100%', padding: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '6px', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>
                                 Copy to clipboard
                             </button>
+                            <a href="https://gratonite.chat/blog/how-to-use-encrypted-dms" target="_blank" rel="noreferrer" style={{ display: 'block', marginTop: '10px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', textDecoration: 'none' }}>
+                                Learn how encryption works
+                            </a>
                         </div>
                     </div>
                 )}
