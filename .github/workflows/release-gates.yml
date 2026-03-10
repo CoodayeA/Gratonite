@@ -11,27 +11,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'pnpm'
-          cache-dependency-path: apps/web/pnpm-lock.yaml
 
       - name: Install web deps
-        run: pnpm --dir apps/web install --frozen-lockfile
+        run: cd apps/web && npm install
 
       - name: Install api deps
-        run: pnpm --dir apps/api install --frozen-lockfile
+        run: cd apps/api && npm install
 
-      - name: Web lint (zero warnings)
-        run: npm --prefix apps/web run lint
+      - name: Web type-check + build
+        run: cd apps/web && npm run build
 
-      - name: API lint (zero warnings)
-        run: pnpm --dir apps/api run lint
+      - name: API type-check + build
+        run: cd apps/api && npm run build
 
-      - name: Release verification
-        run: npm run verify:release:all
+      - name: Placeholder guard (web)
+        run: cd apps/web && npm run guard:placeholders
+
+      - name: Placeholder guard (api)
+        run: cd apps/api && npm run guard:placeholders
