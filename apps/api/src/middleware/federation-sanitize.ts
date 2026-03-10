@@ -14,10 +14,35 @@ const MAX_BODY_SIZE = 1_000_000; // 1MB
 const DANGEROUS_SCHEMES = ['javascript:', 'data:', 'vbscript:', 'file:'];
 
 /**
- * Strip HTML tags from a string (basic sanitization).
+ * Strip HTML tags from a string.
+ *
+ * Uses a loop to handle nested/malformed tags like `<<script>script>` that
+ * a single regex pass would miss. Also strips event handler attributes
+ * (onerror, onclick, etc.) and encodes residual HTML entities.
  */
 function stripHtml(str: string): string {
-  return str.replace(/<[^>]*>/g, '');
+  const TAG_RE = /<[^>]*>/g;
+
+  // Repeatedly strip tags until the output stabilises (handles nesting tricks)
+  let result = str;
+  let prev: string;
+  let iterations = 0;
+  do {
+    prev = result;
+    result = result.replace(TAG_RE, '');
+    iterations++;
+  } while (result !== prev && iterations < 10);
+
+  // Strip any leftover event-handler-style attributes (e.g. onerror=...)
+  result = result.replace(/\bon\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi, '');
+
+  // Encode residual angle brackets and ampersands to prevent injection
+  result = result
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  return result;
 }
 
 /**

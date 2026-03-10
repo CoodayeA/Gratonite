@@ -24,6 +24,7 @@ import { startFriendshipStreaksJob } from './jobs/friendshipStreaks';
 import { startGiveawaysJob } from './jobs/giveaways';
 import { startGuildDigestJob } from './jobs/guildDigest';
 import { httpRequestDuration, activeWebSocketConnections, registry } from './lib/metrics';
+import { globalIpRateLimit } from './middleware/rateLimit';
 import { initFederation, isFederationEnabled } from './federation/index';
 import { initFederationNamespace } from './federation/realtime';
 import { wellKnownHandler } from './routes/federation';
@@ -143,7 +144,20 @@ initSocket(io);
 app.set('trust proxy', 1);
 
 // Security headers (HSTS, X-Content-Type-Options, X-Frame-Options, etc.)
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:", "https:"],
+      connectSrc: ["'self'", "wss:", "https:"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      mediaSrc: ["'self'", "blob:", "https:"],
+      frameSrc: ["'none'"],
+    },
+  },
+}));
 
 app.use(
   cors({
@@ -151,6 +165,11 @@ app.use(
     credentials: true,
   })
 );
+// Global IP-based rate limit BEFORE body parsing so large payloads are rejected early
+app.use(globalIpRateLimit);
+
+// Stripe webhook needs the raw body for signature verification — mount BEFORE express.json()
+app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));

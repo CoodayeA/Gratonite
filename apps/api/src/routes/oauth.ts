@@ -14,6 +14,8 @@ const sha256 = (s: string) => crypto.createHash('sha256').update(s).digest('hex'
 oauthRouter.get('/authorize', async (req: Request, res: Response): Promise<void> => {
   const clientId = typeof req.query.client_id === 'string' ? req.query.client_id : '';
   const scope = typeof req.query.scope === 'string' ? req.query.scope : '';
+  const redirectUri = typeof req.query.redirect_uri === 'string' ? req.query.redirect_uri : '';
+  const state = typeof req.query.state === 'string' ? req.query.state : '';
 
   if (!clientId) {
     res.status(400).json({ code: 'VALIDATION_ERROR', message: 'client_id is required' }); return;
@@ -24,7 +26,25 @@ oauthRouter.get('/authorize', async (req: Request, res: Response): Promise<void>
     res.status(404).json({ code: 'NOT_FOUND', message: 'Application not found' }); return;
   }
 
-  const requestedScopes = scope ? scope.split(' ') : app.scopes;
+  // C1: Validate redirect URI against registered URIs
+  if (redirectUri && !app.redirectUris.includes(redirectUri)) {
+    res.status(400).json({ code: 'INVALID_REDIRECT_URI', message: 'redirect_uri does not match any registered redirect URIs for this application' }); return;
+  }
+
+  // C2: Filter requested scopes against app's registered scopes
+  const requestedScopes = scope ? scope.split(' ').filter(s => app.scopes.includes(s)) : app.scopes;
+  if (requestedScopes.length === 0) {
+    res.status(400).json({ code: 'INVALID_SCOPE', message: 'No valid scopes requested' }); return;
+  }
+
+  // M3: Generate and store a server-side state token to prevent CSRF
+  const serverState = crypto.randomBytes(16).toString('hex');
+  await redis.set(
+    `oauth:state:${serverState}`,
+    JSON.stringify({ clientId, redirectUri, state }),
+    'EX',
+    600, // 10-minute TTL
+  );
 
   res.json({
     id: app.id,
@@ -32,19 +52,43 @@ oauthRouter.get('/authorize', async (req: Request, res: Response): Promise<void>
     description: app.description,
     iconHash: app.iconHash,
     scopes: requestedScopes,
+    redirectUri: redirectUri || (app.redirectUris.length > 0 ? app.redirectUris[0] : ''),
+    serverState,
   });
 });
 
 /** POST /oauth/authorize — authenticated: approve or deny consent */
 oauthRouter.post('/authorize', requireAuth, async (req: Request, res: Response): Promise<void> => {
-  const { clientId, redirectUri, scope, state, approved } = req.body;
+  const { clientId, scope, serverState, approved } = req.body;
 
-  if (!clientId || !redirectUri) {
-    res.status(400).json({ code: 'VALIDATION_ERROR', message: 'clientId and redirectUri are required' }); return;
+  if (!clientId || !serverState) {
+    res.status(400).json({ code: 'VALIDATION_ERROR', message: 'clientId and serverState are required' }); return;
+  }
+
+  // M3: Verify the server-side state token to prevent CSRF
+  const storedStateRaw = await redis.get(`oauth:state:${serverState}`);
+  if (!storedStateRaw) {
+    res.status(400).json({ code: 'INVALID_STATE', message: 'Invalid or expired state parameter. Please restart the authorization flow.' }); return;
+  }
+  await redis.del(`oauth:state:${serverState}`); // single-use
+
+  const storedState = JSON.parse(storedStateRaw) as { clientId: string; redirectUri: string; state: string };
+
+  // Verify the clientId matches what was stored with the state
+  if (storedState.clientId !== clientId) {
+    res.status(400).json({ code: 'INVALID_STATE', message: 'State does not match the authorization request' }); return;
+  }
+
+  // C1: Use the validated redirect URI from the server-side state, not from the client
+  const validatedRedirectUri = storedState.redirectUri;
+  const clientState = storedState.state; // original state from the OAuth client
+
+  if (!validatedRedirectUri) {
+    res.status(400).json({ code: 'VALIDATION_ERROR', message: 'No redirect URI was provided in the authorization request' }); return;
   }
 
   if (!approved) {
-    res.json({ redirectUri: `${redirectUri}?error=access_denied&state=${encodeURIComponent(state || '')}` }); return;
+    res.json({ redirectTo: `${validatedRedirectUri}?error=access_denied&state=${encodeURIComponent(clientState || '')}` }); return;
   }
 
   const [app] = await db.select().from(oauthApps).where(eq(oauthApps.clientId, clientId)).limit(1);
@@ -52,15 +96,21 @@ oauthRouter.post('/authorize', requireAuth, async (req: Request, res: Response):
     res.status(404).json({ code: 'NOT_FOUND', message: 'Application not found' }); return;
   }
 
+  // C2: Filter requested scopes against app's registered scopes
+  const requestedScopes = scope ? (scope as string).split(' ').filter((s: string) => app.scopes.includes(s)) : app.scopes;
+  if (requestedScopes.length === 0) {
+    res.status(400).json({ code: 'INVALID_SCOPE', message: 'No valid scopes requested' }); return;
+  }
+
   const code = crypto.randomBytes(16).toString('hex');
   await redis.set(
     `oauth:code:${code}`,
-    JSON.stringify({ clientId, userId: req.userId, scopes: scope ? scope.split(' ') : app.scopes }),
+    JSON.stringify({ clientId, userId: req.userId, scopes: requestedScopes }),
     'EX',
     60,
   );
 
-  res.json({ code, state, redirectUri });
+  res.json({ code, state: clientState, redirectTo: `${validatedRedirectUri}?code=${code}&state=${encodeURIComponent(clientState || '')}` });
 });
 
 /** POST /oauth/token — exchange code for tokens */

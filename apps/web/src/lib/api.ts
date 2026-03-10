@@ -137,6 +137,16 @@ interface InventoryItem {
 // ---------------------------------------------------------------------------
 // Token management (module-scoped, not reactive)
 // ---------------------------------------------------------------------------
+// SECURITY NOTE: Access tokens are currently stored in localStorage for
+// persistence across page reloads. This is vulnerable to XSS attacks — any
+// injected script can read localStorage. The long-term fix is migrating to
+// httpOnly cookies set by the API server, which are inaccessible to JS.
+// Until that migration:
+//   1. All user-generated HTML must be sanitized (DOMPurify) before rendering.
+//   2. Tokens must be cleared from localStorage on every logout/auth-failure path.
+//   3. Tokens must never be logged, included in error messages, or exposed
+//      to client-side telemetry.
+// ---------------------------------------------------------------------------
 
 let accessToken: string | null = null;
 let refreshPromise: Promise<string | null> | null = null;

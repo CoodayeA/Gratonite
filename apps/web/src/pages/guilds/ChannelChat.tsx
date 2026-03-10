@@ -22,8 +22,8 @@ import { markRead } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
 import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onMessageDeleteBulk, onReactionAdd, onReactionRemove, onChannelPinsUpdate, onSocketReconnect, onChannelBackgroundUpdated, onGroupKeyRotationNeeded, onThreadCreate, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type MessageDeleteBulkPayload, type ReactionPayload, type ChannelPinsUpdatePayload, type GroupKeyRotationNeededPayload } from '../../lib/socket';
 import Avatar from '../../components/ui/Avatar';
-import { encrypt, decrypt, getOrCreateKeyPair, decryptGroupKey, generateGroupKey, encryptGroupKey, importPublicKey } from '../../lib/e2e';
-import { Lock } from 'lucide-react';
+import { encrypt, decrypt, getOrCreateKeyPair, decryptGroupKey, generateGroupKey, encryptGroupKey, importPublicKey, encryptFile, decryptFile } from '../../lib/e2e';
+import { Lock, Loader2 as Loader2Icon } from 'lucide-react';
 
 type MediaType = 'image' | 'video';
 
@@ -84,6 +84,7 @@ type Message = {
     authorAvatarHash?: string | null;
     authorNameplateStyle?: string | null;
     embeds?: Array<{ url: string; title?: string; description?: string; image?: string; siteName?: string }>;
+    isEncrypted?: boolean;
     expiresAt?: string | null;
     createdAt?: string | null;
 };
@@ -169,6 +170,7 @@ const MemoizedMessageItem = memo(({
     addToast,
     compactMode,
     isNewMessageDivider,
+    decryptedFileUrls = new Map(),
 }: any) => {
     const [isHovered, setIsHovered] = useState(false);
     const [famGiven, setFamGiven] = useState(false);
@@ -430,39 +432,53 @@ const MemoizedMessageItem = memo(({
                             return (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
                                 {filteredAttachments.map((att: Attachment) => {
-                                    const isImage = att.mimeType?.startsWith('image/');
-                                    const isVideo = att.mimeType?.startsWith('video/') || /\.(mp4|webm|mov|ogg)$/i.test(att.filename);
-                                    const isAudio = att.mimeType?.startsWith('audio/') || /\.(mp3|wav|flac|m4a|aac)$/i.test(att.filename);
+                                    // Use decrypted file URL if available (E2E encrypted file)
+                                    const decFile = decryptedFileUrls.get(att.id);
+                                    const displayUrl = decFile?.url || att.url;
+                                    const displayName = decFile?.filename || att.filename;
+                                    const displayMime = decFile?.mimeType || att.mimeType;
+                                    // If encrypted but not yet decrypted, show loading state
+                                    if (msg.isEncrypted && !decFile && att.mimeType === 'application/octet-stream') {
+                                        return (
+                                            <div key={att.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', maxWidth: '320px' }}>
+                                                <Loader2Icon size={16} style={{ color: 'var(--text-muted)', animation: 'spin 1s linear infinite' }} />
+                                                <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Decrypting file...</span>
+                                            </div>
+                                        );
+                                    }
+                                    const isImage = displayMime?.startsWith('image/');
+                                    const isVideo = displayMime?.startsWith('video/') || /\.(mp4|webm|mov|ogg)$/i.test(displayName);
+                                    const isAudio = displayMime?.startsWith('audio/') || /\.(mp3|wav|flac|m4a|aac)$/i.test(displayName);
                                     const isSticker = (att as any).type === 'sticker';
                                     if (isSticker) {
                                         return (
-                                            <img key={att.id} src={att.url} alt={att.filename} style={{ width: '160px', height: '160px', objectFit: 'contain' }} />
+                                            <img key={att.id} src={displayUrl} alt={displayName} style={{ width: '160px', height: '160px', objectFit: 'contain' }} />
                                         );
                                     }
                                     if (isImage) {
                                         return (
-                                            <div key={att.id} className="chat-media-attachment" onClick={() => onImageClick?.(att.url)} style={{
+                                            <div key={att.id} className="chat-media-attachment" onClick={() => onImageClick?.(displayUrl)} style={{
                                                 maxWidth: '400px', borderRadius: '8px', overflow: 'hidden',
                                                 border: '1px solid var(--stroke)', cursor: 'pointer',
                                                 background: 'var(--bg-tertiary)',
                                             }}>
-                                                <img src={att.url} alt={att.filename} style={{ width: '100%', display: 'block', objectFit: 'contain', maxHeight: '350px' }} />
+                                                <img src={displayUrl} alt={displayName} style={{ width: '100%', display: 'block', objectFit: 'contain', maxHeight: '350px' }} />
                                             </div>
                                         );
                                     }
                                     if (isVideo) {
                                         return (
-                                            <video key={att.id} controls preload="metadata" src={att.url} style={{ maxWidth: '400px', borderRadius: '8px', display: 'block' }} />
+                                            <video key={att.id} controls preload="metadata" src={displayUrl} style={{ maxWidth: '400px', borderRadius: '8px', display: 'block' }} />
                                         );
                                     }
                                     if (isAudio) {
                                         return (
-                                            <audio key={att.id} controls src={att.url} style={{ width: '100%', maxWidth: '400px' }} />
+                                            <audio key={att.id} controls src={displayUrl} style={{ width: '100%', maxWidth: '400px' }} />
                                         );
                                     }
                                     const sizeStr = att.size < 1024 ? `${att.size} B` : att.size < 1048576 ? `${(att.size / 1024).toFixed(1)} KB` : `${(att.size / 1048576).toFixed(1)} MB`;
                                     return (
-                                        <a key={att.id} href={att.url} target="_blank" rel="noopener noreferrer" style={{
+                                        <a key={att.id} href={displayUrl} download={displayName} target="_blank" rel="noopener noreferrer" style={{
                                             display: 'flex', alignItems: 'center', gap: '10px',
                                             padding: '10px 14px', background: 'var(--bg-tertiary)',
                                             border: '1px solid var(--stroke)', borderRadius: '8px',
@@ -473,7 +489,7 @@ const MemoizedMessageItem = memo(({
                                             <FileText size={20} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
                                             <div style={{ flex: 1, overflow: 'hidden' }}>
                                                 <div style={{ fontSize: '14px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--accent-primary)' }}>
-                                                    {att.filename}
+                                                    {displayName}
                                                 </div>
                                                 <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{sizeStr}</div>
                                             </div>
@@ -723,6 +739,14 @@ const ChannelChat = () => {
     const [channelAttachmentsEnabled, setChannelAttachmentsEnabled] = useState(true);
     const [channelKeyVersion, setChannelKeyVersion] = useState<number | null>(null);
     const e2eKeyPairRef = useRef<{ publicKey: CryptoKey; privateKey: CryptoKey } | null>(null);
+    const [decryptedFileUrls, setDecryptedFileUrls] = useState<Map<string, { url: string; filename: string; mimeType: string }>>(new Map());
+
+    // Clean up blob URLs when channel changes or component unmounts
+    useEffect(() => {
+        return () => {
+            decryptedFileUrls.forEach(({ url }) => URL.revokeObjectURL(url));
+        };
+    }, [channelId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Voice Recording State
     const [isRecording, setIsRecording] = useState(false);
@@ -1667,7 +1691,33 @@ const ChannelChat = () => {
             let decryptedContent = data.content || '';
             if ((data as any).isEncrypted && (data as any).encryptedContent && channelE2EKey) {
                 try {
-                    decryptedContent = await decrypt(channelE2EKey, (data as any).encryptedContent);
+                    const plain = await decrypt(channelE2EKey, (data as any).encryptedContent);
+                    // Check for structured E2E payload (v2 — includes file metadata)
+                    try {
+                        const parsed = JSON.parse(plain);
+                        if (parsed && parsed._e2e === 2) {
+                            decryptedContent = parsed.text || '';
+                            // Decrypt file attachments in background
+                            if (Array.isArray(parsed.files) && parsed.files.length > 0 && incomingAttachments) {
+                                for (const fileMeta of parsed.files) {
+                                    const att = incomingAttachments.find((a: any) => a.id === fileMeta.id);
+                                    if (att && !decryptedFileUrls.has(fileMeta.id)) {
+                                        fetch(att.url).then(r => r.blob()).then(async (blob) => {
+                                            const decrypted = await decryptFile(channelE2EKey, blob, fileMeta.iv, fileMeta.ef);
+                                            const blobUrl = URL.createObjectURL(decrypted);
+                                            setDecryptedFileUrls(prev => {
+                                                const next = new Map(prev);
+                                                next.set(fileMeta.id, { url: blobUrl, filename: decrypted.name, mimeType: fileMeta.mt });
+                                                return next;
+                                            });
+                                        }).catch(() => { /* file decrypt failed */ });
+                                    }
+                                }
+                            }
+                        } else {
+                            decryptedContent = plain;
+                        }
+                    } catch { decryptedContent = plain; /* not JSON — plain text */ }
                 } catch {
                     decryptedContent = '[Encrypted message - unable to decrypt]';
                 }
@@ -1687,6 +1737,7 @@ const ChannelChat = () => {
                 replyToId: (data as any).replyToId || undefined,
                 replyToAuthor,
                 replyToContent,
+                isEncrypted: (data as any).isEncrypted ?? false,
                 attachments: incomingAttachments,
                 embeds: Array.isArray((data as any).embeds) && (data as any).embeds.length > 0 ? (data as any).embeds : undefined,
                 authorRoleColor: data.authorId ? roleColorCacheRef.current.get(data.authorId) : undefined,
@@ -1851,10 +1902,10 @@ const ChannelChat = () => {
     }, [messages]);
 
     const scrollToBottom = useCallback(() => {
-        if (messages.length > 0) {
-            if (parentRef.current) parentRef.current.scrollTop = parentRef.current.scrollHeight;
+        if (messages.length > 0 && parentRef.current) {
+            parentRef.current.scrollTop = parentRef.current.scrollHeight;
         }
-    }, [messages.length, rowVirtualizer]);
+    }, [messages.length]);
 
     // Load older messages when user scrolls near top
     useEffect(() => {
@@ -1884,17 +1935,12 @@ const ChannelChat = () => {
         if (messages.length === 0) return;
         if (needsInitialScrollRef.current) {
             needsInitialScrollRef.current = false;
-            // Always scroll to bottom on channel open — users expect to see latest messages
-            // Use setTimeout to ensure DOM has fully rendered (rAF alone isn't enough for virtualizers)
-            const doScroll = () => {
-                if (parentRef.current) {
-                    parentRef.current.scrollTop = parentRef.current.scrollHeight;
-                }
-            };
-            doScroll();
-            requestAnimationFrame(doScroll);
-            setTimeout(doScroll, 50);
-            setTimeout(doScroll, 150);
+            // Scroll to bottom on initial channel load.
+            // rAF waits for the next paint (virtualizer content rendered),
+            // then scrollTop = scrollHeight is instant (no smooth scrolling).
+            requestAnimationFrame(() => {
+                if (parentRef.current) parentRef.current.scrollTop = parentRef.current.scrollHeight;
+            });
             return;
         }
         // On new message: only auto-scroll if user is near the bottom
@@ -1991,14 +2037,26 @@ const ChannelChat = () => {
 
         const processedContent = processEmojis(inputValue);
 
-        // Upload attached files and collect IDs
+        // Upload attached files — encrypt if channel has E2E enabled
         let attachmentIds: string[] = [];
+        const encryptedFileMeta: Array<{ id: string; iv: string; ef: string; mt: string }> = [];
         if (chatAttachedFiles.length > 0) {
             try {
-                const uploadResults = await Promise.all(
-                    chatAttachedFiles.map(f => api.files.upload(f.file, 'attachment'))
-                );
-                attachmentIds = uploadResults.map(r => r.id);
+                if (channelE2EKey && channelIsEncrypted) {
+                    // Encrypt files before upload
+                    for (const f of chatAttachedFiles) {
+                        const { encryptedBlob, encryptedFilename, iv } = await encryptFile(channelE2EKey, f.file);
+                        const encFile = new File([encryptedBlob], 'encrypted.bin', { type: 'application/octet-stream' });
+                        const result = await api.files.upload(encFile, 'attachment');
+                        attachmentIds.push(result.id);
+                        encryptedFileMeta.push({ id: result.id, iv, ef: encryptedFilename, mt: f.file.type || 'application/octet-stream' });
+                    }
+                } else {
+                    const uploadResults = await Promise.all(
+                        chatAttachedFiles.map(f => api.files.upload(f.file, 'attachment'))
+                    );
+                    attachmentIds = uploadResults.map(r => r.id);
+                }
             } catch {
                 addToast({ title: 'Failed to upload attachments', variant: 'error' });
                 return;
@@ -2036,7 +2094,11 @@ const ChannelChat = () => {
         };
         if (channelE2EKey && channelIsEncrypted) {
             try {
-                const encrypted = await encrypt(channelE2EKey, processedContent || ' ');
+                // Build structured payload when files are present
+                const plainPayload = encryptedFileMeta.length > 0
+                    ? JSON.stringify({ _e2e: 2, text: processedContent || ' ', files: encryptedFileMeta })
+                    : processedContent || ' ';
+                const encrypted = await encrypt(channelE2EKey, plainPayload);
                 sendPayload.content = '[Encrypted message]';
                 sendPayload.isEncrypted = true;
                 sendPayload.encryptedContent = encrypted;
@@ -2793,7 +2855,7 @@ const ChannelChat = () => {
                             Beginning of channel history
                         </div>
                     )}
-                    <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+                    <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative', flexShrink: 0 }}>
                         {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                             const msg = messages[virtualRow.index];
                             const prevMsg = messages[virtualRow.index - 1];
@@ -2840,6 +2902,7 @@ const ChannelChat = () => {
                                         addToast={addToast}
                                         compactMode={compactMode}
                                         isNewMessageDivider={!!(lastReadMessageId && prevMsg?.apiId === lastReadMessageId && msg.apiId !== lastReadMessageId)}
+                                        decryptedFileUrls={decryptedFileUrls}
                                     />
                                 </div>
                             );

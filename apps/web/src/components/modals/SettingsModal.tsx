@@ -342,6 +342,7 @@ const SettingsModal = ({
     // Delete account state
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
+    const [deletePassword, setDeletePassword] = useState('');
 
     // 2FA states
     const [authenticatorEnabled, setAuthenticatorEnabled] = useState(false);
@@ -908,6 +909,14 @@ const SettingsModal = ({
                                         <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid var(--error)', borderRadius: 'var(--radius-md)', padding: '20px', marginTop: '8px' }}>
                                             <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--error)', marginBottom: '8px' }}>Are you absolutely sure?</div>
                                             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>This action cannot be undone. This will permanently delete your account, messages, and remove all your data from our servers.</p>
+                                            <label style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>Enter your password</label>
+                                            <input
+                                                type="password"
+                                                value={deletePassword}
+                                                onChange={e => setDeletePassword(e.target.value)}
+                                                placeholder="Password"
+                                                style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', marginBottom: '12px', boxSizing: 'border-box' }}
+                                            />
                                             <label style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>Type DELETE to confirm</label>
                                             <input
                                                 type="text"
@@ -919,8 +928,8 @@ const SettingsModal = ({
                                             <div style={{ display: 'flex', gap: '8px' }}>
                                                 <button
                                                     onClick={() => {
-                                                        if (deleteConfirmText === 'DELETE') {
-                                                            api.users.deleteAccount('').then(() => {
+                                                        if (deleteConfirmText === 'DELETE' && deletePassword) {
+                                                            api.users.deleteAccount(deletePassword).then(() => {
                                                                 setShowDeleteConfirm(false);
                                                                 setDeleteConfirmText('');
                                                                 addToast({ title: 'Account Deleted', description: 'Your account has been scheduled for deletion.', variant: 'success' });
@@ -928,10 +937,10 @@ const SettingsModal = ({
                                                             }).catch((e: any) => addToast({ title: 'Failed to delete account', description: e?.message || 'Unknown error', variant: 'error' }));
                                                         }
                                                     }}
-                                                    disabled={deleteConfirmText !== 'DELETE'}
-                                                    style={{ background: deleteConfirmText === 'DELETE' ? 'var(--error)' : 'var(--bg-elevated)', border: 'none', padding: '8px 20px', borderRadius: 'var(--radius-sm)', color: deleteConfirmText === 'DELETE' ? 'white' : 'var(--text-muted)', cursor: deleteConfirmText === 'DELETE' ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: '13px' }}
+                                                    disabled={deleteConfirmText !== 'DELETE' || !deletePassword}
+                                                    style={{ background: deleteConfirmText === 'DELETE' && deletePassword ? 'var(--error)' : 'var(--bg-elevated)', border: 'none', padding: '8px 20px', borderRadius: 'var(--radius-sm)', color: deleteConfirmText === 'DELETE' && deletePassword ? 'white' : 'var(--text-muted)', cursor: deleteConfirmText === 'DELETE' && deletePassword ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: '13px' }}
                                                 >Delete My Account</button>
-                                                <button onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); }} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '8px 20px', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Cancel</button>
+                                                <button onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); setDeletePassword(''); }} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '8px 20px', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Cancel</button>
                                             </div>
                                         </div>
                                     )}

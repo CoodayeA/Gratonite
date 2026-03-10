@@ -50,6 +50,51 @@ import { activeWebSocketConnections } from '../lib/metrics';
 // Ephemeral — not persisted to Redis (too high frequency: ~15 updates/sec/user)
 const spatialPositions = new Map<string, Map<string, { x: number; y: number }>>();
 
+// ---------------------------------------------------------------------------
+// Per-user, per-event WebSocket rate limiter
+// ---------------------------------------------------------------------------
+
+/** Rate limit config: [maxEvents, windowMs] */
+const WS_RATE_LIMITS: Record<string, [number, number]> = {
+  PRESENCE_UPDATE: [5, 10_000],          // max 5 per 10 seconds
+  SPATIAL_POSITION_UPDATE: [10, 5_000],  // max 10 per 5 seconds
+  // TYPING_START is handled via HTTP POST, not a socket event — rate limit there instead
+};
+
+/** Map key: `${userId}:${eventType}` → array of timestamps */
+const wsRateBuckets = new Map<string, number[]>();
+
+/** Periodically prune stale WebSocket rate-limit entries */
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamps] of wsRateBuckets) {
+    const fresh = timestamps.filter(t => now - t < 15_000);
+    if (fresh.length === 0) wsRateBuckets.delete(key);
+    else wsRateBuckets.set(key, fresh);
+  }
+}, 30_000).unref();
+
+/**
+ * Returns true if the event should be allowed, false if rate-limited.
+ * Silently drops events that exceed the limit.
+ */
+function checkWsRateLimit(userId: string, eventType: string): boolean {
+  const config = WS_RATE_LIMITS[eventType];
+  if (!config) return true; // no limit configured for this event
+  const [maxEvents, windowMs] = config;
+  const key = `${userId}:${eventType}`;
+  const now = Date.now();
+  let timestamps = wsRateBuckets.get(key) ?? [];
+  timestamps = timestamps.filter(t => now - t < windowMs);
+  if (timestamps.length >= maxEvents) {
+    wsRateBuckets.set(key, timestamps);
+    return false;
+  }
+  timestamps.push(now);
+  wsRateBuckets.set(key, timestamps);
+  return true;
+}
+
 /**
  * initSocket — Wire up Socket.io authentication middleware and connection
  * handlers on the provided server instance.
@@ -83,6 +128,7 @@ export function initSocket(io: SocketIOServer): void {
         token = authToken;
       } else if (queryToken) {
         token = queryToken;
+        console.warn(`[socket.io] DEPRECATION: client connected with token via query parameter (socket ${socket.id}). Prefer using the auth handshake object instead.`);
       }
 
       if (!token) {
@@ -161,7 +207,8 @@ export function initSocket(io: SocketIOServer): void {
         .where(eq(users.id, userId))
         .limit(1);
       const desiredStatus = dbUser?.status === 'invisible' ? 'invisible' : 'online';
-      await redis.set(`presence:${userId}`, desiredStatus, 'EX', 300);
+      await redis.set(`presence:${userId}`, desiredStatus, 'EX', 600);
+      console.info(`[socket.io] presence set for ${userId}: ${desiredStatus} (guilds: ${userGuildIds.length})`);
       // Broadcast — invisible appears as "offline" to others
       const broadcastStatus = desiredStatus === 'invisible' ? 'offline' : desiredStatus;
       for (const guildId of userGuildIds) {
@@ -195,7 +242,10 @@ export function initSocket(io: SocketIOServer): void {
     // -------------------------------------------------------------------------
     socket.on('HEARTBEAT', async () => {
       try {
-        await redis.set(`presence:${userId}`, 'online', 'EX', 300);
+        // Preserve current status (idle/dnd/invisible) — don't force 'online'
+        const current = await redis.get(`presence:${userId}`);
+        const status = current || 'online';
+        await redis.set(`presence:${userId}`, status, 'EX', 600);
       } catch {
         // Non-fatal
       }
@@ -253,6 +303,7 @@ export function initSocket(io: SocketIOServer): void {
     // -------------------------------------------------------------------------
     socket.on('PRESENCE_UPDATE', async (data: { status: string; activity?: { name: string; type: string } | null }) => {
       if (!data?.status) return;
+      if (!checkWsRateLimit(userId, 'PRESENCE_UPDATE')) return;
       const validStatuses = ['online', 'idle', 'dnd', 'invisible'];
       if (!validStatuses.includes(data.status)) return;
 
@@ -264,9 +315,9 @@ export function initSocket(io: SocketIOServer): void {
       }
 
       try {
-        await redis.set(`presence:${userId}`, data.status, 'EX', 300);
+        await redis.set(`presence:${userId}`, data.status, 'EX', 600);
         if (activity) {
-          await redis.set(`presence:${userId}:activity`, JSON.stringify(activity), 'EX', 300);
+          await redis.set(`presence:${userId}:activity`, JSON.stringify(activity), 'EX', 600);
         } else if (data.activity === null) {
           await redis.del(`presence:${userId}:activity`);
         }
@@ -275,7 +326,7 @@ export function initSocket(io: SocketIOServer): void {
         const payload: { userId: string; status: string; activity?: { name: string; type: string } | null } = { userId, status: broadcastStatus };
         if (activity !== undefined && data.status !== 'invisible') payload.activity = activity;
         for (const guildId of userGuildIds) {
-          socket.to(`guild:${guildId}`).emit('PRESENCE_UPDATE', payload);
+          io.to(`guild:${guildId}`).emit('PRESENCE_UPDATE', payload);
         }
       } catch {
         // Non-fatal
@@ -419,6 +470,7 @@ export function initSocket(io: SocketIOServer): void {
     // -------------------------------------------------------------------------
     socket.on('SPATIAL_POSITION_UPDATE', (data: { channelId: string; x: number; y: number }) => {
       if (!data?.channelId || typeof data.x !== 'number' || typeof data.y !== 'number') return;
+      if (!checkWsRateLimit(userId, 'SPATIAL_POSITION_UPDATE')) return;
       if (!Number.isFinite(data.x) || !Number.isFinite(data.y)) return;
       if (!socket.rooms.has(`channel:${data.channelId}`)) return;
       // Clamp to 0–1
@@ -479,14 +531,15 @@ export function initSocket(io: SocketIOServer): void {
         posMap.delete(userId);
         if (posMap.size === 0) spatialPositions.delete(channelId);
       }
-      console.info(`[socket.io] user ${userId} disconnected (${socket.id})`);
-
       // Check if the user has other active sockets
       const userRoom = io.sockets.adapter.rooms.get(`user:${userId}`);
       if (!userRoom || userRoom.size === 0) {
-        // No more connections — set offline
+        // No more connections — set a 30s grace period instead of deleting immediately.
+        // If the user reconnects within 30s, heartbeat resumes and refreshes to 600s.
+        // If not, the key expires naturally and they go offline.
         try {
-          await redis.del(`presence:${userId}`);
+          await redis.expire(`presence:${userId}`, 30);
+          await redis.expire(`presence:${userId}:activity`, 30);
         } catch {
           // Non-fatal
         }

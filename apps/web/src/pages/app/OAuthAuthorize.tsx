@@ -18,6 +18,8 @@ interface AppInfo {
   description: string | null;
   iconHash: string | null;
   scopes: string[];
+  redirectUri: string;
+  serverState: string;
 }
 
 export default function OAuthAuthorize() {
@@ -25,31 +27,36 @@ export default function OAuthAuthorize() {
   const clientId = searchParams.get('client_id') || '';
   const redirectUri = searchParams.get('redirect_uri') || '';
   const scope = searchParams.get('scope') || '';
-  const state = searchParams.get('state') || '';
 
   const [app, setApp] = useState<AppInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const state = searchParams.get('state') || '';
+
   useEffect(() => {
     if (!clientId) { setError('Missing client_id'); setLoading(false); return; }
-    api.get<AppInfo>(`/oauth/authorize?client_id=${encodeURIComponent(clientId)}&scope=${encodeURIComponent(scope)}`)
+    const params = new URLSearchParams({ client_id: clientId, scope, redirect_uri: redirectUri, state });
+    api.get<AppInfo>(`/oauth/authorize?${params.toString()}`)
       .then(data => { setApp(data); setLoading(false); })
-      .catch(() => { setError('Application not found'); setLoading(false); });
-  }, [clientId, scope]);
+      .catch((err: any) => {
+        const msg = err?.message || 'Application not found';
+        setError(msg);
+        setLoading(false);
+      });
+  }, [clientId, scope, redirectUri, state]);
 
   const handleAuthorize = async (approved: boolean) => {
+    if (!app) return;
     setSubmitting(true);
     try {
-      const result = await api.post<{ code?: string; redirectUri: string; state?: string }>('/oauth/authorize', {
-        clientId, redirectUri, scope, state, approved,
+      const result = await api.post<{ code?: string; redirectTo: string; state?: string }>('/oauth/authorize', {
+        clientId, scope, serverState: app.serverState, approved,
       });
-      if (result.redirectUri) {
-        const url = approved && result.code
-          ? `${redirectUri}?code=${result.code}&state=${encodeURIComponent(state)}`
-          : result.redirectUri;
-        window.location.href = url;
+      // C1: Use the validated redirectTo URL from the backend, never the raw query param
+      if (result.redirectTo) {
+        window.location.href = result.redirectTo;
       }
     } catch {
       setError('Authorization failed');

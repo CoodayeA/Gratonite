@@ -21,6 +21,7 @@ import { getPublicKeyPem, getKeyId } from '../federation/crypto';
 import { recordInboundActivity } from '../federation/activities';
 import { parseFederationAddress, createShadowUser } from '../federation/user-resolver';
 import { exportAccount, verifyImportSignature, startImport, ExportData } from '../federation/export-import';
+import { assertNotPrivateHost } from '../lib/ssrf-guard';
 
 export const federationRouter = Router();
 
@@ -100,6 +101,15 @@ federationRouter.post('/handshake', async (req: Request, res: Response) => {
     baseUrl = `${parsed.protocol}//${parsed.host}`;
   } catch {
     res.status(400).json({ code: 'INVALID_URL', message: 'Invalid instanceUrl format' });
+    return;
+  }
+
+  // SSRF protection: resolve the hostname and block private IPs before fetching
+  try {
+    const parsedUrl = new URL(baseUrl);
+    await assertNotPrivateHost(parsedUrl.hostname);
+  } catch (ssrfErr: any) {
+    res.status(400).json({ code: 'SSRF_BLOCKED', message: `Blocked: ${ssrfErr.message}` });
     return;
   }
 

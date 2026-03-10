@@ -219,6 +219,18 @@ export const usernameCheckRateLimit = createRateLimiter({
 });
 
 /**
+ * globalIpRateLimit — 300 requests per 60 seconds, keyed by IP.
+ * Applied before body parsing so large payloads are rejected before
+ * the JSON parser processes them.
+ */
+export const globalIpRateLimit = createRateLimiter({
+  prefix: 'rl:global',
+  maxRequests: 300,
+  windowSeconds: 60,
+  keyFn: (req) => req.ip ?? req.socket.remoteAddress ?? null,
+});
+
+/**
  * messageRateLimit — 5 messages per 5 seconds, keyed by userId + channelId.
  * Apply to the POST /channels/:channelId/messages endpoint to prevent spam.
  */

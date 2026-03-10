@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
-import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star } from 'lucide-react';
-import { getOrCreateKeyPair, exportPublicKey, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported, generateGroupKey, encryptGroupKey, decryptGroupKey } from '../../lib/e2e';
+import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star, Shield } from 'lucide-react';
+import { getOrCreateKeyPair, exportPublicKey, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported, generateGroupKey, encryptGroupKey, decryptGroupKey, computeSafetyNumber, encryptFile, decryptFile } from '../../lib/e2e';
 import { onGroupKeyRotationNeeded, onUserKeyChanged } from '../../lib/socket';
 import type { GroupKeyRotationNeededPayload, UserKeyChangedPayload } from '../../lib/socket';
 
@@ -381,6 +381,11 @@ const DirectMessage = () => {
     const [decryptedContents, setDecryptedContents] = useState<Map<number, string>>(new Map());
     // Store key pair ref for group key rotation
     const e2eKeyPairRef = useRef<{ publicKey: CryptoKey; privateKey: CryptoKey } | null>(null);
+    const partnerPublicKeyRef = useRef<CryptoKey | null>(null);
+    const [showSafetyNumber, setShowSafetyNumber] = useState(false);
+    const [safetyNumber, setSafetyNumber] = useState<string | null>(null);
+    // Map of attachmentId -> decrypted blob URL + metadata (for E2E-encrypted files)
+    const [decryptedFileUrls, setDecryptedFileUrls] = useState<Map<string, { url: string; filename: string; mimeType: string }>>(new Map());
     const [showDisappearMenu, setShowDisappearMenu] = useState(false);
     const disappearMenuRef = useRef<HTMLDivElement>(null);
 
@@ -861,6 +866,7 @@ const DirectMessage = () => {
                 if (cancelled) return;
                 if (!data.publicKeyJwk) { setE2eError('Partner has not set up encryption yet'); return; }
                 const theirKey = await importPublicKey(data.publicKeyJwk);
+                partnerPublicKeyRef.current = theirKey;
                 const sharedKey = await deriveSharedKey(myKeyPair.privateKey, theirKey);
                 if (!cancelled) setE2eKey(sharedKey);
             } catch {
@@ -967,6 +973,30 @@ const DirectMessage = () => {
             encryptedMsgs.map(async (m) => {
                 try {
                     const plain = await decrypt(e2eKey, m.encryptedContent!);
+                    // Check for structured E2E payload (v2 — includes file metadata)
+                    try {
+                        const parsed = JSON.parse(plain);
+                        if (parsed && parsed._e2e === 2) {
+                            // Decrypt file attachments in background
+                            if (Array.isArray(parsed.files) && parsed.files.length > 0 && m.attachments) {
+                                for (const fileMeta of parsed.files) {
+                                    const att = m.attachments.find((a: MessageAttachment) => a.id === fileMeta.id);
+                                    if (att && !decryptedFileUrls.has(fileMeta.id)) {
+                                        fetch(att.url).then(r => r.blob()).then(async (blob) => {
+                                            const decrypted = await decryptFile(e2eKey, blob, fileMeta.iv, fileMeta.ef);
+                                            const blobUrl = URL.createObjectURL(decrypted);
+                                            setDecryptedFileUrls(prev => {
+                                                const next = new Map(prev);
+                                                next.set(fileMeta.id, { url: blobUrl, filename: decrypted.name, mimeType: fileMeta.mt });
+                                                return next;
+                                            });
+                                        }).catch(() => { /* file decrypt failed — show as generic attachment */ });
+                                    }
+                                }
+                            }
+                            return [m.id, parsed.text || ''] as const;
+                        }
+                    } catch { /* not JSON — plain text, fall through */ }
                     return [m.id, plain] as const;
                 } catch {
                     return [m.id, '[Decryption failed]'] as const;
@@ -1055,6 +1085,7 @@ const DirectMessage = () => {
                         const d = await api.encryption.getPublicKey(recipientId);
                         if (!d.publicKeyJwk) return;
                         const theirKey = await importPublicKey(d.publicKeyJwk);
+                        partnerPublicKeyRef.current = theirKey;
                         const sharedKey = await deriveSharedKey(myKeyPair.privateKey, theirKey);
                         setE2eKey(sharedKey);
                     } catch { /* keep showing warning */ }
@@ -1330,6 +1361,23 @@ const DirectMessage = () => {
         if (e.key === 'Escape' && editingMessage) { setEditingMessage(null); setInputValue(''); return; }
     };
 
+    // Safety number computation
+    const handleShowSafetyNumber = useCallback(async () => {
+        if (!e2eKeyPairRef.current || !partnerPublicKeyRef.current) return;
+        try {
+            const number = await computeSafetyNumber(e2eKeyPairRef.current.publicKey, partnerPublicKeyRef.current);
+            setSafetyNumber(number);
+            setShowSafetyNumber(true);
+        } catch { /* non-fatal */ }
+    }, []);
+
+    // Cleanup decrypted file blob URLs on unmount
+    useEffect(() => {
+        return () => {
+            decryptedFileUrls.forEach(({ url }) => URL.revokeObjectURL(url));
+        };
+    }, []);
+
     // Populate input when editing a message
     useEffect(() => {
         if (editingMessage) {
@@ -1371,12 +1419,22 @@ const DirectMessage = () => {
             return;
         }
 
-        // Upload files first
+        // Upload files — encrypt file content if E2E key is available
         const uploadedFiles: { id: string; url: string; filename: string; mimeType: string; size: number }[] = [];
+        const encryptedFileMeta: Array<{ id: string; iv: string; ef: string; mt: string }> = [];
         for (const f of dmAttachedFiles) {
             try {
-                const result = await api.files.upload(f.file);
-                uploadedFiles.push(result);
+                if (e2eKey) {
+                    // Encrypt file content and filename before upload
+                    const { encryptedBlob, encryptedFilename, iv } = await encryptFile(e2eKey, f.file);
+                    const encFile = new File([encryptedBlob], 'encrypted.bin', { type: 'application/octet-stream' });
+                    const result = await api.files.upload(encFile);
+                    uploadedFiles.push(result);
+                    encryptedFileMeta.push({ id: result.id, iv, ef: encryptedFilename, mt: f.file.type || 'application/octet-stream' });
+                } else {
+                    const result = await api.files.upload(f.file);
+                    uploadedFiles.push(result);
+                }
             } catch {
                 addToast({ title: `Failed to upload ${f.name}`, variant: 'error' });
             }
@@ -1388,19 +1446,29 @@ const DirectMessage = () => {
         if (content || attachmentIds.length > 0) {
             const optimisticId = Date.now();
             // Build attachment metadata for the optimistic message
-            const attachments: MessageAttachment[] = uploadedFiles.map(f => ({
-                id: f.id, filename: f.filename, url: f.url, contentType: f.mimeType, size: f.size
+            const attachments: MessageAttachment[] = uploadedFiles.map((f, idx) => ({
+                id: f.id,
+                filename: encryptedFileMeta[idx] ? dmAttachedFiles[idx]?.name || f.filename : f.filename,
+                url: f.url,
+                contentType: encryptedFileMeta[idx]?.mt || f.mimeType,
+                size: f.size,
             }));
 
             // If there are image attachments, show the first as inline media
-            const firstImage = uploadedFiles.find(f => f.mimeType?.startsWith('image/'));
+            const firstImage = e2eKey && encryptedFileMeta.length > 0
+                ? undefined  // Encrypted files can't show inline previews optimistically
+                : uploadedFiles.find(f => f.mimeType?.startsWith('image/'));
 
-            // Encrypt if E2E key is available (only text content is encrypted; attachments remain unencrypted)
+            // Encrypt if E2E key is available (text + file metadata encrypted together)
             let sendPayload: { content?: string | null; encryptedContent?: string; isEncrypted?: boolean; attachmentIds?: string[]; keyVersion?: number };
             let optimisticContent = content;
-            if (e2eKey && content) {
+            if (e2eKey && (content || encryptedFileMeta.length > 0)) {
                 try {
-                    const encryptedContent = await encrypt(e2eKey, content);
+                    // Build structured payload when files are present, plain text otherwise
+                    const plainPayload = encryptedFileMeta.length > 0
+                        ? JSON.stringify({ _e2e: 2, text: content, files: encryptedFileMeta })
+                        : content;
+                    const encryptedContent = await encrypt(e2eKey, plainPayload);
                     sendPayload = { content: null, encryptedContent, isEncrypted: true, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined, ...(groupKeyVersion != null ? { keyVersion: groupKeyVersion } : {}) };
                     // Store decrypted version optimistically so sender sees plaintext immediately
                     setDecryptedContents(prev => { const next = new Map(prev); next.set(optimisticId, content); return next; });
@@ -1537,7 +1605,7 @@ const DirectMessage = () => {
                                             <Pencil size={14} style={{ cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => { setEditGroupNameValue(groupName); setIsEditingGroupName(true); }} />
                                         )}
                                         {e2eKey && !isGroupDm && (
-                                            <Lock size={14} style={{ color: 'var(--success, #22c55e)' }} aria-label="End-to-end encrypted" />
+                                            <Lock size={14} style={{ color: 'var(--success, #22c55e)', cursor: 'pointer' }} aria-label="End-to-end encrypted" title="View safety number" onClick={handleShowSafetyNumber} />
                                         )}
                                         {e2eKey && isGroupDm && groupE2eAllMembersHaveKeys && (
                                             <Lock size={14} style={{ color: 'var(--success, #22c55e)' }} aria-label="End-to-end encrypted (group)" />
@@ -1628,6 +1696,30 @@ const DirectMessage = () => {
                         <Lock size={14} />
                         <span>Your partner&apos;s encryption key has changed. Verify their identity to ensure security.</span>
                         <X size={14} style={{ marginLeft: 'auto' }} />
+                    </div>
+                )}
+
+                {/* Safety Number Modal */}
+                {showSafetyNumber && safetyNumber && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowSafetyNumber(false)}>
+                        <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '24px', maxWidth: '400px', width: '90%', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Shield size={18} style={{ color: 'var(--success, #22c55e)' }} />
+                                    Safety Number
+                                </h3>
+                                <X size={18} style={{ cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => setShowSafetyNumber(false)} />
+                            </div>
+                            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                                Compare this number with <strong style={{ color: 'var(--text-primary)' }}>{userName}</strong> to verify that your conversation is securely encrypted. If the numbers match, no one has intercepted your keys.
+                            </p>
+                            <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '16px', fontFamily: 'monospace', fontSize: '18px', letterSpacing: '2px', textAlign: 'center', lineHeight: 2, wordBreak: 'break-all', color: 'var(--text-primary)' }}>
+                                {safetyNumber.match(/.{1,5}/g)?.join(' ')}
+                            </div>
+                            <button onClick={() => { navigator.clipboard.writeText(safetyNumber); addToast({ title: 'Safety number copied', variant: 'info' }); }} style={{ marginTop: '12px', width: '100%', padding: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '6px', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>
+                                Copy to clipboard
+                            </button>
+                        </div>
                     </div>
                 )}
 
@@ -2172,22 +2264,36 @@ const DirectMessage = () => {
                                             {/* Render file attachments */}
                                             {msg.attachments && msg.attachments.length > 0 && (
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-                                                    {msg.attachments.map((att) => (
-                                                        att.contentType?.startsWith('image/') ? (
+                                                    {msg.attachments.map((att) => {
+                                                        // Use decrypted file URL if available (E2E encrypted file)
+                                                        const decFile = decryptedFileUrls.get(att.id);
+                                                        const displayUrl = decFile?.url || att.url;
+                                                        const displayName = decFile?.filename || att.filename;
+                                                        const displayType = decFile?.mimeType || att.contentType;
+                                                        // If encrypted but not yet decrypted, show loading state
+                                                        if (msg.isEncrypted && !decFile && att.contentType === 'application/octet-stream') {
+                                                            return (
+                                                                <div key={att.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', maxWidth: '320px' }}>
+                                                                    <Loader2 size={16} style={{ color: 'var(--text-muted)', animation: 'spin 1s linear infinite' }} />
+                                                                    <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Decrypting file...</span>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return displayType?.startsWith('image/') ? (
                                                             <div key={att.id} style={{ maxWidth: '400px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--stroke)', cursor: 'pointer', background: 'var(--bg-tertiary)' }}>
-                                                                <img src={att.url} alt={att.filename} style={{ width: '100%', display: 'block', objectFit: 'cover' }} />
+                                                                <img src={displayUrl} alt={displayName} style={{ width: '100%', display: 'block', objectFit: 'cover' }} />
                                                             </div>
                                                         ) : (
-                                                            <a key={att.id} href={att.url} download={att.filename} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-primary)', maxWidth: '320px' }}>
+                                                            <a key={att.id} href={displayUrl} download={displayName} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-primary)', maxWidth: '320px' }}>
                                                                 <FileIcon size={20} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                                                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                                                    <div style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.filename}</div>
+                                                                    <div style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</div>
                                                                     <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{att.size < 1024 ? `${att.size} B` : att.size < 1048576 ? `${(att.size / 1024).toFixed(1)} KB` : `${(att.size / 1048576).toFixed(1)} MB`}</div>
                                                                 </div>
                                                                 <Download size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                                                             </a>
-                                                        )
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
                                         </div>

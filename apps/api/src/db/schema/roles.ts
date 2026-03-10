@@ -25,6 +25,7 @@ export const Permissions = {
   MANAGE_EMOJIS:     1n << 14n,
   MANAGE_WEBHOOKS:   1n << 15n,
   CREATE_INVITES:    1n << 16n,
+  MODERATE_MEMBERS:  1n << 17n,
 } as const;
 
 /** Default permissions for @everyone role */

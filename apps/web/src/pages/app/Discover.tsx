@@ -89,6 +89,7 @@ const PortalCheckinModal = ({ portal, onClose }: { portal: PortalInfo; onClose: 
     const navigate = useNavigate();
     const [joining, setJoining] = useState(false);
     const [joined, setJoined] = useState(false);
+    const [iconBroken, setIconBroken] = useState(false);
 
     const handleJoin = async () => {
         setJoining(true);
@@ -127,8 +128,8 @@ const PortalCheckinModal = ({ portal, onClose }: { portal: PortalInfo; onClose: 
                     )}
                     {/* Portal icon */}
                     <div style={{ position: 'absolute', bottom: -28, left: 24, width: '56px', height: '56px', borderRadius: '14px', background: 'var(--bg-elevated)', border: '3px solid var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
-                        {portal.iconHash ? (
-                            <img src={`${API_BASE}/files/${portal.iconHash}`} alt={portal.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        {portal.iconHash && !iconBroken ? (
+                            <img src={`${API_BASE}/files/${portal.iconHash}`} alt={portal.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={() => setIconBroken(true)} />
                         ) : (
                             portal.name.charAt(0).toUpperCase()
                         )}
@@ -365,6 +366,7 @@ const Discover = () => {
     const [federatedPortals, setFederatedPortals] = useState<FederatedPortalInfo[]>([]);
     const [federatedLoading, setFederatedLoading] = useState(false);
     const [selectedFederated, setSelectedFederated] = useState<FederatedPortalInfo | null>(null);
+    const [brokenIcons, setBrokenIcons] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         api.get<string[]>('/guilds/tags').then(tags => {
@@ -548,8 +550,8 @@ const Discover = () => {
                                         : 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(56, 189, 248, 0.25))',
                                 }}>
                                     <div style={{ position: 'absolute', bottom: '-20px', left: '16px', width: '44px', height: '44px', borderRadius: '10px', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.5)', border: '2px solid var(--stroke)', fontSize: '18px', overflow: 'hidden' }}>
-                                        {portal.iconHash ? (
-                                            <img src={`${API_BASE}/files/${portal.iconHash}`} alt={portal.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        {portal.iconHash && !brokenIcons.has(portal.iconHash) ? (
+                                            <img src={`${API_BASE}/files/${portal.iconHash}`} alt={portal.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={() => setBrokenIcons(s => new Set(s).add(portal.iconHash!))} />
                                         ) : (
                                             portal.name.charAt(0).toUpperCase()
                                         )}
@@ -764,8 +766,8 @@ const Discover = () => {
                             }}
                         >
                             <div style={{ position: 'absolute', bottom: '-20px', left: '16px', width: '40px', height: '40px', borderRadius: '8px', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.5)', border: '2px solid var(--stroke)', fontSize: '18px', overflow: 'hidden' }}>
-                                {portal.iconHash ? (
-                                    <img src={`${API_BASE}/files/${portal.iconHash}`} alt={portal.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                {portal.iconHash && !brokenIcons.has(portal.iconHash) ? (
+                                    <img src={`${API_BASE}/files/${portal.iconHash}`} alt={portal.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={() => setBrokenIcons(s => new Set(s).add(portal.iconHash!))} />
                                 ) : (
                                     portal.name.charAt(0).toUpperCase()
                                 )}

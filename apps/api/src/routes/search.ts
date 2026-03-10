@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
-import { eq, and, sql, desc, lt, gt, inArray } from 'drizzle-orm';
+import { eq, and, or, sql, desc, lt, gt, inArray } from 'drizzle-orm';
 import { db } from '../db/index';
 import { messages } from '../db/schema/messages';
 import { users } from '../db/schema/users';
 import { channels } from '../db/schema/channels';
-import { guilds } from '../db/schema/guilds';
+import { guilds, guildMembers } from '../db/schema/guilds';
+import { dmChannelMembers } from '../db/schema/channels';
 import { requireAuth } from '../middleware/auth';
 
 export const searchRouter = Router();
@@ -28,6 +29,35 @@ searchRouter.get('/messages', requireAuth, async (req: Request, res: Response): 
   if (channelId) conditions.push(eq(messages.channelId, channelId));
   if (authorId) conditions.push(eq(messages.authorId, authorId));
 
+  // Access control: only search channels the user can access.
+  // Fetch guild IDs where the user is a member.
+  const userGuildRows = await db
+    .select({ guildId: guildMembers.guildId })
+    .from(guildMembers)
+    .where(eq(guildMembers.userId, req.userId!));
+  const userGuildIds = userGuildRows.map(r => r.guildId);
+
+  // Fetch DM channel IDs where the user participates.
+  const userDmRows = await db
+    .select({ channelId: dmChannelMembers.channelId })
+    .from(dmChannelMembers)
+    .where(eq(dmChannelMembers.userId, req.userId!));
+  const userDmChannelIds = userDmRows.map(r => r.channelId);
+
+  if (userGuildIds.length === 0 && userDmChannelIds.length === 0) {
+    res.json([]); return;
+  }
+
+  // Build access condition: channel belongs to a guild the user is in, OR is a DM the user participates in.
+  const accessConditions: ReturnType<typeof eq>[] = [];
+  if (userGuildIds.length > 0) {
+    accessConditions.push(inArray(channels.guildId, userGuildIds));
+  }
+  if (userDmChannelIds.length > 0) {
+    accessConditions.push(inArray(messages.channelId, userDmChannelIds));
+  }
+  conditions.push(or(...accessConditions)!);
+
   const results = await db
     .select({
       id: messages.id,
@@ -42,8 +72,8 @@ searchRouter.get('/messages', requireAuth, async (req: Request, res: Response): 
       guildId: channels.guildId,
     })
     .from(messages)
+    .innerJoin(channels, eq(channels.id, messages.channelId))
     .leftJoin(users, eq(users.id, messages.authorId))
-    .leftJoin(channels, eq(channels.id, messages.channelId))
     .where(and(...conditions))
     .orderBy(desc(messages.createdAt))
     .limit(limit);

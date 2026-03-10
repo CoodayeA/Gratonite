@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import hljs from 'highlight.js';
+import DOMPurify from 'dompurify';
 import 'highlight.js/styles/github-dark.css';
 
 type RichTextRendererProps = {
@@ -343,9 +344,11 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({ content, cus
                 lang = lines.slice(0, firstNewline).trim();
                 code = lines.slice(firstNewline + 1);
             }
-            const highlightedHtml = lang && hljs.getLanguage(lang)
+            const rawHighlightedHtml = lang && hljs.getLanguage(lang)
                 ? hljs.highlight(code, { language: lang }).value
                 : hljs.highlightAuto(code).value;
+            // Sanitize highlight.js output to prevent XSS via crafted code blocks
+            const highlightedHtml = DOMPurify.sanitize(rawHighlightedHtml);
             rendered.push(
                 <pre key={`cb-${idx}`} className="code-block">
                     {lang && <div className="code-block-lang">{lang}</div>}

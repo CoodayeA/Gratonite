@@ -501,6 +501,10 @@ messagesRouter.post(
             if (rule.triggerType !== 'KEYWORD') continue;
             const metadata = rule.triggerMetadata as { keywords?: string[] };
             const keywords: string[] = metadata?.keywords || [];
+            // Skip excessively large automod rules to prevent DoS
+            if (keywords.length > 1000) continue;
+            const totalSize = keywords.reduce((sum, kw) => sum + kw.length, 0);
+            if (totalSize > 50_000) continue;
             const msgLower = content.toLowerCase();
             const matched = keywords.some((kw: string) => msgLower.includes(kw.toLowerCase()));
             if (!matched) continue;
@@ -601,6 +605,43 @@ messagesRouter.post(
       // Build embeds: include forwarded message reference if provided
       const embeds: Array<Record<string, unknown>> = [];
       if (forwardedFromMessageId) {
+        // Verify the user has access to the source message's channel
+        const [sourceMsg] = await db
+          .select({ channelId: messages.channelId })
+          .from(messages)
+          .where(eq(messages.id, forwardedFromMessageId))
+          .limit(1);
+        if (!sourceMsg) {
+          res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Forwarded message not found' });
+          return;
+        }
+        const [sourceChannel] = await db
+          .select({ guildId: channels.guildId })
+          .from(channels)
+          .where(eq(channels.id, sourceMsg.channelId))
+          .limit(1);
+        if (sourceChannel?.guildId) {
+          const [srcMembership] = await db
+            .select({ id: guildMembers.id })
+            .from(guildMembers)
+            .where(and(eq(guildMembers.guildId, sourceChannel.guildId), eq(guildMembers.userId, req.userId!)))
+            .limit(1);
+          if (!srcMembership) {
+            res.status(403).json({ code: 'FORBIDDEN', message: 'You do not have access to the forwarded message' });
+            return;
+          }
+        } else {
+          // DM channel — verify participation
+          const [srcDmMembership] = await db
+            .select({ id: dmChannelMembers.id })
+            .from(dmChannelMembers)
+            .where(and(eq(dmChannelMembers.channelId, sourceMsg.channelId), eq(dmChannelMembers.userId, req.userId!)))
+            .limit(1);
+          if (!srcDmMembership) {
+            res.status(403).json({ code: 'FORBIDDEN', message: 'You do not have access to the forwarded message' });
+            return;
+          }
+        }
         embeds.push({ type: 'forwarded', messageId: forwardedFromMessageId });
       }
 
@@ -635,9 +676,11 @@ messagesRouter.post(
 
       const payload = formatMessage(newMessage, author ?? null);
 
-      // Set slow mode cooldown after successful message insert
-      if (slowCh?.rateLimitPerUser && slowCh.rateLimitPerUser > 0) {
-        await redis.set(`slowmode:${channelId}:${req.userId}`, '1', 'EX', slowCh.rateLimitPerUser);
+      // Set slow mode cooldown after successful message insert — re-read current
+      // channel config so admin changes take effect immediately
+      const [currentSlowCh] = await db.select({ rateLimitPerUser: channels.rateLimitPerUser }).from(channels).where(eq(channels.id, channelId)).limit(1);
+      if (currentSlowCh?.rateLimitPerUser && currentSlowCh.rateLimitPerUser > 0) {
+        await redis.set(`slowmode:${channelId}:${req.userId}`, '1', 'EX', currentSlowCh.rateLimitPerUser);
       }
 
       // Emit real-time event to all clients subscribed to this channel.

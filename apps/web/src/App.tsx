@@ -46,7 +46,7 @@ import HelpCenter from './pages/app/HelpCenter';
 import InviteAccept from './pages/InviteAccept';
 import { NotFound } from './pages/ErrorStates';
 import { getDeterministicGradient } from './utils/colors';
-import { api, API_BASE, getAccessToken, ApiRequestError } from './lib/api';
+import { api, API_BASE, getAccessToken, setAccessToken, ApiRequestError } from './lib/api';
 import { connectSocket, disconnectSocket, getSocket, onPresenceUpdate, onVoiceStateUpdate, onSocketReconnect, onCallInvite, onCallCancel, type CallInvitePayload } from './lib/socket';
 import { useMobileSwipe } from './hooks/useMobileSwipe';
 
@@ -950,7 +950,8 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 onOpenSettings={() => { setPresenceMenuOpen(false); onOpenSettings(); }}
                 onLogout={async () => {
                     try { await api.auth.logout(); } catch { /* ignore */ }
-                    window.localStorage.removeItem('gratonite_access_token');
+                    // Clear token from both in-memory state and localStorage
+                    setAccessToken(null);
                     window.localStorage.removeItem('gratonite_user');
                     window.location.replace('/app/login');
                 }}

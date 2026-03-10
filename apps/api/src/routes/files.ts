@@ -288,7 +288,10 @@ filesRouter.post(
  * @returns 200 File contents with correct Content-Type header
  * @returns 404 File record not found in database or missing from disk
  */
-filesRouter.get('/:fileId', publicFileRateLimit, async (req: Request, res: Response): Promise<void> => {
+filesRouter.get('/:fileId', publicFileRateLimit, (req: Request, res: Response, next: Function) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, async (req: Request, res: Response): Promise<void> => {
   let { fileId } = req.params as Record<string, string>;
 
   // Support _static suffix: serve the first frame of an animated GIF as a static PNG.
@@ -318,6 +321,12 @@ filesRouter.get('/:fileId', publicFileRateLimit, async (req: Request, res: Respo
     }
 
     const filePath = path.join(UPLOADS_DIR, fileRecord.storageKey);
+
+    // Path traversal defense: ensure resolved path stays within UPLOADS_DIR
+    if (!path.resolve(filePath).startsWith(path.resolve(UPLOADS_DIR))) {
+      res.status(403).json({ error: 'Invalid path' });
+      return;
+    }
 
     // Verify the file actually exists on disk before attempting to send it.
     if (!fs.existsSync(filePath)) {

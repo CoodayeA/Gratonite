@@ -23,7 +23,9 @@ import { db } from '../db/index';
 import { guildEmojis } from '../db/schema/emojis';
 import { guilds, guildMembers } from '../db/schema/guilds';
 import { files } from '../db/schema/files';
+import { Permissions } from '../db/schema/roles';
 import { requireAuth } from '../middleware/auth';
+import { hasPermission } from './roles';
 
 // mergeParams: true so we can read :guildId from the parent mount
 export const emojisRouter = Router({ mergeParams: true });
@@ -183,6 +185,10 @@ emojisRouter.post('/', requireAuth, upload.single('file'), async (req: Request, 
     const { guildId } = req.params as Record<string, string>;
     await requireMember(guildId, req.userId!);
 
+    if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_EMOJIS))) {
+      throw new AppError(403, 'Missing MANAGE_EMOJIS permission', 'FORBIDDEN');
+    }
+
     // Validate name
     const name = (req.body?.name ?? '').trim();
     if (!name || name.length < 2 || name.length > 32) {
@@ -277,6 +283,10 @@ emojisRouter.delete('/:emojiId', requireAuth, async (req: Request, res: Response
   try {
     const { guildId, emojiId } = req.params as Record<string, string>;
     await requireMember(guildId, req.userId!);
+
+    if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_EMOJIS))) {
+      throw new AppError(403, 'Missing MANAGE_EMOJIS permission', 'FORBIDDEN');
+    }
 
     // Verify emoji exists and belongs to this guild
     const [emoji] = await db

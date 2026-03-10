@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, count } from 'drizzle-orm';
 import { db } from '../db/index';
 import { channelPins } from '../db/schema/pins';
 import { messages } from '../db/schema/messages';
@@ -62,8 +62,8 @@ pinsRouter.put('/:messageId', requireAuth, async (req: Request, res: Response): 
   if (!msg) { res.status(404).json({ code: 'NOT_FOUND', message: 'Message not found' }); return; }
 
   // Check max 50 pins
-  const pinCount = await db.select({ id: channelPins.id }).from(channelPins).where(eq(channelPins.channelId, channelId));
-  if (pinCount.length >= 50) { res.status(400).json({ code: 'MAX_PINS', message: 'Maximum 50 pins per channel' }); return; }
+  const [{ pinCount }] = await db.select({ pinCount: count() }).from(channelPins).where(eq(channelPins.channelId, channelId));
+  if (pinCount >= 50) { res.status(400).json({ code: 'MAX_PINS', message: 'Maximum 50 pins per channel' }); return; }
 
   await db.insert(channelPins).values({
     channelId,

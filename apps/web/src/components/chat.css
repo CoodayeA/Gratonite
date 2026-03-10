@@ -260,6 +260,7 @@
             .member-list-panel {
                 width: 240px;
                 min-width: 240px;
+                height: 100%;
                 background: var(--bg-secondary, #2f3136);
                 border-left: 1px solid var(--stroke, #202225);
                 display: flex;

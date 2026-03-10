@@ -162,7 +162,7 @@ export default function DownloadPage() {
             </p>
             <p className="text-foreground/40 text-sm">
               Want to see what changed?{" "}
-              <a href="https://github.com/CoodayeA/Gratonite/releases" target="_blank" rel="noreferrer" className="text-purple font-bold hover:underline">
+              <a href="/releases" className="text-purple font-bold hover:underline">
                 Read the release notes
               </a>
             </p>

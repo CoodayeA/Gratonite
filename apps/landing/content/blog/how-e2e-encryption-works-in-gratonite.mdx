@@ -1,0 +1,167 @@
+---
+title: "How End-to-End Encryption Works in Gratonite"
+description: "A detailed technical look at how Gratonite encrypts your DMs and group conversations — from key generation to message delivery."
+date: "2026-03-09"
+author: "Gratonite Team"
+tag: "Engineering"
+---
+
+## Why we built E2E encryption
+
+Privacy isn't a feature toggle — it's a design decision. When you send a private message on Gratonite, the server should be a relay, not a reader. Our end-to-end encryption (E2EE) ensures that **only you and the people in your conversation** can read what's being said. Not us, not anyone with access to our database, not anyone intercepting traffic in between.
+
+This post explains exactly how it works — no hand-waving, no marketing abstractions. The client-side encryption code lives in `apps/web/src/lib/e2e.ts`.
+
+## The primitives
+
+We use two well-established cryptographic building blocks, both provided by the **Web Crypto API** (built into every modern browser):
+
+1. **ECDH P-256** — Elliptic Curve Diffie-Hellman key agreement. Two parties each have a key pair. By combining one party's private key with the other's public key, both sides arrive at the same shared secret — without ever transmitting it.
+
+2. **AES-GCM 256-bit** — Authenticated symmetric encryption. Once both sides share a key, every message is encrypted with AES-GCM using a unique 12-byte random IV (initialization vector). AES-GCM also provides built-in integrity checking — if a single bit of the ciphertext is modified, decryption fails.
+
+We deliberately chose standard, proven primitives over novel constructions. ECDH P-256 and AES-GCM are NIST-approved, widely audited, and available in every browser's native crypto stack without any third-party dependencies.
+
+## How 1-to-1 DM encryption works
+
+Here's the step-by-step flow when you open an encrypted DM:
+
+### 1. Key pair generation
+
+The first time you use E2EE, your browser generates an **ECDH P-256 key pair** — a public key and a private key. The private key is stored in **IndexedDB** (your browser's local database) and **never leaves your device**. The public key is uploaded to the server so other users can find it.
+
+### 2. Key exchange
+
+When you open a DM with another user, your client fetches their public key from the server via `GET /api/v1/users/:userId/public-key`. Their client does the same with yours. No secret material is exchanged — only public keys.
+
+### 3. Shared key derivation
+
+Your client performs the ECDH computation: your private key + their public key = a shared **AES-GCM 256-bit symmetric key**. The other user's client does the same computation (their private key + your public key) and arrives at the **exact same shared key**. This is the core mathematical property of Diffie-Hellman.
+
+The derived key is used directly for encryption and decryption. It's never exported or transmitted.
+
+### 4. Message encryption
+
+When you send a message:
+
+- A fresh **12-byte random IV** is generated (using `crypto.getRandomValues`)
+- Your plaintext is encoded to bytes and encrypted with AES-GCM using the shared key and IV
+- The IV is **prepended** to the ciphertext
+- The combined IV + ciphertext is base64-encoded and sent to the server as `encryptedContent`
+- The message is flagged with `isEncrypted: true`
+
+The server stores only the opaque base64 blob. It cannot decrypt it — it doesn't have any party's private key.
+
+### 5. Message decryption
+
+The recipient's client:
+
+- Receives the base64 blob
+- Splits off the first 12 bytes (the IV)
+- Decrypts the remaining ciphertext with AES-GCM using the same shared key and IV
+- Renders the plaintext in the chat
+
+Since the shared key derivation is deterministic (same key pairs always produce the same shared key), no additional key exchange is needed per message.
+
+## How group DM encryption works
+
+Group conversations are harder because there's no single "other party" to do ECDH with. We use a **symmetric group key** approach:
+
+### 1. Group key creation
+
+When E2EE is enabled on a group DM, the initiator generates a random **AES-GCM 256-bit symmetric key** — the group key. All messages in the channel are encrypted and decrypted with this key.
+
+### 2. Key distribution with ephemeral ECDH
+
+The group key needs to be securely delivered to every member. For each member, the initiator:
+
+1. Generates an **ephemeral ECDH P-256 key pair** (used once, then discarded)
+2. Performs ECDH between the ephemeral private key and the member's public key to derive a **one-time wrapping key**
+3. Encrypts the raw group key bytes with AES-GCM using the wrapping key and a random IV
+4. Packages the ephemeral public key, IV, and ciphertext into a JSON blob, base64-encodes it, and stores it on the server keyed to that member
+
+Each member gets their own uniquely-encrypted copy of the same group key. The server sees a different ciphertext for each member and cannot decrypt any of them.
+
+### 3. Group key decryption
+
+When a member joins the channel, their client fetches their encrypted key blob from `GET /api/v1/channels/:channelId/group-key`. They:
+
+1. Parse the JSON blob to extract the ephemeral public key, IV, and ciphertext
+2. Perform ECDH between their private key and the ephemeral public key to re-derive the wrapping key
+3. Decrypt the group key bytes with AES-GCM
+4. Import the raw bytes back as an AES-GCM CryptoKey
+
+### 4. Key rotation
+
+When a member is removed from the group, the group key is rotated — a new key version is generated and distributed to remaining members. Previous messages remain encrypted with the old key version (tracked via `keyVersion` on each message), so members can still decrypt historical messages they had access to.
+
+## File encryption
+
+E2EE extends to file attachments. When you send a file in an encrypted channel:
+
+- The entire file is read into memory and encrypted with AES-GCM using the conversation key
+- The **filename itself** is also encrypted (so the server can't see `tax-return-2026.pdf`)
+- The encrypted blob is uploaded to the server, which stores it as opaque binary
+- File metadata (IV, encrypted filename, original MIME type) is bundled into the encrypted message payload
+- The recipient's client fetches the encrypted blob, decrypts it, restores the original filename and type, and renders it inline (images, video, audio) or as a download
+
+We recommend this for files up to ~25 MB. Larger files are read entirely into memory for encryption, which may be impractical on constrained devices.
+
+## Key verification (safety numbers)
+
+How do you know you're actually encrypting to the right person and not a man-in-the-middle? Gratonite provides **safety numbers** — a 60-digit numeric code that both parties can compare out-of-band (in person, over a phone call, etc.).
+
+The safety number is computed by:
+
+1. Exporting both users' raw public keys
+2. Ordering them deterministically (the lexicographically smaller key goes first)
+3. Concatenating them
+4. Computing a SHA-256 hash of the concatenation
+5. Converting the hash bytes to decimal digits and taking the first 60
+
+If both users see the same 60-digit number, they can be confident that no one has substituted a different public key. Click the green lock icon in any encrypted 1-to-1 DM to view and compare your safety number.
+
+## What the server knows
+
+In an encrypted conversation, the server has access to:
+
+- **Who** is talking to whom (sender, recipient, channel membership)
+- **When** a message was sent (timestamp)
+- **That** a message is encrypted (`isEncrypted: true`)
+- The **opaque ciphertext** (base64 blob it cannot decrypt)
+
+The server does **not** have access to:
+
+- Message content
+- File contents or filenames
+- Your private key (stored only in IndexedDB on your device)
+
+## What this is not
+
+We want to be transparent about the current limitations:
+
+- **No forward secrecy.** We use static ECDH key pairs, not a Double Ratchet (as in Signal). If your private key is ever compromised, an attacker with recorded ciphertext could decrypt past messages. Signal's approach rotates keys per message, so compromising one key only exposes a single message. We may adopt a ratcheting protocol in the future.
+
+- **No post-compromise security.** Related to the above — if your key is compromised, you need to manually rotate it. There's no automatic recovery.
+
+- **Not for server channels.** E2EE currently applies to DMs and group DMs only. Server (guild) channels are not encrypted end-to-end because they require server-side features like search, moderation, and link previews that are incompatible with E2EE.
+
+- **Browser-dependent key storage.** Your private key lives in IndexedDB. If you clear browser data, your key is gone and you'll need to generate a new one. We're exploring more durable key backup options.
+
+## Why not Signal protocol?
+
+The Signal protocol (Double Ratchet + X3DH) is the gold standard for forward-secret messaging. We chose not to implement it in v1 for practical reasons:
+
+1. **Complexity vs. scope.** Signal's protocol is designed for asynchronous messaging where either party may be offline. Gratonite is primarily a real-time app — users are typically online simultaneously.
+
+2. **Multi-device complexity.** Signal's key management becomes significantly more complex with multiple devices. We wanted to ship a working, auditable E2EE system first and iterate toward stronger guarantees.
+
+3. **No third-party dependencies.** Our implementation uses only the Web Crypto API — zero external libraries. This minimizes supply chain risk and makes the code easy to audit.
+
+The current system provides strong confidentiality against server compromise and passive eavesdropping. It does not protect against an attacker who both compromises your private key and has recorded your ciphertext — that's the gap forward secrecy would close.
+
+## Try it
+
+E2EE is available now in any DM or group DM. Look for the green lock icon to verify a conversation is encrypted, and click it to view your safety number for key verification.
+
+If you find a flaw, let us know. We'd rather be corrected than comfortable.

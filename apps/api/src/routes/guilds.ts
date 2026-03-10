@@ -1583,23 +1583,39 @@ guildsRouter.get(
       const statusByUser = new Map<string, MemberWithPresenceStatus>();
       const activityByUser = new Map<string, { name: string; type: string } | null>();
       if (userIds.length > 0) {
+        // Use Redis presence keys as source of truth for online status.
+        // Heartbeats keep keys alive (600s TTL) for connected users,
+        // and disconnect sets a 30s grace period before expiry.
         try {
           const pipeline = redis.pipeline();
-          for (const userId of userIds) {
-            pipeline.get(`presence:${userId}`);
-            pipeline.get(`presence:${userId}:activity`);
+          for (const uid of userIds) {
+            pipeline.get(`presence:${uid}`);
+            pipeline.get(`presence:${uid}:activity`);
           }
           const pipelineResult = await pipeline.exec();
-          userIds.forEach((userId, index) => {
-            const statusValue = (pipelineResult?.[index * 2]?.[1] as string | null) ?? 'offline';
-            statusByUser.set(userId, normalizePresenceStatus(statusValue));
+          userIds.forEach((uid, index) => {
+            const redisStatus = (pipelineResult?.[index * 2]?.[1] as string | null);
+
+            let status: MemberWithPresenceStatus;
+            if (redisStatus) {
+              // Redis key exists — user is online (heartbeat keeping it alive)
+              status = normalizePresenceStatus(redisStatus);
+            } else {
+              // No Redis key — user is offline
+              status = 'offline';
+            }
+            statusByUser.set(uid, status);
+
             const activityValue = pipelineResult?.[index * 2 + 1]?.[1] as string | null;
             if (activityValue) {
-              try { activityByUser.set(userId, JSON.parse(activityValue)); } catch { /* ignore */ }
+              try { activityByUser.set(uid, JSON.parse(activityValue)); } catch { /* ignore */ }
             }
           });
         } catch {
-          userIds.forEach((userId) => statusByUser.set(userId, 'offline'));
+          // Redis unavailable — default everyone to offline
+          userIds.forEach((uid) => {
+            statusByUser.set(uid, 'offline');
+          });
         }
       }
 
@@ -1893,8 +1909,11 @@ guildsRouter.post(
       const { guildId, userId: targetUserId } = req.params as Record<string, string>;
       await requireMember(guildId, req.userId!);
 
-      if (!(await hasPermission(req.userId!, guildId, Permissions.KICK_MEMBERS))) {
-        throw new AppError(403, 'Missing KICK_MEMBERS permission', 'FORBIDDEN');
+      // Accept MODERATE_MEMBERS or KICK_MEMBERS (backwards compat for existing roles)
+      const canModerate = await hasPermission(req.userId!, guildId, Permissions.MODERATE_MEMBERS);
+      const canKick = await hasPermission(req.userId!, guildId, Permissions.KICK_MEMBERS);
+      if (!canModerate && !canKick) {
+        throw new AppError(403, 'Missing MODERATE_MEMBERS permission', 'FORBIDDEN');
       }
 
       // Cannot timeout yourself

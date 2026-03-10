@@ -18,13 +18,27 @@ import { webhooks } from '../db/schema/webhooks';
 import { channels } from '../db/schema/channels';
 import { messages } from '../db/schema/messages';
 import { guildMembers } from '../db/schema/guilds';
+import { Permissions } from '../db/schema/roles';
 import { requireAuth } from '../middleware/auth';
+import { hasPermission } from './roles';
 import { getIO } from '../lib/socket-io';
+import { validateOutboundUrl } from '../lib/ssrf-guard';
 
 export const webhooksRouter = Router();
 
 // Simple in-memory rate limit: max 5 executions per webhook per 10 seconds
+const RATE_LIMIT_WINDOW_MS = 10_000;
 const webhookRateLimits = new Map<string, { count: number; resetAt: number }>();
+
+// Periodic cleanup of stale rate limit entries (every 60 seconds)
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of webhookRateLimits) {
+    if (now >= entry.resetAt) {
+      webhookRateLimits.delete(key);
+    }
+  }
+}, 60_000).unref();
 
 // POST /channels/:channelId/webhooks — create webhook
 webhooksRouter.post(
@@ -61,6 +75,23 @@ webhooksRouter.post(
         return;
       }
 
+      // Require MANAGE_WEBHOOKS permission to create webhooks
+      if (!(await hasPermission(userId, channel.guildId!, Permissions.MANAGE_WEBHOOKS))) {
+        res.status(403).json({ error: 'Missing MANAGE_WEBHOOKS permission' });
+        return;
+      }
+
+      // Validate webhook URL if provided — must be HTTPS and not target private IPs
+      const { url } = req.body as { url?: string };
+      if (url) {
+        try {
+          await validateOutboundUrl(url);
+        } catch (err: any) {
+          res.status(400).json({ error: `Invalid webhook URL: ${err.message}` });
+          return;
+        }
+      }
+
       const [webhook] = await db
         .insert(webhooks)
         .values({
@@ -68,6 +99,7 @@ webhooksRouter.post(
           guildId: channel.guildId,
           creatorId: userId,
           name: name.slice(0, 80),
+          ...(url ? { url } : {}),
         })
         .returning();
 
@@ -124,13 +156,14 @@ webhooksRouter.delete(
         return;
       }
 
-      const member = await db.select({ userId: guildMembers.userId })
-        .from(guildMembers)
-        .where(and(eq(guildMembers.guildId, webhook.guildId), eq(guildMembers.userId, userId)))
-        .limit(1);
-      if (!member.length && webhook.creatorId !== userId) {
-        res.status(403).json({ error: 'Unauthorized' });
-        return;
+      // Authorization: only the webhook creator OR a member with MANAGE_WEBHOOKS
+      // permission can delete a webhook.
+      if (webhook.creatorId !== userId) {
+        const canManageWebhooks = await hasPermission(userId, webhook.guildId, Permissions.MANAGE_WEBHOOKS);
+        if (!canManageWebhooks) {
+          res.status(403).json({ error: 'Unauthorized — must be webhook creator or have MANAGE_WEBHOOKS permission' });
+          return;
+        }
       }
 
       await db.delete(webhooks).where(eq(webhooks.id, webhookId));
@@ -161,7 +194,7 @@ webhooksRouter.post(
         }
         rl.count++;
       } else {
-        webhookRateLimits.set(webhookId, { count: 1, resetAt: now + 10000 });
+        webhookRateLimits.set(webhookId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
       }
 
       if (!content || typeof content !== 'string') {

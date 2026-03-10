@@ -132,10 +132,29 @@ invitesRouter.post('/invites/:code', requireAuth, async (req: Request, res: Resp
     const [vanityGuild] = await db.select({ id: guilds.id }).from(guilds).where(eq(guilds.vanityCode, code)).limit(1);
     if (!vanityGuild) { res.status(404).json({ code: 'NOT_FOUND', message: 'Invite not found' }); return; }
 
-    // Check ban
+    // Check ban BEFORE raid detection so banned users can't trigger lockdown
     const [ban] = await db.select({ id: guildBans.id }).from(guildBans)
       .where(and(eq(guildBans.guildId, vanityGuild.id), eq(guildBans.userId, req.userId!))).limit(1);
     if (ban) { res.status(403).json({ code: 'BANNED', message: 'You are banned from this guild' }); return; }
+
+    // Check if guild is locked (raid protection)
+    const vanityGuildResult = await db.execute(sql`SELECT locked_at, raid_protection_enabled FROM guilds WHERE id = ${vanityGuild.id}`);
+    const vanityGuildRow = (vanityGuildResult as any)[0] ?? (vanityGuildResult as any).rows?.[0];
+    if (vanityGuildRow && (vanityGuildRow as any).locked_at) {
+      res.status(403).json({ code: 'GUILD_LOCKED', message: 'This server is currently locked' }); return;
+    }
+
+    // Raid detection
+    if (vanityGuildRow && (vanityGuildRow as any).raid_protection_enabled) {
+      const key = `raid:joins:${vanityGuild.id}`;
+      const count = await redis.incr(key);
+      await redis.expire(key, 10); // Always set TTL to avoid leaked keys
+      if (count > 10) {
+        await db.execute(sql`UPDATE guilds SET locked_at = now() WHERE id = ${vanityGuild.id}`);
+        getIO().to(`guild:${vanityGuild.id}`).emit('GUILD_LOCKDOWN_START', { guildId: vanityGuild.id });
+        res.status(403).json({ code: 'GUILD_LOCKED', message: 'Server locked due to raid detection' }); return;
+      }
+    }
 
     // Check already a member
     const [existing] = await db.select({ id: guildMembers.id }).from(guildMembers)
@@ -144,6 +163,7 @@ invitesRouter.post('/invites/:code', requireAuth, async (req: Request, res: Resp
 
     // Join guild via vanity code
     await db.insert(guildMembers).values({ guildId: vanityGuild.id, userId: req.userId! });
+    await db.update(guilds).set({ memberCount: sql`${guilds.memberCount} + 1` }).where(eq(guilds.id, vanityGuild.id));
 
     const [user] = await db.select({ id: users.id, username: users.username, displayName: users.displayName, avatarHash: users.avatarHash })
       .from(users).where(eq(users.id, req.userId!)).limit(1);
@@ -174,7 +194,7 @@ invitesRouter.post('/invites/:code', requireAuth, async (req: Request, res: Resp
   if (guildRow && (guildRow as any).raid_protection_enabled) {
     const key = `raid:joins:${invite.guildId}`;
     const count = await redis.incr(key);
-    if (count === 1) await redis.expire(key, 10);
+    await redis.expire(key, 10); // Always set TTL to avoid leaked keys
     if (count > 10) {
       await db.execute(sql`UPDATE guilds SET locked_at = now() WHERE id = ${invite.guildId}`);
       getIO().to(`guild:${invite.guildId}`).emit('GUILD_LOCKDOWN_START', { guildId: invite.guildId });
@@ -194,7 +214,7 @@ invitesRouter.post('/invites/:code', requireAuth, async (req: Request, res: Resp
 
   // Join guild
   await db.insert(guildMembers).values({ guildId: invite.guildId, userId: req.userId! });
-  await db.update(guilds).set({ memberCount: guilds.memberCount }).where(eq(guilds.id, invite.guildId));
+  await db.update(guilds).set({ memberCount: sql`${guilds.memberCount} + 1` }).where(eq(guilds.id, invite.guildId));
 
   // Increment uses
   await db.update(guildInvites).set({ uses: invite.uses + 1 }).where(eq(guildInvites.code, code));
