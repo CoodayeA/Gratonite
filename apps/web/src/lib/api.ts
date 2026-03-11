@@ -157,6 +157,7 @@ let meRequestPromise: Promise<{
   emailVerified: boolean;
   createdAt: string;
   isAdmin: boolean;
+  status?: string;
   onboardingCompleted: boolean;
   interests: string[] | null;
   profile: {
