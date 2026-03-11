@@ -183,6 +183,41 @@ if (typeof window !== 'undefined') {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Proactive token refresh — refresh ~60s before JWT expiry
+// ---------------------------------------------------------------------------
+
+let proactiveRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+function decodeJwtExp(token: string): number | null {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof decoded.exp === 'number' ? decoded.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+function scheduleProactiveRefresh(token: string | null) {
+  if (proactiveRefreshTimer) {
+    clearTimeout(proactiveRefreshTimer);
+    proactiveRefreshTimer = null;
+  }
+  if (!token) return;
+
+  const exp = decodeJwtExp(token);
+  if (!exp) return;
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const refreshInMs = Math.max((exp - nowSec - 60) * 1000, 0);
+
+  proactiveRefreshTimer = setTimeout(async () => {
+    await refreshAccessToken(); // setAccessToken() inside refreshAccessToken reschedules automatically
+  }, refreshInMs);
+}
+
 export function setAccessToken(token: string | null) {
   accessToken = token;
   if (isAuthGuardEnabled()) {
@@ -195,9 +230,15 @@ export function setAccessToken(token: string | null) {
       window.localStorage.removeItem('gratonite_access_token');
     }
   }
+  scheduleProactiveRefresh(token);
 }
 export function getAccessToken(): string | null {
   return accessToken;
+}
+
+// Schedule proactive refresh on initial load
+if (accessToken) {
+  scheduleProactiveRefresh(accessToken);
 }
 
 // ---------------------------------------------------------------------------

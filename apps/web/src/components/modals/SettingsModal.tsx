@@ -542,9 +542,10 @@ const SettingsModal = ({
 
     // Load user settings from API on mount
     const settingsLoadedRef = useRef(false);
+    const settingsFetchedRef = useRef(false);
     useEffect(() => {
-        if (settingsLoadedRef.current) return;
-        settingsLoadedRef.current = true;
+        if (settingsFetchedRef.current) return;
+        settingsFetchedRef.current = true;
         api.users.getSettings().then((s: any) => {
             if (s?.theme) setTheme(s.theme);
             if (s?.colorMode) setColorMode(s.colorMode);
@@ -562,7 +563,9 @@ const SettingsModal = ({
                 setSoundVolumeState(vol);
                 setSoundVolume(vol);
             }
-        }).catch(() => { /* settings may not exist yet */ });
+            // Mark as loaded AFTER applying server values so auto-save doesn't fire with defaults
+            settingsLoadedRef.current = true;
+        }).catch(() => { settingsLoadedRef.current = true; /* settings may not exist yet — allow auto-save with defaults */ });
 
         // Auto-sync nameplateStyle: if DB has no value but localStorage does, push it to the API
         const localNameplate = localStorage.getItem('gratonite-nameplate-style');
