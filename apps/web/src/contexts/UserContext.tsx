@@ -89,7 +89,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
                     avatarUrl,
                     avatarHash: avatarHash ?? null,
                     bannerHash: profile?.bannerHash ?? null,
-                    status: 'online',
+                    status: (me.status as PresenceType) || 'online',
                     customStatus: null,
                     badges: [],
                     isAdmin: me.isAdmin,

@@ -102,6 +102,7 @@ function safeProfile(user: typeof users.$inferSelect) {
     isAdmin: user.isAdmin,
     onboardingCompleted: user.onboardingCompleted,
     interests: parsedInterests,
+    status: user.status,
     profile: {
       displayName: user.displayName,
       avatarHash: user.avatarHash ?? null,

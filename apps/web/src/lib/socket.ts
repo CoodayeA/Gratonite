@@ -403,6 +403,7 @@ let socket: GratoniteSocket | null = null;
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 let idleTimeout: ReturnType<typeof setTimeout> | null = null;
 let isIdle = false;
+let userChosenStatus: string = 'online'; // tracks the user's explicit status choice
 
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -422,14 +423,16 @@ function stopHeartbeat() {
 
 function resetIdleTimer() {
   if (idleTimeout) clearTimeout(idleTimeout);
+  // Don't override dnd/invisible with auto idle transitions
+  if (userChosenStatus === 'dnd' || userChosenStatus === 'invisible') return;
   if (isIdle && socket?.connected) {
     isIdle = false;
-    socket.emit('PRESENCE_UPDATE', { status: 'online' });
+    socket.emit('PRESENCE_UPDATE', { status: 'online', auto: true });
   }
   idleTimeout = setTimeout(() => {
-    if (socket?.connected) {
+    if (socket?.connected && userChosenStatus !== 'dnd' && userChosenStatus !== 'invisible') {
       isIdle = true;
-      socket.emit('PRESENCE_UPDATE', { status: 'idle' });
+      socket.emit('PRESENCE_UPDATE', { status: 'idle', auto: true });
     }
   }, IDLE_TIMEOUT_MS);
 }
@@ -494,9 +497,12 @@ export function connectSocket(): GratoniteSocket {
     socketReconnectListeners.forEach(cb => cb());
   });
 
-  socket.on('READY', () => {
+  socket.on('READY', (data: { userId?: string; sessionId?: string; status?: string }) => {
     startHeartbeat();
     startIdleDetection();
+    if (data?.status && ['online', 'idle', 'dnd', 'invisible'].includes(data.status)) {
+      userChosenStatus = data.status;
+    }
   });
 
   /* ── Dispatch gateway events to registered listeners ──── */
@@ -646,5 +652,6 @@ export function leaveChannel(channelId: string): void {
 
 /** Set presence status */
 export function setPresence(status: 'online' | 'idle' | 'dnd' | 'invisible'): void {
+  userChosenStatus = status;
   socket?.emit('PRESENCE_UPDATE', { status });
 }

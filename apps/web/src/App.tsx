@@ -47,7 +47,7 @@ import InviteAccept from './pages/InviteAccept';
 import { NotFound } from './pages/ErrorStates';
 import { getDeterministicGradient } from './utils/colors';
 import { api, API_BASE, getAccessToken, setAccessToken, ApiRequestError } from './lib/api';
-import { connectSocket, disconnectSocket, getSocket, onPresenceUpdate, onVoiceStateUpdate, onSocketReconnect, onCallInvite, onCallCancel, type CallInvitePayload } from './lib/socket';
+import { connectSocket, disconnectSocket, getSocket, onPresenceUpdate, onVoiceStateUpdate, onSocketReconnect, onCallInvite, onCallCancel, setPresence as setSocketPresence, type CallInvitePayload } from './lib/socket';
 import { useMobileSwipe } from './hooks/useMobileSwipe';
 
 import SettingsModal from './components/modals/SettingsModal';
@@ -855,7 +855,16 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     ].some(path => location.pathname.startsWith(path));
 
     const [presenceMenuOpen, setPresenceMenuOpen] = useState(false);
-    const [presence, setPresence] = useState<PresenceType>('online');
+    const [presence, setPresenceState] = useState<PresenceType>('online');
+    const setPresence = useCallback((p: PresenceType) => {
+        setPresenceState(p);
+        setSocketPresence(p);
+    }, []);
+    useEffect(() => {
+        if (ctxUser.status && ctxUser.status !== 'online') {
+            setPresenceState(ctxUser.status as PresenceType);
+        }
+    }, [ctxUser.status]);
     const [customStatus, setCustomStatus] = useState<string | null>(null);
     const [micMuted, setMicMuted] = useState(false);
     const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
