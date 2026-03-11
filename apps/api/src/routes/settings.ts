@@ -24,6 +24,11 @@ const patchSettingsSchema = z.object({
   highContrast: z.boolean().optional(),
   compactMode: z.boolean().optional(),
   accentColor: z.string().max(20).nullable().optional(),
+  emailNotifications: z.object({
+    mentions: z.boolean().optional(),
+    dms: z.boolean().optional(),
+    frequency: z.enum(['instant', 'daily', 'never']).optional(),
+  }).optional(),
 });
 
 /** GET /api/v1/users/@me/settings */

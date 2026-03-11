@@ -199,14 +199,16 @@ export function initSocket(io: SocketIOServer): void {
     // -------------------------------------------------------------------------
     // Set presence in Redis and broadcast — respect stored status (invisible)
     // -------------------------------------------------------------------------
+    let desiredStatus = 'online';
     try {
-      // Check if the user's DB status is invisible; if so, stay invisible
+      // Respect the user's saved status preference from the database
       const [dbUser] = await db
         .select({ status: users.status })
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
-      const desiredStatus = dbUser?.status === 'invisible' ? 'invisible' : 'online';
+      const savedStatus = dbUser?.status || 'online';
+      desiredStatus = ['online', 'idle', 'dnd', 'invisible'].includes(savedStatus) ? savedStatus : 'online';
       await redis.set(`presence:${userId}`, desiredStatus, 'EX', 600);
       console.info(`[socket.io] presence set for ${userId}: ${desiredStatus} (guilds: ${userGuildIds.length})`);
       // Broadcast — invisible appears as "offline" to others
@@ -219,7 +221,7 @@ export function initSocket(io: SocketIOServer): void {
     }
 
     // Emit READY so the client knows the handshake is complete
-    socket.emit('READY', { userId, sessionId: socket.id });
+    socket.emit('READY', { userId, sessionId: socket.id, status: desiredStatus });
 
     // -------------------------------------------------------------------------
     // IDENTIFY handler — frontend sends this after connect; we already authed
@@ -227,7 +229,7 @@ export function initSocket(io: SocketIOServer): void {
     // Trigger 'member_join' workflows for all guilds this user is in.
     // -------------------------------------------------------------------------
     socket.on('IDENTIFY', () => {
-      socket.emit('READY', { userId, sessionId: socket.id });
+      socket.emit('READY', { userId, sessionId: socket.id, status: desiredStatus });
 
       // Fire member_join workflows (non-blocking)
       for (const guildId of userGuildIds) {
@@ -301,7 +303,7 @@ export function initSocket(io: SocketIOServer): void {
     // -------------------------------------------------------------------------
     // PRESENCE_UPDATE — client sets their own presence (idle, dnd, etc.)
     // -------------------------------------------------------------------------
-    socket.on('PRESENCE_UPDATE', async (data: { status: string; activity?: { name: string; type: string } | null }) => {
+    socket.on('PRESENCE_UPDATE', async (data: { status: string; auto?: boolean; activity?: { name: string; type: string } | null }) => {
       if (!data?.status) return;
       if (!checkWsRateLimit(userId, 'PRESENCE_UPDATE')) return;
       const validStatuses = ['online', 'idle', 'dnd', 'invisible'];
@@ -320,6 +322,10 @@ export function initSocket(io: SocketIOServer): void {
           await redis.set(`presence:${userId}:activity`, JSON.stringify(activity), 'EX', 600);
         } else if (data.activity === null) {
           await redis.del(`presence:${userId}:activity`);
+        }
+        // Persist to DB only for explicit user-initiated status changes (not auto idle/online)
+        if (!data.auto) {
+          await db.update(users).set({ status: data.status }).where(eq(users.id, userId));
         }
         // Broadcast to all guilds — invisible users appear "offline" to others
         const broadcastStatus = data.status === 'invisible' ? 'offline' : data.status;
