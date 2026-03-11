@@ -29,7 +29,7 @@ export default function SavedMessages() {
     useEffect(() => {
         setLoading(true);
         fetch(`${API_BASE}/api/v1/users/@me/bookmarks`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+            headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
         })
             .then(r => r.json())
             .then(data => { setBookmarks(Array.isArray(data) ? data : []); })
@@ -41,7 +41,7 @@ export default function SavedMessages() {
         try {
             await fetch(`${API_BASE}/api/v1/users/@me/bookmarks/${messageId}`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+                headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
             });
             setBookmarks(prev => prev.filter(b => b.messageId !== messageId));
             addToast({ title: 'Bookmark removed', variant: 'info' });

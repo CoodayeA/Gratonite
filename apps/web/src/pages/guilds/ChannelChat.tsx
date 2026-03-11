@@ -109,7 +109,7 @@ const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApiId, cha
     const handleMouseEnter = () => {
         if (!messageApiId || !channelId) return;
         timerRef.current = setTimeout(() => {
-            fetch(`${API_BASE}/api/v1/channels/${channelId}/messages/${messageApiId}/reactions/${encodeURIComponent(emoji)}`, {
+            fetch(`${API_BASE}/channels/${channelId}/messages/${messageApiId}/reactions/${encodeURIComponent(emoji)}`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
             }).then(r => r.ok ? r.json() : []).then(data => {
                 if (Array.isArray(data) && data.length > 0) {
@@ -881,7 +881,7 @@ const ChannelChat = () => {
     useEffect(() => {
         if (!channelId) return;
         fetch(`${API_BASE}/api/v1/channels/${channelId}/read-state`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+            headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
         }).then(r => r.ok ? r.json() : null).then(state => {
             if (state?.lastMessageId) {
                 setLastReadMessageId(state.lastMessageId);
@@ -1236,7 +1236,7 @@ const ChannelChat = () => {
                 id: 'bookmark', label: 'Bookmark Message', icon: Star, onClick: () => {
                     fetch(`${API_BASE}/api/v1/users/@me/bookmarks`, {
                         method: 'POST',
-                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+                        headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ messageId: msg.apiId }),
                     }).then(r => {
                         if (r.ok) addToast({ title: 'Message bookmarked', variant: 'success' });
@@ -1433,7 +1433,7 @@ const ChannelChat = () => {
         if (!channelId) return;
         // Load draft
         fetch(`${API_BASE}/api/v1/channels/${channelId}/draft`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+            headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
         }).then(r => r.ok ? r.json() : null).then(draft => {
             if (draft?.content) {
                 setInputValue(draft.content);
@@ -1444,7 +1444,7 @@ const ChannelChat = () => {
         }).catch(() => {});
         // Load scheduled messages
         fetch(`${API_BASE}/api/v1/channels/${channelId}/messages/scheduled`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+            headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
         }).then(r => r.ok ? r.json() : []).then(data => {
             setScheduledMessages(Array.isArray(data) ? data : []);
         }).catch(() => {});
@@ -1561,7 +1561,7 @@ const ChannelChat = () => {
     useEffect(() => {
         if (!guildId) { setGuildStickers([]); return; }
         fetch(`${API_BASE}/api/v1/guilds/${guildId}/stickers`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+            headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
         }).then(r => r.ok ? r.json() : []).then(data => {
             if (Array.isArray(data)) {
                 setGuildStickers(data.map((s: any) => ({
@@ -2305,7 +2305,7 @@ const ChannelChat = () => {
                 draftSaveTimerRef.current = setTimeout(() => {
                     fetch(`${API_BASE}/api/v1/channels/${channelId}/draft`, {
                         method: 'PUT',
-                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+                        headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ content: val }),
                     }).catch(() => {});
                 }, 2000);
@@ -2313,7 +2313,7 @@ const ChannelChat = () => {
                 setHasDraft(false);
                 fetch(`${API_BASE}/api/v1/channels/${channelId}/draft`, {
                     method: 'DELETE',
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+                    headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
                 }).catch(() => {});
             }
         }
@@ -3155,7 +3155,7 @@ const ChannelChat = () => {
                                     if (!channelId) return;
                                     fetch(`${API_BASE}/api/v1/channels/${channelId}/messages/scheduled/${sm.id}`, {
                                         method: 'DELETE',
-                                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+                                        headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
                                     }).then(r => {
                                         if (r.ok) {
                                             setScheduledMessages(prev => prev.filter(s => s.id !== sm.id));
@@ -3579,7 +3579,7 @@ const ChannelChat = () => {
                                 const processedContent = processEmojis(inputValue);
                                 fetch(`${API_BASE}/api/v1/channels/${channelId}/messages`, {
                                     method: 'POST',
-                                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+                                    headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}`, 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ content: processedContent || ' ', scheduledAt }),
                                 }).then(r => {
                                     if (r.ok) {

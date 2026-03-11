@@ -103,6 +103,48 @@ const ParticipantVideo = ({ track }: { track: any }) => {
     );
 };
 
+const ReactionBadge = ({ emoji, count, me, messageApiId, channelId, onReaction }: { emoji: string; count: number; me: boolean; messageApiId?: string; channelId?: string; onReaction?: (apiId: string, emoji: string, me: boolean) => void }) => {
+    const [tooltip, setTooltip] = useState<{ users: Array<{ displayName?: string; username: string }>; total: number } | null>(null);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleMouseEnter = () => {
+        if (!messageApiId || !channelId) return;
+        timerRef.current = setTimeout(() => {
+            fetch(`${API_BASE}/channels/${channelId}/messages/${messageApiId}/reactions/${encodeURIComponent(emoji)}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
+            }).then(r => r.ok ? r.json() : []).then(data => {
+                if (Array.isArray(data) && data.length > 0) {
+                    setTooltip({ users: data.slice(0, 5), total: count });
+                }
+            }).catch(() => {});
+        }, 300);
+    };
+
+    const handleMouseLeave = () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        setTooltip(null);
+    };
+
+    return (
+        <button
+            onClick={() => onReaction?.(messageApiId!, emoji, me)}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '12px', background: me ? 'rgba(var(--accent-primary-rgb, 139,92,246), 0.15)' : 'var(--bg-tertiary)', border: `1px solid ${me ? 'var(--accent-primary)' : 'var(--stroke)'}`, cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'all 0.15s', position: 'relative' }}
+        >
+            <span>{emoji}</span> <span style={{ fontSize: '11px', fontWeight: 600 }}>{count}</span>
+            {tooltip && (
+                <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '6px 10px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', zIndex: 50, whiteSpace: 'nowrap', fontSize: '12px', color: 'var(--text-primary)', pointerEvents: 'none' }}>
+                    {tooltip.users.map((u, i) => (
+                        <span key={i}>{u.displayName || u.username}{i < tooltip.users.length - 1 ? ', ' : ''}</span>
+                    ))}
+                    {tooltip.total > 5 && <span style={{ color: 'var(--text-muted)' }}> and {tooltip.total - 5} more</span>}
+                </div>
+            )}
+        </button>
+    );
+};
+
 const DirectMessage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -483,13 +525,27 @@ const DirectMessage = () => {
     // Fetch DM channel info and recipient
     const [userName, setUserName] = useState('');
     const [userStatus] = useState('');
-    const userGame: string | null = null;
     const [userColor, setUserColor] = useState('linear-gradient(135deg, var(--accent-blue), var(--accent-purple))');
-    const bannerColor = 'var(--bg-tertiary)';
     const [initial, setInitial] = useState('?');
     const [recipientId, setRecipientId] = useState<string>('');
     const [recipientAvatarHash, setRecipientAvatarHash] = useState<string | null>(null);
     const [presenceMap, setPresenceMap] = useState<Record<string, string>>({});
+    const [profileData, setProfileData] = useState<{
+        displayName: string;
+        username: string;
+        bannerHash: string | null;
+        bio: string | null;
+        pronouns: string | null;
+        customStatus: string | null;
+        statusEmoji: string | null;
+        badges: string[];
+        createdAt: string;
+    } | null>(null);
+    const [fameStats, setFameStats] = useState<{ fameReceived: number; fameGiven: number } | null>(null);
+    const [mutualData, setMutualData] = useState<{
+        mutualServers: Array<{ id: string; name: string; iconHash: string | null }>;
+        mutualFriends: Array<{ id: string; username: string; displayName: string; avatarHash: string | null }>;
+    } | null>(null);
 
     // Subscribe to presence updates for DM recipients
     useEffect(() => {
@@ -544,6 +600,25 @@ const DirectMessage = () => {
             }
         }).catch(() => { addToast({ title: 'Failed to load conversation', variant: 'error' }); });
     }, [dmChannelId, addToast]);
+
+    // Fetch profile, mutuals, fame for DM recipient
+    useEffect(() => {
+        if (!recipientId || isGroupDm) return;
+        let cancelled = false;
+
+        Promise.all([
+            api.users.getProfile(recipientId).catch(() => null),
+            api.users.getMutuals(recipientId).catch(() => null),
+            api.fame.getStats(recipientId).catch(() => null),
+        ]).then(([profile, mutuals, fame]: [any, any, any]) => {
+            if (cancelled) return;
+            if (profile) setProfileData(profile);
+            if (mutuals) setMutualData(mutuals);
+            if (fame) setFameStats(fame);
+        });
+
+        return () => { cancelled = true; };
+    }, [recipientId, isGroupDm]);
 
     // Fetch messages from API
     const userCacheRef = useRef<Map<string, { username: string; displayName: string }>>(new Map());
@@ -1629,8 +1704,8 @@ const DirectMessage = () => {
                                     </span>
                                 )}
                             </h2>
-                            <div style={{ fontSize: '0.75rem', color: userGame ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
-                                {isGroupDm ? `${groupParticipants.length} members` : (userGame ? <span style={{ fontWeight: 600 }}>{userGame}</span> : userStatus)}
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                {isGroupDm ? `${groupParticipants.length} members` : userStatus}
                             </div>
                         </div>
                     </div>
@@ -1765,7 +1840,7 @@ const DirectMessage = () => {
                                         <ParticipantVideo track={remoteDisplayTrack} />
                                     ) : (
                                         <>
-                                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '60px', background: bannerColor, opacity: 0.2, filter: 'blur(20px)' }}></div>
+                                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '60px', background: 'var(--bg-tertiary)', opacity: 0.2, filter: 'blur(20px)' }}></div>
                                             <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: userColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 600, color: 'white', zIndex: 2, boxShadow: otherParticipant?.isSpeaking ? '0 0 0 4px var(--bg-elevated), 0 0 0 8px var(--accent-primary)' : 'none', transition: 'box-shadow 0.2s' }}>{initial}</div>
                                         </>
                                     )}
@@ -2140,7 +2215,7 @@ const DirectMessage = () => {
                                                 id: 'bookmark', label: 'Bookmark Message', icon: Star, onClick: () => {
                                                     fetch(`${API_BASE}/users/@me/bookmarks`, {
                                                         method: 'POST',
-                                                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+                                                        headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}`, 'Content-Type': 'application/json' },
                                                         body: JSON.stringify({ messageId: msg.apiId }),
                                                     }).then(r => {
                                                         if (r.ok) addToast({ title: 'Message bookmarked', variant: 'success' });
@@ -2310,9 +2385,15 @@ const DirectMessage = () => {
                                         {msg.reactions && msg.reactions.length > 0 && (
                                             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
                                                 {msg.reactions.map((r) => (
-                                                    <button key={r.emoji} onClick={() => handleReaction(msg.apiId, r.emoji, r.me)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '12px', background: r.me ? 'rgba(var(--accent-primary-rgb, 139,92,246), 0.15)' : 'var(--bg-tertiary)', border: `1px solid ${r.me ? 'var(--accent-primary)' : 'var(--stroke)'}`, cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'all 0.15s' }}>
-                                                        <span>{r.emoji}</span> <span style={{ fontSize: '11px', fontWeight: 600 }}>{r.count}</span>
-                                                    </button>
+                                                    <ReactionBadge
+                                                        key={r.emoji}
+                                                        emoji={r.emoji}
+                                                        count={r.count}
+                                                        me={r.me}
+                                                        messageApiId={msg.apiId}
+                                                        channelId={dmChannelId}
+                                                        onReaction={(apiId, emoji, me) => handleReaction(apiId, emoji, me)}
+                                                    />
                                                 ))}
                                             </div>
                                         )}
@@ -2587,7 +2668,14 @@ const DirectMessage = () => {
                 zIndex: 2
             }}>
                 <div style={{ width: '320px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ height: '120px', background: bannerColor, flexShrink: 0 }}></div>
+                    {/* Banner */}
+                    <div style={{
+                        height: '120px',
+                        background: profileData?.bannerHash
+                            ? `url(${API_BASE}/files/${profileData.bannerHash}) center/cover`
+                            : 'var(--bg-tertiary)',
+                        flexShrink: 0
+                    }}></div>
                     <div style={{ padding: '0 16px', marginTop: '-36px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px' }}>
                         <Avatar
                             userId={recipientId || dmChannelId || ''}
@@ -2597,38 +2685,127 @@ const DirectMessage = () => {
                             style={{ border: '6px solid var(--bg-elevated)' }}
                         />
                     </div>
-                    <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto' }}>
+                    <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', whiteSpace: 'normal' }}>
+                        {/* Name + Handle */}
                         <div>
-                            <h2 style={{ fontSize: '1.2rem', margin: '0 0 4px 0' }}>{userName}</h2>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>{recipientId === 'kael' ? 'backend engineer & cyberpunk enthusiast.' : 'ux designer learning to code.'}</p>
+                            <h2 style={{ fontSize: '1.2rem', margin: '0 0 2px 0' }}>{profileData?.displayName || userName}</h2>
+                            {profileData?.username && (
+                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>@{profileData.username}</p>
+                            )}
+                            {profileData?.pronouns && (
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>{profileData.pronouns}</p>
+                            )}
                         </div>
 
-                        {userGame && (
+                        {/* Badges */}
+                        {profileData?.badges && profileData.badges.length > 0 && (
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                {profileData.badges.map(badge => {
+                                    const meta: Record<string, { label: string; emoji: string; color: string }> = {
+                                        admin: { label: 'Admin', emoji: '🛡️', color: '#ed4245' },
+                                        early_adopter: { label: 'Early Adopter', emoji: '⭐', color: '#faa61a' },
+                                        verified: { label: 'Verified', emoji: '✅', color: '#3ba55c' },
+                                        developer: { label: 'Developer', emoji: '🔧', color: '#5865f2' },
+                                        moderator: { label: 'Moderator', emoji: '🔨', color: '#eb459e' },
+                                        supporter: { label: 'Supporter', emoji: '💎', color: '#5865f2' },
+                                    };
+                                    const m = meta[badge];
+                                    if (!m) return null;
+                                    return (
+                                        <span key={badge} title={m.label} style={{ fontSize: '14px', cursor: 'default', color: m.color }}>{m.emoji}</span>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Custom Status */}
+                        {profileData?.customStatus && (
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                                {profileData.statusEmoji && <span style={{ marginRight: '4px' }}>{profileData.statusEmoji}</span>}
+                                {profileData.customStatus}
+                            </p>
+                        )}
+
+                        {/* Bio */}
+                        {profileData?.bio && (
                             <div>
-                                <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Playing a game</h3>
-                                <div style={{ background: 'var(--bg-elevated)', padding: '12px', borderRadius: '8px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                    <div style={{ width: '48px', height: '48px', background: 'var(--accent-primary)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎮</div>
-                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <span style={{ fontSize: '13px', fontWeight: 600 }}>Cyberpunk 2077</span>
-                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Night City</span>
-                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>02:15:30 elapsed</span>
-                                    </div>
+                                <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>About Me</h3>
+                                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{profileData.bio}</p>
+                            </div>
+                        )}
+
+                        {/* Fame */}
+                        {fameStats && fameStats.fameReceived > 0 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: 'rgba(245,158,11,0.08)', borderRadius: '6px', width: 'fit-content' }}>
+                                <Star size={14} color="#f59e0b" fill="#f59e0b" />
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: '#f59e0b' }}>{fameStats.fameReceived} FAME</span>
+                            </div>
+                        )}
+
+                        {/* Member Since */}
+                        <div>
+                            <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>Gratonite Member Since</h3>
+                            <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', margin: 0 }}>
+                                {profileData?.createdAt
+                                    ? new Date(profileData.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                                    : '—'}
+                            </p>
+                        </div>
+
+                        {/* Mutual Servers */}
+                        {mutualData?.mutualServers && mutualData.mutualServers.length > 0 && (
+                            <div>
+                                <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>
+                                    Mutual Servers — {mutualData.mutualServers.length}
+                                </h3>
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    {mutualData.mutualServers.slice(0, 8).map(server => (
+                                        <div key={server.id} title={server.name} style={{
+                                            width: '32px', height: '32px', borderRadius: '8px',
+                                            background: server.iconHash
+                                                ? `url(${API_BASE}/files/${server.iconHash}) center/cover`
+                                                : 'var(--bg-tertiary)',
+                                            border: '1px solid var(--stroke)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)',
+                                            overflow: 'hidden'
+                                        }}>
+                                            {!server.iconHash && server.name.charAt(0).toUpperCase()}
+                                        </div>
+                                    ))}
+                                    {mutualData.mutualServers.length > 8 && (
+                                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>
+                                            +{mutualData.mutualServers.length - 8}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
 
-                        <div>
-                            <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Gratonite Member Since</h3>
-                            <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', margin: 0 }}>Sep 15, 2024</p>
-                        </div>
-
-                        <div>
-                            <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Mutual Servers</h3>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(0,0,0,0.5))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>A</div>
-                                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>D</div>
+                        {/* Mutual Friends */}
+                        {mutualData?.mutualFriends && mutualData.mutualFriends.length > 0 && (
+                            <div>
+                                <h3 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>
+                                    Mutual Friends — {mutualData.mutualFriends.length}
+                                </h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    {mutualData.mutualFriends.slice(0, 8).map(friend => (
+                                        <div key={friend.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <Avatar
+                                                userId={friend.id}
+                                                avatarHash={friend.avatarHash}
+                                                displayName={friend.displayName || friend.username}
+                                                size={24}
+                                            />
+                                            <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{friend.displayName || friend.username}</span>
+                                        </div>
+                                    ))}
+                                    {mutualData.mutualFriends.length > 8 && (
+                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>and {mutualData.mutualFriends.length - 8} more...</span>
+                                    )}
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             </aside>
