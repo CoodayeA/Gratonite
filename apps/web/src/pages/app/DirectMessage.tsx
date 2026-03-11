@@ -2497,6 +2497,7 @@ const DirectMessage = () => {
                                 </div>
                             )}
                             <input
+                                id="dm-file-upload"
                                 type="file"
                                 ref={attachmentInputRef}
                                 style={{ display: 'none' }}
@@ -2571,9 +2572,9 @@ const DirectMessage = () => {
                                         ))}
                                     </div>
                                 )}
-                                <button type="button" className="input-icon-btn" title="Upload Attachment" onClick={() => { attachmentInputRef.current?.click(); }}>
+                                <label htmlFor="dm-file-upload" className="input-icon-btn" title="Upload Attachment" aria-label="Upload attachment" role="button" style={{ cursor: 'pointer' }}>
                                     <Plus size={20} />
-                                </button>
+                                </label>
                                 <textarea
                                     className="chat-input"
                                     rows={1}

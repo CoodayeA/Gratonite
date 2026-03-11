@@ -3372,7 +3372,7 @@ const ChannelChat = () => {
                         </div>
                     ) : (
                         <>
-                            <input type="file" multiple ref={chatFileInputRef} hidden onChange={(e) => {
+                            <input id="channel-file-upload" type="file" multiple ref={chatFileInputRef} style={{ display: 'none' }} onChange={(e) => {
                                 const files = e.target.files;
                                 if (!files) return;
                                 const newFiles = Array.from(files).map(f => ({
@@ -3383,9 +3383,9 @@ const ChannelChat = () => {
                                 setChatAttachedFiles(prev => [...prev, ...newFiles]);
                                 e.target.value = '';
                             }} />
-                            <button type="button" className="input-icon-btn" title={channelAttachmentsEnabled ? "Upload Attachment" : "Attachments disabled in this channel"} aria-label="Upload attachment" onClick={() => { if (channelAttachmentsEnabled) chatFileInputRef.current?.click(); }} style={channelAttachmentsEnabled ? {} : { opacity: 0.3, cursor: 'not-allowed' }}>
+                            <label htmlFor={channelAttachmentsEnabled ? "channel-file-upload" : undefined} className="input-icon-btn" title={channelAttachmentsEnabled ? "Upload Attachment" : "Attachments disabled in this channel"} aria-label="Upload attachment" role="button" style={channelAttachmentsEnabled ? { cursor: 'pointer' } : { opacity: 0.3, cursor: 'not-allowed' }}>
                                 <Plus size={20} />
-                            </button>
+                            </label>
                             {hasDraft && !editingMessage && (
                                 <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 15%, transparent)', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0 }}>Draft</span>
                             )}
