@@ -860,11 +860,12 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         setPresenceState(p);
         setSocketPresence(p);
     }, []);
+    const { user: sidebarUser } = useUser();
     useEffect(() => {
-        if (ctxUser.status && ctxUser.status !== 'online') {
-            setPresenceState(ctxUser.status as PresenceType);
+        if (sidebarUser.status && sidebarUser.status !== 'online') {
+            setPresenceState(sidebarUser.status as PresenceType);
         }
-    }, [ctxUser.status]);
+    }, [sidebarUser.status]);
     const [customStatus, setCustomStatus] = useState<string | null>(null);
     const [micMuted, setMicMuted] = useState(false);
     const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
