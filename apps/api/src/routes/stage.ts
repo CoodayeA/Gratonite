@@ -21,32 +21,13 @@ import { channels } from '../db/schema/channels';
 import { stageSessions, stageSpeakers } from '../db/schema/stage';
 import { requireAuth } from '../middleware/auth';
 import { getIO } from '../lib/socket-io';
+import { AppError, handleAppError } from '../lib/errors.js';
 
 export const stageRouter = Router();
 
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
-
-class AppError extends Error {
-  constructor(
-    public statusCode: number,
-    message: string,
-    public code: string = 'UNKNOWN_ERROR',
-  ) {
-    super(message);
-    this.name = 'AppError';
-  }
-}
-
-function handleAppError(res: Response, err: unknown): void {
-  if (err instanceof AppError) {
-    res.status(err.statusCode).json({ code: err.code, message: err.message });
-  } else {
-    console.error('[stage] unexpected error:', err);
-    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
-  }
-}
 
 /** Fetch the active (not yet ended) session for a channel, or null. */
 async function getActiveSession(channelId: string) {
@@ -106,7 +87,7 @@ stageRouter.get(
 
       res.status(200).json({ session, speakers });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'stage');
     }
   },
 );
@@ -170,7 +151,7 @@ stageRouter.post(
 
       res.status(201).json({ session, speakers: [] });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'stage');
     }
   },
 );
@@ -213,7 +194,7 @@ stageRouter.delete(
 
       res.status(200).json({ session: ended });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'stage');
     }
   },
 );
@@ -264,7 +245,7 @@ stageRouter.post(
 
       res.status(201).json({ speaker: speaker ?? null });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'stage');
     }
   },
 );
@@ -305,7 +286,7 @@ stageRouter.delete(
 
       res.status(200).json({ code: 'OK', message: 'Speaker removed' });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'stage');
     }
   },
 );
@@ -337,7 +318,7 @@ stageRouter.post(
 
       res.status(200).json({ code: 'OK', message: 'Hand raised' });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'stage');
     }
   },
 );

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
 import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star, Shield } from 'lucide-react';
 import { getOrCreateKeyPair, exportPublicKey, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported, generateGroupKey, encryptGroupKey, decryptGroupKey, computeSafetyNumber, encryptFile, decryptFile } from '../../lib/e2e';
@@ -10,6 +10,7 @@ import { useToast } from '../../components/ui/ToastManager';
 import { useContextMenu } from '../../components/ui/ContextMenu';
 import EmojiPicker from '../../components/chat/EmojiPicker';
 import ForwardModal from '../../components/modals/ForwardModal';
+import EditHistoryPopover from '../../components/chat/EditHistoryPopover';
 import { RichTextRenderer } from '../../components/chat/RichTextRenderer';
 import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
 import { ErrorState } from '../../components/ui/ErrorState';
@@ -19,6 +20,7 @@ import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onRea
 import { getDeterministicGradient } from '../../utils/colors';
 import { useLiveKit, type LiveKitParticipant } from '../../lib/useLiveKit';
 import Avatar from '../../components/ui/Avatar';
+import UserProfilePopover from '../../components/ui/UserProfilePopover';
 
 type MediaType = 'image' | 'video';
 
@@ -253,8 +255,12 @@ const DirectMessage = () => {
     // Forward modal state
     const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
 
+    // Profile popover state
+    const [profilePopover, setProfilePopover] = useState<{ user: string; userId: string; x: number; y: number } | null>(null);
+
     // Reaction state
     const [hoveredMessageId, setHoveredMessageId] = useState<number | null>(null);
+    const [highlightedMsgId, setHighlightedMsgId] = useState<number | null>(null);
     const [reactionPickerMessageId, setReactionPickerMessageId] = useState<number | null>(null);
     const reactionPickerRef = useRef<HTMLDivElement>(null);
     const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
@@ -406,6 +412,9 @@ const DirectMessage = () => {
     // Read receipts state (A1)
     const [partnerLastReadAt, setPartnerLastReadAt] = useState<string | null>(null);
     const [partnerLastReadMessageId, setPartnerLastReadMessageId] = useState<string | null>(null);
+
+    // NEW message divider — current user's last-read message ID (fetched before ack)
+    const [myLastReadMessageId, setMyLastReadMessageId] = useState<string | null>(null);
 
     // Disappearing messages timer state (A2)
     const [disappearTimer, setDisappearTimer] = useState<number | null>(null);
@@ -680,6 +689,11 @@ const DirectMessage = () => {
             if (apiMessages.length > 0) {
                 // Last element in API response (newest-first) is the oldest
                 oldestMessageIdRef.current = apiMessages[apiMessages.length - 1].id;
+                // Mark as read with latest message ID after loading
+                const latestMessageId = apiMessages[0].id;
+                api.messages.markRead(dmChannelId, latestMessageId).catch(() => {});
+            } else {
+                api.messages.markRead(dmChannelId).catch(() => {});
             }
             if (apiMessages.length < 50) {
                 setHasMoreMessages(false);
@@ -875,9 +889,8 @@ const DirectMessage = () => {
         api.messages.markRead(dmChannelId).catch(() => { /* non-fatal */ });
     }, [dmChannelId]);
 
-    useEffect(() => {
-        markAsRead();
-    }, [markAsRead]);
+    // Defer initial markAsRead to after messages load (see fetchDmMessages)
+    // to avoid clobbering the read state before we can capture the divider position.
 
     useEffect(() => {
         const handleFocus = () => markAsRead();
@@ -893,13 +906,15 @@ const DirectMessage = () => {
     // Fetch initial read state + disappear timer when channel opens (A1, A2)
     useEffect(() => {
         if (!dmChannelId) return;
-        // Fetch read state for partner read receipt
+        // Fetch read state for partner read receipt + current user's NEW divider
         api.messages.getReadState(dmChannelId).then((states: any[]) => {
             const partner = states.find((s: any) => s.userId !== currentUserId);
             if (partner) {
                 setPartnerLastReadAt(partner.lastReadAt);
                 setPartnerLastReadMessageId(partner.lastReadMessageId);
             }
+            const myState = states.find((s: any) => s.userId === currentUserId);
+            setMyLastReadMessageId(myState?.lastReadMessageId ?? null);
         }).catch(() => { /* non-fatal */ });
         // Fetch channel to get disappear timer
         api.channels.get(dmChannelId).then((ch: any) => {
@@ -1041,6 +1056,7 @@ const DirectMessage = () => {
     // Decrypt encrypted messages whenever the e2eKey or messages list changes
     useEffect(() => {
         if (!e2eKey) return;
+        const controller = new AbortController();
         const encryptedMsgs = messages.filter(
             (m) => m.isEncrypted && m.encryptedContent && !decryptedContents.has(m.id),
         );
@@ -1060,7 +1076,7 @@ const DirectMessage = () => {
                                     const att = m.attachments.find((a: MessageAttachment) => a.id === fileMeta.id);
                                     if (att && !decryptInFlightRef.current.has(fileMeta.id)) {
                                         decryptInFlightRef.current.add(fileMeta.id);
-                                        fetch(att.url).then(r => r.blob()).then(async (blob) => {
+                                        fetch(att.url, { signal: controller.signal }).then(r => r.blob()).then(async (blob) => {
                                             const decrypted = await decryptFile(e2eKey, blob, fileMeta.iv, fileMeta.ef);
                                             const blobUrl = URL.createObjectURL(decrypted);
                                             blobUrlsRef.current.push(blobUrl);
@@ -1069,7 +1085,7 @@ const DirectMessage = () => {
                                                 next.set(fileMeta.id, { url: blobUrl, filename: decrypted.name, mimeType: fileMeta.mt });
                                                 return next;
                                             });
-                                        }).catch(() => { decryptInFlightRef.current.delete(fileMeta.id); });
+                                        }).catch((err: any) => { if (err.name === 'AbortError') return; decryptInFlightRef.current.delete(fileMeta.id); });
                                     }
                                 }
                             }
@@ -1088,6 +1104,7 @@ const DirectMessage = () => {
                 return next;
             });
         });
+        return () => controller.abort();
     }, [e2eKey, messages]);
 
     // Group key rotation listener — when a member is added/removed, re-generate the group key
@@ -2191,10 +2208,27 @@ const DirectMessage = () => {
                                     msg.createdAt && prevMsg.createdAt &&
                                     new Date(msg.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() < 5 * 60 * 1000);
 
+                                const isNewMessageDivider = !!(myLastReadMessageId && prevMsg?.apiId === myLastReadMessageId && msg.apiId !== myLastReadMessageId);
+
                                 return (
+                                <React.Fragment key={msg.id}>
+                                {isNewMessageDivider && (
+                                    <div className="new-messages-divider" style={{
+                                        display: 'flex', alignItems: 'center', margin: '17px 0 4px', padding: '0 16px', position: 'relative',
+                                    }}>
+                                        <div style={{ flex: 1, height: '1px', background: '#ed4245' }}></div>
+                                        <span style={{
+                                            color: '#ed4245', fontSize: '11px', fontWeight: 700,
+                                            textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1,
+                                            padding: '0 0 0 4px', flexShrink: 0,
+                                        }}>
+                                            NEW
+                                        </span>
+                                    </div>
+                                )}
                                 <div
-                                    key={msg.id}
-                                    className={`message${isGrouped ? ' grouped' : ''}`}
+                                    data-message-id={msg.apiId}
+                                    className={`message${isGrouped ? ' grouped' : ''}${highlightedMsgId === msg.id ? ' highlighted-message' : ''}`}
                                     style={{ margin: 0, marginTop: isGrouped ? '1px' : '12px', padding: isGrouped ? '1px 16px' : '4px 16px', display: 'flex', gap: '12px', position: 'relative' }}
                                     onMouseEnter={() => setHoveredMessageId(msg.id)}
                                     onMouseLeave={() => { setHoveredMessageId(null); }}
@@ -2248,12 +2282,18 @@ const DirectMessage = () => {
                                             avatarHash={msg.authorAvatarHash}
                                             frame={isCurrentUserMessage ? currentFrame : 'none'}
                                             size={40}
+                                            onClick={(e) => { if (!msg.system && msg.authorId) setProfilePopover({ user: msg.author, userId: msg.authorId, x: e.clientX, y: e.clientY }); }}
+                                            style={{ cursor: msg.system ? 'default' : 'pointer' }}
                                         />
                                     )}
                                     <div className="msg-content">
                                         {!isGrouped && (
                                         <div className="msg-header">
-                                            <span className={`msg-author ${msg.authorNameplateStyle && msg.authorNameplateStyle !== 'none' ? `nameplate-${msg.authorNameplateStyle}` : (isCurrentUserMessage && currentNameplate !== 'none' ? `nameplate-${currentNameplate}` : '')}`}>{msg.author}</span>
+                                            <span
+                                                className={`msg-author ${msg.authorNameplateStyle && msg.authorNameplateStyle !== 'none' ? `nameplate-${msg.authorNameplateStyle}` : (isCurrentUserMessage && currentNameplate !== 'none' ? `nameplate-${currentNameplate}` : '')}`}
+                                                onClick={(e) => { if (!msg.system && msg.authorId) setProfilePopover({ user: msg.author, userId: msg.authorId, x: e.clientX, y: e.clientY }); }}
+                                                style={{ cursor: msg.system ? 'default' : 'pointer' }}
+                                            >{msg.author}</span>
                                             <span className="msg-timestamp">{msg.time}</span>
                                         </div>
                                         )}
@@ -2270,7 +2310,14 @@ const DirectMessage = () => {
                                                 maxWidth: '100%', overflow: 'hidden',
                                             }} onClick={() => {
                                                 const el = document.querySelector(`[data-message-id="${msg.replyToId}"]`);
-                                                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                if (el) {
+                                                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                    const localMsg = messages.find(m => m.apiId === msg.replyToId);
+                                                    if (localMsg) {
+                                                        setHighlightedMsgId(localMsg.id);
+                                                        setTimeout(() => setHighlightedMsgId(null), 2500);
+                                                    }
+                                                }
                                             }}>
                                                 <Reply size={11} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
                                                 <span style={{ fontWeight: 600, color: 'var(--accent-primary)', flexShrink: 0, fontSize: '11px' }}>
@@ -2307,7 +2354,7 @@ const DirectMessage = () => {
                                                         cursor: 'pointer',
                                                         background: 'var(--bg-tertiary)'
                                                     }}>
-                                                        <img src={msg.mediaUrl} alt="Media" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
+                                                        <img src={msg.mediaUrl} alt="Media" loading="lazy" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
                                                     </div>
                                                 </div>
                                             ) : (
@@ -2324,7 +2371,7 @@ const DirectMessage = () => {
                                                     ) : (
                                                         <RichTextRenderer content={msg.content} members={groupParticipants.map(p => ({ id: p.id, username: p.username, displayName: p.displayName }))} />
                                                     )}
-                                                    {msg.edited && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '6px' }}>(edited)</span>}
+                                                    {msg.edited && msg.apiId && dmChannelId && <EditHistoryPopover channelId={dmChannelId} messageApiId={msg.apiId} />}
                                                     {/* Expiry countdown (A2) */}
                                                     {msg.expiresAt && (() => {
                                                         const remaining = new Date(msg.expiresAt).getTime() - Date.now();
@@ -2365,7 +2412,7 @@ const DirectMessage = () => {
                                                         }
                                                         return displayType?.startsWith('image/') ? (
                                                             <div key={att.id} style={{ maxWidth: '400px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--stroke)', cursor: 'pointer', background: 'var(--bg-tertiary)' }}>
-                                                                <img src={displayUrl} alt={displayName} style={{ width: '100%', display: 'block', objectFit: 'cover' }} />
+                                                                <img src={displayUrl} alt={displayName} loading="lazy" style={{ width: '100%', display: 'block', objectFit: 'cover' }} />
                                                             </div>
                                                         ) : (
                                                             <a key={att.id} href={displayUrl} download={displayName} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-primary)', maxWidth: '320px' }}>
@@ -2416,6 +2463,7 @@ const DirectMessage = () => {
                                         </div>
                                     )}
                                 </div>
+                                </React.Fragment>
                                 );
                             })}
                             <div ref={messagesEndRef} />
@@ -2443,8 +2491,8 @@ const DirectMessage = () => {
                                         const names = [...typingUsers.values()];
                                         if (names.length === 1) return `${names[0]} is typing...`;
                                         if (names.length === 2) return `${names[0]} and ${names[1]} are typing...`;
-                                        if (names.length <= 4) return `${names[0]}, ${names[1]}, and ${names.length - 2} more are typing...`;
-                                        return `Multiple people are typing...`;
+                                        if (names.length === 3) return `${names[0]}, ${names[1]}, and ${names[2]} are typing...`;
+                                        return `Several people are typing...`;
                                     })()}
                                 </div>
                             )}
@@ -2523,7 +2571,7 @@ const DirectMessage = () => {
                                         ))}
                                     </div>
                                 )}
-                                <button className="input-icon-btn" title="Upload Attachment" onClick={() => attachmentInputRef.current?.click()}>
+                                <button type="button" className="input-icon-btn" title="Upload Attachment" onClick={() => { attachmentInputRef.current?.click(); }}>
                                     <Plus size={20} />
                                 </button>
                                 <textarea
@@ -2818,6 +2866,44 @@ const DirectMessage = () => {
                     onForward={(destinations, _note) => {
                         addToast({ title: 'Message Forwarded', description: `Sent to ${destinations.length} destination${destinations.length > 1 ? 's' : ''}`, variant: 'success' });
                         setForwardingMessage(null);
+                    }}
+                />
+            )}
+
+            {/* User Profile Popover */}
+            {profilePopover && (
+                <UserProfilePopover
+                    user={{
+                        id: profilePopover.userId,
+                        name: profilePopover.user,
+                        handle: profilePopover.user.toLowerCase().replace(/\s+/g, '_'),
+                        status: 'online',
+                    }}
+                    position={{ x: profilePopover.x, y: profilePopover.y }}
+                    onClose={() => setProfilePopover(null)}
+                    onMessage={async () => {
+                        const userId = profilePopover.userId;
+                        setProfilePopover(null);
+                        if (userId) {
+                            try {
+                                const dm = await api.relationships.openDm(userId) as any;
+                                navigate(`/dm/${dm.id}`);
+                            } catch {
+                                addToast({ title: 'Failed to open DM', variant: 'error' });
+                            }
+                        }
+                    }}
+                    onAddFriend={async () => {
+                        const userId = profilePopover.userId;
+                        setProfilePopover(null);
+                        if (userId) {
+                            try {
+                                await api.relationships.sendFriendRequest(userId);
+                                addToast({ title: 'Friend request sent!', variant: 'success' });
+                            } catch {
+                                addToast({ title: 'Failed to send friend request', variant: 'error' });
+                            }
+                        }
                     }}
                 />
             )}

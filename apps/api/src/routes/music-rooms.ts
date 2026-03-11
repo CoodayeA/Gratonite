@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { eq, and, asc, isNull } from 'drizzle-orm';
 import { db } from '../db/index';
-import { musicRoomSettings, musicQueue } from '../db/schema/music-rooms';
+import { musicRoomSettings, musicQueue, type NewMusicRoomSettings } from '../db/schema/music-rooms';
 import { guildMembers } from '../db/schema/guilds';
 import { channels } from '../db/schema/channels';
 import { Permissions } from '../db/schema/roles';
@@ -45,11 +45,11 @@ musicRoomsRouter.put('/settings', requireAuth, async (req: Request, res: Respons
   }
 
   const { mode, volume } = req.body;
-  const values: Record<string, unknown> = { channelId };
+  const values: NewMusicRoomSettings = { channelId };
   if (mode) values.mode = mode;
   if (volume !== undefined) values.volume = Math.max(0, Math.min(100, Number(volume)));
 
-  const [row] = await db.insert(musicRoomSettings).values(values as any)
+  const [row] = await db.insert(musicRoomSettings).values(values)
     .onConflictDoUpdate({
       target: musicRoomSettings.channelId,
       set: { ...(mode && { mode }), ...(volume !== undefined && { volume: values.volume as number }) },

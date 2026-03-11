@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect, useRef, ReactNode, useCallback } from 'react';
 import { LucideIcon } from 'lucide-react';
 
 export type ContextMenuItem = {
@@ -40,39 +40,50 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
         focusedIndex: -1
     });
 
+    const [positioned, setPositioned] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
     const openMenu = useCallback((e: React.MouseEvent, items: ContextMenuItem[]) => {
         e.preventDefault();
         e.stopPropagation();
 
-        // Calculate position to prevent menu going off-screen (naive approach, can be improved)
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight;
-
-        let x = e.clientX;
-        let y = e.clientY;
-
-        // Approximate menu dimensions (padding + items height)
-        const estWidth = 200;
-        const estHeight = items.length * 40 + 20;
-
-        if (x + estWidth > windowWidth) {
-            x = windowWidth - estWidth - 10;
-        }
-        if (y + estHeight > windowHeight) {
-            y = windowHeight - estHeight - 10;
-        }
-
+        // Store the raw click coordinates; actual clamping happens after measurement
+        setPositioned(false);
         setState({
             isOpen: true,
-            x,
-            y,
+            x: e.clientX,
+            y: e.clientY,
             items,
             focusedIndex: 0
         });
     }, []);
 
+    // After the menu renders (hidden), measure it and clamp to viewport
+    useLayoutEffect(() => {
+        if (!state.isOpen || positioned || !menuRef.current) return;
+
+        const rect = menuRef.current.getBoundingClientRect();
+        const pad = 10;
+        let x = state.x;
+        let y = state.y;
+
+        if (x + rect.width > window.innerWidth - pad) {
+            x = window.innerWidth - rect.width - pad;
+        }
+        if (x < pad) x = pad;
+
+        if (y + rect.height > window.innerHeight - pad) {
+            y = window.innerHeight - rect.height - pad;
+        }
+        if (y < pad) y = pad;
+
+        setState(prev => ({ ...prev, x, y }));
+        setPositioned(true);
+    }, [state.isOpen, state.x, state.y, positioned]);
+
     const closeMenu = useCallback(() => {
         setState(prev => ({ ...prev, isOpen: false }));
+        setPositioned(false);
     }, []);
 
     useEffect(() => {
@@ -113,6 +124,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
 
             {state.isOpen && (
                 <div
+                    ref={menuRef}
                     style={{
                         position: 'fixed',
                         top: state.y,
@@ -127,9 +139,10 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '2px',
-                        animation: 'popIn 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+                        animation: positioned ? 'popIn 0.15s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
                         transformOrigin: 'top left',
-                        backdropFilter: 'blur(20px)'
+                        backdropFilter: 'blur(20px)',
+                        visibility: positioned ? 'visible' : 'hidden',
                     }}
                     role="menu"
                     aria-label="Context Menu"

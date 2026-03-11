@@ -50,6 +50,35 @@ function isPlaceholderSecret(value: string): boolean {
   return PLACEHOLDER_PATTERNS.some((pattern) => normalized.includes(pattern));
 }
 
+function validateCriticalEnvVars(): void {
+  if (process.env.NODE_ENV !== 'production') return;
+
+  const required: Record<string, string | undefined> = {
+    REDIS_URL: process.env.REDIS_URL,
+    DATABASE_URL: process.env.DATABASE_URL,
+    APP_URL: process.env.APP_URL || (process.env.INSTANCE_DOMAIN ? `https://${process.env.INSTANCE_DOMAIN}` : undefined),
+  };
+
+  // At least one auth secret must be set
+  const hasAuthSecret = !!(process.env.JWT_SECRET || process.env.SESSION_SECRET);
+  if (!hasAuthSecret) {
+    required['JWT_SECRET or SESSION_SECRET'] = undefined;
+  }
+
+  const missing = Object.entries(required)
+    .filter(([, value]) => !value)
+    .map(([key]) => key);
+
+  if (missing.length > 0) {
+    throw new Error(
+      `FATAL: Missing critical environment variables in production: ${missing.join(', ')}. ` +
+      'Set these in your .env or environment before starting the server.',
+    );
+  }
+}
+
+validateCriticalEnvVars();
+
 function validateStartupConfig(): void {
   const env = (process.env.NODE_ENV ?? 'development').toLowerCase();
   const isProdLike = env === 'production' || env === 'staging';

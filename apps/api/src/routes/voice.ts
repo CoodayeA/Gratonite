@@ -27,6 +27,7 @@ import { getIO } from '../lib/socket-io';
 import { hasChannelPermission } from './roles';
 import { redis } from '../lib/redis';
 import { desc } from 'drizzle-orm';
+import { safeJsonParse } from '../lib/safe-json.js';
 
 export const voiceRouter = Router();
 
@@ -49,11 +50,24 @@ const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => P
 // LiveKit env var validation
 // ---------------------------------------------------------------------------
 const LIVEKIT_ENABLED = !!(process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET);
-if (!LIVEKIT_ENABLED) {
-  console.warn('[voice] WARNING: LIVEKIT_API_KEY and/or LIVEKIT_API_SECRET are not set. Voice features will be disabled.');
-}
-if (!process.env.LIVEKIT_URL) {
-  console.warn('[voice] WARNING: LIVEKIT_URL is not set, falling back to ws://localhost:7880. Set LIVEKIT_URL in production.');
+if (process.env.NODE_ENV === 'production') {
+  const missingLiveKit: string[] = [];
+  if (!process.env.LIVEKIT_URL) missingLiveKit.push('LIVEKIT_URL');
+  if (!process.env.LIVEKIT_API_KEY) missingLiveKit.push('LIVEKIT_API_KEY');
+  if (!process.env.LIVEKIT_API_SECRET) missingLiveKit.push('LIVEKIT_API_SECRET');
+  if (missingLiveKit.length > 0) {
+    throw new Error(
+      `FATAL: Missing LiveKit environment variables in production: ${missingLiveKit.join(', ')}. ` +
+      'Voice features require all three LiveKit variables to be set.',
+    );
+  }
+} else {
+  if (!LIVEKIT_ENABLED) {
+    console.warn('[voice] WARNING: LIVEKIT_API_KEY and/or LIVEKIT_API_SECRET are not set. Voice features will be disabled.');
+  }
+  if (!process.env.LIVEKIT_URL) {
+    console.warn('[voice] WARNING: LIVEKIT_URL is not set, falling back to ws://localhost:7880. Set LIVEKIT_URL in production.');
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -108,7 +122,9 @@ async function removeVoiceState(userId: string): Promise<string | null> {
 async function getVoiceStates(channelId: string): Promise<VoiceStateEntry[]> {
   const key = `${VOICE_STATE_PREFIX}${channelId}`;
   const raw = await redis.hgetall(key);
-  return Object.values(raw).map((v) => JSON.parse(v) as VoiceStateEntry);
+  return Object.values(raw)
+    .map((v) => safeJsonParse<VoiceStateEntry | null>(v, null))
+    .filter((entry): entry is VoiceStateEntry => entry !== null);
 }
 
 function normalizeChannelType(type: string | null | undefined): string {
@@ -515,7 +531,11 @@ voiceRouter.post(
       return;
     }
 
-    const pending = JSON.parse(pendingRaw);
+    const pending = safeJsonParse<{ callerId: string; withVideo: boolean; startedAt: number } | null>(pendingRaw, null);
+    if (!pending) {
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Corrupted pending call data' });
+      return;
+    }
 
     // Clear pending call
     await redis.del(`pendingCall:${channelId}`);
@@ -586,13 +606,13 @@ voiceRouter.post(
 
     const pendingRaw = await redis.get(`pendingCall:${channelId}`);
     if (pendingRaw) {
-      const pending = JSON.parse(pendingRaw);
+      const pending = safeJsonParse<{ callerId: string } | null>(pendingRaw, null);
       await redis.del(`pendingCall:${channelId}`);
 
       // Notify caller
       try {
         const io = getIO();
-        io.to(`user:${pending.callerId}`).emit('CALL_REJECT', { channelId, userId });
+        if (pending) io.to(`user:${pending.callerId}`).emit('CALL_REJECT', { channelId, userId });
       } catch {
         // Socket.io may not be initialised in tests
       }
@@ -621,8 +641,8 @@ voiceRouter.post(
     // Verify the canceller is the original caller
     const cancelPendingRaw = await redis.get(`pendingCall:${channelId}`);
     if (cancelPendingRaw) {
-      const cancelPending = JSON.parse(cancelPendingRaw);
-      if (cancelPending.callerId !== userId) {
+      const cancelPending = safeJsonParse<{ callerId: string } | null>(cancelPendingRaw, null);
+      if (cancelPending && cancelPending.callerId !== userId) {
         res.status(403).json({ code: 'FORBIDDEN', message: 'Only the caller can cancel the call' });
         return;
       }

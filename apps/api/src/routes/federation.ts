@@ -25,6 +25,14 @@ import { assertNotPrivateHost } from '../lib/ssrf-guard';
 
 export const federationRouter = Router();
 
+/**
+ * getFederationInstanceId — Extract the federation instance ID attached by
+ * `requireFederationAuth` middleware. Avoids `(req as any)` casts throughout.
+ */
+function getFederationInstanceId(req: Request): string {
+  return (req as Request & { federationInstanceId: string }).federationInstanceId;
+}
+
 // ---------------------------------------------------------------------------
 // Well-known endpoint (no auth — public discovery)
 // ---------------------------------------------------------------------------
@@ -188,7 +196,7 @@ federationRouter.post('/inbox',
   requireFederationAuth,
   federationSanitizeMiddleware,
   async (req: Request, res: Response) => {
-    const instanceId = (req as any).federationInstanceId as string;
+    const instanceId = getFederationInstanceId(req);
 
     const { type, payload } = req.body as {
       type?: string;
@@ -489,7 +497,7 @@ federationRouter.delete('/admin/blocks/:blockId', requireAuth, async (req: Reque
  * Requires federation auth (HTTP Signature).
  */
 federationRouter.post('/discover/register', requireFederationAuth, async (req: Request, res: Response) => {
-  const instanceId = (req as any).federationInstanceId as string;
+  const instanceId = getFederationInstanceId(req);
 
   const { guilds: guildList } = req.body as {
     guilds?: Array<{
@@ -616,7 +624,7 @@ federationRouter.post('/discover/register', requireFederationAuth, async (req: R
  * DELETE /federation/discover/unregister — Remove instance from Discover.
  */
 federationRouter.delete('/discover/unregister', requireFederationAuth, async (req: Request, res: Response) => {
-  const instanceId = (req as any).federationInstanceId as string;
+  const instanceId = getFederationInstanceId(req);
 
   await db.delete(remoteGuilds).where(eq(remoteGuilds.instanceId, instanceId));
   await db.update(federatedInstances)

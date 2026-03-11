@@ -18,7 +18,7 @@ import { BackgroundMedia } from '../../components/ui/BackgroundMedia';
 import UserProfilePopover from '../../components/ui/UserProfilePopover';
 import { playSound } from '../../utils/SoundManager';
 import { api, API_BASE } from '../../lib/api';
-import { markRead } from '../../store/unreadStore';
+import { markRead, setChannelHasUnread } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
 import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onMessageDeleteBulk, onReactionAdd, onReactionRemove, onChannelPinsUpdate, onSocketReconnect, onChannelBackgroundUpdated, onGroupKeyRotationNeeded, onThreadCreate, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type MessageDeleteBulkPayload, type ReactionPayload, type ChannelPinsUpdatePayload, type GroupKeyRotationNeededPayload } from '../../lib/socket';
 import Avatar from '../../components/ui/Avatar';
@@ -100,6 +100,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { RichTextRenderer } from '../../components/chat/RichTextRenderer';
 import { Tooltip } from '../../components/ui/Tooltip';
 import ForwardModal from '../../components/modals/ForwardModal';
+import EditHistoryPopover from '../../components/chat/EditHistoryPopover';
 import { MemberListPanel } from '../../components/guild/MemberListPanel';
 
 const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApiId, channelId, onReaction }: { emoji: string; emojiUrl?: string; isCustom?: boolean; count: number; me: boolean; messageApiId?: string; channelId?: string; onReaction?: (apiId: string, emoji: string, me: boolean) => void }) => {
@@ -159,6 +160,7 @@ const MemoizedMessageItem = memo(({
     onProfileClick,
     onForward,
     onReaction,
+    onReplyHighlight,
     channelId: msgChannelId,
     customEmojis,
     members,
@@ -238,17 +240,16 @@ const MemoizedMessageItem = memo(({
         <React.Fragment>
             {isNewMessageDivider && (
                 <div className="new-messages-divider" style={{
-                    display: 'flex', alignItems: 'center', margin: '24px 0', opacity: 0.8
+                    display: 'flex', alignItems: 'center', margin: '17px 0 4px', padding: '0 16px', position: 'relative',
                 }}>
-                    <div style={{ flex: 1, height: '1px', background: 'var(--error)' }}></div>
-                    <div style={{
-                        background: 'var(--error)', color: 'white', padding: '2px 8px',
-                        borderRadius: '12px', fontSize: '11px', fontWeight: 600,
-                        textTransform: 'uppercase', letterSpacing: '0.5px', marginLeft: '8px', marginRight: '8px'
+                    <div style={{ flex: 1, height: '1px', background: '#ed4245' }}></div>
+                    <span style={{
+                        color: '#ed4245', fontSize: '11px', fontWeight: 700,
+                        textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1,
+                        padding: '0 0 0 4px', flexShrink: 0,
                     }}>
                         NEW
-                    </div>
-                    <div style={{ flex: 1, height: '1px', background: 'var(--error)' }}></div>
+                    </span>
                 </div>
             )}
             <motion.div
@@ -284,7 +285,11 @@ const MemoizedMessageItem = memo(({
                         </span>
                     </div>
                 ) : (
-                    <div style={{ position: 'relative', flexShrink: 0 }} ref={avatarRef}>
+                    <div
+                        style={{ position: 'relative', flexShrink: 0, cursor: msg.system ? 'default' : 'pointer' }}
+                        ref={avatarRef}
+                        onClick={(e) => { if (!msg.system) onProfileClick?.({ user: msg.author, userId: msg.authorId || '', x: e.clientX, y: e.clientY }); }}
+                    >
                         {typeof msg.avatar === 'string' ? (
                             <Avatar
                                 userId={msg.authorId || String(msg.id)}
@@ -363,7 +368,10 @@ const MemoizedMessageItem = memo(({
                             maxWidth: '100%', overflow: 'hidden',
                         }} onClick={() => {
                             const el = document.querySelector(`[data-message-id="${msg.replyToId}"]`);
-                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            if (el) {
+                                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                onReplyHighlight?.(msg.replyToId);
+                            }
                         }}>
                             <Reply size={11} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
                             <span style={{ fontWeight: 600, color: 'var(--accent-primary)', flexShrink: 0, fontSize: '11px' }}>
@@ -417,13 +425,13 @@ const MemoizedMessageItem = memo(({
                                     border: '1px solid var(--stroke)',
                                     cursor: 'pointer'
                                 }}>
-                                    <img src={msg.mediaUrl} alt="Attached Media" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <img src={msg.mediaUrl} alt="Attached Media" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 </div>
                             </div>
                         ) : (
                             <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.5', willChange: 'transform, opacity' }}>
                                 <RichTextRenderer content={msg.content} customEmojis={customEmojis} members={members} channels={channels} />
-                                {msg.edited && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '4px' }}>(edited)</span>}
+                                {msg.edited && msg.apiId && msgChannelId && <EditHistoryPopover channelId={msgChannelId} messageApiId={msg.apiId} />}
                             </div>
                         )}
                         {/* Attachment rendering — skip duplicates of mediaUrl */}
@@ -463,7 +471,7 @@ const MemoizedMessageItem = memo(({
                                                 border: '1px solid var(--stroke)', cursor: 'pointer',
                                                 background: 'var(--bg-tertiary)',
                                             }}>
-                                                <img src={displayUrl} alt={displayName} style={{ width: '100%', display: 'block', objectFit: 'contain', maxHeight: '350px' }} />
+                                                <img src={displayUrl} alt={displayName} loading="lazy" style={{ width: '100%', display: 'block', objectFit: 'contain', maxHeight: '350px' }} />
                                             </div>
                                         );
                                     }
@@ -880,22 +888,21 @@ const ChannelChat = () => {
     // Feature 9: Fetch last read message ID before marking as read
     useEffect(() => {
         if (!channelId) return;
-        fetch(`${API_BASE}/api/v1/channels/${channelId}/read-state`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
-        }).then(r => r.ok ? r.json() : null).then(state => {
-            if (state?.lastMessageId) {
-                setLastReadMessageId(state.lastMessageId);
+        api.messages.getReadState(channelId).then((states: any[]) => {
+            // Find current user's read state (works for both guild and DM channels)
+            const myState = states.find((s: any) => s.userId === currentUserId) || states[0];
+            if (myState?.lastReadMessageId) {
+                setLastReadMessageId(myState.lastReadMessageId);
             } else {
                 setLastReadMessageId(null);
             }
         }).catch(() => setLastReadMessageId(null));
-    }, [channelId]);
+    }, [channelId, currentUserId]);
 
-    // Mark channel as read on mount
+    // Mark channel as read in client store on mount (server ack deferred until messages load)
     useEffect(() => {
         if (!channelId) return;
         markRead(channelId);
-        api.messages.ack(channelId).catch(() => {});
     }, [channelId]);
 
     // Listen for remote typing events
@@ -1244,6 +1251,20 @@ const ChannelChat = () => {
                     }).catch(() => addToast({ title: 'Failed to bookmark', variant: 'error' }));
                 }
             }] : []),
+            ...(msg.apiId ? [{
+                id: 'mark-unread', label: 'Mark as Unread', icon: Eye, onClick: () => {
+                    if (!channelId || !msg.apiId) return;
+                    // Find the message right before this one to set as the last-read position
+                    const idx = messages.findIndex(m => m.id === msg.id);
+                    const prevApiId = idx > 0 ? messages[idx - 1].apiId : undefined;
+                    // Ack with the previous message ID (or clear read state if it's the first message)
+                    api.messages.ack(channelId, prevApiId).then(() => {
+                        setLastReadMessageId(prevApiId || null);
+                        setChannelHasUnread(channelId);
+                        addToast({ title: 'Marked as unread', variant: 'info' });
+                    }).catch(() => addToast({ title: 'Failed to mark as unread', variant: 'error' }));
+                }
+            }] : []),
             { divider: true, id: 'div1', label: '', onClick: () => { } },
             ...(!isOwn ? [{
                 id: 'report', label: 'Report Message', icon: Flag, color: 'var(--warning)', onClick: () => {
@@ -1400,6 +1421,11 @@ const ChannelChat = () => {
             if (apiMessages.length > 0) {
                 // API returns newest-first; the last element is the oldest message
                 oldestMessageIdRef.current = apiMessages[apiMessages.length - 1].id;
+                // Ack with newest message ID so the read-state is persisted for next visit
+                const latestMessageId = apiMessages[0].id;
+                api.messages.ack(channelId, latestMessageId).catch(() => {});
+            } else {
+                api.messages.ack(channelId).catch(() => {});
             }
             if (apiMessages.length < 50) {
                 setHasMoreMessages(false);
@@ -2951,6 +2977,13 @@ const ChannelChat = () => {
                                         onProfileClick={(p: any) => setProfilePopover(p)}
                                         onForward={(m: Message) => setForwardingMessage(m)}
                                         onReaction={handleReaction}
+                                        onReplyHighlight={(replyApiId: string) => {
+                                            const localMsg = messages.find(m => m.apiId === replyApiId);
+                                            if (localMsg) {
+                                                setHighlightedMessageId(localMsg.id);
+                                                setTimeout(() => setHighlightedMessageId(null), 2500);
+                                            }
+                                        }}
                                         channelId={channelId}
                                         customEmojis={guildCustomEmojis}
                                         members={guildMembers}
@@ -3121,8 +3154,8 @@ const ChannelChat = () => {
                             const names = [...typingUsers.values()];
                             if (names.length === 1) return `${names[0]} is typing...`;
                             if (names.length === 2) return `${names[0]} and ${names[1]} are typing...`;
-                            if (names.length <= 4) return `${names[0]}, ${names[1]}, and ${names.length - 2} more are typing...`;
-                            return `Multiple people are typing...`;
+                            if (names.length === 3) return `${names[0]}, ${names[1]}, and ${names[2]} are typing...`;
+                            return `Several people are typing...`;
                         })()}
                     </div>
                 )}
@@ -3350,7 +3383,7 @@ const ChannelChat = () => {
                                 setChatAttachedFiles(prev => [...prev, ...newFiles]);
                                 e.target.value = '';
                             }} />
-                            <button className="input-icon-btn" title={channelAttachmentsEnabled ? "Upload Attachment" : "Attachments disabled in this channel"} aria-label="Upload attachment" onClick={() => channelAttachmentsEnabled && chatFileInputRef.current?.click()} style={channelAttachmentsEnabled ? {} : { opacity: 0.3, cursor: 'not-allowed' }}>
+                            <button type="button" className="input-icon-btn" title={channelAttachmentsEnabled ? "Upload Attachment" : "Attachments disabled in this channel"} aria-label="Upload attachment" onClick={() => { if (channelAttachmentsEnabled) chatFileInputRef.current?.click(); }} style={channelAttachmentsEnabled ? {} : { opacity: 0.3, cursor: 'not-allowed' }}>
                                 <Plus size={20} />
                             </button>
                             {hasDraft && !editingMessage && (

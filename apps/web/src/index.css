@@ -2371,6 +2371,7 @@ p {
 .input-icon-btn {
     width: 36px;
     height: 36px;
+    border: none;
     border-radius: var(--radius-md);
     background: rgba(255, 255, 255, 0.05);
     display: flex;
@@ -2379,6 +2380,8 @@ p {
     color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.2s ease;
+    position: relative;
+    z-index: 1;
 }
 
 .input-icon-btn:hover {
