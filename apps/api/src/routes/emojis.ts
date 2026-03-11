@@ -26,6 +26,7 @@ import { files } from '../db/schema/files';
 import { Permissions } from '../db/schema/roles';
 import { requireAuth } from '../middleware/auth';
 import { hasPermission } from './roles';
+import { AppError } from '../lib/errors.js';
 
 // mergeParams: true so we can read :guildId from the parent mount
 export const emojisRouter = Router({ mergeParams: true });
@@ -75,17 +76,6 @@ const upload = multer({
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-class AppError extends Error {
-  constructor(
-    public statusCode: number,
-    message: string,
-    public code: string = 'UNKNOWN_ERROR',
-  ) {
-    super(message);
-    this.name = 'AppError';
-  }
-}
 
 function handleAppError(res: Response, err: unknown): void {
   if (err instanceof AppError) {

@@ -21,6 +21,7 @@ import { users } from '../db/schema/users';
 import { guildMembers } from '../db/schema/guilds';
 import { fameTransactions } from '../db/schema/fameTransactions';
 import { requireAuth } from '../middleware/auth';
+import { toRows } from '../lib/to-rows.js';
 
 export const leaderboardRouter = Router();
 
@@ -77,27 +78,29 @@ leaderboardRouter.get(
     try {
       const metric = typeof req.query.metric === 'string' ? req.query.metric : 'level';
 
-      let rows: Array<{ userId: string; username: string; displayName: string; avatarHash: string | null; score: number }>;
+      type LeaderboardRow = { userId: string; username: string; displayName: string; avatarHash: string | null; score: number };
+
+      let rawResult: unknown;
 
       if (metric === 'level' || metric === 'xp') {
-        rows = await db.execute(sql`
+        rawResult = await db.execute(sql`
           SELECT id as "userId", username, display_name as "displayName", avatar_hash as "avatarHash",
                  COALESCE(level, 1) as score
           FROM users
           ORDER BY COALESCE(xp, 0) DESC
           LIMIT 50
-        `) as any;
+        `);
       } else if (metric === 'coins') {
-        rows = await db.execute(sql`
+        rawResult = await db.execute(sql`
           SELECT id as "userId", username, display_name as "displayName", avatar_hash as "avatarHash",
                  COALESCE(coins, 0) as score
           FROM users
           ORDER BY COALESCE(coins, 0) DESC
           LIMIT 50
-        `) as any;
+        `);
       } else {
         // messages — use fame transactions as proxy
-        rows = await db.execute(sql`
+        rawResult = await db.execute(sql`
           SELECT u.id as "userId", u.username, u.display_name as "displayName", u.avatar_hash as "avatarHash",
                  COUNT(ft.id)::int as score
           FROM users u
@@ -105,10 +108,10 @@ leaderboardRouter.get(
           GROUP BY u.id
           ORDER BY COUNT(ft.id) DESC
           LIMIT 50
-        `) as any;
+        `);
       }
 
-      const result = (Array.isArray(rows) ? rows : (rows as any).rows ?? []).map((row: any, i: number) => ({
+      const result = toRows<LeaderboardRow>(rawResult).map((row, i) => ({
         rank: i + 1,
         userId: row.userId,
         username: row.username,
@@ -221,18 +224,19 @@ leaderboardRouter.get(
 
       // For level/coins metrics — pull from users directly, filtered to guild members
       if (metric === 'level' || metric === 'coins') {
+        type GuildLeaderboardRow = { userId: string; username: string; displayName: string; avatarHash: string | null; score: number; joinedAt: string | null };
         const orderCol = metric === 'level' ? 'COALESCE(u.xp, 0)' : 'COALESCE(u.coins, 0)';
         const scoreCol = metric === 'level' ? 'COALESCE(u.level, 1)' : 'COALESCE(u.coins, 0)';
-        const rows = await db.execute(sql`
+        const rawResult = await db.execute(sql`
           SELECT u.id as "userId", u.username, u.display_name as "displayName", u.avatar_hash as "avatarHash",
                  ${sql.raw(scoreCol)} as score, gm.joined_at as "joinedAt"
           FROM users u
           INNER JOIN guild_members gm ON gm.guild_id = ${guildId}::uuid AND gm.user_id = u.id
           ORDER BY ${sql.raw(orderCol)} DESC
           LIMIT 10
-        `) as any;
-        const data = Array.isArray(rows) ? rows : (rows as any).rows ?? [];
-        res.status(200).json(data.map((row: any, i: number) => ({
+        `);
+        const data = toRows<GuildLeaderboardRow>(rawResult);
+        res.status(200).json(data.map((row, i) => ({
           rank: i + 1,
           userId: row.userId,
           username: row.username,

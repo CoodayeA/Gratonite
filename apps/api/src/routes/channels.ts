@@ -40,42 +40,13 @@ import { requireMember } from './guilds';
 import { hasPermission, hasChannelPermission } from './roles';
 import { logAuditEvent, AuditActionTypes } from '../lib/audit';
 import { getIO } from '../lib/socket-io';
+import { AppError, handleAppError } from '../lib/errors.js';
 
 export const channelsRouter = Router();
 
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
-
-/**
- * AppError — Lightweight error with an HTTP status code.
- * Used to distinguish intentional HTTP errors from unexpected runtime errors.
- */
-class AppError extends Error {
-  constructor(
-    public statusCode: number,
-    message: string,
-    public code: string = 'UNKNOWN_ERROR',
-  ) {
-    super(message);
-    this.name = 'AppError';
-  }
-}
-
-/**
- * handleAppError — Shared error handler for all channel route handlers.
- *
- * @param res - Express Response.
- * @param err - The caught error value.
- */
-function handleAppError(res: Response, err: unknown): void {
-  if (err instanceof AppError) {
-    res.status(err.statusCode).json({ code: err.code, message: err.message });
-  } else {
-    console.error('[channels] unexpected error:', err);
-    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
-  }
-}
 
 /**
  * canAccessChannel — Verify that the user may access the given channel.
@@ -208,7 +179,7 @@ channelsRouter.get(
 
       res.status(200).json(filtered);
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'channels');
     }
   },
 );
@@ -307,7 +278,7 @@ channelsRouter.post(
       getIO().to(`guild:${guildId}`).emit('CHANNEL_CREATE', channel);
       res.status(201).json(channel);
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'channels');
     }
   },
 );
@@ -396,9 +367,14 @@ channelsRouter.patch(
           .where(eq(channels.id, u.id));
       }
 
+      // Broadcast position update so other clients reorder in real time
+      try {
+        getIO().to(`guild:${guildId}`).emit('CHANNEL_POSITIONS_UPDATE', { guildId, updates });
+      } catch { /* socket may not be initialised in tests */ }
+
       res.status(200).json({ code: 'OK', message: 'Positions updated' });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'channels');
     }
   },
 );
@@ -460,7 +436,7 @@ channelsRouter.get(
 
       res.status(200).json(channel);
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'channels');
     }
   },
 );
@@ -564,7 +540,7 @@ channelsRouter.patch(
 
       res.status(200).json(updated);
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'channels');
     }
   },
 );
@@ -642,7 +618,7 @@ channelsRouter.delete(
 
       res.status(200).json({ code: 'OK', message: 'Channel deleted' });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'channels');
     }
   },
 );
@@ -680,7 +656,7 @@ channelsRouter.post(
 
       res.status(201).json({ sourceChannelId: channelId, targetChannelId });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'channels');
     }
   },
 );
@@ -737,7 +713,7 @@ channelsRouter.post(
 
       res.json({ crossposted: followers.length });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'channels');
     }
   },
 );
@@ -894,7 +870,7 @@ channelsRouter.post('/channels/:channelId/duplicate', requireAuth, async (req: R
 
     res.status(201).json(newChannel);
   } catch (err) {
-    handleAppError(res, err);
+    handleAppError(res, err, 'channels');
   }
 });
 
@@ -938,7 +914,7 @@ channelsRouter.post(
 
       res.status(201).json(inserted);
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'channels');
     }
   },
 );
@@ -975,7 +951,7 @@ channelsRouter.get(
 
       res.json(keys[0]);
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'channels');
     }
   },
 );

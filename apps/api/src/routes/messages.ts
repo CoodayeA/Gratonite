@@ -60,6 +60,8 @@ import { scheduledMessages } from '../db/schema/scheduled-messages';
 import { messageDrafts } from '../db/schema/message-drafts';
 import { guildWordFilters } from '../db/schema/guild-word-filters';
 import { messagesSentTotal } from '../lib/metrics';
+import { AppError, handleAppError } from '../lib/errors.js';
+import { safeJsonParse } from '../lib/safe-json.js';
 
 /** Use mergeParams so `:channelId` from the parent mount path is accessible. */
 export const messagesRouter = Router({ mergeParams: true });
@@ -67,35 +69,6 @@ export const messagesRouter = Router({ mergeParams: true });
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
-
-/**
- * AppError — Lightweight typed HTTP error.
- */
-class AppError extends Error {
-  constructor(
-    public statusCode: number,
-    message: string,
-    public code: string = 'UNKNOWN_ERROR',
-  ) {
-    super(message);
-    this.name = 'AppError';
-  }
-}
-
-/**
- * handleAppError — Shared error handler for message route handlers.
- *
- * @param res - Express Response.
- * @param err - The caught error.
- */
-function handleAppError(res: Response, err: unknown): void {
-  if (err instanceof AppError) {
-    res.status(err.statusCode).json({ code: err.code, message: err.message });
-  } else {
-    console.error('[messages] unexpected error:', err);
-    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
-  }
-}
 
 /**
  * resolveChannel — Fetch a channel row and verify the user has access.
@@ -401,7 +374,7 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
 
     res.status(200).json(formatted);
   } catch (err) {
-    handleAppError(res, err);
+    handleAppError(res, err, 'messages');
   }
 });
 
@@ -861,7 +834,7 @@ messagesRouter.post(
               title: `New message from ${senderName}`,
               body: preview || '(attachment)',
               data: { senderId: req.userId!, senderName, channelId },
-            }).catch(() => {});
+            }).catch(err => console.error('[messages] notification failed:', err));
           }
         }
       }
@@ -892,7 +865,7 @@ messagesRouter.post(
                   title: `${senderName} mentioned you`,
                   body: preview,
                   data: { senderId: req.userId!, senderName, channelId, guildId: chan?.guildId ?? null },
-                }).catch(() => {});
+                }).catch(err => console.error('[messages] mention notification failed:', err));
               }
             } catch { /* skip failed lookups */ }
           }
@@ -904,7 +877,7 @@ messagesRouter.post(
       // Clear draft for this user/channel (fire-and-forget)
       db.delete(messageDrafts)
         .where(and(eq(messageDrafts.userId, req.userId!), eq(messageDrafts.channelId, channelId)))
-        .catch(() => {});
+        .catch(err => console.error('[messages] draft cleanup failed:', err));
 
       // Fire-and-forget URL embed scraping
       (async () => {
@@ -921,9 +894,9 @@ messagesRouter.post(
           messageId: newMessage.id,
           embeds,
         });
-      })().catch(() => {});
+      })().catch(err => console.error('[messages] embed scraping failed:', err));
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'messages');
     }
   },
 );
@@ -1029,7 +1002,7 @@ messagesRouter.patch(
 
       res.status(200).json(payload);
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'messages');
     }
   },
 );
@@ -1054,7 +1027,7 @@ messagesRouter.get(
 
       res.status(200).json(history);
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'messages');
     }
   },
 );
@@ -1104,7 +1077,7 @@ messagesRouter.delete(
 
       res.json({ deleted: ids.length });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'messages');
     }
   },
 );
@@ -1177,7 +1150,7 @@ messagesRouter.delete(
 
       res.status(200).json({ code: 'OK', message: 'Message deleted' });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'messages');
     }
   },
 );
@@ -1226,7 +1199,7 @@ messagesRouter.post('/typing', requireAuth, async (req: Request, res: Response):
 
     res.status(200).json({ ok: true });
   } catch (err) {
-    handleAppError(res, err);
+    handleAppError(res, err, 'messages');
   }
 });
 
@@ -1266,7 +1239,7 @@ messagesRouter.post('/ack', requireAuth, validate(ackSchema), async (req: Reques
 
     res.status(204).end();
   } catch (err) {
-    handleAppError(res, err);
+    handleAppError(res, err, 'messages');
   }
 });
 
@@ -1365,7 +1338,7 @@ messagesRouter.post('/read', requireAuth, validate(readSchema), async (req: Requ
 
     res.status(200).json({ ok: true });
   } catch (err) {
-    handleAppError(res, err);
+    handleAppError(res, err, 'messages');
   }
 });
 
@@ -1388,7 +1361,16 @@ messagesRouter.get('/read-state', requireAuth, async (req: Request, res: Respons
     const channel = await resolveChannel(channelId, req.userId!);
 
     if (channel.guildId) {
-      res.status(200).json([]);
+      // Return guild channel read state for the current user
+      const guildRows = await db
+        .select({
+          userId: channelReadState.userId,
+          lastReadAt: channelReadState.lastReadAt,
+          lastReadMessageId: channelReadState.lastReadMessageId,
+        })
+        .from(channelReadState)
+        .where(and(eq(channelReadState.channelId, channelId), eq(channelReadState.userId, req.userId!)));
+      res.status(200).json(guildRows);
       return;
     }
 
@@ -1403,7 +1385,7 @@ messagesRouter.get('/read-state', requireAuth, async (req: Request, res: Respons
 
     res.status(200).json(rows);
   } catch (err) {
-    handleAppError(res, err);
+    handleAppError(res, err, 'messages');
   }
 });
 
@@ -1448,7 +1430,7 @@ messagesRouter.patch('/disappear-timer', requireAuth, validate(disappearTimerSch
 
     res.status(200).json({ disappearTimer: updated.disappearTimer });
   } catch (err) {
-    handleAppError(res, err);
+    handleAppError(res, err, 'messages');
   }
 });
 
@@ -1470,7 +1452,7 @@ messagesRouter.get('/scheduled', requireAuth, async (req: Request, res: Response
       .orderBy(scheduledMessages.scheduledAt);
     res.json(rows);
   } catch (err) {
-    handleAppError(res, err);
+    handleAppError(res, err, 'messages');
   }
 });
 
@@ -1491,7 +1473,7 @@ messagesRouter.delete('/scheduled/:id', requireAuth, async (req: Request, res: R
     await db.update(scheduledMessages).set({ cancelledAt: new Date() }).where(eq(scheduledMessages.id, id));
     res.json({ ok: true });
   } catch (err) {
-    handleAppError(res, err);
+    handleAppError(res, err, 'messages');
   }
 });
 
@@ -1507,7 +1489,10 @@ messagesRouter.post('/:messageId/translate', requireAuth, async (req: Request, r
 
     const cacheKey = `translate:${messageId}:${targetLang.toUpperCase()}`;
     const cached = await redis.get(cacheKey);
-    if (cached) { res.json(JSON.parse(cached)); return; }
+    if (cached) {
+      const parsed = safeJsonParse(cached, null);
+      if (parsed) { res.json(parsed); return; }
+    }
 
     const deeplKey = process.env.DEEPL_API_KEY;
     if (!deeplKey) {
@@ -1531,6 +1516,6 @@ messagesRouter.post('/:messageId/translate', requireAuth, async (req: Request, r
     await redis.set(cacheKey, JSON.stringify(result), 'EX', 3600);
     res.json(result);
   } catch (err) {
-    handleAppError(res, err);
+    handleAppError(res, err, 'messages');
   }
 });

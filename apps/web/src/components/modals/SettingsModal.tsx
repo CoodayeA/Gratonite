@@ -376,9 +376,11 @@ const SettingsModal = ({
 
     useEffect(() => {
         if (activeTab !== 'connections') return;
+        const controller = new AbortController();
         fetch(`${API_BASE}/users/@me/connections`, {
             credentials: 'include',
             headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}` },
+            signal: controller.signal,
         })
             .then(r => r.ok ? r.json() : [])
             .then((rows: any[]) => {
@@ -392,7 +394,8 @@ const SettingsModal = ({
                 setConnectionUsernames(prev => ({ ...prev, ...usernames }) as Record<Provider, string>);
                 setConnectionProfileUrls(prev => ({ ...prev, ...profileUrls }) as Record<Provider, string>);
             })
-            .catch(() => {});
+            .catch((err: any) => { if (err.name === 'AbortError') return; });
+        return () => controller.abort();
     }, [activeTab]);
 
     // Fetch wardrobe inventory
@@ -425,15 +428,19 @@ const SettingsModal = ({
     // Fetch achievements and stats
     useEffect(() => {
         if (activeTab !== 'achievements' && activeTab !== 'stats') return;
+        const controller = new AbortController();
         const token = localStorage.getItem('gratonite_access_token') ?? '';
         fetch(`${API_BASE}/users/@me/achievements`, {
             credentials: 'include',
             headers: { Authorization: `Bearer ${token}` },
-        }).then(r => r.ok ? r.json() : []).then((data: any[]) => { if (Array.isArray(data)) setAchievements(data); }).catch(() => {});
+            signal: controller.signal,
+        }).then(r => r.ok ? r.json() : []).then((data: any[]) => { if (Array.isArray(data)) setAchievements(data); }).catch((err: any) => { if (err.name === 'AbortError') return; });
         fetch(`${API_BASE}/users/@me/stats`, {
             credentials: 'include',
             headers: { Authorization: `Bearer ${token}` },
-        }).then(r => r.ok ? r.json() : null).then((data: any) => { if (data) setUserStats(data); }).catch(() => {});
+            signal: controller.signal,
+        }).then(r => r.ok ? r.json() : null).then((data: any) => { if (data) setUserStats(data); }).catch((err: any) => { if (err.name === 'AbortError') return; });
+        return () => controller.abort();
     }, [activeTab]);
 
     const saveConnection = async (provider: Provider) => {

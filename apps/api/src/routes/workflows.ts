@@ -18,23 +18,13 @@ import { db } from '../db/index';
 import { guilds } from '../db/schema/guilds';
 import { workflows, workflowTriggers, workflowActions } from '../db/schema/workflows';
 import { requireAuth } from '../middleware/auth';
+import { AppError, handleAppError } from '../lib/errors.js';
 
 export const workflowsRouter = Router();
 
 // ---------------------------------------------------------------------------
 // Helper: require guild ownership
 // ---------------------------------------------------------------------------
-
-class AppError extends Error {
-  constructor(
-    public statusCode: number,
-    message: string,
-    public code: string = 'UNKNOWN_ERROR',
-  ) {
-    super(message);
-    this.name = 'AppError';
-  }
-}
 
 async function requireGuildOwner(guildId: string, userId: string): Promise<void> {
   const [guild] = await db
@@ -118,12 +108,7 @@ workflowsRouter.get(
 
       res.json(results);
     } catch (err) {
-      if (err instanceof AppError) {
-        res.status(err.statusCode).json({ code: err.code, message: err.message });
-        return;
-      }
-      console.error('[workflows] GET error:', err);
-      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+      handleAppError(res, err, 'workflows');
     }
   },
 );
@@ -193,12 +178,7 @@ workflowsRouter.post(
 
       res.status(201).json({ ...workflow, triggers: insertedTriggers, actions: insertedActions });
     } catch (err) {
-      if (err instanceof AppError) {
-        res.status(err.statusCode).json({ code: err.code, message: err.message });
-        return;
-      }
-      console.error('[workflows] POST error:', err);
-      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+      handleAppError(res, err, 'workflows');
     }
   },
 );
@@ -295,12 +275,7 @@ workflowsRouter.patch(
 
       res.json({ ...updated, triggers: updatedTriggers, actions: updatedActions });
     } catch (err) {
-      if (err instanceof AppError) {
-        res.status(err.statusCode).json({ code: err.code, message: err.message });
-        return;
-      }
-      console.error('[workflows] PATCH error:', err);
-      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+      handleAppError(res, err, 'workflows');
     }
   },
 );
@@ -334,12 +309,7 @@ workflowsRouter.delete(
 
       res.status(204).send();
     } catch (err) {
-      if (err instanceof AppError) {
-        res.status(err.statusCode).json({ code: err.code, message: err.message });
-        return;
-      }
-      console.error('[workflows] DELETE error:', err);
-      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+      handleAppError(res, err, 'workflows');
     }
   },
 );

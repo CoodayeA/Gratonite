@@ -51,6 +51,7 @@ import { hasPermission } from './roles';
 import { getIO } from '../lib/socket-io';
 import { logAuditEvent, AuditActionTypes } from '../lib/audit';
 import { redis } from '../lib/redis';
+import { toRows } from '../lib/to-rows.js';
 
 export const guildsRouter = Router();
 
@@ -2278,14 +2279,14 @@ guildsRouter.get('/:guildId/insights', requireAuth, async (req: Request, res: Re
 
       // Hourly messages (today)
       const hourlyResult = await db.execute(sql`SELECT EXTRACT(HOUR FROM created_at)::int as hour, COUNT(*)::int as count FROM messages WHERE channel_id = ANY(${channelIds}) AND created_at > now() - interval '1 day' GROUP BY hour`);
-      const hourlyRows: any[] = Array.isArray(hourlyResult) ? hourlyResult : (hourlyResult as any).rows ?? [];
+      const hourlyRows = toRows<{ hour: number; count: number }>(hourlyResult);
       for (const row of hourlyRows) {
         hourlyMessages[row.hour] = row.count;
       }
 
       // Daily messages
       const dailyMsgResult = await db.execute(sql`SELECT DATE(created_at) as day, COUNT(*)::int as count FROM messages WHERE channel_id = ANY(${channelIds}) AND created_at > now() - ${sql.raw(`interval '${range} days'`)} GROUP BY day ORDER BY day`);
-      const dailyMsgRows: any[] = Array.isArray(dailyMsgResult) ? dailyMsgResult : (dailyMsgResult as any).rows ?? [];
+      const dailyMsgRows = toRows<{ day: string | Date; count: number }>(dailyMsgResult);
       const dailyMsgMap = new Map<string, number>();
       for (const row of dailyMsgRows) {
         const key = typeof row.day === 'string' ? row.day.slice(0, 10) : new Date(row.day).toISOString().slice(0, 10);
@@ -2300,7 +2301,7 @@ guildsRouter.get('/:guildId/insights', requireAuth, async (req: Request, res: Re
 
       // Active users 24h
       const activeResult = await db.execute(sql`SELECT COUNT(DISTINCT author_id)::int as count FROM messages WHERE channel_id = ANY(${channelIds}) AND created_at > now() - interval '1 day'`);
-      const activeRows: any[] = Array.isArray(activeResult) ? activeResult : (activeResult as any).rows ?? [];
+      const activeRows = toRows<{ count: number }>(activeResult);
       activeUsers24h = activeRows[0]?.count ?? 0;
     } else {
       dailyMessages = new Array(range).fill(0);
@@ -2308,7 +2309,7 @@ guildsRouter.get('/:guildId/insights', requireAuth, async (req: Request, res: Re
 
     // Daily joins
     const joinResult = await db.execute(sql`SELECT DATE(joined_at) as day, COUNT(*)::int as count FROM guild_members WHERE guild_id = ${guildId} AND joined_at > now() - ${sql.raw(`interval '${range} days'`)} GROUP BY day ORDER BY day`);
-    const joinRows: any[] = Array.isArray(joinResult) ? joinResult : (joinResult as any).rows ?? [];
+    const joinRows = toRows<{ day: string | Date; count: number }>(joinResult);
     const joinMap = new Map<string, number>();
     for (const row of joinRows) {
       const key = typeof row.day === 'string' ? row.day.slice(0, 10) : new Date(row.day).toISOString().slice(0, 10);

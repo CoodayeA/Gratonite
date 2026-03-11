@@ -6,6 +6,7 @@ import { userSettings } from '../db/schema/settings';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { redis } from '../lib/redis';
+import { safeJsonParse } from '../lib/safe-json.js';
 
 export const settingsRouter = Router();
 
@@ -114,13 +115,10 @@ const notifKeySchema = z.object({
 settingsRouter.get('/notif', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const key = req.query.key as string | undefined;
   if (!key) { res.status(400).json({ code: 'BAD_REQUEST', message: 'key query parameter required' }); return; }
-  try {
-    const raw = await redis.get(`user-notif:${req.userId!}:${key}`);
-    if (!raw) { res.json({ key, value: null }); return; }
-    res.json({ key, value: JSON.parse(raw) });
-  } catch {
-    res.json({ key, value: null });
-  }
+  const raw = await redis.get(`user-notif:${req.userId!}:${key}`);
+  if (!raw) { res.json({ key, value: null }); return; }
+  const parsed = safeJsonParse(raw, null);
+  res.json({ key, value: parsed });
 });
 
 /** PATCH /api/v1/users/@me/settings/notif */

@@ -13,6 +13,7 @@ import { getIO } from '../lib/socket-io';
 import { hasPermission } from './roles';
 import { redis } from '../lib/redis';
 import { publicInviteRateLimit } from '../middleware/rateLimit';
+import { toRows } from '../lib/to-rows.js';
 import crypto from 'crypto';
 
 export const invitesRouter = Router();
@@ -139,13 +140,13 @@ invitesRouter.post('/invites/:code', requireAuth, async (req: Request, res: Resp
 
     // Check if guild is locked (raid protection)
     const vanityGuildResult = await db.execute(sql`SELECT locked_at, raid_protection_enabled FROM guilds WHERE id = ${vanityGuild.id}`);
-    const vanityGuildRow = (vanityGuildResult as any)[0] ?? (vanityGuildResult as any).rows?.[0];
-    if (vanityGuildRow && (vanityGuildRow as any).locked_at) {
+    const vanityGuildRow = toRows<{ locked_at: string | null; raid_protection_enabled: boolean }>(vanityGuildResult)[0];
+    if (vanityGuildRow && vanityGuildRow.locked_at) {
       res.status(403).json({ code: 'GUILD_LOCKED', message: 'This server is currently locked' }); return;
     }
 
     // Raid detection
-    if (vanityGuildRow && (vanityGuildRow as any).raid_protection_enabled) {
+    if (vanityGuildRow && vanityGuildRow.raid_protection_enabled) {
       const key = `raid:joins:${vanityGuild.id}`;
       const count = await redis.incr(key);
       await redis.expire(key, 10); // Always set TTL to avoid leaked keys
@@ -185,13 +186,13 @@ invitesRouter.post('/invites/:code', requireAuth, async (req: Request, res: Resp
 
   // Check if guild is locked (raid protection)
   const guildResult = await db.execute(sql`SELECT locked_at, raid_protection_enabled FROM guilds WHERE id = ${invite.guildId}`);
-  const guildRow = (guildResult as any)[0] ?? (guildResult as any).rows?.[0];
-  if (guildRow && (guildRow as any).locked_at) {
+  const guildRow = toRows<{ locked_at: string | null; raid_protection_enabled: boolean }>(guildResult)[0];
+  if (guildRow && guildRow.locked_at) {
     res.status(403).json({ code: 'GUILD_LOCKED', message: 'This server is currently locked' }); return;
   }
 
   // Raid detection
-  if (guildRow && (guildRow as any).raid_protection_enabled) {
+  if (guildRow && guildRow.raid_protection_enabled) {
     const key = `raid:joins:${invite.guildId}`;
     const count = await redis.incr(key);
     await redis.expire(key, 10); // Always set TTL to avoid leaked keys

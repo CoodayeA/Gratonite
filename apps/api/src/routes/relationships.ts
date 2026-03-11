@@ -41,41 +41,9 @@ import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { createNotification } from '../lib/notifications';
 import { getIO } from '../lib/socket-io';
+import { AppError, handleAppError } from '../lib/errors.js';
 
 export const relationshipsRouter = Router();
-
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-/**
- * AppError — Lightweight typed HTTP error.
- */
-class AppError extends Error {
-  constructor(
-    public statusCode: number,
-    message: string,
-    public code: string = 'UNKNOWN_ERROR',
-  ) {
-    super(message);
-    this.name = 'AppError';
-  }
-}
-
-/**
- * handleAppError — Shared error handler for relationship route handlers.
- *
- * @param res - Express Response.
- * @param err - The caught error.
- */
-function handleAppError(res: Response, err: unknown): void {
-  if (err instanceof AppError) {
-    res.status(err.statusCode).json({ code: err.code, message: err.message });
-  } else {
-    console.error('[relationships] unexpected error:', err);
-    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Zod schemas
@@ -147,7 +115,7 @@ relationshipsRouter.get('/', requireAuth, async (req: Request, res: Response): P
 
     res.status(200).json(all);
   } catch (err) {
-    handleAppError(res, err);
+    handleAppError(res, err, 'relationships');
   }
 });
 
@@ -222,7 +190,7 @@ relationshipsRouter.get(
 
       res.status(200).json(items);
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'relationships');
     }
   },
 );
@@ -296,7 +264,7 @@ relationshipsRouter.post(
 
       res.status(200).json({ code: 'OK', message: 'Message request accepted' });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'relationships');
     }
   },
 );
@@ -331,7 +299,7 @@ relationshipsRouter.post(
 
       res.status(200).json({ code: 'OK', message: 'Message request ignored' });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'relationships');
     }
   },
 );
@@ -388,7 +356,7 @@ relationshipsRouter.post(
 
       res.status(200).json({ code: 'OK', message: 'Message request reported and removed' });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'relationships');
     }
   },
 );
@@ -493,7 +461,7 @@ relationshipsRouter.get(
 
       res.status(200).json(filtered);
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'relationships');
     }
   },
 );
@@ -615,7 +583,7 @@ relationshipsRouter.post(
 
       res.status(201).json(newChannel);
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'relationships');
     }
   },
 );
@@ -735,7 +703,7 @@ relationshipsRouter.post(
 
       res.status(201).json({ code: 'OK', message: 'Friend request sent' });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'relationships');
     }
   },
 );
@@ -809,7 +777,7 @@ relationshipsRouter.put(
 
       res.status(200).json({ code: 'OK', message: 'Friend request accepted' });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'relationships');
     }
   },
 );
@@ -850,7 +818,7 @@ relationshipsRouter.delete(
 
       res.status(200).json({ code: 'OK', message: 'Relationship removed' });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'relationships');
     }
   },
 );
@@ -920,7 +888,7 @@ relationshipsRouter.put(
 
       res.status(200).json({ code: 'OK', message: 'User blocked' });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'relationships');
     }
   },
 );
@@ -962,7 +930,7 @@ relationshipsRouter.delete(
 
       res.status(200).json({ code: 'OK', message: 'User unblocked' });
     } catch (err) {
-      handleAppError(res, err);
+      handleAppError(res, err, 'relationships');
     }
   },
 );

@@ -5,6 +5,7 @@ import { db } from '../db/index';
 import { oauthApps, oauthTokens } from '../db/schema/oauth';
 import { requireAuth } from '../middleware/auth';
 import { redis } from '../lib/redis';
+import { safeJsonParse } from '../lib/safe-json.js';
 
 export const oauthRouter = Router();
 
@@ -72,7 +73,10 @@ oauthRouter.post('/authorize', requireAuth, async (req: Request, res: Response):
   }
   await redis.del(`oauth:state:${serverState}`); // single-use
 
-  const storedState = JSON.parse(storedStateRaw) as { clientId: string; redirectUri: string; state: string };
+  const storedState = safeJsonParse<{ clientId: string; redirectUri: string; state: string } | null>(storedStateRaw, null);
+  if (!storedState) {
+    res.status(400).json({ code: 'INVALID_STATE', message: 'Corrupted state data. Please restart the authorization flow.' }); return;
+  }
 
   // Verify the clientId matches what was stored with the state
   if (storedState.clientId !== clientId) {
@@ -136,7 +140,10 @@ oauthRouter.post('/token', async (req: Request, res: Response): Promise<void> =>
       res.status(400).json({ code: 'INVALID_GRANT', message: 'Invalid or expired authorization code' }); return;
     }
 
-    const codeData = JSON.parse(stored) as { clientId: string; userId: string; scopes: string[] };
+    const codeData = safeJsonParse<{ clientId: string; userId: string; scopes: string[] } | null>(stored, null);
+    if (!codeData) {
+      res.status(400).json({ code: 'INVALID_GRANT', message: 'Corrupted authorization code data' }); return;
+    }
     if (codeData.clientId !== client_id) {
       res.status(400).json({ code: 'INVALID_GRANT', message: 'Code does not match client' }); return;
     }

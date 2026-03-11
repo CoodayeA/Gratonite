@@ -10,6 +10,9 @@
 
 import { db } from '../db';
 import { workflows, workflowTriggers, workflowActions } from '../db/schema/workflows';
+import { memberRoles } from '../db/schema/roles';
+import { threads, threadMembers } from '../db/schema/threads';
+import { channelPins } from '../db/schema/pins';
 import { eq, and } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -101,22 +104,95 @@ async function executeAction(action: any, context: WorkflowContext, io?: any): P
       break;
     }
 
-    case 'add_role':
+    case 'add_role': {
+      if (config.roleId && context.userId && context.guildId) {
+        await db
+          .insert(memberRoles)
+          .values({ userId: context.userId, roleId: config.roleId, guildId: context.guildId })
+          .onConflictDoNothing();
+
+        if (io) {
+          io.to(`guild:${context.guildId}`).emit('GUILD_MEMBER_ROLE_ADD', {
+            userId: context.userId,
+            roleId: config.roleId,
+            guildId: context.guildId,
+          });
+        }
+      }
+      break;
+    }
+
     case 'remove_role': {
-      // Role assignment requires guild member update — log for now
-      console.log(`[workflow] ${action.type} roleId=${config.roleId} userId=${context.userId}`);
+      if (config.roleId && context.userId && context.guildId) {
+        await db
+          .delete(memberRoles)
+          .where(
+            and(
+              eq(memberRoles.userId, context.userId),
+              eq(memberRoles.roleId, config.roleId),
+            ),
+          );
+
+        if (io) {
+          io.to(`guild:${context.guildId}`).emit('GUILD_MEMBER_ROLE_REMOVE', {
+            userId: context.userId,
+            roleId: config.roleId,
+            guildId: context.guildId,
+          });
+        }
+      }
       break;
     }
 
     case 'create_thread': {
-      // Thread creation requires channel write access — log for now
-      console.log(`[workflow] create_thread channelId=${config.channelId} name=${config.name}`);
+      const threadChannelId = config.channelId || context.channelId;
+      const threadName = config.name || 'Automated Thread';
+      if (threadChannelId) {
+        const [thread] = await db
+          .insert(threads)
+          .values({
+            channelId: threadChannelId,
+            name: threadName,
+            creatorId: context.userId || '00000000-0000-0000-0000-000000000000',
+          })
+          .returning();
+
+        // Auto-join the triggering user if available
+        if (context.userId && thread) {
+          await db
+            .insert(threadMembers)
+            .values({ threadId: thread.id, userId: context.userId })
+            .onConflictDoNothing();
+        }
+
+        if (io && thread) {
+          io.to(`channel:${threadChannelId}`).emit('THREAD_CREATE', thread);
+        }
+      }
       break;
     }
 
     case 'pin_message': {
-      // Pin message — log for now
-      console.log(`[workflow] pin_message messageId=${context.messageId}`);
+      const pinMessageId = config.messageId || context.messageId;
+      const pinChannelId = config.channelId || context.channelId;
+      if (pinMessageId && pinChannelId) {
+        await db
+          .insert(channelPins)
+          .values({
+            channelId: pinChannelId,
+            messageId: pinMessageId,
+            pinnedBy: context.userId || '00000000-0000-0000-0000-000000000000',
+          })
+          .onConflictDoNothing();
+
+        if (io) {
+          io.to(`channel:${pinChannelId}`).emit('CHANNEL_PINS_UPDATE', {
+            channelId: pinChannelId,
+            messageId: pinMessageId,
+            pinned: true,
+          });
+        }
+      }
       break;
     }
 

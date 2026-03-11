@@ -885,6 +885,124 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         setCollapsed(prev => ({ ...prev, [cat]: !prev[cat] }));
     };
 
+    // ── Drag-and-drop channel reorder state ──
+    const [dragChannelId, setDragChannelId] = useState<string | null>(null);
+    const [dragOverChannelId, setDragOverChannelId] = useState<string | null>(null);
+    const [dragOverPosition, setDragOverPosition] = useState<'above' | 'below' | null>(null);
+
+    const handleChannelDragStart = useCallback((e: React.DragEvent, channelId: string) => {
+        if (!canManageChannels) { e.preventDefault(); return; }
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', channelId);
+        setDragChannelId(channelId);
+    }, [canManageChannels]);
+
+    const handleChannelDragOver = useCallback((e: React.DragEvent, targetChannelId: string) => {
+        if (!canManageChannels || !dragChannelId || targetChannelId === dragChannelId) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        setDragOverChannelId(targetChannelId);
+        setDragOverPosition(e.clientY < midY ? 'above' : 'below');
+    }, [canManageChannels, dragChannelId]);
+
+    const handleChannelDragLeave = useCallback(() => {
+        setDragOverChannelId(null);
+        setDragOverPosition(null);
+    }, []);
+
+    const handleChannelDragEnd = useCallback(() => {
+        setDragChannelId(null);
+        setDragOverChannelId(null);
+        setDragOverPosition(null);
+    }, []);
+
+    const handleChannelDrop = useCallback(async (e: React.DragEvent, targetChannelId: string) => {
+        e.preventDefault();
+        if (!canManageChannels || !activeGuildId || !dragChannelId || dragChannelId === targetChannelId) {
+            handleChannelDragEnd();
+            return;
+        }
+
+        const draggedChannel = guildChannels.find(c => c.id === dragChannelId);
+        const targetChannel = guildChannels.find(c => c.id === targetChannelId);
+        if (!draggedChannel || !targetChannel) { handleChannelDragEnd(); return; }
+
+        // Only allow reorder within the same parent category
+        if (draggedChannel.parentId !== targetChannel.parentId) { handleChannelDragEnd(); return; }
+
+        // Build the sibling list (same parentId, excluding categories)
+        const isCategoryType = (type: string) => type === 'category' || type === 'GUILD_CATEGORY';
+        const siblings = guildChannels
+            .filter(c => !isCategoryType(c.type) && c.parentId === draggedChannel.parentId)
+            .sort((a, b) => a.position - b.position);
+
+        // Remove dragged from list, then insert at target position
+        const withoutDragged = siblings.filter(c => c.id !== dragChannelId);
+        const targetIdx = withoutDragged.findIndex(c => c.id === targetChannelId);
+        if (targetIdx === -1) { handleChannelDragEnd(); return; }
+
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        const insertIdx = e.clientY < midY ? targetIdx : targetIdx + 1;
+        withoutDragged.splice(insertIdx, 0, draggedChannel);
+
+        // Build position update payload
+        const positionUpdates = withoutDragged.map((c, idx) => ({
+            id: c.id,
+            position: idx,
+            parentId: c.parentId,
+        }));
+
+        // Optimistically update local state
+        setGuildChannels((prev: any[]) => {
+            const next = [...prev];
+            for (const upd of positionUpdates) {
+                const ch = next.find((c: any) => c.id === upd.id);
+                if (ch) ch.position = upd.position;
+            }
+            return next;
+        });
+
+        handleChannelDragEnd();
+
+        // Persist to backend
+        try {
+            await api.channels.updatePositions(activeGuildId, positionUpdates);
+        } catch {
+            // Revert on failure — refetch channels
+            addToast({ title: 'Failed to reorder channels', variant: 'error' });
+            if (guildSession.enabled) {
+                guildSession.refresh();
+            } else {
+                api.channels.getGuildChannels(activeGuildId).then((chs) => setLegacyGuildChannels(chs as any)).catch(() => {});
+            }
+        }
+    }, [canManageChannels, activeGuildId, dragChannelId, guildChannels, setGuildChannels, handleChannelDragEnd, guildSession, addToast]);
+
+    // Listen for CHANNEL_POSITIONS_UPDATE socket event from other clients
+    useEffect(() => {
+        const socket = getSocket();
+        if (!socket || !activeGuildId) return;
+        const handler = (data: { guildId: string; updates: Array<{ id: string; position: number; parentId?: string | null }> }) => {
+            if (data.guildId !== activeGuildId) return;
+            setGuildChannels((prev: any[]) => {
+                const next = [...prev];
+                for (const upd of data.updates) {
+                    const ch = next.find((c: any) => c.id === upd.id);
+                    if (ch) {
+                        ch.position = upd.position;
+                        if (upd.parentId !== undefined) ch.parentId = upd.parentId;
+                    }
+                }
+                return next;
+            });
+        };
+        socket.on('CHANNEL_POSITIONS_UPDATE', handler);
+        return () => { socket.off('CHANNEL_POSITIONS_UPDATE', handler); };
+    }, [activeGuildId, setGuildChannels]);
+
     const userAvatarUrl = userProfile.avatarHash ? `${API_BASE}/files/${userProfile.avatarHash}` : null;
 
     const UserPanel = () => (
@@ -1220,13 +1338,30 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         const voiceMembers = voiceMembersByChannel[ch.id] || [];
                         const voiceCount = voiceMembers.length;
 
+                        // Drag-and-drop indicator styles
+                        const isDragging = dragChannelId === ch.id;
+                        const isDropTarget = dragOverChannelId === ch.id && dragChannelId !== ch.id;
+                        const dropIndicatorStyle: React.CSSProperties = isDropTarget ? {
+                            [dragOverPosition === 'above' ? 'borderTop' : 'borderBottom']: '2px solid var(--accent-primary, #526df5)',
+                        } : {};
+
+                        // Common drag props for channel items
+                        const dragProps = canManageChannels ? {
+                            draggable: true,
+                            onDragStart: (e: React.DragEvent) => handleChannelDragStart(e, ch.id),
+                            onDragOver: (e: React.DragEvent) => handleChannelDragOver(e, ch.id),
+                            onDragLeave: handleChannelDragLeave,
+                            onDragEnd: handleChannelDragEnd,
+                            onDrop: (e: React.DragEvent) => handleChannelDrop(e, ch.id),
+                        } : {};
+
                         if (isVoice) {
                             // Voice channels: click joins voice, doesn't navigate away
                             return (
-                                <div key={ch.id} onContextMenu={(e) => handleChannelContext(e, ch)}>
+                                <div key={ch.id} onContextMenu={(e) => handleChannelContext(e, ch)} {...dragProps} style={{ opacity: isDragging ? 0.5 : undefined, ...dropIndicatorStyle }}>
                                     <div
                                         className={`channel-item ${isConnectedChannel ? 'active' : ''}`}
-                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: canManageChannels ? 'grab' : 'pointer' }}
                                         onClick={() => {
                                             if (isConnectedChannel) {
                                                 // Already connected — navigate to the voice channel view
@@ -1288,20 +1423,22 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         const isMuted = mutedChannelIds.has(ch.id);
                         const isPrivate = ch.type === 'GUILD_PRIVATE';
                         return (
-                            <Link key={ch.id} to={linkTo} style={{ textDecoration: 'none' }} onContextMenu={(e) => handleChannelContext(e, ch)}>
-                                <div className={`channel-item ${isActive ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: isMuted ? 0.5 : undefined }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                                        {isPrivate ? <Lock size={18} style={{ flexShrink: 0, opacity: 0.7 }} /> : <HashIcon size={18} style={{ flexShrink: 0, opacity: 0.7 }} />}
-                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: hasUnread ? 600 : undefined, color: hasUnread ? 'var(--text-primary)' : undefined }}>{ch.name}</span>
-                                        {isMuted && <BellOff size={12} style={{ flexShrink: 0, opacity: 0.5, color: 'var(--text-muted)' }} />}
+                            <div key={ch.id} {...dragProps} style={{ opacity: isDragging ? 0.5 : undefined, ...dropIndicatorStyle }}>
+                                <Link to={linkTo} style={{ textDecoration: 'none' }} draggable={false} onContextMenu={(e) => handleChannelContext(e, ch)}>
+                                    <div className={`channel-item ${isActive ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: isMuted ? 0.5 : undefined, cursor: canManageChannels ? 'grab' : undefined }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                                            {isPrivate ? <Lock size={18} style={{ flexShrink: 0, opacity: 0.7 }} /> : <HashIcon size={18} style={{ flexShrink: 0, opacity: 0.7 }} />}
+                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: hasUnread ? 600 : undefined, color: hasUnread ? 'var(--text-primary)' : undefined }}>{ch.name}</span>
+                                            {isMuted && <BellOff size={12} style={{ flexShrink: 0, opacity: 0.5, color: 'var(--text-muted)' }} />}
+                                        </div>
+                                        {mentions > 0 && !isActive && (
+                                            <span style={{ background: '#ed4245', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px', flexShrink: 0 }}>
+                                                {mentions}
+                                            </span>
+                                        )}
                                     </div>
-                                    {mentions > 0 && !isActive && (
-                                        <span style={{ background: '#ed4245', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px', flexShrink: 0 }}>
-                                            {mentions}
-                                        </span>
-                                    )}
-                                </div>
-                            </Link>
+                                </Link>
+                            </div>
                         );
                     };
 
@@ -1967,6 +2104,9 @@ export const AppLayout = () => {
     // Play join/leave sounds globally for all voice channels
     useVoiceSounds();
 
+    // Voice context for keyboard shortcuts (mute/deafen)
+    const voiceCtx = useVoice();
+
 
     // Per-channel background persistence via localStorage
     const channelBgKey = `gratonite-bg:${location.pathname}`;
@@ -2468,18 +2608,56 @@ export const AppLayout = () => {
             // Ctrl+Shift+M: Toggle mute
             if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'M') {
                 e.preventDefault();
-                window.dispatchEvent(new CustomEvent('gratonite:toggle-mute'));
+                if (voiceCtx.connected) {
+                    voiceCtx.toggleMute();
+                }
             }
 
             // Ctrl+Shift+D: Toggle deafen
             if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'D') {
                 e.preventDefault();
-                window.dispatchEvent(new CustomEvent('gratonite:toggle-deafen'));
+                if (voiceCtx.connected) {
+                    voiceCtx.toggleDeafen();
+                }
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activeModal, location.pathname, guildSession, navigate]);
+    }, [activeModal, location.pathname, guildSession, navigate, voiceCtx]);
+
+    // Push to Talk: Hold Space to unmute while in voice, release to re-mute
+    const pttActiveRef = useRef(false);
+    useEffect(() => {
+        const handlePttDown = (e: KeyboardEvent) => {
+            if (e.repeat) return;
+            if (e.key !== ' ') return;
+            const tag = (e.target as HTMLElement)?.tagName;
+            const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable;
+            if (isInput) return;
+            if (!voiceCtx.connected || !voiceCtx.muted) return;
+            e.preventDefault();
+            pttActiveRef.current = true;
+            voiceCtx.toggleMute();
+        };
+        const handlePttUp = (e: KeyboardEvent) => {
+            if (e.key !== ' ') return;
+            if (!pttActiveRef.current) return;
+            const tag = (e.target as HTMLElement)?.tagName;
+            const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable;
+            if (isInput) return;
+            e.preventDefault();
+            pttActiveRef.current = false;
+            if (voiceCtx.connected && !voiceCtx.muted) {
+                voiceCtx.toggleMute();
+            }
+        };
+        window.addEventListener('keydown', handlePttDown);
+        window.addEventListener('keyup', handlePttUp);
+        return () => {
+            window.removeEventListener('keydown', handlePttDown);
+            window.removeEventListener('keyup', handlePttUp);
+        };
+    }, [voiceCtx]);
 
     // Close drawers on route change
     useEffect(() => {
