@@ -2206,7 +2206,7 @@ const DirectMessage = () => {
                     </div>
                 ) : (
                     <>
-                        <div ref={messageListRef} className="message-area" style={{ overflowY: 'auto' }}
+                        <div ref={messageListRef} className="message-area" role="log" aria-label={`Direct messages with ${userName}`} aria-live="polite" style={{ overflowY: 'auto' }}
                             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                             onDrop={(e) => {
                                 e.preventDefault();

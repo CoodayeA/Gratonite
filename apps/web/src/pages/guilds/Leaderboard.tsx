@@ -129,7 +129,7 @@ const Leaderboard = () => {
     const formatScore = (val: number) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val.toString();
 
     return (
-        <div style={{ flex: 1, padding: '32px 48px', overflowY: 'auto', background: 'var(--bg-primary)' }}>
+        <div className="content-padding" style={{ flex: 1, padding: '32px 48px', overflowY: 'auto', background: 'var(--bg-primary)' }}>
             <div style={{ maxWidth: '860px', margin: '0 auto' }}>
                 {/* Header */}
                 <header style={{ marginBottom: '36px', textAlign: 'center' }}>

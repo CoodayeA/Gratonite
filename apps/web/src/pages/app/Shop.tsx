@@ -39,6 +39,24 @@ const rarityColor: Record<string, string> = {
     legendary: '#f59e0b',
 };
 
+const ItemBadge = ({ item }: { item: ShopItem }) => {
+    if (item.rarity === 'legendary') {
+        return (
+            <span style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 3, display: 'inline-flex', alignItems: 'center', gap: '3px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#111', padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', boxShadow: '2px 2px 0 rgba(0,0,0,0.15)' }}>
+                <Star size={10} fill="#111" /> Popular
+            </span>
+        );
+    }
+    if (item.rarity === 'epic') {
+        return (
+            <span style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 3, display: 'inline-flex', alignItems: 'center', gap: '3px', background: 'linear-gradient(135deg, #a855f7, #7c3aed)', color: 'white', padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', boxShadow: '2px 2px 0 rgba(0,0,0,0.15)' }}>
+                <Sparkles size={10} /> New
+            </span>
+        );
+    }
+    return null;
+};
+
 const Shop = () => {
     const { gratoniteBalance, setGratoniteBalance } = useOutletContext<any>();
     const navigate = useNavigate();
@@ -334,6 +352,7 @@ const Shop = () => {
                                 <div className="hover-lift" style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '20px', border: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '12px', position: 'relative', overflow: 'hidden', boxShadow: 'var(--shadow-panel)' }}>
                                     {/* Rarity bar */}
                                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: rarityColor[item.rarity] }} />
+                                    <ItemBadge item={item} />
 
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                                         {/* Sound emoji / icon */}
@@ -398,6 +417,7 @@ const Shop = () => {
                             <TiltCard key={item.id} maxTilt={10} scale={1.03}>
                                 <div className="hover-lift" style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '24px', border: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', overflow: 'hidden', boxShadow: 'var(--shadow-panel)' }}>
                                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: rarityColor[item.rarity] }} />
+                                    <ItemBadge item={item} />
 
                                     {/* Nameplate Preview */}
                                     <div style={{ background: 'var(--bg-tertiary)', borderRadius: '10px', padding: '20px', display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid var(--stroke)' }}>
@@ -443,6 +463,7 @@ const Shop = () => {
                             <TiltCard key={item.id} maxTilt={12} scale={1.03}>
                                 <div className="hover-lift" style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '24px', border: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', position: 'relative', overflow: 'hidden', boxShadow: 'var(--shadow-panel)' }}>
                                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: rarityColor[item.rarity] }} />
+                                    <ItemBadge item={item} />
 
                                     {/* Decoration Preview */}
                                     <div style={{ position: 'relative', width: '100px', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '8px' }}>
@@ -499,6 +520,7 @@ const Shop = () => {
                                 <div className="hover-lift" style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '24px', border: 'var(--border-structural)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', position: 'relative', overflow: 'hidden', height: '100%', boxShadow: 'var(--shadow-panel)' }}>
                                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '80px', background: 'linear-gradient(180deg, var(--bg-tertiary) 0%, transparent 100%)', zIndex: 0 }}></div>
                                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: rarityColor[item.rarity] }} />
+                                    <ItemBadge item={item} />
 
                                     {isFrame ? (
                                         <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 1 }}>
@@ -572,7 +594,7 @@ const Shop = () => {
             {/* Purchase Modal */}
             {selectedItem && (
                 <div className="modal-overlay" style={{ zIndex: 999 }}>
-                    <div className="auth-card wide glass-panel" style={{ width: '480px', position: 'relative', animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+                    <div className="auth-card wide glass-panel" style={{ width: 'min(480px, 95vw)', position: 'relative', animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)', maxHeight: '90vh', overflowY: 'auto' }}>
                         <button
                             onClick={closeModal}
                             style={{ position: 'absolute', top: 16, right: 16, background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>

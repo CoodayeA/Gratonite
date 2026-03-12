@@ -252,7 +252,7 @@ export default function AdminReports() {
 
   return (
     <div className="main-content-wrapper" style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-primary)' }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '48px 24px', width: '100%' }}>
+      <div className="content-padding" style={{ maxWidth: '900px', margin: '0 auto', padding: '48px 24px', width: '100%' }}>
 
         {/* Header */}
         <div style={{ marginBottom: '32px' }}>
@@ -289,6 +289,7 @@ export default function AdminReports() {
 
         {/* Stats Row */}
         <div
+          className="grid-mobile-2"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(5, 1fr)',

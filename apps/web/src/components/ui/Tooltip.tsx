@@ -17,6 +17,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ children, content, delay = 300
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const showTooltip = () => {
+        if (window.matchMedia('(hover: none)').matches) return;
         timeoutRef.current = setTimeout(() => {
             updatePosition();
             setIsVisible(true);

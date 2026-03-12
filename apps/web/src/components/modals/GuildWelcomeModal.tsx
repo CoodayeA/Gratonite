@@ -67,13 +67,15 @@ const GuildWelcomeModal = ({
             <div
                 onClick={e => e.stopPropagation()}
                 style={{
-                    width: '480px',
+                    width: 'min(480px, 95vw)',
                     background: 'var(--bg-elevated)',
                     border: 'var(--border-structural, 3px solid #000)',
                     borderRadius: 'var(--radius-lg, 12px)',
                     boxShadow: 'var(--shadow-panel, 8px 8px 0 #000)',
                     overflow: 'hidden',
                     position: 'relative',
+                    maxHeight: '90vh',
+                    overflowY: 'auto',
                 }}
             >
                 {/* Close button */}

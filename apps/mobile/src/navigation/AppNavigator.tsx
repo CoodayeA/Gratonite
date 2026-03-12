@@ -23,6 +23,9 @@ import GuildSettingsScreen from '../screens/guild/GuildSettingsScreen';
 import GuildMemberListScreen from '../screens/guild/GuildMemberListScreen';
 import InviteAcceptScreen from '../screens/app/InviteAcceptScreen';
 import GuildDrawerNavigator from './GuildDrawerNavigator';
+import GuildChannelsScreen from '../screens/guild/GuildChannelsScreen';
+import ChannelChatScreen from '../screens/guild/ChannelChatScreen';
+import VoiceChannelScreen from '../screens/guild/VoiceChannelScreen';
 
 // Wave 2: User system
 import UserProfileScreen from '../screens/app/UserProfileScreen';
@@ -152,7 +155,7 @@ const Stack = createNativeStackNavigator<AppStackParamList>();
 function MainTabs() {
   const insets = useSafeAreaInsets();
   const { notificationCount } = useAppState();
-  const { colors, fontSize, neo } = useTheme();
+  const { colors, fontSize, neo, glass } = useTheme();
 
   return (
     <View style={{ flex: 1 }}>
@@ -163,12 +166,17 @@ function MainTabs() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.bgSecondary,
-          borderTopColor: colors.border,
-          borderTopWidth: neo ? 3 : 1,
-          height: 56 + insets.bottom,
+          backgroundColor: glass ? glass.glassBackground : colors.bgSecondary,
+          borderTopColor: neo ? colors.border : glass ? glass.glassBorder : colors.accentPrimary,
+          borderTopWidth: neo ? 3 : glass ? 0.5 : 1,
+          height: 60 + insets.bottom,
           paddingBottom: insets.bottom,
           paddingTop: 6,
+          shadowColor: '#000',
+          shadowOpacity: 0.1,
+          shadowOffset: { width: 0, height: -2 },
+          shadowRadius: 4,
+          elevation: 8,
         },
         tabBarActiveTintColor: colors.accentPrimary,
         tabBarInactiveTintColor: colors.textMuted,
@@ -176,8 +184,8 @@ function MainTabs() {
           marginBottom: 2,
         },
         tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: neo ? '800' : '500',
+          fontSize: 11,
+          fontWeight: neo ? '800' : '600',
           ...(neo ? { textTransform: 'uppercase' as const } : {}),
         },
       }}
@@ -186,10 +194,22 @@ function MainTabs() {
         name="Guilds"
         component={GuildListScreen}
         options={{
-          tabBarLabel: 'Servers',
-          tabBarAccessibilityLabel: 'Servers tab',
+          tabBarLabel: 'Portals',
+          tabBarAccessibilityLabel: 'Portals tab',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'planet' : 'planet-outline'} size={22} color={color} />
+            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+              {focused && (
+                <View style={{
+                  position: 'absolute',
+                  width: 48,
+                  height: 28,
+                  borderRadius: 14,
+                  backgroundColor: neo ? neo.palette.sky : `${colors.accentPrimary}20`,
+                  ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
+                }} />
+              )}
+              <Ionicons name={focused ? 'planet' : 'planet-outline'} size={focused ? 24 : 20} color={color} />
+            </View>
           ),
         }}
       />
@@ -200,7 +220,19 @@ function MainTabs() {
           tabBarLabel: 'Chats',
           tabBarAccessibilityLabel: 'Chats tab',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={22} color={color} />
+            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+              {focused && (
+                <View style={{
+                  position: 'absolute',
+                  width: 48,
+                  height: 28,
+                  borderRadius: 14,
+                  backgroundColor: neo ? neo.palette.mint : `${colors.accentPrimary}20`,
+                  ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
+                }} />
+              )}
+              <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={focused ? 24 : 20} color={color} />
+            </View>
           ),
         }}
       />
@@ -211,7 +243,19 @@ function MainTabs() {
           tabBarLabel: 'Friends',
           tabBarAccessibilityLabel: 'Friends tab',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'people' : 'people-outline'} size={22} color={color} />
+            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+              {focused && (
+                <View style={{
+                  position: 'absolute',
+                  width: 48,
+                  height: 28,
+                  borderRadius: 14,
+                  backgroundColor: neo ? neo.palette.lavender : `${colors.accentPrimary}20`,
+                  ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
+                }} />
+              )}
+              <Ionicons name={focused ? 'people' : 'people-outline'} size={focused ? 24 : 20} color={color} />
+            </View>
           ),
         }}
       />
@@ -222,7 +266,19 @@ function MainTabs() {
           tabBarLabel: 'Alerts',
           tabBarAccessibilityLabel: 'Alerts tab',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'notifications' : 'notifications-outline'} size={22} color={color} />
+            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+              {focused && (
+                <View style={{
+                  position: 'absolute',
+                  width: 48,
+                  height: 28,
+                  borderRadius: 14,
+                  backgroundColor: neo ? neo.palette.coral : `${colors.accentPrimary}20`,
+                  ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
+                }} />
+              )}
+              <Ionicons name={focused ? 'notifications' : 'notifications-outline'} size={focused ? 24 : 20} color={color} />
+            </View>
           ),
           tabBarBadge: notificationCount > 0 ? (notificationCount > 99 ? '99+' : notificationCount) : undefined,
           tabBarBadgeStyle: {
@@ -241,11 +297,11 @@ function MainTabs() {
 }
 
 export default function AppNavigator() {
-  const { colors, neo } = useTheme();
+  const { colors, neo, glass } = useTheme();
 
   const defaultStackOpts = React.useMemo(() => ({
     headerStyle: {
-      backgroundColor: colors.bgSecondary,
+      backgroundColor: glass ? glass.glassBackground : colors.bgSecondary,
       ...(neo ? { borderBottomWidth: 3, borderBottomColor: colors.border } : {}),
     },
     headerTintColor: colors.textPrimary,
@@ -254,17 +310,20 @@ export default function AppNavigator() {
       ...(neo ? { textTransform: 'uppercase' as const } : {}),
     },
     contentStyle: { backgroundColor: colors.bgPrimary },
-  }), [colors, neo]);
+  }), [colors, neo, glass]);
 
   return (
     <Stack.Navigator screenOptions={defaultStackOpts}>
       <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
       <Stack.Screen name="GuildDrawer" component={GuildDrawerNavigator} options={{ headerShown: false }} />
+      <Stack.Screen name="GuildChannels" component={GuildChannelsScreen} options={({ route }) => ({ title: route.params.guildName })} />
+      <Stack.Screen name="ChannelChat" component={ChannelChatScreen} options={({ route }) => ({ title: `#${route.params.channelName}` })} />
+      <Stack.Screen name="VoiceChannel" component={VoiceChannelScreen} options={({ route }) => ({ title: route.params.channelName })} />
       <Stack.Screen name="DirectMessage" component={DirectMessageScreen} options={({ route }) => ({ title: route.params.recipientName })} />
-      <Stack.Screen name="CreateGuild" component={CreateGuildScreen} options={{ title: 'Create Server' }} />
+      <Stack.Screen name="CreateGuild" component={CreateGuildScreen} options={{ title: 'Create Portal' }} />
       <Stack.Screen name="GuildSettings" component={GuildSettingsScreen} options={({ route }) => ({ title: `${route.params.guildName} Settings` })} />
       <Stack.Screen name="GuildMemberList" component={GuildMemberListScreen} options={{ title: 'Members' }} />
-      <Stack.Screen name="InviteAccept" component={InviteAcceptScreen} options={{ title: 'Server Invite' }} />
+      <Stack.Screen name="InviteAccept" component={InviteAcceptScreen} options={{ title: 'Portal Invite' }} />
 
       {/* Wave 2: User system */}
       <Stack.Screen name="UserProfile" component={UserProfileScreen} options={{ title: 'Profile' }} />
@@ -298,12 +357,12 @@ export default function AppNavigator() {
       <Stack.Screen name="GlobalSearch" component={GlobalSearchScreen} options={{ title: 'Search' }} />
 
       {/* Wave 6: Discovery & organization */}
-      <Stack.Screen name="ServerDiscover" component={ServerDiscoverScreen} options={{ title: 'Discover Servers' }} />
-      <Stack.Screen name="ServerFolders" component={ServerFoldersScreen} options={{ title: 'Server Folders' }} />
+      <Stack.Screen name="ServerDiscover" component={ServerDiscoverScreen} options={{ title: 'Discover Portals' }} />
+      <Stack.Screen name="ServerFolders" component={ServerFoldersScreen} options={{ title: 'Portal Folders' }} />
       <Stack.Screen name="ScheduledEvents" component={ScheduledEventsScreen} options={{ title: 'Events' }} />
       <Stack.Screen name="EventDetail" component={EventDetailScreen} options={{ title: 'Event' }} />
       <Stack.Screen name="EventCreate" component={EventCreateScreen} options={({ route }) => ({ title: route.params.eventId ? 'Edit Event' : 'Create Event' })} />
-      <Stack.Screen name="GuildInsights" component={GuildInsightsScreen} options={{ title: 'Server Insights' }} />
+      <Stack.Screen name="GuildInsights" component={GuildInsightsScreen} options={{ title: 'Portal Insights' }} />
 
       {/* Wave 7: Economy & cosmetics */}
       <Stack.Screen name="Shop" component={ShopScreen} options={{ title: 'Shop' }} />

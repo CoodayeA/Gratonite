@@ -12,14 +12,16 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { relationships as relApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
-import { useTheme } from '../../lib/theme';
+import { useTheme, useGlass } from '../../lib/theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'FriendAdd'>;
 
 export default function FriendAddScreen({ navigation }: Props) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const glass = useGlass();
   const toast = useToast();
   const [username, setUsername] = useState('');
   const [sending, setSending] = useState(false);
@@ -57,11 +59,21 @@ export default function FriendAddScreen({ navigation }: Props) {
     iconContainer: {
       width: 96,
       height: 96,
-      borderRadius: 48,
-      backgroundColor: colors.accentLight,
+      borderRadius: neo ? 0 : glass ? borderRadius.xl : 48,
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: spacing.xl,
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : neo ? {
+        backgroundColor: neo.palette.sky,
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+      } : {
+        backgroundColor: colors.accentLight,
+      }),
     },
     title: {
       fontSize: fontSize.xxl,
@@ -88,23 +100,49 @@ export default function FriendAddScreen({ navigation }: Props) {
       marginBottom: spacing.sm,
     },
     input: {
-      backgroundColor: colors.inputBg,
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      borderRadius: borderRadius.md,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.lg,
       color: colors.textPrimary,
       fontSize: fontSize.md,
-      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border } : {}),
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.xl,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : neo ? {
+        backgroundColor: colors.inputBg,
+        borderRadius: 0,
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+      } : {
+        backgroundColor: colors.inputBg,
+        borderWidth: 1,
+        borderColor: colors.inputBorder,
+        borderRadius: borderRadius.md,
+      }),
     },
     sendBtn: {
       width: '100%',
       backgroundColor: colors.accentPrimary,
       paddingVertical: spacing.lg,
-      borderRadius: borderRadius.md,
       alignItems: 'center',
-      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border, shadowColor: neo.shadowColor, shadowOffset: neo.shadowOffset, shadowOpacity: neo.shadowOpacity, shadowRadius: neo.shadowRadius } : {}),
+      ...(glass ? {
+        borderRadius: borderRadius.xl,
+        shadowColor: colors.accentPrimary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      } : neo ? {
+        borderRadius: 0,
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+        shadowColor: neo.shadowColor,
+        shadowOffset: neo.shadowOffset,
+        shadowOpacity: neo.shadowOpacity,
+        shadowRadius: neo.shadowRadius,
+      } : {
+        borderRadius: borderRadius.md,
+      }),
     },
     sendBtnDisabled: {
       opacity: 0.5,
@@ -114,9 +152,10 @@ export default function FriendAddScreen({ navigation }: Props) {
       fontWeight: '700',
       fontSize: fontSize.md,
     },
-  }), [colors, spacing, fontSize, borderRadius, neo]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
 
   return (
+    <PatternBackground>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -160,5 +199,6 @@ export default function FriendAddScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
+    </PatternBackground>
   );
 }

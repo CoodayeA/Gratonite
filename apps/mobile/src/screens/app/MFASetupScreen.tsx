@@ -17,6 +17,7 @@ import SectionHeader from '../../components/SectionHeader';
 import LoadingScreen from '../../components/LoadingScreen';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'MFASetup'>;
 
@@ -246,7 +247,8 @@ export default function MFASetupScreen({ navigation }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
       {/* Status display */}
       <SectionHeader title="Two-Factor Authentication" />
       <View style={styles.section}>
@@ -403,5 +405,6 @@ export default function MFASetupScreen({ navigation }: Props) {
 
       <View style={styles.bottomPad} />
     </ScrollView>
+    </PatternBackground>
   );
 }

@@ -18,6 +18,7 @@ import EmptyState from '../../components/EmptyState';
 import type { Relationship, User } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'MessageRequests'>;
 
@@ -183,7 +184,7 @@ export default function MessageRequestsScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Message Requests</Text>
         <Text style={styles.headerCount}>{requests.length} pending</Text>
@@ -250,6 +251,6 @@ export default function MessageRequestsScreen({ navigation }: Props) {
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

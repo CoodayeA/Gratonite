@@ -13,8 +13,10 @@
 import { eq, and, lte } from 'drizzle-orm';
 import { db } from '../db/index';
 import { auctions } from '../db/schema/auctions';
+import { cosmetics } from '../db/schema/cosmetics';
 import { userCosmetics } from '../db/schema/cosmetics';
 import { userWallets, economyLedger } from '../db/schema/economy';
+import { createNotification } from './notifications';
 
 async function closeExpiredAuctions(): Promise<void> {
   const now = new Date();
@@ -126,6 +128,48 @@ async function closeExpiredAuctions(): Promise<void> {
           .set({ status: 'ended' })
           .where(eq(auctions.id, txAuction.id));
       });
+
+      // Send notifications after transaction commits
+      let cosmeticName = 'item';
+      try {
+        const [c] = await db.select({ name: cosmetics.name }).from(cosmetics).where(eq(cosmetics.id, auction.cosmeticId)).limit(1);
+        if (c) cosmeticName = c.name;
+      } catch { /* non-fatal */ }
+
+      if (auction.currentBidderId && auction.currentBid !== null) {
+        // Notify winner
+        try {
+          await createNotification({
+            userId: auction.currentBidderId,
+            type: 'auction_won',
+            title: `You won ${cosmeticName}!`,
+            body: `Your bid of ${auction.currentBid} Gratonites won the auction. The item has been added to your inventory.`,
+            data: { auctionId: auction.id, cosmeticName, amount: auction.currentBid },
+          });
+        } catch { /* non-fatal */ }
+
+        // Notify seller of sale
+        try {
+          await createNotification({
+            userId: auction.sellerId,
+            type: 'auction_sold',
+            title: `${cosmeticName} sold!`,
+            body: `Your auction ended with a winning bid of ${auction.currentBid} Gratonites.`,
+            data: { auctionId: auction.id, cosmeticName, amount: auction.currentBid },
+          });
+        } catch { /* non-fatal */ }
+      } else {
+        // Notify seller auction ended with no bids
+        try {
+          await createNotification({
+            userId: auction.sellerId,
+            type: 'auction_ended',
+            title: `Auction ended — ${cosmeticName}`,
+            body: 'Your auction ended with no bids. The item has been returned to your inventory.',
+            data: { auctionId: auction.id, cosmeticName },
+          });
+        } catch { /* non-fatal */ }
+      }
 
       console.log(
         `[auction-cron] Closed auction ${auction.id} (winner: ${auction.currentBidderId ?? 'none'})`,

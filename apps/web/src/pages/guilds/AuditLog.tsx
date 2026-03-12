@@ -232,7 +232,7 @@ const AuditLog = () => {
                 </div>
             </header>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '32px 48px' }}>
+            <div className="content-padding" style={{ flex: 1, overflowY: 'auto', padding: '32px 48px' }}>
                 <div style={{ maxWidth: '900px', margin: '0 auto' }}>
 
                     <div style={{ marginBottom: '32px' }}>

@@ -16,6 +16,7 @@ import EmptyState from '../../components/EmptyState';
 import type { Workflow } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'WorkflowList'>;
 
@@ -146,7 +147,7 @@ export default function WorkflowListScreen({ route, navigation }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={workflows}
         keyExtractor={(item) => item.id}
@@ -167,6 +168,6 @@ export default function WorkflowListScreen({ route, navigation }: Props) {
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

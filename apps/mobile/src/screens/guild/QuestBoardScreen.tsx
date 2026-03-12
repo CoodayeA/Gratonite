@@ -16,6 +16,7 @@ import EmptyState from '../../components/EmptyState';
 import type { Quest } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'QuestBoard'>;
 
@@ -224,7 +225,7 @@ export default function QuestBoardScreen({ route }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.tabRow}>
         <TouchableOpacity
           style={[styles.tab, tab === 'active' && styles.tabActive]}
@@ -259,6 +260,6 @@ export default function QuestBoardScreen({ route }: Props) {
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

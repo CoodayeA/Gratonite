@@ -9,6 +9,7 @@ import LoadingScreen from '../../components/LoadingScreen';
 import type { InterestTag } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'InterestTags'>;
 
@@ -99,7 +100,7 @@ export default function InterestTagsScreen({ navigation }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.header}>
         <Text style={styles.headerText}>Select topics you're interested in</Text>
         <Text style={styles.selectedCount}>{selectedIds.size} selected</Text>
@@ -135,6 +136,6 @@ export default function InterestTagsScreen({ navigation }: Props) {
           <Text style={styles.saveBtnText}>{saving ? 'Saving...' : 'Save Interests'}</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </PatternBackground>
   );
 }

@@ -17,6 +17,7 @@ import EmptyState from '../../components/EmptyState';
 import type { WordFilter } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'WordFilterScreen'>;
 
@@ -247,7 +248,7 @@ export default function WordFilterScreen({ route, navigation }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       {/* Add word section */}
       <View style={styles.addSection}>
         <Text style={styles.sectionTitle}>ADD WORD</Text>
@@ -327,6 +328,6 @@ export default function WordFilterScreen({ route, navigation }: Props) {
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

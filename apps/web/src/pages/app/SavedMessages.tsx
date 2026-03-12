@@ -78,7 +78,7 @@ export default function SavedMessages() {
         : bookmarks;
 
     return (
-        <div style={{ padding: '32px', maxWidth: '800px', margin: '0 auto' }}>
+        <div style={{ padding: 'clamp(12px, 3vw, 32px)', maxWidth: '800px', margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                 <Bookmark size={24} color="var(--accent-primary)" />
                 <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Saved Messages</h1>

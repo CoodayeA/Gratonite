@@ -18,6 +18,7 @@ import EmptyState from '../../components/EmptyState';
 import type { Session } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SettingsSessions'>;
 
@@ -206,7 +207,7 @@ export default function SettingsSessionsScreen({ navigation }: Props) {
   const otherSessionCount = sessions.filter((s) => !s.current).length;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={sessions}
         keyExtractor={(item) => item.id}
@@ -237,6 +238,6 @@ export default function SettingsSessionsScreen({ navigation }: Props) {
           ) : null
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

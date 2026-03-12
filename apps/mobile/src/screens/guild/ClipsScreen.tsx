@@ -10,6 +10,7 @@ import EmptyState from '../../components/EmptyState';
 import type { Clip } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Clips'>;
 
@@ -68,7 +69,7 @@ export default function ClipsScreen({ route }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
@@ -90,6 +91,6 @@ export default function ClipsScreen({ route }: Props) {
         ListEmptyComponent={<EmptyState icon="videocam-outline" title="No clips" subtitle="Record clips from voice channels" />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchClips(); }} tintColor={colors.accentPrimary} />}
       />
-    </View>
+    </PatternBackground>
   );
 }

@@ -59,7 +59,7 @@ const SecretRevealModal = ({ title, fields, onClose }: {
 
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }} onClick={onClose}>
-            <div style={{ background: 'var(--bg-elevated)', borderRadius: '16px', padding: '32px', width: '500px', border: '1px solid var(--stroke)', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: 'var(--bg-elevated)', borderRadius: '16px', padding: '32px', width: 'min(500px, 95vw)', border: '1px solid var(--stroke)', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                     <h3 style={{ fontSize: '18px', fontWeight: 700 }}>{title}</h3>
                     <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={18} /></button>
@@ -389,7 +389,7 @@ const BotBuilder = () => {
 
     const SubmitModal = () => (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }} onClick={() => !submitting && setShowSubmitModal(false)}>
-            <div style={{ background: 'var(--bg-elevated)', borderRadius: '16px', padding: '32px', width: '420px', border: '1px solid var(--stroke)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: 'var(--bg-elevated)', borderRadius: '16px', padding: '32px', width: 'min(420px, 95vw)', border: '1px solid var(--stroke)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
                 {submitted ? (
                     <div style={{ textAlign: 'center', padding: '20px 0' }}>
                         <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>

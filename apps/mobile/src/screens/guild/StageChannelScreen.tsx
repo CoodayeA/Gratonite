@@ -11,6 +11,7 @@ import Avatar from '../../components/Avatar';
 import type { StageSession, StageSpeaker } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'StageChannel'>;
 
@@ -162,7 +163,7 @@ export default function StageChannelScreen({ route, navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.topicBar}>
         <Text style={styles.topicLabel}>Stage Topic</Text>
         <Text style={styles.topicText}>{session.topic}</Text>
@@ -219,6 +220,6 @@ export default function StageChannelScreen({ route, navigation }: Props) {
           <Ionicons name="exit-outline" size={24} color={colors.white} />
         </TouchableOpacity>
       </View>
-    </View>
+    </PatternBackground>
   );
 }

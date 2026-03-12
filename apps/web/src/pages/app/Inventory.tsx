@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Archive, LayoutTemplate, Check, ShoppingBag, Store, Sparkles, Crown, Star, Gem, Shield, Tag, Music } from 'lucide-react';
+import { Archive, LayoutTemplate, Check, ShoppingBag, Store, Sparkles, Crown, Star, Gem, Shield, Tag, Music, Wallet, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import Skeleton from '../../components/ui/Skeleton';
 import { TiltCard, RippleWrapper } from '../../components/ui/Physics';
@@ -43,7 +43,7 @@ const RARITY: Record<string, { color: string; glow: string; label: string; borde
 /*  Tab config                                                         */
 /* ------------------------------------------------------------------ */
 
-type TabKey = 'all' | 'avatar_frame' | 'profile_effect' | 'theme' | 'decoration' | 'nameplate' | 'soundboard';
+type TabKey = 'all' | 'avatar_frame' | 'profile_effect' | 'theme' | 'decoration' | 'nameplate' | 'soundboard' | 'wallet';
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode; emptyLabel: string }[] = [
     { key: 'all',            label: 'All',          icon: <Archive size={14} />,   emptyLabel: 'items' },
@@ -53,6 +53,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode; emptyLabel: str
     { key: 'decoration',     label: 'Canvas',        icon: <Gem size={14} />,       emptyLabel: 'canvas items' },
     { key: 'nameplate',      label: 'Nameplates',    icon: <Tag size={14} />,       emptyLabel: 'nameplate items' },
     { key: 'soundboard',     label: 'Soundboard',    icon: <Music size={14} />,     emptyLabel: 'soundboard items' },
+    { key: 'wallet',         label: 'Wallet',        icon: <Wallet size={14} />,    emptyLabel: 'transactions' },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -91,6 +92,9 @@ const Inventory = () => {
     const [justSaved, setJustSaved] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [equippingId, setEquippingId] = useState<string | null>(null);
+    const [walletData, setWalletData] = useState<{ balance: number; lifetimeEarned: number; lifetimeSpent: number } | null>(null);
+    const [ledger, setLedger] = useState<Array<{ id: string; direction: string; amount: number; source: string; description: string; createdAt: string }>>([]);
+    const [walletLoading, setWalletLoading] = useState(false);
     const mountedRef = useRef(true);
 
     const loadInventory = useCallback(() => {
@@ -125,6 +129,25 @@ const Inventory = () => {
     useEffect(() => {
         loadInventory();
     }, [loadInventory]);
+
+    /* fetch wallet data when wallet tab is active */
+    useEffect(() => {
+        if (activeTab !== 'wallet') return;
+        setWalletLoading(true);
+        Promise.all([
+            api.economy.getWallet(),
+            api.economy.getLedger(50),
+        ]).then(([wallet, entries]) => {
+            if (!mountedRef.current) return;
+            setWalletData({ balance: wallet.balance, lifetimeEarned: wallet.lifetimeEarned, lifetimeSpent: wallet.lifetimeSpent });
+            setLedger(entries);
+        }).catch(() => {
+            if (!mountedRef.current) return;
+            addToast({ title: 'Failed to load wallet', variant: 'error' });
+        }).finally(() => {
+            if (mountedRef.current) setWalletLoading(false);
+        });
+    }, [activeTab, addToast]);
 
     // Keep inventory in sync after shop/marketplace purchases and when tab regains focus.
     useEffect(() => {
@@ -467,7 +490,7 @@ const Inventory = () => {
                     }}>
                         {TABS.map(tab => {
                             const isActive = activeTab === tab.key;
-                            const count = tab.key === 'all' ? inventory.length : inventory.filter(i => i.type === tab.key).length;
+                            const count = tab.key === 'all' ? inventory.length : tab.key === 'wallet' ? (ledger.length) : inventory.filter(i => i.type === tab.key).length;
                             return (
                                 <button
                                     key={tab.key}
@@ -499,8 +522,134 @@ const Inventory = () => {
                         })}
                     </div>
 
+                    {/* Wallet view */}
+                    {activeTab === 'wallet' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            {walletLoading ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    <Skeleton variant="card" height="120px" />
+                                    <Skeleton variant="card" height="300px" />
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Balance card */}
+                                    <div className="glass-panel" style={{
+                                        padding: '28px', borderRadius: '16px', border: '1px solid var(--stroke)',
+                                        background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.02))',
+                                        display: 'flex', alignItems: 'center', gap: '24px',
+                                    }}>
+                                        <div style={{
+                                            width: '56px', height: '56px', borderRadius: '16px',
+                                            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            boxShadow: '4px 4px 0 rgba(0,0,0,0.1)',
+                                            flexShrink: 0,
+                                        }}>
+                                            <Wallet size={28} color="#111" />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '1px', marginBottom: '4px' }}>Current Balance</div>
+                                            <div style={{ fontSize: '32px', fontWeight: 800, fontFamily: 'var(--font-display)', color: '#f59e0b', letterSpacing: '-0.02em' }}>
+                                                {(walletData?.balance ?? 0).toLocaleString()} <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-muted)' }}>G</span>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '24px' }}>
+                                            <div style={{ textAlign: 'center' }}>
+                                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>Earned</div>
+                                                <div style={{ fontSize: '16px', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <TrendingUp size={14} /> {(walletData?.lifetimeEarned ?? 0).toLocaleString()}
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: 'center' }}>
+                                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>Spent</div>
+                                                <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--error)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <TrendingDown size={14} /> {(walletData?.lifetimeSpent ?? 0).toLocaleString()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Earn More link */}
+                                    <div
+                                        role="button" tabIndex={0}
+                                        onClick={() => navigate('/fame')}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/fame'); } }}
+                                        className="hover-lift"
+                                        style={{
+                                            padding: '14px 18px', borderRadius: '10px', cursor: 'pointer',
+                                            background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <Star size={18} style={{ color: '#f59e0b' }} />
+                                            <div>
+                                                <div style={{ fontWeight: 600, fontSize: '14px' }}>Earn More Gratonites</div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Give FAME, claim daily rewards, send messages</div>
+                                            </div>
+                                        </div>
+                                        <ArrowRight size={16} style={{ color: 'var(--text-muted)' }} />
+                                    </div>
+
+                                    {/* Transaction ledger */}
+                                    <div className="glass-panel" style={{
+                                        borderRadius: '12px', border: '1px solid var(--stroke)', overflow: 'hidden',
+                                    }}>
+                                        <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <Archive size={16} style={{ color: 'var(--text-muted)' }} />
+                                            <span style={{ fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>Recent Transactions</span>
+                                        </div>
+                                        {ledger.length === 0 ? (
+                                            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                                <p style={{ fontWeight: 600, marginBottom: '4px' }}>No transactions yet</p>
+                                                <p style={{ fontSize: '13px' }}>Your earning and spending history will appear here.</p>
+                                            </div>
+                                        ) : (
+                                            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                                                {ledger.map((entry) => {
+                                                    const isEarn = entry.direction === 'earn';
+                                                    const date = new Date(entry.createdAt);
+                                                    const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                                                    const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                                                    return (
+                                                        <div key={entry.id} style={{
+                                                            display: 'flex', alignItems: 'center', gap: '12px',
+                                                            padding: '12px 18px',
+                                                            borderBottom: '1px solid var(--stroke)',
+                                                        }}>
+                                                            <div style={{
+                                                                width: '32px', height: '32px', borderRadius: '8px',
+                                                                background: isEarn ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                flexShrink: 0,
+                                                            }}>
+                                                                {isEarn ? <TrendingUp size={16} style={{ color: '#10b981' }} /> : <TrendingDown size={16} style={{ color: '#ef4444' }} />}
+                                                            </div>
+                                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                                <div style={{ fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                    {entry.description || entry.source.replace(/_/g, ' ')}
+                                                                </div>
+                                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{dateStr} at {timeStr}</div>
+                                                            </div>
+                                                            <div style={{
+                                                                fontWeight: 700, fontSize: '14px', fontFamily: 'var(--font-display)',
+                                                                color: isEarn ? '#10b981' : 'var(--error)',
+                                                            }}>
+                                                                {isEarn ? '+' : '-'}{entry.amount.toLocaleString()} G
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
+
                     {/* Inventory grid */}
-                    <div style={{
+                    {activeTab !== 'wallet' && <div style={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
                         gap: '16px',
@@ -699,7 +848,7 @@ const Inventory = () => {
                                 );
                             })
                         )}
-                    </div>
+                    </div>}
                 </div>
 
             </div>

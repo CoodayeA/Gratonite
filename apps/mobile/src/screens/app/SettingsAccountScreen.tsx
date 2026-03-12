@@ -14,17 +14,19 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { useTheme } from '../../lib/theme';
+import { useTheme, useGlass } from '../../lib/theme';
 import { mfa } from '../../lib/api';
 import SectionHeader from '../../components/SectionHeader';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SettingsAccount'>;
 
 export default function SettingsAccountScreen({ navigation }: Props) {
   const { user, updateProfile } = useAuth();
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const glass = useGlass();
   const toast = useToast();
 
   const [displayName, setDisplayName] = useState(user?.displayName || '');
@@ -130,16 +132,27 @@ export default function SettingsAccountScreen({ navigation }: Props) {
       marginBottom: spacing.xs,
     },
     input: {
-      backgroundColor: colors.inputBg,
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      borderRadius: borderRadius.md,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
       fontSize: fontSize.md,
       color: colors.textPrimary,
       marginBottom: spacing.md,
-      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border } : {}),
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.xl,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : neo ? {
+        backgroundColor: colors.inputBg,
+        borderRadius: 0,
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+      } : {
+        backgroundColor: colors.inputBg,
+        borderWidth: 1,
+        borderColor: colors.inputBorder,
+        borderRadius: borderRadius.md,
+      }),
     },
     inputMultiline: {
       minHeight: 80,
@@ -147,11 +160,26 @@ export default function SettingsAccountScreen({ navigation }: Props) {
     },
     saveButton: {
       backgroundColor: colors.accentPrimary,
-      borderRadius: borderRadius.md,
       paddingVertical: spacing.md,
       alignItems: 'center',
       marginTop: spacing.sm,
-      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border, shadowColor: neo.shadowColor, shadowOffset: neo.shadowOffset, shadowOpacity: neo.shadowOpacity, shadowRadius: neo.shadowRadius } : {}),
+      ...(glass ? {
+        borderRadius: borderRadius.xl,
+        shadowColor: colors.accentPrimary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      } : neo ? {
+        borderRadius: 0,
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+        shadowColor: neo.shadowColor,
+        shadowOffset: neo.shadowOffset,
+        shadowOpacity: neo.shadowOpacity,
+        shadowRadius: neo.shadowRadius,
+      } : {
+        borderRadius: borderRadius.md,
+      }),
     },
     buttonDisabled: {
       opacity: 0.6,
@@ -162,12 +190,24 @@ export default function SettingsAccountScreen({ navigation }: Props) {
       fontWeight: '600',
     },
     deleteButton: {
-      backgroundColor: colors.bgElevated,
-      borderRadius: borderRadius.md,
       paddingVertical: spacing.lg,
       alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.error,
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.xl,
+        borderWidth: 1,
+        borderColor: colors.error,
+      } : neo ? {
+        backgroundColor: colors.bgElevated,
+        borderRadius: 0,
+        borderWidth: neo.borderWidth,
+        borderColor: colors.error,
+      } : {
+        backgroundColor: colors.bgElevated,
+        borderRadius: borderRadius.md,
+        borderWidth: 1,
+        borderColor: colors.error,
+      }),
     },
     deleteButtonText: {
       color: colors.error,
@@ -178,10 +218,22 @@ export default function SettingsAccountScreen({ navigation }: Props) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      backgroundColor: colors.bgSecondary,
-      borderRadius: borderRadius.md,
       padding: spacing.lg,
       gap: spacing.md,
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.xl,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : neo ? {
+        backgroundColor: colors.bgSecondary,
+        borderRadius: 0,
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+      } : {
+        backgroundColor: colors.bgSecondary,
+        borderRadius: borderRadius.md,
+      }),
     },
     mfaInfo: {
       flex: 1,
@@ -217,9 +269,10 @@ export default function SettingsAccountScreen({ navigation }: Props) {
     bottomPad: {
       height: 40,
     },
-  }), [colors, spacing, fontSize, borderRadius, neo]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
 
   return (
+    <PatternBackground>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -348,5 +401,6 @@ export default function SettingsAccountScreen({ navigation }: Props) {
         <View style={styles.bottomPad} />
       </ScrollView>
     </KeyboardAvoidingView>
+    </PatternBackground>
   );
 }

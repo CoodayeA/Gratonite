@@ -69,7 +69,7 @@ const InviteModal = ({ onClose, guildId }: { onClose: () => void; guildId: strin
 
     return (
         <div className="modal-overlay">
-            <div className="login-box glass-panel" style={{ width: '480px', padding: '32px', position: 'relative' }}>
+            <div className="login-box glass-panel" style={{ width: 'min(480px, 95vw)', padding: '32px', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
                 <button onClick={onClose} style={{ position: 'absolute', top: 24, right: 24, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                     <X size={24} />
                 </button>

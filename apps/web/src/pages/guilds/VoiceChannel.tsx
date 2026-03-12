@@ -12,6 +12,7 @@ import Avatar from '../../components/ui/Avatar';
 import { useVoice } from '../../contexts/VoiceContext';
 import { SpatialAudioEngine } from '../../lib/spatialAudio';
 import { useSpatialPositions } from '../../hooks/useSpatialPositions';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import SpatialCanvas from '../../components/voice/SpatialCanvas';
 import { Track } from 'livekit-client';
 
@@ -93,6 +94,7 @@ const VoiceChannel = () => {
     const { channelId, guildId } = useParams<{ channelId: string; guildId: string }>();
     const { addToast } = useToast();
     const voiceCtx = useVoice();
+    const isMobile = useIsMobile();
 
     const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
     const [showVolumePanel, setShowVolumePanel] = useState(false);
@@ -1572,9 +1574,15 @@ const VoiceChannel = () => {
             {/* Embedded Text Chat Panel */}
             {chatOpen && (
                 <div style={{
-                    position: 'absolute', top: '56px', right: 0, bottom: 0, width: '360px',
-                    background: 'var(--bg-primary)', borderLeft: '1px solid var(--stroke)',
-                    display: 'flex', flexDirection: 'column', zIndex: 15,
+                    ...(isMobile ? {
+                        position: 'fixed', top: 0, right: 0, bottom: 0, left: 0,
+                        width: '100%', zIndex: 500,
+                        background: 'var(--bg-primary)',
+                    } : {
+                        position: 'absolute', top: '56px', right: 0, bottom: 0, width: '360px',
+                        background: 'var(--bg-primary)', borderLeft: '1px solid var(--stroke)',
+                    }),
+                    display: 'flex', flexDirection: 'column', zIndex: isMobile ? 500 : 15,
                 }}>
                     {/* Chat Header */}
                     <div style={{

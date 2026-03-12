@@ -18,6 +18,7 @@ import EmptyState from '../../components/EmptyState';
 import type { Reminder } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Reminders'>;
 
@@ -161,7 +162,7 @@ export default function RemindersScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={reminderList}
         keyExtractor={(item) => item.id}
@@ -178,6 +179,6 @@ export default function RemindersScreen({ navigation }: Props) {
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

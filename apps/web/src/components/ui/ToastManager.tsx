@@ -41,6 +41,10 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
         <ToastContext.Provider value={{ addToast, removeToast }}>
             {children}
             <div
+                className="toast-container"
+                role="status"
+                aria-live="polite"
+                aria-atomic="false"
                 style={{
                     position: 'fixed',
                     bottom: '24px',
@@ -178,6 +182,8 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
                     : 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
             }}
             className="hover-lift"
+            role="alert"
+            aria-label={`${toast.variant}: ${toast.title}${toast.description ? '. ' + toast.description : ''}`}
             onClick={handleRemove}
         >
             <div style={{ color: iconColor, flexShrink: 0, marginTop: isAchievement ? '0' : '2px', background: isAchievement ? 'rgba(0,0,0,0.2)' : 'transparent', padding: isAchievement ? '8px' : '0', borderRadius: '50%', display: 'flex' }}>
@@ -194,6 +200,7 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
                 )}
             </div>
             <button
+                aria-label="Dismiss notification"
                 onClick={(e) => { e.stopPropagation(); handleRemove(); }}
                 style={{
                     background: 'transparent',

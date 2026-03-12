@@ -315,7 +315,7 @@ const EventScheduler = () => {
                     <div style={{ color: 'var(--error)', fontSize: '14px' }}>{error}</div>
                 </div>
             ) : (
-            <div style={{ flex: 1, overflowY: 'auto', padding: '32px 48px' }}>
+            <div className="content-padding" style={{ flex: 1, overflowY: 'auto', padding: '32px 48px' }}>
                 <div style={{ maxWidth: '900px', margin: '0 auto' }}>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>

@@ -1621,6 +1621,233 @@
     --stroke-light: rgba(0, 0, 0, 0.4) !important;
 }
 
+/* ------------------------
+   CONTRAST FIX: Glass light mode
+   --text-secondary #52525b → #3f3f46 (4.5:1 on #f9f9fb)
+   --text-muted #71717a → #52525b (4.5:1 on #f9f9fb)
+   ------------------------ */
+[data-theme="glass"][data-color-mode="light"] {
+    --text-secondary: #3f3f46;
+    --text-muted: #52525b;
+}
+
+/* Contrast fixes for all light themes — ensure muted text meets WCAG AA */
+[data-color-mode="light"] {
+    --text-muted: #52525b;
+    --text-secondary: #3f3f46;
+}
+
+/* ------------------------
+   ACCESSIBILITY: Screen Reader Mode
+   Adds a visually-hidden live region for route announcements
+   ------------------------ */
+.screen-reader-mode .sr-route-announcer {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ------------------------
+   ACCESSIBILITY: Link Underlines
+   Forces underlines on all interactive text
+   ------------------------ */
+.link-underlines a,
+.link-underlines [role="link"] {
+    text-decoration: underline !important;
+    text-underline-offset: 2px;
+}
+
+.link-underlines .channel-item,
+.link-underlines .mobile-nav-item,
+.link-underlines .guild-icon {
+    text-decoration: none !important;
+}
+
+/* ------------------------
+   ACCESSIBILITY: Large Focus Indicator
+   4px outline instead of 2px for better visibility
+   ------------------------ */
+.focus-large *:focus-visible {
+    outline: 4px solid var(--accent-primary) !important;
+    outline-offset: 2px !important;
+}
+
+.focus-large .action-card:focus-visible {
+    outline: 4px solid var(--accent-primary) !important;
+    outline-offset: 2px !important;
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.25) !important;
+}
+
+/* ------------------------
+   ACCESSIBILITY: Color-Blind Mode
+   Replaces color-only status indicators with shapes
+   circle=online, moon=idle, minus=dnd, hollow=offline
+   ------------------------ */
+.color-blind-mode .presence-dot::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+}
+
+/* Online: filled circle (default shape, add a checkmark) */
+.color-blind-mode .presence-dot[data-status="online"]::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Idle: crescent / moon — half-circle cutout */
+.color-blind-mode .presence-dot[data-status="idle"] {
+    background: transparent !important;
+    border: 2px solid #f59e0b;
+    position: relative;
+}
+.color-blind-mode .presence-dot[data-status="idle"]::after {
+    content: '';
+    position: absolute;
+    width: 50%;
+    height: 100%;
+    right: 0;
+    top: 0;
+    background: #f59e0b;
+    border-radius: 0 50% 50% 0;
+}
+
+/* DND: minus sign */
+.color-blind-mode .presence-dot[data-status="dnd"] {
+    position: relative;
+}
+.color-blind-mode .presence-dot[data-status="dnd"]::after {
+    content: '';
+    position: absolute;
+    width: 60%;
+    height: 2px;
+    background: white;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 1px;
+}
+
+/* Offline: hollow circle */
+.color-blind-mode .presence-dot[data-status="offline"] {
+    background: transparent !important;
+    border: 2px solid var(--text-muted);
+}
+
+/* Visually hidden utility */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ------------------------
+   DESIGN TOKENS: Neobrutalist Utilities
+   Additive classes — existing themes won't break
+   ------------------------ */
+.neo-shadow {
+    box-shadow: 4px 4px 0 var(--shadow-color, rgba(0, 0, 0, 0.15));
+}
+.neo-shadow-hover {
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+.neo-shadow-hover:hover {
+    box-shadow: 6px 6px 0 var(--shadow-color, rgba(0, 0, 0, 0.15));
+    transform: translate(-2px, -2px);
+}
+.tilt-1 { transform: rotate(-1deg); }
+.tilt-2 { transform: rotate(1deg); }
+.tilt-subtle-1 { transform: rotate(-0.5deg); }
+.tilt-subtle-2 { transform: rotate(0.5deg); }
+
+.sticker {
+    display: inline-flex;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1;
+}
+
+/* Neobrutalism theme gets stronger offset shadows */
+[data-theme="neobrutalism"] .neo-shadow,
+[data-theme="neobrutalism"] .action-card {
+    box-shadow: 6px 6px 0 var(--shadow-color, rgba(0, 0, 0, 0.25));
+}
+[data-theme="neobrutalism"] .neo-shadow-hover:hover,
+[data-theme="neobrutalism"] .action-card:hover {
+    box-shadow: 8px 8px 0 var(--shadow-color, rgba(0, 0, 0, 0.25));
+    transform: translate(-2px, -2px);
+}
+
+/* Action card design enhancement */
+.action-card {
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+.action-card:hover {
+    box-shadow: 4px 4px 0 var(--shadow-color, rgba(0, 0, 0, 0.1));
+    transform: translate(-1px, -1px);
+}
+.action-card:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+
+/* Staggered card layout — subtle rotation for personality */
+.action-card:nth-child(odd) {
+    transform: rotate(-0.3deg);
+}
+.action-card:nth-child(even) {
+    transform: rotate(0.3deg);
+}
+.action-card:hover {
+    transform: translate(-1px, -1px) rotate(0deg) !important;
+}
+
+/* Grain texture overlay — opt-in via --grain-opacity */
+:root {
+    --grain-opacity: 0;
+}
+[data-theme="neobrutalism"] {
+    --grain-opacity: 0.02;
+}
+[data-theme="artdeco"] {
+    --grain-opacity: 0.015;
+}
+.app-container::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
+    mix-blend-mode: overlay;
+}
+
 /* Default mapping for fluid sizes (universal) */
 :root {
     --text-xs: clamp(0.7rem, 0.65rem + 0.25vw, 0.75rem);

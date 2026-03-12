@@ -15,6 +15,7 @@ import EmptyState from '../../components/EmptyState';
 import type { ActivityLogEvent } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ActivityLog'>;
 
@@ -123,7 +124,7 @@ export default function ActivityLogScreen({ route }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={events}
         keyExtractor={(item) => item.id}
@@ -149,7 +150,7 @@ export default function ActivityLogScreen({ route }: Props) {
           <EmptyState
             icon="time-outline"
             title="No activity"
-            subtitle="Server activity will appear here"
+            subtitle="Portal activity will appear here"
           />
         }
         ListFooterComponent={
@@ -160,6 +161,6 @@ export default function ActivityLogScreen({ route }: Props) {
           ) : null
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

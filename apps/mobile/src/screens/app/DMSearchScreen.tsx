@@ -17,6 +17,7 @@ import EmptyState from '../../components/EmptyState';
 import type { User } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'DMSearch'>;
 
@@ -120,7 +121,7 @@ export default function DMSearchScreen({ navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Find a User</Text>
       </View>
@@ -190,6 +191,6 @@ export default function DMSearchScreen({ navigation }: Props) {
           ) : null
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

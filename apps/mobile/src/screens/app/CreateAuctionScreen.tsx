@@ -7,6 +7,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { mediumImpact } from '../../lib/haptics';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'CreateAuction'>;
 
@@ -58,7 +59,7 @@ export default function CreateAuctionScreen({ navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <ScrollView style={styles.scroll}>
         <Text style={[styles.label, { marginTop: 0 }]}>Cosmetic ID</Text>
         <TextInput style={styles.input} placeholder="Enter cosmetic ID" placeholderTextColor={colors.textMuted} value={cosmeticId} onChangeText={setCosmeticId} />
@@ -79,6 +80,6 @@ export default function CreateAuctionScreen({ navigation }: Props) {
           <Text style={styles.createBtnText}>{creating ? 'Creating...' : 'Create Auction'}</Text>
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </PatternBackground>
   );
 }

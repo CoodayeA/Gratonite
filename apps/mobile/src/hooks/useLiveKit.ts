@@ -2,31 +2,17 @@
  * LiveKit React Native hook for voice channels.
  * Adapted from the web useLiveKit — stripped of browser-only APIs
  * (device enumeration, screen share, noise suppression, spatial audio).
- *
- * livekit-client is lazy-loaded to avoid crashing in Expo Go / simulator
- * builds where native WebRTC modules aren't linked.
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  Room,
+  RoomEvent,
+  Track,
+  type Participant,
+  type RemoteParticipant,
+  ConnectionState,
+} from 'livekit-client';
 import { voice as voiceApi } from '../lib/api';
-
-// Lazy-load livekit-client to avoid crashing when native modules aren't linked.
-// The module name is split to prevent Metro from statically resolving the require.
-let _lk: typeof import('livekit-client') | null = null;
-const _lkModuleName = ['livekit', 'client'].join('-');
-function getLiveKit() {
-  if (!_lk) {
-    try {
-      _lk = require(_lkModuleName);
-    } catch {
-      return null;
-    }
-  }
-  return _lk;
-}
-
-type Room = import('livekit-client').Room;
-type Participant = import('livekit-client').Participant;
-type RemoteParticipant = import('livekit-client').RemoteParticipant;
 
 export interface LiveKitParticipant {
   id: string;
@@ -80,8 +66,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
   useEffect(() => { onSpeakingChangedRef.current = onSpeakingChanged; }, [onSpeakingChanged]);
 
   const participantToInfo = useCallback((p: Participant): LiveKitParticipant => {
-    const lk = getLiveKit();
-    const audioPublication = lk ? p.getTrackPublication(lk.Track.Source.Microphone) : null;
+    const audioPublication = p.getTrackPublication(Track.Source.Microphone);
     return {
       id: p.identity,
       name: p.name || p.identity,
@@ -107,14 +92,8 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
   }, [participantToInfo]);
 
   const connect = useCallback(async () => {
-    const lk = getLiveKit();
-    if (!lk) {
-      setConnectionError('Voice is not available in this build.');
-      return;
-    }
-
-    if (roomRef.current?.state === lk.ConnectionState.Connected ||
-        roomRef.current?.state === lk.ConnectionState.Connecting) {
+    if (roomRef.current?.state === ConnectionState.Connected ||
+        roomRef.current?.state === ConnectionState.Connecting) {
       return;
     }
 
@@ -130,7 +109,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
     try {
       const { token, endpoint } = await voiceApi.join(channelId, true, false);
 
-      const room = new lk.Room({
+      const room = new Room({
         adaptiveStream: true,
         dynacast: true,
         audioCaptureDefaults: {
@@ -142,14 +121,14 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
 
       roomRef.current = room;
 
-      room.on(lk.RoomEvent.Connected, () => {
+      room.on(RoomEvent.Connected, () => {
         if (attemptId !== connectAttemptRef.current) return;
         setIsConnected(true);
         setIsConnecting(false);
         updateParticipants();
       });
 
-      room.on(lk.RoomEvent.Disconnected, () => {
+      room.on(RoomEvent.Disconnected, () => {
         setIsConnected(false);
         setIsConnecting(false);
         setParticipants([]);
@@ -158,23 +137,23 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
         setIsDeafened(false);
       });
 
-      room.on(lk.RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
+      room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
         const info = participantToInfo(participant);
         onParticipantJoinedRef.current?.(info);
         updateParticipants();
       });
 
-      room.on(lk.RoomEvent.ParticipantDisconnected, (participant: RemoteParticipant) => {
+      room.on(RoomEvent.ParticipantDisconnected, (participant: RemoteParticipant) => {
         onParticipantLeftRef.current?.(participant.identity);
         updateParticipants();
       });
 
-      room.on(lk.RoomEvent.TrackSubscribed, () => updateParticipants());
-      room.on(lk.RoomEvent.TrackUnsubscribed, () => updateParticipants());
-      room.on(lk.RoomEvent.TrackMuted, () => updateParticipants());
-      room.on(lk.RoomEvent.TrackUnmuted, () => updateParticipants());
+      room.on(RoomEvent.TrackSubscribed, () => updateParticipants());
+      room.on(RoomEvent.TrackUnsubscribed, () => updateParticipants());
+      room.on(RoomEvent.TrackMuted, () => updateParticipants());
+      room.on(RoomEvent.TrackUnmuted, () => updateParticipants());
 
-      room.on(lk.RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => {
+      room.on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => {
         const speakerIds = new Set(speakers.map(s => s.identity));
 
         setParticipants(prev => prev.map(p => {
@@ -263,7 +242,6 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
   }, [updateParticipants]);
 
   const toggleDeafen = useCallback(() => {
-    const lk = getLiveKit();
     const newDeafened = !isDeafened;
     setIsDeafened(newDeafened);
 
@@ -274,25 +252,21 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
         room.localParticipant.setMicrophoneEnabled(false).catch(() => {});
       }
       // Mute all remote audio tracks
-      if (lk) {
-        room?.remoteParticipants.forEach((participant: RemoteParticipant) => {
-          const audioPublication = participant.getTrackPublication(lk.Track.Source.Microphone);
-          if (audioPublication?.track?.mediaStreamTrack) {
-            audioPublication.track.mediaStreamTrack.enabled = false;
-          }
-        });
-      }
+      room?.remoteParticipants.forEach((participant: RemoteParticipant) => {
+        const audioPublication = participant.getTrackPublication(Track.Source.Microphone);
+        if (audioPublication?.track?.mediaStreamTrack) {
+          audioPublication.track.mediaStreamTrack.enabled = false;
+        }
+      });
     } else {
       // Restore remote audio
       const room = roomRef.current;
-      if (lk) {
-        room?.remoteParticipants.forEach((participant: RemoteParticipant) => {
-          const audioPublication = participant.getTrackPublication(lk.Track.Source.Microphone);
-          if (audioPublication?.track?.mediaStreamTrack) {
-            audioPublication.track.mediaStreamTrack.enabled = true;
-          }
-        });
-      }
+      room?.remoteParticipants.forEach((participant: RemoteParticipant) => {
+        const audioPublication = participant.getTrackPublication(Track.Source.Microphone);
+        if (audioPublication?.track?.mediaStreamTrack) {
+          audioPublication.track.mediaStreamTrack.enabled = true;
+        }
+      });
     }
   }, [isDeafened]);
 

@@ -18,6 +18,7 @@ import LoadingScreen from '../../components/LoadingScreen';
 import type { UserMute } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SettingsMutedUsers'>;
 
@@ -142,7 +143,7 @@ export default function SettingsMutedUsersScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={mutes}
         keyExtractor={(item) => item.id}
@@ -163,6 +164,6 @@ export default function SettingsMutedUsersScreen({ navigation }: Props) {
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

@@ -22,6 +22,7 @@ import {
 } from '../../lib/keyVerification';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'KeyVerification'>;
 
@@ -165,7 +166,8 @@ export default function KeyVerificationScreen({ route, navigation }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }}>
       {/* My Key */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>YOUR KEY</Text>
@@ -217,5 +219,6 @@ export default function KeyVerificationScreen({ route, navigation }: Props) {
         </View>
       )}
     </ScrollView>
+    </PatternBackground>
   );
 }

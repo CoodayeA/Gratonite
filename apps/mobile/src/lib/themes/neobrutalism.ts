@@ -9,7 +9,7 @@ export const neoColors: ThemeColors = {
   bgActive: '#ffe08a',
   textPrimary: '#000000',
   textSecondary: '#333333',
-  textMuted: '#555555',
+  textMuted: '#4a4a4a',
   textLink: '#f97316',
   accentPrimary: '#f97316',
   accentHover: '#ea580c',
@@ -37,7 +37,7 @@ export const neoSpacing: ThemeSpacing = {
 };
 
 export const neoFontSize: ThemeFontSize = {
-  xs: 11, sm: 13, md: 15, lg: 17, xl: 20, xxl: 24, xxxl: 32,
+  xs: 12, sm: 13, md: 15, lg: 17, xl: 20, xxl: 24, xxxl: 32,
 };
 
 export const neoBorderRadius: ThemeBorderRadius = {

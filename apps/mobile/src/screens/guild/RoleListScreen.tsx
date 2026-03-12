@@ -16,6 +16,7 @@ import EmptyState from '../../components/EmptyState';
 import type { Role } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'RoleList'>;
 
@@ -132,7 +133,7 @@ export default function RoleListScreen({ route, navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Roles</Text>
         <TouchableOpacity
@@ -193,6 +194,6 @@ export default function RoleListScreen({ route, navigation }: Props) {
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

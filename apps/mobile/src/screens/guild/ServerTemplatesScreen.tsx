@@ -18,6 +18,7 @@ import EmptyState from '../../components/EmptyState';
 import type { ServerTemplate } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ServerTemplates'>;
 
@@ -268,7 +269,7 @@ export default function ServerTemplatesScreen({ route }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.header}>
         <Text style={styles.headerCount}>
           {templateList.length} template{templateList.length !== 1 ? 's' : ''}
@@ -320,10 +321,10 @@ export default function ServerTemplatesScreen({ route }: Props) {
           <EmptyState
             icon="copy-outline"
             title="No templates"
-            subtitle="Create a template to share your server structure"
+            subtitle="Create a template to share your portal structure"
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

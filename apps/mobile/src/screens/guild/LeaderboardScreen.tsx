@@ -10,13 +10,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { leaderboard as leaderboardApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
-import { useTheme } from '../../lib/theme';
+import { useTheme, useGlass } from '../../lib/theme';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
 import Avatar from '../../components/Avatar';
 import type { LeaderboardEntry } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Leaderboard'>;
 
@@ -34,6 +35,7 @@ const RANK_COLORS: Record<number, string> = {
 
 export default function LeaderboardScreen({ route }: Props) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const glass = useGlass();
   const toast = useToast();
   const { guildId } = route.params;
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
@@ -82,13 +84,30 @@ export default function LeaderboardScreen({ route }: Props) {
     tab: {
       flex: 1,
       paddingVertical: spacing.sm,
-      borderRadius: neo ? 0 : borderRadius.full,
-      backgroundColor: colors.bgElevated,
       alignItems: 'center',
-      ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.full,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : neo ? {
+        backgroundColor: colors.bgElevated,
+        borderRadius: 0,
+        borderWidth: 2,
+        borderColor: colors.border,
+      } : {
+        backgroundColor: colors.bgElevated,
+        borderRadius: borderRadius.full,
+      }),
     },
     tabActive: {
-      backgroundColor: colors.accentPrimary,
+      backgroundColor: neo ? neo.palette.coral : colors.accentPrimary,
+      ...(glass ? {
+        shadowColor: colors.accentPrimary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+      } : {}),
     },
     tabText: {
       color: colors.textSecondary,
@@ -104,10 +123,21 @@ export default function LeaderboardScreen({ route }: Props) {
       alignItems: 'center',
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
       gap: spacing.md,
-      ...(neo ? { borderBottomWidth: 2 } : {}),
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.lg,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+        marginHorizontal: spacing.md,
+        marginBottom: spacing.xs,
+      } : neo ? {
+        borderBottomWidth: 2,
+        borderBottomColor: colors.border,
+      } : {
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+      }),
     },
     rankContainer: {
       width: 32,
@@ -132,18 +162,29 @@ export default function LeaderboardScreen({ route }: Props) {
       fontSize: fontSize.xs,
     },
     scoreContainer: {
-      backgroundColor: colors.bgElevated,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs,
-      borderRadius: neo ? 0 : borderRadius.md,
-      ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.full,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : neo ? {
+        backgroundColor: colors.bgElevated,
+        borderRadius: 0,
+        borderWidth: 2,
+        borderColor: colors.border,
+      } : {
+        backgroundColor: colors.bgElevated,
+        borderRadius: borderRadius.md,
+      }),
     },
     scoreText: {
       color: colors.accentPrimary,
       fontSize: fontSize.sm,
       fontWeight: '700',
     },
-  }), [colors, spacing, fontSize, borderRadius, neo]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
 
   const renderEntry = ({ item }: { item: LeaderboardEntry }) => {
     const rankColor = RANK_COLORS[item.rank];
@@ -182,7 +223,7 @@ export default function LeaderboardScreen({ route }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.tabRow}>
         {PERIODS.map((p) => (
           <TouchableOpacity
@@ -211,6 +252,6 @@ export default function LeaderboardScreen({ route }: Props) {
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

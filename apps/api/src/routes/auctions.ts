@@ -20,6 +20,7 @@ import { userWallets, economyLedger } from '../db/schema/economy';
 import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { createNotification } from '../lib/notifications';
 
 export const auctionsRouter = Router();
 
@@ -210,6 +211,99 @@ auctionsRouter.get(
       );
     } catch (err) {
       console.error('[auctions] list error:', err);
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// GET /auctions/me/selling — My auctions (active + completed)
+// ---------------------------------------------------------------------------
+
+auctionsRouter.get(
+  '/me/selling',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const rows = await db
+        .select({
+          auction: auctions,
+          cosmetic: {
+            id: cosmetics.id,
+            name: cosmetics.name,
+            type: cosmetics.type,
+            rarity: cosmetics.rarity,
+            previewImageUrl: cosmetics.previewImageUrl,
+          },
+        })
+        .from(auctions)
+        .innerJoin(cosmetics, eq(cosmetics.id, auctions.cosmeticId))
+        .where(eq(auctions.sellerId, userId))
+        .orderBy(desc(auctions.createdAt))
+        .limit(50);
+
+      res.status(200).json(
+        rows.map((r) => ({
+          ...auctionJson(r.auction),
+          cosmetic: r.cosmetic,
+        })),
+      );
+    } catch (err) {
+      console.error('[auctions] me/selling error:', err);
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// GET /auctions/me/bids — My active bids
+// ---------------------------------------------------------------------------
+
+auctionsRouter.get(
+  '/me/bids',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const rows = await db
+        .select({
+          bid: auctionBids,
+          auction: auctions,
+          cosmetic: {
+            id: cosmetics.id,
+            name: cosmetics.name,
+            type: cosmetics.type,
+            previewImageUrl: cosmetics.previewImageUrl,
+          },
+          seller: {
+            id: users.id,
+            username: users.username,
+          },
+        })
+        .from(auctionBids)
+        .innerJoin(auctions, eq(auctions.id, auctionBids.auctionId))
+        .innerJoin(cosmetics, eq(cosmetics.id, auctions.cosmeticId))
+        .innerJoin(users, eq(users.id, auctions.sellerId))
+        .where(eq(auctionBids.bidderId, userId))
+        .orderBy(desc(auctionBids.createdAt))
+        .limit(50);
+
+      res.status(200).json(
+        rows.map((r) => ({
+          bidId: r.bid.id,
+          bidAmount: r.bid.amount,
+          bidAt: r.bid.createdAt.toISOString(),
+          isWinning: r.auction.currentBidderId === userId,
+          auction: {
+            ...auctionJson(r.auction),
+            cosmetic: r.cosmetic,
+            seller: r.seller,
+          },
+        })),
+      );
+    } catch (err) {
+      console.error('[auctions] me/bids error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -436,6 +530,44 @@ auctionsRouter.post(
         .from(auctions)
         .where(eq(auctions.id, auctionId))
         .limit(1);
+
+      // Fetch cosmetic name for notifications
+      let cosmeticName = 'item';
+      try {
+        const [c] = await db.select({ name: cosmetics.name }).from(cosmetics).where(eq(cosmetics.id, updatedAuction!.cosmeticId)).limit(1);
+        if (c) cosmeticName = c.name;
+      } catch { /* non-fatal */ }
+
+      // Fetch bidder name
+      let bidderName = 'Someone';
+      try {
+        const [u] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq(users.id, bidderId)).limit(1);
+        if (u) bidderName = u.displayName || u.username || 'Someone';
+      } catch { /* non-fatal */ }
+
+      // Notify seller about new bid
+      try {
+        await createNotification({
+          userId: updatedAuction!.sellerId,
+          type: 'auction_new_bid',
+          title: `New bid on ${cosmeticName}`,
+          body: `${bidderName} bid ${amount} Gratonites on your auction.`,
+          data: { auctionId, bidderId, amount, cosmeticName },
+        });
+      } catch { /* non-fatal */ }
+
+      // Notify previous bidder they were outbid
+      if (auction.currentBidderId && auction.currentBidderId !== bidderId) {
+        try {
+          await createNotification({
+            userId: auction.currentBidderId,
+            type: 'auction_outbid',
+            title: `Outbid on ${cosmeticName}`,
+            body: `Someone placed a higher bid of ${amount} Gratonites. Your ${auction.currentBid} Gratonites have been refunded.`,
+            data: { auctionId, amount, cosmeticName },
+          });
+        } catch { /* non-fatal */ }
+      }
 
       res.status(200).json(auctionJson(updatedAuction!));
     } catch (err: unknown) {

@@ -22,6 +22,7 @@ import EmptyState from '../../components/EmptyState';
 import type { BotListing, BotReview } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'BotStore'>;
 
@@ -105,20 +106,20 @@ export default function BotStoreScreen({ navigation }: Props) {
     if (!selectedBot) return;
     Alert.prompt(
       'Install Bot',
-      `Enter the server ID to install "${selectedBot.name}" to:`,
+      `Enter the portal ID to install "${selectedBot.name}" to:`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Install',
           onPress: async (guildId?: string) => {
             if (!guildId?.trim()) {
-              toast.error('Please enter a server ID');
+              toast.error('Please enter a portal ID');
               return;
             }
             setInstalling(true);
             try {
               await botStore.install(selectedBot.id, guildId.trim());
-              toast.success(`Installed "${selectedBot.name}" to server!`);
+              toast.success(`Installed "${selectedBot.name}" to portal!`);
             } catch (err: any) {
               toast.error(err.message || 'Failed to install bot');
             } finally {
@@ -611,7 +612,7 @@ export default function BotStoreScreen({ navigation }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       {/* Search bar */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={18} color={colors.textMuted} style={styles.searchIcon} />
@@ -742,7 +743,7 @@ export default function BotStoreScreen({ navigation }: Props) {
                   disabled={installing}
                 >
                   <Text style={styles.installButtonText}>
-                    {installing ? 'Installing...' : 'Install to Server'}
+                    {installing ? 'Installing...' : 'Install to Portal'}
                   </Text>
                 </TouchableOpacity>
 
@@ -816,6 +817,6 @@ export default function BotStoreScreen({ navigation }: Props) {
           </View>
         </View>
       </Modal>
-    </View>
+    </PatternBackground>
   );
 }

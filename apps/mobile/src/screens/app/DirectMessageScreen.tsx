@@ -32,7 +32,7 @@ import {
 } from '../../lib/socket';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
-import { useTheme } from '../../lib/theme';
+import { useTheme, useGlass } from '../../lib/theme';
 import { useToast } from '../../contexts/ToastContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MessageBubble from '../../components/MessageBubble';
@@ -61,6 +61,7 @@ import { playSound } from '../../lib/soundEngine';
 import type { Message, ReactionGroup, TextReactionGroup } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'DirectMessage'>;
 
@@ -71,6 +72,7 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
   const { channelId, recipientName, recipientId, isGroupDm } = route.params;
   const { user } = useAuth();
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const glass = useGlass();
   const toast = useToast();
   const isOnline = useIsOnline();
 
@@ -712,37 +714,59 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
       alignItems: 'flex-end',
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
-      backgroundColor: colors.bgSecondary,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
       gap: spacing.sm,
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderTopWidth: 1,
+        borderTopColor: glass.glassBorder,
+      } : neo ? {
+        backgroundColor: colors.bgSecondary,
+        borderTopWidth: neo.borderWidth,
+        borderTopColor: colors.border,
+      } : {
+        backgroundColor: colors.bgSecondary,
+        borderTopWidth: 1,
+        borderTopColor: colors.border,
+      }),
     },
     attachButton: {
       width: 40,
       height: 40,
-      borderRadius: 20,
-      backgroundColor: colors.bgElevated,
+      borderRadius: neo ? 0 : 20,
+      backgroundColor: glass ? glass.glassBackground : colors.bgElevated,
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 4,
+      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border } : {}),
+      ...(glass ? { borderWidth: 1, borderColor: glass.glassBorder } : {}),
     },
     textInput: {
       flex: 1,
-      backgroundColor: colors.inputBg,
-      borderRadius: borderRadius.lg,
+      backgroundColor: glass ? glass.glassBackground : colors.inputBg,
+      borderRadius: neo ? 0 : borderRadius.lg,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
       fontSize: fontSize.md,
       color: colors.textPrimary,
       maxHeight: 120,
+      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border } : {}),
+      ...(glass ? { borderWidth: 1, borderColor: glass.glassBorder } : {}),
     },
     sendButton: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: neo ? 0 : 20,
       backgroundColor: colors.accentPrimary,
       justifyContent: 'center',
       alignItems: 'center',
+      ...(neo ? {
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+        shadowColor: neo.shadowColor,
+        shadowOffset: neo.shadowOffset,
+        shadowOpacity: neo.shadowOpacity,
+        shadowRadius: neo.shadowRadius,
+      } : {}),
     },
     sendButtonDisabled: {
       backgroundColor: colors.bgElevated,
@@ -752,7 +776,7 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
       alignItems: 'center',
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.xs,
-      backgroundColor: colors.bgSecondary,
+      backgroundColor: glass ? glass.glassBackground : colors.bgSecondary,
       gap: spacing.sm,
     },
     typingText: {
@@ -765,10 +789,12 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
       marginLeft: 40,
       marginTop: spacing.xs,
       marginBottom: spacing.sm,
-      backgroundColor: colors.bgElevated,
-      borderRadius: borderRadius.lg,
+      backgroundColor: glass ? glass.glassBackground : colors.bgElevated,
+      borderRadius: neo ? 0 : borderRadius.lg,
       padding: spacing.xs,
       gap: spacing.xs,
+      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border } : {}),
+      ...(glass ? { borderWidth: 1, borderColor: glass.glassBorder } : {}),
     },
     emojiPickerBtn: {
       padding: spacing.xs,
@@ -776,7 +802,7 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
     emojiPickerText: {
       fontSize: fontSize.xl,
     },
-  }), [colors, spacing, fontSize, borderRadius, neo]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
 
   // --- Render ---
 
@@ -850,6 +876,7 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
   }
 
   return (
+    <PatternBackground>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -1013,5 +1040,6 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
         onTimerChanged={setDisappearTimer}
       />
     </KeyboardAvoidingView>
+    </PatternBackground>
   );
 }

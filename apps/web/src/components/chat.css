@@ -396,3 +396,9 @@
             .embed-image { max-width: 80px; max-height: 80px; border-radius: 4px; object-fit: cover; }
             .embed-dismiss { position: absolute; top: 4px; right: 4px; background: none; border: none; color: var(--text-muted, #72767d); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; }
             .embed-dismiss:hover { color: var(--text-primary, #dcddde); }
+
+            /* Mobile overrides */
+            @media (max-width: 768px) {
+              .embed-card { max-width: 100% !important; }
+              .code-block, pre { max-width: calc(100vw - 48px) !important; }
+            }

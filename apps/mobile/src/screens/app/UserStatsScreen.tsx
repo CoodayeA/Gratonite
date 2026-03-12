@@ -13,6 +13,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'UserStats'>;
 
@@ -33,7 +34,7 @@ const STAT_CARDS: {
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
   { key: 'totalUsers', label: 'Total Users', icon: 'people-outline' },
-  { key: 'totalGuilds', label: 'Total Servers', icon: 'planet-outline' },
+  { key: 'totalGuilds', label: 'Total Portals', icon: 'planet-outline' },
   { key: 'totalMessages', label: 'Total Messages', icon: 'chatbubble-outline' },
   { key: 'onlineNow', label: 'Online Now', icon: 'ellipse' },
 ];
@@ -128,7 +129,8 @@ export default function UserStatsScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }}>
       <View style={styles.grid}>
         {STAT_CARDS.map((card) => {
           const isOnline = card.key === 'onlineNow';
@@ -154,5 +156,6 @@ export default function UserStatsScreen({ navigation }: Props) {
         })}
       </View>
     </ScrollView>
+    </PatternBackground>
   );
 }

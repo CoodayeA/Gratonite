@@ -17,6 +17,7 @@ import EmptyState from '../../components/EmptyState';
 import type { OnboardingStep } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'OnboardingConfig'>;
 
@@ -155,7 +156,7 @@ export default function OnboardingConfigScreen({ route }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={steps}
         keyExtractor={(item) => item.id}
@@ -191,7 +192,7 @@ export default function OnboardingConfigScreen({ route }: Props) {
           <EmptyState
             icon="school-outline"
             title="No onboarding steps"
-            subtitle="Configure onboarding in server settings"
+            subtitle="Configure onboarding in portal settings"
           />
         }
       />
@@ -203,6 +204,6 @@ export default function OnboardingConfigScreen({ route }: Props) {
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </PatternBackground>
   );
 }

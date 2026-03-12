@@ -21,6 +21,7 @@ import EmptyState from '../../components/EmptyState';
 import type { Webhook, Channel } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'WebhookManagement'>;
 
@@ -299,7 +300,7 @@ export default function WebhookManagementScreen({ route, navigation }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={webhookList}
         keyExtractor={(item) => item.id}
@@ -404,6 +405,6 @@ export default function WebhookManagementScreen({ route, navigation }: Props) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </View>
+    </PatternBackground>
   );
 }

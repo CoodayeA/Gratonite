@@ -302,7 +302,7 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
     };
 
     return (
-        <div style={{ position: 'absolute', bottom: 'calc(100% + 12px)', right: '0', width: '400px', height: '460px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 100, animation: 'scaleIn 0.2s ease-out' }}>
+        <div className="emoji-picker" style={{ position: 'absolute', bottom: 'calc(100% + 12px)', right: '0', width: '400px', height: '460px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 100, animation: 'scaleIn 0.2s ease-out' }}>
 
             {/* Tabs */}
             <div style={{ display: 'flex', gap: '4px', padding: '8px 12px', borderBottom: '1px solid var(--stroke)', background: 'var(--bg-tertiary)' }}>

@@ -18,6 +18,7 @@ import EmptyState from '../../components/EmptyState';
 import type { GuildEmoji } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'EmojiManagement'>;
 
@@ -97,7 +98,7 @@ export default function EmojiManagementScreen({ route }: Props) {
   const handleDelete = (emoji: GuildEmoji) => {
     Alert.alert(
       'Delete Emoji',
-      `Remove :${emoji.name}: from this server?`,
+      `Remove :${emoji.name}: from this portal?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -200,7 +201,7 @@ export default function EmojiManagementScreen({ route }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.header}>
         <Text style={styles.headerCount}>{emojis.length} emoji{emojis.length !== 1 ? 's' : ''}</Text>
         <TouchableOpacity
@@ -222,10 +223,10 @@ export default function EmojiManagementScreen({ route }: Props) {
           <EmptyState
             icon="happy-outline"
             title="No custom emojis"
-            subtitle="Upload emojis to use in this server"
+            subtitle="Upload emojis to use in this portal"
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

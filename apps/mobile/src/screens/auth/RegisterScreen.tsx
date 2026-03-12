@@ -10,22 +10,28 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  Image,
 } from 'react-native';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../lib/theme';
+import { StarField, RainbowStrip } from '../../components/decorative';
 import type { AuthStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 export default function RegisterScreen({ navigation }: Props) {
   const { register } = useAuth();
-  const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const { colors, spacing, fontSize, borderRadius } = useTheme();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleRegister = async () => {
     if (!username.trim() || !email.trim() || !password) {
@@ -54,58 +60,108 @@ export default function RegisterScreen({ navigation }: Props) {
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.bgPrimary,
+      backgroundColor: '#12121f',
     },
-    inner: {
+    scrollContent: {
       flexGrow: 1,
       justifyContent: 'center',
-      paddingHorizontal: spacing.xxxl,
-      paddingVertical: spacing.xxxl,
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.xxxl,
+      paddingBottom: 60,
     },
-    logo: {
-      fontSize: fontSize.xxxl,
-      fontWeight: neo ? '800' : '700',
-      color: colors.accentPrimary,
+    mascotContainer: {
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    mascotImage: {
+      width: 80,
+      height: 80,
+      borderRadius: 20,
+    },
+    mascotGlow: {
+      position: 'absolute',
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      backgroundColor: colors.accentPrimary,
+      opacity: 0.15,
+      top: -10,
+    },
+    heading: {
+      fontSize: 28,
+      fontWeight: '900',
+      color: colors.white,
       textAlign: 'center',
-      marginBottom: spacing.sm,
-      ...(neo ? { textTransform: 'uppercase' as const } : {}),
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      lineHeight: 34,
+    },
+    headingAccent: {
+      color: colors.accentPrimary,
     },
     subtitle: {
-      fontSize: fontSize.lg,
+      fontSize: fontSize.md,
       color: colors.textSecondary,
       textAlign: 'center',
-      marginBottom: spacing.xxxl,
+      marginTop: spacing.sm,
+      marginBottom: spacing.xl,
     },
-    form: {
-      gap: spacing.md,
+    pillRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      marginBottom: spacing.xl,
     },
-    label: {
-      fontSize: fontSize.sm,
-      fontWeight: '600',
-      color: colors.textSecondary,
+    pill: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.full,
+      borderWidth: 1.5,
+      borderColor: colors.accentPrimary,
+    },
+    pillText: {
+      fontSize: fontSize.xs,
+      fontWeight: '700',
+      color: colors.accentPrimary,
       textTransform: 'uppercase',
       letterSpacing: 0.5,
-      marginBottom: spacing.xs,
+    },
+    form: {
+      gap: spacing.sm,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.bgElevated,
+      borderRadius: borderRadius.lg,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      paddingHorizontal: spacing.lg,
+      gap: spacing.sm,
+    },
+    inputIcon: {
+      opacity: 0.5,
     },
     input: {
-      backgroundColor: colors.inputBg,
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      borderRadius: borderRadius.md,
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.md,
+      flex: 1,
+      paddingVertical: Platform.OS === 'ios' ? spacing.lg : spacing.md,
       fontSize: fontSize.md,
       color: colors.textPrimary,
-      marginBottom: spacing.md,
-      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border } : {}),
+    },
+    eyeButton: {
+      padding: spacing.xs,
     },
     button: {
       backgroundColor: colors.accentPrimary,
-      borderRadius: borderRadius.md,
+      borderRadius: borderRadius.lg,
       paddingVertical: spacing.lg,
       alignItems: 'center',
       marginTop: spacing.md,
-      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border, shadowColor: neo.shadowColor, shadowOffset: neo.shadowOffset, shadowOpacity: neo.shadowOpacity, shadowRadius: neo.shadowRadius } : {}),
+      shadowColor: colors.accentPrimary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+      elevation: 8,
     },
     buttonDisabled: {
       opacity: 0.6,
@@ -113,11 +169,18 @@ export default function RegisterScreen({ navigation }: Props) {
     buttonText: {
       color: colors.white,
       fontSize: fontSize.md,
-      fontWeight: '600',
+      fontWeight: '800',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+    },
+    stripContainer: {
+      marginTop: spacing.xl,
+      marginBottom: spacing.md,
+      marginHorizontal: spacing.xl,
     },
     linkButton: {
       alignItems: 'center',
-      marginTop: spacing.lg,
+      marginTop: spacing.md,
     },
     linkText: {
       color: colors.textSecondary,
@@ -125,96 +188,155 @@ export default function RegisterScreen({ navigation }: Props) {
     },
     linkBold: {
       color: colors.accentPrimary,
-      fontWeight: '600',
+      fontWeight: '700',
     },
-  }), [colors, spacing, fontSize, borderRadius, neo]);
+  }), [colors, spacing, fontSize, borderRadius]);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
-        <Text style={styles.logo}>Gratonite</Text>
-        <Text style={styles.subtitle}>Create an account</Text>
+    <PatternBackground>
+      <StarField />
 
-        <View style={styles.form}>
-          <Text style={styles.label}>Username</Text>
-          <TextInput
-            style={styles.input}
-            value={username}
-            onChangeText={setUsername}
-            placeholder="Choose a username"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="none"
-            autoCorrect={false}
-            accessibilityLabel="Username"
-            accessibilityHint="Choose a username"
-          />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Mascot */}
+          <Animated.View entering={FadeInDown.duration(600)} style={styles.mascotContainer}>
+            <View style={styles.mascotGlow} />
+            <Image
+              source={require('../../../assets/splash-icon.png')}
+              style={styles.mascotImage}
+            />
+          </Animated.View>
 
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Enter your email"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            accessibilityLabel="Email"
-            accessibilityHint="Enter your email address"
-          />
-
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Create a password"
-            placeholderTextColor={colors.textMuted}
-            secureTextEntry
-            accessibilityLabel="Password"
-            accessibilityHint="Create a password"
-          />
-
-          <Text style={styles.label}>Confirm Password</Text>
-          <TextInput
-            style={styles.input}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            placeholder="Confirm your password"
-            placeholderTextColor={colors.textMuted}
-            secureTextEntry
-            accessibilityLabel="Confirm password"
-            accessibilityHint="Re-enter your password"
-          />
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleRegister}
-            disabled={loading}
-            accessibilityRole="button"
-            accessibilityLabel="Create account"
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.white} />
-            ) : (
-              <Text style={styles.buttonText}>Create Account</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.linkButton}
-            onPress={() => navigation.navigate('Login')}
-            accessibilityRole="button"
-            accessibilityLabel="Go to login"
-          >
-            <Text style={styles.linkText}>
-              Already have an account? <Text style={styles.linkBold}>Log in</Text>
+          {/* Heading */}
+          <Animated.View entering={FadeInDown.duration(600).delay(100)}>
+            <Text style={styles.heading}>
+              JOIN THE{'\n'}
+              <Text style={styles.headingAccent}>COMMUNITY.</Text>
             </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <Text style={styles.subtitle}>Create your Gratonite account</Text>
+          </Animated.View>
+
+          {/* Pill badges */}
+          <Animated.View entering={FadeInDown.duration(600).delay(200)} style={styles.pillRow}>
+            <View style={[styles.pill, { transform: [{ rotate: '-1.5deg' }] }]}>
+              <Text style={styles.pillText}>No Ads</Text>
+            </View>
+            <View style={[styles.pill, { borderColor: '#f59e0b', transform: [{ rotate: '2deg' }] }]}>
+              <Text style={[styles.pillText, { color: '#f59e0b' }]}>Built by Friends</Text>
+            </View>
+            <View style={[styles.pill, { transform: [{ rotate: '-1deg' }] }]}>
+              <Text style={styles.pillText}>Your Rules</Text>
+            </View>
+          </Animated.View>
+
+          {/* Form */}
+          <Animated.View entering={FadeInDown.duration(600).delay(300)} style={styles.form}>
+            <View style={styles.inputContainer}>
+              <Ionicons name="person-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={username}
+                onChangeText={setUsername}
+                placeholder="Username"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="none"
+                autoCorrect={false}
+                accessibilityLabel="Username"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Ionicons name="mail-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Email address"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                accessibilityLabel="Email"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Password"
+                placeholderTextColor={colors.textMuted}
+                secureTextEntry={!showPassword}
+                accessibilityLabel="Password"
+              />
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={colors.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Ionicons name="shield-checkmark-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Confirm password"
+                placeholderTextColor={colors.textMuted}
+                secureTextEntry={!showPassword}
+                accessibilityLabel="Confirm password"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleRegister}
+              disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel="Create account"
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <Text style={styles.buttonText}>Create Account</Text>
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Rainbow strip */}
+          <Animated.View entering={FadeInUp.duration(600).delay(500)} style={styles.stripContainer}>
+            <RainbowStrip />
+          </Animated.View>
+
+          {/* Login link */}
+          <Animated.View entering={FadeInUp.duration(600).delay(600)}>
+            <TouchableOpacity
+              style={styles.linkButton}
+              onPress={() => navigation.navigate('Login')}
+              accessibilityRole="button"
+              accessibilityLabel="Go to login"
+            >
+              <Text style={styles.linkText}>
+                Already have an account? <Text style={styles.linkBold}>Sign in</Text>
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </PatternBackground>
   );
 }

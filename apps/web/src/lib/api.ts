@@ -1885,6 +1885,8 @@ export const api = {
       apiFetch<any>(`/auctions/${auctionId}/bid`, { method: 'POST', body: JSON.stringify({ amount }) }),
     cancel: (auctionId: string) =>
       apiFetch<void>(`/auctions/${auctionId}`, { method: 'DELETE' }),
+    mySelling: () => apiFetch<any[]>('/auctions/me/selling'),
+    myBids: () => apiFetch<any[]>('/auctions/me/bids'),
   },
 
   marketplace: {

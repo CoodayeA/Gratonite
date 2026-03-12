@@ -302,7 +302,7 @@ const CollectionModal = ({ items, totalCount, onClose }: { items: CollectibleIte
 
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
-            <div style={{ width: '860px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', borderRadius: '20px', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
+            <div style={{ width: 'min(860px, 95vw)', maxHeight: '85vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', borderRadius: '20px', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
                 {/* Header */}
                 <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--stroke)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
@@ -377,7 +377,7 @@ const CollectionModal = ({ items, totalCount, onClose }: { items: CollectibleIte
 const PullHistoryModal = ({ history, onClose }: { history: PullHistoryEntry[]; onClose: () => void }) => {
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
-            <div style={{ width: '560px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', borderRadius: '20px', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
+            <div style={{ width: 'min(560px, 95vw)', maxHeight: '80vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', borderRadius: '20px', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
                 <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--stroke)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h2 style={{ fontSize: '20px', fontWeight: 700 }}>Pull History</h2>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>

@@ -5,6 +5,7 @@ import { appLockStore } from '../../lib/appLockStore';
 import { useTheme } from '../../lib/theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SettingsAppLock'>;
 
@@ -83,7 +84,7 @@ export default function SettingsAppLockScreen({ navigation }: Props) {
   if (loading) return null;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.section}>
         <View style={styles.row}>
           <View style={styles.rowInfo}>
@@ -104,6 +105,6 @@ export default function SettingsAppLockScreen({ navigation }: Props) {
           Detected: {biometricType}
         </Text>
       </View>
-    </View>
+    </PatternBackground>
   );
 }

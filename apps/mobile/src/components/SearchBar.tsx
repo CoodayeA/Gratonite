@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useColors, useNeo, spacing, fontSize, borderRadius } from '../lib/theme';
+import { useColors, useNeo, useGlass, spacing, fontSize, borderRadius } from '../lib/theme';
 
 interface SearchBarProps {
   value: string;
@@ -13,17 +13,22 @@ interface SearchBarProps {
 export default function SearchBar({ value, onChangeText, placeholder = 'Search...', autoFocus }: SearchBarProps) {
   const colors = useColors();
   const neo = useNeo();
+  const glass = useGlass();
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.inputBg,
-      borderRadius: borderRadius.md,
       marginHorizontal: spacing.lg,
       marginVertical: spacing.sm,
       paddingHorizontal: spacing.md,
-      ...(neo ? {
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.xl,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : neo ? {
+        backgroundColor: colors.inputBg,
         borderWidth: 3,
         borderColor: colors.border,
         borderRadius: 0,
@@ -31,7 +36,10 @@ export default function SearchBar({ value, onChangeText, placeholder = 'Search..
         shadowOffset: neo.shadowOffset,
         shadowOpacity: neo.shadowOpacity,
         shadowRadius: neo.shadowRadius,
-      } : {}),
+      } : {
+        backgroundColor: colors.inputBg,
+        borderRadius: borderRadius.md,
+      }),
     },
     icon: {
       marginRight: spacing.sm,
@@ -45,7 +53,7 @@ export default function SearchBar({ value, onChangeText, placeholder = 'Search..
     clearBtn: {
       padding: spacing.xs,
     },
-  }), [colors, neo]);
+  }), [colors, neo, glass]);
 
   return (
     <View style={styles.container}>

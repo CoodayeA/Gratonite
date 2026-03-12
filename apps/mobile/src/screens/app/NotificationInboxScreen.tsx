@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { notifications as notifApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
-import { useTheme } from '../../lib/theme';
+import { useTheme, useGlass } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
+import { lightImpact } from '../../lib/haptics';
 import EmptyState from '../../components/EmptyState';
 import LoadingScreen from '../../components/LoadingScreen';
 import type { Notification } from '../../types';
+import PatternBackground from '../../components/PatternBackground';
 
 const NOTIFICATION_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   message: 'chatbubble',
@@ -27,6 +30,8 @@ const NOTIFICATION_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   system: 'information-circle',
 };
 
+const NEO_PALETTE_KEYS = ['coral', 'mint', 'butter', 'lavender', 'sky', 'peach'] as const;
+
 const getNotificationIcon = (type: string): keyof typeof Ionicons.glyphMap => {
   return NOTIFICATION_ICONS[type] || 'notifications';
 };
@@ -34,10 +39,12 @@ const getNotificationIcon = (type: string): keyof typeof Ionicons.glyphMap => {
 export default function NotificationInboxScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const glassExtras = useGlass();
   const toast = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const activeSwipeableRef = useRef<Swipeable | null>(null);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -81,6 +88,22 @@ export default function NotificationInboxScreen({ navigation }: any) {
     }
   };
 
+  const handleDismiss = async (notificationId: string) => {
+    lightImpact();
+    try {
+      await notifApi.dismiss(notificationId);
+      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to dismiss notification');
+    }
+  };
+
+  const handleSwipeMarkRead = async (notificationId: string) => {
+    lightImpact();
+    await handleMarkRead(notificationId);
+    activeSwipeableRef.current?.close();
+  };
+
   const handleMarkAllRead = async () => {
     try {
       await notifApi.markAllRead();
@@ -110,6 +133,19 @@ export default function NotificationInboxScreen({ navigation }: any) {
     ]);
   };
 
+  const onSwipeableOpen = (ref: Swipeable) => {
+    if (activeSwipeableRef.current && activeSwipeableRef.current !== ref) {
+      activeSwipeableRef.current.close();
+    }
+    activeSwipeableRef.current = ref;
+  };
+
+  const actionBorderRadius = neo ? 0 : borderRadius.md;
+  const deleteActionBg = glassExtras ? 'rgba(239, 68, 68, 0.75)' : '#ef4444';
+  const readActionBg = glassExtras
+    ? (colors.accentPrimary + 'BF') // accent at 75% opacity
+    : colors.accentPrimary;
+
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
@@ -125,21 +161,46 @@ export default function NotificationInboxScreen({ navigation }: any) {
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
       gap: spacing.md,
+      ...(glassExtras ? {
+        backgroundColor: glassExtras.glassBackground,
+        borderWidth: 1,
+        borderColor: glassExtras.glassBorder,
+        borderRadius: borderRadius.md,
+        marginHorizontal: spacing.md,
+        marginBottom: spacing.sm,
+      } : neo ? {
+        borderWidth: neo.borderWidth,
+        borderColor: neo.shadowColor,
+        borderRadius: 0,
+        marginHorizontal: spacing.md,
+        marginBottom: spacing.sm,
+      } : {
+        borderRadius: borderRadius.md,
+        marginHorizontal: spacing.md,
+        marginBottom: spacing.sm,
+        backgroundColor: colors.bgSecondary,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 3,
+        elevation: 2,
+      }),
     },
     notifItemUnread: {
-      backgroundColor: colors.accentLight,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.accentPrimary,
     },
     iconContainer: {
       width: 36,
       height: 36,
-      borderRadius: 18,
+      borderRadius: neo ? 0 : 18,
       backgroundColor: colors.bgElevated,
       justifyContent: 'center',
       alignItems: 'center',
       marginTop: 2,
     },
     iconContainerUnread: {
-      backgroundColor: colors.bgActive,
+      backgroundColor: colors.accentPrimary + '1A', // accent at 10% opacity
     },
     notifContent: {
       flex: 1,
@@ -173,52 +234,143 @@ export default function NotificationInboxScreen({ navigation }: any) {
       fontStyle: 'italic',
     },
     unreadDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
+      width: 10,
+      height: 10,
+      borderRadius: 5,
       backgroundColor: colors.accentPrimary,
       marginTop: spacing.sm,
+      shadowColor: colors.accentPrimary,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.6,
+      shadowRadius: 4,
+      elevation: 4,
     },
-  }), [colors, spacing, fontSize, borderRadius, neo]);
+    swipeAction: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: 80,
+      marginBottom: spacing.sm,
+    },
+    swipeActionDelete: {
+      backgroundColor: deleteActionBg,
+      borderTopRightRadius: actionBorderRadius,
+      borderBottomRightRadius: actionBorderRadius,
+      ...(neo ? { borderWidth: neo.borderWidth, borderColor: neo.shadowColor, borderLeftWidth: 0 } : {}),
+    },
+    swipeActionRead: {
+      backgroundColor: readActionBg,
+      borderTopLeftRadius: actionBorderRadius,
+      borderBottomLeftRadius: actionBorderRadius,
+      ...(neo ? { borderWidth: neo.borderWidth, borderColor: neo.shadowColor, borderRightWidth: 0 } : {}),
+    },
+    swipeActionLabel: {
+      color: '#fff',
+      fontSize: fontSize.xs,
+      fontWeight: '600',
+      marginTop: 4,
+    },
+  }), [colors, spacing, fontSize, borderRadius, neo, glassExtras, deleteActionBg, readActionBg, actionBorderRadius]);
 
-  const renderItem = ({ item }: { item: Notification }) => (
+  const renderRightActions = (notificationId: string) => () => (
     <TouchableOpacity
-      style={[styles.notifItem, !item.read && styles.notifItemUnread]}
-      onPress={() => handleMarkRead(item.id)}
-      activeOpacity={0.6}
+      style={[styles.swipeAction, styles.swipeActionDelete]}
+      onPress={() => handleDismiss(notificationId)}
     >
-      <View style={[styles.iconContainer, !item.read && styles.iconContainerUnread]}>
-        <Ionicons
-          name={getNotificationIcon(item.type)}
-          size={20}
-          color={!item.read ? colors.accentPrimary : colors.textMuted}
-        />
-      </View>
-      <View style={styles.notifContent}>
-        <View style={styles.notifHeader}>
-          {item.senderName && (
-            <Text style={styles.senderName}>{item.senderName}</Text>
-          )}
-          <Text style={styles.notifTime}>{formatRelativeTime(item.createdAt)}</Text>
-        </View>
-        <Text style={styles.notifText} numberOfLines={2}>
-          {item.content}
-        </Text>
-        {item.preview && (
-          <Text style={styles.notifPreview} numberOfLines={1}>
-            {item.preview}
-          </Text>
-        )}
-      </View>
-      {!item.read && <View style={styles.unreadDot} />}
+      <Ionicons name="trash-outline" size={22} color="#fff" />
+      <Text style={styles.swipeActionLabel}>Delete</Text>
     </TouchableOpacity>
   );
+
+  const renderLeftActions = (notificationId: string) => () => (
+    <TouchableOpacity
+      style={[styles.swipeAction, styles.swipeActionRead]}
+      onPress={() => handleSwipeMarkRead(notificationId)}
+    >
+      <Ionicons name="checkmark-circle-outline" size={22} color="#fff" />
+      <Text style={styles.swipeActionLabel}>Read</Text>
+    </TouchableOpacity>
+  );
+
+  const renderItem = ({ item, index }: { item: Notification; index: number }) => {
+    // For neo theme, cycle through palette colors for each card's background
+    const neoCardStyle = neo
+      ? {
+          backgroundColor:
+            neo.palette[NEO_PALETTE_KEYS[index % NEO_PALETTE_KEYS.length]],
+        }
+      : undefined;
+
+    return (
+      <Swipeable
+        ref={(ref) => { if (ref) (ref as any)._notifId = item.id; }}
+        renderRightActions={renderRightActions(item.id)}
+        renderLeftActions={!item.read ? renderLeftActions(item.id) : undefined}
+        onSwipeableWillOpen={() => {}}
+        onSwipeableOpen={(direction, swipeable) => {
+          onSwipeableOpen(swipeable);
+          if (direction === 'right') {
+            handleDismiss(item.id);
+          } else if (direction === 'left' && !item.read) {
+            handleSwipeMarkRead(item.id);
+          }
+        }}
+        overshootRight={false}
+        overshootLeft={false}
+        friction={2}
+        rightThreshold={80}
+        leftThreshold={80}
+      >
+        <TouchableOpacity
+          style={[
+            styles.notifItem,
+            neoCardStyle,
+            !item.read && styles.notifItemUnread,
+          ]}
+          onPress={() => handleMarkRead(item.id)}
+          activeOpacity={0.6}
+        >
+          <View
+            style={[
+              styles.iconContainer,
+              !item.read && styles.iconContainerUnread,
+            ]}
+          >
+            <Ionicons
+              name={getNotificationIcon(item.type)}
+              size={20}
+              color={!item.read ? colors.accentPrimary : colors.textMuted}
+            />
+          </View>
+          <View style={styles.notifContent}>
+            <View style={styles.notifHeader}>
+              {item.senderName && (
+                <Text style={styles.senderName}>{item.senderName}</Text>
+              )}
+              <Text style={styles.notifTime}>
+                {formatRelativeTime(item.createdAt)}
+              </Text>
+            </View>
+            <Text style={styles.notifText} numberOfLines={2}>
+              {item.content}
+            </Text>
+            {item.preview && (
+              <Text style={styles.notifPreview} numberOfLines={1}>
+                {item.preview}
+              </Text>
+            )}
+          </View>
+          {!item.read && <View style={styles.unreadDot} />}
+        </TouchableOpacity>
+      </Swipeable>
+    );
+  };
 
   if (loading) {
     return <LoadingScreen />;
   }
 
   return (
+    <PatternBackground>
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <FlatList
         data={notifications}
@@ -241,5 +393,6 @@ export default function NotificationInboxScreen({ navigation }: any) {
         }
       />
     </View>
+    </PatternBackground>
   );
 }

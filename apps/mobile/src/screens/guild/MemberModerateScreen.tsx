@@ -22,6 +22,7 @@ import SectionHeader from '../../components/SectionHeader';
 import type { Role, User } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'MemberModerate'>;
 
@@ -97,7 +98,7 @@ export default function MemberModerateScreen({ route, navigation }: Props) {
   const handleKick = () => {
     Alert.alert(
       'Kick Member',
-      `Are you sure you want to kick ${username} from this server?`,
+      `Are you sure you want to kick ${username} from this portal?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -309,7 +310,8 @@ export default function MemberModerateScreen({ route, navigation }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
       {/* User header */}
       <View style={styles.userHeader}>
         <Avatar
@@ -408,5 +410,6 @@ export default function MemberModerateScreen({ route, navigation }: Props) {
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </PatternBackground>
   );
 }

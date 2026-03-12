@@ -102,7 +102,7 @@ const OnboardingModal = ({ onClose }: { onClose: () => void }) => {
 
     return (
         <div className="modal-overlay" style={{ zIndex: 9999, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(20px)' }}>
-            <div className="auth-card wide glass-panel" style={{ width: '480px', position: 'relative', animation: 'slideIn 0.3s ease-out' }}>
+            <div className="auth-card wide glass-panel" style={{ width: 'min(480px, 95vw)', position: 'relative', animation: 'slideIn 0.3s ease-out', maxHeight: '90vh', overflowY: 'auto' }}>
                 <button
                     onClick={onClose}
                     style={{ position: 'absolute', top: 16, right: 16, background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}

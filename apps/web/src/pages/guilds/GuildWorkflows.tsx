@@ -547,7 +547,7 @@ export default function GuildWorkflows() {
 
     return (
         <div
-            className="main-content-wrapper"
+            className="main-content-wrapper content-padding"
             style={{ flex: 1, overflowY: 'auto', padding: '48px' }}
         >
             <div style={{ maxWidth: '800px', margin: '0 auto' }}>

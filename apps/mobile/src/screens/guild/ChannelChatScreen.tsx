@@ -37,7 +37,7 @@ import {
 } from '../../lib/socket';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
-import { useTheme } from '../../lib/theme';
+import { useTheme, useGlass } from '../../lib/theme';
 import { useToast } from '../../contexts/ToastContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MessageBubble from '../../components/MessageBubble';
@@ -70,6 +70,9 @@ import { securityStore } from '../../lib/securityStore';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 import type { Message, ReactionGroup, TextReactionGroup, Sticker, Poll, GuildEmoji } from '../../types';
+import PatternBackground from '../../components/PatternBackground';
+import PressableScale from '../../components/PressableScale';
+import Reanimated, { SlideInDown } from 'react-native-reanimated';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ChannelChat'>;
 
@@ -79,7 +82,8 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { channelId, channelName, guildId } = route.params;
   const { user } = useAuth();
-  const { colors, spacing, fontSize, borderRadius } = useTheme();
+  const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const glass = useGlass();
   const toast = useToast();
   const isOnline = useIsOnline();
   const [messageList, setMessageList] = useState<Message[]>([]);
@@ -181,37 +185,74 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       alignItems: 'flex-end',
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
-      backgroundColor: colors.bgSecondary,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
       gap: spacing.sm,
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderTopWidth: 1,
+        borderTopColor: glass.glassBorder,
+      } : neo ? {
+        backgroundColor: colors.bgSecondary,
+        borderTopWidth: neo.borderWidth,
+        borderTopColor: colors.border,
+      } : {
+        backgroundColor: colors.bgSecondary,
+        shadowColor: '#000',
+        shadowOpacity: 0.08,
+        shadowOffset: { width: 0, height: -3 },
+        shadowRadius: 4,
+        elevation: 4,
+      }),
     },
     attachButton: {
       width: 40,
       height: 40,
-      borderRadius: 20,
-      backgroundColor: colors.bgElevated,
+      borderRadius: neo ? 0 : 20,
+      backgroundColor: glass ? glass.glassBackground : colors.bgElevated,
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 4,
+      ...(neo ? {
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+      } : {}),
+      ...(glass ? {
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : {}),
     },
     textInput: {
       flex: 1,
-      backgroundColor: colors.inputBg,
-      borderRadius: borderRadius.lg,
+      backgroundColor: glass ? glass.glassBackground : colors.inputBg,
+      borderRadius: neo ? 0 : borderRadius.lg,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
       fontSize: fontSize.md,
       color: colors.textPrimary,
       maxHeight: 120,
+      ...(neo ? {
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+      } : {}),
+      ...(glass ? {
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : {}),
     },
     sendButton: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: neo ? 0 : 20,
       backgroundColor: colors.accentPrimary,
       justifyContent: 'center',
       alignItems: 'center',
+      ...(neo ? {
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+        shadowColor: neo.shadowColor,
+        shadowOffset: neo.shadowOffset,
+        shadowOpacity: neo.shadowOpacity,
+        shadowRadius: neo.shadowRadius,
+      } : {}),
     },
     sendButtonDisabled: {
       backgroundColor: colors.bgElevated,
@@ -221,7 +262,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       alignItems: 'center',
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.xs,
-      backgroundColor: colors.bgSecondary,
+      backgroundColor: glass ? glass.glassBackground : colors.bgSecondary,
       gap: spacing.sm,
     },
     typingText: {
@@ -234,10 +275,18 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       marginLeft: 40,
       marginTop: spacing.xs,
       marginBottom: spacing.sm,
-      backgroundColor: colors.bgElevated,
-      borderRadius: borderRadius.lg,
+      backgroundColor: glass ? glass.glassBackground : colors.bgElevated,
+      borderRadius: neo ? 0 : borderRadius.lg,
       padding: spacing.xs,
       gap: spacing.xs,
+      ...(neo ? {
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+      } : {}),
+      ...(glass ? {
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : {}),
     },
     emojiPickerBtn: {
       padding: spacing.xs,
@@ -257,8 +306,8 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       position: 'absolute' as const,
       bottom: 56,
       left: spacing.md,
-      backgroundColor: colors.bgElevated,
-      borderRadius: borderRadius.lg,
+      backgroundColor: glass ? glass.glassBackground : colors.bgElevated,
+      borderRadius: neo ? 0 : borderRadius.lg,
       paddingVertical: spacing.sm,
       minWidth: 200,
       shadowColor: '#000',
@@ -267,6 +316,14 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       shadowRadius: 8,
       elevation: 8,
       zIndex: 51,
+      ...(neo ? {
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+      } : {}),
+      ...(glass ? {
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : {}),
     },
     attachMenuItem: {
       flexDirection: 'row' as const,
@@ -280,7 +337,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       fontSize: fontSize.md,
       fontWeight: '500' as const,
     },
-  }), [colors, spacing, fontSize, borderRadius]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
 
   // Set header with pin and member list buttons
   useEffect(() => {
@@ -904,6 +961,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
   }
 
   return (
+    <PatternBackground>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -945,13 +1003,13 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
 
       {/* Typing indicator */}
       {typingUsers.size > 0 && (
-        <View style={styles.typingBar}>
+        <Reanimated.View entering={SlideInDown.springify().damping(15)} style={styles.typingBar}>
           <TypingDots />
           <Text style={styles.typingText}>
             {Array.from(typingUsers.values()).map((t) => t.username).join(', ')}{' '}
             {typingUsers.size === 1 ? 'is' : 'are'} typing
           </Text>
-        </View>
+        </Reanimated.View>
       )}
 
       {/* Reply bar */}
@@ -1002,17 +1060,17 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
 
       {/* Input bar */}
       <View style={styles.inputBar}>
-        <TouchableOpacity style={styles.attachButton} onPress={handleAttachPress} disabled={sending} accessibilityRole="button" accessibilityLabel="Attach file">
+        <PressableScale style={styles.attachButton} onPress={handleAttachPress} disabled={sending} accessibilityRole="button" accessibilityLabel="Attach file">
           <Ionicons name={showAttachMenu ? 'close' : 'add'} size={24} color={showAttachMenu ? colors.accentPrimary : colors.textMuted} />
-        </TouchableOpacity>
-        <TouchableOpacity
+        </PressableScale>
+        <PressableScale
           style={styles.attachButton}
           onPress={() => setShowEmojiPicker(true)}
           accessibilityRole="button"
           accessibilityLabel="Open emoji picker"
         >
           <Ionicons name="happy-outline" size={24} color={colors.textMuted} />
-        </TouchableOpacity>
+        </PressableScale>
         <TextInput
           style={styles.textInput}
           value={inputText}
@@ -1030,7 +1088,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
           accessibilityLabel={editingMessage ? 'Edit message' : 'Message input'}
           accessibilityHint="Type your message"
         />
-        <TouchableOpacity
+        <PressableScale
           style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
           onPress={handleSend}
           disabled={!inputText.trim() || sending}
@@ -1042,7 +1100,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
             size={20}
             color={inputText.trim() && !sending ? colors.white : colors.textMuted}
           />
-        </TouchableOpacity>
+        </PressableScale>
       </View>
 
       <EmojiPicker
@@ -1134,5 +1192,6 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
         channelId={channelId}
       />
     </KeyboardAvoidingView>
+    </PatternBackground>
   );
 }

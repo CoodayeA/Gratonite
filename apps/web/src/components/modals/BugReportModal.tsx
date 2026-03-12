@@ -45,7 +45,7 @@ const BugReportModal = ({ onClose }: { onClose: () => void }) => {
                 className="glass-panel"
                 onClick={e => e.stopPropagation()}
                 style={{
-                    width: '480px',
+                    width: 'min(480px, 95vw)',
                     borderRadius: '16px',
                     border: '1px solid var(--stroke)',
                     boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
@@ -53,7 +53,8 @@ const BugReportModal = ({ onClose }: { onClose: () => void }) => {
                     display: 'flex',
                     flexDirection: 'column',
                     padding: 0,
-                    animation: 'scaleIn 0.2s ease-out'
+                    animation: 'scaleIn 0.2s ease-out',
+                    maxHeight: '90vh'
                 }}
             >
                 <div style={{ padding: '24px', borderBottom: '1px solid var(--stroke)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

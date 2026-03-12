@@ -70,10 +70,11 @@ export function OnboardingTour({ onClose }: { onClose: () => void }) {
     }}>
       <div style={{
         background: 'var(--bg-primary)', border: '1px solid var(--stroke)',
-        borderRadius: 'var(--radius-xl)', width: '400px', padding: '32px',
+        borderRadius: 'var(--radius-xl)', width: 'min(400px, 95vw)', padding: '32px',
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px',
         boxShadow: 'var(--shadow-panel)',
         position: 'relative',
+        maxHeight: '90vh', overflowY: 'auto' as const,
       }}>
         <button onClick={() => { localStorage.setItem(STORAGE_KEY, '1'); onClose(); }} style={{
           position: 'absolute' as const, top: '16px', right: '16px',

@@ -19,6 +19,7 @@ import EmptyState from '../../components/EmptyState';
 import type { PhotoAlbum, PhotoAlbumItem } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'PhotoAlbums'>;
 
@@ -221,7 +222,7 @@ export default function PhotoAlbumsScreen({ route }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={albums}
         keyExtractor={(item) => item.id}
@@ -327,6 +328,6 @@ export default function PhotoAlbumsScreen({ route }: Props) {
           </View>
         </View>
       </Modal>
-    </View>
+    </PatternBackground>
   );
 }

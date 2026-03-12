@@ -123,7 +123,7 @@ const AdminAnalytics = () => {
 
             <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', flex: 1 }}>
                 {/* KPI Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                     {kpis.map(kpi => (
                         <div key={kpi.label} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '14px', padding: '20px', position: 'relative', overflow: 'hidden' }}>
                             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: kpi.color }} />

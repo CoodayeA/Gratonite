@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ActivityIndicator,
   ScrollView,
   Share,
 } from 'react-native';
@@ -13,15 +12,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { guilds as guildsApi, invites as invitesApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { useTheme } from '../../lib/theme';
+import { useTheme, useGlass } from '../../lib/theme';
+import LoadingScreen from '../../components/LoadingScreen';
 import type { Guild } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'GuildSettings'>;
 
 export default function GuildSettingsScreen({ route, navigation }: Props) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const glass = useGlass();
   const toast = useToast();
   const { guildId, guildName } = route.params;
   const { user } = useAuth();
@@ -35,7 +37,7 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
       setGuild(data);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load server info');
+        toast.error('Failed to load portal info');
       }
     } finally {
       setLoading(false);
@@ -48,7 +50,7 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
 
   const handleLeaveServer = () => {
     Alert.alert(
-      'Leave Server',
+      'Leave Portal',
       `Are you sure you want to leave ${guildName}?`,
       [
         { text: 'Cancel', style: 'cancel' },
@@ -61,7 +63,7 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
               // Navigate back to guild list
               navigation.popToTop();
             } catch (err: any) {
-              toast.error(err.message || 'Failed to leave server');
+              toast.error(err.message || 'Failed to leave portal');
             }
           },
         },
@@ -106,17 +108,29 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
       alignItems: 'center',
       paddingVertical: spacing.xxl,
       paddingHorizontal: spacing.lg,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        margin: spacing.md,
+        borderRadius: borderRadius.xl,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : neo ? {
+        borderBottomWidth: neo.borderWidth,
+        borderBottomColor: colors.border,
+      } : {
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+      }),
     },
     guildIcon: {
       width: 72,
       height: 72,
-      borderRadius: 36,
+      borderRadius: neo ? 0 : 36,
       backgroundColor: colors.accentPrimary,
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: spacing.md,
+      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border } : {}),
     },
     guildIconText: {
       color: colors.white,
@@ -166,8 +180,20 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.lg,
       gap: spacing.md,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.lg,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+        marginHorizontal: spacing.md,
+        marginBottom: spacing.xs,
+      } : neo ? {
+        borderTopWidth: neo.borderWidth,
+        borderTopColor: colors.border,
+      } : {
+        borderTopWidth: 1,
+        borderTopColor: colors.border,
+      }),
     },
     actionText: {
       flex: 1,
@@ -181,8 +207,20 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.lg,
       gap: spacing.md,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.lg,
+        borderWidth: 1,
+        borderColor: colors.error + '40',
+        marginHorizontal: spacing.md,
+        marginBottom: spacing.xs,
+      } : neo ? {
+        borderTopWidth: neo.borderWidth,
+        borderTopColor: colors.border,
+      } : {
+        borderTopWidth: 1,
+        borderTopColor: colors.border,
+      }),
     },
     dangerText: {
       flex: 1,
@@ -190,20 +228,17 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
       fontSize: fontSize.md,
       fontWeight: '500',
     },
-  }), [colors, spacing, fontSize, borderRadius, neo]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.accentPrimary} />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   const isOwner = guild?.ownerId === user?.id;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
       {/* Guild info header */}
       <View style={styles.guildHeader}>
         <View style={styles.guildIcon}>
@@ -349,7 +384,7 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
 
         <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('GuildInsights', { guildId })}>
           <Ionicons name="analytics-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Server Insights</Text>
+          <Text style={styles.actionText}>Portal Insights</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </TouchableOpacity>
 
@@ -378,10 +413,11 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
           <Text style={styles.sectionTitle}>DANGER ZONE</Text>
           <TouchableOpacity style={styles.dangerRow} onPress={handleLeaveServer}>
             <Ionicons name="log-out-outline" size={22} color={colors.error} />
-            <Text style={styles.dangerText}>Leave Server</Text>
+            <Text style={styles.dangerText}>Leave Portal</Text>
           </TouchableOpacity>
         </View>
       )}
     </ScrollView>
+    </PatternBackground>
   );
 }

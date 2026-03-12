@@ -11,14 +11,16 @@ import {
 } from 'react-native';
 import { guilds as guildsApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
-import { useTheme } from '../../lib/theme';
+import { useTheme, useGlass } from '../../lib/theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'CreateGuild'>;
 
 export default function CreateGuildScreen({ navigation }: Props) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const glass = useGlass();
   const toast = useToast();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -26,7 +28,7 @@ export default function CreateGuildScreen({ navigation }: Props) {
 
   const handleCreate = async () => {
     if (!name.trim()) {
-      toast.error('Server name is required');
+      toast.error('Portal name is required');
       return;
     }
 
@@ -38,7 +40,7 @@ export default function CreateGuildScreen({ navigation }: Props) {
       });
       navigation.replace('GuildChannels', { guildId: guild.id, guildName: guild.name });
     } catch (err: any) {
-      toast.error(err.message || 'Failed to create server');
+      toast.error(err.message || 'Failed to create portal');
     } finally {
       setLoading(false);
     }
@@ -71,26 +73,44 @@ export default function CreateGuildScreen({ navigation }: Props) {
     },
     form: {
       gap: spacing.md,
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.xl,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+        padding: spacing.lg,
+      } : {}),
     },
     label: {
       fontSize: fontSize.sm,
-      fontWeight: '600',
+      fontWeight: neo ? '800' : '600',
       color: colors.textSecondary,
       textTransform: 'uppercase',
-      letterSpacing: 0.5,
+      letterSpacing: neo ? 1.2 : 0.5,
       marginBottom: spacing.xs,
     },
     input: {
-      backgroundColor: colors.inputBg,
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      borderRadius: borderRadius.md,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
       fontSize: fontSize.md,
       color: colors.textPrimary,
       marginBottom: spacing.md,
-      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border } : {}),
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.xl,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : neo ? {
+        backgroundColor: colors.inputBg,
+        borderRadius: 0,
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+      } : {
+        backgroundColor: colors.inputBg,
+        borderWidth: 1,
+        borderColor: colors.inputBorder,
+        borderRadius: borderRadius.md,
+      }),
     },
     inputMultiline: {
       minHeight: 80,
@@ -98,11 +118,26 @@ export default function CreateGuildScreen({ navigation }: Props) {
     },
     button: {
       backgroundColor: colors.accentPrimary,
-      borderRadius: borderRadius.md,
       paddingVertical: spacing.lg,
       alignItems: 'center',
       marginTop: spacing.md,
-      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border, shadowColor: neo.shadowColor, shadowOffset: neo.shadowOffset, shadowOpacity: neo.shadowOpacity, shadowRadius: neo.shadowRadius } : {}),
+      ...(glass ? {
+        borderRadius: borderRadius.xl,
+        shadowColor: colors.accentPrimary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      } : neo ? {
+        borderRadius: 0,
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+        shadowColor: neo.shadowColor,
+        shadowOffset: neo.shadowOffset,
+        shadowOpacity: neo.shadowOpacity,
+        shadowRadius: neo.shadowRadius,
+      } : {
+        borderRadius: borderRadius.md,
+      }),
     },
     buttonDisabled: {
       opacity: 0.6,
@@ -112,26 +147,27 @@ export default function CreateGuildScreen({ navigation }: Props) {
       fontSize: fontSize.md,
       fontWeight: '600',
     },
-  }), [colors, spacing, fontSize, borderRadius, neo]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
 
   return (
+    <PatternBackground>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.inner}>
-        <Text style={styles.title}>Create a Server</Text>
+        <Text style={styles.title}>Create a Portal</Text>
         <Text style={styles.subtitle}>
-          Your server is where you and your friends hang out. Make yours and start talking.
+          Your portal is where you and your friends hang out. Make yours and start talking.
         </Text>
 
         <View style={styles.form}>
-          <Text style={styles.label}>Server Name</Text>
+          <Text style={styles.label}>Portal Name</Text>
           <TextInput
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="My Awesome Server"
+            placeholder="My Awesome Portal"
             placeholderTextColor={colors.textMuted}
             maxLength={100}
           />
@@ -141,7 +177,7 @@ export default function CreateGuildScreen({ navigation }: Props) {
             style={[styles.input, styles.inputMultiline]}
             value={description}
             onChangeText={setDescription}
-            placeholder="What's your server about?"
+            placeholder="What's your portal about?"
             placeholderTextColor={colors.textMuted}
             multiline
             numberOfLines={3}
@@ -156,11 +192,12 @@ export default function CreateGuildScreen({ navigation }: Props) {
             {loading ? (
               <ActivityIndicator color={colors.white} />
             ) : (
-              <Text style={styles.buttonText}>Create Server</Text>
+              <Text style={styles.buttonText}>Create Portal</Text>
             )}
           </TouchableOpacity>
         </View>
       </View>
     </KeyboardAvoidingView>
+    </PatternBackground>
   );
 }

@@ -8,8 +8,8 @@ export const darkColors: ThemeColors = {
   bgHover: '#2a2a4e',
   bgActive: '#333366',
   textPrimary: '#e8e8f0',
-  textSecondary: '#9898b8',
-  textMuted: '#6a6a8e',
+  textSecondary: '#a0a0c0',
+  textMuted: '#8888a8',
   textLink: '#7c7cff',
   accentPrimary: '#6c63ff',
   accentHover: '#5a52e0',
@@ -22,8 +22,8 @@ export const darkColors: ThemeColors = {
   warning: '#faa61a',
   error: '#f04747',
   info: '#5865f2',
-  border: '#2a2a4e',
-  borderLight: '#333366',
+  border: '#343460',
+  borderLight: '#3d3d6e',
   inputBg: '#0f0f1e',
   inputBorder: '#2a2a4e',
   inputFocus: '#6c63ff',
@@ -37,7 +37,7 @@ export const darkSpacing: ThemeSpacing = {
 };
 
 export const darkFontSize: ThemeFontSize = {
-  xs: 11, sm: 13, md: 15, lg: 17, xl: 20, xxl: 24, xxxl: 32,
+  xs: 12, sm: 13, md: 15, lg: 17, xl: 20, xxl: 24, xxxl: 32,
 };
 
 export const darkBorderRadius: ThemeBorderRadius = {

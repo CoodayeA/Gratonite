@@ -23,6 +23,7 @@ import RichText from '../../components/RichText';
 import type { ForumPost, Message } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'QAChannel'>;
 
@@ -399,7 +400,7 @@ export default function QAChannelScreen({ route, navigation }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
@@ -561,6 +562,6 @@ export default function QAChannelScreen({ route, navigation }: Props) {
           </View>
         </View>
       </Modal>
-    </View>
+    </PatternBackground>
   );
 }

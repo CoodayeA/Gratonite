@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import type { ThemeName, ThemeDefinition, ThemeColors, ThemeFontSize, NeoExtras } from './themes';
+import type { ThemeName, ThemeDefinition, ThemeColors, ThemeFontSize, NeoExtras, GlassExtras } from './themes';
 import { themes } from './themes';
 
 // Base font size the themes are designed around (API default = 14)
@@ -48,6 +48,9 @@ function buildThemeWithScale(base: ThemeDefinition, userFontSize: number): Theme
   };
 }
 
+/** All valid theme names for runtime validation */
+const VALID_THEMES = new Set<string>(Object.keys(themes));
+
 export const themeStore = {
   getSnapshot(): ThemeState {
     return state;
@@ -60,7 +63,7 @@ export const themeStore = {
     if (state.name === name) return;
     const base = themes[name];
     if (!base) return;
-    state = { name, theme: buildThemeWithScale(base, state.userFontSize), userFontSize: state.userFontSize };
+    state = { name, theme: buildThemeWithScale(base, state.userFontSize), userFontSize: state.userFontSize, autoMode: state.autoMode };
     emit();
   },
   setFontSize(size: number) {
@@ -86,6 +89,9 @@ export const themeStore = {
   getAutoMode(): boolean {
     return state.autoMode;
   },
+  isValidTheme(name: string): name is ThemeName {
+    return VALID_THEMES.has(name);
+  },
 };
 
 export function useTheme(): ThemeState & ThemeDefinition {
@@ -101,4 +107,9 @@ export function useColors(): ThemeColors {
 export function useNeo(): NeoExtras | null {
   const s = useSyncExternalStore(themeStore.subscribe, themeStore.getSnapshot);
   return s.theme.neo;
+}
+
+export function useGlass(): GlassExtras | null {
+  const s = useSyncExternalStore(themeStore.subscribe, themeStore.getSnapshot);
+  return s.theme.glass;
 }

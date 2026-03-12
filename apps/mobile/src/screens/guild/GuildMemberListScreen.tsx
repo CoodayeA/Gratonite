@@ -16,6 +16,7 @@ import Avatar from '../../components/Avatar';
 import { useTheme } from '../../lib/theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'GuildMemberList'>;
 
@@ -154,7 +155,7 @@ export default function GuildMemberListScreen({ route, navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.header}>
         <Text style={styles.headerCount}>{members.length} member{members.length !== 1 ? 's' : ''}</Text>
       </View>
@@ -180,6 +181,6 @@ export default function GuildMemberListScreen({ route, navigation }: Props) {
           </View>
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

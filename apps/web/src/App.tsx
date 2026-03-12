@@ -290,7 +290,16 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
     };
 
     return (
-        <nav className={`guild-rail glass-panel ${isOpen ? 'open' : ''}`}>
+        <nav className={`guild-rail glass-panel ${isOpen ? 'open' : ''}`} aria-label="Server navigation" onKeyDown={(e) => {
+            if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+            e.preventDefault();
+            const nav = e.currentTarget;
+            const focusable = Array.from(nav.querySelectorAll<HTMLElement>('a, [role="button"], [tabindex="0"]'));
+            const idx = focusable.indexOf(document.activeElement as HTMLElement);
+            if (idx < 0) return;
+            const next = e.key === 'ArrowDown' ? focusable[idx + 1] : focusable[idx - 1];
+            next?.focus();
+        }}>
             <Link to="/" style={{ textDecoration: 'none' }}>
                 <div className={`guild-icon ${isAppRoot ? 'active' : ''}`} style={!isAppRoot ? { background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(0,0,0,0.5))' } : {}}>
                     {isAppRoot && <div style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.2), transparent)', width: '100%', height: '100%', borderRadius: 'inherit', position: 'absolute' }}></div>}
@@ -299,7 +308,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
             </Link>
 
             <Tooltip content="Profile" position="right">
-                <div className="guild-icon" onClick={onOpenProfile} style={{ cursor: 'pointer', overflow: 'hidden', padding: 0 }}>
+                <div className="guild-icon" role="button" aria-label="Open your profile" tabIndex={0} onClick={onOpenProfile} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenProfile(); } }} style={{ cursor: 'pointer', overflow: 'hidden', padding: 0 }}>
                     <Avatar
                         userId={userProfile.id || 'me'}
                         avatarHash={userProfile.avatarHash}
@@ -312,7 +321,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
             </Tooltip>
 
             <Tooltip content="Inbox" position="right">
-                <div className="guild-icon" role="button" aria-label="Notifications inbox" onClick={() => { setNotifCount(0); onOpenNotifications(); }} style={{ background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', position: 'relative' }}>
+                <div className="guild-icon" role="button" aria-label="Notifications inbox" tabIndex={0} onClick={() => { setNotifCount(0); onOpenNotifications(); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setNotifCount(0); onOpenNotifications(); } }} style={{ background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', position: 'relative' }}>
                     <Bell size={24} />
                     {notifCount > 0 && (
                         <span style={{
@@ -367,7 +376,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
             })}
 
             <Tooltip content="Create Portal" position="right">
-                <div className="guild-icon" role="button" aria-label="Create guild" onClick={onOpenCreateGuild} style={{ background: 'transparent', border: '1px dashed var(--stroke-light)', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <div className="guild-icon" role="button" aria-label="Create guild" tabIndex={0} onClick={onOpenCreateGuild} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenCreateGuild(); } }} style={{ background: 'transparent', border: '1px dashed var(--stroke-light)', color: 'var(--text-muted)', cursor: 'pointer' }}>
                     <Plus size={24} />
                 </div>
             </Tooltip>
@@ -375,13 +384,13 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
             <div style={{ flex: 1 }}></div>
 
             <Tooltip content="Help & Support" position="right">
-                <div className="guild-icon" role="button" aria-label="Help and support" onClick={() => navigate('/help-center')} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', width: '32px', height: '32px', minWidth: '32px', minHeight: '32px', marginBottom: '4px' }}>
+                <div className="guild-icon" role="button" aria-label="Help and support" tabIndex={0} onClick={() => navigate('/help-center')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/help-center'); } }} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', width: '32px', height: '32px', minWidth: '32px', minHeight: '32px', marginBottom: '4px' }}>
                     <HelpCircle size={18} />
                 </div>
             </Tooltip>
 
             <Tooltip content="Report Bug" position="right">
-                <div className="guild-icon" role="button" aria-label="Report a bug" onClick={onOpenBugReport} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginBottom: '8px' }}>
+                <div className="guild-icon" role="button" aria-label="Report a bug" tabIndex={0} onClick={onOpenBugReport} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenBugReport(); } }} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginBottom: '8px' }}>
                     <Bug size={24} />
                 </div>
             </Tooltip>
@@ -1147,7 +1156,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
 
     if (isAppRoot) {
         return (
-            <aside className={`channel-sidebar glass-panel ${isOpen ? 'open' : ''}`}>
+            <aside className={`channel-sidebar glass-panel ${isOpen ? 'open' : ''}`} role="navigation" aria-label="App navigation">
                 <div className="channel-list" style={{ paddingTop: '16px' }} onClick={(e) => { if ((e.target as HTMLElement).closest('.channel-item')) playSound('click'); }}>
                     <Link to="/" style={{ textDecoration: 'none' }}>
                         <div className={`channel-item ${location.pathname === '/' ? 'active' : ''}`}>
@@ -1327,7 +1336,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     }
 
     return (
-        <aside className={`channel-sidebar glass-panel ${isOpen ? 'open' : ''}`}>
+        <aside className={`channel-sidebar glass-panel ${isOpen ? 'open' : ''}`} role="navigation" aria-label="Channel navigation">
             <header className="sidebar-header" style={{ cursor: 'pointer' }}>
                 <Link to={activeGuildId ? `/guild/${activeGuildId}` : '/guild'} style={{ color: 'inherit', textDecoration: 'none' }}>{guildInfo?.name || 'Loading...'}</Link>
             </header>
@@ -2216,7 +2225,8 @@ export const AppLayout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const mainContentRef = useRef<HTMLDivElement>(null);
     const { user: ctxUser, loading: userLoading, gratoniteBalance, setGratoniteBalance } = useUser();
-    const { setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects } = useTheme();
+    const { setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects, screenReaderMode } = useTheme();
+    const routeAnnouncerRef = useRef<HTMLDivElement>(null);
     const [guilds, setGuilds] = useState<Array<{ id: string; name: string; ownerId: string; iconHash: string | null; description: string | null; memberCount: number }>>([]);
     const [dmChannels, setDmChannels] = useState<Array<{ id: string; recipientIds?: string[]; recipients?: Array<{ id: string; username: string; displayName: string; avatarHash: string | null }> }>>([]);
     const activeGuildId = useMemo(() => {
@@ -2870,9 +2880,29 @@ export const AppLayout = () => {
         },
     });
 
+    // Screen reader: announce route changes
+    useEffect(() => {
+        if (!screenReaderMode || !routeAnnouncerRef.current) return;
+        const path = location.pathname;
+        let label = 'Page changed';
+        if (path === '/') label = 'Home page';
+        else if (path === '/friends') label = 'Friends page';
+        else if (path.startsWith('/guild/')) label = 'Server channel';
+        else if (path.startsWith('/dm/')) label = 'Direct message';
+        else if (path === '/discover') label = 'Discover servers';
+        else if (path === '/shop') label = 'Shop';
+        else if (path === '/fame') label = 'FAME Dashboard';
+        else if (path === '/inventory') label = 'Inventory';
+        else if (path === '/marketplace') label = 'Marketplace';
+        else if (path === '/me') label = 'Your profile';
+        routeAnnouncerRef.current.textContent = label;
+    }, [location.pathname, screenReaderMode]);
+
     return (
         <ContextMenuProvider>
             <div className="app-container">
+                {/* Visually hidden route announcer for screen readers */}
+                <div ref={routeAnnouncerRef} className="sr-route-announcer" aria-live="assertive" aria-atomic="true" role="status" />
                 <a
                     href="#main-content"
                     style={{
@@ -2967,17 +2997,17 @@ export const AppLayout = () => {
 
                 {/* Mobile Bottom Navigation (< 768px) — 3 tabs, hidden in chat */}
                 {!hideBottomNav && (
-                <nav className="mobile-bottom-nav">
-                    <Link to="/" className={`mobile-nav-item ${location.pathname === '/' ? 'active' : ''}`}>
-                        <Compass size={20} />
+                <nav className="mobile-bottom-nav" aria-label="Main navigation">
+                    <Link to="/" className={`mobile-nav-item ${location.pathname === '/' ? 'active' : ''}`} aria-current={location.pathname === '/' ? 'page' : undefined}>
+                        <Compass size={20} aria-hidden="true" />
                         <span>Servers</span>
                     </Link>
-                    <Link to="/friends" className={`mobile-nav-item ${location.pathname.startsWith('/dm') || location.pathname === '/friends' ? 'active' : ''}`}>
-                        <MessageSquare size={20} />
+                    <Link to="/friends" className={`mobile-nav-item ${location.pathname.startsWith('/dm') || location.pathname === '/friends' ? 'active' : ''}`} aria-current={location.pathname.startsWith('/dm') || location.pathname === '/friends' ? 'page' : undefined}>
+                        <MessageSquare size={20} aria-hidden="true" />
                         <span>Messages</span>
                     </Link>
-                    <Link to="/me" className={`mobile-nav-item ${location.pathname === '/me' ? 'active' : ''}`}>
-                        <User size={20} />
+                    <Link to="/me" className={`mobile-nav-item ${location.pathname === '/me' ? 'active' : ''}`} aria-current={location.pathname === '/me' ? 'page' : undefined}>
+                        <User size={20} aria-hidden="true" />
                         <span>You</span>
                     </Link>
                 </nav>

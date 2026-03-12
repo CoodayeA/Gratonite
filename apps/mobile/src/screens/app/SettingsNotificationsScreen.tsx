@@ -15,6 +15,7 @@ import LoadingScreen from '../../components/LoadingScreen';
 import type { UserSettings } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SettingsNotifications'>;
 
@@ -125,7 +126,8 @@ export default function SettingsNotificationsScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }}>
       {/* Push notifications master toggle */}
       <SectionHeader title="Push Notifications" />
       <View style={styles.section}>
@@ -217,5 +219,6 @@ export default function SettingsNotificationsScreen({ navigation }: Props) {
 
       <View style={styles.bottomPad} />
     </ScrollView>
+    </PatternBackground>
   );
 }

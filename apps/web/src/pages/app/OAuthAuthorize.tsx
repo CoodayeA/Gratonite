@@ -86,7 +86,7 @@ export default function OAuthAuthorize() {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-primary)' }}>
-      <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: 32, maxWidth: 440, width: '100%', border: '1px solid var(--stroke)' }}>
+      <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: 32, maxWidth: 'min(440px, 95vw)', width: '100%', border: '1px solid var(--stroke)', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{
             width: 64, height: 64, borderRadius: 16, background: 'var(--accent-primary)',

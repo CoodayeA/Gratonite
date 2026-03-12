@@ -9,6 +9,7 @@ import EmptyState from '../../components/EmptyState';
 import type { FormTemplate } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'GuildForms'>;
 
@@ -49,7 +50,7 @@ export default function GuildFormsScreen({ route, navigation }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={forms}
         keyExtractor={(item) => item.id}
@@ -75,6 +76,6 @@ export default function GuildFormsScreen({ route, navigation }: Props) {
       <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('FormCreate', { guildId })}>
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
-    </View>
+    </PatternBackground>
   );
 }

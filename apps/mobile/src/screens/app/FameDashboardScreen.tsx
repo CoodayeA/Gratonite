@@ -11,12 +11,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { users, leaderboard } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { useTheme } from '../../lib/theme';
+import { useTheme, useGlass } from '../../lib/theme';
 import LoadingScreen from '../../components/LoadingScreen';
 import Avatar from '../../components/Avatar';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 import type { LeaderboardEntry } from '../../types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'FameDashboard'>;
 
@@ -29,6 +30,7 @@ interface FameStats {
 
 export default function FameDashboardScreen({ navigation }: Props) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const glass = useGlass();
   const { user } = useAuth();
   const toast = useToast();
 
@@ -83,12 +85,23 @@ export default function FameDashboardScreen({ navigation }: Props) {
       padding: spacing.xs,
     },
     statCardInner: {
-      backgroundColor: colors.bgSecondary,
-      borderRadius: neo ? 0 : borderRadius.lg || borderRadius.md,
       padding: spacing.xl,
       alignItems: 'center',
       gap: spacing.sm,
-      ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.xl,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : neo ? {
+        backgroundColor: colors.bgSecondary,
+        borderRadius: 0,
+        borderWidth: 2,
+        borderColor: colors.border,
+      } : {
+        backgroundColor: colors.bgSecondary,
+        borderRadius: borderRadius.lg || borderRadius.md,
+      }),
     },
     statIconCircle: {
       width: 48,
@@ -124,6 +137,14 @@ export default function FameDashboardScreen({ navigation }: Props) {
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
       gap: spacing.md,
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.lg,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+        marginHorizontal: spacing.md,
+        marginBottom: spacing.xs,
+      } : {}),
     },
     rankBadge: {
       width: 32,
@@ -167,7 +188,7 @@ export default function FameDashboardScreen({ navigation }: Props) {
       fontSize: fontSize.md,
       paddingVertical: spacing.xxxl,
     },
-  }), [colors, spacing, fontSize, borderRadius, neo]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
 
   if (loading) {
     return <LoadingScreen />;
@@ -188,8 +209,9 @@ export default function FameDashboardScreen({ navigation }: Props) {
   };
 
   return (
+    <PatternBackground>
     <ScrollView
-      style={styles.container}
+      style={{ flex: 1 }}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -236,11 +258,12 @@ export default function FameDashboardScreen({ navigation }: Props) {
               <Text style={styles.leaderScore}>@{entry.username}</Text>
             </View>
             <View style={styles.scoreBadge}>
-              <Text style={styles.scoreBadgeText}>{entry.score.toLocaleString()}</Text>
+              <Text style={styles.scoreBadgeText}>{(entry.score ?? 0).toLocaleString()}</Text>
             </View>
           </View>
         ))
       )}
     </ScrollView>
+    </PatternBackground>
   );
 }

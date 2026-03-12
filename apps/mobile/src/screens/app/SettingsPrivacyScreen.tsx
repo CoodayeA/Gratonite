@@ -16,6 +16,7 @@ import LoadingScreen from '../../components/LoadingScreen';
 import type { UserSettings } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SettingsPrivacy'>;
 
@@ -33,7 +34,7 @@ const DM_OPTIONS: PickerOption[] = [
 
 const FRIEND_REQUEST_OPTIONS: PickerOption[] = [
   { value: 'everyone', label: 'Everyone', description: 'Anyone can send you a friend request' },
-  { value: 'mutual', label: 'Mutual Servers', description: 'Only people in shared servers' },
+  { value: 'mutual', label: 'Mutual Portals', description: 'Only people in shared portals' },
   { value: 'none', label: 'No One', description: 'Block all friend requests' },
 ];
 
@@ -180,7 +181,8 @@ export default function SettingsPrivacyScreen({ navigation }: Props) {
   );
 
   return (
-    <ScrollView style={styles.container}>
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }}>
       {renderPicker(
         'Direct Messages',
         DM_OPTIONS,
@@ -204,5 +206,6 @@ export default function SettingsPrivacyScreen({ navigation }: Props) {
 
       <View style={styles.bottomPad} />
     </ScrollView>
+    </PatternBackground>
   );
 }

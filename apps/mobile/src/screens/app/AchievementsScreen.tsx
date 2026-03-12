@@ -13,6 +13,7 @@ import { useTheme } from '../../lib/theme';
 import type { Achievement } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Achievements'>;
 
@@ -140,6 +141,7 @@ export default function AchievementsScreen({ navigation }: Props) {
   }
 
   return (
+    <PatternBackground>
     <FlatList
       style={styles.container}
       contentContainerStyle={styles.list}
@@ -151,5 +153,6 @@ export default function AchievementsScreen({ navigation }: Props) {
         <Text style={styles.emptyText}>No achievements yet</Text>
       }
     />
+    </PatternBackground>
   );
 }
