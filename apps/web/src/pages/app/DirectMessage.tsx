@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
 import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star, Shield } from 'lucide-react';
 import { getOrCreateKeyPair, exportPublicKey, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported, generateGroupKey, encryptGroupKey, decryptGroupKey, computeSafetyNumber, encryptFile, decryptFile } from '../../lib/e2e';
@@ -1407,6 +1407,22 @@ const DirectMessage = () => {
         (u.username.toLowerCase().includes(mentionSearch.toLowerCase()) || u.displayName.toLowerCase().includes(mentionSearch.toLowerCase()))
     );
 
+    // Build members list for RichTextRenderer mention resolution.
+    // For group DMs, use groupParticipants. For 1-on-1 DMs, include both users.
+    const dmMembersForMentions = useMemo(() => {
+        if (isGroupDm) {
+            return groupParticipants.map(p => ({ id: p.id, username: p.username, displayName: p.displayName }));
+        }
+        const members: Array<{ id: string; username: string; displayName: string }> = [];
+        if (currentUserId && currentUserName) {
+            members.push({ id: currentUserId, username: currentUserName, displayName: currentUserName });
+        }
+        if (recipientId && userName) {
+            members.push({ id: recipientId, username: userName, displayName: profileData?.displayName || userName });
+        }
+        return members;
+    }, [isGroupDm, groupParticipants, currentUserId, currentUserName, recipientId, userName, profileData?.displayName]);
+
     const handleDmInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = e.target.value;
         setInputValue(val);
@@ -2232,6 +2248,7 @@ const DirectMessage = () => {
                                     style={{ margin: 0, marginTop: isGrouped ? '1px' : '12px', padding: isGrouped ? '1px 16px' : '4px 16px', display: 'flex', gap: '12px', position: 'relative' }}
                                     onMouseEnter={() => setHoveredMessageId(msg.id)}
                                     onMouseLeave={() => { setHoveredMessageId(null); }}
+                                    onDoubleClick={() => { if (msg.apiId && dmChannelId && !msg.system) { handleReaction(msg.apiId, '\u2764\uFE0F', false); } }}
                                     onContextMenu={(e) => {
                                         e.preventDefault();
                                         const isOwnMessage = msg.authorId === userProfile?.id;
@@ -2342,7 +2359,7 @@ const DirectMessage = () => {
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                     {msg.content && (
                                                         <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.5' }}>
-                                                            <RichTextRenderer content={msg.content} members={groupParticipants.map(p => ({ id: p.id, username: p.username, displayName: p.displayName }))} />
+                                                            <RichTextRenderer content={msg.content} members={dmMembersForMentions} />
                                                         </div>
                                                     )}
                                                     <div style={{
@@ -2361,7 +2378,7 @@ const DirectMessage = () => {
                                                 <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.5' }}>
                                                     {msg.isEncrypted ? (
                                                         decryptedContents.has(msg.id) ? (
-                                                            <RichTextRenderer content={decryptedContents.get(msg.id)!} members={groupParticipants.map(p => ({ id: p.id, username: p.username, displayName: p.displayName }))} />
+                                                            <RichTextRenderer content={decryptedContents.get(msg.id)!} members={dmMembersForMentions} />
                                                         ) : (
                                                             <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                                                 <Lock size={12} />
@@ -2369,7 +2386,7 @@ const DirectMessage = () => {
                                                             </span>
                                                         )
                                                     ) : (
-                                                        <RichTextRenderer content={msg.content} members={groupParticipants.map(p => ({ id: p.id, username: p.username, displayName: p.displayName }))} />
+                                                        <RichTextRenderer content={msg.content} members={dmMembersForMentions} />
                                                     )}
                                                     {msg.edited && msg.apiId && dmChannelId && <EditHistoryPopover channelId={dmChannelId} messageApiId={msg.apiId} />}
                                                     {/* Expiry countdown (A2) */}

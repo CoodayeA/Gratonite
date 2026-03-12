@@ -26,6 +26,14 @@ const STATUS_DOT_COLORS: Record<string, string> = {
   offline: '#747f8d',
 };
 
+const STATUS_SYMBOLS: Record<string, string> = {
+  online: '\u2713',   // checkmark
+  idle: '\u25D0',     // half circle
+  dnd: '\u2298',      // circled division slash
+  invisible: '\u25CB', // white circle
+  offline: '\u25CB',   // white circle
+};
+
 const DECORATION_EMOJI: Record<string, string> = {
   crown:  '\u{1F451}',
   star:   '\u2B50',
@@ -242,14 +250,25 @@ const Avatar = ({
             alignItems: 'center',
             justifyContent: 'center',
           }}
+          aria-label={`Status: ${status}`}
         >
           <div
+            className="status-dot-inner"
             style={{
               width: statusDotSize,
               height: statusDotSize,
               borderRadius: '50%',
               background: STATUS_DOT_COLORS[status] || STATUS_DOT_COLORS.offline,
+              transition: 'background-color 300ms ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: Math.max(6, statusDotSize - 3),
+              lineHeight: 1,
+              color: '#fff',
+              fontWeight: 700,
             }}
+            data-status-symbol={STATUS_SYMBOLS[status] || ''}
           />
         </div>
       )}

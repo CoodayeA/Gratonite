@@ -60,7 +60,7 @@ starboardRouter.put('/config', requireAuth, async (req: Request, res: Response):
 starboardRouter.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { guildId } = req.params as Record<string, string>;
   const limit = Math.min(Number(req.query.limit) || 25, 50);
-  const offset = Number(req.query.offset) || 0;
+  const offset = Math.min(Number(req.query.offset) || 0, 10000);
 
   const rows = await db.select({
     id: starboardEntries.id,

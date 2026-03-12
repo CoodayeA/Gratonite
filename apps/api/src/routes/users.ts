@@ -40,7 +40,7 @@ import { userCosmetics } from '../db/schema/cosmetics';
 import { files } from '../db/schema/files';
 import { guildFolders } from '../db/schema/guild-folders';
 import { favoriteChannels } from '../db/schema/favorite-channels';
-import { channels } from '../db/schema/channels';
+import { channels, dmChannelMembers } from '../db/schema/channels';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { redis } from '../lib/redis';
@@ -253,6 +253,43 @@ usersRouter.get('/@me', requireAuth, asyncHandler(async (req: Request, res: Resp
   }
 
   res.status(200).json(safeProfile(user));
+}));
+
+// ---------------------------------------------------------------------------
+// GET /@me/bootstrap — preload critical data in a single call
+// ---------------------------------------------------------------------------
+
+usersRouter.get('/@me/bootstrap', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.userId as string;
+
+    // Fetch user, guilds, and DM channels in parallel
+    const [userResult, guildsResult, dmResult] = await Promise.all([
+      db.select().from(users).where(eq(users.id, userId)).limit(1),
+      db.select({
+        id: guilds.id,
+        name: guilds.name,
+        ownerId: guilds.ownerId,
+        iconHash: guilds.iconHash,
+        description: guilds.description,
+        memberCount: guilds.memberCount,
+      }).from(guilds)
+        .innerJoin(guildMembers, and(eq(guildMembers.guildId, guilds.id), eq(guildMembers.userId, userId))),
+      db.select({ channelId: dmChannelMembers.channelId })
+        .from(dmChannelMembers)
+        .where(eq(dmChannelMembers.userId, userId))
+        .limit(100),
+    ]);
+
+    res.json({
+      user: userResult[0] ? safeProfile(userResult[0]) : null,
+      guilds: guildsResult,
+      dmChannelIds: dmResult.map(d => d.channelId),
+    });
+  } catch (err) {
+    console.error('[bootstrap] error:', err);
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 }));
 
 // ---------------------------------------------------------------------------

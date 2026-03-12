@@ -57,6 +57,7 @@ function validateCriticalEnvVars(): void {
     REDIS_URL: process.env.REDIS_URL,
     DATABASE_URL: process.env.DATABASE_URL,
     APP_URL: process.env.APP_URL || (process.env.INSTANCE_DOMAIN ? `https://${process.env.INSTANCE_DOMAIN}` : undefined),
+    MFA_ENCRYPTION_KEY: process.env.MFA_ENCRYPTION_KEY,
   };
 
   // At least one auth secret must be set
@@ -202,6 +203,18 @@ app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
+// Request logging
+app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    if (req.path !== '/health' && !req.path.startsWith('/socket.io')) {
+      console.log(`${req.method} ${req.path} ${res.statusCode} ${duration}ms`);
+    }
+  });
+  next();
+});
 
 // Request duration tracking for metrics
 app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {

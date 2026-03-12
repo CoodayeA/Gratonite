@@ -17,6 +17,7 @@ import { colors } from './src/lib/theme';
 import { useTheme, themeStore } from './src/lib/themeStore';
 import { registerForPushNotifications, setupNotificationHandlers } from './src/lib/notifications';
 import { ToastProvider } from './src/contexts/ToastContext';
+import { VoiceProvider } from './src/contexts/VoiceContext';
 import { appLockStore } from './src/lib/appLockStore';
 import { securityStore } from './src/lib/securityStore';
 import * as ScreenCapture from 'expo-screen-capture';
@@ -54,7 +55,9 @@ function RootNavigator() {
 
   return (
     <AppStateProvider>
-      <AppNavigator />
+      <VoiceProvider>
+        <AppNavigator />
+      </VoiceProvider>
     </AppStateProvider>
   );
 }

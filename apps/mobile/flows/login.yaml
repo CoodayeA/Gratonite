@@ -1,0 +1,12 @@
+appId: chat.gratonite.mobile
+---
+- launchApp
+- assertVisible: "Login"
+- tapOn:
+    id: "email-input"
+- inputText: "test@gratonite.chat"
+- tapOn:
+    id: "password-input"
+- inputText: "testpassword123"
+- tapOn: "Sign In"
+- assertVisible: "Servers"

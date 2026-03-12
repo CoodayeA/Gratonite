@@ -199,7 +199,7 @@ const GuildOverview = () => {
             )}
             {/* Guild Banner */}
             {bannerUrl && (
-                <div style={{ width: '100%', height: '240px', position: 'relative', overflow: 'hidden', flexShrink: 0, willChange: 'auto', isolation: 'isolate' }}>
+                <div className="guild-banner" style={{ width: '100%', height: '240px', position: 'relative', overflow: 'hidden', flexShrink: 0, isolation: 'isolate' }}>
                     {isBannerVideo ? (
                         <video src={bannerUrl} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (

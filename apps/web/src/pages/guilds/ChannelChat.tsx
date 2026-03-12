@@ -269,6 +269,7 @@ const MemoizedMessageItem = memo(({
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 onContextMenu={(e) => handleMessageContext(e, msg)}
+                onDoubleClick={() => { if (msg.apiId && msgChannelId && !msg.system) { onReaction(msg.apiId, '\u2764\uFE0F', false); } }}
             >
                 {compactMode ? (
                     /* Feature 13: Compact mode - no avatar, inline timestamp */
@@ -2022,11 +2023,14 @@ const ChannelChat = () => {
         if (messages.length === 0) return;
         if (needsInitialScrollRef.current) {
             needsInitialScrollRef.current = false;
-            // Scroll to bottom on initial channel load.
-            // rAF waits for the next paint (virtualizer content rendered),
-            // then scrollTop = scrollHeight is instant (no smooth scrolling).
+            // Scroll to first unread (NEW divider) if present, otherwise to bottom
             requestAnimationFrame(() => {
-                if (parentRef.current) parentRef.current.scrollTop = parentRef.current.scrollHeight;
+                const unreadDivider = parentRef.current?.querySelector('.new-messages-divider');
+                if (unreadDivider) {
+                    unreadDivider.scrollIntoView({ block: 'center' });
+                } else if (parentRef.current) {
+                    parentRef.current.scrollTop = parentRef.current.scrollHeight;
+                }
             });
             return;
         }
@@ -2886,27 +2890,28 @@ const ChannelChat = () => {
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', minHeight: 0 }}>
             {showScrollButton && (
                 <button
-                    onClick={scrollToBottom}
+                    onClick={() => parentRef.current?.scrollTo({ top: parentRef.current.scrollHeight, behavior: 'smooth' })}
                     style={{
                         position: 'absolute',
-                        bottom: '80px',
-                        right: '24px',
-                        zIndex: 10,
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '50%',
+                        bottom: 80,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
                         background: 'var(--accent-primary)',
-                        border: '2px solid var(--stroke)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 20,
+                        padding: '8px 16px',
+                        cursor: 'pointer',
+                        zIndex: 10,
+                        fontSize: 13,
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        boxShadow: 'var(--shadow-panel)',
-                        color: '#000',
+                        gap: 6,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
                     }}
-                    title="Scroll to bottom"
+                    aria-label="Jump to bottom"
                 >
-                    <ChevronDown size={20} />
+                    <ChevronDown size={16} /> New messages
                 </button>
             )}
             <div ref={parentRef} className="message-area" style={{ overflowY: 'auto', zIndex: 2, position: 'relative' }}>

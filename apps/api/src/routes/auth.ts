@@ -38,7 +38,7 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../lib/jw
 import { sendVerificationEmail, sendPasswordResetEmail } from '../lib/mailer';
 import { requireAuth } from '../middleware/auth';
 import { redis } from '../lib/redis';
-import { usernameCheckRateLimit } from '../middleware/rateLimit';
+import { usernameCheckRateLimit, emailVerifyRateLimit, mfaSetupRateLimit } from '../middleware/rateLimit';
 import { referrals as referralsTable } from '../db/schema/referrals';
 
 export const authRouter = Router();
@@ -161,7 +161,7 @@ type MfaBackupCodesCache = {
 };
 
 function getMfaEncryptionKey(): Buffer {
-  const keyMaterial = process.env.MFA_ENCRYPTION_KEY || process.env.JWT_SECRET || 'gratonite-dev-mfa-key';
+  const keyMaterial = process.env.MFA_ENCRYPTION_KEY || (process.env.NODE_ENV === 'production' ? (() => { throw new Error('MFA_ENCRYPTION_KEY is required in production'); })() : 'gratonite-dev-mfa-key');
   return crypto.createHash('sha256').update(keyMaterial).digest();
 }
 
@@ -272,8 +272,12 @@ function normalizeBackupCode(code: string): string {
   return code.toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
-function hashBackupCode(code: string): string {
-  return hashToken(normalizeBackupCode(code));
+function hashBackupCode(code: string, userId?: string): string {
+  const normalized = normalizeBackupCode(code);
+  if (userId) {
+    return crypto.createHash('sha256').update(userId + ':' + normalized).digest('hex');
+  }
+  return hashToken(normalized);
 }
 
 function getMfaSetupKey(userId: string): string {
@@ -461,7 +465,7 @@ authRouter.post('/register', asyncHandler(async (req: Request, res: Response): P
       email: email.toLowerCase(),
       passwordHash,
       displayName: displayName ?? username, // default display name to username
-      emailVerified: true, // Email verification disabled for now
+      emailVerified: false, // Email verification enabled — user must confirm via email link
     })
     .returning();
 
@@ -626,8 +630,13 @@ authRouter.post('/login', asyncHandler(async (req: Request, res: Response): Prom
     // Allow one-time backup codes as fallback.
     if (!mfaVerified) {
       const backupHashes = await getMfaBackupHashes(user.id);
-      const codeHash = hashBackupCode(mfaCode);
-      const idx = backupHashes.indexOf(codeHash);
+      const codeHash = hashBackupCode(mfaCode, user.id);
+      let idx = backupHashes.indexOf(codeHash);
+      // Fallback: check legacy unsalted hash for pre-migration backup codes
+      if (idx < 0) {
+        const legacyHash = hashToken(normalizeBackupCode(mfaCode));
+        idx = backupHashes.indexOf(legacyHash);
+      }
       if (idx >= 0) {
         backupHashes.splice(idx, 1);
         await setMfaBackupHashes(user.id, backupHashes);
@@ -971,9 +980,9 @@ const startMfaSetupHandler = async (req: Request, res: Response): Promise<void> 
   });
 };
 
-authRouter.post('/mfa/setup/start', requireAuth, asyncHandler(startMfaSetupHandler));
+authRouter.post('/mfa/setup/start', requireAuth, mfaSetupRateLimit, asyncHandler(startMfaSetupHandler));
 // Alias used by some clients/docs.
-authRouter.post('/mfa/setup', requireAuth, asyncHandler(startMfaSetupHandler));
+authRouter.post('/mfa/setup', requireAuth, mfaSetupRateLimit, asyncHandler(startMfaSetupHandler));
 
 const enableMfaHandler = async (req: Request, res: Response): Promise<void> => {
   const parse = mfaEnableSchema.safeParse(req.body);
@@ -1025,15 +1034,15 @@ const enableMfaHandler = async (req: Request, res: Response): Promise<void> => {
     .where(eq(users.id, req.userId!));
 
   const backupCodes = generateBackupCodes();
-  await setMfaBackupHashes(req.userId!, backupCodes.map(hashBackupCode));
+  await setMfaBackupHashes(req.userId!, backupCodes.map(c => hashBackupCode(c, req.userId!)));
   await redis.del(getMfaSetupKey(req.userId!));
 
   res.status(200).json({ ok: true, backupCodes });
 };
 
-authRouter.post('/mfa/setup/enable', requireAuth, asyncHandler(enableMfaHandler));
+authRouter.post('/mfa/setup/enable', requireAuth, mfaSetupRateLimit, asyncHandler(enableMfaHandler));
 // Alias used by plan/docs.
-authRouter.post('/mfa/verify/enable', requireAuth, asyncHandler(enableMfaHandler));
+authRouter.post('/mfa/verify/enable', requireAuth, mfaSetupRateLimit, asyncHandler(enableMfaHandler));
 
 authRouter.post('/mfa/disable', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const parse = mfaEnableSchema.safeParse(req.body);
@@ -1069,7 +1078,7 @@ authRouter.post('/mfa/disable', requireAuth, asyncHandler(async (req: Request, r
 
   if (!verified) {
     const hashes = await getMfaBackupHashes(req.userId!);
-    verified = hashes.includes(hashBackupCode(code));
+    verified = hashes.includes(hashBackupCode(code, req.userId!));
   }
 
   if (!verified) {
@@ -1125,7 +1134,7 @@ authRouter.post('/mfa/backup-codes/regenerate', requireAuth, asyncHandler(async 
   }
 
   const backupCodes = generateBackupCodes();
-  await setMfaBackupHashes(req.userId!, backupCodes.map(hashBackupCode));
+  await setMfaBackupHashes(req.userId!, backupCodes.map(c => hashBackupCode(c, req.userId!)));
   res.status(200).json({ ok: true, backupCodes });
 }));
 
@@ -1148,7 +1157,7 @@ authRouter.post('/mfa/backup-codes/regenerate', requireAuth, asyncHandler(async 
  * This prevents email enumeration attacks — an attacker cannot distinguish
  * "this email is registered but unverified" from "this email isn't registered".
  */
-authRouter.post('/verify-email/request', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+authRouter.post('/verify-email/request', emailVerifyRateLimit, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   // 1. Validate request body
   const parseResult = verifyEmailRequestSchema.safeParse(req.body);
   if (!parseResult.success) {
@@ -1228,7 +1237,7 @@ authRouter.post('/verify-email/request', asyncHandler(async (req: Request, res: 
  *   - Sets user.emailVerified = true and user.updatedAt = now().
  *   - Deletes the used token record (one-time use).
  */
-authRouter.post('/verify-email/confirm', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+authRouter.post('/verify-email/confirm', emailVerifyRateLimit, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   // 1. Validate request body
   const parseResult = verifyEmailConfirmSchema.safeParse(req.body);
   if (!parseResult.success) {

@@ -476,7 +476,37 @@ const EventScheduler = () => {
                                             )}
                                         </div>
 
-                                        <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', position: 'relative' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto' }}>
+                                            <button
+                                                onClick={() => {
+                                                    if ('Notification' in window) {
+                                                        Notification.requestPermission().then(perm => {
+                                                            if (perm === 'granted') {
+                                                                const eventTime = new Date(event.startTime).getTime();
+                                                                const reminderTime = eventTime - 15 * 60 * 1000;
+                                                                const delay = reminderTime - Date.now();
+                                                                if (delay > 0) {
+                                                                    setTimeout(() => {
+                                                                        new Notification(`Event starting soon: ${event.name}`, {
+                                                                            body: 'Starting in 15 minutes',
+                                                                            icon: '/app/favicon.ico',
+                                                                        });
+                                                                    }, delay);
+                                                                    addToast({ title: 'Reminder set', description: `You'll be notified 15 min before "${event.name}"`, variant: 'success' });
+                                                                } else {
+                                                                    addToast({ title: 'Event too soon', description: 'This event starts in less than 15 minutes.', variant: 'info' });
+                                                                }
+                                                            } else {
+                                                                addToast({ title: 'Notifications blocked', description: 'Allow notifications in your browser settings to set reminders.', variant: 'error' });
+                                                            }
+                                                        });
+                                                    }
+                                                }}
+                                                style={{ fontSize: 12, padding: '4px 10px', borderRadius: 12, border: '1px solid var(--border-primary, var(--stroke))', background: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                                            >
+                                                Remind me
+                                            </button>
+                                        <div style={{ display: 'flex', gap: '8px', position: 'relative' }}>
                                             <button onClick={() => handleInterestToggle(event.id)} className="auth-button" style={{ margin: 0, flex: 1, padding: '0', background: event.isInterested ? 'var(--success)' : 'var(--accent-primary)', color: '#fff', height: '36px', transition: 'all 0.15s' }}>{event.isInterested ? 'Interested' : 'Interested?'}</button>
                                             <button onClick={() => setOptionsOpenFor(optionsOpenFor === event.id ? null : event.id)} style={{ width: '36px', height: '36px', background: 'var(--bg-tertiary)', border: `1px solid ${optionsOpenFor === event.id ? 'var(--accent-primary)' : 'var(--stroke)'}`, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}>
                                                 <MoreHorizontal size={18} />
@@ -484,6 +514,7 @@ const EventScheduler = () => {
                                             {optionsOpenFor === event.id && guildId && (
                                                 <EventOptionsMenu event={event} guildId={guildId} onClose={() => setOptionsOpenFor(null)} onDeleted={handleEventDeleted} />
                                             )}
+                                        </div>
                                         </div>
                                     </div>
                                 </div>

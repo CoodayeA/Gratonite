@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Image, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 
 interface AvatarFrameProps {
   size: number;
@@ -22,6 +23,7 @@ export default function AvatarFrame({ size, frameUrl, children }: AvatarFramePro
       </View>
       <Image
         source={{ uri: frameUrl }}
+        contentFit="contain"
         style={[
           styles.frame,
           {
@@ -47,6 +49,5 @@ const styles = StyleSheet.create({
   },
   frame: {
     position: 'absolute',
-    resizeMode: 'contain',
   },
 });

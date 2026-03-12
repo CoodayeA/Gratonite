@@ -30,7 +30,7 @@ export function EmbedCard({ embed }: Props) {
         </div>
         {embed.image && (
           <div className="embed-image-wrap">
-            <img src={embed.image} alt="" className="embed-image" loading="lazy" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            <img src={embed.image} alt={embed.title || embed.url} className="embed-image" loading="lazy" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
           </div>
         )}
       </div>

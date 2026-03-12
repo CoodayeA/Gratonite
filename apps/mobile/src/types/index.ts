@@ -1145,3 +1145,215 @@ export interface FeedbackItem {
   status: string;
   createdAt: string;
 }
+
+// ---------------------------------------------------------------------------
+// Voice Effects
+// ---------------------------------------------------------------------------
+
+export interface VoiceEffect {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+}
+
+export interface VoiceSettings {
+  activeEffect: string | null;
+  effectVolume: number;
+}
+
+// ---------------------------------------------------------------------------
+// Music Rooms
+// ---------------------------------------------------------------------------
+
+export interface MusicTrack {
+  id: string;
+  title: string;
+  thumbnail: string | null;
+  duration: number;
+  url: string;
+  addedBy: string;
+  addedByName?: string;
+}
+
+export interface MusicQueue {
+  settings: { maxQueueSize: number; allowDuplicates: boolean };
+  queue: MusicTrack[];
+}
+
+// ---------------------------------------------------------------------------
+// Study Rooms
+// ---------------------------------------------------------------------------
+
+export interface StudySession {
+  id: string;
+  channelId: string;
+  userId: string;
+  username?: string;
+  phase: 'work' | 'break';
+  workDuration: number;
+  breakDuration: number;
+  startedAt: string;
+  totalFocusTime: number;
+}
+
+export interface StudyRoomSettings {
+  pomodoroWork: number;
+  pomodoroBreak: number;
+  ambientSound: string | null;
+}
+
+export interface StudyLeaderboardEntry {
+  userId: string;
+  username: string;
+  displayName: string | null;
+  avatarHash: string | null;
+  totalMinutes: number;
+  sessionsCompleted: number;
+  rank: number;
+}
+
+// ---------------------------------------------------------------------------
+// Stage Channels
+// ---------------------------------------------------------------------------
+
+export interface StageSpeaker {
+  userId: string;
+  username: string;
+  displayName: string | null;
+  avatarHash: string | null;
+  role: 'host' | 'speaker' | 'audience';
+  isSpeaking: boolean;
+}
+
+export interface StageSession {
+  id: string;
+  channelId: string;
+  topic: string;
+  hostId: string;
+  speakers: StageSpeaker[];
+  audienceCount: number;
+  startedAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Auctions
+// ---------------------------------------------------------------------------
+
+export interface Auction {
+  id: string;
+  sellerId: string;
+  sellerName?: string;
+  cosmeticId: string;
+  cosmetic?: { id: string; name: string; imageUrl: string | null; rarity: string };
+  startingPrice: number;
+  currentBid: number;
+  currentBidderId: string | null;
+  currentBidderName?: string | null;
+  endsAt: string;
+  status: 'active' | 'ended' | 'cancelled';
+  bidCount: number;
+  createdAt: string;
+}
+
+export interface AuctionBid {
+  id: string;
+  auctionId: string;
+  bidderId: string;
+  bidderName?: string;
+  amount: number;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Connections (Social Accounts)
+// ---------------------------------------------------------------------------
+
+export interface SocialConnection {
+  id: string;
+  provider: 'github' | 'twitch' | 'steam' | 'twitter' | 'youtube';
+  providerUsername: string;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Interest Tags
+// ---------------------------------------------------------------------------
+
+export interface InterestTag {
+  id: string;
+  name: string;
+  category: string;
+  emoji: string;
+}
+
+export interface InterestMatch {
+  userId: string;
+  username: string;
+  displayName: string | null;
+  avatarHash: string | null;
+  sharedInterests: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Seasonal Events
+// ---------------------------------------------------------------------------
+
+export interface SeasonalEvent {
+  id: string;
+  name: string;
+  themeOverride: string | null;
+  bannerColor: string | null;
+  emoji: string | null;
+  startAt: string;
+  endAt: string;
+  milestones: Array<{ id: string; name: string; threshold: number; reward: string }>;
+}
+
+export interface SeasonalEventProgress {
+  eventId: string;
+  points: number;
+  claimedRewards: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Clips
+// ---------------------------------------------------------------------------
+
+export interface Clip {
+  id: string;
+  guildId: string;
+  channelId: string;
+  channelName?: string;
+  creatorId: string;
+  creatorName?: string;
+  title: string;
+  url: string;
+  duration: number;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Help Center
+// ---------------------------------------------------------------------------
+
+export type HelpCategory =
+  | 'All'
+  | 'Getting Started'
+  | 'Account & Security'
+  | 'Servers & Channels'
+  | 'Bots & Integrations'
+  | 'Billing & Premium'
+  | 'Cosmetics & Shop'
+  | 'Creator Tools'
+  | 'Marketplace & Auctions'
+  | 'Messaging & Chat'
+  | 'Privacy & Safety';
+
+export interface HelpArticle {
+  id: string;
+  title: string;
+  description: string;
+  category: Exclude<HelpCategory, 'All'>;
+  body: string[];
+}

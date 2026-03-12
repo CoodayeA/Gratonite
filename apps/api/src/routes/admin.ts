@@ -349,7 +349,7 @@ adminRouter.delete('/team/:userId', requireAuth, async (req: Request, res: Respo
 adminRouter.get('/audit-log', requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!(await assertScope(req, res, ADMIN_SCOPES.AUDIT_READ))) return;
 
-  const limit = Math.min(Number(req.query.limit) || 100, 500);
+  const limit = Math.min(Number(req.query.limit) || 50, 500);
   const offset = Number(req.query.offset) || 0;
 
   const rows = await db

@@ -14,12 +14,13 @@ interface InsightsData {
   dateLabels: string[];
 }
 
-function StatCard({ value, label, sub, subColor }: { value: number; label: string; sub?: string; subColor?: string }) {
+function StatCard({ value, label, sub, subColor, accentColor }: { value: number; label: string; sub?: string; subColor?: string; accentColor?: string }) {
   return (
-    <div style={{ background: 'var(--bg-tertiary)', padding: 16, borderRadius: 8, border: '1px solid var(--stroke)' }}>
+    <div style={{ background: 'var(--bg-tertiary)', padding: 16, borderRadius: 8, border: '1px solid var(--stroke)', position: 'relative', overflow: 'hidden' }}>
+      {accentColor && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: accentColor }} />}
       <div style={{ fontSize: 32, fontWeight: 700 }}>{value.toLocaleString()}</div>
       <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>{label}</div>
-      {sub && <div style={{ color: subColor || 'var(--text-muted)', fontSize: 12, marginTop: 4 }}>{sub}</div>}
+      {sub && <div style={{ color: subColor || 'var(--text-muted)', fontSize: 12, marginTop: 4, fontWeight: 600 }}>{sub}</div>}
     </div>
   );
 }
@@ -97,28 +98,44 @@ function HourlyHeatmap({ data }: { data: number[] }) {
   const max = Math.max(...data, 1);
   const hourLabels = Array.from({ length: 24 }, (_, i) => i === 0 ? '12a' : i < 12 ? `${i}a` : i === 12 ? '12p' : `${i - 12}p`);
 
+  // Find peak hour(s) — all hours that share the max value (if max > 0)
+  const peakIndices = new Set<number>();
+  if (max > 0) {
+    data.forEach((val, i) => { if (val === max) peakIndices.add(i); });
+  }
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(24, 1fr)', gap: 2 }}>
-      {data.map((val, i) => {
-        const opacity = max > 0 ? 0.1 + (val / max) * 0.9 : 0.1;
-        return (
-          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-            <div
-              title={`${hourLabels[i]}: ${val} messages`}
-              style={{
-                width: '100%',
-                height: 28,
-                borderRadius: 4,
-                backgroundColor: `var(--accent-primary)`,
-                opacity,
-                minWidth: 8,
-              }}
-            />
-            <span style={{ fontSize: 8, color: 'var(--text-muted)' }}>{i % 3 === 0 ? hourLabels[i] : ''}</span>
-          </div>
-        );
-      })}
-    </div>
+    <>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(24, 1fr)', gap: 2 }}>
+        {data.map((val, i) => {
+          const opacity = max > 0 ? 0.1 + (val / max) * 0.9 : 0.1;
+          const isPeak = peakIndices.has(i);
+          return (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <div
+                title={`${hourLabels[i]}: ${val} messages${isPeak ? ' (peak)' : ''}`}
+                style={{
+                  width: '100%',
+                  height: 28,
+                  borderRadius: 4,
+                  backgroundColor: isPeak ? '#f59e0b' : 'var(--accent-primary)',
+                  opacity,
+                  minWidth: 8,
+                  border: isPeak ? '2px solid #f59e0b' : 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+              <span style={{ fontSize: 8, color: isPeak ? '#f59e0b' : 'var(--text-muted)', fontWeight: isPeak ? 700 : 400 }}>{i % 3 === 0 || isPeak ? hourLabels[i] : ''}</span>
+            </div>
+          );
+        })}
+      </div>
+      {peakIndices.size > 0 && (
+        <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)' }}>
+          Peak hour{peakIndices.size > 1 ? 's' : ''}: <span style={{ color: '#f59e0b', fontWeight: 600 }}>{[...peakIndices].map(i => hourLabels[i]).join(', ')}</span> ({max} messages)
+        </div>
+      )}
+    </>
   );
 }
 
@@ -145,10 +162,16 @@ export default function GuildInsights({ guildId }: { guildId: string }) {
 
       {/* Stats row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-        <StatCard value={data.memberCount} label="Total Members" />
-        <StatCard value={data.messages7d} label="Messages (7d)" />
-        <StatCard value={data.activeUsers24h} label="Active Users (24h)" />
-        <StatCard value={data.memberGrowth7d} label="Member Growth" sub={`+${data.memberGrowth7d} this week`} subColor="#43b581" />
+        <StatCard value={data.memberCount} label="Total Members" accentColor="#6366f1" />
+        <StatCard value={data.messages7d} label="Messages (7d)" accentColor="#f59e0b" />
+        <StatCard value={data.activeUsers24h} label="Active Users (24h)" accentColor="#10b981" />
+        <StatCard
+          value={data.memberGrowth7d}
+          label="Member Growth"
+          sub={`${data.memberGrowth7d >= 0 ? '\u2191' : '\u2193'} ${data.memberGrowth7d >= 0 ? '+' : ''}${data.memberGrowth7d} this week`}
+          subColor={data.memberGrowth7d >= 0 ? '#43b581' : '#f04747'}
+          accentColor="#ec4899"
+        />
       </div>
 
       {/* Date range selector */}

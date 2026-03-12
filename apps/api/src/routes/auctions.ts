@@ -329,7 +329,10 @@ auctionsRouter.post(
 
       // Atomic transaction
       await db.transaction(async (tx) => {
-        // Re-fetch inside tx
+        // Lock the auction row with SELECT ... FOR UPDATE to prevent race conditions
+        await tx.execute(sql`SELECT id FROM auctions WHERE id = ${auctionId} FOR UPDATE`);
+
+        // Re-fetch inside tx (row is now locked)
         const [txAuction] = await tx
           .select()
           .from(auctions)

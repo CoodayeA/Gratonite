@@ -245,3 +245,36 @@ export const messageRateLimit = createRateLimiter({
     return `${userId}:${channelId}`;
   },
 });
+
+/**
+ * emailVerifyRateLimit — 5 requests per hour, keyed by IP.
+ * Apply to POST /verify-email/request and /verify-email/confirm.
+ */
+export const emailVerifyRateLimit = createRateLimiter({
+  prefix: 'rl:emailverify',
+  maxRequests: 5,
+  windowSeconds: 3600,
+  keyFn: (req) => req.ip ?? req.socket.remoteAddress ?? null,
+});
+
+/**
+ * mfaSetupRateLimit — 10 requests per hour, keyed by userId.
+ * Apply to MFA setup/enable endpoints.
+ */
+export const mfaSetupRateLimit = createRateLimiter({
+  prefix: 'rl:mfasetup',
+  maxRequests: 10,
+  windowSeconds: 3600,
+  keyFn: (req) => req.userId ?? null,
+});
+
+/**
+ * searchRateLimit — 20 requests per 60 seconds, keyed by userId.
+ * Apply to GET /search/messages to prevent abuse.
+ */
+export const searchRateLimit = createRateLimiter({
+  prefix: 'rl:search',
+  maxRequests: 20,
+  windowSeconds: 60,
+  keyFn: (req) => req.userId ?? null,
+});

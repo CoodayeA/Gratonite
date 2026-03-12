@@ -22,6 +22,7 @@ import { guildMembers } from '../db/schema/guilds';
 import { fameTransactions } from '../db/schema/fameTransactions';
 import { requireAuth } from '../middleware/auth';
 import { toRows } from '../lib/to-rows.js';
+import { redis } from '../lib/redis';
 
 export const leaderboardRouter = Router();
 
@@ -77,6 +78,16 @@ leaderboardRouter.get(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const metric = typeof req.query.metric === 'string' ? req.query.metric : 'level';
+      const page = Math.max(Math.min(Number(req.query.page) || 0, 200), 0); // cap at page 200 (10000 / 50)
+      const offset = Math.min(page * 50, 10000);
+
+      // Check Redis cache
+      const cacheKey = `leaderboard:global:${metric}:${page}`;
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        res.status(200).json(JSON.parse(cached));
+        return;
+      }
 
       type LeaderboardRow = { userId: string; username: string; displayName: string; avatarHash: string | null; score: number };
 
@@ -88,7 +99,7 @@ leaderboardRouter.get(
                  COALESCE(level, 1) as score
           FROM users
           ORDER BY COALESCE(xp, 0) DESC
-          LIMIT 50
+          LIMIT 50 OFFSET ${offset}
         `);
       } else if (metric === 'coins') {
         rawResult = await db.execute(sql`
@@ -96,7 +107,7 @@ leaderboardRouter.get(
                  COALESCE(coins, 0) as score
           FROM users
           ORDER BY COALESCE(coins, 0) DESC
-          LIMIT 50
+          LIMIT 50 OFFSET ${offset}
         `);
       } else {
         // messages — use fame transactions as proxy
@@ -107,12 +118,12 @@ leaderboardRouter.get(
           LEFT JOIN fame_transactions ft ON ft.receiver_id = u.id
           GROUP BY u.id
           ORDER BY COUNT(ft.id) DESC
-          LIMIT 50
+          LIMIT 50 OFFSET ${offset}
         `);
       }
 
       const result = toRows<LeaderboardRow>(rawResult).map((row, i) => ({
-        rank: i + 1,
+        rank: offset + i + 1,
         userId: row.userId,
         username: row.username,
         displayName: row.displayName,
@@ -122,6 +133,7 @@ leaderboardRouter.get(
         coins: metric === 'coins' ? Number(row.score ?? 0) : undefined,
       }));
 
+      await redis.set(cacheKey, JSON.stringify(result), 'EX', 300); // 5 min cache
       res.status(200).json(result);
     } catch (err) {
       console.error('[leaderboard] global/metric error:', err);
@@ -140,7 +152,17 @@ leaderboardRouter.get(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const period = typeof req.query.period === 'string' ? req.query.period : 'week';
+      const page = Math.max(Math.min(Number(req.query.page) || 0, 200), 0);
+      const offset = Math.min(page * 50, 10000);
       const cutoff = periodCutoff(period);
+
+      // Check Redis cache
+      const cacheKey = `leaderboard:legacy:${period}:${page}`;
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        res.status(200).json(JSON.parse(cached));
+        return;
+      }
 
       // Build date condition on fame transactions
       const dateCondition = cutoff
@@ -164,10 +186,11 @@ leaderboardRouter.get(
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .groupBy(fameTransactions.receiverId, users.username, users.displayName, users.avatarHash, users.createdAt)
         .orderBy(desc(sql`count(*)`))
-        .limit(50);
+        .limit(50)
+        .offset(offset);
 
       const result = rows.map((row, i) => ({
-        rank: i + 1,
+        rank: offset + i + 1,
         userId: row.userId,
         username: row.username,
         displayName: row.displayName,
@@ -176,6 +199,7 @@ leaderboardRouter.get(
         memberSince: row.memberSince?.toISOString() ?? null,
       }));
 
+      await redis.set(cacheKey, JSON.stringify(result), 'EX', 300); // 5 min cache
       res.status(200).json(result);
     } catch (err) {
       console.error('[leaderboard] global error:', err);

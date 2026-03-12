@@ -20,6 +20,7 @@ type ContextMenuState = {
 
 type ContextMenuContextType = {
     openMenu: (e: React.MouseEvent, items: ContextMenuItem[]) => void;
+    openMenuAt: (x: number, y: number, items: ContextMenuItem[]) => void;
     closeMenu: () => void;
 };
 
@@ -43,20 +44,24 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
     const [positioned, setPositioned] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
+    const openMenuAt = useCallback((x: number, y: number, items: ContextMenuItem[]) => {
+        setPositioned(false);
+        setState({
+            isOpen: true,
+            x,
+            y,
+            items,
+            focusedIndex: 0
+        });
+    }, []);
+
     const openMenu = useCallback((e: React.MouseEvent, items: ContextMenuItem[]) => {
         e.preventDefault();
         e.stopPropagation();
 
         // Store the raw click coordinates; actual clamping happens after measurement
-        setPositioned(false);
-        setState({
-            isOpen: true,
-            x: e.clientX,
-            y: e.clientY,
-            items,
-            focusedIndex: 0
-        });
-    }, []);
+        openMenuAt(e.clientX, e.clientY, items);
+    }, [openMenuAt]);
 
     // After the menu renders (hidden), measure it and clamp to viewport
     useLayoutEffect(() => {
@@ -119,7 +124,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
     }, [state.isOpen, state.items, state.focusedIndex, closeMenu]);
 
     return (
-        <ContextMenuContext.Provider value={{ openMenu, closeMenu }}>
+        <ContextMenuContext.Provider value={{ openMenu, openMenuAt, closeMenu }}>
             {children}
 
             {state.isOpen && (
@@ -198,3 +203,54 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
         </ContextMenuContext.Provider>
     );
 };
+
+/**
+ * Hook for long-press (500ms hold) to trigger context menu on touch devices.
+ * Returns touch event handlers to spread onto the target element.
+ */
+export function useLongPressMenu(items: ContextMenuItem[]) {
+    const { openMenuAt } = useContextMenu();
+    const touchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const touchPos = useRef<{ x: number; y: number } | null>(null);
+
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        const touch = e.touches[0];
+        if (!touch) return;
+        touchPos.current = { x: touch.clientX, y: touch.clientY };
+        touchTimer.current = setTimeout(() => {
+            if (touchPos.current) {
+                openMenuAt(touchPos.current.x, touchPos.current.y, items);
+            }
+            touchTimer.current = null;
+        }, 500);
+    }, [items, openMenuAt]);
+
+    const handleTouchEnd = useCallback(() => {
+        if (touchTimer.current) {
+            clearTimeout(touchTimer.current);
+            touchTimer.current = null;
+        }
+        touchPos.current = null;
+    }, []);
+
+    const handleTouchMove = useCallback((e: React.TouchEvent) => {
+        // Cancel if finger moves more than 10px (user is scrolling, not long-pressing)
+        if (touchPos.current && e.touches[0]) {
+            const dx = e.touches[0].clientX - touchPos.current.x;
+            const dy = e.touches[0].clientY - touchPos.current.y;
+            if (Math.sqrt(dx * dx + dy * dy) > 10) {
+                if (touchTimer.current) {
+                    clearTimeout(touchTimer.current);
+                    touchTimer.current = null;
+                }
+            }
+        }
+    }, []);
+
+    return {
+        onTouchStart: handleTouchStart,
+        onTouchEnd: handleTouchEnd,
+        onTouchCancel: handleTouchEnd,
+        onTouchMove: handleTouchMove,
+    };
+}

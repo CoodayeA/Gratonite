@@ -1,0 +1,19 @@
+appId: chat.gratonite.mobile
+---
+# Assumes user is already logged in
+- assertVisible: "Servers"
+# Tap first server
+- tapOn:
+    index: 0
+    id: "guild-item"
+# Tap first text channel
+- tapOn:
+    index: 0
+    id: "channel-item"
+# Wait for messages to load
+- assertVisible: "Message input"
+- tapOn: "Message input"
+- inputText: "Hello from Maestro E2E test!"
+- tapOn: "Send message"
+# Verify message appears
+- assertVisible: "Hello from Maestro E2E test!"

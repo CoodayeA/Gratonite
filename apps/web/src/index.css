@@ -4258,6 +4258,7 @@ a {
         justify-content: space-around;
         align-items: center;
         padding: 0 8px;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
     }
 
     .mobile-nav-item {
@@ -5808,5 +5809,361 @@ button:active:not(:disabled) {
 body.electron-mac .app-sidebar,
 body.electron-mac .sidebar-header {
   padding-top: 28px;
+}
+
+/* Mobile-optimized chat input (Item 7) */
+@media (max-width: 768px) {
+  .chat-input-container {
+    padding: 6px 8px;
+  }
+  .chat-input-container textarea {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+  }
+  .chat-input-actions {
+    gap: 4px;
+  }
+  .chat-input-actions button {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
+/* Hide desktop-only features on touch devices (Item 14) */
+@media (hover: none) {
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+/* Route transitions (Item 46) */
+.route-container {
+  animation: routeFadeIn 150ms ease-out;
+}
+
+@keyframes routeFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-container {
+    animation: none;
+  }
+}
+
+/* ------------------------
+   THEME: HIGH CONTRAST
+   Maximum readability with strong borders
+   ------------------------ */
+[data-theme="high-contrast"] {
+    color-scheme: dark;
+    --bg-app: #000000;
+    --bg-sidebar: #0a0a0a;
+    --bg-channel: #000000;
+    --bg-rail: #000000;
+
+    --bg-primary: #000000;
+    --bg-elevated: #1a1a1a;
+    --bg-tertiary: #1a1a1a;
+    --bg-overlay: rgba(0, 0, 0, 0.9);
+
+    --text-primary: #ffffff;
+    --text-secondary: #e0e0e0;
+    --text-muted: #b0b0b0;
+
+    --accent-bluelight: #5b9fff;
+    --accent-blue: #5b9fff;
+    --accent-purple: #a78bfa;
+    --accent-pink: #ff6b6b;
+
+    --stroke: rgba(255, 255, 255, 0.3);
+    --stroke-light: rgba(255, 255, 255, 0.15);
+    --hover-overlay: rgba(255, 255, 255, 0.08);
+    --active-overlay: rgba(255, 255, 255, 0.12);
+
+    --font-sans: 'Inter', sans-serif;
+    --font-display: 'Outfit', sans-serif;
+
+    --accent-primary-h: 217;
+    --accent-primary-s: 100%;
+    --accent-primary-l: 68%;
+    --accent-primary: #5b9fff;
+    --accent-hover: #7db3ff;
+    --accent-primary-alpha: rgba(91, 159, 255, 0.2);
+    --accent-secondary: #ff6b6b;
+    --stroke-subtle: #1a1a1a;
+
+    --border-structural: 1px solid rgba(255, 255, 255, 0.3);
+    --border-focused: 1px solid #5b9fff;
+    --shadow-panel: 0 4px 16px rgba(0, 0, 0, 0.8);
+    --shadow-hover: 0 2px 8px rgba(91, 159, 255, 0.3);
+    --panel-blur: none;
+
+    --success: #44ff44;
+    --error: #ff4444;
+    --warning: #ffaa00;
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+}
+
+/* Global reduced motion (Item 90) */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Color-blind safe status symbols (Item 89) */
+.high-contrast .status-dot-inner::after,
+.color-blind-mode .status-dot-inner::after {
+    content: attr(data-status-symbol);
+    font-size: inherit;
+    line-height: 1;
+    color: #fff;
+    font-weight: 700;
+}
+
+@media (prefers-contrast: more) {
+    .status-dot-inner::after {
+        content: attr(data-status-symbol);
+        font-size: inherit;
+        line-height: 1;
+        color: #fff;
+        font-weight: 700;
+    }
+}
+
+/* Visible focus indicators for keyboard users (Item 85) */
+*:focus-visible {
+  outline: 2px solid var(--accent-primary, #6366f1);
+  outline-offset: 2px;
+}
+
+/* Remove outline for mouse users */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ========================
+   WAVE 1 — Mobile Responsive
+   ======================== */
+
+/* Item 2: Responsive sidebar drawer with improved swipe */
+@media (max-width: 768px) {
+  .sidebar-drawer {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 49;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .sidebar-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* Item 8 & 9: Responsive settings modals — tab pills on mobile */
+@media (max-width: 768px) {
+  .settings-sidebar {
+    display: none !important;
+  }
+  .settings-tabs-mobile {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px;
+    border-bottom: 1px solid var(--border-primary);
+  }
+  .settings-tabs-mobile button {
+    padding: 6px 12px;
+    border-radius: 16px;
+    border: 1px solid var(--border-primary);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .settings-tabs-mobile button.active {
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+  }
+}
+@media (min-width: 769px) {
+  .settings-tabs-mobile {
+    display: none;
+  }
+}
+
+/* Item 10: Mobile-friendly voice channel UI */
+@media (max-width: 768px) {
+  .voice-controls {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    padding: 16px;
+  }
+  .voice-controls button {
+    min-width: 48px;
+    min-height: 48px;
+    border-radius: 50%;
+  }
+  .voice-participant-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 8px;
+  }
+}
+
+/* Item 12: Mobile emoji picker */
+@media (max-width: 768px) {
+  .emoji-picker {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    width: 100% !important;
+    max-height: 50vh;
+    border-radius: 16px 16px 0 0;
+    z-index: 200;
+  }
+  .emoji-picker .emoji-grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+  .emoji-picker .emoji-grid button {
+    font-size: 24px;
+    padding: 8px;
+    min-height: 44px;
+  }
+}
+
+/* Item 13: Pinch-to-zoom on images */
+.image-lightbox img {
+  touch-action: pinch-zoom;
+  max-width: 100%;
+  max-height: 90vh;
+  object-fit: contain;
+}
+
+/* Item 41: Image gallery lightbox navigation */
+.image-lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 201;
+  font-size: 18px;
+}
+.image-lightbox-nav:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+.image-lightbox-nav.prev { left: 16px; }
+.image-lightbox-nav.next { right: 16px; }
+.image-lightbox-counter {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  z-index: 201;
+}
+
+/* ========================
+   WAVE 4 — UI/UX Enhancements
+   ======================== */
+
+/* Item 42: Compact message density option */
+.compact-mode .message-row {
+  padding: 2px 16px;
+}
+.compact-mode .message-row .message-avatar {
+  display: none;
+}
+.compact-mode .message-row .message-content-wrapper {
+  margin-left: 0;
+}
+.compact-mode .message-row .message-author {
+  display: inline;
+  margin-right: 6px;
+}
+.compact-mode .message-row .message-timestamp {
+  font-size: 10px;
+}
+
+/* Item 48: Server banner parallax on scroll */
+.guild-banner {
+  will-change: transform;
+  transition: transform 0.1s linear;
+}
+
+/* Skeleton pulse animation for loading placeholders */
+.skeleton-pulse {
+  background: var(--bg-tertiary, #2a2a3a);
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-pulse::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 20%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.04) 80%,
+    transparent 100%
+  );
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ------------------------
+   STREAMER MODE
+   Blurs sensitive content when streaming
+   ------------------------ */
+.streamer-mode .sensitive-content {
+  filter: blur(8px);
+  transition: filter 0.2s;
+}
+.streamer-mode .sensitive-content:hover {
+  filter: none;
 }
 

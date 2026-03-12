@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, Text, Image, StyleSheet, Linking } from 'react-native';
+import { View, Text, StyleSheet, Linking } from 'react-native';
+import { Image } from 'expo-image';
 import { useTheme } from '../lib/theme';
 import { API_BASE } from '../lib/api';
 import LinkPreview from './LinkPreview';
@@ -86,7 +87,7 @@ export default function RichText({ content, color, customEmojis }: RichTextProps
             case 'spoiler':
               return <Text key={i} style={styles.spoiler}>{part.text}</Text>;
             case 'emoji':
-              return <Image key={i} source={{ uri: part.url }} style={styles.emoji} resizeMode="contain" />;
+              return <Image key={i} source={{ uri: part.url }} style={styles.emoji} contentFit="contain" />;
             default:
               return <Text key={i}>{part.text}</Text>;
           }

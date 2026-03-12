@@ -109,4 +109,25 @@ export type AppStackParamList = {
   BotStore: undefined;
   SettingsSecurity: undefined;
   KeyVerification: { userId: string };
+  // Wave H: Feature Enhancement
+  MusicRoom: { channelId: string; channelName: string };
+  StudyRoom: { channelId: string; channelName: string; guildId: string };
+  StudyLeaderboard: { guildId: string };
+  StageChannel: { channelId: string; channelName: string; guildId: string };
+  Auctions: undefined;
+  AuctionDetail: { auctionId: string };
+  CreateAuction: undefined;
+  GuildForms: { guildId: string };
+  FormFill: { guildId: string; formId: string };
+  FormResponses: { guildId: string; formId: string };
+  FormCreate: { guildId: string; formId?: string };
+  Connections: undefined;
+  InterestTags: undefined;
+  InterestMatches: { guildId: string };
+  SeasonalEvents: undefined;
+  Clips: { guildId: string };
+  HelpCenter: undefined;
+  HelpArticle: { articleId: string };
+  FameDashboard: undefined;
+  CommandPalette: undefined;
 };

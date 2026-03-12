@@ -39,7 +39,7 @@ oauthRouter.get('/authorize', async (req: Request, res: Response): Promise<void>
   }
 
   // M3: Generate and store a server-side state token to prevent CSRF
-  const serverState = crypto.randomBytes(16).toString('hex');
+  const serverState = crypto.randomBytes(32).toString('hex');
   await redis.set(
     `oauth:state:${serverState}`,
     JSON.stringify({ clientId, redirectUri, state }),

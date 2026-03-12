@@ -37,7 +37,7 @@ interface MessageBubbleProps {
   forwardingDisabled?: boolean;
 }
 
-export default function MessageBubble({
+function MessageBubbleInner({
   message,
   isOwn,
   isGrouped,
@@ -62,7 +62,7 @@ export default function MessageBubble({
 }: MessageBubbleProps) {
   const colors = useColors();
   const neo = useNeo();
-  const authorName = message.author?.displayName || message.author?.username || message.authorId.slice(0, 8);
+  const authorName = message.author?.displayName || message.author?.username || message.authorId?.slice(0, 8) || 'Unknown';
 
   // Media viewer state
   const [showViewer, setShowViewer] = useState(false);
@@ -371,3 +371,6 @@ export default function MessageBubble({
     </Animated.View>
   );
 }
+
+const MessageBubble = React.memo(MessageBubbleInner);
+export default MessageBubble;

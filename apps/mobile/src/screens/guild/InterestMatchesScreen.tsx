@@ -1,0 +1,72 @@
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { interestTags } from '../../lib/api';
+import { useTheme } from '../../lib/theme';
+import { useToast } from '../../contexts/ToastContext';
+import LoadingScreen from '../../components/LoadingScreen';
+import EmptyState from '../../components/EmptyState';
+import Avatar from '../../components/Avatar';
+import type { InterestMatch } from '../../types';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { AppStackParamList } from '../../navigation/types';
+
+type Props = NativeStackScreenProps<AppStackParamList, 'InterestMatches'>;
+
+export default function InterestMatchesScreen({ route, navigation }: Props) {
+  const { guildId } = route.params;
+  const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const toast = useToast();
+  const [matches, setMatches] = useState<InterestMatch[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchMatches = useCallback(async () => {
+    try {
+      const data = await interestTags.getMatches(guildId);
+      setMatches(data);
+    } catch {
+      toast.error('Failed to load matches');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [guildId]);
+
+  useEffect(() => { fetchMatches(); }, [fetchMatches]);
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.bgPrimary },
+    row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.md, borderBottomWidth: neo ? 2 : 1, borderBottomColor: colors.border },
+    info: { flex: 1 },
+    name: { fontSize: fontSize.sm, fontWeight: '700', color: colors.textPrimary },
+    interests: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+    matchCount: { backgroundColor: colors.accentPrimary + '20', paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: neo ? 0 : borderRadius.full },
+    matchCountText: { fontSize: fontSize.xs, fontWeight: '700', color: colors.accentPrimary },
+  }), [colors, spacing, fontSize, borderRadius, neo]);
+
+  if (loading) return <LoadingScreen />;
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={matches}
+        keyExtractor={(item) => item.userId}
+        renderItem={({ item }) => (
+          <View style={styles.row}>
+            <Avatar userId={item.userId} avatarHash={item.avatarHash} name={item.displayName || item.username} size={40} />
+            <View style={styles.info}>
+              <Text style={styles.name}>{item.displayName || item.username}</Text>
+              <Text style={styles.interests} numberOfLines={1}>{item.sharedInterests.join(', ')}</Text>
+            </View>
+            <View style={styles.matchCount}>
+              <Text style={styles.matchCountText}>{item.sharedInterests.length} shared</Text>
+            </View>
+          </View>
+        )}
+        ListEmptyComponent={<EmptyState icon="heart-outline" title="No matches" subtitle="Add interests to find like-minded members" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchMatches(); }} tintColor={colors.accentPrimary} />}
+      />
+    </View>
+  );
+}

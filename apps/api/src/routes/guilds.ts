@@ -740,6 +740,19 @@ guildsRouter.post(
 
         // Trigger E2E key rotation for any encrypted channels in this guild
         await emitKeyRotationForEncryptedChannels(guildId, 'member_added');
+
+        // Notify existing guild members about the new member
+        const [joiningUser] = await db
+          .select({ id: users.id, username: users.username, displayName: users.displayName, avatarHash: users.avatarHash })
+          .from(users)
+          .where(eq(users.id, req.userId!))
+          .limit(1);
+
+        const io = getIO();
+        io.to(`guild:${guildId}`).emit('GUILD_MEMBER_ADD', {
+          guildId,
+          user: joiningUser ? { id: joiningUser.id, username: joiningUser.username, displayName: joiningUser.displayName, avatarHash: joiningUser.avatarHash } : { id: req.userId! },
+        });
       }
 
       const [fresh] = await db
@@ -759,6 +772,16 @@ guildsRouter.post(
         joined,
         alreadyMember: !joined,
       });
+
+      // Notify the joining user to add guild to sidebar
+      if (joined) {
+        try {
+          getIO().to(`user:${req.userId!}`).emit('GUILD_JOINED', {
+            guildId,
+            guild: fresh ?? { id: guildId, name: guild.name, iconHash: null, memberCount: guild.memberCount + 1 },
+          });
+        } catch { /* socket may not be initialised in tests */ }
+      }
     } catch (err) {
       handleAppError(res, err);
     }
@@ -1046,6 +1069,11 @@ guildsRouter.patch(
       logAuditEvent(guildId, req.userId!, AuditActionTypes.GUILD_UPDATE, guildId, 'GUILD', changes);
 
       res.status(200).json(updated);
+
+      // Emit real-time guild update to all members
+      try {
+        getIO().to(`guild:${guildId}`).emit('GUILD_UPDATE', { guildId, ...updated });
+      } catch { /* socket may not be initialised in tests */ }
     } catch (err) {
       handleAppError(res, err);
     }
@@ -1237,7 +1265,14 @@ guildsRouter.delete(
       const { guildId } = req.params as Record<string, string>;
       await requireOwner(guildId, req.userId!);
 
-      await db.delete(guilds).where(eq(guilds.id, guildId));
+      // Emit guild delete to all members BEFORE deleting (so we still have the data)
+      try {
+        getIO().to(`guild:${guildId}`).emit('GUILD_DELETE', { guildId });
+      } catch { /* socket may not be initialised in tests */ }
+
+      await db.transaction(async (tx) => {
+        await tx.delete(guilds).where(eq(guilds.id, guildId));
+      });
 
       res.status(200).json({ code: 'OK', message: 'Guild deleted' });
     } catch (err) {
@@ -1833,6 +1868,9 @@ guildsRouter.delete(
 
       getIO().to(`guild:${guildId}`).emit('GUILD_MEMBER_REMOVE', { guildId, userId });
 
+      // Notify the leaving user to remove guild from sidebar (they already left the guild room)
+      getIO().to(`user:${userId}`).emit('GUILD_LEFT', { guildId });
+
       // Trigger E2E key rotation for any encrypted channels in this guild
       await emitKeyRotationForEncryptedChannels(guildId, 'member_removed');
 
@@ -2285,7 +2323,7 @@ guildsRouter.get('/:guildId/insights', requireAuth, async (req: Request, res: Re
       }
 
       // Daily messages
-      const dailyMsgResult = await db.execute(sql`SELECT DATE(created_at) as day, COUNT(*)::int as count FROM messages WHERE channel_id = ANY(${channelIds}) AND created_at > now() - ${sql.raw(`interval '${range} days'`)} GROUP BY day ORDER BY day`);
+      const dailyMsgResult = await db.execute(sql`SELECT DATE(created_at) as day, COUNT(*)::int as count FROM messages WHERE channel_id = ANY(${channelIds}) AND created_at > now() - ${range}::int * interval '1 day' GROUP BY day ORDER BY day`);
       const dailyMsgRows = toRows<{ day: string | Date; count: number }>(dailyMsgResult);
       const dailyMsgMap = new Map<string, number>();
       for (const row of dailyMsgRows) {
@@ -2308,7 +2346,7 @@ guildsRouter.get('/:guildId/insights', requireAuth, async (req: Request, res: Re
     }
 
     // Daily joins
-    const joinResult = await db.execute(sql`SELECT DATE(joined_at) as day, COUNT(*)::int as count FROM guild_members WHERE guild_id = ${guildId} AND joined_at > now() - ${sql.raw(`interval '${range} days'`)} GROUP BY day ORDER BY day`);
+    const joinResult = await db.execute(sql`SELECT DATE(joined_at) as day, COUNT(*)::int as count FROM guild_members WHERE guild_id = ${guildId} AND joined_at > now() - ${range}::int * interval '1 day' GROUP BY day ORDER BY day`);
     const joinRows = toRows<{ day: string | Date; count: number }>(joinResult);
     const joinMap = new Map<string, number>();
     for (const row of joinRows) {

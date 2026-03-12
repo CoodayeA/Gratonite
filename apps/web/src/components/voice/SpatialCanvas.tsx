@@ -60,7 +60,7 @@ export default function SpatialCanvas({
         maxWidth: '1200px',
         height: '60vh',
         minHeight: '400px',
-        background: 'var(--bg-elevated)',
+        background: 'linear-gradient(135deg, rgba(15,15,30,0.95) 0%, rgba(25,20,50,0.9) 30%, rgba(10,25,40,0.95) 60%, rgba(20,15,35,0.95) 100%)',
         borderRadius: 'var(--radius-lg)',
         border: 'var(--border-structural)',
         overflow: 'hidden',
@@ -114,18 +114,54 @@ export default function SpatialCanvas({
               touchAction: 'none',
             }}
           >
-            {/* Speaking ring */}
+            {/* Speaking ring + audio wave rings */}
             <div style={{ position: 'relative' }}>
               {p.isSpeaking && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: '-5px',
-                    borderRadius: '50%',
-                    border: '2.5px solid #43b581',
-                    animation: 'speakingPulse 1.2s ease-in-out infinite',
-                  }}
-                />
+                <>
+                  {/* Outer wave ring 1 */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: '-16px',
+                      borderRadius: '50%',
+                      border: '1.5px solid rgba(67, 181, 129, 0.15)',
+                      animation: 'spatialWaveRing 2s ease-out infinite',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                  {/* Outer wave ring 2 (delayed) */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: '-16px',
+                      borderRadius: '50%',
+                      border: '1.5px solid rgba(67, 181, 129, 0.15)',
+                      animation: 'spatialWaveRing 2s ease-out 0.6s infinite',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                  {/* Outer wave ring 3 (delayed more) */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: '-16px',
+                      borderRadius: '50%',
+                      border: '1.5px solid rgba(67, 181, 129, 0.15)',
+                      animation: 'spatialWaveRing 2s ease-out 1.2s infinite',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                  {/* Inner glow ring */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: '-5px',
+                      borderRadius: '50%',
+                      border: '2.5px solid #43b581',
+                      animation: 'speakingPulse 1.2s ease-in-out infinite',
+                    }}
+                  />
+                </>
               )}
               <Avatar
                 userId={p.id}
@@ -176,6 +212,14 @@ export default function SpatialCanvas({
       >
         Drag your avatar to move &middot; Closer = louder
       </div>
+
+      {/* Keyframes for spatial audio wave rings */}
+      <style>{`
+        @keyframes spatialWaveRing {
+          0% { transform: scale(1); opacity: 0.6; }
+          100% { transform: scale(2.2); opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 }

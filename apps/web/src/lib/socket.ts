@@ -132,6 +132,63 @@ export interface StageHandRaisePayload {
   userId: string;
 }
 
+export interface GuildJoinedPayload {
+  guildId: string;
+  guild: { id: string; name: string; iconHash: string | null; memberCount: number };
+}
+
+export interface GuildLeftPayload {
+  guildId: string;
+}
+
+export interface GuildUpdatePayload {
+  guildId: string;
+  [key: string]: any;
+}
+
+export interface GuildDeletePayload {
+  guildId: string;
+}
+
+export interface ChannelUpdatePayload {
+  channelId: string;
+  guildId: string;
+  [key: string]: any;
+}
+
+export interface ChannelDeletePayload {
+  channelId: string;
+  guildId: string;
+}
+
+export interface GuildMemberAddPayload {
+  guildId: string;
+  user: { id: string; username: string; displayName: string; avatarHash: string | null };
+}
+
+export interface GuildMemberRemovePayload {
+  guildId: string;
+  userId: string;
+}
+
+export interface FriendAcceptedPayload {
+  userId: string;
+  friendId: string;
+  username: string;
+  displayName: string;
+  avatarHash: string | null;
+}
+
+export interface FriendRemovedPayload {
+  userId: string;
+  removedById: string;
+}
+
+export interface DmChannelCreatePayload {
+  channel: any;
+  initiator: { id: string; username: string; displayName: string; avatarHash: string | null };
+}
+
 /* ── Callback registries ────────────────────────────────────── */
 
 type PresenceCallback = (payload: PresenceUpdatePayload) => void;
@@ -152,6 +209,17 @@ type StageEndCallback = (payload: StageEndPayload) => void;
 type StageSpeakerAddCallback = (payload: StageSpeakerAddPayload) => void;
 type StageSpeakerRemoveCallback = (payload: StageSpeakerRemovePayload) => void;
 type StageHandRaiseCallback = (payload: StageHandRaisePayload) => void;
+type GuildJoinedCallback = (payload: GuildJoinedPayload) => void;
+type GuildLeftCallback = (payload: GuildLeftPayload) => void;
+type GuildUpdateCallback = (payload: GuildUpdatePayload) => void;
+type GuildDeleteCallback = (payload: GuildDeletePayload) => void;
+type ChannelUpdateCallback = (payload: ChannelUpdatePayload) => void;
+type ChannelDeleteCallback = (payload: ChannelDeletePayload) => void;
+type GuildMemberAddCallback = (payload: GuildMemberAddPayload) => void;
+type GuildMemberRemoveCallback = (payload: GuildMemberRemovePayload) => void;
+type FriendAcceptedCallback = (payload: FriendAcceptedPayload) => void;
+type FriendRemovedCallback = (payload: FriendRemovedPayload) => void;
+type DmChannelCreateCallback = (payload: DmChannelCreatePayload) => void;
 
 const presenceListeners = new Set<PresenceCallback>();
 const typingStartListeners = new Set<TypingCallback>();
@@ -173,6 +241,17 @@ const stageEndListeners = new Set<StageEndCallback>();
 const stageSpeakerAddListeners = new Set<StageSpeakerAddCallback>();
 const stageSpeakerRemoveListeners = new Set<StageSpeakerRemoveCallback>();
 const stageHandRaiseListeners = new Set<StageHandRaiseCallback>();
+const guildJoinedListeners = new Set<GuildJoinedCallback>();
+const guildLeftListeners = new Set<GuildLeftCallback>();
+const guildUpdateListeners = new Set<GuildUpdateCallback>();
+const guildDeleteListeners = new Set<GuildDeleteCallback>();
+const channelUpdateListeners = new Set<ChannelUpdateCallback>();
+const channelDeleteListeners = new Set<ChannelDeleteCallback>();
+const guildMemberAddListeners = new Set<GuildMemberAddCallback>();
+const guildMemberRemoveListeners = new Set<GuildMemberRemoveCallback>();
+const friendAcceptedListeners = new Set<FriendAcceptedCallback>();
+const friendRemovedListeners = new Set<FriendRemovedCallback>();
+const dmChannelCreateListeners = new Set<DmChannelCreateCallback>();
 
 export interface ChannelBackgroundUpdatedPayload {
   channelId: string;
@@ -285,6 +364,61 @@ export function onStageHandRaise(cb: StageHandRaiseCallback): () => void {
 export function onChannelBackgroundUpdated(cb: ChannelBgCallback): () => void {
   channelBgListeners.add(cb);
   return () => { channelBgListeners.delete(cb); };
+}
+
+export function onGuildJoined(cb: GuildJoinedCallback): () => void {
+  guildJoinedListeners.add(cb);
+  return () => { guildJoinedListeners.delete(cb); };
+}
+
+export function onGuildLeft(cb: GuildLeftCallback): () => void {
+  guildLeftListeners.add(cb);
+  return () => { guildLeftListeners.delete(cb); };
+}
+
+export function onGuildUpdate(cb: GuildUpdateCallback): () => void {
+  guildUpdateListeners.add(cb);
+  return () => { guildUpdateListeners.delete(cb); };
+}
+
+export function onGuildDelete(cb: GuildDeleteCallback): () => void {
+  guildDeleteListeners.add(cb);
+  return () => { guildDeleteListeners.delete(cb); };
+}
+
+export function onChannelUpdate(cb: ChannelUpdateCallback): () => void {
+  channelUpdateListeners.add(cb);
+  return () => { channelUpdateListeners.delete(cb); };
+}
+
+export function onChannelDelete(cb: ChannelDeleteCallback): () => void {
+  channelDeleteListeners.add(cb);
+  return () => { channelDeleteListeners.delete(cb); };
+}
+
+export function onGuildMemberAdd(cb: GuildMemberAddCallback): () => void {
+  guildMemberAddListeners.add(cb);
+  return () => { guildMemberAddListeners.delete(cb); };
+}
+
+export function onGuildMemberRemove(cb: GuildMemberRemoveCallback): () => void {
+  guildMemberRemoveListeners.add(cb);
+  return () => { guildMemberRemoveListeners.delete(cb); };
+}
+
+export function onFriendAccepted(cb: FriendAcceptedCallback): () => void {
+  friendAcceptedListeners.add(cb);
+  return () => { friendAcceptedListeners.delete(cb); };
+}
+
+export function onFriendRemoved(cb: FriendRemovedCallback): () => void {
+  friendRemovedListeners.add(cb);
+  return () => { friendRemovedListeners.delete(cb); };
+}
+
+export function onDmChannelCreate(cb: DmChannelCreateCallback): () => void {
+  dmChannelCreateListeners.add(cb);
+  return () => { dmChannelCreateListeners.delete(cb); };
 }
 
 /* ── E2E encryption events ─────────────────────────────────── */
@@ -483,6 +617,7 @@ export function connectSocket(): GratoniteSocket {
     reconnectionDelay: 1000,
     reconnectionDelayMax: 30000,
     reconnectionAttempts: Infinity,
+    randomizationFactor: 0.5,
     auth: token ? { token } : undefined,
     query: token ? { token } : undefined,
   });
@@ -583,6 +718,50 @@ export function connectSocket(): GratoniteSocket {
     channelBgListeners.forEach(cb => cb(data));
   });
 
+  socket.on('GUILD_JOINED', (data: GuildJoinedPayload) => {
+    guildJoinedListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('GUILD_LEFT', (data: GuildLeftPayload) => {
+    guildLeftListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('GUILD_UPDATE', (data: GuildUpdatePayload) => {
+    guildUpdateListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('GUILD_DELETE', (data: GuildDeletePayload) => {
+    guildDeleteListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('CHANNEL_UPDATE', (data: ChannelUpdatePayload) => {
+    channelUpdateListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('CHANNEL_DELETE', (data: ChannelDeletePayload) => {
+    channelDeleteListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('GUILD_MEMBER_ADD', (data: GuildMemberAddPayload) => {
+    guildMemberAddListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('GUILD_MEMBER_REMOVE', (data: GuildMemberRemovePayload) => {
+    guildMemberRemoveListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('FRIEND_ACCEPTED', (data: FriendAcceptedPayload) => {
+    friendAcceptedListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('FRIEND_REMOVED', (data: FriendRemovedPayload) => {
+    friendRemovedListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('DM_CHANNEL_CREATE', (data: DmChannelCreatePayload) => {
+    dmChannelCreateListeners.forEach(cb => cb(data));
+  });
+
   socket.on('CALL_INVITE', (data: CallInvitePayload) => {
     callInviteListeners.forEach(cb => cb(data));
   });
@@ -648,6 +827,11 @@ export function joinChannel(channelId: string): void {
 /** Leave a channel room */
 export function leaveChannel(channelId: string): void {
   socket?.emit('CHANNEL_LEAVE', { channelId });
+}
+
+/** Join a guild room to receive guild-level real-time events */
+export function joinGuildRoom(guildId: string): void {
+  socket?.emit('JOIN_GUILD_ROOM', { guildId });
 }
 
 /** Set presence status */

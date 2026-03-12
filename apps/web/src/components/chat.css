@@ -76,12 +76,27 @@
                 pointer-events: auto;
             }
 
+            /* Show toolbar on touch devices via tap */
+            @media (hover: none) {
+              .message-row .message-toolbar {
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.15s;
+              }
+              .message-row:active .message-toolbar,
+              .message-row:focus-within .message-toolbar,
+              .message-row.toolbar-visible .message-toolbar {
+                opacity: 1;
+                pointer-events: auto;
+              }
+            }
+
             .thread-panel {
                 position: absolute;
                 top: 0;
                 right: 0;
                 bottom: 0;
-                width: 380px;
+                width: min(380px, 100vw);
                 background: var(--bg-primary);
                 border-left: 1px solid var(--stroke);
                 display: flex;
@@ -346,7 +361,18 @@
             }
             @media (max-width: 768px) {
                 .member-list-panel {
-                    display: none;
+                    position: fixed;
+                    right: 0;
+                    top: 0;
+                    bottom: 0;
+                    z-index: 50;
+                    min-width: unset;
+                    width: 280px;
+                    transform: translateX(100%);
+                    transition: transform 0.2s ease;
+                }
+                .member-list-panel.mobile-open {
+                    transform: translateX(0);
                 }
             }
 

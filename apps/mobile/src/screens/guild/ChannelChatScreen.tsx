@@ -67,9 +67,11 @@ import { useIsOnline } from '../../components/OfflineBanner';
 import { mediumImpact, lightImpact } from '../../lib/haptics';
 import { playSound } from '../../lib/soundEngine';
 import { securityStore } from '../../lib/securityStore';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { AppStackParamList } from '../../navigation/types';
 import type { Message, ReactionGroup, TextReactionGroup, Sticker, Poll, GuildEmoji } from '../../types';
 
-type Props = any;
+type Props = NativeStackScreenProps<AppStackParamList, 'ChannelChat'>;
 
 const QUICK_EMOJIS = ['\u{1F44D}', '\u{2764}\u{FE0F}', '\u{1F602}', '\u{1F60E}', '\u{1F525}', '\u{1F389}'];
 
@@ -293,7 +295,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
           </TouchableOpacity>
           <TouchableOpacity onPress={() => {
             const guildId = route.params?.guildId;
-            if (guildId) navigation.navigate('GuildMemberList', { guildId });
+            if (guildId) navigation.navigate('GuildMemberList', { guildId, guildName: channelName });
           }} style={{ padding: spacing.sm }}>
             <Ionicons name="people-outline" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
@@ -833,7 +835,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
 
   // --- Render ---
 
-  const renderMessage = ({ item, index }: { item: Message; index: number }) => {
+  const renderMessage = useCallback(({ item, index }: { item: Message; index: number }) => {
     // With inverted list, data is newest-first. index+1 is the chronologically older message.
     const olderMsg = index < invertedData.length - 1 ? invertedData[index + 1] : null;
     const isGrouped = olderMsg?.authorId === item.authorId &&
@@ -891,7 +893,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
         </View>
       </SwipeableMessage>
     );
-  };
+  }, [invertedData, user?.id, messageReactions, textReactionsMap, reactionPickerMessageId, customEmojis, styles, handleReply, handleReactionToggle, handleReact, handlePollVote, handlePollRemoveVote, handleReactionLongPress, handleTextReactionToggle]);
 
   if (loading) {
     return (

@@ -35,7 +35,13 @@ const SETTINGS_ROWS: SettingsRow[] = [
   { icon: 'finger-print-outline', label: 'App Lock', screen: 'SettingsAppLock' },
   { icon: 'chatbox-outline', label: 'Feedback', screen: 'Feedback' },
   { icon: 'trophy-outline', label: 'Achievements', screen: 'Achievements' },
+  { icon: 'star-outline', label: 'Fame', screen: 'FameDashboard' },
   { icon: 'shirt-outline', label: 'Wardrobe', screen: 'Cosmetics' },
+  { icon: 'link-outline', label: 'Connections', screen: 'Connections' },
+  { icon: 'pricetag-outline', label: 'Interest Tags', screen: 'InterestTags' },
+  { icon: 'help-circle-outline', label: 'Help Center', screen: 'HelpCenter' },
+  { icon: 'calendar-outline', label: 'Seasonal Events', screen: 'SeasonalEvents' },
+  { icon: 'hammer-outline', label: 'Auctions', screen: 'Auctions' },
 ];
 
 export default function SettingsScreen({ navigation }: Props) {

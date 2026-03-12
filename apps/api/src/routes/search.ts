@@ -7,11 +7,12 @@ import { channels } from '../db/schema/channels';
 import { guilds, guildMembers } from '../db/schema/guilds';
 import { dmChannelMembers } from '../db/schema/channels';
 import { requireAuth } from '../middleware/auth';
+import { searchRateLimit } from '../middleware/rateLimit';
 
 export const searchRouter = Router();
 
 /** GET /api/v1/search/messages */
-searchRouter.get('/messages', requireAuth, async (req: Request, res: Response): Promise<void> => {
+searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request, res: Response): Promise<void> => {
   const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
   if (q.length < 2) {
     res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Query must be at least 2 characters' }); return;
@@ -34,14 +35,16 @@ searchRouter.get('/messages', requireAuth, async (req: Request, res: Response): 
   const userGuildRows = await db
     .select({ guildId: guildMembers.guildId })
     .from(guildMembers)
-    .where(eq(guildMembers.userId, req.userId!));
+    .where(eq(guildMembers.userId, req.userId!))
+    .limit(500);
   const userGuildIds = userGuildRows.map(r => r.guildId);
 
   // Fetch DM channel IDs where the user participates.
   const userDmRows = await db
     .select({ channelId: dmChannelMembers.channelId })
     .from(dmChannelMembers)
-    .where(eq(dmChannelMembers.userId, req.userId!));
+    .where(eq(dmChannelMembers.userId, req.userId!))
+    .limit(500);
   const userDmChannelIds = userDmRows.map(r => r.channelId);
 
   if (userGuildIds.length === 0 && userDmChannelIds.length === 0) {

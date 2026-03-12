@@ -27,7 +27,9 @@ export async function registerForPushNotifications(): Promise<string | null> {
       return null;
     }
 
-    const tokenData = await Notifications.getExpoPushTokenAsync();
+    const tokenData = await Notifications.getExpoPushTokenAsync({
+      projectId: '2c90539e-5fd5-4eed-a08e-507c32d77ed8',
+    });
     const token = tokenData.data;
 
     await push.register(token, Platform.OS);
