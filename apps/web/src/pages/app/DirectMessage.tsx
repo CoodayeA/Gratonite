@@ -425,6 +425,12 @@ const DirectMessage = () => {
     const [e2eSupported, setE2eSupported] = useState(false);
     const [e2eError, setE2eError] = useState<string | null>(null);
     const [partnerKeyChanged, setPartnerKeyChanged] = useState(false);
+    // E2E opt-in: user must explicitly enable encryption for outgoing messages.
+    // The key is still derived to decrypt existing encrypted messages.
+    const [e2eEnabled, setE2eEnabled] = useState(() => {
+        if (!id) return false;
+        return localStorage.getItem(`gratonite:e2e-enabled:${id}`) === 'true';
+    });
     // Whether all GROUP_DM members have registered public keys (controls lock icon)
     const [groupE2eAllMembersHaveKeys, setGroupE2eAllMembersHaveKeys] = useState(false);
     // Current group key version (for tagging outgoing messages)
@@ -1539,7 +1545,7 @@ const DirectMessage = () => {
         const encryptedFileMeta: Array<{ id: string; iv: string; ef: string; mt: string }> = [];
         for (const f of dmAttachedFiles) {
             try {
-                if (e2eKey) {
+                if (e2eEnabled && e2eKey) {
                     // Encrypt file content and filename before upload
                     const { encryptedBlob, encryptedFilename, iv } = await encryptFile(e2eKey, f.file);
                     const encFile = new File([encryptedBlob], 'encrypted.bin', { type: 'application/octet-stream' });
@@ -1570,14 +1576,14 @@ const DirectMessage = () => {
             }));
 
             // If there are image attachments, show the first as inline media
-            const firstImage = e2eKey && encryptedFileMeta.length > 0
+            const firstImage = e2eEnabled && e2eKey && encryptedFileMeta.length > 0
                 ? undefined  // Encrypted files can't show inline previews optimistically
                 : uploadedFiles.find(f => f.mimeType?.startsWith('image/'));
 
-            // Encrypt if E2E key is available (text + file metadata encrypted together)
+            // Encrypt only when user has explicitly enabled E2E for this conversation
             let sendPayload: { content?: string | null; encryptedContent?: string; isEncrypted?: boolean; attachmentIds?: string[]; keyVersion?: number };
             let optimisticContent = content;
-            if (e2eKey && (content || encryptedFileMeta.length > 0)) {
+            if (e2eEnabled && e2eKey && (content || encryptedFileMeta.length > 0)) {
                 try {
                     // Build structured payload when files are present, plain text otherwise
                     const plainPayload = encryptedFileMeta.length > 0
@@ -1595,7 +1601,7 @@ const DirectMessage = () => {
                 sendPayload = { content, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined };
             }
 
-            const isOptimisticEncrypted = e2eKey != null && content != null && content.length > 0 && 'encryptedContent' in sendPayload;
+            const isOptimisticEncrypted = e2eEnabled && e2eKey != null && content != null && content.length > 0 && 'encryptedContent' in sendPayload;
 
             setMessages(prev => [...prev, {
                 id: optimisticId,
@@ -1798,6 +1804,20 @@ const DirectMessage = () => {
                                 </div>
                             )}
                         </div>
+                        {e2eSupported && e2eKey && !isGroupDm && (
+                            <button
+                                onClick={() => {
+                                    const next = !e2eEnabled;
+                                    setE2eEnabled(next);
+                                    localStorage.setItem(`gratonite:e2e-enabled:${id}`, String(next));
+                                    addToast({ title: next ? 'Encryption enabled for new messages' : 'Encryption disabled for new messages', variant: 'info' });
+                                }}
+                                title={e2eEnabled ? 'Encryption enabled — click to disable' : 'Encryption disabled — click to enable'}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', color: e2eEnabled ? 'var(--success, #22c55e)' : 'var(--text-muted)' }}
+                            >
+                                <Lock size={18} />
+                            </button>
+                        )}
                         <Info size={20} style={{ cursor: 'pointer', transition: 'color 0.2s', color: infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }} onClick={() => { setInfoPanelOpen(!infoPanelOpen); if (isGroupDm) setMemberPanelOpen(false); }} onMouseOver={e => e.currentTarget.style.color = infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
                     </div>
                 </header>
