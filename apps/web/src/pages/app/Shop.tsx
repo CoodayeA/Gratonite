@@ -636,18 +636,16 @@ const Shop = () => {
                         ) : (
                             <div style={{ display: 'flex', gap: '12px' }}>
                                 <button onClick={closeModal} className="auth-button" style={{ flex: 1, background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', margin: 0 }}>
-                                    {purchaseState === 'success' ? 'Close' : 'Cancel'}
+                                    Cancel
                                 </button>
 
-                                {purchaseState !== 'success' && (
-                                    <button
-                                        onClick={purchaseState === 'insufficient' ? undefined : confirmPurchase}
-                                        className="auth-button"
-                                        style={{ flex: 1, margin: 0, opacity: (purchaseState === 'insufficient' || purchaseState === 'processing') ? 0.5 : 1, cursor: (purchaseState === 'insufficient' || purchaseState === 'processing') ? 'not-allowed' : 'pointer' }}
-                                        disabled={purchaseState === 'insufficient' || purchaseState === 'processing'}>
-                                        {purchaseState === 'insufficient' ? 'Not Enough Gratonite' : purchaseState === 'processing' ? 'Processing...' : 'Confirm Purchase'}
-                                    </button>
-                                )}
+                                <button
+                                    onClick={purchaseState === 'insufficient' ? undefined : confirmPurchase}
+                                    className="auth-button"
+                                    style={{ flex: 1, margin: 0, opacity: (purchaseState === 'insufficient' || purchaseState === 'processing') ? 0.5 : 1, cursor: (purchaseState === 'insufficient' || purchaseState === 'processing') ? 'not-allowed' : 'pointer' }}
+                                    disabled={purchaseState === 'insufficient' || purchaseState === 'processing'}>
+                                    {purchaseState === 'insufficient' ? 'Not Enough Gratonite' : purchaseState === 'processing' ? 'Processing...' : 'Confirm Purchase'}
+                                </button>
                             </div>
                         )}
                     </div>
