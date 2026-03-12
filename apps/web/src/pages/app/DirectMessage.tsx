@@ -2382,7 +2382,14 @@ const DirectMessage = () => {
                                                 <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.5' }}>
                                                     {msg.isEncrypted ? (
                                                         decryptedContents.has(msg.id) ? (
-                                                            <RichTextRenderer content={decryptedContents.get(msg.id)!} members={dmMembersForMentions} />
+                                                            decryptedContents.get(msg.id) === '[Decryption failed]' ? (
+                                                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                                    <Shield size={12} />
+                                                                    Unable to decrypt — encryption keys may have changed
+                                                                </span>
+                                                            ) : (
+                                                                <RichTextRenderer content={decryptedContents.get(msg.id)!} members={dmMembersForMentions} />
+                                                            )
                                                         ) : (
                                                             <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                                                 <Lock size={12} />
