@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, Sparkles, Gem, ArrowRight, X, Check, Play, Pause, Volume2, Type, Star, Layers } from 'lucide-react';
+import { ShoppingBag, Sparkles, Gem, ArrowRight, X, Check, Type, Star, Layers } from 'lucide-react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import Skeleton from '../../components/ui/Skeleton';
 import { useToast } from '../../components/ui/ToastManager';
@@ -7,11 +7,11 @@ import { TiltCard, RippleWrapper, MagneticButton } from '../../components/ui/Phy
 import { api } from '../../lib/api';
 import { applyEquippedItem } from '../../lib/cosmetics';
 
-type ViewType = 'frames' | 'decorations' | 'effects' | 'nameplates' | 'soundboard';
+type ViewType = 'frames' | 'decorations' | 'effects' | 'nameplates';
 
 type ShopItem = {
     id: string;
-    type: 'frame' | 'decoration' | 'effect' | 'nameplate' | 'soundboard';
+    type: 'frame' | 'decoration' | 'effect' | 'nameplate';
     name: string;
     price: number;
     image: string;
@@ -22,10 +22,6 @@ type ShopItem = {
     // Nameplate extras
     nameplateFont?: string;
     nameplateGradient?: string;
-    // Soundboard extras
-    soundDuration?: string;
-    soundCategory?: string;
-    soundEmoji?: string;
     // Decoration extras
     decorationEmoji?: string;
 };
@@ -67,13 +63,12 @@ const Shop = () => {
     const [shopItems, setShopItems] = useState<ShopItem[]>(initialShopItems);
     const [view, setView] = useState<ViewType>('frames');
     const [purchasingId, setPurchasingId] = useState<string | null>(null);
-    const [playingSound, setPlayingSound] = useState<string | null>(null);
     const [showBundleItems, setShowBundleItems] = useState(false);
     const [equippingPurchased, setEquippingPurchased] = useState(false);
     const bundleItemsRef = useRef<HTMLDivElement>(null);
 
     const bundleIncludedItems = shopItems.filter(i =>
-        ['Aurora Borealis', 'Cherry Blossom', 'Prismatic', 'Cosmic Ping'].includes(i.name)
+        ['Aurora Borealis', 'Cherry Blossom', 'Prismatic Arc', 'Liquid Chrome'].includes(i.name)
     );
 
     useEffect(() => {
@@ -83,7 +78,6 @@ const Shop = () => {
                 avatar_decoration: 'decoration', decoration: 'decoration',
                 profile_effect: 'effect', effect: 'effect',
                 nameplate: 'nameplate',
-                soundboard: 'soundboard',
             };
             const rarityMap: Record<string, ShopItem['rarity']> = {
                 epic: 'epic', legendary: 'legendary', rare: 'rare', uncommon: 'uncommon',
@@ -106,13 +100,25 @@ const Shop = () => {
                         ice: 'linear-gradient(90deg, #00bfff, #87ceeb, #e0ffff)',
                         gold: 'linear-gradient(90deg, #ffd700, #daa520, #b8860b)',
                         glitch: 'linear-gradient(90deg, #ff00ff, #00ffff, #ff00ff)',
+                        sakura: 'linear-gradient(90deg, #f9a8d4, #fbcfe8, #fff1f2)',
+                        neon: 'linear-gradient(90deg, #00ffff, #39ff14, #00ffff)',
+                        void: 'linear-gradient(90deg, #7c3aed, #3b0764, #000000)',
                     };
                     return gradients[style] ?? 'linear-gradient(90deg, var(--accent-blue), var(--accent-purple))';
                 })(),
-                decorationEmoji: (item.assetConfig as any)?.decorationEmoji,
-                soundEmoji: (item.assetConfig as any)?.soundEmoji,
-                soundCategory: (item.assetConfig as any)?.soundCategory,
-                soundDuration: (item.assetConfig as any)?.soundDuration,
+                decorationEmoji: (() => {
+                    const shape = (item.assetConfig as any)?.shape as string | undefined;
+                    if (shape) {
+                        const emojiMap: Record<string, string> = {
+                            crown: '\u{1F451}', star: '\u2B50', flame: '\u{1F525}', bolt: '\u26A1',
+                            orb: '\u{1F52E}', shield: '\u{1F6E1}\uFE0F', gem: '\u{1F48E}',
+                            lotus: '\u{1F338}', moon: '\u{1F319}', snowflake: '\u2744\uFE0F',
+                            comet: '\u2604\uFE0F', sparkles: '\u2728', sun: '\u2600\uFE0F', gear: '\u2699\uFE0F',
+                        };
+                        return emojiMap[shape] ?? '\u2728';
+                    }
+                    return (item.assetConfig as any)?.decorationEmoji;
+                })(),
                 color: item.color ?? (item.assetConfig as any)?.glowColor ?? 'var(--accent-primary)',
             }));
             if (mapped.length > 0) setShopItems(mapped);
@@ -126,8 +132,7 @@ const Shop = () => {
     const filterType = view === 'frames' ? 'frame'
         : view === 'decorations' ? 'decoration'
         : view === 'effects' ? 'effect'
-        : view === 'nameplates' ? 'nameplate'
-        : 'soundboard';
+        : 'nameplate';
 
     const filteredItems = shopItems.filter(i => i.type === filterType);
 
@@ -200,19 +205,11 @@ const Shop = () => {
         });
     };
 
-    const toggleSound = (id: string) => {
-        setPlayingSound(prev => prev === id ? null : id);
-        if (playingSound !== id) {
-            setTimeout(() => setPlayingSound(null), 3000);
-        }
-    };
-
     const tabs: { key: ViewType; label: string; icon: React.ReactNode }[] = [
         { key: 'frames', label: 'Avatar Frames', icon: <Layers size={14} /> },
         { key: 'decorations', label: 'Decorations', icon: <Star size={14} /> },
         { key: 'effects', label: 'Profile Effects', icon: <Sparkles size={14} /> },
         { key: 'nameplates', label: 'Nameplates', icon: <Type size={14} /> },
-        { key: 'soundboard', label: 'Soundboard', icon: <Volume2 size={14} /> },
     ];
 
     return (
@@ -250,7 +247,7 @@ const Shop = () => {
                             <Sparkles size={14} /> New Arrival
                         </div>
                         <h2 style={{ fontSize: '32px', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: '8px' }}>Astral Projection Bundle</h2>
-                        <p style={{ color: 'var(--text-secondary)', maxWidth: '400px', marginBottom: '24px' }}>Includes an animated avatar frame, profile theme, exclusive chat effects, and a Cosmic Ping soundboard clip.</p>
+                        <p style={{ color: 'var(--text-secondary)', maxWidth: '400px', marginBottom: '24px' }}>Includes Prismatic Arc frame, Aurora Borealis effect, Cherry Blossom decoration, and Liquid Chrome profile effect.</p>
                         <MagneticButton className="auth-button" onClick={() => {
                             setShowBundleItems(prev => !prev);
                             if (!showBundleItems) {
@@ -273,7 +270,7 @@ const Shop = () => {
                             {bundleIncludedItems.map(item => (
                                 <div key={item.id} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     <div style={{ width: '48px', height: '48px', borderRadius: '10px', background: item.image, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-                                        {item.soundEmoji || item.decorationEmoji || ''}
+                                        {item.decorationEmoji || ''}
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '2px' }}>{item.name}</div>
@@ -330,12 +327,6 @@ const Shop = () => {
                         🔤 Nameplates change how your display name appears across the app — gradients, fonts, and glowing effects.
                     </p>
                 )}
-                {view === 'soundboard' && (
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px', padding: '12px 16px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
-                        🔊 Soundboard clips are downloaded to your soundboard and can be triggered in voice channels. Preview them below.
-                    </p>
-                )}
-
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px', marginBottom: '48px' }}>
                     {isLoading ? (
                         Array.from({ length: 4 }).map((_, i) => (
@@ -346,72 +337,6 @@ const Shop = () => {
                             <p style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>No Items Available</p>
                             <p style={{ fontSize: '13px' }}>No cosmetics are currently available for this category.</p>
                         </div>
-                    ) : view === 'soundboard' ? (
-                        filteredItems.map(item => (
-                            <TiltCard key={item.id} maxTilt={8} scale={1.02}>
-                                <div className="hover-lift" style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '20px', border: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '12px', position: 'relative', overflow: 'hidden', boxShadow: 'var(--shadow-panel)' }}>
-                                    {/* Rarity bar */}
-                                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: rarityColor[item.rarity] }} />
-                                    <ItemBadge item={item} />
-
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                                        {/* Sound emoji / icon */}
-                                        <div style={{ width: '56px', height: '56px', borderRadius: '12px', background: item.image, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
-                                            {item.soundEmoji}
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <h3 style={{ fontWeight: 600, fontSize: '16px', marginBottom: '2px' }}>{item.name}</h3>
-                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                <span style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--bg-tertiary)', padding: '2px 8px', borderRadius: '4px' }}>{item.soundCategory}</span>
-                                                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{item.soundDuration}</span>
-                                            </div>
-                                        </div>
-                                        {/* Play button */}
-                                        <button
-                                            onClick={() => toggleSound(item.id)}
-                                            style={{ width: '36px', height: '36px', borderRadius: '50%', background: playingSound === item.id ? item.color : 'var(--bg-tertiary)', border: `2px solid ${item.color}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}>
-                                            {playingSound === item.id ? <Pause size={16} color="white" /> : <Play size={16} color={item.color} />}
-                                        </button>
-                                    </div>
-
-                                    {/* Waveform visual (static decoration) */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px', height: '32px', padding: '0 4px' }}>
-                                        {Array.from({ length: 28 }).map((_, i) => {
-                                            const h = [4, 8, 12, 20, 28, 16, 10, 24, 18, 6, 22, 14, 8, 30, 12, 20, 6, 16, 28, 10, 18, 24, 8, 14, 20, 6, 12, 18][i] ?? 10;
-                                            const active = playingSound === item.id && i < 16;
-                                            return (
-                                                <div key={i} style={{ flex: 1, height: `${h}px`, borderRadius: '2px', background: active ? item.color : 'var(--stroke)', transition: 'background 0.3s' }} />
-                                            );
-                                        })}
-                                    </div>
-
-                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{item.description}</p>
-
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                                        <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <Gem size={14} /> {item.price}
-                                        </span>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            <RippleWrapper>
-                                                <button
-                                                    onClick={() => openModal(item)}
-                                                    style={{ background: 'transparent', border: `1px solid ${item.color}`, color: item.color, padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>
-                                                    Details
-                                                </button>
-                                            </RippleWrapper>
-                                            <RippleWrapper>
-                                                <button
-                                                    onClick={() => handleQuickBuy(item)}
-                                                    disabled={purchasingId === item.id}
-                                                    style={{ background: 'var(--text-primary)', color: 'var(--bg-app)', border: 'none', padding: '6px 16px', borderRadius: 'var(--radius-sm)', fontWeight: 600, cursor: purchasingId === item.id ? 'wait' : 'pointer' }}>
-                                                    {purchasingId === item.id ? '...' : 'Download'}
-                                                </button>
-                                            </RippleWrapper>
-                                        </div>
-                                    </div>
-                                </div>
-                            </TiltCard>
-                        ))
                     ) : view === 'nameplates' ? (
                         filteredItems.map(item => (
                             <TiltCard key={item.id} maxTilt={10} scale={1.03}>
@@ -511,6 +436,8 @@ const Shop = () => {
                                     case 'glass': return { border: '3px solid rgba(255,255,255,0.3)', boxShadow: '0 0 12px rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)' };
                                     case 'rainbow': return { border: '3px solid transparent', backgroundImage: `linear-gradient(var(--bg-elevated), var(--bg-elevated)), linear-gradient(90deg, #ff0000, #ff7700, #ffff00, #00ff00, #0000ff, #8b00ff)`, backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box', animation: 'shop-rainbow-spin 3s linear infinite' };
                                     case 'pulse': return { border: `3px solid ${glowColor}`, animation: 'shop-pulse-glow 2s ease-in-out infinite', boxShadow: `0 0 12px ${glowColor}80` };
+                                    case 'fire': return { border: '3px solid #ff6b35', boxShadow: '0 0 12px #ff6b3580, 0 0 24px #ff450040', animation: 'shop-pulse-glow 1.5s ease-in-out infinite' };
+                                    case 'glitch': return { border: '3px solid #00ffff', boxShadow: '0 0 12px #00ffff80, -2px 0 8px #ff00ff40, 2px 0 8px #00ffff40', animation: 'shop-pulse-glow 2s steps(4) infinite' };
                                     default: return { border: `3px solid ${glowColor}`, boxShadow: `0 0 12px ${glowColor}60` };
                                 }
                             })() : {};
@@ -536,7 +463,7 @@ const Shop = () => {
                                                     {[...Array(8)].map((_, i) => (
                                                         <div key={i} style={{ position: 'absolute', width: '4px', height: '4px', borderRadius: '50%', background: glowColor, left: `${12 + (i * 11) % 80}%`, top: `${8 + (i * 17) % 80}%`, animation: `shop-twinkle ${1.5 + (i % 3) * 0.5}s ease-in-out ${i * 0.2}s infinite`, boxShadow: `0 0 4px ${glowColor}` }} />
                                                     ))}
-                                                    <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50)', width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))' }} />
+                                                    <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))' }} />
                                                 </div>
                                             )}
                                             {effectType === 'particles' && (
@@ -557,6 +484,9 @@ const Shop = () => {
                                             )}
                                             {effectType === 'aurora' && (
                                                 <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, transparent 0%, ${glowColor}40 30%, #00ffaa40 60%, transparent 100%)`, animation: 'shop-aurora-shift 4s ease-in-out infinite', opacity: 0.7 }} />
+                                            )}
+                                            {effectType === 'liquid-metal' && (
+                                                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #c0c0c0, #808080, #e0e0e0, #606060, #d0d0d0, #404040)', backgroundSize: '300% 300%', animation: 'shop-gradient-pulse 4s ease-in-out infinite', opacity: 0.9 }} />
                                             )}
                                             {!effectType && (
                                                 <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${glowColor}40, transparent)`, opacity: 0.6 }} />
@@ -614,6 +544,8 @@ const Shop = () => {
                                             case 'glass': return { border: '4px solid rgba(255,255,255,0.3)', boxShadow: '0 0 16px rgba(255,255,255,0.15)' };
                                             case 'rainbow': return { border: '4px solid transparent', backgroundImage: `linear-gradient(var(--bg-tertiary), var(--bg-tertiary)), linear-gradient(90deg, #ff0000, #ff7700, #ffff00, #00ff00, #0000ff, #8b00ff)`, backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box' };
                                             case 'pulse': return { border: `4px solid ${gc}`, animation: 'shop-pulse-glow 2s ease-in-out infinite', boxShadow: `0 0 16px ${gc}80` };
+                                            case 'fire': return { border: '4px solid #ff6b35', boxShadow: '0 0 16px #ff6b3580, 0 0 32px #ff450040', animation: 'shop-pulse-glow 1.5s ease-in-out infinite' };
+                                            case 'glitch': return { border: '4px solid #00ffff', boxShadow: '0 0 16px #00ffff80, -3px 0 10px #ff00ff40, 3px 0 10px #00ffff40', animation: 'shop-pulse-glow 2s steps(4) infinite' };
                                             default: return { border: `4px solid ${gc}`, boxShadow: `0 0 16px ${gc}60` };
                                         }
                                     })();
@@ -633,10 +565,6 @@ const Shop = () => {
                                             YourUsername
                                         </div>
                                     </div>
-                                ) : selectedItem.type === 'soundboard' ? (
-                                    <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: selectedItem.image, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>
-                                        {selectedItem.soundEmoji}
-                                    </div>
                                 ) : (() => {
                                     const cfg = selectedItem.assetConfig ?? {};
                                     const et = (cfg as any)?.effectType as string | undefined;
@@ -648,6 +576,7 @@ const Shop = () => {
                                         {et === 'particles' && <div style={{ position: 'absolute', inset: 0 }}>{[...Array(5)].map((_, i) => <div key={i} style={{ position: 'absolute', width: '5px', height: '5px', borderRadius: '50%', background: gc, left: `${12 + (i * 16) % 70}%`, bottom: '-5px', animation: `shop-float-up ${2 + (i % 3)}s ease-in-out ${i * 0.3}s infinite`, opacity: 0.7 }} />)}</div>}
                                         {et === 'matrix-rain' && <div style={{ position: 'absolute', inset: 0, fontFamily: 'monospace', fontSize: '9px', color: '#00ff41', overflow: 'hidden', opacity: 0.5 }}>{[...Array(4)].map((_, i) => <div key={i} style={{ position: 'absolute', left: `${10 + i * 22}%`, top: '-15px', animation: `shop-matrix-fall ${1.5 + (i % 3) * 0.5}s linear ${i * 0.3}s infinite` }}>{String.fromCharCode(0x30A0 + i * 7)}</div>)}</div>}
                                         {et === 'aurora' && <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, transparent, ${gc}40, #00ffaa40, transparent)`, animation: 'shop-aurora-shift 4s ease-in-out infinite', opacity: 0.6 }} />}
+                                        {et === 'liquid-metal' && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #c0c0c0, #808080, #e0e0e0, #606060, #d0d0d0, #404040)', backgroundSize: '300% 300%', animation: 'shop-gradient-pulse 4s ease-in-out infinite', opacity: 0.9 }} />}
                                         {!et && <div style={{ height: '50px', background: selectedItem.image, opacity: 0.8 }} />}
                                         <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-elevated)', border: '2px solid var(--bg-primary)', position: 'absolute', top: '30px', left: '12px' }}></div>
                                     </div>
@@ -691,7 +620,7 @@ const Shop = () => {
                             </div>
                         )}
 
-                        {purchaseState === 'success' && selectedItem.type !== 'soundboard' ? (
+                        {purchaseState === 'success' ? (
                             <div style={{ display: 'flex', gap: '12px' }}>
                                 <button onClick={closeModal} className="auth-button" style={{ flex: 1, background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', margin: 0 }}>
                                     Close
@@ -716,7 +645,7 @@ const Shop = () => {
                                         className="auth-button"
                                         style={{ flex: 1, margin: 0, opacity: (purchaseState === 'insufficient' || purchaseState === 'processing') ? 0.5 : 1, cursor: (purchaseState === 'insufficient' || purchaseState === 'processing') ? 'not-allowed' : 'pointer' }}
                                         disabled={purchaseState === 'insufficient' || purchaseState === 'processing'}>
-                                        {purchaseState === 'insufficient' ? 'Not Enough Gratonite' : purchaseState === 'processing' ? 'Processing...' : selectedItem.type === 'soundboard' ? 'Download Sound' : 'Confirm Purchase'}
+                                        {purchaseState === 'insufficient' ? 'Not Enough Gratonite' : purchaseState === 'processing' ? 'Processing...' : 'Confirm Purchase'}
                                     </button>
                                 )}
                             </div>

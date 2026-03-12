@@ -2974,6 +2974,31 @@ html .main-view.has-custom-bg .input-area {
     animation: breathingGlow 2s ease-in-out infinite;
 }
 
+/* Fire frame — animated ember glow */
+@keyframes fireGlow {
+    0%   { box-shadow: 0 0 8px 3px #ff6b35, 0 0 16px 6px rgba(255,107,53,0.4); }
+    33%  { box-shadow: 0 0 10px 4px #ff4500, 0 0 20px 8px rgba(255,69,0,0.5); }
+    66%  { box-shadow: 0 0 8px 3px #ff8c00, 0 0 18px 6px rgba(255,140,0,0.4); }
+    100% { box-shadow: 0 0 8px 3px #ff6b35, 0 0 16px 6px rgba(255,107,53,0.4); }
+}
+.avatar-frame-fire {
+    animation: fireGlow 1.5s ease-in-out infinite;
+    border: 2px solid #ff6b35;
+}
+
+/* Glitch frame — rapid displacement with cyan/magenta flicker */
+@keyframes glitchFrame {
+    0%, 100% { box-shadow: 0 0 8px 2px #00ffff, 0 0 0 2px #00ffff; transform: translate(0); }
+    10% { box-shadow: -2px 0 8px 2px #ff00ff, 2px 0 0 2px #00ffff; transform: translate(1px, -1px); }
+    20% { box-shadow: 2px 0 8px 2px #00ffff, -2px 0 0 2px #ff00ff; transform: translate(-1px, 1px); }
+    30% { box-shadow: 0 0 12px 4px #ff00ff, 0 0 0 2px #00ffff; transform: translate(0); }
+    40% { box-shadow: 0 0 8px 2px #00ffff, 0 0 0 2px #00ffff; transform: translate(0); }
+}
+.avatar-frame-glitch {
+    animation: glitchFrame 2s steps(1) infinite;
+    border: 2px solid #00ffff;
+}
+
 @keyframes fadeInModal {
     from {
         opacity: 0;
@@ -4000,6 +4025,42 @@ a {
     25% { transform: translate(3px, 1px); }
     50% { transform: translate(-3px, 0); }
     75% { transform: translate(0); }
+}
+
+/* Sakura nameplate — soft pink-to-white */
+.nameplate-sakura {
+    background: linear-gradient(90deg, #f9a8d4, #fbcfe8, #fff1f2, #f9a8d4);
+    background-size: 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientPulse 4s linear infinite;
+}
+
+/* Neon nameplate — bright cyan-to-lime with glow */
+.nameplate-neon {
+    background: linear-gradient(90deg, #00ffff, #39ff14, #00ffff);
+    background-size: 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientPulse 2.5s linear infinite;
+    text-shadow: 0 0 8px rgba(0,255,255,0.6), 0 0 16px rgba(57,255,20,0.3);
+    filter: drop-shadow(0 0 6px rgba(0,255,255,0.4));
+}
+
+/* Void nameplate — deep purple-to-black reverse pulse */
+@keyframes voidPulse {
+    0%, 100% { background-position: 0% 50%; filter: brightness(1); }
+    50% { background-position: 100% 50%; filter: brightness(0.7); }
+}
+.nameplate-void {
+    background: linear-gradient(90deg, #7c3aed, #3b0764, #000000, #3b0764, #7c3aed);
+    background-size: 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: voidPulse 3s ease-in-out infinite;
 }
 
 /* Mobile Bottom Navigation */
