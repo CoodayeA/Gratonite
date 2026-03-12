@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense, type Dispatch, type SetStateAction } from 'react';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, Navigate, Outlet, Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar } from 'lucide-react';
+import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar, Compass, User } from 'lucide-react';
 import './components/chat.css';
 import CommandPalette from './components/ui/CommandPalette';
 import { playSound, setSoundVolume } from './utils/SoundManager';
@@ -43,6 +43,7 @@ const AdminFeedback = lazy(() => import('./pages/admin/AdminFeedback'));
 const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
 const AdminPortals = lazy(() => import('./pages/admin/AdminPortals'));
 const HelpCenter = lazy(() => import('./pages/app/HelpCenter'));
+const MeProfile = lazy(() => import('./pages/app/MeProfile'));
 
 import InviteAccept from './pages/InviteAccept';
 import { NotFound } from './pages/ErrorStates';
@@ -50,6 +51,7 @@ import { getDeterministicGradient } from './utils/colors';
 import { api, API_BASE, getAccessToken, setAccessToken, ApiRequestError } from './lib/api';
 import { connectSocket, disconnectSocket, getSocket, onPresenceUpdate, onVoiceStateUpdate, onSocketReconnect, onCallInvite, onCallCancel, setPresence as setSocketPresence, onGuildJoined, onGuildLeft, onGuildUpdate, onGuildDelete, onChannelUpdate, onChannelDelete, onGuildMemberAdd, onGuildMemberRemove, onDmChannelCreate, joinGuildRoom, onTypingStart, onNotificationCreate, type CallInvitePayload } from './lib/socket';
 import { useMobileSwipe } from './hooks/useMobileSwipe';
+import { useIsMobile } from './hooks/useIsMobile';
 
 // Lazy-loaded modal components for code splitting
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal'));
@@ -2168,6 +2170,7 @@ export const AppLayout = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { addToast } = useToast();
+    const isMobile = useIsMobile();
     const [bgMedia, setBgMediaRaw] = useState<{ url: string, type: MediaType } | null>(null);
 
     // Play join/leave sounds globally for all voice channels
@@ -2823,17 +2826,45 @@ export const AppLayout = () => {
         setIsSidebarOpen(false);
     }, [location.pathname]);
 
+    // Browser back button: push history state when modal opens, pop to close
+    useEffect(() => {
+        if (activeModal) {
+            window.history.pushState({ modal: activeModal }, '');
+        }
+    }, [activeModal]);
+
+    useEffect(() => {
+        const onPopState = () => {
+            if (activeModal) {
+                setActiveModal(null);
+            }
+            setIsGuildRailOpen(false);
+            setIsSidebarOpen(false);
+        };
+        window.addEventListener('popstate', onPopState);
+        return () => window.removeEventListener('popstate', onPopState);
+    }, [activeModal]);
+
     // Only chat/channel routes show the members sidebar
     const isChatRoute = location.pathname.includes('/chat') || location.pathname.includes('/channel/');
     const isVoiceRoute = location.pathname.includes('/voice');
+    const isDmRoute = location.pathname.match(/^\/dm\/[^/]+$/);
+    const hideBottomNav = isChatRoute || isVoiceRoute || !!isDmRoute;
 
     // Mobile swipe gestures
     useMobileSwipe(mainContentRef, {
         onSwipeRight: () => {
+            if (isMobile) {
+                const guildMatch = location.pathname.match(/\/guild\/([^/]+)\/(?:channel|voice)\//);
+                if (guildMatch) navigate(`/guild/${guildMatch[1]}`);
+                else if (isDmRoute) navigate('/friends');
+                return;
+            }
             if (isSidebarOpen) { setIsSidebarOpen(false); return; }
             setIsGuildRailOpen(true);
         },
         onSwipeLeft: () => {
+            if (isMobile) return;
             if (isGuildRailOpen) { setIsGuildRailOpen(false); return; }
             if (isChatRoute) setIsSidebarOpen(true);
         },
@@ -2906,46 +2937,51 @@ export const AppLayout = () => {
                     userProfile={userProfile}
                     guildSession={guildSession}
                 />
-                <main id="main-content" ref={mainContentRef} className={`main-content-wrapper ${bgMedia !== null ? 'has-custom-bg' : ''}`} tabIndex={-1} style={(!isChatRoute && !isVoiceRoute) ? { flex: 1, display: 'flex', flexDirection: 'column' } : {}}>
+                <main id="main-content" ref={mainContentRef} className={`main-content-wrapper ${bgMedia !== null ? 'has-custom-bg' : ''} ${!hideBottomNav ? 'has-bottom-nav' : ''}`} tabIndex={-1} style={(!isChatRoute && !isVoiceRoute) ? { flex: 1, display: 'flex', flexDirection: 'column' } : {}}>
                     <div className="route-transition-wrapper route-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
                         <Outlet context={{
                             bgMedia,
                             hasCustomBg: bgMedia !== null,
                             setBgMedia,
                             setActiveModal,
-                            toggleGuildRail: () => setIsGuildRailOpen(!isGuildRailOpen),
-                            toggleSidebar: () => setIsSidebarOpen(!isSidebarOpen),
+                            toggleGuildRail: () => {
+                                if (isMobile) { navigate('/'); return; }
+                                setIsGuildRailOpen(!isGuildRailOpen);
+                            },
+                            toggleSidebar: () => {
+                                if (isMobile) return;
+                                setIsSidebarOpen(!isSidebarOpen);
+                            },
                             gratoniteBalance,
                             setGratoniteBalance,
                             userProfile,
                             setUserProfile,
                             userTheme,
                             setUserTheme,
-                            guildSession
+                            guildSession,
+                            guilds
                         }} />
                     </div>
                     {isChatRoute && isSidebarOpen && <MembersSidebar onOpenProfile={() => setActiveModal('userProfile')} />}
                 </main>
 
-                {/* Mobile Bottom Navigation (< 768px) — 4 tabs */}
+                {/* Mobile Bottom Navigation (< 768px) — 3 tabs, hidden in chat */}
+                {!hideBottomNav && (
                 <nav className="mobile-bottom-nav">
                     <Link to="/" className={`mobile-nav-item ${location.pathname === '/' ? 'active' : ''}`}>
-                        <Home size={20} />
-                        <span>Home</span>
+                        <Compass size={20} />
+                        <span>Servers</span>
                     </Link>
                     <Link to="/friends" className={`mobile-nav-item ${location.pathname.startsWith('/dm') || location.pathname === '/friends' ? 'active' : ''}`}>
                         <MessageSquare size={20} />
-                        <span>DMs</span>
+                        <span>Messages</span>
                     </Link>
-                    <div className="mobile-nav-item" onClick={() => setActiveModal('globalSearch')}>
-                        <Search size={20} />
-                        <span>Search</span>
-                    </div>
-                    <div className="mobile-nav-item" onClick={() => setActiveModal('settings')}>
-                        <Settings size={20} />
-                        <span>Profile</span>
-                    </div>
+                    <Link to="/me" className={`mobile-nav-item ${location.pathname === '/me' ? 'active' : ''}`}>
+                        <User size={20} />
+                        <span>You</span>
+                    </Link>
                 </nav>
+                )}
             </div>
 
             {/* Modals */}
@@ -3072,6 +3108,7 @@ const appRouter = createBrowserRouter(
                 <Route path="bot-builder" element={<Suspense fallback={<LazyFallback />}><BotBuilder /></Suspense>} />
                 <Route path="bot-store" element={<Suspense fallback={<LazyFallback />}><BotStore /></Suspense>} />
                 <Route path="help-center" element={<Suspense fallback={<LazyFallback />}><HelpCenter /></Suspense>} />
+                <Route path="me" element={<Suspense fallback={<LazyFallback />}><MeProfile /></Suspense>} />
                 <Route path="message-requests" element={<Suspense fallback={<LazyFallback />}><MessageRequests /></Suspense>} />
                 <Route path="admin/team" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminTeam /></Suspense></RequireAdmin>} />
                 <Route path="admin/audit" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminAuditLog /></Suspense></RequireAdmin>} />
