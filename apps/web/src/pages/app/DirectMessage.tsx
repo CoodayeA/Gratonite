@@ -431,6 +431,9 @@ const DirectMessage = () => {
         if (!id) return false;
         return localStorage.getItem(`gratonite:e2e-enabled:${id}`) === 'true';
     });
+    const [showE2eGuide, setShowE2eGuide] = useState(() => {
+        return !localStorage.getItem('gratonite:e2e-guide-dismissed');
+    });
     // Whether all GROUP_DM members have registered public keys (controls lock icon)
     const [groupE2eAllMembersHaveKeys, setGroupE2eAllMembersHaveKeys] = useState(false);
     // Current group key version (for tagging outgoing messages)
@@ -1861,6 +1864,33 @@ const DirectMessage = () => {
                         <Lock size={14} />
                         <span>Your partner&apos;s encryption key has changed. Verify their identity to ensure security.</span>
                         <X size={14} style={{ marginLeft: 'auto' }} />
+                    </div>
+                )}
+
+                {/* E2E encryption guide — shown once */}
+                {showE2eGuide && e2eSupported && e2eKey && !isGroupDm && (
+                    <div style={{ padding: '12px 16px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--stroke)', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                            <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                                    <Shield size={16} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                                    <strong style={{ color: 'var(--text-primary)', fontSize: '13px' }}>End-to-End Encryption</strong>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <span><Lock size={11} style={{ color: 'var(--text-muted)', verticalAlign: 'middle', marginRight: '4px' }} />
+                                        <strong style={{ color: 'var(--text-primary)' }}>Gray lock</strong> next to username = encryption off. Click to enable.</span>
+                                    <span><Lock size={11} style={{ color: 'var(--success, #22c55e)', verticalAlign: 'middle', marginRight: '4px' }} />
+                                        <strong style={{ color: 'var(--text-primary)' }}>Green lock</strong> = encryption on. Click to view your <strong style={{ color: 'var(--text-primary)' }}>safety number</strong> — compare it with the other person to verify your connection is secure.</span>
+                                    <span style={{ paddingLeft: '15px' }}>Right-click the green lock to disable encryption.</span>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => { setShowE2eGuide(false); localStorage.setItem('gratonite:e2e-guide-dismissed', 'true'); }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', flexShrink: 0 }}
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
                     </div>
                 )}
 
