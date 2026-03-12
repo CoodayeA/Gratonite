@@ -852,14 +852,16 @@ const DirectMessage = () => {
 
         unsubs.push(onReactionAdd((payload: any) => {
             if (payload.channelId !== dmChannelId) return;
+            // Skip own reactions — already handled by optimistic update in handleReaction
+            if (payload.userId === currentUserId) return;
             setMessages(prev => prev.map(m => {
                 if (m.apiId !== payload.messageId) return m;
                 const reactions = [...(m.reactions || [])];
                 const idx = reactions.findIndex(r => r.emoji === payload.emoji);
                 if (idx >= 0) {
-                    reactions[idx] = { ...reactions[idx], count: reactions[idx].count + 1, me: payload.userId === currentUserId ? true : reactions[idx].me };
+                    reactions[idx] = { ...reactions[idx], count: reactions[idx].count + 1 };
                 } else {
-                    reactions.push({ emoji: payload.emoji, count: 1, me: payload.userId === currentUserId });
+                    reactions.push({ emoji: payload.emoji, count: 1, me: false });
                 }
                 return { ...m, reactions };
             }));
@@ -867,12 +869,14 @@ const DirectMessage = () => {
 
         unsubs.push(onReactionRemove((payload: any) => {
             if (payload.channelId !== dmChannelId) return;
+            // Skip own reactions — already handled by optimistic update in handleReaction
+            if (payload.userId === currentUserId) return;
             setMessages(prev => prev.map(m => {
                 if (m.apiId !== payload.messageId) return m;
                 const reactions = [...(m.reactions || [])];
                 const idx = reactions.findIndex(r => r.emoji === payload.emoji);
                 if (idx >= 0) {
-                    reactions[idx] = { ...reactions[idx], count: reactions[idx].count - 1, me: payload.userId === currentUserId ? false : reactions[idx].me };
+                    reactions[idx] = { ...reactions[idx], count: reactions[idx].count - 1 };
                     if (reactions[idx].count <= 0) reactions.splice(idx, 1);
                 }
                 return { ...m, reactions };
@@ -1728,9 +1732,7 @@ const DirectMessage = () => {
                                         {isGroupDm && groupOwnerId === userProfile?.id && (
                                             <Pencil size={14} style={{ cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => { setEditGroupNameValue(groupName); setIsEditingGroupName(true); }} />
                                         )}
-                                        {e2eKey && !isGroupDm && (
-                                            <span title="View safety number" onClick={handleShowSafetyNumber} style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}><Lock size={14} style={{ color: 'var(--success, #22c55e)' }} aria-label="End-to-end encrypted" /></span>
-                                        )}
+                                        {/* E2E lock moved to header action buttons */}
                                         {e2eKey && isGroupDm && groupE2eAllMembersHaveKeys && (
                                             <Lock size={14} style={{ color: 'var(--success, #22c55e)' }} aria-label="End-to-end encrypted (group)" />
                                         )}
@@ -1810,9 +1812,19 @@ const DirectMessage = () => {
                                     const next = !e2eEnabled;
                                     setE2eEnabled(next);
                                     localStorage.setItem(`gratonite:e2e-enabled:${id}`, String(next));
-                                    addToast({ title: next ? 'Encryption enabled for new messages' : 'Encryption disabled for new messages', variant: 'info' });
+                                    setMessages(prev => [...prev, {
+                                        id: Date.now(),
+                                        author: 'System',
+                                        system: true,
+                                        avatar: '',
+                                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                        content: next
+                                            ? '🔒 End-to-end encryption enabled for new messages in this conversation.'
+                                            : '🔓 End-to-end encryption disabled. New messages will be sent unencrypted.',
+                                    }]);
                                 }}
-                                title={e2eEnabled ? 'Encryption enabled — click to disable' : 'Encryption disabled — click to enable'}
+                                onContextMenu={(e) => { if (e2eEnabled) { e.preventDefault(); handleShowSafetyNumber(); } }}
+                                title={e2eEnabled ? 'Encryption enabled — click to disable, right-click for safety number' : 'Encryption disabled — click to enable'}
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', color: e2eEnabled ? 'var(--success, #22c55e)' : 'var(--text-muted)' }}
                             >
                                 <Lock size={18} />
@@ -2272,7 +2284,7 @@ const DirectMessage = () => {
                                     style={{ margin: 0, marginTop: isGrouped ? '1px' : '12px', padding: isGrouped ? '1px 16px' : '4px 16px', display: 'flex', gap: '12px', position: 'relative' }}
                                     onMouseEnter={() => setHoveredMessageId(msg.id)}
                                     onMouseLeave={() => { setHoveredMessageId(null); }}
-                                    onDoubleClick={() => { if (msg.apiId && dmChannelId && !msg.system) { handleReaction(msg.apiId, '\u2764\uFE0F', false); } }}
+                                    onDoubleClick={() => { if (msg.apiId && dmChannelId && !msg.system) { const alreadyHearted = (msg.reactions || []).some(r => r.emoji === '❤️' && r.me); handleReaction(msg.apiId, '❤️', alreadyHearted); } }}
                                     onContextMenu={(e) => {
                                         e.preventDefault();
                                         const isOwnMessage = msg.authorId === userProfile?.id;
