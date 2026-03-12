@@ -28,7 +28,7 @@ const MeProfile = () => {
     };
 
     return (
-        <div className="main-content-wrapper" style={{ flex: 1, overflowY: 'auto' }}>
+        <div style={{ flex: 1, overflowY: 'auto' }}>
             <div style={{ maxWidth: '480px', margin: '0 auto', padding: '32px 16px', width: '100%' }}>
                 {/* Profile header */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
