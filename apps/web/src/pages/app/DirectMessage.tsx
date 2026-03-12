@@ -31,6 +31,7 @@ type OutletContextType = {
     setActiveModal?: (modal: 'settings' | 'userProfile' | 'createGuild' | 'screenShare' | null) => void;
     userProfile?: {
         id?: string;
+        avatarHash?: string | null;
         avatarFrame?: 'none' | 'neon' | 'gold' | 'glass';
         nameplateStyle?: 'none' | 'rainbow' | 'fire' | 'ice' | 'gold' | 'glitch';
     };
@@ -1598,7 +1599,9 @@ const DirectMessage = () => {
 
             setMessages(prev => [...prev, {
                 id: optimisticId,
+                authorId: currentUserId,
                 author: currentUserName || 'You',
+                authorAvatarHash: userProfile?.avatarHash ?? null,
                 system: false,
                 avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -1646,6 +1649,7 @@ const DirectMessage = () => {
             id: optimisticId,
             authorId: currentUserId,
             author: currentUserName || 'You',
+            authorAvatarHash: userProfile?.avatarHash ?? null,
             system: false,
             avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
