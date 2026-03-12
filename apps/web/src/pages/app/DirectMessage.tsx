@@ -1732,7 +1732,45 @@ const DirectMessage = () => {
                                         {isGroupDm && groupOwnerId === userProfile?.id && (
                                             <Pencil size={14} style={{ cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => { setEditGroupNameValue(groupName); setIsEditingGroupName(true); }} />
                                         )}
-                                        {/* E2E lock moved to header action buttons */}
+                                        {e2eSupported && e2eKey && !isGroupDm && (
+                                            <span
+                                                title={e2eEnabled ? 'Encrypted — click for safety number' : 'Not encrypted — click to enable'}
+                                                onClick={() => {
+                                                    if (e2eEnabled) {
+                                                        handleShowSafetyNumber();
+                                                    } else {
+                                                        setE2eEnabled(true);
+                                                        localStorage.setItem(`gratonite:e2e-enabled:${id}`, 'true');
+                                                        setMessages(prev => [...prev, {
+                                                            id: Date.now(),
+                                                            author: 'System',
+                                                            system: true,
+                                                            avatar: '',
+                                                            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                                            content: '🔒 End-to-end encryption enabled for new messages in this conversation.',
+                                                        }]);
+                                                    }
+                                                }}
+                                                onContextMenu={(e) => {
+                                                    if (e2eEnabled) {
+                                                        e.preventDefault();
+                                                        setE2eEnabled(false);
+                                                        localStorage.setItem(`gratonite:e2e-enabled:${id}`, 'false');
+                                                        setMessages(prev => [...prev, {
+                                                            id: Date.now(),
+                                                            author: 'System',
+                                                            system: true,
+                                                            avatar: '',
+                                                            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                                            content: '🔓 End-to-end encryption disabled. New messages will be sent unencrypted.',
+                                                        }]);
+                                                    }
+                                                }}
+                                                style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', marginLeft: '4px' }}
+                                            >
+                                                <Lock size={14} style={{ color: e2eEnabled ? 'var(--success, #22c55e)' : 'var(--text-muted)' }} aria-label={e2eEnabled ? 'End-to-end encrypted' : 'Encryption disabled'} />
+                                            </span>
+                                        )}
                                         {e2eKey && isGroupDm && groupE2eAllMembersHaveKeys && (
                                             <Lock size={14} style={{ color: 'var(--success, #22c55e)' }} aria-label="End-to-end encrypted (group)" />
                                         )}
@@ -1806,30 +1844,7 @@ const DirectMessage = () => {
                                 </div>
                             )}
                         </div>
-                        {e2eSupported && e2eKey && !isGroupDm && (
-                            <button
-                                onClick={() => {
-                                    const next = !e2eEnabled;
-                                    setE2eEnabled(next);
-                                    localStorage.setItem(`gratonite:e2e-enabled:${id}`, String(next));
-                                    setMessages(prev => [...prev, {
-                                        id: Date.now(),
-                                        author: 'System',
-                                        system: true,
-                                        avatar: '',
-                                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                                        content: next
-                                            ? '🔒 End-to-end encryption enabled for new messages in this conversation.'
-                                            : '🔓 End-to-end encryption disabled. New messages will be sent unencrypted.',
-                                    }]);
-                                }}
-                                onContextMenu={(e) => { if (e2eEnabled) { e.preventDefault(); handleShowSafetyNumber(); } }}
-                                title={e2eEnabled ? 'Encryption enabled — click to disable, right-click for safety number' : 'Encryption disabled — click to enable'}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', color: e2eEnabled ? 'var(--success, #22c55e)' : 'var(--text-muted)' }}
-                            >
-                                <Lock size={18} />
-                            </button>
-                        )}
+                        {/* E2E lock toggle is next to username, not here */}
                         <Info size={20} style={{ cursor: 'pointer', transition: 'color 0.2s', color: infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }} onClick={() => { setInfoPanelOpen(!infoPanelOpen); if (isGroupDm) setMemberPanelOpen(false); }} onMouseOver={e => e.currentTarget.style.color = infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
                     </div>
                 </header>
