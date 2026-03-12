@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
-import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star, Shield } from 'lucide-react';
+import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star, Shield, ArrowLeft } from 'lucide-react';
 import { getOrCreateKeyPair, exportPublicKey, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported, generateGroupKey, encryptGroupKey, decryptGroupKey, computeSafetyNumber, encryptFile, decryptFile } from '../../lib/e2e';
 import { onGroupKeyRotationNeeded, onUserKeyChanged } from '../../lib/socket';
 import type { GroupKeyRotationNeededPayload, UserKeyChangedPayload } from '../../lib/socket';
@@ -21,6 +21,7 @@ import { getDeterministicGradient } from '../../utils/colors';
 import { useLiveKit, type LiveKitParticipant } from '../../lib/useLiveKit';
 import Avatar from '../../components/ui/Avatar';
 import UserProfilePopover from '../../components/ui/UserProfilePopover';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 type MediaType = 'image' | 'video';
 
@@ -159,6 +160,7 @@ const DirectMessage = () => {
     const [inputValue, setInputValue] = useState('');
     const [dmAttachedFiles, setDmAttachedFiles] = useState<{file: File, name: string, size: string, previewUrl?: string}[]>([]);
     const [infoPanelOpen, setInfoPanelOpen] = useState(false);
+    const isMobile = useIsMobile();
     const { addToast } = useToast();
     const { openMenu } = useContextMenu();
 
@@ -1704,6 +1706,11 @@ const DirectMessage = () => {
                 {/* Header */}
                 <header className="top-bar">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {isMobile && (
+                            <button className="mobile-back-btn" onClick={() => navigate('/friends')}>
+                                <ArrowLeft size={20} />
+                            </button>
+                        )}
                         {isGroupDm ? (
                             <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                 <Users size={18} color="var(--bg-app)" />
@@ -2842,17 +2849,33 @@ const DirectMessage = () => {
 
             {/* Sliding Info Panel */}
             <aside style={{
-                width: infoPanelOpen ? '320px' : '0px',
-                background: 'var(--bg-elevated)',
-                borderLeft: infoPanelOpen ? '1px solid var(--stroke)' : 'none',
-                transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                flexDirection: 'column',
-                zIndex: 2
+                ...(isMobile && infoPanelOpen ? {
+                    position: 'fixed' as const, top: 0, right: 0, bottom: 0,
+                    width: '100%', height: '100%', zIndex: 500,
+                    background: 'var(--bg-primary)',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column' as const,
+                } : {
+                    width: infoPanelOpen ? '320px' : '0px',
+                    background: 'var(--bg-elevated)',
+                    borderLeft: infoPanelOpen ? '1px solid var(--stroke)' : 'none',
+                    transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap' as const,
+                    display: 'flex',
+                    flexDirection: 'column' as const,
+                    zIndex: 2,
+                })
             }}>
-                <div style={{ width: '320px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                {isMobile && infoPanelOpen && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', borderBottom: '1px solid var(--stroke)', flexShrink: 0 }}>
+                        <button onClick={() => setInfoPanelOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}>
+                            <X size={24} />
+                        </button>
+                    </div>
+                )}
+                <div style={{ width: isMobile ? '100%' : '320px', height: '100%', display: 'flex', flexDirection: 'column' }}>
                     {/* Banner */}
                     <div style={{
                         height: '120px',

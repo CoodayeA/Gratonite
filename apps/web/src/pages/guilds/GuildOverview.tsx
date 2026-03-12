@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Hash as HashIcon, Mic, Users, Zap, Calendar } from 'lucide-react';
+import { Hash as HashIcon, Mic, Users, Zap, Calendar, ArrowLeft } from 'lucide-react';
 import { useOutletContext, Link, useParams, useNavigate } from 'react-router-dom';
 import { api, API_BASE } from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
@@ -7,6 +7,7 @@ import { getDeterministicGradient } from '../../utils/colors';
 import { onVoiceStateUpdate, type VoiceStateUpdatePayload } from '../../lib/socket';
 import type { GuildSessionChannel, GuildSessionInfo, GuildSessionErrorCode } from '../../hooks/useGuildSession';
 import GuildWelcomeModal from '../../components/modals/GuildWelcomeModal';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface GuildData {
     id: string;
@@ -44,6 +45,7 @@ const GuildOverview = () => {
     const { guildId } = useParams<{ guildId: string }>();
     const navigate = useNavigate();
     const { user: currentUser } = useUser();
+    const isMobile = useIsMobile();
     const [legacyGuild, setLegacyGuild] = useState<GuildData | null>(null);
     const [legacyChannels, setLegacyChannels] = useState<ChannelData[]>([]);
     const [legacyLoading, setLegacyLoading] = useState(false);
@@ -208,7 +210,15 @@ const GuildOverview = () => {
                     <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '80px', background: 'linear-gradient(transparent, var(--bg-primary))' }} />
                 </div>
             )}
-            <div style={{ padding: '48px 48px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: '48px', alignItems: 'start', maxWidth: '1400px', margin: '0 auto' }}>
+            {isMobile && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px' }}>
+                    <button className="mobile-back-btn" onClick={() => navigate('/')}>
+                        <ArrowLeft size={20} />
+                    </button>
+                    <span style={{ fontWeight: 600, fontSize: '16px' }}>{guildName}</span>
+                </div>
+            )}
+            <div className="content-padding" style={{ padding: isMobile ? '24px 16px' : '48px 48px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) 340px', gap: isMobile ? '24px' : '48px', alignItems: 'start', maxWidth: '1400px', margin: '0 auto' }}>
 
                 {/* Left Column: Channels */}
                 <div>

@@ -3,7 +3,7 @@ import { useOutletContext, useParams, useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion } from 'framer-motion';
 import {
-    Send, Smile, Image as ImageIcon, Reply, X, Play, Hash, Menu,
+    Send, Smile, Image as ImageIcon, Reply, X, Play, Hash, Menu, ArrowLeft,
     Volume2, Trash2, Copy, Pin, Share2, Link2, FileText, Download,
     Pause, MessageSquare, MoreHorizontal, Square, Plus, Mic, BarChart2, Clock, Users,
     ThumbsUp, Star, Flag, Edit2, Search, ChevronUp, ChevronDown, Eye, ChevronLeft, ChevronRight
@@ -2755,7 +2755,7 @@ const ChannelChat = () => {
             <header className="top-bar">
                 {/* Mobile Toggles */}
                 <div className="mobile-header-toggles">
-                    <Menu size={20} className="mobile-toggle-btn" role="button" aria-label="Toggle sidebar" tabIndex={0} onClick={toggleGuildRail} />
+                    <ArrowLeft size={20} className="mobile-toggle-btn" role="button" aria-label="Back to channels" tabIndex={0} onClick={() => navigate(`/guild/${guildId}`)} />
                     <Hash size={24} style={{ color: 'var(--text-muted)', marginLeft: '8px' }} />
                 </div>
 
@@ -3617,7 +3617,7 @@ const ChannelChat = () => {
 
                     {/* Schedule Message Popover */}
                     {isScheduleOpen && (
-                        <div style={{ position: 'absolute', bottom: 'calc(100% + 12px)', right: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '16px', width: '300px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '16px', animation: 'scaleIn 0.2s ease-out' }}>
+                        <div style={{ position: 'absolute', bottom: 'calc(100% + 12px)', right: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '16px', width: 'min(300px, 90vw)', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '16px', animation: 'scaleIn 0.2s ease-out' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <Clock size={16} color="var(--accent-primary)" />
@@ -3678,7 +3678,7 @@ const ChannelChat = () => {
                             bottom: '100%',
                             right: '80px',
                             marginBottom: '8px',
-                            width: '360px',
+                            width: 'min(360px, 90vw)',
                             background: 'var(--bg-elevated)',
                             border: '1px solid var(--stroke)',
                             borderRadius: 'var(--radius-lg)',
@@ -3954,7 +3954,7 @@ const ChannelChat = () => {
             {memberListOpen && guildId && (
                 <div style={{
                     position: 'absolute', right: 0, top: '64px', bottom: 0, zIndex: 4,
-                    width: '240px',
+                    width: 'min(240px, 90vw)',
                 }}>
                     <MemberListPanel
                         guildId={guildId}

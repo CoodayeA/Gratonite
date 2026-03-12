@@ -1661,6 +1661,8 @@ body {
     font-family: var(--font-sans);
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 /* ── BACKGROUND MEDIA ── */
@@ -1757,6 +1759,9 @@ body {
     background: transparent;
     position: relative;
     z-index: 1;
+}
+@supports (height: 100dvh) {
+    .app-container { height: 100dvh; }
 }
 
 /* Glass Panels */
@@ -3514,6 +3519,7 @@ a {
 .hidden-on-mobile { display: flex !important; }
 .mobile-bottom-nav { display: none; }
 .mobile-backdrop { display: none; }
+.mobile-back-btn { display: none; }
 
 /* Tablet (768px – 1024px) */
 @media (max-width: 1024px) {
@@ -3523,31 +3529,35 @@ a {
 
 /* Phone (<768px) */
 @media (max-width: 768px) {
-    /* Channel sidebar: slide-in drawer from left */
+    /* Channel sidebar: slide-in drawer from left (GPU-composited) */
     .channel-sidebar {
         position: fixed !important;
-        left: -280px;
+        left: 0;
         top: 0;
         height: 100%;
         width: 280px !important;
         z-index: 500;
-        transition: left 0.3s ease;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform;
     }
-    .channel-sidebar.open { left: 0 !important; box-shadow: 8px 0 32px rgba(0,0,0,0.6); }
+    .channel-sidebar.open { transform: translateX(0) !important; box-shadow: 8px 0 32px rgba(0,0,0,0.6); }
 
-    /* Guild/portal rail: slide-in drawer from left, behind channel sidebar */
+    /* Guild/portal rail: slide-in drawer from left (GPU-composited) */
     .guild-rail {
         display: flex !important;
         position: fixed !important;
-        left: -76px;
+        left: 0;
         top: 0;
         height: 100%;
         width: 76px;
         z-index: 499;
-        transition: left 0.3s ease;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform;
         padding-bottom: 70px;
     }
-    .guild-rail.open { left: 0 !important; box-shadow: 8px 0 32px rgba(0,0,0,0.6); }
+    .guild-rail.open { transform: translateX(0) !important; box-shadow: 8px 0 32px rgba(0,0,0,0.6); }
 
     /* Main content takes full width — sidebars are overlays now */
     .main-content-wrapper { width: 100% !important; padding: 0 0 60px 0 !important; }
@@ -3567,18 +3577,62 @@ a {
         pointer-events: auto;
     }
 
-    /* Bottom nav */
+    /* Bottom nav — with safe area for notched devices */
     .mobile-bottom-nav {
         display: flex !important;
         position: fixed;
         bottom: 0; left: 0; right: 0;
-        height: 60px;
+        height: calc(60px + env(safe-area-inset-bottom, 0px));
         background: var(--bg-elevated);
         border-top: 1px solid var(--stroke);
         z-index: 500;
         justify-content: space-around;
         align-items: center;
         padding: 0 8px;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    /* Main content accounts for bottom nav + safe area (only when nav visible) */
+    .main-content-wrapper.has-bottom-nav {
+        padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+    .main-content-wrapper {
+        touch-action: pan-y;
+    }
+
+    /* Active state feedback on bottom nav items */
+    .mobile-nav-item:active {
+        transform: scale(0.9);
+        opacity: 0.7;
+    }
+
+    /* Mobile back button */
+    .mobile-back-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: transparent;
+        border: none;
+        color: var(--text-primary);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        padding: 0;
+    }
+
+    /* Settings close button: bigger touch target on mobile */
+    .settings-close-btn {
+        top: 8px !important;
+        right: 8px !important;
+        width: 44px !important;
+        height: 44px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: var(--bg-tertiary) !important;
+        border-radius: 50% !important;
     }
 
     .top-bar { padding: 0 12px !important; }
@@ -6165,5 +6219,43 @@ body.electron-mac .sidebar-header {
 }
 .streamer-mode .sensitive-content:hover {
   filter: none;
+}
+
+/* ========================
+   MOBILE WEB OVERHAUL
+   ======================== */
+
+/* Toast positioning above bottom nav */
+@media (max-width: 768px) {
+  .toast-container {
+    bottom: 80px !important;
+    right: 12px !important;
+    left: 12px !important;
+    min-width: unset !important;
+  }
+}
+
+/* Settings/Guild settings content panel padding */
+@media (max-width: 768px) {
+  .settings-content-panel {
+    padding: 16px 12px !important;
+  }
+}
+
+/* Responsive grid utility classes */
+@media (max-width: 768px) {
+  .grid-mobile-2 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .grid-mobile-1 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Page content padding reduction */
+@media (max-width: 768px) {
+  .content-padding {
+    padding: 16px 12px !important;
+  }
 }
 
