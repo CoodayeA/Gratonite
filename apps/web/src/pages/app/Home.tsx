@@ -173,7 +173,7 @@ const Home = () => {
                                     }}>
                                         {g.iconHash ? (
                                             <img
-                                                src={`${API_BASE}/guilds/${g.id}/icon/${g.iconHash}`}
+                                                src={`${API_BASE}/files/${g.iconHash}`}
                                                 alt={g.name}
                                                 style={{ width: '44px', height: '44px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 }}
                                             />

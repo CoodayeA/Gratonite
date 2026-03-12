@@ -2683,7 +2683,7 @@ html .main-view.has-custom-bg .input-area {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 100;
+    z-index: 1000;
     animation: modalOverlayIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -3560,7 +3560,7 @@ a {
     .guild-rail.open { transform: translateX(0) !important; box-shadow: 8px 0 32px rgba(0,0,0,0.6); }
 
     /* Main content takes full width — sidebars are overlays now */
-    .main-content-wrapper { width: 100% !important; padding: 0 0 60px 0 !important; }
+    .main-content-wrapper { width: 100% !important; padding: 0 !important; }
 
     /* Backdrop: dim layer behind open drawers */
     .mobile-backdrop {
