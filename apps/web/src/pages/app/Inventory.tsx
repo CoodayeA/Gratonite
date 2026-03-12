@@ -93,7 +93,7 @@ const Inventory = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [equippingId, setEquippingId] = useState<string | null>(null);
     const [walletData, setWalletData] = useState<{ balance: number; lifetimeEarned: number; lifetimeSpent: number } | null>(null);
-    const [ledger, setLedger] = useState<Array<{ id: string; direction: string; amount: number; source: string; description: string; createdAt: string }>>([]);
+    const [ledger, setLedger] = useState<Array<{ id: string; direction: string; amount: number; source: string; description: string | null; createdAt: string }>>([]);
     const [walletLoading, setWalletLoading] = useState(false);
     const mountedRef = useRef(true);
 

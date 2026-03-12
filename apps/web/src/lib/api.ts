@@ -569,6 +569,7 @@ export interface CurrencyWallet {
   lifetimeEarned: number;
   lifetimeSpent: number;
   updatedAt: string;
+  lastDailyClaimAt: string | null;
 }
 
 export interface CurrencyLedgerEntry {
@@ -1097,7 +1098,7 @@ export const api = {
       source: 'chat_message' | 'server_engagement' | 'daily_checkin';
       contextKey?: string;
     }) =>
-      apiFetch<{ wallet: CurrencyWallet; ledgerEntry: CurrencyLedgerEntry | null; amount: number }>('/economy/rewards/claim', {
+      apiFetch<{ wallet: CurrencyWallet; ledgerEntry: CurrencyLedgerEntry | null; amount: number; nextClaimAt?: string }>('/economy/rewards/claim', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
