@@ -1242,7 +1242,7 @@ const ChannelChat = () => {
             },
             ...(msg.apiId ? [{
                 id: 'bookmark', label: 'Bookmark Message', icon: Star, onClick: () => {
-                    fetch(`${API_BASE}/api/v1/users/@me/bookmarks`, {
+                    fetch(`${API_BASE}/users/@me/bookmarks`, {
                         method: 'POST',
                         headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ messageId: msg.apiId }),
@@ -1459,7 +1459,7 @@ const ChannelChat = () => {
     useEffect(() => {
         if (!channelId) return;
         // Load draft
-        fetch(`${API_BASE}/api/v1/channels/${channelId}/draft`, {
+        fetch(`${API_BASE}/channels/${channelId}/draft`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
         }).then(r => r.ok ? r.json() : null).then(draft => {
             if (draft?.content) {
@@ -1470,7 +1470,7 @@ const ChannelChat = () => {
             }
         }).catch(() => {});
         // Load scheduled messages
-        fetch(`${API_BASE}/api/v1/channels/${channelId}/messages/scheduled`, {
+        fetch(`${API_BASE}/channels/${channelId}/messages/scheduled`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
         }).then(r => r.ok ? r.json() : []).then(data => {
             setScheduledMessages(Array.isArray(data) ? data : []);
@@ -1587,7 +1587,7 @@ const ChannelChat = () => {
     // Feature 19: Fetch guild stickers
     useEffect(() => {
         if (!guildId) { setGuildStickers([]); return; }
-        fetch(`${API_BASE}/api/v1/guilds/${guildId}/stickers`, {
+        fetch(`${API_BASE}/guilds/${guildId}/stickers`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
         }).then(r => r.ok ? r.json() : []).then(data => {
             if (Array.isArray(data)) {
@@ -2120,6 +2120,10 @@ const ChannelChat = () => {
     const handleSendMessage = async () => {
         if (inputValue.trim() === '' && chatAttachedFiles.length === 0) return;
         if (!channelId) return;
+        if (inputValue.length > 2000) {
+            addToast({ title: `Message too long (${inputValue.length}/2000)`, variant: 'error' });
+            return;
+        }
         if (slowRemaining > 0) {
             addToast({ title: `Slowmode active. Wait ${slowRemaining}s`, variant: 'error' });
             return;
@@ -2231,6 +2235,10 @@ const ChannelChat = () => {
     // Edit message handler
     const handleEditSubmit = useCallback(async () => {
         if (!editingMessage || !channelId || !editContent.trim()) return;
+        if (editContent.length > 2000) {
+            addToast({ title: `Message too long (${editContent.length}/2000)`, variant: 'error' });
+            return;
+        }
         try {
             await api.messages.edit(channelId, editingMessage.apiId, { content: editContent.trim() });
             setMessages(prev => prev.map(m =>
@@ -2333,7 +2341,7 @@ const ChannelChat = () => {
             if (val.trim().length > 0) {
                 setHasDraft(true);
                 draftSaveTimerRef.current = setTimeout(() => {
-                    fetch(`${API_BASE}/api/v1/channels/${channelId}/draft`, {
+                    fetch(`${API_BASE}/channels/${channelId}/draft`, {
                         method: 'PUT',
                         headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ content: val }),
@@ -2341,7 +2349,7 @@ const ChannelChat = () => {
                 }, 2000);
             } else {
                 setHasDraft(false);
-                fetch(`${API_BASE}/api/v1/channels/${channelId}/draft`, {
+                fetch(`${API_BASE}/channels/${channelId}/draft`, {
                     method: 'DELETE',
                     headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
                 }).catch(() => {});
@@ -3191,7 +3199,7 @@ const ChannelChat = () => {
                                 </span>
                                 <button onClick={() => {
                                     if (!channelId) return;
-                                    fetch(`${API_BASE}/api/v1/channels/${channelId}/messages/scheduled/${sm.id}`, {
+                                    fetch(`${API_BASE}/channels/${channelId}/messages/scheduled/${sm.id}`, {
                                         method: 'DELETE',
                                         headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
                                     }).then(r => {
@@ -3403,7 +3411,30 @@ const ChannelChat = () => {
                                 onChange={editingMessage ? (e) => setEditContent(e.target.value) : handleInputChange}
                                 onKeyDown={handleInputKeyDown}
                                 onInput={(e) => { const t = e.target as HTMLTextAreaElement; t.style.height = '24px'; t.style.height = Math.min(t.scrollHeight, 200) + 'px'; }}
+                                onPaste={(e) => {
+                                    const items = e.clipboardData?.items;
+                                    if (!items) return;
+                                    for (const item of Array.from(items)) {
+                                        if (item.type.startsWith('image/')) {
+                                            e.preventDefault();
+                                            const file = item.getAsFile();
+                                            if (file && channelAttachmentsEnabled) {
+                                                setChatAttachedFiles(prev => [...prev, {
+                                                    name: file.name || `pasted-image.${item.type.split('/')[1] || 'png'}`,
+                                                    size: file.size < 1024 ? `${file.size} B` : file.size < 1048576 ? `${(file.size / 1024).toFixed(1)} KB` : `${(file.size / 1048576).toFixed(1)} MB`,
+                                                    file,
+                                                }]);
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }}
                             />
+                            {!editingMessage && inputValue.length > 1800 && (
+                                <span style={{ fontSize: '11px', fontWeight: 600, color: inputValue.length > 2000 ? 'var(--error)' : 'var(--warning)', flexShrink: 0, padding: '0 4px' }}>
+                                    {inputValue.length}/2000
+                                </span>
+                            )}
                             <button className="input-icon-btn" title="Record Voice Note" aria-label="Record voice note" onClick={startRecording}>
                                 <Mic size={20} />
                             </button>
@@ -3615,7 +3646,7 @@ const ChannelChat = () => {
                                 }
                                 const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
                                 const processedContent = processEmojis(inputValue);
-                                fetch(`${API_BASE}/api/v1/channels/${channelId}/messages`, {
+                                fetch(`${API_BASE}/channels/${channelId}/messages`, {
                                     method: 'POST',
                                     headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}`, 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ content: processedContent || ' ', scheduledAt }),

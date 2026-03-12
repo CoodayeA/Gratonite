@@ -2271,7 +2271,7 @@ const SettingsModal = ({
                                         onClick={async () => {
                                             try {
                                                 const token = localStorage.getItem('gratonite_access_token');
-                                                await fetch(`${API_BASE}/api/v1/users/@me/data-export`, {
+                                                await fetch(`${API_BASE}/users/@me/data-export`, {
                                                     method: 'POST',
                                                     headers: { Authorization: `Bearer ${token}` },
                                                 });

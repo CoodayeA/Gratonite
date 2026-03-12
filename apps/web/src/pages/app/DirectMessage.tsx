@@ -1519,6 +1519,10 @@ const DirectMessage = () => {
         if (!editingMessage || !dmChannelId) return;
         const newContent = inputValue.trim();
         if (!newContent) return;
+        if (newContent.length > 2000) {
+            addToast({ title: `Message too long (${newContent.length}/2000)`, variant: 'error' });
+            return;
+        }
 
         try {
             let editPayload: { content?: string; encryptedContent?: string; isEncrypted?: boolean; keyVersion?: number };
@@ -1544,6 +1548,10 @@ const DirectMessage = () => {
         if (inputValue.trim() === '' && dmAttachedFiles.length === 0) return;
         if (!dmChannelId) {
             addToast({ title: 'Message unavailable', description: 'Conversation is not ready yet. Please retry.', variant: 'error' });
+            return;
+        }
+        if (inputValue.length > 2000) {
+            addToast({ title: `Message too long (${inputValue.length}/2000)`, variant: 'error' });
             return;
         }
 
@@ -2688,7 +2696,30 @@ const DirectMessage = () => {
                                     onChange={handleDmInputChange}
                                     onKeyDown={handleDmKeyDown}
                                     onInput={(e) => { const t = e.target as HTMLTextAreaElement; t.style.height = '24px'; t.style.height = Math.min(t.scrollHeight, 200) + 'px'; }}
+                                    onPaste={(e) => {
+                                        const items = e.clipboardData?.items;
+                                        if (!items) return;
+                                        for (const item of Array.from(items)) {
+                                            if (item.type.startsWith('image/')) {
+                                                e.preventDefault();
+                                                const file = item.getAsFile();
+                                                if (file) {
+                                                    setDmAttachedFiles(prev => [...prev, {
+                                                        name: file.name || `pasted-image.${item.type.split('/')[1] || 'png'}`,
+                                                        size: file.size < 1024 ? `${file.size} B` : file.size < 1048576 ? `${(file.size / 1024).toFixed(1)} KB` : `${(file.size / 1048576).toFixed(1)} MB`,
+                                                        file,
+                                                    }]);
+                                                }
+                                                break;
+                                            }
+                                        }
+                                    }}
                                 />
+                                {inputValue.length > 1800 && (
+                                    <span style={{ fontSize: '11px', fontWeight: 600, color: inputValue.length > 2000 ? 'var(--error)' : 'var(--warning)', flexShrink: 0, padding: '0 4px' }}>
+                                        {inputValue.length}/2000
+                                    </span>
+                                )}
                                 <button className={`input-icon-btn ${isEmojiPickerOpen ? 'primary' : ''}`} title="Select Emoji" onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}>
                                     <Smile size={20} />
                                 </button>
