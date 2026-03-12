@@ -9,7 +9,7 @@ export interface AvatarProps {
   avatarAnimated?: boolean;
   displayName?: string;
   size?: number;
-  frame?: 'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse';
+  frame?: 'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse' | 'fire' | 'glitch';
   /** Optional presence status dot */
   status?: 'online' | 'idle' | 'dnd' | 'invisible' | 'offline' | null;
   /** Background color behind the status dot (matches parent bg) */
@@ -44,6 +44,11 @@ const DECORATION_EMOJI: Record<string, string> = {
   gem:    '\u{1F48E}',
   lotus:  '\u{1F338}',
   moon:   '\u{1F319}',
+  snowflake: '\u2744\uFE0F',
+  comet:  '\u2604\uFE0F',
+  sparkles: '\u2728',
+  sun:    '\u2600\uFE0F',
+  gear:   '\u2699\uFE0F',
 };
 
 const DECORATION_POSITIONS: Record<string, React.CSSProperties> = {
@@ -53,7 +58,7 @@ const DECORATION_POSITIONS: Record<string, React.CSSProperties> = {
   'bottom-left':  { bottom: -4, left:  -4 },
 };
 
-type FrameType = 'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse';
+type FrameType = 'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse' | 'fire' | 'glitch';
 
 const Avatar = ({
   userId,
@@ -84,7 +89,7 @@ const Avatar = ({
     try {
       const key = user.id ? `gratonite-avatar-frame:${user.id}` : 'gratonite-avatar-frame';
       const value = localStorage.getItem(key) || localStorage.getItem('gratonite-avatar-frame');
-      if (value === 'neon' || value === 'gold' || value === 'glass' || value === 'rainbow' || value === 'pulse' || value === 'none') return value;
+      if (value === 'neon' || value === 'gold' || value === 'glass' || value === 'rainbow' || value === 'pulse' || value === 'fire' || value === 'glitch' || value === 'none') return value;
     } catch { /* ignore */ }
     return 'none';
   };
@@ -126,7 +131,7 @@ const Avatar = ({
       const detail = (e as CustomEvent).detail ?? {};
       const f = detail.frame as string;
       const validFrame: FrameType =
-        (f === 'neon' || f === 'gold' || f === 'glass' || f === 'rainbow' || f === 'pulse' || f === 'none') ? f : 'none';
+        (f === 'neon' || f === 'gold' || f === 'glass' || f === 'rainbow' || f === 'pulse' || f === 'fire' || f === 'glitch' || f === 'none') ? f : 'none';
       setFrameState({ frame: validFrame, glowColor: detail.glowColor as string | undefined });
     };
     window.addEventListener('gratonite:avatar-frame-updated', handler);
@@ -154,6 +159,8 @@ const Avatar = ({
   const frameClassName =
     resolvedFrame === 'rainbow' ? 'avatar-frame-rainbow' :
     resolvedFrame === 'pulse'   ? 'avatar-frame-pulse'   :
+    resolvedFrame === 'fire'    ? 'avatar-frame-fire'     :
+    resolvedFrame === 'glitch'  ? 'avatar-frame-glitch'   :
     undefined;
 
   return (

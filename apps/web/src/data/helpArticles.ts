@@ -186,7 +186,7 @@ export const ARTICLES: Article[] = [
     category: 'Cosmetics & Shop',
     body: [
       'Navigate to /shop from the main sidebar to open the official Cosmetics Shop, where you can browse all items sold directly by Gratonite.',
-      'The Shop is organized into five tabs: Avatar Frames, Decorations, Profile Effects, Nameplates, and Soundboard — click any tab to filter items by type.',
+      'The Shop is organized into four tabs: Avatar Frames, Decorations, Profile Effects, and Nameplates — click any tab to filter items by type.',
       'Hover over any item card to see a live preview; for animated items, the animation will play automatically inside the preview panel on the right side of the screen.',
       'Your current Gratonite currency balance is displayed in the top-right corner of the Shop. Only items you can afford are fully interactive — items that exceed your balance are shown with a lock indicator.',
       'To purchase an item, click its card and then click the "Buy" button. A confirmation dialog will show the item name, price, and your balance after purchase — click "Confirm" to complete the transaction.',
