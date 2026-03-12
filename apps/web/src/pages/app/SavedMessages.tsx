@@ -33,7 +33,7 @@ export default function SavedMessages() {
 
     useEffect(() => {
         setLoading(true);
-        fetch(`${API_BASE}/api/v1/users/@me/bookmarks`, {
+        fetch(`${API_BASE}/users/@me/bookmarks`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
         })
             .then(r => r.json())
@@ -44,7 +44,7 @@ export default function SavedMessages() {
 
     const removeBookmark = async (messageId: string) => {
         try {
-            await fetch(`${API_BASE}/api/v1/users/@me/bookmarks/${messageId}`, {
+            await fetch(`${API_BASE}/users/@me/bookmarks/${messageId}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
             });
