@@ -269,7 +269,7 @@ const MemoizedMessageItem = memo(({
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 onContextMenu={(e) => handleMessageContext(e, msg)}
-                onDoubleClick={() => { if (msg.apiId && msgChannelId && !msg.system) { const alreadyHearted = (msg.reactions || []).some(r => r.emoji === '❤️' && r.me); onReaction(msg.apiId, '❤️', alreadyHearted); } }}
+                onDoubleClick={() => { if (msg.apiId && msgChannelId && !msg.system) { const alreadyHearted = (msg.reactions || []).some((r: any) => r.emoji === '❤️' && r.me); onReaction(msg.apiId, '❤️', alreadyHearted); } }}
             >
                 {compactMode ? (
                     /* Feature 13: Compact mode - no avatar, inline timestamp */
