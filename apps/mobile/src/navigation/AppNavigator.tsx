@@ -7,6 +7,7 @@ import { useAppState } from '../contexts/AppStateContext';
 import { useTheme } from '../lib/theme';
 import { selectionFeedback } from '../lib/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import VoiceBar from '../components/VoiceBar';
 import type { AppStackParamList, AppTabParamList } from './types';
 
 // Tab screens
@@ -123,6 +124,28 @@ import BotStoreScreen from '../screens/app/BotStoreScreen';
 import SettingsSecurityScreen from '../screens/app/SettingsSecurityScreen';
 import KeyVerificationScreen from '../screens/app/KeyVerificationScreen';
 
+// Wave H: Feature Enhancement
+import MusicRoomScreen from '../screens/guild/MusicRoomScreen';
+import StudyRoomScreen from '../screens/guild/StudyRoomScreen';
+import StudyLeaderboardScreen from '../screens/guild/StudyLeaderboardScreen';
+import StageChannelScreen from '../screens/guild/StageChannelScreen';
+import AuctionsScreen from '../screens/app/AuctionsScreen';
+import AuctionDetailScreen from '../screens/app/AuctionDetailScreen';
+import CreateAuctionScreen from '../screens/app/CreateAuctionScreen';
+import GuildFormsScreen from '../screens/guild/GuildFormsScreen';
+import FormFillScreen from '../screens/guild/FormFillScreen';
+import FormResponsesScreen from '../screens/guild/FormResponsesScreen';
+import FormCreateScreen from '../screens/guild/FormCreateScreen';
+import ConnectionsScreen from '../screens/app/ConnectionsScreen';
+import InterestTagsScreen from '../screens/app/InterestTagsScreen';
+import InterestMatchesScreen from '../screens/guild/InterestMatchesScreen';
+import SeasonalEventsScreen from '../screens/app/SeasonalEventsScreen';
+import ClipsScreen from '../screens/guild/ClipsScreen';
+import HelpCenterScreen from '../screens/app/HelpCenterScreen';
+import HelpArticleScreen from '../screens/app/HelpArticleScreen';
+import FameDashboardScreen from '../screens/app/FameDashboardScreen';
+import CommandPaletteScreen from '../screens/app/CommandPaletteScreen';
+
 const Tab = createBottomTabNavigator<AppTabParamList>();
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
@@ -132,6 +155,7 @@ function MainTabs() {
   const { colors, fontSize, neo } = useTheme();
 
   return (
+    <View style={{ flex: 1 }}>
     <Tab.Navigator
       screenListeners={{
         tabPress: () => selectionFeedback(),
@@ -211,6 +235,8 @@ function MainTabs() {
         }}
       />
     </Tab.Navigator>
+    <VoiceBar />
+    </View>
   );
 }
 
@@ -339,6 +365,28 @@ export default function AppNavigator() {
       <Stack.Screen name="BotStore" component={BotStoreScreen} options={{ title: 'Bot Store' }} />
       <Stack.Screen name="SettingsSecurity" component={SettingsSecurityScreen} options={{ title: 'Security' }} />
       <Stack.Screen name="KeyVerification" component={KeyVerificationScreen} options={{ title: 'Verify Identity' }} />
+
+      {/* Wave H: Feature Enhancement */}
+      <Stack.Screen name="MusicRoom" component={MusicRoomScreen} options={({ route }) => ({ title: `Music - ${route.params.channelName}` })} />
+      <Stack.Screen name="StudyRoom" component={StudyRoomScreen} options={({ route }) => ({ title: `Study - ${route.params.channelName}` })} />
+      <Stack.Screen name="StudyLeaderboard" component={StudyLeaderboardScreen} options={{ title: 'Study Leaderboard' }} />
+      <Stack.Screen name="StageChannel" component={StageChannelScreen} options={({ route }) => ({ title: route.params.channelName })} />
+      <Stack.Screen name="Auctions" component={AuctionsScreen} options={{ title: 'Auctions' }} />
+      <Stack.Screen name="AuctionDetail" component={AuctionDetailScreen} options={{ title: 'Auction' }} />
+      <Stack.Screen name="CreateAuction" component={CreateAuctionScreen} options={{ title: 'Create Auction' }} />
+      <Stack.Screen name="GuildForms" component={GuildFormsScreen} options={{ title: 'Forms' }} />
+      <Stack.Screen name="FormFill" component={FormFillScreen} options={{ title: 'Fill Form' }} />
+      <Stack.Screen name="FormResponses" component={FormResponsesScreen} options={{ title: 'Responses' }} />
+      <Stack.Screen name="FormCreate" component={FormCreateScreen} options={{ title: 'Create Form' }} />
+      <Stack.Screen name="Connections" component={ConnectionsScreen} options={{ title: 'Connections' }} />
+      <Stack.Screen name="InterestTags" component={InterestTagsScreen} options={{ title: 'Interests' }} />
+      <Stack.Screen name="InterestMatches" component={InterestMatchesScreen} options={{ title: 'Interest Matches' }} />
+      <Stack.Screen name="SeasonalEvents" component={SeasonalEventsScreen} options={{ title: 'Events' }} />
+      <Stack.Screen name="Clips" component={ClipsScreen} options={{ title: 'Clips' }} />
+      <Stack.Screen name="HelpCenter" component={HelpCenterScreen} options={{ title: 'Help Center' }} />
+      <Stack.Screen name="HelpArticle" component={HelpArticleScreen} options={{ title: 'Help' }} />
+      <Stack.Screen name="FameDashboard" component={FameDashboardScreen} options={{ title: 'Fame' }} />
+      <Stack.Screen name="CommandPalette" component={CommandPaletteScreen} options={{ title: 'Quick Jump', presentation: 'modal' }} />
     </Stack.Navigator>
   );
 }

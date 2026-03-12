@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '../../lib/api';
-import { onPresenceUpdate } from '../../lib/socket';
+import { onPresenceUpdate, onSocketReconnect } from '../../lib/socket';
 import Avatar from '../ui/Avatar';
 
 interface Member {
@@ -60,19 +60,46 @@ function MemberRow({ member, onMemberClick }: { member: Member; onMemberClick?: 
 export function MemberListPanel({ guildId, onMemberClick }: Props) {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const fetchCountRef = useRef(0);
 
   const fetchMembers = useCallback(() => {
-    api.guilds.getMembers(guildId, { limit: 100 })
+    const thisCall = ++fetchCountRef.current;
+    api.guilds.getMembers(guildId, { limit: 200 })
       .then((data) => {
+        if (thisCall !== fetchCountRef.current) return; // stale
         setMembers(data as unknown as Member[]);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => { if (thisCall === fetchCountRef.current) setLoading(false); });
   }, [guildId]);
 
   useEffect(() => {
     setLoading(true);
     fetchMembers();
+  }, [fetchMembers]);
+
+  // Refetch member list on socket reconnect (picks up fresh presence from Redis)
+  useEffect(() => {
+    const unsub = onSocketReconnect(() => {
+      // Small delay so the server has time to set presence in Redis first
+      setTimeout(fetchMembers, 1500);
+    });
+    return unsub;
+  }, [fetchMembers]);
+
+  // Refetch when tab becomes visible again (presence may have changed while away)
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') fetchMembers();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [fetchMembers]);
+
+  // Periodic presence sync every 60s to catch any missed updates
+  useEffect(() => {
+    const iv = setInterval(fetchMembers, 60_000);
+    return () => clearInterval(iv);
   }, [fetchMembers]);
 
   // Subscribe to real-time presence updates
@@ -89,6 +116,9 @@ export function MemberListPanel({ guildId, onMemberClick }: Props) {
     return unsub;
   }, []);
 
+  const [onlineCollapsed, setOnlineCollapsed] = useState(false);
+  const [offlineCollapsed, setOfflineCollapsed] = useState(false);
+
   const online = members.filter((m) => m.status && m.status !== 'offline' && m.status !== 'invisible');
   const offline = members.filter((m) => !m.status || m.status === 'offline' || m.status === 'invisible');
 
@@ -99,18 +129,28 @@ export function MemberListPanel({ guildId, onMemberClick }: Props) {
           <div className="member-list-loading">Loading...</div>
         ) : (
           <>
-            <div className="member-list-section-header">
+            <div
+              className="member-list-section-header"
+              onClick={() => setOnlineCollapsed(p => !p)}
+              style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              <span style={{ display: 'inline-block', transition: 'transform 0.15s', transform: onlineCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', fontSize: '10px' }}>▼</span>
               ONLINE — {online.length}
             </div>
-            {online.map((m) => (
+            {!onlineCollapsed && online.map((m) => (
               <MemberRow key={m.userId} member={m} onMemberClick={onMemberClick} />
             ))}
             {offline.length > 0 && (
               <>
-                <div className="member-list-section-header">
+                <div
+                  className="member-list-section-header"
+                  onClick={() => setOfflineCollapsed(p => !p)}
+                  style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  <span style={{ display: 'inline-block', transition: 'transform 0.15s', transform: offlineCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', fontSize: '10px' }}>▼</span>
                   OFFLINE — {offline.length}
                 </div>
-                {offline.map((m) => (
+                {!offlineCollapsed && offline.map((m) => (
                   <MemberRow key={m.userId} member={m} onMemberClick={onMemberClick} />
                 ))}
               </>

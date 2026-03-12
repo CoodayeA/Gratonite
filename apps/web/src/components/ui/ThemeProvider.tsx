@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type AppTheme = 'default' | 'glass' | 'neobrutalism' | 'synthwave' | 'y2k' | 'memphis' | 'artdeco' | 'terminal' | 'aurora' | 'vaporwave' | 'nord' | 'solarized' | 'bubblegum' | 'obsidian' | 'sakura' | 'midnight' | 'forest' | 'cyberpunk' | 'pastel' | 'monochrome' | 'ocean' | 'fire' | 'desert' | 'lavender' | 'coffee' | 'matrix' | 'rose_gold' | 'emerald' | 'dracula' | 'monokai' | 'catppuccin' | 'gruvbox' | 'tokyo_night' | 'everforest' | 'arctic' | 'neon' | 'midnight_blue';
+export type AppTheme = 'default' | 'glass' | 'neobrutalism' | 'synthwave' | 'y2k' | 'memphis' | 'artdeco' | 'terminal' | 'aurora' | 'vaporwave' | 'nord' | 'solarized' | 'bubblegum' | 'obsidian' | 'sakura' | 'midnight' | 'forest' | 'cyberpunk' | 'pastel' | 'monochrome' | 'ocean' | 'fire' | 'desert' | 'lavender' | 'coffee' | 'matrix' | 'rose_gold' | 'emerald' | 'dracula' | 'monokai' | 'catppuccin' | 'gruvbox' | 'tokyo_night' | 'everforest' | 'arctic' | 'neon' | 'midnight_blue' | 'high-contrast';
 export type ColorMode = 'light' | 'dark';
 export type FontFamily = 'inter' | 'outfit' | 'space-grotesk' | 'fira-code';
 export type FontSize = 'small' | 'medium' | 'large' | 'extra-large';

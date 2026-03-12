@@ -1,0 +1,20 @@
+appId: chat.gratonite.mobile
+---
+# Assumes user is already logged in
+- assertVisible: "Servers"
+# Navigate to DMs tab
+- tapOn: "Chats"
+- assertVisible: "Chats"
+# Tap first DM conversation if available
+- tapOn:
+    index: 0
+    id: "dm-item"
+    optional: true
+# If DM exists, send a message
+- tapOn:
+    text: "Message input"
+    optional: true
+- inputText: "DM test from Maestro"
+- tapOn:
+    text: "Send message"
+    optional: true

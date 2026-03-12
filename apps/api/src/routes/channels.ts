@@ -539,6 +539,13 @@ channelsRouter.patch(
       }
 
       res.status(200).json(updated);
+
+      // Emit real-time channel update to guild members
+      if (channel.guildId) {
+        try {
+          getIO().to(`guild:${channel.guildId}`).emit('CHANNEL_UPDATE', { ...updated, channelId, guildId: channel.guildId });
+        } catch { /* socket may not be initialised in tests */ }
+      }
     } catch (err) {
       handleAppError(res, err, 'channels');
     }
@@ -615,6 +622,11 @@ channelsRouter.delete(
       logAuditEvent(channel.guildId, req.userId!, AuditActionTypes.CHANNEL_DELETE, channelId, 'CHANNEL', { name: channel.name, type: channel.type });
 
       await db.delete(channels).where(eq(channels.id, channelId));
+
+      // Emit real-time channel delete to guild members
+      try {
+        getIO().to(`guild:${channel.guildId}`).emit('CHANNEL_DELETE', { channelId, guildId: channel.guildId });
+      } catch { /* socket may not be initialised in tests */ }
 
       res.status(200).json({ code: 'OK', message: 'Channel deleted' });
     } catch (err) {

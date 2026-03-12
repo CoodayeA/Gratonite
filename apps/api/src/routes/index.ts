@@ -94,6 +94,7 @@ import { guildQuestsRouter } from './guild-quests';
 import { guildFormsRouter } from './guild-forms';
 import { confessionsRouter } from './confessions';
 import { federationRouter } from './federation';
+import { tasksRouter } from './tasks';
 
 export const router = Router();
 
@@ -312,3 +313,6 @@ router.use('/', confessionsRouter);
 
 // Federation
 router.use('/federation', federationRouter);
+
+// Task boards (Kanban per channel)
+router.use('/tasks', tasksRouter);

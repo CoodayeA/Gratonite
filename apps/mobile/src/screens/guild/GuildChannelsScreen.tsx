@@ -79,7 +79,7 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
         .filter((c) => c.parentId === cat.id)
         .sort((a, b) => a.position - b.position);
       if (children.length > 0) {
-        result.push({ title: cat.name.toUpperCase(), data: children });
+        result.push({ title: (cat.name || 'Untitled').toUpperCase(), data: children });
       }
     });
 

@@ -1641,7 +1641,7 @@ export const api = {
   },
 
   search: {
-    messages: (params: { query: string; guildId?: string; channelId?: string; authorId?: string; before?: string; after?: string; limit?: number; offset?: number }) => {
+    messages: (params: { query: string; guildId?: string; channelId?: string; authorId?: string; before?: string; after?: string; has?: string; limit?: number; offset?: number }) => {
       const query = new URLSearchParams();
       query.set('query', params.query);
       if (params.guildId) query.set('guildId', params.guildId);
@@ -1649,6 +1649,7 @@ export const api = {
       if (params.authorId) query.set('authorId', params.authorId);
       if (params.before) query.set('before', params.before);
       if (params.after) query.set('after', params.after);
+      if (params.has) query.set('has', params.has);
       if (params.limit) query.set('limit', String(params.limit));
       if (params.offset) query.set('offset', String(params.offset));
       return apiFetch<SearchMessagesResponse>(`/search/messages?${query.toString()}`);

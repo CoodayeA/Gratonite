@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense, type Dispatch, type SetStateAction } from 'react';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, Navigate, Outlet, Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar } from 'lucide-react';
@@ -12,62 +12,64 @@ import Register from './pages/auth/Register';
 import Verify from './pages/auth/Verify';
 import ResetPassword from './pages/auth/ResetPassword';
 
-import HomePage from './pages/app/Home';
-import Discover from './pages/app/Discover';
 import Download from './pages/Download';
-import Friends from './pages/app/Friends';
-import Shop from './pages/app/Shop';
-import Marketplace from './pages/app/Marketplace';
-
-import Inventory from './pages/app/Inventory';
-import FameDashboard from './pages/app/FameDashboard';
-import CreatorDashboard from './pages/app/CreatorDashboard';
-import ThemeBuilder from './pages/app/ThemeBuilder';
-import BotBuilder from './pages/app/BotBuilder';
-import BotStore from './pages/app/BotStore';
-import DirectMessage from './pages/app/DirectMessage';
-import ChannelChat from './pages/guilds/ChannelChat';
-import VoiceChannel from './pages/guilds/VoiceChannel';
-import GuildOverview from './pages/guilds/GuildOverview';
-import AuditLog from './pages/guilds/AuditLog';
-import GuildWorkflows from './pages/guilds/GuildWorkflows';
-import EventScheduler from './pages/guilds/EventScheduler';
-import MessageRequests from './pages/app/MessageRequests';
-import AdminTeam from './pages/admin/AdminTeam';
-import AdminAuditLog from './pages/admin/AdminAuditLog';
-import AdminBotModeration from './pages/admin/AdminBotModeration';
-import AdminFeedback from './pages/admin/AdminFeedback';
-import AdminReports from './pages/admin/AdminReports';
-import AdminPortals from './pages/admin/AdminPortals';
 import RequireAdmin from './components/guards/RequireAdmin';
 import RequireAuth from './components/guards/RequireAuth';
-import HelpCenter from './pages/app/HelpCenter';
+
+// Lazy-loaded page components for code splitting
+const HomePage = lazy(() => import('./pages/app/Home'));
+const Discover = lazy(() => import('./pages/app/Discover'));
+const Friends = lazy(() => import('./pages/app/Friends'));
+const Shop = lazy(() => import('./pages/app/Shop'));
+const Marketplace = lazy(() => import('./pages/app/Marketplace'));
+const Inventory = lazy(() => import('./pages/app/Inventory'));
+const FameDashboard = lazy(() => import('./pages/app/FameDashboard'));
+const CreatorDashboard = lazy(() => import('./pages/app/CreatorDashboard'));
+const ThemeBuilder = lazy(() => import('./pages/app/ThemeBuilder'));
+const BotBuilder = lazy(() => import('./pages/app/BotBuilder'));
+const BotStore = lazy(() => import('./pages/app/BotStore'));
+const DirectMessage = lazy(() => import('./pages/app/DirectMessage'));
+const ChannelChat = lazy(() => import('./pages/guilds/ChannelChat'));
+const VoiceChannel = lazy(() => import('./pages/guilds/VoiceChannel'));
+const GuildOverview = lazy(() => import('./pages/guilds/GuildOverview'));
+const AuditLog = lazy(() => import('./pages/guilds/AuditLog'));
+const GuildWorkflows = lazy(() => import('./pages/guilds/GuildWorkflows'));
+const EventScheduler = lazy(() => import('./pages/guilds/EventScheduler'));
+const MessageRequests = lazy(() => import('./pages/app/MessageRequests'));
+const AdminTeam = lazy(() => import('./pages/admin/AdminTeam'));
+const AdminAuditLog = lazy(() => import('./pages/admin/AdminAuditLog'));
+const AdminBotModeration = lazy(() => import('./pages/admin/AdminBotModeration'));
+const AdminFeedback = lazy(() => import('./pages/admin/AdminFeedback'));
+const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
+const AdminPortals = lazy(() => import('./pages/admin/AdminPortals'));
+const HelpCenter = lazy(() => import('./pages/app/HelpCenter'));
 
 import InviteAccept from './pages/InviteAccept';
 import { NotFound } from './pages/ErrorStates';
 import { getDeterministicGradient } from './utils/colors';
 import { api, API_BASE, getAccessToken, setAccessToken, ApiRequestError } from './lib/api';
-import { connectSocket, disconnectSocket, getSocket, onPresenceUpdate, onVoiceStateUpdate, onSocketReconnect, onCallInvite, onCallCancel, setPresence as setSocketPresence, type CallInvitePayload } from './lib/socket';
+import { connectSocket, disconnectSocket, getSocket, onPresenceUpdate, onVoiceStateUpdate, onSocketReconnect, onCallInvite, onCallCancel, setPresence as setSocketPresence, onGuildJoined, onGuildLeft, onGuildUpdate, onGuildDelete, onChannelUpdate, onChannelDelete, onGuildMemberAdd, onGuildMemberRemove, onDmChannelCreate, joinGuildRoom, onTypingStart, onNotificationCreate, type CallInvitePayload } from './lib/socket';
 import { useMobileSwipe } from './hooks/useMobileSwipe';
 
-import SettingsModal from './components/modals/SettingsModal';
-import UserProfileModal from './components/modals/UserProfileModal';
+// Lazy-loaded modal components for code splitting
+const SettingsModal = lazy(() => import('./components/modals/SettingsModal'));
+const UserProfileModal = lazy(() => import('./components/modals/UserProfileModal'));
+const GuildSettingsModal = lazy(() => import('./components/modals/GuildSettingsModal'));
+const WhatsNewModal = lazy(() => import('./components/modals/WhatsNewModal'));
+const OnboardingModal = lazy(() => import('./components/modals/OnboardingModal'));
+const BugReportModal = lazy(() => import('./components/modals/BugReportModal'));
+const KeyboardShortcutsModal = lazy(() => import('./components/modals/KeyboardShortcutsModal'));
+const NotificationModal = lazy(() => import('./components/modals/NotificationModal'));
 import CreateGuildModal from './components/modals/CreateGuildModal';
 import PresenceMenu, { PresenceType, PRESENCE_COLORS } from './components/modals/PresenceMenu';
 import ScreenShareModal from './components/modals/ScreenShareModal';
-import GuildSettingsModal from './components/modals/GuildSettingsModal';
 import { ChannelSettingsModal } from './components/modals/ChannelSettingsModal';
 import MemberOptionsModal from './components/modals/MemberOptionsModal';
 import IncomingCallModal from './components/modals/IncomingCallModal';
 import InviteModal from './components/modals/InviteModal';
 import DMSearchModal from './components/modals/DMSearchModal';
 import GroupDmCreateModal from './components/modals/GroupDmCreateModal';
-
-import NotificationModal from './components/modals/NotificationModal';
 import { NotificationPrefsModal } from './components/modals/NotificationPrefsModal';
-import KeyboardShortcutsModal from './components/modals/KeyboardShortcutsModal';
-import BugReportModal from './components/modals/BugReportModal';
-import OnboardingModal from './components/modals/OnboardingModal';
 import { Tooltip } from './components/ui/Tooltip';
 import { ModalWrapper } from './components/ui/ModalWrapper';
 import { useTheme } from './components/ui/ThemeProvider';
@@ -179,7 +181,15 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
     const [ratingInfo, setRatingInfo] = useState<{ avg: number; total: number } | null>(null);
     const [ratingSubmitting, setRatingSubmitting] = useState(false);
     const [guildFolders, setGuildFolders] = useState<Array<{ id: string; name: string; color: string; guildIds: string[]; collapsed: boolean }>>([]);
+    const [notifCount, setNotifCount] = useState(0);
     useUnreadStore(); // subscribe to re-render on unread changes
+
+    // Listen for new notifications to update unread badge
+    useEffect(() => {
+        return onNotificationCreate(() => {
+            setNotifCount(prev => prev + 1);
+        });
+    }, []);
 
     // Load guild folders from API
     useEffect(() => {
@@ -300,8 +310,27 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
             </Tooltip>
 
             <Tooltip content="Inbox" position="right">
-                <div className="guild-icon" onClick={onOpenNotifications} style={{ background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', position: 'relative' }}>
+                <div className="guild-icon" role="button" aria-label="Notifications inbox" onClick={() => { setNotifCount(0); onOpenNotifications(); }} style={{ background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', position: 'relative' }}>
                     <Bell size={24} />
+                    {notifCount > 0 && (
+                        <span style={{
+                            position: 'absolute',
+                            top: -4,
+                            right: -4,
+                            background: 'var(--error, #ed4245)',
+                            color: 'white',
+                            borderRadius: '50%',
+                            width: 16,
+                            height: 16,
+                            fontSize: 10,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 700,
+                        }}>
+                            {notifCount > 9 ? '9+' : notifCount}
+                        </span>
+                    )}
                 </div>
             </Tooltip>
 
@@ -336,7 +365,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
             })}
 
             <Tooltip content="Create Portal" position="right">
-                <div className="guild-icon" onClick={onOpenCreateGuild} style={{ background: 'transparent', border: '1px dashed var(--stroke-light)', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <div className="guild-icon" role="button" aria-label="Create guild" onClick={onOpenCreateGuild} style={{ background: 'transparent', border: '1px dashed var(--stroke-light)', color: 'var(--text-muted)', cursor: 'pointer' }}>
                     <Plus size={24} />
                 </div>
             </Tooltip>
@@ -344,13 +373,13 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
             <div style={{ flex: 1 }}></div>
 
             <Tooltip content="Help & Support" position="right">
-                <div className="guild-icon" onClick={() => navigate('/help-center')} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', width: '32px', height: '32px', minWidth: '32px', minHeight: '32px', marginBottom: '4px' }}>
+                <div className="guild-icon" role="button" aria-label="Help and support" onClick={() => navigate('/help-center')} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', width: '32px', height: '32px', minWidth: '32px', minHeight: '32px', marginBottom: '4px' }}>
                     <HelpCircle size={18} />
                 </div>
             </Tooltip>
 
             <Tooltip content="Report Bug" position="right">
-                <div className="guild-icon" onClick={onOpenBugReport} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginBottom: '8px' }}>
+                <div className="guild-icon" role="button" aria-label="Report a bug" onClick={onOpenBugReport} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginBottom: '8px' }}>
                     <Bug size={24} />
                 </div>
             </Tooltip>
@@ -367,7 +396,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                     <div style={{ width: '360px', background: 'var(--bg-elevated)', borderRadius: '16px', padding: '24px', border: '1px solid var(--stroke)', boxShadow: '0 24px 48px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <h3 style={{ fontSize: '18px', fontWeight: 700 }}>Rate {ratingGuild.name}</h3>
-                            <button onClick={() => setRatingGuild(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}><X size={18} /></button>
+                            <button onClick={() => setRatingGuild(null)} aria-label="Close rating dialog" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}><X size={18} /></button>
                         </div>
                         {ratingInfo && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', padding: '10px 12px', background: 'var(--bg-tertiary)', borderRadius: '10px', border: '1px solid var(--stroke)' }}>
@@ -414,6 +443,30 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const [notifPrefs, setNotifPrefs] = useState<{ type: 'guild' | 'channel'; id: string; name: string } | null>(null);
     const [newChannelName, setNewChannelName] = useState('');
     const [favoriteChannelIds, setFavoriteChannelIds] = useState<Set<string>>(new Set());
+    const [channelTyping, setChannelTyping] = useState<Map<string, string[]>>(new Map());
+
+    // Listen for typing events across channels for sidebar indicators
+    useEffect(() => {
+        return onTypingStart((data) => {
+            setChannelTyping(prev => {
+                const next = new Map(prev);
+                const current = next.get(data.channelId) || [];
+                if (!current.includes(data.username)) {
+                    next.set(data.channelId, [...current, data.username]);
+                }
+                setTimeout(() => {
+                    setChannelTyping(prev2 => {
+                        const next2 = new Map(prev2);
+                        const list = next2.get(data.channelId) || [];
+                        next2.set(data.channelId, list.filter(u => u !== data.username));
+                        if (next2.get(data.channelId)?.length === 0) next2.delete(data.channelId);
+                        return next2;
+                    });
+                }, 5000);
+                return next;
+            });
+        });
+    }, []);
 
     // Load favorites
     useEffect(() => {
@@ -1036,6 +1089,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     type="button"
                     onClick={() => setMicMuted(m => !m)}
                     title={micMuted ? 'Unmute mic' : 'Mute mic'}
+                    aria-label={micMuted ? 'Unmute microphone' : 'Mute microphone'}
                     style={{
                         cursor: 'pointer',
                         transition: 'color 0.2s',
@@ -1361,6 +1415,13 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                 <div key={ch.id} onContextMenu={(e) => handleChannelContext(e, ch)} {...dragProps} style={{ opacity: isDragging ? 0.5 : undefined, ...dropIndicatorStyle }}>
                                     <div
                                         className={`channel-item ${isConnectedChannel ? 'active' : ''}`}
+                                        tabIndex={0}
+                                        role="button"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'ArrowDown') { e.preventDefault(); (e.currentTarget.closest('.channel-item')?.parentElement?.nextElementSibling?.querySelector('.channel-item') as HTMLElement)?.focus(); }
+                                            if (e.key === 'ArrowUp') { e.preventDefault(); (e.currentTarget.closest('.channel-item')?.parentElement?.previousElementSibling?.querySelector('.channel-item') as HTMLElement)?.focus(); }
+                                            if (e.key === 'Enter') { e.currentTarget.click(); }
+                                        }}
                                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: canManageChannels ? 'grab' : 'pointer' }}
                                         onClick={() => {
                                             if (isConnectedChannel) {
@@ -1425,7 +1486,10 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         return (
                             <div key={ch.id} {...dragProps} style={{ opacity: isDragging ? 0.5 : undefined, ...dropIndicatorStyle }}>
                                 <Link to={linkTo} style={{ textDecoration: 'none' }} draggable={false} onContextMenu={(e) => handleChannelContext(e, ch)}>
-                                    <div className={`channel-item ${isActive ? 'active' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: isMuted ? 0.5 : undefined, cursor: canManageChannels ? 'grab' : undefined }}>
+                                    <div className={`channel-item ${isActive ? 'active' : ''}`} tabIndex={0} onKeyDown={(e) => {
+                                            if (e.key === 'ArrowDown') { e.preventDefault(); (e.currentTarget.closest('.channel-item')?.parentElement?.parentElement?.nextElementSibling?.querySelector('.channel-item') as HTMLElement)?.focus(); }
+                                            if (e.key === 'ArrowUp') { e.preventDefault(); (e.currentTarget.closest('.channel-item')?.parentElement?.parentElement?.previousElementSibling?.querySelector('.channel-item') as HTMLElement)?.focus(); }
+                                        }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: isMuted ? 0.5 : undefined, cursor: canManageChannels ? 'grab' : undefined }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                                             {isPrivate ? <Lock size={18} style={{ flexShrink: 0, opacity: 0.7 }} /> : <HashIcon size={18} style={{ flexShrink: 0, opacity: 0.7 }} />}
                                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: hasUnread ? 600 : undefined, color: hasUnread ? 'var(--text-primary)' : undefined }}>{ch.name}</span>
@@ -1438,6 +1502,11 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                         )}
                                     </div>
                                 </Link>
+                                {channelTyping.has(ch.id) && (
+                                    <span style={{ fontSize: 10, color: 'var(--text-muted)', fontStyle: 'italic', padding: '0 0 2px 30px', display: 'block' }}>
+                                        {channelTyping.get(ch.id)!.join(', ')} typing...
+                                    </span>
+                                )}
                             </div>
                         );
                     };
@@ -2138,6 +2207,7 @@ export const AppLayout = () => {
         }
     }, [channelBgKey]);
     const [activeModal, setActiveModal] = useState<ModalType>(null);
+    const [showWhatsNew, setShowWhatsNew] = useState(false);
     const [incomingCall, setIncomingCall] = useState<CallInvitePayload | null>(null);
     const [isGuildRailOpen, setIsGuildRailOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -2185,6 +2255,14 @@ export const AppLayout = () => {
             disconnectSocket();
         };
     }, [userLoading, ctxUser.id]);
+
+    // Show "What's New" modal if user hasn't seen the latest changelog
+    useEffect(() => {
+        const lastSeen = localStorage.getItem('gratonite:last-seen-changelog');
+        if (lastSeen !== '2.0' && ctxUser.id) {
+            setTimeout(() => setShowWhatsNew(true), 2000);
+        }
+    }, [ctxUser.id]);
 
     // Fetch unread state when guild changes
     useEffect(() => {
@@ -2239,6 +2317,86 @@ export const AppLayout = () => {
         socket.on('CHANNEL_CREATE', onChannelCreate);
         return () => { socket.off('CHANNEL_CREATE', onChannelCreate); };
     }, []);
+
+    // Real-time guild, channel, friend, and DM updates (Wave 0)
+    useEffect(() => {
+        const unsubs = [
+            onGuildJoined((data) => {
+                setGuilds(prev => {
+                    if (prev.some(g => g.id === data.guildId)) return prev;
+                    return [...prev, {
+                        id: data.guild.id,
+                        name: data.guild.name,
+                        ownerId: '',
+                        iconHash: data.guild.iconHash,
+                        description: null,
+                        memberCount: data.guild.memberCount,
+                    }];
+                });
+                joinGuildRoom(data.guildId);
+                // Check if onboarding is configured for the new guild
+                (async () => {
+                    try {
+                        const token = getAccessToken();
+                        const res = await fetch(`${API_BASE}/guilds/${data.guildId}/onboarding`, {
+                            headers: { Authorization: `Bearer ${token}` },
+                        });
+                        if (res.ok) {
+                            const onboarding = await res.json();
+                            if (onboarding.welcomeMessage || onboarding.rulesChannelId) {
+                                setActiveModal('onboarding');
+                            }
+                        }
+                    } catch { /* ignore — onboarding is optional */ }
+                })();
+            }),
+            onGuildLeft((data) => {
+                setGuilds(prev => prev.filter(g => g.id !== data.guildId));
+                if (activeGuildId === data.guildId) {
+                    navigate('/app');
+                }
+            }),
+            onGuildUpdate((data) => {
+                setGuilds(prev => prev.map(g =>
+                    g.id === data.guildId ? { ...g, name: data.name ?? g.name, iconHash: data.iconHash ?? g.iconHash, description: data.description ?? g.description, memberCount: data.memberCount ?? g.memberCount } : g
+                ));
+            }),
+            onGuildDelete((data) => {
+                setGuilds(prev => prev.filter(g => g.id !== data.guildId));
+                if (activeGuildId === data.guildId) {
+                    navigate('/app');
+                }
+            }),
+            onChannelUpdate(() => {
+                window.dispatchEvent(new CustomEvent('gratonite:guild-updated'));
+            }),
+            onChannelDelete((data) => {
+                window.dispatchEvent(new CustomEvent('gratonite:guild-updated'));
+                const currentChannelMatch = location.pathname.match(/\/channel\/([^/]+)/);
+                if (currentChannelMatch?.[1] === data.channelId) {
+                    navigate(activeGuildId ? `/guild/${activeGuildId}` : '/app');
+                }
+            }),
+            onGuildMemberAdd((data) => {
+                setGuilds(prev => prev.map(g =>
+                    g.id === data.guildId ? { ...g, memberCount: g.memberCount + 1 } : g
+                ));
+            }),
+            onGuildMemberRemove((data) => {
+                setGuilds(prev => prev.map(g =>
+                    g.id === data.guildId ? { ...g, memberCount: Math.max(g.memberCount - 1, 0) } : g
+                ));
+            }),
+            onDmChannelCreate((data) => {
+                setDmChannels(prev => {
+                    if (prev.some(d => d.id === data.channel.id)) return prev;
+                    return [...prev, data.channel];
+                });
+            }),
+        ];
+
+        return () => unsubs.forEach(fn => fn());
+    }, [activeGuildId, navigate, location.pathname]);
 
     // Browser tab title with unread count
     const tabTitleUnreadMap = useUnreadStore();
@@ -2684,6 +2842,41 @@ export const AppLayout = () => {
     return (
         <ContextMenuProvider>
             <div className="app-container">
+                <a
+                    href="#main-content"
+                    style={{
+                        position: 'absolute',
+                        left: '-9999px',
+                        top: 'auto',
+                        width: '1px',
+                        height: '1px',
+                        overflow: 'hidden',
+                        zIndex: 9999,
+                    }}
+                    onFocus={(e) => {
+                        e.currentTarget.style.position = 'fixed';
+                        e.currentTarget.style.left = '16px';
+                        e.currentTarget.style.top = '16px';
+                        e.currentTarget.style.width = 'auto';
+                        e.currentTarget.style.height = 'auto';
+                        e.currentTarget.style.overflow = 'visible';
+                        e.currentTarget.style.background = 'var(--accent-primary)';
+                        e.currentTarget.style.color = 'white';
+                        e.currentTarget.style.padding = '8px 16px';
+                        e.currentTarget.style.borderRadius = '6px';
+                        e.currentTarget.style.textDecoration = 'none';
+                        e.currentTarget.style.fontSize = '14px';
+                    }}
+                    onBlur={(e) => {
+                        e.currentTarget.style.position = 'absolute';
+                        e.currentTarget.style.left = '-9999px';
+                        e.currentTarget.style.width = '1px';
+                        e.currentTarget.style.height = '1px';
+                        e.currentTarget.style.overflow = 'hidden';
+                    }}
+                >
+                    Skip to main content
+                </a>
                 <div
                     className={`mobile-backdrop ${isGuildRailOpen || isSidebarOpen ? 'visible' : ''}`}
                     onClick={() => { setIsGuildRailOpen(false); setIsSidebarOpen(false); }}
@@ -2713,8 +2906,8 @@ export const AppLayout = () => {
                     userProfile={userProfile}
                     guildSession={guildSession}
                 />
-                <div ref={mainContentRef} className={`main-content-wrapper ${bgMedia !== null ? 'has-custom-bg' : ''}`} style={(!isChatRoute && !isVoiceRoute) ? { flex: 1, display: 'flex', flexDirection: 'column' } : {}}>
-                    <div className="route-transition-wrapper" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <main id="main-content" ref={mainContentRef} className={`main-content-wrapper ${bgMedia !== null ? 'has-custom-bg' : ''}`} tabIndex={-1} style={(!isChatRoute && !isVoiceRoute) ? { flex: 1, display: 'flex', flexDirection: 'column' } : {}}>
+                    <div className="route-transition-wrapper route-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
                         <Outlet context={{
                             bgMedia,
                             hasCustomBg: bgMedia !== null,
@@ -2732,26 +2925,31 @@ export const AppLayout = () => {
                         }} />
                     </div>
                     {isChatRoute && isSidebarOpen && <MembersSidebar onOpenProfile={() => setActiveModal('userProfile')} />}
-                </div>
+                </main>
 
-                {/* Mobile Bottom Navigation (< 768px) — 3 tabs only */}
+                {/* Mobile Bottom Navigation (< 768px) — 4 tabs */}
                 <nav className="mobile-bottom-nav">
                     <Link to="/" className={`mobile-nav-item ${location.pathname === '/' ? 'active' : ''}`}>
                         <Home size={20} />
                         <span>Home</span>
                     </Link>
-                    <Link to="/discover" className={`mobile-nav-item ${location.pathname === '/discover' ? 'active' : ''}`}>
-                        <Search size={20} />
-                        <span>Discover</span>
+                    <Link to="/friends" className={`mobile-nav-item ${location.pathname.startsWith('/dm') || location.pathname === '/friends' ? 'active' : ''}`}>
+                        <MessageSquare size={20} />
+                        <span>DMs</span>
                     </Link>
-                    <div className="mobile-nav-item" onClick={() => setActiveModal('notifications')}>
-                        <Bell size={20} />
-                        <span>Notifications</span>
+                    <div className="mobile-nav-item" onClick={() => setActiveModal('globalSearch')}>
+                        <Search size={20} />
+                        <span>Search</span>
+                    </div>
+                    <div className="mobile-nav-item" onClick={() => setActiveModal('settings')}>
+                        <Settings size={20} />
+                        <span>Profile</span>
                     </div>
                 </nav>
             </div>
 
             {/* Modals */}
+            <Suspense fallback={null}>
             <ModalWrapper isOpen={activeModal === 'settings'}>
                 <SettingsModal onClose={() => setActiveModal(null)} userProfile={userProfile} setUserProfile={setUserProfile} userTheme={userTheme} setUserTheme={setUserTheme} />
             </ModalWrapper>
@@ -2811,6 +3009,8 @@ export const AppLayout = () => {
             <ModalWrapper isOpen={activeModal === 'onboarding'}>
                 <OnboardingModal onClose={() => setActiveModal(null)} />
             </ModalWrapper>
+            {showWhatsNew && <WhatsNewModal onClose={() => setShowWhatsNew(false)} />}
+            </Suspense>
             {incomingCall && (
                 <IncomingCallModal
                     channelId={incomingCall.channelId}
@@ -2823,11 +3023,24 @@ export const AppLayout = () => {
                     onDecline={handleDeclineCall}
                 />
             )}
+            <div
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+                style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}
+                id="sr-announcements"
+            />
         </ContextMenuProvider>
     );
 };
 
 // Removed ChatRouteWrapper since ChannelChat uses outlet context directly
+
+const LazyFallback = () => (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        <div className="skeleton-pulse" style={{ width: 40, height: 40, borderRadius: '50%' }} />
+    </div>
+);
 
 const appRouter = createBrowserRouter(
     createRoutesFromElements(
@@ -2845,39 +3058,39 @@ const appRouter = createBrowserRouter(
 
             {/* Private App Routes */}
             <Route path="/" element={<RequireAuth><AppLayout /></RequireAuth>}>
-                <Route index element={<HomePage />} />
-                <Route path="friends" element={<Friends />} />
+                <Route index element={<Suspense fallback={<LazyFallback />}><HomePage /></Suspense>} />
+                <Route path="friends" element={<Suspense fallback={<LazyFallback />}><Friends /></Suspense>} />
                 <Route path="gratonite" element={<Navigate to="/" replace />} />
-                <Route path="shop" element={<Shop />} />
-                <Route path="marketplace" element={<Marketplace />} />
-                <Route path="inventory" element={<Inventory />} />
-                <Route path="discover" element={<Discover />} />
+                <Route path="shop" element={<Suspense fallback={<LazyFallback />}><Shop /></Suspense>} />
+                <Route path="marketplace" element={<Suspense fallback={<LazyFallback />}><Marketplace /></Suspense>} />
+                <Route path="inventory" element={<Suspense fallback={<LazyFallback />}><Inventory /></Suspense>} />
+                <Route path="discover" element={<Suspense fallback={<LazyFallback />}><Discover /></Suspense>} />
                 <Route path="download" element={<Download />} />
-                <Route path="creator-dashboard" element={<CreatorDashboard />} />
-                <Route path="fame" element={<FameDashboard />} />
-                <Route path="theme-builder" element={<ThemeBuilder />} />
-                <Route path="bot-builder" element={<BotBuilder />} />
-                <Route path="bot-store" element={<BotStore />} />
-                <Route path="help-center" element={<HelpCenter />} />
-                <Route path="message-requests" element={<MessageRequests />} />
-                <Route path="admin/team" element={<RequireAdmin><AdminTeam /></RequireAdmin>} />
-                <Route path="admin/audit" element={<RequireAdmin><AdminAuditLog /></RequireAdmin>} />
-                <Route path="admin/bot-moderation" element={<RequireAdmin><AdminBotModeration /></RequireAdmin>} />
-                <Route path="admin/feedback" element={<RequireAdmin><AdminFeedback /></RequireAdmin>} />
-                <Route path="admin/reports" element={<RequireAdmin><AdminReports /></RequireAdmin>} />
-                <Route path="admin/portals" element={<RequireAdmin><AdminPortals /></RequireAdmin>} />
-                <Route path="dm/:id" element={<DirectMessage />} />
+                <Route path="creator-dashboard" element={<Suspense fallback={<LazyFallback />}><CreatorDashboard /></Suspense>} />
+                <Route path="fame" element={<Suspense fallback={<LazyFallback />}><FameDashboard /></Suspense>} />
+                <Route path="theme-builder" element={<Suspense fallback={<LazyFallback />}><ThemeBuilder /></Suspense>} />
+                <Route path="bot-builder" element={<Suspense fallback={<LazyFallback />}><BotBuilder /></Suspense>} />
+                <Route path="bot-store" element={<Suspense fallback={<LazyFallback />}><BotStore /></Suspense>} />
+                <Route path="help-center" element={<Suspense fallback={<LazyFallback />}><HelpCenter /></Suspense>} />
+                <Route path="message-requests" element={<Suspense fallback={<LazyFallback />}><MessageRequests /></Suspense>} />
+                <Route path="admin/team" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminTeam /></Suspense></RequireAdmin>} />
+                <Route path="admin/audit" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminAuditLog /></Suspense></RequireAdmin>} />
+                <Route path="admin/bot-moderation" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminBotModeration /></Suspense></RequireAdmin>} />
+                <Route path="admin/feedback" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminFeedback /></Suspense></RequireAdmin>} />
+                <Route path="admin/reports" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminReports /></Suspense></RequireAdmin>} />
+                <Route path="admin/portals" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminPortals /></Suspense></RequireAdmin>} />
+                <Route path="dm/:id" element={<Suspense fallback={<LazyFallback />}><DirectMessage /></Suspense>} />
                 {/* Parameterized guild routes */}
-                <Route path="guild/:guildId" element={<ErrorBoundary><GuildOverview /></ErrorBoundary>} />
-                <Route path="guild/:guildId/channel/:channelId" element={<ChannelChat />} />
-                <Route path="guild/:guildId/voice/:channelId" element={<VoiceChannel />} />
+                <Route path="guild/:guildId" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><GuildOverview /></Suspense></ErrorBoundary>} />
+                <Route path="guild/:guildId/channel/:channelId" element={<Suspense fallback={<LazyFallback />}><ChannelChat /></Suspense>} />
+                <Route path="guild/:guildId/voice/:channelId" element={<Suspense fallback={<LazyFallback />}><VoiceChannel /></Suspense>} />
                 <Route path="guilds/:guildId/:channelId" element={<LegacyGuildChannelRedirect />} />
                 <Route path="guilds/:guildId/voice/:channelId" element={<LegacyGuildVoiceRedirect />} />
                 <Route path="guild/:guildId/:channelId" element={<LegacyGuildChannelRedirect />} />
-                <Route path="guild/:guildId/overview" element={<ErrorBoundary><GuildOverview /></ErrorBoundary>} />
-                <Route path="guild/:guildId/audit-log" element={<AuditLog />} />
-                <Route path="guild/:guildId/workflows" element={<GuildWorkflows />} />
-                <Route path="guild/:guildId/events" element={<EventScheduler />} />
+                <Route path="guild/:guildId/overview" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><GuildOverview /></Suspense></ErrorBoundary>} />
+                <Route path="guild/:guildId/audit-log" element={<Suspense fallback={<LazyFallback />}><AuditLog /></Suspense>} />
+                <Route path="guild/:guildId/workflows" element={<Suspense fallback={<LazyFallback />}><GuildWorkflows /></Suspense>} />
+                <Route path="guild/:guildId/events" element={<Suspense fallback={<LazyFallback />}><EventScheduler /></Suspense>} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

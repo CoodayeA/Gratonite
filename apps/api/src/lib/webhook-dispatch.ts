@@ -108,6 +108,41 @@ async function processActions(actions: BotAction[], guildId: string): Promise<vo
 }
 
 // ---------------------------------------------------------------------------
+// Retry with exponential backoff
+// ---------------------------------------------------------------------------
+
+async function deliverWebhookWithRetry(url: string, payload: string, headers: Record<string, string>, maxRetries = 3): Promise<{ ok: boolean; status: number; body: string }> {
+  const delays = [1000, 5000, 30000];
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: payload,
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      const body = await res.text();
+      if (res.ok) return { ok: true, status: res.status, body };
+      // Retry on 5xx errors only
+      if (res.status >= 500 && attempt < maxRetries) {
+        await new Promise(r => setTimeout(r, delays[attempt]));
+        continue;
+      }
+      return { ok: false, status: res.status, body };
+    } catch {
+      if (attempt < maxRetries) {
+        await new Promise(r => setTimeout(r, delays[attempt]));
+        continue;
+      }
+    }
+  }
+  return { ok: false, status: 0, body: '' };
+}
+
+// ---------------------------------------------------------------------------
 // Core dispatch
 // ---------------------------------------------------------------------------
 
@@ -167,50 +202,20 @@ async function _sendToBot(
   try {
     const signature = sign(payload, bot.webhookSecretKey);
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3000);
+    const result = await deliverWebhookWithRetry(bot.webhookUrl, payload, {
+      'X-Gratonite-Signature': signature,
+      'X-Gratonite-Bot-Id': bot.id,
+    });
 
-    let responseBody: BotActionResponse = {};
-    const startTime = Date.now();
-
-    try {
-      const resp = await fetch(bot.webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Gratonite-Signature': signature,
-          'X-Gratonite-Bot-Id': bot.id,
-        },
-        body: payload,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timer);
-      const durationMs = Date.now() - startTime;
-      let responseText = '';
-
-      if (resp.ok) {
-        const contentType = resp.headers.get('content-type') ?? '';
-        if (contentType.includes('application/json')) {
-          responseText = await resp.text();
-          try { responseBody = JSON.parse(responseText) as BotActionResponse; } catch { /* ignore */ }
-        }
-      } else {
-        responseText = await resp.text();
-      }
-
-      // Delivery logged at the webhooks route level for traditional webhooks
-    } catch (fetchErr: unknown) {
-      clearTimeout(timer);
-      const durationMs = Date.now() - startTime;
-      const isAbort = fetchErr instanceof Error && fetchErr.name === 'AbortError';
-      if (isAbort) {
-        console.warn('[webhook-dispatch] timeout for bot', bot.id, 'at', bot.webhookUrl);
-      } else {
-        console.warn('[webhook-dispatch] fetch error for bot', bot.id, fetchErr);
-      }
-
+    if (!result.ok) {
+      console.warn('[webhook-dispatch] delivery failed for bot', bot.id, 'status:', result.status);
       return;
+    }
+
+    // Parse action response if present
+    let responseBody: BotActionResponse = {};
+    if (result.body) {
+      try { responseBody = JSON.parse(result.body) as BotActionResponse; } catch { /* ignore */ }
     }
 
     // Process any actions the bot returned.

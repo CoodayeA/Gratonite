@@ -6,3 +6,8 @@ const pool = new Pool({
 });
 
 export const db = drizzle(pool);
+
+// Periodic pool stats logging
+setInterval(() => {
+  console.log(`[db-pool] total=${pool.totalCount} idle=${pool.idleCount} waiting=${pool.waitingCount}`);
+}, 60_000).unref();

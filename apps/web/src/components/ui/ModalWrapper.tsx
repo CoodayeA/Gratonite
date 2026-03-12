@@ -141,8 +141,10 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children }) 
                 outline: 'none',
             }}
         >
-            <div style={{ pointerEvents: 'auto', width: '100%', height: '100%' }}>
-                {children}
+            <div style={{ pointerEvents: 'auto', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', width: '100%', height: '100%' }}>
+                    {children}
+                </div>
             </div>
         </div>
     );

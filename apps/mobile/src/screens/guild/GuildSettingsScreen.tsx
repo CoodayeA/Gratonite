@@ -352,6 +352,24 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
           <Text style={styles.actionText}>Server Insights</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('GuildForms', { guildId })}>
+          <Ionicons name="document-text-outline" size={22} color={colors.textSecondary} />
+          <Text style={styles.actionText}>Forms & Surveys</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('Clips', { guildId })}>
+          <Ionicons name="videocam-outline" size={22} color={colors.textSecondary} />
+          <Text style={styles.actionText}>Clips</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('InterestMatches', { guildId })}>
+          <Ionicons name="people-circle-outline" size={22} color={colors.textSecondary} />
+          <Text style={styles.actionText}>Interest Matches</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
       </View>
 
       {/* Danger zone */}

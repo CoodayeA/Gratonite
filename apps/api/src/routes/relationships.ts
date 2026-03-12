@@ -582,6 +582,15 @@ relationshipsRouter.post(
       ]);
 
       res.status(201).json(newChannel);
+
+      // Notify the target user about the new DM channel
+      try {
+        const [initiator] = await db.select({ id: users.id, username: users.username, displayName: users.displayName, avatarHash: users.avatarHash }).from(users).where(eq(users.id, userId)).limit(1);
+        getIO().to(`user:${targetUserId}`).emit('DM_CHANNEL_CREATE', {
+          channel: newChannel,
+          initiator: initiator ? { id: initiator.id, username: initiator.username, displayName: initiator.displayName, avatarHash: initiator.avatarHash } : { id: userId },
+        });
+      } catch { /* socket may not be initialised in tests */ }
     } catch (err) {
       handleAppError(res, err, 'relationships');
     }
@@ -776,6 +785,27 @@ relationshipsRouter.put(
         );
 
       res.status(200).json({ code: 'OK', message: 'Friend request accepted' });
+
+      // Emit friend accepted to both users
+      try {
+        const [accepter] = await db.select({ id: users.id, username: users.username, displayName: users.displayName, avatarHash: users.avatarHash }).from(users).where(eq(users.id, userId)).limit(1);
+        const [requesterUser] = await db.select({ id: users.id, username: users.username, displayName: users.displayName, avatarHash: users.avatarHash }).from(users).where(eq(users.id, requesterId)).limit(1);
+        const io = getIO();
+        io.to(`user:${requesterId}`).emit('FRIEND_ACCEPTED', {
+          userId: requesterId,
+          friendId: userId,
+          username: accepter?.username,
+          displayName: accepter?.displayName,
+          avatarHash: accepter?.avatarHash,
+        });
+        io.to(`user:${userId}`).emit('FRIEND_ACCEPTED', {
+          userId,
+          friendId: requesterId,
+          username: requesterUser?.username,
+          displayName: requesterUser?.displayName,
+          avatarHash: requesterUser?.avatarHash,
+        });
+      } catch { /* socket may not be initialised in tests */ }
     } catch (err) {
       handleAppError(res, err, 'relationships');
     }
@@ -817,6 +847,11 @@ relationshipsRouter.delete(
         );
 
       res.status(200).json({ code: 'OK', message: 'Relationship removed' });
+
+      // Emit friend removed to the other user
+      try {
+        getIO().to(`user:${targetId}`).emit('FRIEND_REMOVED', { userId: targetId, removedById: userId });
+      } catch { /* socket may not be initialised in tests */ }
     } catch (err) {
       handleAppError(res, err, 'relationships');
     }

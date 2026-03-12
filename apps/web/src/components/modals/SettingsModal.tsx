@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Check, ZoomIn, ZoomOut, RotateCw, Volume2, VolumeX, Eye, EyeOff, Copy, Info, Link2 } from 'lucide-react';
+import { X, Check, ZoomIn, ZoomOut, RotateCw, Volume2, VolumeX, Eye, EyeOff, Copy, Info, Link2, Globe } from 'lucide-react';
 import { useTheme, ButtonShape } from '../ui/ThemeProvider';
 import { useToast } from '../ui/ToastManager';
 import { useUser } from '../../contexts/UserContext';
 import { isSoundMuted, setSoundMuted, getSoundVolume, setSoundVolume, getSoundPack, setSoundPack, playSound } from '../../utils/SoundManager';
 import { api, API_BASE } from '../../lib/api';
+import { AVAILABLE_LOCALES, getLocale, setLocale } from '../../i18n';
 
 // ─── Image Crop Modal ────────────────────────────────────────────────────────
 
@@ -193,7 +194,7 @@ const CropModal = ({
 
 // ─── Privacy Toggle Component ────────────────────────────────────────────────
 
-const PrivacyToggle = ({ label, description, storageKey, defaultValue }: { label: string; description: string; storageKey: string; defaultValue: boolean }) => {
+const PrivacyToggle = ({ label, description, storageKey, defaultValue, onChange }: { label: string; description: string; storageKey: string; defaultValue: boolean; onChange?: (value: boolean) => void }) => {
     const [enabled, setEnabled] = useState(() => {
         try {
             const saved = localStorage.getItem(storageKey);
@@ -207,6 +208,7 @@ const PrivacyToggle = ({ label, description, storageKey, defaultValue }: { label
         const next = !enabled;
         setEnabled(next);
         try { localStorage.setItem(storageKey, String(next)); } catch {}
+        onChange?.(next);
     };
 
     return (
@@ -732,7 +734,7 @@ const SettingsModal = ({
             <div className="modal-overlay">
                 <div className="settings-modal flex-row glass-panel" style={{ width: 'min(960px, 90vw)', height: 'min(680px, 85vh)', padding: 0, overflow: 'hidden' }}>
                     {/* Left Sidebar */}
-                    <div style={{ width: '220px', background: 'var(--bg-elevated)', padding: '32px 16px', borderRight: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    <div className="settings-sidebar" style={{ width: '220px', background: 'var(--bg-elevated)', padding: '32px 16px', borderRight: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
                         <div>
                             <div className="sidebar-section-label">ACCOUNT</div>
                             <div className={`sidebar-nav-item ${activeTab === 'account' ? 'active' : ''}`} onClick={() => setActiveTab('account')}>My Account</div>
@@ -754,6 +756,15 @@ const SettingsModal = ({
                             <div className="sidebar-section-label">SUPPORT</div>
                             <div className={`sidebar-nav-item ${activeTab === 'feedback' ? 'active' : ''}`} onClick={() => setActiveTab('feedback')}>Send Feedback</div>
                         </div>
+                    </div>
+
+                    {/* Mobile Tab Pills */}
+                    <div className="settings-tabs-mobile">
+                        {(['account', 'profile', 'sessions', 'privacy', 'connections', 'achievements', 'stats', 'wardrobe', 'theme', 'sound', 'accessibility', 'feedback'] as const).map(tab => (
+                            <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>
+                                {tab === 'privacy' ? 'Privacy' : tab === 'connections' ? 'Connections' : tab === 'achievements' ? 'Achievements' : tab === 'wardrobe' ? 'Wardrobe' : tab === 'accessibility' ? 'A11y' : tab === 'feedback' ? 'Feedback' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            </button>
+                        ))}
                     </div>
 
                     {/* Right Panel */}
@@ -1601,6 +1612,10 @@ const SettingsModal = ({
                                             id: 'y2k', label: 'Y2K Chrome', desc: 'Shiny millennium',
                                             preview: { bg: '#e8eaf6', sidebar: '#c5cae9', accent: '#5c6bc0', text: '#3949ab', msg1: '#ede7f6', msg2: '#d1c4e9' }
                                         },
+                                        {
+                                            id: 'high-contrast', label: 'High Contrast', desc: 'Maximum readability',
+                                            preview: { bg: '#000000', sidebar: '#0a0a0a', accent: '#5b9fff', text: '#e0e0e0', msg1: '#1a1a1a', msg2: '#0a0a0a' }
+                                        },
                                     ].map(t => {
                                         const isSelected = theme === t.id;
                                         const p = t.preview;
@@ -1799,6 +1814,27 @@ const SettingsModal = ({
                                             </div>
                                         );
                                     })}
+                                </div>
+
+                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Language</h3>
+                                <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '40px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <Globe size={18} style={{ color: 'var(--text-muted)' }} />
+                                        <div>
+                                            <div style={{ fontWeight: 600, marginBottom: '4px' }}>Display Language</div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Choose the language for Gratonite's interface.</div>
+                                        </div>
+                                    </div>
+                                    <select
+                                        value={getLocale()}
+                                        onChange={(e) => { setLocale(e.target.value as any); playSound('click'); }}
+                                        className="auth-input"
+                                        style={{ width: '160px', padding: '8px 12px', margin: 0 }}
+                                    >
+                                        {AVAILABLE_LOCALES.map(loc => (
+                                            <option key={loc.code} value={loc.code}>{loc.name}</option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Performance & Effects</h3>
@@ -2184,6 +2220,26 @@ const SettingsModal = ({
                                     </div>
                                 </div>
 
+                                {/* Streamer Mode */}
+                                <div style={{ marginBottom: '32px' }}>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Streamer Mode</h3>
+                                    <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
+                                        <PrivacyToggle
+                                            label="Enable Streamer Mode"
+                                            description="Hides sensitive information like email addresses, invite links, and personal details behind a blur. Hover to reveal."
+                                            storageKey="gratonite:streamer-mode"
+                                            defaultValue={false}
+                                            onChange={(val) => {
+                                                if (val) {
+                                                    document.body.classList.add('streamer-mode');
+                                                } else {
+                                                    document.body.classList.remove('streamer-mode');
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
                                 {/* Content filtering */}
                                 <div style={{ marginBottom: '32px' }}>
                                     <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Safe Messaging</h3>
@@ -2203,6 +2259,31 @@ const SettingsModal = ({
                                             defaultValue={true}
                                         />
                                     </div>
+                                </div>
+
+                                {/* Data Export (GDPR) */}
+                                <div style={{ marginBottom: '32px' }}>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Your Data</h3>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '16px', lineHeight: '1.4' }}>
+                                        Request a copy of all your Gratonite data, including messages, profile info, and server memberships. You will receive an email when your export is ready.
+                                    </p>
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const token = localStorage.getItem('gratonite_access_token');
+                                                await fetch(`${API_BASE}/api/v1/users/@me/data-export`, {
+                                                    method: 'POST',
+                                                    headers: { Authorization: `Bearer ${token}` },
+                                                });
+                                                addToast({ title: 'Data export requested', description: 'You will receive an email when your data is ready to download.', variant: 'success' });
+                                            } catch {
+                                                addToast({ title: 'Failed to request data export', variant: 'error' });
+                                            }
+                                        }}
+                                        style={{ padding: '8px 16px', background: 'var(--bg-elevated)', border: '1px solid var(--border-primary, var(--stroke))', color: 'var(--text-primary)', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
+                                    >
+                                        Request My Data
+                                    </button>
                                 </div>
                             </>
                         )}

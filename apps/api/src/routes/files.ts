@@ -81,13 +81,28 @@ const EXT_MIME_MAP: Record<string, string[]> = {
 };
 
 /**
- * Cross-validate extension against claimed MIME type. Returns true if they are
- * consistent or if the extension is not in our known map (we fall through to
- * the allowlist check in that case).
+ * Allowed file extensions (default-deny). Only files with these extensions
+ * will be accepted for upload.
+ */
+const ALLOWED_EXTENSIONS = new Set([
+  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico', '.avif',
+  '.mp4', '.webm', '.mov', '.avi', '.mkv',
+  '.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a',
+  '.pdf', '.txt', '.md', '.json', '.csv', '.xml',
+  '.zip', '.tar', '.gz',
+  '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+]);
+
+/**
+ * Cross-validate extension against claimed MIME type. Returns true if the
+ * extension is in the allowed set and is consistent with the MIME type
+ * (or not in our known map). Unknown extensions are rejected.
  */
 function extensionMatchesMime(ext: string, mimeType: string): boolean {
-  const expected = EXT_MIME_MAP[ext.toLowerCase()];
-  if (!expected) return true; // unknown extension — rely on allowlist only
+  const lower = ext.toLowerCase();
+  if (!ALLOWED_EXTENSIONS.has(lower)) return false; // reject unknown extensions
+  const expected = EXT_MIME_MAP[lower];
+  if (!expected) return true; // allowed extension but no MIME mapping — accept
   return expected.includes(mimeType.toLowerCase());
 }
 

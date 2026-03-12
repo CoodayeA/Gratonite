@@ -18,6 +18,10 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<SearchResult[]>([]);
     const [searching, setSearching] = useState(false);
+    const [filterFrom, setFilterFrom] = useState('');
+    const [filterBefore, setFilterBefore] = useState('');
+    const [filterAfter, setFilterAfter] = useState('');
+    const [filterHas, setFilterHas] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
     const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const navigate = useNavigate();
@@ -40,9 +44,14 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
         setSearching(true);
         searchTimerRef.current = setTimeout(async () => {
             try {
+                const searchParams: { query: string; limit: number; authorId?: string; before?: string; after?: string; has?: string } = { query, limit: 10 };
+                if (filterFrom.trim()) searchParams.authorId = filterFrom.trim();
+                if (filterBefore) searchParams.before = filterBefore;
+                if (filterAfter) searchParams.after = filterAfter;
+                if (filterHas) searchParams.has = filterHas;
                 const [users, messages] = await Promise.all([
                     api.users.searchUsers(query).catch(() => []),
-                    api.search.messages({ query, limit: 10 }).catch(() => ({ results: [] })),
+                    api.search.messages(searchParams).catch(() => ({ results: [] })),
                 ]);
 
                 const combined: SearchResult[] = [];
@@ -76,7 +85,7 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
         }, 300);
 
         return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
-    }, [query]);
+    }, [query, filterFrom, filterBefore, filterAfter, filterHas]);
 
     const handleResultClick = async (result: SearchResult) => {
         try {
@@ -122,6 +131,19 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                         style={{ flex: 1, background: 'transparent', border: 'none', color: 'white', fontSize: '16px', outline: 'none' }}
                     />
                     <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '6px', color: 'var(--text-muted)', fontSize: '12px', padding: '4px 8px', fontWeight: 600 }}>ESC</div>
+                </div>
+
+                {/* Advanced search filters */}
+                <div style={{ display: 'flex', gap: 8, padding: '8px 16px', flexWrap: 'wrap', borderBottom: '1px solid var(--stroke)', background: 'var(--bg-elevated)' }}>
+                    <input placeholder="from:user" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} style={{ flex: '1 1 120px', minWidth: 100, padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} />
+                    <input type="date" value={filterAfter} onChange={e => setFilterAfter(e.target.value)} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} title="After date" />
+                    <input type="date" value={filterBefore} onChange={e => setFilterBefore(e.target.value)} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} title="Before date" />
+                    <select value={filterHas} onChange={e => setFilterHas(e.target.value)} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }}>
+                        <option value="">has:...</option>
+                        <option value="file">file</option>
+                        <option value="image">image</option>
+                        <option value="link">link</option>
+                    </select>
                 </div>
 
                 <div style={{ maxHeight: '400px', overflowY: 'auto', background: 'var(--bg-primary)' }}>

@@ -25,17 +25,21 @@ type RuleType = 'keyword' | 'spam' | 'caps' | 'links';
 
 const RULE_TYPES: RuleType[] = ['keyword', 'spam', 'caps', 'links'];
 
-const TYPE_CONFIG: Record<RuleType, { color: string; icon: string; label: string }> = {
-  keyword: { color: '#e67e22', icon: 'text-outline', label: 'Keyword' },
-  spam: { color: '#e74c3c', icon: 'flash-outline', label: 'Spam' },
-  caps: { color: '#3498db', icon: 'volume-high-outline', label: 'Caps' },
-  links: { color: '#9b59b6', icon: 'link-outline', label: 'Links' },
-};
+/** Automod rule type accent color — purple has no semantic theme token, kept as constant */
+const AUTOMOD_LINKS_COLOR = '#9b59b6';
+
+const TYPE_CONFIG_FACTORY = (colors: { warning: string; error: string; accentPrimary: string }) => ({
+  keyword: { color: colors.warning, icon: 'text-outline', label: 'Keyword' },
+  spam: { color: colors.error, icon: 'flash-outline', label: 'Spam' },
+  caps: { color: colors.accentPrimary, icon: 'volume-high-outline', label: 'Caps' },
+  links: { color: AUTOMOD_LINKS_COLOR, icon: 'link-outline', label: 'Links' },
+} as Record<RuleType, { color: string; icon: string; label: string }>);
 
 export default function AutomodConfigScreen({ route }: Props) {
   const { guildId } = route.params;
   const { colors, spacing, fontSize, borderRadius } = useTheme();
   const toast = useToast();
+  const TYPE_CONFIG = useMemo(() => TYPE_CONFIG_FACTORY(colors), [colors]);
   const [rules, setRules] = useState<AutomodRule[]>([]);
   const [loading, setLoading] = useState(true);
 

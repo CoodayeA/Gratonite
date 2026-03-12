@@ -37,6 +37,7 @@ seasonalEventsRouter.get('/events/:eventId/progress', requireAuth, async (req: R
 seasonalEventsRouter.post('/events/:eventId/claim', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const userId = req.userId!;
   const eventId = req.params.eventId as string;
+  const { milestoneId } = req.body ?? {};
   try {
     const [event] = await db.select().from(seasonalEvents).where(eq(seasonalEvents.id, eventId)).limit(1);
     if (!event) {
@@ -50,10 +51,37 @@ seasonalEventsRouter.post('/events/:eventId/claim', requireAuth, async (req: Req
       return;
     }
 
+    if (!milestoneId) {
+      res.status(400).json({ error: 'milestoneId is required' });
+      return;
+    }
+
     const [progress] = await db.select().from(userEventProgress)
       .where(and(eq(userEventProgress.userId, userId), eq(userEventProgress.eventId, eventId)));
 
-    res.json(progress ?? { userId, eventId, points: 0, claimedRewards: [] });
+    const currentRewards = (progress?.claimedRewards ?? []) as string[];
+
+    if (currentRewards.includes(milestoneId)) {
+      res.status(400).json({ error: 'Milestone already claimed' });
+      return;
+    }
+
+    const updatedRewards = [...currentRewards, milestoneId];
+
+    if (progress) {
+      await db.update(userEventProgress)
+        .set({ claimedRewards: updatedRewards })
+        .where(and(eq(userEventProgress.userId, userId), eq(userEventProgress.eventId, eventId)));
+    } else {
+      await db.insert(userEventProgress).values({
+        userId,
+        eventId,
+        points: 0,
+        claimedRewards: updatedRewards,
+      });
+    }
+
+    res.json({ userId, eventId, points: progress?.points ?? 0, claimedRewards: updatedRewards });
   } catch (err) {
     console.error('[seasonal-events] POST claim error:', err);
     res.status(500).json({ error: 'Internal server error' });

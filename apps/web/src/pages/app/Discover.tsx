@@ -6,7 +6,7 @@ import { useTheme, AppTheme } from '../../components/ui/ThemeProvider';
 import { api, API_BASE } from '../../lib/api';
 import { StarRating } from '../../components/ui/StarRating';
 
-type Tab = 'portals' | 'bots' | 'themes';
+type Tab = 'portals' | 'bots' | 'themes' | 'templates';
 
 type PortalInfo = {
     id: string;
@@ -82,6 +82,15 @@ const BUILTIN_THEME_PREVIEWS: Record<string, { bg: string; accent: string; label
     neon:          { bg: '#0a0010', accent: '#ff00ff', label: 'Neon',          tags: ['Built-in', 'Dark'] },
     midnight_blue: { bg: '#0a0f1e', accent: '#00b4ff', label: 'Midnight Blue', tags: ['Built-in', 'Dark'] },
 };
+
+const SERVER_TEMPLATES = [
+    { id: '1', name: 'Gaming Community', description: 'Voice channels, LFG, game channels', memberCount: 1200, uses: 340, category: 'Gaming' },
+    { id: '2', name: 'Study Group', description: 'Subject channels, library, study rooms', memberCount: 800, uses: 220, category: 'Education' },
+    { id: '3', name: 'Music Label', description: 'Release channels, collab rooms, showcases', memberCount: 500, uses: 150, category: 'Music' },
+    { id: '4', name: 'Art Studio', description: 'Portfolio, critique, commission channels', memberCount: 600, uses: 180, category: 'Art' },
+    { id: '5', name: 'Tech Startup', description: 'Dev channels, standup, PR reviews', memberCount: 450, uses: 130, category: 'Tech' },
+    { id: '6', name: 'Book Club', description: 'Reading lists, discussion threads, reviews', memberCount: 350, uses: 95, category: 'Education' },
+];
 
 // Portal Check-in Modal
 const PortalCheckinModal = ({ portal, onClose }: { portal: PortalInfo; onClose: () => void }) => {
@@ -508,6 +517,18 @@ const Discover = () => {
             >
                 <Palette size={18} /> Themes
             </button>
+            <button
+                onClick={() => setActiveTab('templates')}
+                style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    padding: '0 0 12px 0', fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px',
+                    color: activeTab === 'templates' ? 'var(--text-primary)' : 'var(--text-muted)',
+                    borderBottom: activeTab === 'templates' ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                    transition: 'all 0.2s'
+                }}
+            >
+                <Globe size={18} /> Templates
+            </button>
         </div>
     );
 
@@ -915,6 +936,44 @@ const Discover = () => {
     const filteredBotIndices = q ? botNames.map((b, i) => ({ b, i })).filter(({ b }) => b.toLowerCase().includes(q)).map(({ i }) => i) : botNames.map((_, i) => i);
     const filteredThemes = q ? allThemes.filter(t => t.name.toLowerCase().includes(q) || t.tags.some((tag: string) => tag.toLowerCase().includes(q))) : allThemes;
 
+    const renderTemplates = () => {
+        const filtered = searchQuery
+            ? SERVER_TEMPLATES.filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.description.toLowerCase().includes(searchQuery.toLowerCase()))
+            : SERVER_TEMPLATES;
+        return (
+            <>
+                <div style={{ marginBottom: '24px' }}>
+                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Start your server with a pre-built template. Channels, roles, and permissions included.</p>
+                </div>
+                {filtered.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', padding: '32px' }}>No templates match "{searchQuery}"</p>}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                    {filtered.map(template => (
+                        <div key={template.id} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', transition: 'border-color 0.2s' }}
+                            onMouseOver={e => (e.currentTarget.style.borderColor = 'var(--accent-primary)')}
+                            onMouseOut={e => (e.currentTarget.style.borderColor = 'var(--stroke)')}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <div>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>{template.name}</h3>
+                                    <span style={{ fontSize: '11px', padding: '2px 8px', background: 'var(--bg-tertiary)', borderRadius: '6px', color: 'var(--text-muted)' }}>{template.category}</span>
+                                </div>
+                            </div>
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{template.description}</p>
+                            <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Users size={12} /> {template.uses} uses</span>
+                            </div>
+                            <button
+                                onClick={() => { addToast({ title: 'Template Applied', description: `"${template.name}" template will be used when creating a new server.`, variant: 'success' }); }}
+                                style={{ marginTop: 'auto', padding: '8px 16px', background: 'var(--accent-primary)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
+                            >
+                                Use Template
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </>
+        );
+    };
+
     const renderThemes = () => (
         <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -1003,16 +1062,18 @@ const Discover = () => {
 
                     <div className="discover-content">
                         {isLoading ? (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '64px', color: 'var(--text-muted)', gap: '12px', flexDirection: 'column' }}>
-                                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                                <div style={{ width: '32px', height: '32px', border: '3px solid var(--stroke)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                                <span style={{ fontSize: '14px' }}>Loading...</span>
+                            <div style={{ padding: 24 }}>
+                                <div className="skeleton-pulse" style={{ width: '60%', height: 24, borderRadius: 6, marginBottom: 16 }} />
+                                <div className="skeleton-pulse" style={{ width: '100%', height: 120, borderRadius: 8, marginBottom: 12 }} />
+                                <div className="skeleton-pulse" style={{ width: '100%', height: 120, borderRadius: 8, marginBottom: 12 }} />
+                                <div className="skeleton-pulse" style={{ width: '80%', height: 120, borderRadius: 8 }} />
                             </div>
                         ) : (
                             <>
                                 {activeTab === 'portals' && renderPortals()}
                                 {activeTab === 'bots' && renderBots()}
                                 {activeTab === 'themes' && renderThemes()}
+                                {activeTab === 'templates' && renderTemplates()}
                             </>
                         )}
                     </div>

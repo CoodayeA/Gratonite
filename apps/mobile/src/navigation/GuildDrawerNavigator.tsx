@@ -50,7 +50,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps & { guildId: str
                 .filter((c) => c.parentId === cat.id)
                 .sort((a, b) => a.position - b.position);
             if (children.length > 0) {
-                result.push({ title: cat.name.toUpperCase(), data: children });
+                result.push({ title: (cat.name || 'Untitled').toUpperCase(), data: children });
             }
         });
 
@@ -66,6 +66,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps & { guildId: str
             case 'GUILD_WIKI': return 'book-outline';
             case 'GUILD_TIMELINE': return 'time-outline';
             case 'GUILD_QA': return 'help-circle-outline';
+            case 'GUILD_STAGE': return 'mic-outline';
             default: return 'chatbubble-outline';
         }
     };
@@ -156,6 +157,8 @@ function CustomDrawerContent(props: DrawerContentComponentProps & { guildId: str
                                 props.navigation.navigate('TimelineChannel', { channelId: item.id, channelName: item.name });
                             } else if (item.type === 'GUILD_QA') {
                                 props.navigation.navigate('QAChannel', { channelId: item.id, channelName: item.name });
+                            } else if (item.type === 'GUILD_STAGE') {
+                                props.navigation.navigate('StageChannel', { channelId: item.id, channelName: item.name, guildId: props.guildId });
                             } else {
                                 props.navigation.navigate('ChannelChat', { channelId: item.id, channelName: item.name, guildId: props.guildId });
                             }

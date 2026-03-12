@@ -19,12 +19,13 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Allow Gratonite to access your camera for video calls.",
         "NSMicrophoneUsageDescription": "Allow Gratonite to access your microphone for voice channels.",
-        "ITSAppUsesNonExemptEncryption": true
+        "ITSAppUsesNonExemptEncryption": true,
+        "UIBackgroundModes": ["audio", "voip"]
       }
     },
     "android": {
       "package": "chat.gratonite.mobile",
-      "versionCode": 1,
+      "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#1a1a2e",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -34,7 +35,10 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_CONNECT"
       ]
     },
     "web": {
@@ -47,11 +51,37 @@
           "photosPermission": "Allow Gratonite to access your photos so you can share images in chat."
         }
       ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Gratonite to access your camera for video calls."
+        }
+      ],
       "expo-image",
       "expo-notifications",
       "expo-sharing",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0f172a",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200
+        }
+      ],
+      [
+        "expo-updates",
+        {
+          "username": "gratonite"
+        }
+      ]
     ],
+    "updates": {
+      "url": "https://u.expo.dev/2c90539e-5fd5-4eed-a08e-507c32d77ed8"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "extra": {
       "eas": {
         "projectId": "2c90539e-5fd5-4eed-a08e-507c32d77ed8"

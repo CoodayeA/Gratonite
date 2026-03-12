@@ -630,10 +630,11 @@ const FameDashboard = () => {
             )}
 
             {isLoading ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '64px', color: 'var(--text-muted)', gap: '12px', flexDirection: 'column' }}>
-                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                    <div style={{ width: '32px', height: '32px', border: '3px solid var(--stroke)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                    <span style={{ fontSize: '14px' }}>Loading...</span>
+                <div style={{ padding: 24, maxWidth: '900px', margin: '0 auto' }}>
+                    <div className="skeleton-pulse" style={{ width: '60%', height: 24, borderRadius: 6, marginBottom: 16 }} />
+                    <div className="skeleton-pulse" style={{ width: '100%', height: 120, borderRadius: 8, marginBottom: 12 }} />
+                    <div className="skeleton-pulse" style={{ width: '100%', height: 120, borderRadius: 8, marginBottom: 12 }} />
+                    <div className="skeleton-pulse" style={{ width: '80%', height: 120, borderRadius: 8 }} />
                 </div>
             ) : (
             <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 24px' }}>

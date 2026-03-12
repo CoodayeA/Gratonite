@@ -173,7 +173,7 @@ function formatMessage(
  */
 const sendMessageSchema = z
   .object({
-    content: z.string().min(1).max(2000).optional(),
+    content: z.string().min(1).max(2000).optional().nullable(),
     attachmentIds: z.array(z.string().uuid()).optional(),
     replyToId: z.string().uuid().optional(),
     threadId: z.string().uuid().optional(),
@@ -184,7 +184,7 @@ const sendMessageSchema = z
     encryptedContent: z.string().optional(),
     keyVersion: z.number().int().optional(),
   })
-  .refine((d) => d.content !== undefined || (d.attachmentIds && d.attachmentIds.length > 0) || (d.isEncrypted && d.encryptedContent), {
+  .refine((d) => d.content || (d.attachmentIds && d.attachmentIds.length > 0) || (d.isEncrypted && d.encryptedContent), {
     message: 'Message must have content, at least one attachment, or encrypted content',
   });
 

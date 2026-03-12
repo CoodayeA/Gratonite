@@ -4,6 +4,8 @@ import { eq, and, desc } from 'drizzle-orm';
 import { db } from '../db/index';
 import { clips } from '../db/schema/clips';
 import { guildMembers } from '../db/schema/guilds';
+import { users } from '../db/schema/users';
+import { files } from '../db/schema/files';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 
@@ -22,8 +24,21 @@ clipsRouter.get('/', requireAuth, async (req: Request, res: Response): Promise<v
   const limit = Math.min(Number(req.query.limit) || 50, 100);
 
   const rows = await db
-    .select()
+    .select({
+      id: clips.id,
+      userId: clips.userId,
+      guildId: clips.guildId,
+      channelId: clips.channelId,
+      title: clips.title,
+      fileId: clips.fileId,
+      duration: clips.duration,
+      createdAt: clips.createdAt,
+      creatorName: users.username,
+      url: files.url,
+    })
     .from(clips)
+    .leftJoin(users, eq(clips.userId, users.id))
+    .leftJoin(files, eq(clips.fileId, files.id))
     .where(eq(clips.guildId, guildId))
     .orderBy(desc(clips.createdAt))
     .limit(limit);
@@ -67,8 +82,21 @@ clipsRouter.get('/:clipId', requireAuth, async (req: Request, res: Response): Pr
   const clipId = req.params.clipId as string;
 
   const [clip] = await db
-    .select()
+    .select({
+      id: clips.id,
+      userId: clips.userId,
+      guildId: clips.guildId,
+      channelId: clips.channelId,
+      title: clips.title,
+      fileId: clips.fileId,
+      duration: clips.duration,
+      createdAt: clips.createdAt,
+      creatorName: users.username,
+      url: files.url,
+    })
     .from(clips)
+    .leftJoin(users, eq(clips.userId, users.id))
+    .leftJoin(files, eq(clips.fileId, files.id))
     .where(eq(clips.id, clipId))
     .limit(1);
 

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -39,16 +39,18 @@ export default function GuildListScreen({ navigation }: Props) {
   const { colors, spacing, fontSize, borderRadius } = useTheme();
   const neo = useNeo();
 
-  // Fetch online member counts for all guilds
-  useEffect(() => {
-    if (guilds.length === 0) return;
-    let cancelled = false;
-
-    (async () => {
-      try {
-        // Fetch members for each guild in parallel
-        const membersByGuild = await Promise.all(
-          guilds.map(async (g) => {
+  // Fetch online member counts — only once on mount and on pull-to-refresh
+  const hasFetchedCounts = useRef(false);
+  const fetchOnlineCounts = useCallback(async (guildList: Guild[]) => {
+    if (guildList.length === 0) return;
+    try {
+      // Fetch members for up to 10 guilds at a time to limit concurrent requests
+      const BATCH_SIZE = 10;
+      const membersByGuild: Array<{ guildId: string; userIds: string[] }> = [];
+      for (let i = 0; i < guildList.length; i += BATCH_SIZE) {
+        const batch = guildList.slice(i, i + BATCH_SIZE);
+        const results = await Promise.all(
+          batch.map(async (g) => {
             try {
               const members = await guildsApi.getMembers(g.id);
               return { guildId: g.id, userIds: members.map((m) => m.userId) };
@@ -57,48 +59,48 @@ export default function GuildListScreen({ navigation }: Props) {
             }
           }),
         );
-
-        if (cancelled) return;
-
-        // Collect all unique user IDs
-        const allIds = new Set<string>();
-        for (const g of membersByGuild) {
-          for (const id of g.userIds) allIds.add(id);
-        }
-
-        if (allIds.size === 0) return;
-
-        // Batch query presences (API caps at 200 per call)
-        const idArray = Array.from(allIds);
-        const presenceMap = new Map<string, string>();
-        for (let i = 0; i < idArray.length; i += 200) {
-          const batch = idArray.slice(i, i + 200);
-          try {
-            const presences = await usersApi.getPresences(batch);
-            for (const p of presences) presenceMap.set(p.userId, p.status);
-          } catch {
-            // best-effort
-          }
-        }
-
-        if (cancelled) return;
-
-        // Compute per-guild online counts
-        const counts: Record<string, number> = {};
-        for (const g of membersByGuild) {
-          counts[g.guildId] = g.userIds.filter((id) => {
-            const status = presenceMap.get(id);
-            return status === 'online' || status === 'idle' || status === 'dnd';
-          }).length;
-        }
-        setOnlineCounts(counts);
-      } catch {
-        // ignore
+        membersByGuild.push(...results);
       }
-    })();
 
-    return () => { cancelled = true; };
-  }, [guilds]);
+      // Collect all unique user IDs
+      const allIds = new Set<string>();
+      for (const g of membersByGuild) {
+        for (const id of g.userIds) allIds.add(id);
+      }
+      if (allIds.size === 0) return;
+
+      // Batch query presences (API caps at 200 per call)
+      const idArray = Array.from(allIds);
+      const presenceMap = new Map<string, string>();
+      for (let i = 0; i < idArray.length; i += 200) {
+        const batch = idArray.slice(i, i + 200);
+        try {
+          const presences = await usersApi.getPresences(batch);
+          for (const p of presences) presenceMap.set(p.userId, p.status);
+        } catch {
+          // best-effort
+        }
+      }
+
+      // Compute per-guild online counts
+      const counts: Record<string, number> = {};
+      for (const g of membersByGuild) {
+        counts[g.guildId] = g.userIds.filter((id) => {
+          const status = presenceMap.get(id);
+          return status === 'online' || status === 'idle' || status === 'dnd';
+        }).length;
+      }
+      setOnlineCounts(counts);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    if (hasFetchedCounts.current || guilds.length === 0) return;
+    hasFetchedCounts.current = true;
+    fetchOnlineCounts(guilds);
+  }, [guilds, fetchOnlineCounts]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -208,8 +210,9 @@ export default function GuildListScreen({ navigation }: Props) {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await refreshGuilds();
+    fetchOnlineCounts(guilds);
     setRefreshing(false);
-  }, [refreshGuilds]);
+  }, [refreshGuilds, guilds, fetchOnlineCounts]);
 
   const getStatusColor = (status?: PresenceStatus): string => {
     switch (status) {
@@ -257,6 +260,9 @@ export default function GuildListScreen({ navigation }: Props) {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Servers</Text>
         <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => navigation.navigate('CommandPalette')} style={styles.headerBtn}>
+            <Ionicons name="search-outline" size={26} color={colors.textPrimary} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('ServerDiscover')} style={styles.headerBtn}>
             <Ionicons name="compass-outline" size={26} color={colors.textPrimary} />
           </TouchableOpacity>

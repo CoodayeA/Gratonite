@@ -119,6 +119,18 @@ export default function UserProfileScreen({ route, navigation }: Props) {
     ]);
   };
 
+  const handleGiveFame = async () => {
+    setActionLoading(true);
+    try {
+      const result = await usersApi.giveFame(userId);
+      toast.success(`Fame given! You have ${result.remaining} remaining today.`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to give fame');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleBlock = async () => {
     Alert.alert('Block User', 'Are you sure you want to block this user?', [
       { text: 'Cancel', style: 'cancel' },
@@ -563,6 +575,15 @@ export default function UserProfileScreen({ route, navigation }: Props) {
             <Text style={styles.actionButtonSecondaryText}>Add Friend</Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          style={[styles.actionButtonSecondary, { marginTop: spacing.sm }]}
+          onPress={handleGiveFame}
+          disabled={actionLoading}
+        >
+          <Ionicons name="star" size={18} color="#FFD700" />
+          <Text style={styles.actionButtonSecondaryText}>Give Fame</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.actionButtonSecondary, { marginTop: spacing.sm }]}

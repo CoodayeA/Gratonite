@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, MessageSquare, Send, Smile, Filter, Clock, Archive } from 'lucide-react';
+import { X, MessageSquare, Send, Smile, Filter, Clock, Archive, Search } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { api } from '../../lib/api';
 import { onThreadCreate } from '../../lib/socket';
@@ -58,6 +58,7 @@ const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) 
     const [threadListLoading, setThreadListLoading] = useState(false);
     const [threadFilterTab, setThreadFilterTab] = useState<ThreadFilterTab>('active');
     const [threadSort, setThreadSort] = useState<ThreadSortOption>('recent');
+    const [threadSearchQuery, setThreadSearchQuery] = useState('');
 
     const EMOJI_LIST = ['😄','😂','❤️','🔥','👍','👎','😮','🎉','💀','🚀','✨','💯','👀','😢','🤔','😡'];
 
@@ -161,6 +162,10 @@ const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) 
             if (threadFilterTab === 'archived') return t.archived;
             if (threadFilterTab === 'mine') return t.creatorId === ctxUser.id;
             return true;
+        })
+        .filter(t => {
+            if (!threadSearchQuery.trim()) return true;
+            return t.name.toLowerCase().includes(threadSearchQuery.trim().toLowerCase());
         })
         .sort((a, b) => {
             if (threadSort === 'recent') return new Date(b.lastActivityAt || b.createdAt).getTime() - new Date(a.lastActivityAt || a.createdAt).getTime();
@@ -277,6 +282,21 @@ const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) 
                             <option value="created">Creation Date</option>
                             <option value="replies">Most Replies</option>
                         </select>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', background: 'var(--bg-tertiary)', borderRadius: '6px', padding: '4px 8px', border: '1px solid var(--stroke)' }}>
+                        <Search size={12} color="var(--text-muted)" />
+                        <input
+                            type="text"
+                            placeholder="Search threads..."
+                            value={threadSearchQuery}
+                            onChange={e => setThreadSearchQuery(e.target.value)}
+                            style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: '11px', padding: '2px 0' }}
+                        />
+                        {threadSearchQuery && (
+                            <button onClick={() => setThreadSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0, display: 'flex' }}>
+                                <X size={10} />
+                            </button>
+                        )}
                     </div>
                     {threadListLoading ? (
                         <div style={{ textAlign: 'center', padding: '12px', color: 'var(--text-muted)', fontSize: '12px' }}>Loading threads...</div>

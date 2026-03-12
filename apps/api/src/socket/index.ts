@@ -61,38 +61,25 @@ const WS_RATE_LIMITS: Record<string, [number, number]> = {
   // TYPING_START is handled via HTTP POST, not a socket event — rate limit there instead
 };
 
-/** Map key: `${userId}:${eventType}` → array of timestamps */
-const wsRateBuckets = new Map<string, number[]>();
-
-/** Periodically prune stale WebSocket rate-limit entries */
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, timestamps] of wsRateBuckets) {
-    const fresh = timestamps.filter(t => now - t < 15_000);
-    if (fresh.length === 0) wsRateBuckets.delete(key);
-    else wsRateBuckets.set(key, fresh);
-  }
-}, 30_000).unref();
-
 /**
  * Returns true if the event should be allowed, false if rate-limited.
+ * Uses Redis INCR with TTL for distributed rate limiting.
  * Silently drops events that exceed the limit.
  */
-function checkWsRateLimit(userId: string, eventType: string): boolean {
+async function checkWsRateLimit(userId: string, eventType: string): Promise<boolean> {
   const config = WS_RATE_LIMITS[eventType];
   if (!config) return true; // no limit configured for this event
   const [maxEvents, windowMs] = config;
-  const key = `${userId}:${eventType}`;
-  const now = Date.now();
-  let timestamps = wsRateBuckets.get(key) ?? [];
-  timestamps = timestamps.filter(t => now - t < windowMs);
-  if (timestamps.length >= maxEvents) {
-    wsRateBuckets.set(key, timestamps);
-    return false;
+  const key = `ws_rate:${userId}:${eventType}`;
+  try {
+    const count = await redis.incr(key);
+    if (count === 1) {
+      await redis.pexpire(key, windowMs);
+    }
+    return count <= maxEvents;
+  } catch {
+    return true; // Allow on Redis failure
   }
-  timestamps.push(now);
-  wsRateBuckets.set(key, timestamps);
-  return true;
 }
 
 /**
@@ -293,6 +280,27 @@ export function initSocket(io: SocketIOServer): void {
     });
 
     // -------------------------------------------------------------------------
+    // JOIN_GUILD_ROOM — client joins a guild room after being added to a guild
+    // -------------------------------------------------------------------------
+    socket.on('JOIN_GUILD_ROOM', async (data: { guildId: string }) => {
+      if (!data?.guildId) return;
+      try {
+        // Verify the user is actually a member of this guild
+        const [membership] = await db
+          .select({ id: guildMembers.id })
+          .from(guildMembers)
+          .where(and(eq(guildMembers.guildId, data.guildId), eq(guildMembers.userId, userId)))
+          .limit(1);
+        if (!membership) return;
+        await socket.join(`guild:${data.guildId}`);
+        // Also add to the tracked list so disconnect cleanup works
+        userGuildIds.push(data.guildId);
+      } catch (err) {
+        console.error(`[socket.io] JOIN_GUILD_ROOM error:`, err);
+      }
+    });
+
+    // -------------------------------------------------------------------------
     // CHANNEL_LEAVE — client unsubscribes from a channel room
     // -------------------------------------------------------------------------
     socket.on('CHANNEL_LEAVE', (data: { channelId: string }) => {
@@ -305,7 +313,7 @@ export function initSocket(io: SocketIOServer): void {
     // -------------------------------------------------------------------------
     socket.on('PRESENCE_UPDATE', async (data: { status: string; auto?: boolean; activity?: { name: string; type: string } | null }) => {
       if (!data?.status) return;
-      if (!checkWsRateLimit(userId, 'PRESENCE_UPDATE')) return;
+      if (!await checkWsRateLimit(userId, 'PRESENCE_UPDATE')) return;
       const validStatuses = ['online', 'idle', 'dnd', 'invisible'];
       if (!validStatuses.includes(data.status)) return;
 
@@ -474,9 +482,9 @@ export function initSocket(io: SocketIOServer): void {
     // -------------------------------------------------------------------------
     // SPATIAL_POSITION_UPDATE — relay spatial position to channel peers
     // -------------------------------------------------------------------------
-    socket.on('SPATIAL_POSITION_UPDATE', (data: { channelId: string; x: number; y: number }) => {
+    socket.on('SPATIAL_POSITION_UPDATE', async (data: { channelId: string; x: number; y: number }) => {
       if (!data?.channelId || typeof data.x !== 'number' || typeof data.y !== 'number') return;
-      if (!checkWsRateLimit(userId, 'SPATIAL_POSITION_UPDATE')) return;
+      if (!await checkWsRateLimit(userId, 'SPATIAL_POSITION_UPDATE')) return;
       if (!Number.isFinite(data.x) || !Number.isFinite(data.y)) return;
       if (!socket.rooms.has(`channel:${data.channelId}`)) return;
       // Clamp to 0–1
