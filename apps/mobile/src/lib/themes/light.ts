@@ -37,7 +37,7 @@ export const lightSpacing: ThemeSpacing = {
 };
 
 export const lightFontSize: ThemeFontSize = {
-  xs: 11, sm: 13, md: 15, lg: 17, xl: 20, xxl: 24, xxxl: 32,
+  xs: 12, sm: 13, md: 15, lg: 17, xl: 20, xxl: 24, xxxl: 32,
 };
 
 export const lightBorderRadius: ThemeBorderRadius = {

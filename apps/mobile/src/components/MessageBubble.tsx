@@ -6,7 +6,7 @@ import RichText from './RichText';
 import AttachmentPreview from './AttachmentPreview';
 import MediaViewer from './MediaViewer';
 import PollCard from './PollCard';
-import { useColors, useNeo, spacing, fontSize, borderRadius } from '../lib/theme';
+import { useColors, useNeo, useGlass, spacing, fontSize, borderRadius } from '../lib/theme';
 import { formatTime } from '../lib/formatters';
 import { heavyImpact } from '../lib/haptics';
 import type { Message, ReactionGroup, TextReactionGroup, Poll } from '../types';
@@ -62,6 +62,7 @@ function MessageBubbleInner({
 }: MessageBubbleProps) {
   const colors = useColors();
   const neo = useNeo();
+  const glass = useGlass();
   const authorName = message.author?.displayName || message.author?.username || message.authorId?.slice(0, 8) || 'Unknown';
 
   // Media viewer state
@@ -109,27 +110,36 @@ function MessageBubbleInner({
       marginTop: -spacing.xs,
     },
     bubble: {
-      backgroundColor: colors.bgElevated,
+      backgroundColor: glass ? glass.glassBackground : colors.bgElevated,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
-      borderRadius: borderRadius.lg,
+      borderRadius: neo ? 0 : glass ? borderRadius.xl : borderRadius.lg,
       maxWidth: '85%',
       ...(neo ? {
         borderWidth: 2,
         borderColor: '#000',
-        borderRadius: 0,
         shadowColor: neo.shadowColor,
         shadowOffset: neo.shadowOffset,
         shadowOpacity: neo.shadowOpacity,
         shadowRadius: neo.shadowRadius,
       } : {}),
+      ...(glass ? {
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : {}),
     },
     bubbleOther: {
-      borderTopLeftRadius: neo ? 0 : 4,
+      borderTopLeftRadius: neo ? 0 : glass ? 4 : 4,
     },
     bubbleOwn: {
       backgroundColor: colors.accentPrimary,
-      borderTopRightRadius: neo ? 0 : 4,
+      borderTopRightRadius: neo ? 0 : glass ? 4 : 4,
+      ...(glass ? {
+        shadowColor: colors.accentPrimary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+      } : {}),
     },
     replyPreview: {
       flexDirection: 'row',
@@ -163,14 +173,13 @@ function MessageBubbleInner({
     reactionChip: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.bgElevated,
-      borderRadius: borderRadius.full,
+      backgroundColor: glass ? glass.glassBackground : colors.bgElevated,
+      borderRadius: neo ? 0 : borderRadius.full,
       paddingHorizontal: spacing.sm,
       paddingVertical: 2,
       gap: 4,
-      borderWidth: 1,
-      borderColor: colors.transparent,
-      ...(neo ? { borderRadius: 0, borderWidth: 2, borderColor: '#000' } : {}),
+      borderWidth: neo ? 2 : glass ? 1 : 1,
+      borderColor: neo ? '#000' : glass ? glass.glassBorder : colors.transparent,
     },
     reactionChipActive: {
       borderColor: colors.accentPrimary,
@@ -230,7 +239,7 @@ function MessageBubbleInner({
     lockIcon: {
       marginLeft: 4,
     },
-  }), [colors, neo]);
+  }), [colors, neo, glass]);
 
   const entering = isNewMessage
     ? isOwn

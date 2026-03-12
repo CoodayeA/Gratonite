@@ -161,7 +161,7 @@ export default function GuildInsights({ guildId }: { guildId: string }) {
       <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '20px' }}>Server Insights</h2>
 
       {/* Stats row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         <StatCard value={data.memberCount} label="Total Members" accentColor="#6366f1" />
         <StatCard value={data.messages7d} label="Messages (7d)" accentColor="#f59e0b" />
         <StatCard value={data.activeUsers24h} label="Active Users (24h)" accentColor="#10b981" />

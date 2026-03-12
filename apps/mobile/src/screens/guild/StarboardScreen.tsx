@@ -16,6 +16,7 @@ import EmptyState from '../../components/EmptyState';
 import type { StarboardEntry } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Starboard'>;
 
@@ -116,7 +117,7 @@ export default function StarboardScreen({ route }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={entries}
         keyExtractor={(item) => item.id}
@@ -148,6 +149,6 @@ export default function StarboardScreen({ route }: Props) {
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

@@ -9,6 +9,7 @@ import LoadingScreen from '../../components/LoadingScreen';
 import type { StudySession, StudyRoomSettings } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'StudyRoom'>;
 
@@ -138,7 +139,7 @@ export default function StudyRoomScreen({ route, navigation }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.timerSection}>
         <View style={styles.timerCircle}>
           <Text style={styles.timerText}>{timerDisplay}</Text>
@@ -180,6 +181,6 @@ export default function StudyRoomScreen({ route, navigation }: Props) {
         <Ionicons name="trophy-outline" size={18} color={colors.accentPrimary} />
         <Text style={styles.leaderboardText}>View Leaderboard</Text>
       </TouchableOpacity>
-    </View>
+    </PatternBackground>
   );
 }

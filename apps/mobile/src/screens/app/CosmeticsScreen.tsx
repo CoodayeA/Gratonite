@@ -13,6 +13,7 @@ import { useTheme } from '../../lib/theme';
 import type { Cosmetic } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Cosmetics'>;
 
@@ -229,7 +230,7 @@ export default function CosmeticsScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.tabRow}>
         {TABS.map((t) => (
           <TouchableOpacity
@@ -253,6 +254,6 @@ export default function CosmeticsScreen({ navigation }: Props) {
           <Text style={styles.emptyText}>No items in this category</Text>
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

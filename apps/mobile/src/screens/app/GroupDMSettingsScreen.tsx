@@ -19,6 +19,7 @@ import EmptyState from '../../components/EmptyState';
 import type { GroupDMChannel } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'GroupDMSettings'>;
 
@@ -297,7 +298,7 @@ export default function GroupDMSettingsScreen({ route, navigation }: Props) {
   const availableFriends = friends.filter((f) => !existingMemberIds.has(f.id));
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>GROUP NAME</Text>
         <View style={styles.nameRow}>
@@ -411,6 +412,6 @@ export default function GroupDMSettingsScreen({ route, navigation }: Props) {
           <Text style={styles.dangerText}>Leave Group</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </PatternBackground>
   );
 }

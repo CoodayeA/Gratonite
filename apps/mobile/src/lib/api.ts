@@ -194,7 +194,9 @@ async function refreshAccessToken(): Promise<string | null> {
 
   refreshPromise = (async () => {
     try {
-      if (!refreshToken) return null;
+      if (!refreshToken) {
+        return null;
+      }
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -232,6 +234,11 @@ async function apiFetch<T>(
   options: RequestInit = {},
   retried = false,
 ): Promise<T> {
+  // Auto-reload tokens from SecureStore if wiped (e.g. by hot module reload)
+  if (!accessToken) {
+    await loadTokens();
+  }
+
   const headers: Record<string, string> = {
     ...((options.headers as Record<string, string>) ?? {}),
   };
@@ -511,6 +518,13 @@ export const channels = {
 
   delete(channelId: string) {
     return apiFetch<void>(`/channels/${channelId}`, { method: 'DELETE' });
+  },
+
+  updatePositions(guildId: string, updates: Array<{ id: string; position: number; parentId?: string | null }>) {
+    return apiFetch<void>(`/guilds/${guildId}/channels/positions`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
   },
 };
 

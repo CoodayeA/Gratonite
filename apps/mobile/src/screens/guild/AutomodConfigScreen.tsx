@@ -18,6 +18,7 @@ import EmptyState from '../../components/EmptyState';
 import type { AutomodRule } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'AutomodConfig'>;
 
@@ -285,7 +286,7 @@ export default function AutomodConfigScreen({ route }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.header}>
         <Text style={styles.headerCount}>{rules.length} rule{rules.length !== 1 ? 's' : ''}</Text>
         <TouchableOpacity style={styles.addBtn} onPress={() => setShowForm(!showForm)}>
@@ -350,10 +351,10 @@ export default function AutomodConfigScreen({ route }: Props) {
           <EmptyState
             icon="hardware-chip-outline"
             title="No automod rules"
-            subtitle="Create rules to automatically moderate your server"
+            subtitle="Create rules to automatically moderate your portal"
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

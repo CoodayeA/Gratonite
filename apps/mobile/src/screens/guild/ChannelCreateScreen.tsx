@@ -16,6 +16,7 @@ import { useTheme } from '../../lib/theme';
 import type { Channel } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ChannelCreate'>;
 
@@ -247,7 +248,8 @@ export default function ChannelCreateScreen({ route, navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
       {/* Name */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>CHANNEL NAME</Text>
@@ -409,5 +411,6 @@ export default function ChannelCreateScreen({ route, navigation }: Props) {
         )}
       </TouchableOpacity>
     </ScrollView>
+    </PatternBackground>
   );
 }

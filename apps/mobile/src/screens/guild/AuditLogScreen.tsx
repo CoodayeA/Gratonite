@@ -16,11 +16,12 @@ import EmptyState from '../../components/EmptyState';
 import type { AuditLogEntry } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'AuditLog'>;
 
 const ACTION_DESCRIPTIONS: Record<string, string> = {
-  guild_update: 'Updated server settings',
+  guild_update: 'Updated portal settings',
   channel_create: 'Created a channel',
   channel_update: 'Updated a channel',
   channel_delete: 'Deleted a channel',
@@ -80,7 +81,7 @@ const FILTER_CATEGORIES = [
   { label: 'Members', value: 'member' },
   { label: 'Channels', value: 'channel' },
   { label: 'Roles', value: 'role' },
-  { label: 'Server', value: 'guild' },
+  { label: 'Portal', value: 'guild' },
   { label: 'Messages', value: 'message' },
 ];
 
@@ -226,7 +227,7 @@ export default function AuditLogScreen({ route, navigation }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       {/* Filter tabs */}
       <View style={styles.filterContainer}>
         <FlatList
@@ -266,6 +267,6 @@ export default function AuditLogScreen({ route, navigation }: Props) {
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

@@ -78,6 +78,6 @@ export const borderRadius = {
   full: 9999,
 };
 
-export { useTheme, useColors, useNeo } from './themeStore';
+export { useTheme, useColors, useNeo, useGlass } from './themeStore';
 export { themeStore } from './themeStore';
-export type { ThemeName, ThemeDefinition, NeoExtras } from './themes';
+export type { ThemeName, ThemeDefinition, NeoExtras, GlassExtras } from './themes';

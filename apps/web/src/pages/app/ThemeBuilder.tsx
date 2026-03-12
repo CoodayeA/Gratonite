@@ -270,7 +270,7 @@ const ThemeBuilder = () => {
 
     const SubmitModal = () => (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }} onClick={() => !submitting && setShowSubmitModal(false)}>
-            <div style={{ background: 'var(--bg-elevated)', borderRadius: '16px', padding: '32px', width: '440px', border: '1px solid var(--stroke)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: 'var(--bg-elevated)', borderRadius: '16px', padding: '32px', width: 'min(440px, 95vw)', border: '1px solid var(--stroke)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
                 {submitted ? (
                     <div style={{ textAlign: 'center', padding: '20px 0' }}>
                         <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>

@@ -15,6 +15,7 @@ import { useTheme } from '../../lib/theme';
 import LoadingScreen from '../../components/LoadingScreen';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'RaidProtection'>;
 
@@ -66,10 +67,10 @@ export default function RaidProtectionScreen({ route, navigation }: Props) {
     const action = isLocked ? 'unlock' : 'lock';
 
     Alert.alert(
-      `${action.charAt(0).toUpperCase() + action.slice(1)} Server`,
+      `${action.charAt(0).toUpperCase() + action.slice(1)} Portal`,
       isLocked
-        ? 'This will allow new members to join the server again.'
-        : 'This will prevent any new members from joining the server. Existing members will not be affected.',
+        ? 'This will allow new members to join the portal again.'
+        : 'This will prevent any new members from joining the portal. Existing members will not be affected.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -83,7 +84,7 @@ export default function RaidProtectionScreen({ route, navigation }: Props) {
               } as any);
               setGuild(updated as GuildWithProtection);
             } catch (err: any) {
-              toast.error(err.message || `Failed to ${action} server`);
+              toast.error(err.message || `Failed to ${action} portal`);
             } finally {
               setLocking(false);
             }
@@ -248,7 +249,7 @@ export default function RaidProtectionScreen({ route, navigation }: Props) {
   if (!guild) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.errorText}>Failed to load server info</Text>
+        <Text style={styles.errorText}>Failed to load portal info</Text>
       </View>
     );
   }
@@ -257,7 +258,8 @@ export default function RaidProtectionScreen({ route, navigation }: Props) {
   const isLocked = !!guild.lockedAt;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
         <View style={[styles.shieldIcon, isProtectionEnabled ? styles.shieldActive : styles.shieldInactive]}>
@@ -270,8 +272,8 @@ export default function RaidProtectionScreen({ route, navigation }: Props) {
         <Text style={styles.headerTitle}>Raid Protection</Text>
         <Text style={styles.headerSubtitle}>
           {isProtectionEnabled
-            ? 'Raid protection is active. The server is being monitored for suspicious activity.'
-            : 'Enable raid protection to automatically detect and prevent raids on your server.'}
+            ? 'Raid protection is active. The portal is being monitored for suspicious activity.'
+            : 'Enable raid protection to automatically detect and prevent raids on your portal.'}
         </Text>
       </View>
 
@@ -319,16 +321,16 @@ export default function RaidProtectionScreen({ route, navigation }: Props) {
                 color={isLocked ? colors.warning : colors.textMuted}
               />
               <Text style={[styles.statusText, isLocked && { color: colors.warning }]}>
-                {isLocked ? 'Server is locked' : 'Server is open to new members'}
+                {isLocked ? 'Portal is locked' : 'Portal is open to new members'}
               </Text>
             </View>
           </View>
         </View>
       )}
 
-      {/* Lock/Unlock server */}
+      {/* Lock/Unlock portal */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>SERVER LOCKDOWN</Text>
+        <Text style={styles.sectionTitle}>PORTAL LOCKDOWN</Text>
 
         <TouchableOpacity
           style={[styles.lockButton, isLocked ? styles.unlockButton : styles.lockButtonDanger]}
@@ -344,7 +346,7 @@ export default function RaidProtectionScreen({ route, navigation }: Props) {
             <Text style={[styles.lockButtonText, { color: isLocked ? colors.success : colors.error }]}>
               {locking
                 ? (isLocked ? 'Unlocking...' : 'Locking...')
-                : (isLocked ? 'Unlock Server' : 'Lock Server')}
+                : (isLocked ? 'Unlock Portal' : 'Lock Portal')}
             </Text>
             <Text style={styles.lockButtonSubtext}>
               {isLocked
@@ -359,10 +361,11 @@ export default function RaidProtectionScreen({ route, navigation }: Props) {
       <View style={styles.infoNote}>
         <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
         <Text style={styles.infoNoteText}>
-          Raid protection helps keep your server safe by detecting unusual patterns of activity,
+          Raid protection helps keep your portal safe by detecting unusual patterns of activity,
           such as many accounts joining in a short period.
         </Text>
       </View>
     </ScrollView>
+    </PatternBackground>
   );
 }

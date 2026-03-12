@@ -516,7 +516,7 @@ const SettingsModal = ({
         }).catch(() => { /* MFA status may not be available */ });
     }, [activeTab]);
 
-    const { theme, setTheme, colorMode, setColorMode, fontFamily, setFontFamily, fontSize, setFontSize, showChannelBackgrounds, setShowChannelBackgrounds, playMovingBackgrounds, setPlayMovingBackgrounds, glassMode, setGlassMode, reducedEffects, setReducedEffects, lowPower, setLowPower, accentColor, setAccentColor, highContrast, setHighContrast, compactMode, setCompactMode, buttonShape, setButtonShape } = useTheme();
+    const { theme, setTheme, colorMode, setColorMode, fontFamily, setFontFamily, fontSize, setFontSize, showChannelBackgrounds, setShowChannelBackgrounds, playMovingBackgrounds, setPlayMovingBackgrounds, glassMode, setGlassMode, reducedEffects, setReducedEffects, lowPower, setLowPower, accentColor, setAccentColor, highContrast, setHighContrast, compactMode, setCompactMode, buttonShape, setButtonShape, screenReaderMode, setScreenReaderMode, linkUnderlines, setLinkUnderlines, focusIndicatorSize, setFocusIndicatorSize, colorBlindMode, setColorBlindMode } = useTheme();
     const { addToast } = useToast();
 
     useEffect(() => {
@@ -600,8 +600,8 @@ const SettingsModal = ({
     // Persist theme settings to backend whenever they change
     useEffect(() => {
         if (!settingsLoadedRef.current) return;
-        saveSettingsToApi({ theme, colorMode, fontFamily, fontSize, glassMode, buttonShape, highContrast, compactMode, accentColor, reducedMotion: reducedEffects, lowPower });
-    }, [theme, colorMode, fontFamily, fontSize, glassMode, buttonShape, highContrast, compactMode, accentColor, reducedEffects, lowPower, saveSettingsToApi]);
+        saveSettingsToApi({ theme, colorMode, fontFamily, fontSize, glassMode, buttonShape, highContrast, compactMode, accentColor, reducedMotion: reducedEffects, lowPower, screenReaderMode, linkUnderlines, focusIndicatorSize, colorBlindMode });
+    }, [theme, colorMode, fontFamily, fontSize, glassMode, buttonShape, highContrast, compactMode, accentColor, reducedEffects, lowPower, screenReaderMode, linkUnderlines, focusIndicatorSize, colorBlindMode, saveSettingsToApi]);
 
     const persistedAvatarUrl = ctxUser.avatarHash ? `${API_BASE}/files/${ctxUser.avatarHash}` : null;
     const persistedBannerUrl = ctxUser.bannerHash ? `${API_BASE}/files/${ctxUser.bannerHash}` : null;
@@ -731,8 +731,8 @@ const SettingsModal = ({
 
     return (
         <>
-            <div className="modal-overlay">
-                <div className="settings-modal flex-row glass-panel" style={{ width: 'min(960px, 90vw)', height: 'min(680px, 85vh)', padding: 0, overflow: 'hidden' }}>
+            <div className="modal-overlay" onClick={onClose}>
+                <div className="settings-modal flex-row glass-panel" onClick={e => e.stopPropagation()} style={{ width: 'min(960px, 90vw)', height: 'min(680px, 85vh)', padding: 0, overflow: 'hidden' }}>
                     {/* Left Sidebar */}
                     <div className="settings-sidebar" style={{ width: '220px', background: 'var(--bg-elevated)', padding: '32px 16px', borderRight: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
                         <div>
@@ -760,6 +760,9 @@ const SettingsModal = ({
 
                     {/* Mobile Tab Pills */}
                     <div className="settings-tabs-mobile">
+                        <button onClick={onClose} style={{ marginRight: 'auto', padding: '6px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '16px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600 }}>
+                            <X size={14} /> Close
+                        </button>
                         {(['account', 'profile', 'sessions', 'privacy', 'connections', 'achievements', 'stats', 'wardrobe', 'theme', 'sound', 'accessibility', 'feedback'] as const).map(tab => (
                             <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>
                                 {tab === 'privacy' ? 'Privacy' : tab === 'connections' ? 'Connections' : tab === 'achievements' ? 'Achievements' : tab === 'wardrobe' ? 'Wardrobe' : tab === 'accessibility' ? 'A11y' : tab === 'feedback' ? 'Feedback' : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -768,8 +771,8 @@ const SettingsModal = ({
                     </div>
 
                     {/* Right Panel */}
-                    <div style={{ flex: 1, padding: '32px 48px', overflowY: 'auto', position: 'relative' }}>
-                        <button onClick={onClose} style={{ position: 'absolute', top: 24, right: 24, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                    <div className="settings-content-panel" style={{ flex: 1, padding: '32px 48px', overflowY: 'auto', position: 'relative' }}>
+                        <button className="settings-close-btn" onClick={onClose} style={{ position: 'absolute', top: 24, right: 24, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                             <X size={24} />
                         </button>
 
@@ -1586,7 +1589,7 @@ const SettingsModal = ({
                                 </div>
 
                                 <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Theme Base</h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '32px' }}>
+                                <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '32px' }}>
                                     {[
                                         {
                                             id: 'default', label: 'Default', desc: 'Clean & modern',
@@ -1781,7 +1784,7 @@ const SettingsModal = ({
                                 </div>
 
                                 <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Button Shape</h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '40px' }}>
+                                <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '40px' }}>
                                     {([
                                         { value: 'rounded' as ButtonShape, label: 'Rounded', radius: '8px' },
                                         { value: 'sharp' as ButtonShape, label: 'Sharp / Square', radius: '0px' },
@@ -1884,7 +1887,7 @@ const SettingsModal = ({
                                             <div style={{ fontWeight: 600 }}>High Contrast Mode</div>
                                             <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Increases text contrast for better readability.</div>
                                         </div>
-                                        <div onClick={() => { setHighContrast(!highContrast); playSound('click'); }} style={{ width: '40px', height: '24px', background: highContrast ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
+                                        <div role="switch" aria-checked={highContrast} aria-label="High Contrast Mode" tabIndex={0} onClick={() => { setHighContrast(!highContrast); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setHighContrast(!highContrast); playSound('click'); } }} style={{ width: '40px', height: '24px', background: highContrast ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
                                             <div style={{ position: 'absolute', height: '16px', width: '16px', left: highContrast ? '20px' : '4px', bottom: '4px', backgroundColor: highContrast ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
                                         </div>
                                     </div>
@@ -1893,8 +1896,53 @@ const SettingsModal = ({
                                             <div style={{ fontWeight: 600 }}>Reduce Motion</div>
                                             <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Minimizes animations and movement across the UI.</div>
                                         </div>
-                                        <div onClick={() => { setReducedEffects(!reducedEffects); playSound('click'); }} style={{ width: '40px', height: '24px', background: reducedEffects ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
+                                        <div role="switch" aria-checked={reducedEffects} aria-label="Reduce Motion" tabIndex={0} onClick={() => { setReducedEffects(!reducedEffects); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setReducedEffects(!reducedEffects); playSound('click'); } }} style={{ width: '40px', height: '24px', background: reducedEffects ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
                                             <div style={{ position: 'absolute', height: '16px', width: '16px', left: reducedEffects ? '20px' : '4px', bottom: '4px', backgroundColor: reducedEffects ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
+                                        </div>
+                                    </div>
+                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <div style={{ fontWeight: 600 }}>Color-Blind Friendly</div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Replaces color-only status indicators with distinct shapes (circle, moon, minus, hollow).</div>
+                                        </div>
+                                        <div role="switch" aria-checked={colorBlindMode} aria-label="Color-Blind Friendly mode" tabIndex={0} onClick={() => { setColorBlindMode(!colorBlindMode); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setColorBlindMode(!colorBlindMode); playSound('click'); } }} style={{ width: '40px', height: '24px', background: colorBlindMode ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
+                                            <div style={{ position: 'absolute', height: '16px', width: '16px', left: colorBlindMode ? '20px' : '4px', bottom: '4px', backgroundColor: colorBlindMode ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Navigation & Focus</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <div style={{ fontWeight: 600 }}>Link Underlines</div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Underlines all interactive text links for easier identification.</div>
+                                        </div>
+                                        <div role="switch" aria-checked={linkUnderlines} aria-label="Link Underlines" tabIndex={0} onClick={() => { setLinkUnderlines(!linkUnderlines); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setLinkUnderlines(!linkUnderlines); playSound('click'); } }} style={{ width: '40px', height: '24px', background: linkUnderlines ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
+                                            <div style={{ position: 'absolute', height: '16px', width: '16px', left: linkUnderlines ? '20px' : '4px', bottom: '4px', backgroundColor: linkUnderlines ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
+                                        </div>
+                                    </div>
+                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <div style={{ fontWeight: 600 }}>Focus Indicator Size</div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Controls the thickness of the keyboard focus outline.</div>
+                                        </div>
+                                        <select value={focusIndicatorSize} onChange={(e) => { setFocusIndicatorSize(e.target.value as any); playSound('click'); }} aria-label="Focus indicator size" className="auth-input" style={{ width: 'auto', padding: '8px 12px', margin: 0, height: '36px' }}>
+                                            <option value="normal">Normal (2px)</option>
+                                            <option value="large">Large (4px)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Screen Reader</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <div style={{ fontWeight: 600 }}>Screen Reader Mode</div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Adds verbose labels, live regions, and route change announcements for assistive technology.</div>
+                                        </div>
+                                        <div role="switch" aria-checked={screenReaderMode} aria-label="Screen Reader Mode" tabIndex={0} onClick={() => { setScreenReaderMode(!screenReaderMode); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setScreenReaderMode(!screenReaderMode); playSound('click'); } }} style={{ width: '40px', height: '24px', background: screenReaderMode ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
+                                            <div style={{ position: 'absolute', height: '16px', width: '16px', left: screenReaderMode ? '20px' : '4px', bottom: '4px', backgroundColor: screenReaderMode ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
                                         </div>
                                     </div>
                                 </div>
@@ -1906,7 +1954,7 @@ const SettingsModal = ({
                                             <div style={{ fontWeight: 600 }}>Chat Font Size</div>
                                             <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Changes the font size inside messages.</div>
                                         </div>
-                                        <select value={fontSize} onChange={(e) => setFontSize(e.target.value as any)} className="auth-input" style={{ width: 'auto', padding: '8px 12px', margin: 0, height: '36px' }}>
+                                        <select value={fontSize} onChange={(e) => setFontSize(e.target.value as any)} aria-label="Chat font size" className="auth-input" style={{ width: 'auto', padding: '8px 12px', margin: 0, height: '36px' }}>
                                             <option value="small">Small</option>
                                             <option value="medium">Medium</option>
                                             <option value="large">Large</option>
@@ -1918,7 +1966,7 @@ const SettingsModal = ({
                                             <div style={{ fontWeight: 600 }}>Compact Message Mode</div>
                                             <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Show messages in a denser, more compact layout.</div>
                                         </div>
-                                        <div onClick={() => { setCompactMode(!compactMode); playSound('click'); }} style={{ width: '40px', height: '24px', background: compactMode ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
+                                        <div role="switch" aria-checked={compactMode} aria-label="Compact Message Mode" tabIndex={0} onClick={() => { setCompactMode(!compactMode); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCompactMode(!compactMode); playSound('click'); } }} style={{ width: '40px', height: '24px', background: compactMode ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
                                             <div style={{ position: 'absolute', height: '16px', width: '16px', left: compactMode ? '20px' : '4px', bottom: '4px', backgroundColor: compactMode ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
                                         </div>
                                     </div>
@@ -2002,7 +2050,7 @@ const SettingsModal = ({
                                 </div>
 
                                 <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Sound Pack</h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '32px' }}>
+                                <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '32px' }}>
                                     {[
                                         { id: 'default', label: 'Default', desc: 'Clean modern tones', icon: '🎵' },
                                         { id: 'soft', label: 'Soft', desc: 'Gentle, quiet sounds', icon: '🌿' },
@@ -2042,7 +2090,7 @@ const SettingsModal = ({
                                 </div>
 
                                 <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Ambient Sound</h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '32px' }}>
+                                <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '32px' }}>
                                     {[
                                         { id: 'off', label: 'Off', desc: 'No ambient audio', color: 'var(--text-muted)' },
                                         { id: 'lofi', label: 'Lo-fi', desc: 'Warm chord pad', color: '#8b5cf6' },
@@ -2356,7 +2404,7 @@ const SettingsModal = ({
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                         <div>
                                             <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Category</label>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                                            <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
                                                 {[
                                                     { id: 'general', label: 'General' },
                                                     { id: 'bug', label: 'Bug Report' },

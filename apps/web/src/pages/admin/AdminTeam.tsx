@@ -228,6 +228,7 @@ export default function AdminTeam() {
       style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-primary)' }}
     >
       <div
+        className="content-padding"
         style={{
           maxWidth: '900px',
           margin: '0 auto',

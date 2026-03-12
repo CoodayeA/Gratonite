@@ -199,7 +199,7 @@ export default function AdminBotModeration() {
         </div>
 
         {/* Stat Cards */}
-        <div style={{
+        <div className="grid-mobile-2" style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
           gap: '16px',

@@ -11,19 +11,22 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { guilds as guildsApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
-import { useTheme } from '../../lib/theme';
+import { useTheme, useGlass } from '../../lib/theme';
 import { formatMemberCount } from '../../lib/formatters';
 import SearchBar from '../../components/SearchBar';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
+import Avatar from '../../components/Avatar';
 import type { Guild } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ServerDiscover'>;
 
 export default function ServerDiscoverScreen({ navigation }: Props) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const glass = useGlass();
   const toast = useToast();
   const [allGuilds, setAllGuilds] = useState<Guild[]>([]);
   const [filtered, setFiltered] = useState<Guild[]>([]);
@@ -39,7 +42,7 @@ export default function ServerDiscoverScreen({ navigation }: Props) {
       setFiltered(data);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load servers');
+        toast.error('Failed to load portals');
       }
     } finally {
       setLoading(false);
@@ -77,7 +80,7 @@ export default function ServerDiscoverScreen({ navigation }: Props) {
       await guildsApi.join(guild.id);
       navigation.navigate('GuildChannels', { guildId: guild.id, guildName: guild.name });
     } catch (err: any) {
-      toast.error(err.message || 'Failed to join server');
+      toast.error(err.message || 'Failed to join portal');
     } finally {
       setJoiningId(null);
     }
@@ -95,18 +98,38 @@ export default function ServerDiscoverScreen({ navigation }: Props) {
     guildCard: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.bgElevated,
-      borderRadius: neo ? 0 : borderRadius.lg,
       padding: spacing.lg,
       marginBottom: spacing.md,
       gap: spacing.md,
-      ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.xl,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+        shadowColor: colors.accentPrimary,
+        shadowOpacity: 0.06,
+        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: 12,
+      } : neo ? {
+        backgroundColor: colors.bgElevated,
+        borderRadius: 0,
+        borderWidth: 2,
+        borderColor: colors.border,
+      } : {
+        backgroundColor: colors.bgElevated,
+        borderRadius: borderRadius.lg,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 6,
+        elevation: 3,
+      }),
     },
     guildIcon: {
       width: 48,
       height: 48,
-      borderRadius: neo ? 0 : borderRadius.lg,
-      backgroundColor: colors.bgHover,
+      borderRadius: neo ? 0 : glass ? borderRadius.lg : borderRadius.lg,
+      backgroundColor: glass ? 'transparent' : colors.bgHover,
       justifyContent: 'center',
       alignItems: 'center',
       ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
@@ -144,10 +167,16 @@ export default function ServerDiscoverScreen({ navigation }: Props) {
       backgroundColor: colors.accentPrimary,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.sm,
-      borderRadius: neo ? 0 : borderRadius.md,
+      borderRadius: neo ? 0 : glass ? borderRadius.xl : borderRadius.md,
       minWidth: 60,
       alignItems: 'center',
       ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
+      ...(glass ? {
+        shadowColor: colors.accentPrimary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+      } : {}),
     },
     joinButtonDisabled: {
       opacity: 0.6,
@@ -157,12 +186,16 @@ export default function ServerDiscoverScreen({ navigation }: Props) {
       fontSize: fontSize.sm,
       fontWeight: neo ? '700' : '600',
     },
-  }), [colors, spacing, fontSize, borderRadius, neo]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
 
   const renderGuild = ({ item }: { item: Guild }) => (
     <View style={styles.guildCard}>
       <View style={styles.guildIcon}>
-        <Text style={styles.guildIconText}>{item.name.charAt(0).toUpperCase()}</Text>
+        {item.iconHash ? (
+          <Avatar userId={item.id} avatarHash={item.iconHash} name={item.name} size={48} />
+        ) : (
+          <Text style={styles.guildIconText}>{item.name.charAt(0).toUpperCase()}</Text>
+        )}
       </View>
       <View style={styles.guildInfo}>
         <Text style={styles.guildName} numberOfLines={1}>
@@ -197,11 +230,11 @@ export default function ServerDiscoverScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <SearchBar
         value={query}
         onChangeText={setQuery}
-        placeholder="Search public servers..."
+        placeholder="Search public portals..."
       />
 
       <FlatList
@@ -216,18 +249,18 @@ export default function ServerDiscoverScreen({ navigation }: Props) {
           query.trim() ? (
             <EmptyState
               icon="search-outline"
-              title="No servers found"
-              subtitle={`No servers matching "${query}"`}
+              title="No portals found"
+              subtitle={`No portals matching "${query}"`}
             />
           ) : (
             <EmptyState
               icon="compass-outline"
-              title="No public servers"
-              subtitle="There are no public servers to discover right now"
+              title="No public portals"
+              subtitle="There are no public portals to discover right now"
             />
           )
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

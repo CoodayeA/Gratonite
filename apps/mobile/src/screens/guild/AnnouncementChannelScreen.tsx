@@ -21,6 +21,7 @@ import RichText from '../../components/RichText';
 import type { Message } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'AnnouncementChannel'>;
 
@@ -198,6 +199,7 @@ export default function AnnouncementChannelScreen({ route, navigation }: Props) 
   if (loading) return <LoadingScreen />;
 
   return (
+    <PatternBackground>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -248,5 +250,6 @@ export default function AnnouncementChannelScreen({ route, navigation }: Props) 
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
+    </PatternBackground>
   );
 }

@@ -116,7 +116,7 @@ const PortalCheckinModal = ({ portal, onClose }: { portal: PortalInfo; onClose: 
 
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }} onClick={onClose}>
-            <div style={{ width: '520px', background: 'var(--bg-elevated)', borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--stroke)', boxShadow: '0 32px 64px rgba(0,0,0,0.6)', animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: 'min(520px, 95vw)', background: 'var(--bg-elevated)', borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--stroke)', boxShadow: '0 32px 64px rgba(0,0,0,0.6)', animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
                 {/* Banner */}
                 <div
                     style={{
@@ -258,7 +258,7 @@ const FederatedJoinModal = ({ portal, onClose }: { portal: FederatedPortalInfo; 
 
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }} onClick={onClose}>
-            <div style={{ width: '520px', background: 'var(--bg-elevated)', borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--stroke)', boxShadow: '0 32px 64px rgba(0,0,0,0.6)', animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: 'min(520px, 95vw)', background: 'var(--bg-elevated)', borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--stroke)', boxShadow: '0 32px 64px rgba(0,0,0,0.6)', animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
                 {/* Banner */}
                 <div
                     style={{
@@ -980,7 +980,7 @@ const Discover = () => {
                 <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Click any theme to instantly apply it.</p>
             </div>
             {filteredThemes.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', padding: '32px' }}>No themes match "{searchQuery}"</p>}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+            <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
                 {filteredThemes.map((theme) => (
                     <div key={theme.id}
                         onMouseEnter={() => setHoveredTheme(theme.id)}

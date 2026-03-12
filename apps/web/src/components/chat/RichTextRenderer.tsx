@@ -270,7 +270,7 @@ function renderLeaf(text: string, ctx: InlineCtx, depth: number): React.ReactNod
                             onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'}
                             onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}
                         >{part}</a>
-                        <div style={{ maxWidth: '400px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', cursor: 'pointer', marginTop: '4px', marginBottom: '4px' }}>
+                        <div style={{ maxWidth: 'min(400px, 100%)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', cursor: 'pointer', marginTop: '4px', marginBottom: '4px' }}>
                             <img src={part} alt="Embedded image" style={{ width: '100%', display: 'block', objectFit: 'cover', maxHeight: '350px' }} onClick={() => window.open(part, '_blank')} />
                         </div>
                     </span>

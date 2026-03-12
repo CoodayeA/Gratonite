@@ -3,7 +3,6 @@ import {
   View,
   Text,
   FlatList,
-  TouchableOpacity,
   StyleSheet,
   RefreshControl,
   Alert,
@@ -12,15 +11,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { relationships as relApi, friendshipStreaks as streaksApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
-import { useTheme } from '../../lib/theme';
+import { useTheme, useGlass } from '../../lib/theme';
 import Avatar from '../../components/Avatar';
 import FriendshipStreakBadge from '../../components/FriendshipStreakBadge';
+import PressableScale from '../../components/PressableScale';
+import AnimatedListItem from '../../components/AnimatedListItem';
 import { presenceStore } from '../../lib/presenceStore';
 import type { Relationship } from '../../types';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppTabParamList, AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<AppTabParamList, 'Friends'>,
@@ -29,9 +31,12 @@ type Props = CompositeScreenProps<
 
 type Tab = 'all' | 'pending' | 'blocked';
 
+const NEO_PALETTE_KEYS = ['coral', 'mint', 'butter', 'lavender', 'sky', 'peach'] as const;
+
 export default function FriendsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const glass = useGlass();
   const toast = useToast();
   const [rels, setRels] = useState<Relationship[]>([]);
   const [tab, setTab] = useState<Tab>('all');
@@ -126,14 +131,48 @@ export default function FriendsScreen({ navigation }: Props) {
       alignItems: 'center',
       paddingHorizontal: spacing.lg,
       paddingTop: spacing.md,
-      paddingBottom: spacing.sm,
+      paddingBottom: spacing.md,
       ...(neo ? { borderBottomWidth: neo.borderWidth, borderBottomColor: colors.border } : {}),
+    },
+    headerTitleWrap: {
+      flexDirection: 'column',
     },
     headerTitle: {
       fontSize: fontSize.xl,
-      fontWeight: neo ? '800' : '700',
       color: colors.textPrimary,
-      ...(neo ? { textTransform: 'uppercase' as const } : {}),
+      ...(neo
+        ? { fontWeight: '900', letterSpacing: 2, textTransform: 'uppercase' }
+        : { fontWeight: '700' }
+      ),
+    },
+    headerAccentBar: {
+      height: 3,
+      backgroundColor: colors.accentPrimary,
+      borderRadius: 2,
+      marginTop: 4,
+      width: '100%',
+    },
+    headerActions: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    headerBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: glass
+        ? glass.glassBackground
+        : (neo ? colors.bgElevated : `${colors.accentPrimary}18`),
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...(neo ? {
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+      } : {}),
+      ...(glass ? {
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : {}),
     },
     tabs: {
       flexDirection: 'row',
@@ -146,11 +185,31 @@ export default function FriendsScreen({ navigation }: Props) {
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.sm,
       borderRadius: borderRadius.full,
-      backgroundColor: colors.bgSecondary,
-      ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
+      backgroundColor: glass
+        ? glass.glassBackground
+        : colors.bgSecondary,
+      ...(neo ? {
+        borderWidth: 2,
+        borderColor: colors.border,
+        borderRadius: 0,
+      } : {}),
+      ...(glass ? {
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+        borderRadius: borderRadius.full,
+      } : {}),
     },
     tabActive: {
-      backgroundColor: colors.accentPrimary,
+      ...(neo ? {
+        backgroundColor: neo.palette.coral,
+      } : {
+        backgroundColor: colors.accentPrimary,
+      }),
+      shadowColor: colors.accentPrimary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 3,
     },
     tabText: {
       color: colors.textSecondary,
@@ -159,16 +218,44 @@ export default function FriendsScreen({ navigation }: Props) {
       ...(neo ? { textTransform: 'uppercase' as const } : {}),
     },
     tabTextActive: {
-      color: colors.white,
+      color: neo ? '#000000' : colors.white,
+      fontWeight: '800',
     },
     list: {
       paddingTop: spacing.sm,
+      ...(glass || neo ? {} : { paddingHorizontal: spacing.sm }),
     },
     friendItem: {
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
+      ...(neo ? {
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+        borderRadius: 0,
+        marginHorizontal: spacing.md,
+        marginBottom: spacing.sm,
+      } : {}),
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.lg,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+        marginHorizontal: spacing.md,
+        marginBottom: spacing.sm,
+      } : {}),
+      ...(neo === null && !glass ? {
+        backgroundColor: colors.bgElevated,
+        borderRadius: borderRadius.md,
+        marginHorizontal: spacing.sm,
+        marginBottom: spacing.sm,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 3,
+        elevation: 2,
+      } : {}),
     },
     friendInfo: {
       flex: 1,
@@ -177,7 +264,7 @@ export default function FriendsScreen({ navigation }: Props) {
     friendName: {
       color: colors.textPrimary,
       fontSize: fontSize.md,
-      fontWeight: '500',
+      fontWeight: '700',
     },
     friendMeta: {
       color: colors.textMuted,
@@ -189,37 +276,68 @@ export default function FriendsScreen({ navigation }: Props) {
       gap: spacing.sm,
     },
     actionBtn: {
-      padding: spacing.sm,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: `${colors.error}18`,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     acceptBtn: {
-      padding: spacing.sm,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: `${colors.success}20`,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    chatBtn: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: `${colors.accentPrimary}18`,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     empty: {
       alignItems: 'center',
       paddingTop: 80,
       gap: spacing.md,
     },
+    emptyIcon: {
+      transform: [{ rotate: '-12deg' }],
+    },
+    emptyTitle: {
+      color: colors.textSecondary,
+      fontSize: fontSize.lg,
+      fontWeight: '700',
+    },
     emptyText: {
       color: colors.textMuted,
-      fontSize: fontSize.md,
+      fontSize: fontSize.sm,
     },
-  }), [colors, spacing, fontSize, borderRadius, neo]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
 
-  const renderItem = ({ item }: { item: Relationship }) => {
+  const renderItem = ({ item, index }: { item: Relationship; index: number }) => {
     const user = item.user;
     const name = user?.displayName || user?.username || item.targetId.slice(0, 8);
 
+    const neoItemStyle = neo !== null
+      ? { backgroundColor: neo.palette[NEO_PALETTE_KEYS[index % 6]] }
+      : undefined;
+
     return (
-      <View style={styles.friendItem}>
-        <TouchableOpacity onPress={() => navigation.navigate('UserProfile', { userId: item.targetId })}>
+      <AnimatedListItem index={index}>
+      <View style={[styles.friendItem, neoItemStyle]}>
+        <PressableScale onPress={() => navigation.navigate('UserProfile', { userId: item.targetId })}>
           <Avatar
             userId={item.targetId}
             avatarHash={user?.avatarHash}
             name={name}
-            size={40}
+            size={44}
             showStatus
           />
-        </TouchableOpacity>
+        </PressableScale>
         <View style={styles.friendInfo}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={styles.friendName}>{name}</Text>
@@ -234,42 +352,47 @@ export default function FriendsScreen({ navigation }: Props) {
         </View>
         <View style={styles.actions}>
           {item.type === 'pending_incoming' && (
-            <TouchableOpacity style={styles.acceptBtn} onPress={() => handleAccept(item.targetId)}>
+            <PressableScale style={styles.acceptBtn} scaleTo={0.9} onPress={() => handleAccept(item.targetId)}>
               <Ionicons name="checkmark" size={20} color={colors.success} />
-            </TouchableOpacity>
+            </PressableScale>
           )}
           {item.type === 'friend' && (
-            <TouchableOpacity style={styles.actionBtn} onPress={() => handleOpenDM(item.targetId, user?.username || 'User')}>
-              <Ionicons name="chatbubble-outline" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
+            <PressableScale style={styles.chatBtn} scaleTo={0.9} onPress={() => handleOpenDM(item.targetId, user?.username || 'User')}>
+              <Ionicons name="chatbubble-outline" size={18} color={colors.accentPrimary} />
+            </PressableScale>
           )}
           {(item.type === 'friend' || item.type === 'pending_incoming' || item.type === 'pending_outgoing') && (
-            <TouchableOpacity style={styles.actionBtn} onPress={() => handleRemove(item.targetId)}>
-              <Ionicons name="close" size={20} color={colors.error} />
-            </TouchableOpacity>
+            <PressableScale style={styles.actionBtn} scaleTo={0.9} onPress={() => handleRemove(item.targetId)}>
+              <Ionicons name="close" size={18} color={colors.error} />
+            </PressableScale>
           )}
         </View>
       </View>
+      </AnimatedListItem>
     );
   };
 
   return (
+    <PatternBackground>
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Friends</Text>
-        <View style={{ flexDirection: 'row', gap: spacing.md }}>
-          <TouchableOpacity onPress={() => navigation.navigate('MessageRequests')}>
-            <Ionicons name="mail-outline" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('FriendAdd')}>
-            <Ionicons name="person-add-outline" size={24} color={colors.accentPrimary} />
-          </TouchableOpacity>
+        <View style={styles.headerTitleWrap}>
+          <Text style={styles.headerTitle}>Friends</Text>
+          {glass && !neo && <View style={styles.headerAccentBar} />}
+        </View>
+        <View style={styles.headerActions}>
+          <PressableScale style={styles.headerBtn} onPress={() => navigation.navigate('MessageRequests')}>
+            <Ionicons name="mail-outline" size={22} color={colors.textPrimary} />
+          </PressableScale>
+          <PressableScale style={styles.headerBtn} onPress={() => navigation.navigate('FriendAdd')}>
+            <Ionicons name="person-add-outline" size={22} color={colors.accentPrimary} />
+          </PressableScale>
         </View>
       </View>
 
       <View style={styles.tabs}>
         {(['all', 'pending', 'blocked'] as Tab[]).map((t) => (
-          <TouchableOpacity
+          <PressableScale
             key={t}
             style={[styles.tab, tab === t && styles.tabActive]}
             onPress={() => setTab(t)}
@@ -280,7 +403,7 @@ export default function FriendsScreen({ navigation }: Props) {
                 ` (${rels.filter((r) => r.type === 'pending_incoming').length})`
               )}
             </Text>
-          </TouchableOpacity>
+          </PressableScale>
         ))}
       </View>
 
@@ -294,13 +417,19 @@ export default function FriendsScreen({ navigation }: Props) {
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="people-outline" size={48} color={colors.textMuted} />
-            <Text style={styles.emptyText}>
+            <View style={styles.emptyIcon}>
+              <Ionicons name="people-outline" size={72} color={colors.accentPrimary} />
+            </View>
+            <Text style={styles.emptyTitle}>
               {tab === 'all' ? 'No friends yet' : tab === 'pending' ? 'No pending requests' : 'No blocked users'}
+            </Text>
+            <Text style={styles.emptyText}>
+              {tab === 'all' ? 'Tap the + to add someone!' : tab === 'pending' ? 'All caught up' : 'Your block list is empty'}
             </Text>
           </View>
         }
       />
     </View>
+    </PatternBackground>
   );
 }

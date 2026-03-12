@@ -23,6 +23,7 @@ import { securityStore } from './src/lib/securityStore';
 import * as ScreenCapture from 'expo-screen-capture';
 import AppLockScreen from './src/screens/app/AppLockScreen';
 import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
+import ThemePickerScreen from './src/screens/onboarding/ThemePickerScreen';
 import { initSounds } from './src/lib/soundEngine';
 import { useSystemThemeListener } from './src/lib/useSystemTheme';
 import type { ThemeName } from './src/lib/themes';
@@ -31,15 +32,20 @@ const navigationRef = createNavigationContainerRef();
 
 function RootNavigator() {
   const { user, loading } = useAuth();
+  const [themePickDone, setThemePickDone] = React.useState<boolean | null>(null);
   const [onboardingDone, setOnboardingDone] = React.useState<boolean | null>(null);
 
   React.useEffect(() => {
-    SecureStore.getItemAsync('gratonite_onboarding_complete').then(val => {
-      setOnboardingDone(val === 'true');
+    Promise.all([
+      SecureStore.getItemAsync('gratonite_theme_picked'),
+      SecureStore.getItemAsync('gratonite_onboarding_complete'),
+    ]).then(([themePicked, onboarded]) => {
+      setThemePickDone(themePicked === 'true');
+      setOnboardingDone(onboarded === 'true');
     });
   }, []);
 
-  if (loading || onboardingDone === null) {
+  if (loading || themePickDone === null || onboardingDone === null) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={colors.accentPrimary} />
@@ -47,6 +53,19 @@ function RootNavigator() {
     );
   }
 
+  // First launch: pick your style
+  if (!themePickDone && !user) {
+    return (
+      <ThemePickerScreen
+        onComplete={async () => {
+          await SecureStore.setItemAsync('gratonite_theme_picked', 'true').catch(() => {});
+          setThemePickDone(true);
+        }}
+      />
+    );
+  }
+
+  // Then: onboarding slides
   if (!onboardingDone && !user) {
     return <OnboardingScreen onComplete={() => setOnboardingDone(true)} />;
   }
@@ -67,11 +86,11 @@ function ThemeInitializer() {
     (async () => {
       try {
         const saved = await SecureStore.getItemAsync('gratonite_theme');
-        if (saved && (saved === 'dark' || saved === 'light' || saved === 'neobrutalism' || saved === 'neobrutalism-dark')) {
-          themeStore.setTheme(saved as ThemeName);
+        if (saved && themeStore.isValidTheme(saved)) {
+          themeStore.setTheme(saved);
         }
       } catch {
-        // use default dark
+        // use default
       }
     })();
   }, []);

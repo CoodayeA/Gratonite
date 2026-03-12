@@ -13,6 +13,7 @@ import { useTheme } from '../../lib/theme';
 import LoadingScreen from '../../components/LoadingScreen';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'EventCreate'>;
 
@@ -152,7 +153,8 @@ export default function EventCreateScreen({ route, navigation }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
       {/* Name */}
       <Text style={styles.fieldLabel}>Event Name *</Text>
       <TextInput
@@ -252,5 +254,6 @@ export default function EventCreateScreen({ route, navigation }: Props) {
         </Text>
       </TouchableOpacity>
     </ScrollView>
+    </PatternBackground>
   );
 }

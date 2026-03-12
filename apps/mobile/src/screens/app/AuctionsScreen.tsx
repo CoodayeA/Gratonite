@@ -9,6 +9,7 @@ import EmptyState from '../../components/EmptyState';
 import type { Auction } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Auctions'>;
 
@@ -82,7 +83,7 @@ export default function AuctionsScreen({ navigation }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.sortRow}>
         {SORT_OPTIONS.map(opt => (
           <TouchableOpacity key={opt.value} style={[styles.sortBtn, sort === opt.value && styles.sortBtnActive]} onPress={() => setSort(opt.value)}>
@@ -122,6 +123,6 @@ export default function AuctionsScreen({ navigation }: Props) {
       <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('CreateAuction')}>
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
-    </View>
+    </PatternBackground>
   );
 }

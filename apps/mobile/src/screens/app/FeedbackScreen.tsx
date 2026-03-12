@@ -18,6 +18,7 @@ import SectionHeader from '../../components/SectionHeader';
 import type { FeedbackItem } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Feedback'>;
 
@@ -207,6 +208,7 @@ export default function FeedbackScreen({ navigation }: Props) {
   };
 
   return (
+    <PatternBackground>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -266,5 +268,6 @@ export default function FeedbackScreen({ navigation }: Props) {
         }
       />
     </KeyboardAvoidingView>
+    </PatternBackground>
   );
 }

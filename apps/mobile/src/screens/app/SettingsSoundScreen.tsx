@@ -19,6 +19,7 @@ import LoadingScreen from '../../components/LoadingScreen';
 import type { UserSettings } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SettingsSound'>;
 
@@ -172,7 +173,8 @@ export default function SettingsSoundScreen({ navigation }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <ScrollView style={styles.container}>
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }}>
       <SectionHeader title="Volume" />
       <View style={styles.section}>
         <View style={styles.volumeRow}>
@@ -233,5 +235,6 @@ export default function SettingsSoundScreen({ navigation }: Props) {
 
       <View style={styles.bottomPad} />
     </ScrollView>
+    </PatternBackground>
   );
 }

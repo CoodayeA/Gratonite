@@ -637,7 +637,7 @@ const FameDashboard = () => {
                     <div className="skeleton-pulse" style={{ width: '80%', height: 120, borderRadius: 8 }} />
                 </div>
             ) : (
-            <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 24px' }}>
+            <div className="content-padding" style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 24px' }}>
 
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
@@ -656,7 +656,7 @@ const FameDashboard = () => {
                 </div>
 
                 {/* Your FAME Stats */}
-                <div style={{
+                <div className="grid-mobile-2" style={{
                     display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '28px'
                 }}>
                     {[

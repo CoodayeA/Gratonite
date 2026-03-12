@@ -8,6 +8,7 @@ import LoadingScreen from '../../components/LoadingScreen';
 import type { FormTemplate } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'FormFill'>;
 
@@ -71,7 +72,7 @@ export default function FormFillScreen({ route, navigation }: Props) {
   if (loading || !form) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <ScrollView style={styles.scroll}>
         <Text style={styles.title}>{form.title}</Text>
         {form.description && <Text style={styles.desc}>{form.description}</Text>}
@@ -107,6 +108,6 @@ export default function FormFillScreen({ route, navigation }: Props) {
           <Text style={styles.submitText}>{submitting ? 'Submitting...' : 'Submit'}</Text>
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </PatternBackground>
   );
 }

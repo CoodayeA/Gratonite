@@ -10,6 +10,7 @@ import Avatar from '../../components/Avatar';
 import type { StudyLeaderboardEntry } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'StudyLeaderboard'>;
 
@@ -64,7 +65,7 @@ export default function StudyLeaderboardScreen({ route }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.tabRow}>
         {PERIODS.map((p) => (
           <TouchableOpacity key={p.value} style={[styles.tab, period === p.value && styles.tabActive]} onPress={() => setPeriod(p.value)}>
@@ -93,6 +94,6 @@ export default function StudyLeaderboardScreen({ route }: Props) {
         ListEmptyComponent={<EmptyState icon="timer-outline" title="No study data" subtitle="Start a study session to appear here" />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor={colors.accentPrimary} />}
       />
-    </View>
+    </PatternBackground>
   );
 }

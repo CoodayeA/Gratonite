@@ -1341,7 +1341,7 @@ export type HelpCategory =
   | 'All'
   | 'Getting Started'
   | 'Account & Security'
-  | 'Servers & Channels'
+  | 'Portals & Channels'
   | 'Bots & Integrations'
   | 'Billing & Premium'
   | 'Cosmetics & Shop'

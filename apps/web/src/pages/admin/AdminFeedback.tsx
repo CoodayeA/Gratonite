@@ -136,7 +136,7 @@ export default function AdminFeedback() {
 
   return (
     <div className="main-content-wrapper" style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-primary)' }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '48px 24px', width: '100%' }}>
+      <div className="content-padding" style={{ maxWidth: '900px', margin: '0 auto', padding: '48px 24px', width: '100%' }}>
 
         {/* Header */}
         <div style={{ marginBottom: '32px' }}>
@@ -157,7 +157,7 @@ export default function AdminFeedback() {
         </div>
 
         {/* Stats Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '28px' }}>
+        <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '28px' }}>
           {[
             { label: 'Total Feedback', value: counts.total, icon: <MessageSquare size={16} />, color: 'var(--accent-primary)' },
             { label: 'New', value: counts.New, icon: <Eye size={16} />, color: 'var(--accent-blue)' },

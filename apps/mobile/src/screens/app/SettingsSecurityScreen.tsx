@@ -19,6 +19,7 @@ import { getFingerprint } from '../../lib/keyVerification';
 import * as ScreenCapture from 'expo-screen-capture';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SettingsSecurity'>;
 
@@ -168,7 +169,8 @@ export default function SettingsSecurityScreen({ navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius]);
 
   return (
-    <ScrollView style={styles.container}>
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }}>
       {/* Encryption Status */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>ENCRYPTION</Text>
@@ -232,5 +234,6 @@ export default function SettingsSecurityScreen({ navigation }: Props) {
         )}
       </View>
     </ScrollView>
+    </PatternBackground>
   );
 }

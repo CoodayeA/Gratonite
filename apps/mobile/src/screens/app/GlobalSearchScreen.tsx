@@ -18,6 +18,7 @@ import Avatar from '../../components/Avatar';
 import type { SearchResult } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'GlobalSearch'>;
 
@@ -60,7 +61,7 @@ export default function GlobalSearchScreen({ navigation }: Props) {
 
   const handleResultPress = (item: SearchResult) => {
     const details = [
-      item.guildName ? `Server: ${item.guildName}` : null,
+      item.guildName ? `Portal: ${item.guildName}` : null,
       item.channelName ? `Channel: #${item.channelName}` : null,
       item.author ? `Author: ${item.author.displayName || item.author.username}` : null,
     ]
@@ -189,7 +190,7 @@ export default function GlobalSearchScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <SearchBar
         value={query}
         onChangeText={handleQueryChange}
@@ -221,13 +222,13 @@ export default function GlobalSearchScreen({ navigation }: Props) {
                 <Ionicons name="search-outline" size={48} color={colors.textMuted} />
                 <Text style={styles.hintTitle}>Search messages</Text>
                 <Text style={styles.hintSubtitle}>
-                  Find messages across all your servers and DMs
+                  Find messages across all your portals and DMs
                 </Text>
               </View>
             )
           }
         />
       )}
-    </View>
+    </PatternBackground>
   );
 }

@@ -14,6 +14,7 @@ import { useTheme } from '../../lib/theme';
 import type { ActivityFeedItem } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ActivityFeed'>;
 
@@ -158,6 +159,7 @@ export default function ActivityFeedScreen({ navigation }: Props) {
   }
 
   return (
+    <PatternBackground>
     <FlatList
       style={styles.container}
       data={items}
@@ -183,5 +185,6 @@ export default function ActivityFeedScreen({ navigation }: Props) {
         <Text style={styles.emptyText}>No activity yet</Text>
       }
     />
+    </PatternBackground>
   );
 }

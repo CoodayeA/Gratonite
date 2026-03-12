@@ -89,7 +89,7 @@ const PurchaseModal = ({ item, onClose, onConfirm }: { item: CreatorItem; onClos
 
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
-            <div style={{ width: '480px', background: 'var(--bg-primary)', borderRadius: '20px', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
+            <div style={{ width: 'min(480px, 95vw)', background: 'var(--bg-primary)', borderRadius: '20px', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', maxHeight: '90vh', overflowY: 'auto' }}>
                 {step === 'success' ? (
                     <div style={{ padding: '48px', textAlign: 'center' }}>
                         <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
@@ -237,7 +237,7 @@ const CreateItemModal = ({ onClose }: { onClose: () => void }) => {
 
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
-            <div style={{ width: '520px', maxHeight: '90vh', background: 'var(--bg-primary)', borderRadius: '20px', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ width: 'min(520px, 95vw)', maxHeight: '90vh', background: 'var(--bg-primary)', borderRadius: '20px', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column' }}>
                 {step === 'success' ? (
                     <div style={{ padding: '48px', textAlign: 'center' }}>
                         <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
@@ -369,7 +369,7 @@ const BidModal = ({ auction, balance, onClose, onBidSuccess }: {
 
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
-            <div style={{ width: '520px', background: 'var(--bg-primary)', borderRadius: '20px', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
+            <div style={{ width: 'min(520px, 95vw)', background: 'var(--bg-primary)', borderRadius: '20px', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', maxHeight: '90vh', overflowY: 'auto' }}>
                 {bidPlaced ? (
                     <div style={{ padding: '48px', textAlign: 'center' }}>
                         <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
@@ -527,12 +527,15 @@ const FilterDropdown = ({ isOpen, onClose, typeFilter, setTypeFilter, sortOption
 const Marketplace = () => {
     const { gratoniteBalance, setGratoniteBalance } = useOutletContext<any>();
     const { addToast } = useToast();
-    const [activeTab, setActiveTab] = useState<'creators' | 'auctions'>('creators');
+    const [activeTab, setActiveTab] = useState<'creators' | 'auctions' | 'my-auctions' | 'my-bids'>('creators');
     const [purchaseItem, setPurchaseItem] = useState<CreatorItem | null>(null);
     const [biddingOn, setBiddingOn] = useState<ApiAuction | null>(null);
     const [showCreateItem, setShowCreateItem] = useState(false);
     const [auctions, setAuctions] = useState<ApiAuction[]>([]);
     const [auctionsLoading, setAuctionsLoading] = useState(false);
+    const [myAuctions, setMyAuctions] = useState<any[]>([]);
+    const [myBids, setMyBids] = useState<any[]>([]);
+    const [myDataLoading, setMyDataLoading] = useState(false);
     const [auctionSort, setAuctionSort] = useState<AuctionSortOption>('popular');
     const [auctionTypeFilter, setAuctionTypeFilter] = useState<AuctionTypeFilter>('all');
     const [auctionSearch, setAuctionSearch] = useState('');
@@ -605,6 +608,19 @@ const Marketplace = () => {
             loadAuctions();
         }
     }, [activeTab, auctionSort, auctionTypeFilter]);
+
+    // Load my auctions / my bids
+    useEffect(() => {
+        if (activeTab !== 'my-auctions' && activeTab !== 'my-bids') return;
+        setMyDataLoading(true);
+        const fetcher = activeTab === 'my-auctions' ? api.auctions.mySelling() : api.auctions.myBids();
+        fetcher.then((data: any[]) => {
+            if (activeTab === 'my-auctions') setMyAuctions(Array.isArray(data) ? data : []);
+            else setMyBids(Array.isArray(data) ? data : []);
+        }).catch(() => {
+            addToast({ title: `Failed to load ${activeTab === 'my-auctions' ? 'your auctions' : 'your bids'}`, variant: 'error' });
+        }).finally(() => setMyDataLoading(false));
+    }, [activeTab]);
 
     const filteredItems = creatorItems
         .filter(item => {
@@ -709,13 +725,15 @@ const Marketplace = () => {
                     </div>
                 </header>
 
-                <div style={{ display: 'flex', borderBottom: '1px solid var(--stroke)', marginBottom: '32px', gap: '32px' }}>
+                <div style={{ display: 'flex', borderBottom: '1px solid var(--stroke)', marginBottom: '32px', gap: '32px', overflowX: 'auto' }}>
                     {[
                         { id: 'creators', icon: <ShoppingBag size={18} />, label: 'Creator Items', color: 'var(--accent-primary)' },
                         { id: 'auctions', icon: <Gavel size={18} />, label: 'Live Auctions', color: 'var(--accent-purple)' },
+                        { id: 'my-auctions', icon: <Package size={18} />, label: 'My Auctions', color: '#f59e0b' },
+                        { id: 'my-bids', icon: <TrendingUp size={18} />, label: 'My Bids', color: '#10b981' },
                     ].map(tab => (
                         <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
-                            style={{ background: 'none', border: 'none', borderBottom: activeTab === tab.id ? `3px solid ${tab.color}` : '3px solid transparent', padding: '0 0 12px 0', color: activeTab === tab.id ? 'white' : 'var(--text-muted)', fontWeight: 600, fontSize: '16px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px' }}
+                            style={{ background: 'none', border: 'none', borderBottom: activeTab === tab.id ? `3px solid ${tab.color}` : '3px solid transparent', padding: '0 0 12px 0', color: activeTab === tab.id ? 'white' : 'var(--text-muted)', fontWeight: 600, fontSize: '16px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}
                         >{tab.icon} {tab.label}</button>
                     ))}
                 </div>
@@ -922,6 +940,125 @@ const Marketplace = () => {
                                             <button onClick={() => setBiddingOn(auction)}
                                                 style={{ background: 'var(--accent-purple)', border: 'none', padding: '12px 24px', borderRadius: '8px', color: 'white', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', fontSize: '14px' }}
                                             ><ArrowUpRight size={18} /> Bid Now</button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* My Auctions tab */}
+                {activeTab === 'my-auctions' && (
+                    <div>
+                        <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px', fontFamily: 'var(--font-display)' }}>Your Auctions</h3>
+                        {myDataLoading ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                                {Array.from({ length: 3 }).map((_, i) => (
+                                    <div key={i} style={{ height: '120px', borderRadius: '12px', background: 'var(--bg-tertiary)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                                ))}
+                            </div>
+                        ) : myAuctions.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
+                                <Package size={40} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                                <p style={{ fontWeight: 600, marginBottom: '4px' }}>No auctions yet</p>
+                                <p style={{ fontSize: '13px' }}>List a cosmetic from your inventory to start selling!</p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {myAuctions.map((a: any) => {
+                                    const timeLeft = getTimeRemaining(a.endsAt);
+                                    const isActive = a.status === 'active' && timeLeft !== 'Ended';
+                                    return (
+                                        <div key={a.id} style={{
+                                            display: 'flex', alignItems: 'center', gap: '16px',
+                                            padding: '16px', borderRadius: '12px',
+                                            background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+                                        }}>
+                                            <div style={{
+                                                width: '56px', height: '56px', borderRadius: '10px',
+                                                background: a.cosmetic?.previewImageUrl || 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))',
+                                                flexShrink: 0, backgroundSize: 'cover',
+                                            }} />
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '4px' }}>{a.cosmetic?.name || 'Unknown Item'}</div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{(a.cosmetic?.type || '').replace(/_/g, ' ')}</div>
+                                            </div>
+                                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                                <div style={{ fontWeight: 700, fontSize: '16px', color: '#f59e0b' }}>
+                                                    {(a.currentBid ?? a.startingPrice).toLocaleString()} G
+                                                </div>
+                                                <div style={{ fontSize: '11px', color: isActive ? 'var(--text-muted)' : 'var(--error)', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
+                                                    <Clock size={11} /> {isActive ? timeLeft : a.status}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* My Bids tab */}
+                {activeTab === 'my-bids' && (
+                    <div>
+                        <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px', fontFamily: 'var(--font-display)' }}>Your Bids</h3>
+                        {myDataLoading ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                                {Array.from({ length: 3 }).map((_, i) => (
+                                    <div key={i} style={{ height: '120px', borderRadius: '12px', background: 'var(--bg-tertiary)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                                ))}
+                            </div>
+                        ) : myBids.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
+                                <TrendingUp size={40} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                                <p style={{ fontWeight: 600, marginBottom: '4px' }}>No bids yet</p>
+                                <p style={{ fontSize: '13px' }}>Browse the Live Auctions tab to place your first bid!</p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {myBids.map((b: any) => {
+                                    const a = b.auction;
+                                    const timeLeft = getTimeRemaining(a.endsAt);
+                                    const isWinning = b.isWinning;
+                                    return (
+                                        <div key={b.bidId} style={{
+                                            display: 'flex', alignItems: 'center', gap: '16px',
+                                            padding: '16px', borderRadius: '12px',
+                                            background: 'var(--bg-elevated)',
+                                            border: `1px solid ${isWinning ? 'rgba(16,185,129,0.3)' : 'var(--stroke)'}`,
+                                        }}>
+                                            <div style={{
+                                                width: '56px', height: '56px', borderRadius: '10px',
+                                                background: a.cosmetic?.previewImageUrl || 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))',
+                                                flexShrink: 0, backgroundSize: 'cover',
+                                            }} />
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '4px' }}>{a.cosmetic?.name || 'Unknown Item'}</div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                                    Seller: @{a.seller?.username || 'unknown'} · {(a.cosmetic?.type || '').replace(/_/g, ' ')}
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                                <div style={{ fontWeight: 700, fontSize: '14px', color: isWinning ? '#10b981' : 'var(--error)' }}>
+                                                    {isWinning ? 'Winning' : 'Outbid'}
+                                                </div>
+                                                <div style={{ fontSize: '13px', fontWeight: 700, color: '#f59e0b' }}>
+                                                    {b.bidAmount.toLocaleString()} G
+                                                </div>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
+                                                    <Clock size={11} /> {timeLeft}
+                                                </div>
+                                            </div>
+                                            {!isWinning && timeLeft !== 'Ended' && (
+                                                <button
+                                                    onClick={() => setBiddingOn(mapApiAuction(a))}
+                                                    style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: 'var(--accent-purple)', color: 'white', fontWeight: 700, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                                >
+                                                    Rebid
+                                                </button>
+                                            )}
                                         </div>
                                     );
                                 })}

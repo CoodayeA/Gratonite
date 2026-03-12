@@ -73,7 +73,7 @@ export default function ActivityFeed({ onClose }: { onClose: () => void }) {
     }} onClick={onClose}>
       <div style={{
         background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-lg)',
-        width: '420px', maxHeight: '560px', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        width: 'min(420px, 95vw)', maxHeight: '560px', display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '20px 24px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--stroke)' }}>
           <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>Activity Feed</h2>

@@ -10,6 +10,7 @@ import EmptyState from '../../components/EmptyState';
 import type { MusicQueue } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'MusicRoom'>;
 
@@ -111,7 +112,7 @@ export default function MusicRoomScreen({ route }: Props) {
   const upcomingQueue = queue?.queue?.slice(1) ?? [];
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.nowPlaying}>
         {currentTrack ? (
           <>
@@ -179,6 +180,6 @@ export default function MusicRoomScreen({ route }: Props) {
         ListEmptyComponent={<EmptyState icon="musical-notes-outline" title="Queue is empty" subtitle="Add a track to get started" />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchQueue(); }} tintColor={colors.accentPrimary} />}
       />
-    </View>
+    </PatternBackground>
   );
 }

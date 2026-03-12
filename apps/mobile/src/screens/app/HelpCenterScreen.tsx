@@ -5,6 +5,7 @@ import { useTheme } from '../../lib/theme';
 import type { HelpCategory } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'HelpCenter'>;
 
@@ -17,13 +18,13 @@ interface Article {
 
 const ARTICLES: Article[] = [
   { id: 'getting-started', title: 'Getting Started with Gratonite', description: 'Learn the basics of navigating and using Gratonite.', category: 'Getting Started' },
-  { id: 'creating-server', title: 'Creating Your First Server', description: 'Step-by-step guide to setting up a new server.', category: 'Getting Started' },
+  { id: 'creating-server', title: 'Creating Your First Portal', description: 'Step-by-step guide to setting up a new portal.', category: 'Getting Started' },
   { id: 'invite-friends', title: 'Inviting Friends', description: 'How to invite friends and share invite links.', category: 'Getting Started' },
   { id: 'account-security', title: 'Account Security', description: 'Set up 2FA, manage sessions, and keep your account safe.', category: 'Account & Security' },
   { id: 'password-reset', title: 'Resetting Your Password', description: 'How to reset your password if you forgot it.', category: 'Account & Security' },
-  { id: 'roles-permissions', title: 'Roles & Permissions', description: 'Understanding roles, permissions, and access control.', category: 'Servers & Channels' },
-  { id: 'channel-types', title: 'Channel Types', description: 'Text, voice, forum, wiki, announcement, and more.', category: 'Servers & Channels' },
-  { id: 'moderation-tools', title: 'Moderation Tools', description: 'Bans, timeouts, word filters, and automod setup.', category: 'Servers & Channels' },
+  { id: 'roles-permissions', title: 'Roles & Permissions', description: 'Understanding roles, permissions, and access control.', category: 'Portals & Channels' },
+  { id: 'channel-types', title: 'Channel Types', description: 'Text, voice, forum, wiki, announcement, and more.', category: 'Portals & Channels' },
+  { id: 'moderation-tools', title: 'Moderation Tools', description: 'Bans, timeouts, word filters, and automod setup.', category: 'Portals & Channels' },
   { id: 'shop-cosmetics', title: 'Shop & Cosmetics', description: 'Browse and purchase cosmetic items.', category: 'Cosmetics & Shop' },
   { id: 'connections', title: 'Social Connections', description: 'Link your GitHub, Twitch, and other accounts.', category: 'Cosmetics & Shop' },
   { id: 'economy', title: 'Economy & Wallet', description: 'Earning and spending coins in Gratonite.', category: 'Cosmetics & Shop' },
@@ -33,12 +34,12 @@ const ARTICLES: Article[] = [
   { id: 'voice-features', title: 'Voice Features', description: 'Voice channels, effects, soundboard, and music rooms.', category: 'Messaging & Chat' },
   { id: 'privacy', title: 'Privacy Settings', description: 'Control who can message you and see your status.', category: 'Privacy & Safety' },
   { id: 'blocking', title: 'Blocking & Muting', description: 'How to block or mute other users.', category: 'Privacy & Safety' },
-  { id: 'bots', title: 'Adding Bots', description: 'How to find and add bots to your server.', category: 'Bots & Integrations' },
+  { id: 'bots', title: 'Adding Bots', description: 'How to find and add bots to your portal.', category: 'Bots & Integrations' },
   { id: 'webhooks', title: 'Webhooks', description: 'Setting up webhooks for integrations.', category: 'Bots & Integrations' },
   { id: 'premium', title: 'Premium Features', description: 'What you get with Gratonite Premium.', category: 'Billing & Premium' },
 ];
 
-const CATEGORIES: HelpCategory[] = ['All', 'Getting Started', 'Account & Security', 'Servers & Channels', 'Cosmetics & Shop', 'Marketplace & Auctions', 'Messaging & Chat', 'Privacy & Safety', 'Bots & Integrations', 'Billing & Premium'];
+const CATEGORIES: HelpCategory[] = ['All', 'Getting Started', 'Account & Security', 'Portals & Channels', 'Cosmetics & Shop', 'Marketplace & Auctions', 'Messaging & Chat', 'Privacy & Safety', 'Bots & Integrations', 'Billing & Premium'];
 
 export default function HelpCenterScreen({ navigation }: Props) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
@@ -71,7 +72,7 @@ export default function HelpCenterScreen({ navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.searchBar}>
         <Ionicons name="search" size={18} color={colors.textMuted} />
         <TextInput style={styles.searchInput} placeholder="Search articles..." placeholderTextColor={colors.textMuted} value={search} onChangeText={setSearch} />
@@ -102,6 +103,6 @@ export default function HelpCenterScreen({ navigation }: Props) {
           </TouchableOpacity>
         )}
       />
-    </View>
+    </PatternBackground>
   );
 }

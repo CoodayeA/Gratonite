@@ -11,18 +11,20 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { bookmarks as bookmarksApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
-import { useTheme } from '../../lib/theme';
+import { useTheme, useGlass } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
 import type { Bookmark } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Bookmarks'>;
 
 export default function BookmarksScreen({ navigation }: Props) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const glass = useGlass();
   const toast = useToast();
   const [bookmarkList, setBookmarkList] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,9 +84,20 @@ export default function BookmarksScreen({ navigation }: Props) {
       alignItems: 'flex-start',
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      ...(neo ? { borderBottomWidth: 2, borderBottomColor: colors.border } : {}),
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.lg,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+        marginHorizontal: spacing.md,
+        marginBottom: spacing.sm,
+      } : neo ? {
+        borderBottomWidth: 2,
+        borderBottomColor: colors.border,
+      } : {
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+      }),
     },
     bookmarkContent: {
       flex: 1,
@@ -106,12 +119,23 @@ export default function BookmarksScreen({ navigation }: Props) {
       marginLeft: 'auto',
     },
     messagePreview: {
-      backgroundColor: colors.bgElevated,
-      borderRadius: neo ? 0 : borderRadius.md,
       padding: spacing.md,
       borderLeftWidth: 3,
       borderLeftColor: colors.accentPrimary,
-      ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.lg,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : neo ? {
+        backgroundColor: colors.bgElevated,
+        borderRadius: 0,
+        borderWidth: 2,
+        borderColor: colors.border,
+      } : {
+        backgroundColor: colors.bgElevated,
+        borderRadius: borderRadius.md,
+      }),
     },
     authorName: {
       color: colors.textPrimary,
@@ -141,7 +165,7 @@ export default function BookmarksScreen({ navigation }: Props) {
       marginLeft: spacing.sm,
       marginTop: spacing.xs,
     },
-  }), [colors, spacing, fontSize, borderRadius, neo]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
 
   const renderBookmark = ({ item }: { item: Bookmark }) => {
     const authorName = item.authorDisplayName || item.authorUsername || 'Unknown';
@@ -183,7 +207,7 @@ export default function BookmarksScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={bookmarkList}
         keyExtractor={(item) => item.id}
@@ -200,6 +224,6 @@ export default function BookmarksScreen({ navigation }: Props) {
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

@@ -17,6 +17,7 @@ import { useTheme } from '../../lib/theme';
 import type { Channel } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ChannelEdit'>;
 
@@ -236,7 +237,8 @@ export default function ChannelEditScreen({ route, navigation }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
       {/* Channel info */}
       <View style={styles.channelHeader}>
         <Ionicons
@@ -349,5 +351,6 @@ export default function ChannelEditScreen({ route, navigation }: Props) {
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </PatternBackground>
   );
 }

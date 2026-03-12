@@ -10,6 +10,7 @@ import EmptyState from '../../components/EmptyState';
 import type { FormResponse } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'FormResponses'>;
 
@@ -65,7 +66,7 @@ export default function FormResponsesScreen({ route }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={responses}
         keyExtractor={(item) => item.id}
@@ -94,6 +95,6 @@ export default function FormResponsesScreen({ route }: Props) {
         ListEmptyComponent={<EmptyState icon="document-text-outline" title="No responses" subtitle="Responses will appear here" />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchResponses(); }} tintColor={colors.accentPrimary} />}
       />
-    </View>
+    </PatternBackground>
   );
 }

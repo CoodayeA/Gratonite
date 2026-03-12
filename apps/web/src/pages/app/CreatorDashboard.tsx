@@ -228,7 +228,7 @@ const CreatorDashboard = () => {
                 }}
             />
 
-            <div style={{ maxWidth: '900px', margin: '0 auto', padding: '48px 24px', width: '100%' }}>
+            <div className="content-padding" style={{ maxWidth: '900px', margin: '0 auto', padding: '48px 24px', width: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
                     <div>
                         <h1 style={{ fontSize: '32px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '8px' }}>Creator Dashboard</h1>
@@ -245,7 +245,7 @@ const CreatorDashboard = () => {
                 </div>
 
                 {/* Stats Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '40px' }}>
+                <div className="grid-mobile-1" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '40px' }}>
                     {loading ? (
                         <>
                             <Skeleton variant="card" height="100px" />
@@ -387,7 +387,7 @@ const CreatorDashboard = () => {
             {/* ── Submit Modal ── */}
             {isSubmitOpen && (
                 <div className="modal-overlay" style={{ zIndex: 999 }}>
-                    <div className="auth-card wide glass-panel" style={{ width: '500px', position: 'relative', animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+                    <div className="auth-card wide glass-panel" style={{ width: 'min(500px, 95vw)', position: 'relative', animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)', maxHeight: '90vh', overflowY: 'auto' }}>
                         <button onClick={() => submitState !== 'submitting' && setIsSubmitOpen(false)} style={{ position: 'absolute', top: 16, right: 16, background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                             <X size={20} />
                         </button>

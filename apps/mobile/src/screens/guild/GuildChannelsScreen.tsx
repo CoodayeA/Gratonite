@@ -7,15 +7,17 @@ import {
   StyleSheet,
   RefreshControl,
   SectionList,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { channels as channelsApi } from '../../lib/api';
 import ChannelNotificationSheet from '../../components/ChannelNotificationSheet';
 import { useToast } from '../../contexts/ToastContext';
-import { useTheme } from '../../lib/theme';
+import { useTheme, useGlass } from '../../lib/theme';
 import type { Channel } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'GuildChannels'>;
 
@@ -24,11 +26,20 @@ interface Section {
   data: Channel[];
 }
 
+const CHANNEL_TYPE_COLORS: Record<string, string> = {
+  GUILD_TEXT: '#6c63ff',
+  GUILD_VOICE: '#22c55e',
+  GUILD_ANNOUNCEMENT: '#f59e0b',
+  GUILD_FORUM: '#8b5cf6',
+};
+
 export default function GuildChannelsScreen({ route, navigation }: Props) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const glass = useGlass();
   const toast = useToast();
   const { guildId, guildName } = route.params;
   const [channelList, setChannelList] = useState<Channel[]>([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [notifChannel, setNotifChannel] = useState<string | null>(null);
 
@@ -49,10 +60,13 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
   const fetchChannels = useCallback(async () => {
     try {
       const data = await channelsApi.getForGuild(guildId);
-      setChannelList(data);
+      setChannelList(data ?? []);
     } catch (err: any) {
-      toast.error('Failed to load channels');
+      if (err.status !== 401) {
+        toast.error(err.message || 'Failed to load channels');
+      }
     } finally {
+      setLoading(false);
       setRefreshing(false);
     }
   }, [guildId]);
@@ -112,23 +126,32 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
     }
   };
 
-  const renderChannel = ({ item }: { item: Channel }) => (
-    <TouchableOpacity
-      style={styles.channelItem}
-      onPress={() => handleChannelPress(item)}
-      onLongPress={() => setNotifChannel(item.id)}
-    >
-      <Ionicons
-        name={getChannelIcon(item.type) as any}
-        size={20}
-        color={colors.textMuted}
-      />
-      <Text style={styles.channelName} numberOfLines={1}>{item.name}</Text>
-    </TouchableOpacity>
-  );
+  const renderChannel = ({ item }: { item: Channel }) => {
+    const typeColor = CHANNEL_TYPE_COLORS[item.type] || colors.textMuted;
+
+    return (
+      <TouchableOpacity
+        style={styles.channelItem}
+        onPress={() => handleChannelPress(item)}
+        onLongPress={() => setNotifChannel(item.id)}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.channelIconWrap, { backgroundColor: typeColor + '15' }]}>
+          <Ionicons
+            name={getChannelIcon(item.type) as any}
+            size={18}
+            color={typeColor}
+          />
+        </View>
+        <Text style={styles.channelName} numberOfLines={1}>{item.name}</Text>
+        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} style={{ opacity: 0.5 }} />
+      </TouchableOpacity>
+    );
+  };
 
   const renderSectionHeader = ({ section }: { section: Section }) => (
     <View style={styles.sectionHeader}>
+      <View style={styles.sectionAccent} />
       <Text style={styles.sectionTitle}>{section.title}</Text>
     </View>
   );
@@ -140,43 +163,77 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
     },
     list: {
       paddingBottom: spacing.xxxl,
+      paddingTop: spacing.sm,
     },
     sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
       paddingHorizontal: spacing.lg,
-      paddingTop: spacing.lg,
+      paddingTop: spacing.xl,
       paddingBottom: spacing.sm,
+      gap: spacing.sm,
+    },
+    sectionAccent: {
+      width: 3,
+      height: 14,
+      borderRadius: 2,
+      backgroundColor: colors.accentPrimary,
     },
     sectionTitle: {
       fontSize: fontSize.xs,
-      fontWeight: '700',
+      fontWeight: neo ? '800' : '700',
       color: colors.textMuted,
-      letterSpacing: 1,
+      letterSpacing: 1.2,
+      textTransform: 'uppercase',
     },
     channelItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: spacing.xl,
+      paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
-      gap: spacing.sm,
+      marginHorizontal: spacing.md,
+      marginBottom: spacing.xs,
+      gap: spacing.md,
+      borderRadius: neo ? 0 : borderRadius.md,
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+        borderRadius: borderRadius.md,
+      } : {}),
+      ...(neo ? {
+        borderWidth: 2,
+        borderColor: colors.border,
+        backgroundColor: colors.bgElevated,
+      } : {}),
+    },
+    channelIconWrap: {
+      width: 32,
+      height: 32,
+      borderRadius: neo ? 0 : 16,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     channelName: {
-      color: colors.textSecondary,
+      color: colors.textPrimary,
       fontSize: fontSize.md,
-      fontWeight: '500',
+      fontWeight: neo ? '700' : '500',
       flex: 1,
+      ...(neo ? { textTransform: 'uppercase' as const, letterSpacing: 0.3 } : {}),
     },
     empty: {
       alignItems: 'center',
       paddingTop: 80,
+      gap: spacing.md,
     },
     emptyText: {
       color: colors.textMuted,
       fontSize: fontSize.md,
     },
-  }), [colors, spacing, fontSize, borderRadius, neo]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
@@ -187,9 +244,20 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchChannels(); }} tintColor={colors.accentPrimary} />
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>No channels</Text>
-          </View>
+          loading ? (
+            <View style={styles.empty}>
+              <ActivityIndicator size="large" color={colors.accentPrimary} />
+              <Text style={styles.emptyText}>Loading channels…</Text>
+            </View>
+          ) : (
+            <View style={styles.empty}>
+              <Ionicons name="chatbubble-ellipses-outline" size={64} color={colors.accentPrimary} style={{ opacity: 0.5, transform: [{ rotate: '-3deg' }] }} />
+              <Text style={styles.emptyText}>No channels yet</Text>
+              <TouchableOpacity onPress={() => { setLoading(true); fetchChannels(); }}>
+                <Text style={{ color: colors.accentPrimary, fontSize: fontSize.md, marginTop: spacing.sm }}>Tap to retry</Text>
+              </TouchableOpacity>
+            </View>
+          )
         }
       />
       <ChannelNotificationSheet
@@ -197,6 +265,6 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
         onClose={() => setNotifChannel(null)}
         channelId={notifChannel || ''}
       />
-    </View>
+    </PatternBackground>
   );
 }

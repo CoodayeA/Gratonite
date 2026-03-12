@@ -1073,8 +1073,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     });
 
     return (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <div style={{ width: '900px', height: '650px', display: 'flex', background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
+        <div onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div onClick={e => e.stopPropagation()} style={{ width: 'min(900px, 95vw)', height: 'min(650px, 90vh)', display: 'flex', background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
                 {/* Left Sidebar */}
                 <div className="settings-sidebar" style={{ width: '220px', background: 'var(--bg-elevated)', padding: '32px 16px', borderRight: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto' }}>
                     <div>
@@ -1130,6 +1130,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
 
                 {/* Mobile Tab Pills */}
                 <div className="settings-tabs-mobile">
+                    <button onClick={onClose} style={{ marginRight: 'auto', padding: '6px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '16px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600 }}>
+                        <X size={14} /> Close
+                    </button>
                     {(['overview', 'channels', 'roles', 'members', 'invites', 'templates', 'emojis', 'branding', 'webhooks', 'bots', 'automod', 'wordfilter', 'bans', 'audit', 'security', 'insights', 'onboarding'] as const).map(tab => (
                         <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>
                             {tab === 'emojis' ? 'Emojis' : tab === 'branding' ? 'Brand' : tab === 'webhooks' ? 'Webhooks' : tab === 'bots' ? 'Bots' : tab === 'automod' ? 'AutoMod' : tab === 'wordfilter' ? 'Word Filter' : tab === 'audit' ? 'Audit Log' : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -1138,8 +1141,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                 </div>
 
                 {/* Right Panel */}
-                <div style={{ flex: 1, padding: '32px 48px', overflowY: 'auto', position: 'relative' }}>
-                    <button onClick={onClose}
+                <div className="settings-content-panel" style={{ flex: 1, padding: '32px 48px', overflowY: 'auto', position: 'relative' }}>
+                    <button className="settings-close-btn" onClick={onClose}
                         onMouseEnter={() => setHoveredBtn('close')} onMouseLeave={() => setHoveredBtn(null)}
                         style={{ position: 'absolute', top: 24, right: 24, background: 'none', border: 'none', color: hoveredBtn === 'close' ? 'var(--text-primary)' : 'var(--text-muted)', cursor: 'pointer' }}>
                         <X size={24} />
@@ -1242,7 +1245,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             <div style={{ height: '1px', background: 'var(--stroke)', margin: '24px 0' }} />
 
                             <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Quick Stats</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
+                            <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
                                 {[
                                     { label: 'Total Members', value: members.length.toString(), color: 'var(--accent-primary)' },
                                     { label: 'Online Now', value: onlineCount.toString(), color: '#57F287' },
@@ -2644,7 +2647,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Installed Bots</h2>
                             <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Manage bots installed in this guild. Visit the Bot Store to discover and add new bots.</p>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '32px' }}>
+                            <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '32px' }}>
                                 <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
                                     <div style={{ fontSize: '28px', fontWeight: 700, fontFamily: 'var(--font-display)' }}>{installedBots.length}</div>
                                     <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Installed</div>

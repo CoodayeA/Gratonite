@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { appLockStore } from '../../lib/appLockStore';
 import { useTheme } from '../../lib/theme';
+import PatternBackground from '../../components/PatternBackground';
 
 interface AppLockScreenProps {
   onUnlock: () => void;
@@ -64,7 +65,7 @@ export default function AppLockScreen({ onUnlock }: AppLockScreenProps) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.icon}>
         <Ionicons name="lock-closed" size={36} color={colors.accentPrimary} />
       </View>
@@ -73,6 +74,6 @@ export default function AppLockScreen({ onUnlock }: AppLockScreenProps) {
       <TouchableOpacity style={styles.button} onPress={tryUnlock}>
         <Text style={styles.buttonText}>Try Again</Text>
       </TouchableOpacity>
-    </View>
+    </PatternBackground>
   );
 }

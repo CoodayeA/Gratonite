@@ -15,6 +15,7 @@ import LoadingScreen from '../../components/LoadingScreen';
 import type { ScheduledEvent } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'EventDetail'>;
 
@@ -201,7 +202,8 @@ export default function EventDetailScreen({ route }: Props) {
   const isPast = startDate < new Date();
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
       {/* Date banner */}
       <View style={styles.dateBanner}>
         <Text style={styles.dateBannerMonth}>
@@ -316,5 +318,6 @@ export default function EventDetailScreen({ route }: Props) {
         </Text>
       </TouchableOpacity>
     </ScrollView>
+    </PatternBackground>
   );
 }

@@ -1,25 +1,43 @@
 import React, { useMemo } from 'react';
-import { Text, StyleSheet } from 'react-native';
-import { useColors, spacing, fontSize } from '../lib/theme';
+import { View, Text, StyleSheet } from 'react-native';
+import { useTheme, useGlass } from '../lib/theme';
 
 interface SectionHeaderProps {
   title: string;
 }
 
 export default function SectionHeader({ title }: SectionHeaderProps) {
-  const colors = useColors();
+  const { colors, spacing, fontSize, neo } = useTheme();
+  const glass = useGlass();
 
   const styles = useMemo(() => StyleSheet.create({
-    text: {
-      color: colors.textMuted,
-      fontSize: fontSize.xs,
-      fontWeight: '700',
-      letterSpacing: 1,
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
       paddingHorizontal: spacing.lg,
       paddingTop: spacing.lg,
       paddingBottom: spacing.xs,
+      gap: spacing.sm,
     },
-  }), [colors]);
+    accent: {
+      width: 3,
+      height: 12,
+      borderRadius: neo ? 0 : 2,
+      backgroundColor: colors.accentPrimary,
+    },
+    text: {
+      color: colors.textMuted,
+      fontSize: fontSize.xs,
+      fontWeight: neo ? '800' : '700',
+      letterSpacing: 1.2,
+      textTransform: 'uppercase',
+    },
+  }), [colors, spacing, fontSize, neo, glass]);
 
-  return <Text style={styles.text}>{title.toUpperCase()}</Text>;
+  return (
+    <View style={styles.container}>
+      <View style={styles.accent} />
+      <Text style={styles.text}>{title}</Text>
+    </View>
+  );
 }

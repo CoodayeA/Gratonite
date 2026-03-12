@@ -15,6 +15,7 @@ import EmptyState from '../../components/EmptyState';
 import type { AutoRole } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'AutoRoleConfig'>;
 
@@ -99,7 +100,7 @@ export default function AutoRoleConfigScreen({ route }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={roles}
         keyExtractor={(item) => item.id}
@@ -129,6 +130,6 @@ export default function AutoRoleConfigScreen({ route }: Props) {
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

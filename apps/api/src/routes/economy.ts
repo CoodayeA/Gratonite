@@ -68,6 +68,7 @@ function walletJson(w: typeof userWallets.$inferSelect) {
     lifetimeEarned: w.lifetimeEarned,
     lifetimeSpent: w.lifetimeSpent,
     updatedAt: w.updatedAt.toISOString(),
+    lastDailyClaimAt: w.lastDailyClaimAt ? w.lastDailyClaimAt.toISOString() : null,
   };
 }
 

@@ -20,6 +20,7 @@ import EmptyState from '../../components/EmptyState';
 import type { Message } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ThreadView'>;
 
@@ -131,6 +132,7 @@ export default function ThreadViewScreen({ route }: Props) {
   }
 
   return (
+    <PatternBackground>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -180,5 +182,6 @@ export default function ThreadViewScreen({ route }: Props) {
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
+    </PatternBackground>
   );
 }

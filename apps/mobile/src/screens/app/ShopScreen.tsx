@@ -17,6 +17,7 @@ import EmptyState from '../../components/EmptyState';
 import type { ShopItem } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Shop'>;
 
@@ -248,7 +249,7 @@ export default function ShopScreen({ navigation }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       {/* Type filter tabs */}
       <View style={styles.tabsContainer}>
         <FlatList
@@ -288,6 +289,6 @@ export default function ShopScreen({ navigation }: Props) {
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

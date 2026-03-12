@@ -17,6 +17,7 @@ import EmptyState from '../../components/EmptyState';
 import type { Giveaway } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'GiveawayList'>;
 
@@ -228,7 +229,7 @@ export default function GiveawayListScreen({ route }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.segmentRow}>
         <TouchableOpacity
           style={[styles.segment, filter === 'active' && styles.segmentActive]}
@@ -263,6 +264,6 @@ export default function GiveawayListScreen({ route }: Props) {
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

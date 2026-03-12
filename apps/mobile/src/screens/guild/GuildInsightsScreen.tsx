@@ -14,6 +14,7 @@ import LoadingScreen from '../../components/LoadingScreen';
 import type { Guild, Channel } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'GuildInsights'>;
 
@@ -170,9 +171,9 @@ export default function GuildInsightsScreen({ route }: Props) {
 
   if (!guild) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.error}>Failed to load server info</Text>
-      </View>
+      <PatternBackground>
+        <Text style={styles.error}>Failed to load portal info</Text>
+      </PatternBackground>
     );
   }
 
@@ -183,7 +184,7 @@ export default function GuildInsightsScreen({ route }: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Server info banner */}
+      {/* Portal info banner */}
       <View style={styles.banner}>
         <View style={styles.bannerIcon}>
           <Text style={styles.bannerIconText}>{guild.name.charAt(0).toUpperCase()}</Text>

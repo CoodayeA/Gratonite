@@ -56,7 +56,7 @@ export default function Leaderboard({ guildId, onClose }: Props) {
     }} onClick={onClose}>
       <div style={{
         background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-lg)',
-        width: '480px', maxHeight: '600px', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        width: 'min(480px, 95vw)', maxHeight: '600px', display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div style={{ padding: '20px 24px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

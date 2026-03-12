@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Hash, MessageSquare, User, Loader } from 'lucide-react';
+import { Search, Hash, MessageSquare, User, Loader, X, SlidersHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import Avatar from '../ui/Avatar';
 import { buildDmRoute, buildGuildChannelRoute, normalizeLegacyRoute } from '../../lib/routes';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 type SearchResult = {
     id: string;
@@ -22,9 +23,11 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
     const [filterBefore, setFilterBefore] = useState('');
     const [filterAfter, setFilterAfter] = useState('');
     const [filterHas, setFilterHas] = useState('');
+    const [filtersExpanded, setFiltersExpanded] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
 
     useEffect(() => {
         setTimeout(() => inputRef.current?.focus(), 50);
@@ -105,22 +108,24 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
     const msgs = results.filter(r => r.type === 'message');
 
     return (
-        <div className="modal-overlay" onClick={onClose} style={{ alignItems: 'flex-start', paddingTop: '15vh' }}>
+        <div className="modal-overlay" onClick={onClose} style={{ alignItems: 'flex-start', paddingTop: isMobile ? '0' : '15vh' }}>
             <div
                 className="glass-panel"
                 onClick={e => e.stopPropagation()}
                 style={{
-                    width: '600px',
-                    borderRadius: '12px',
-                    border: '1px solid var(--stroke)',
-                    boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+                    width: isMobile ? '100%' : 'min(600px, 95vw)',
+                    borderRadius: isMobile ? '0' : '12px',
+                    border: isMobile ? 'none' : '1px solid var(--stroke)',
+                    boxShadow: isMobile ? 'none' : '0 20px 40px rgba(0,0,0,0.4)',
                     overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column',
-                    padding: 0
+                    padding: 0,
+                    height: isMobile ? '100vh' : 'auto',
+                    maxHeight: isMobile ? '100vh' : '90vh',
                 }}
             >
-                <div style={{ display: 'flex', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid var(--stroke)', gap: '12px', background: 'var(--bg-elevated)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', padding: isMobile ? '12px 16px' : '16px 24px', borderBottom: '1px solid var(--stroke)', gap: '12px', background: 'var(--bg-elevated)' }}>
                     <Search size={20} color="var(--text-muted)" />
                     <input
                         ref={inputRef}
@@ -130,23 +135,41 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                         onChange={e => setQuery(e.target.value)}
                         style={{ flex: 1, background: 'transparent', border: 'none', color: 'white', fontSize: '16px', outline: 'none' }}
                     />
-                    <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '6px', color: 'var(--text-muted)', fontSize: '12px', padding: '4px 8px', fontWeight: 600 }}>ESC</div>
+                    {isMobile ? (
+                        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}>
+                            <X size={20} />
+                        </button>
+                    ) : (
+                        <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '6px', color: 'var(--text-muted)', fontSize: '12px', padding: '4px 8px', fontWeight: 600 }}>ESC</div>
+                    )}
                 </div>
 
-                {/* Advanced search filters */}
-                <div style={{ display: 'flex', gap: 8, padding: '8px 16px', flexWrap: 'wrap', borderBottom: '1px solid var(--stroke)', background: 'var(--bg-elevated)' }}>
-                    <input placeholder="from:user" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} style={{ flex: '1 1 120px', minWidth: 100, padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} />
-                    <input type="date" value={filterAfter} onChange={e => setFilterAfter(e.target.value)} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} title="After date" />
-                    <input type="date" value={filterBefore} onChange={e => setFilterBefore(e.target.value)} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} title="Before date" />
-                    <select value={filterHas} onChange={e => setFilterHas(e.target.value)} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }}>
-                        <option value="">has:...</option>
-                        <option value="file">file</option>
-                        <option value="image">image</option>
-                        <option value="link">link</option>
-                    </select>
-                </div>
+                {/* Advanced search filters — collapsible on mobile */}
+                {isMobile && (
+                    <button
+                        onClick={() => setFiltersExpanded(!filtersExpanded)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: 'var(--bg-elevated)', border: 'none', borderBottom: '1px solid var(--stroke)', color: 'var(--text-secondary)', fontSize: '13px', cursor: 'pointer', width: '100%' }}
+                    >
+                        <SlidersHorizontal size={14} />
+                        Filters
+                        {(filterFrom || filterBefore || filterAfter || filterHas) && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-primary)' }} />}
+                    </button>
+                )}
+                {(!isMobile || filtersExpanded) && (
+                    <div style={{ display: 'flex', gap: 8, padding: '8px 16px', flexWrap: 'wrap', borderBottom: '1px solid var(--stroke)', background: 'var(--bg-elevated)' }}>
+                        <input placeholder="from:user" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} style={{ flex: '1 1 120px', minWidth: 100, padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} />
+                        <input type="date" value={filterAfter} onChange={e => setFilterAfter(e.target.value)} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} title="After date" />
+                        <input type="date" value={filterBefore} onChange={e => setFilterBefore(e.target.value)} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} title="Before date" />
+                        <select value={filterHas} onChange={e => setFilterHas(e.target.value)} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }}>
+                            <option value="">has:...</option>
+                            <option value="file">file</option>
+                            <option value="image">image</option>
+                            <option value="link">link</option>
+                        </select>
+                    </div>
+                )}
 
-                <div style={{ maxHeight: '400px', overflowY: 'auto', background: 'var(--bg-primary)' }}>
+                <div style={{ flex: isMobile ? 1 : undefined, maxHeight: isMobile ? undefined : '400px', overflowY: 'auto', background: 'var(--bg-primary)' }}>
                     {!query ? (
                         <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                             <Search size={32} style={{ opacity: 0.5 }} />

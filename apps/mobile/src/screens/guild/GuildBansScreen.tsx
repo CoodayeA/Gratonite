@@ -16,6 +16,7 @@ import EmptyState from '../../components/EmptyState';
 import type { GuildBan } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'GuildBans'>;
 
@@ -165,7 +166,7 @@ export default function GuildBansScreen({ route }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.header}>
         <Text style={styles.headerCount}>{banList.length} ban{banList.length !== 1 ? 's' : ''}</Text>
       </View>
@@ -182,6 +183,6 @@ export default function GuildBansScreen({ route }: Props) {
           />
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

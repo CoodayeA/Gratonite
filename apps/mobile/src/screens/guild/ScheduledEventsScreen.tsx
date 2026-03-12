@@ -17,6 +17,7 @@ import EmptyState from '../../components/EmptyState';
 import type { ScheduledEvent } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ScheduledEvents'>;
 
@@ -231,7 +232,7 @@ export default function ScheduledEventsScreen({ route, navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={eventList}
         keyExtractor={(item) => item.id}
@@ -258,6 +259,6 @@ export default function ScheduledEventsScreen({ route, navigation }: Props) {
       >
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
-    </View>
+    </PatternBackground>
   );
 }

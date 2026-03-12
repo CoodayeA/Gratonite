@@ -19,6 +19,7 @@ import EmptyState from '../../components/EmptyState';
 import type { ServerFolder, Guild } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ServerFolders'>;
 
@@ -112,7 +113,7 @@ export default function ServerFoldersScreen({ navigation }: Props) {
   };
 
   const handleDelete = (folder: ServerFolder) => {
-    Alert.alert('Delete Folder', `Delete "${folder.name}"? Servers inside will not be removed.`, [
+    Alert.alert('Delete Folder', `Delete "${folder.name}"? Portals inside will not be removed.`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -308,7 +309,7 @@ export default function ServerFoldersScreen({ navigation }: Props) {
           {item.name}
         </Text>
         <Text style={styles.folderMeta}>
-          {item.guildIds.length} {item.guildIds.length === 1 ? 'server' : 'servers'}
+          {item.guildIds.length} {item.guildIds.length === 1 ? 'portal' : 'portals'}
         </Text>
       </View>
       <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item)}>
@@ -323,7 +324,7 @@ export default function ServerFoldersScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={folders}
         keyExtractor={(item) => item.id}
@@ -336,7 +337,7 @@ export default function ServerFoldersScreen({ navigation }: Props) {
           <EmptyState
             icon="folder-outline"
             title="No folders"
-            subtitle="Organize your servers into folders"
+            subtitle="Organize your portals into folders"
             actionLabel="Create Folder"
             onAction={openCreateModal}
           />
@@ -373,7 +374,7 @@ export default function ServerFoldersScreen({ navigation }: Props) {
                 maxLength={50}
               />
 
-              <Text style={styles.fieldLabel}>Select Servers</Text>
+              <Text style={styles.fieldLabel}>Select Portals</Text>
               <FlatList
                 data={myGuilds}
                 keyExtractor={(item) => item.id}
@@ -416,6 +417,6 @@ export default function ServerFoldersScreen({ navigation }: Props) {
           </View>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </PatternBackground>
   );
 }

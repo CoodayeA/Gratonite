@@ -10,6 +10,7 @@ import EmptyState from '../../components/EmptyState';
 import type { SeasonalEvent, SeasonalEventProgress } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SeasonalEvents'>;
 
@@ -87,7 +88,7 @@ export default function SeasonalEventsScreen({ navigation }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={events}
         keyExtractor={(item) => item.id}
@@ -138,6 +139,6 @@ export default function SeasonalEventsScreen({ navigation }: Props) {
         ListEmptyComponent={<EmptyState icon="calendar-outline" title="No active events" subtitle="Check back later for seasonal events" />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor={colors.accentPrimary} />}
       />
-    </View>
+    </PatternBackground>
   );
 }

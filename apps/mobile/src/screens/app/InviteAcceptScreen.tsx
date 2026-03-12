@@ -13,6 +13,7 @@ import { useTheme } from '../../lib/theme';
 import type { InvitePreview } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'InviteAccept'>;
 
@@ -45,11 +46,11 @@ export default function InviteAcceptScreen({ route, navigation }: Props) {
       if (result.guildId) {
         navigation.replace('GuildChannels', {
           guildId: result.guildId,
-          guildName: preview?.guild.name ?? 'Server',
+          guildName: preview?.guild.name ?? 'Portal',
         });
       }
     } catch (err: any) {
-      toast.error(err.message || 'Failed to join server');
+      toast.error(err.message || 'Failed to join portal');
       setJoining(false);
     }
   };
@@ -153,9 +154,9 @@ export default function InviteAcceptScreen({ route, navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <PatternBackground>
         <ActivityIndicator size="large" color={colors.accentPrimary} />
-      </View>
+      </PatternBackground>
     );
   }
 

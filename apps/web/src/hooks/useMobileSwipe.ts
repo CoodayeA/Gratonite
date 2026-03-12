@@ -31,9 +31,10 @@ export function useMobileSwipe(
             // Ignore if primarily a vertical scroll
             if (Math.abs(deltaY) > SWIPE_Y_CANCEL) return;
 
-            if (deltaX > SWIPE_X_THRESHOLD) {
+            // Edge-start: only trigger if swipe started near screen edge
+            if (deltaX > SWIPE_X_THRESHOLD && startX < 30) {
                 handlers.onSwipeRight?.();
-            } else if (deltaX < -SWIPE_X_THRESHOLD) {
+            } else if (deltaX < -SWIPE_X_THRESHOLD && startX > window.innerWidth - 30) {
                 handlers.onSwipeLeft?.();
             }
         };

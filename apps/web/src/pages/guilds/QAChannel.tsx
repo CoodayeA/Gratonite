@@ -288,7 +288,7 @@ const QAChannel = () => {
         </div>
       </header>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '32px 48px' }}>
+      <div className="content-padding" style={{ flex: 1, overflowY: 'auto', padding: '32px 48px' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
 
           {/* ---------- DETAIL VIEW ---------- */}
@@ -633,7 +633,8 @@ const QAChannel = () => {
             onClick={(e) => e.stopPropagation()}
             style={{
               background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-lg)',
-              width: '520px', maxWidth: '90vw', padding: '28px', boxShadow: 'var(--shadow-panel)',
+              width: 'min(520px, 95vw)', padding: '28px', boxShadow: 'var(--shadow-panel)',
+              maxHeight: '90vh', overflowY: 'auto' as const,
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>

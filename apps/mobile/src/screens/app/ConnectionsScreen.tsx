@@ -9,6 +9,7 @@ import LoadingScreen from '../../components/LoadingScreen';
 import type { SocialConnection } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Connections'>;
 
@@ -115,7 +116,7 @@ export default function ConnectionsScreen({ navigation }: Props) {
   const linkedProviders = new Set(linked.map(c => c.provider));
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Connected Accounts</Text>
         {PROVIDERS.map(provider => {
@@ -146,6 +147,6 @@ export default function ConnectionsScreen({ navigation }: Props) {
           );
         })}
       </View>
-    </View>
+    </PatternBackground>
   );
 }

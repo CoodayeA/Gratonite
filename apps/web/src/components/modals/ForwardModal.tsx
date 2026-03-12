@@ -123,7 +123,7 @@ const ForwardModal = ({ message, onClose, onForward }: ForwardModalProps) => {
             }}
         >
             <div style={{
-                width: '520px', position: 'relative', overflow: 'hidden',
+                width: 'min(520px, 95vw)', position: 'relative', overflow: 'hidden',
                 background: 'var(--bg-elevated)', border: '3px solid #000000',
                 boxShadow: '8px 8px 0 #000000', borderRadius: '0px',
                 animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',

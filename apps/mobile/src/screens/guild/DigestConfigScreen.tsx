@@ -15,6 +15,7 @@ import LoadingScreen from '../../components/LoadingScreen';
 import type { DigestConfig } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'DigestConfig'>;
 
@@ -122,7 +123,8 @@ export default function DigestConfigScreen({ route }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
       <View style={styles.row}>
         <Text style={styles.rowLabel}>Enabled</Text>
         <Switch
@@ -152,5 +154,6 @@ export default function DigestConfigScreen({ route }: Props) {
         <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save'}</Text>
       </TouchableOpacity>
     </ScrollView>
+    </PatternBackground>
   );
 }

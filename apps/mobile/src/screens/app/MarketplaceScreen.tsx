@@ -24,6 +24,7 @@ import EmptyState from '../../components/EmptyState';
 import type { MarketplaceListing } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Marketplace'>;
 
@@ -447,7 +448,7 @@ export default function MarketplaceScreen({ navigation }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       {/* Category filter chips */}
       <View style={styles.tabsContainer}>
         <FlatList
@@ -642,6 +643,6 @@ export default function MarketplaceScreen({ navigation }: Props) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </View>
+    </PatternBackground>
   );
 }

@@ -7,6 +7,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { mediumImpact } from '../../lib/haptics';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'FormCreate'>;
 
@@ -83,10 +84,10 @@ export default function FormCreateScreen({ route, navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <ScrollView style={styles.scroll}>
         <Text style={[styles.label, { marginTop: 0 }]}>Form Title</Text>
-        <TextInput style={styles.input} placeholder="e.g. Server Application" placeholderTextColor={colors.textMuted} value={title} onChangeText={setTitle} />
+        <TextInput style={styles.input} placeholder="e.g. Portal Application" placeholderTextColor={colors.textMuted} value={title} onChangeText={setTitle} />
 
         <Text style={styles.label}>Description (optional)</Text>
         <TextInput style={styles.input} placeholder="What is this form for?" placeholderTextColor={colors.textMuted} value={description} onChangeText={setDescription} multiline />
@@ -128,6 +129,6 @@ export default function FormCreateScreen({ route, navigation }: Props) {
           <Text style={styles.createBtnText}>{creating ? 'Creating...' : 'Create Form'}</Text>
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </PatternBackground>
   );
 }

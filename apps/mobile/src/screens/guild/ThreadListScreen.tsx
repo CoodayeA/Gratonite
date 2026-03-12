@@ -20,6 +20,7 @@ import Avatar from '../../components/Avatar';
 import type { Thread } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ThreadList'>;
 
@@ -294,7 +295,7 @@ export default function ThreadListScreen({ route, navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       {/* Sort toggle */}
       <View style={styles.toolbar}>
         <Text style={styles.toolbarTitle}>Threads in #{channelName}</Text>
@@ -363,6 +364,6 @@ export default function ThreadListScreen({ route, navigation }: Props) {
           </View>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </PatternBackground>
   );
 }

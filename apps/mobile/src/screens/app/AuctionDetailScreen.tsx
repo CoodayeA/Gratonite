@@ -9,6 +9,7 @@ import LoadingScreen from '../../components/LoadingScreen';
 import type { Auction, AuctionBid } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'AuctionDetail'>;
 
@@ -109,7 +110,7 @@ export default function AuctionDetailScreen({ route }: Props) {
   const isEnded = auction.status !== 'active' || new Date(auction.endsAt).getTime() <= Date.now();
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.header}>
         <Text style={styles.itemName}>{auction.cosmetic?.name ?? 'Unknown Item'}</Text>
         <Text style={[styles.rarity, { color: RARITY_COLORS[auction.cosmetic?.rarity ?? ''] ?? colors.textSecondary }]}>{auction.cosmetic?.rarity}</Text>
@@ -161,6 +162,6 @@ export default function AuctionDetailScreen({ route }: Props) {
         )}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchAuction(); }} tintColor={colors.accentPrimary} />}
       />
-    </View>
+    </PatternBackground>
   );
 }

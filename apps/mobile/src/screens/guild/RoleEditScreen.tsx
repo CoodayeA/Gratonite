@@ -17,6 +17,7 @@ import { useTheme } from '../../lib/theme';
 import type { Role } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'RoleEdit'>;
 
@@ -255,7 +256,8 @@ export default function RoleEditScreen({ route, navigation }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
       {/* Name */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>ROLE NAME</Text>
@@ -372,5 +374,6 @@ export default function RoleEditScreen({ route, navigation }: Props) {
         </View>
       )}
     </ScrollView>
+    </PatternBackground>
   );
 }

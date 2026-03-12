@@ -4,7 +4,7 @@ import { useTheme } from '../lib/theme';
 
 // Permission bit flags — mirrors the web app's permission system
 const PERMISSIONS = [
-  { bit: 0, label: 'Manage Server', key: 'MANAGE_GUILD' },
+  { bit: 0, label: 'Manage Portal', key: 'MANAGE_GUILD' },
   { bit: 1, label: 'Manage Channels', key: 'MANAGE_CHANNELS' },
   { bit: 2, label: 'Manage Roles', key: 'MANAGE_ROLES' },
   { bit: 3, label: 'Kick Members', key: 'KICK_MEMBERS' },

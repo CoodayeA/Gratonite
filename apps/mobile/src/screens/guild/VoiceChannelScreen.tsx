@@ -19,6 +19,7 @@ import SoundboardSheet from './SoundboardSheet';
 import { mediumImpact } from '../../lib/haptics';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'VoiceChannel'>;
 
@@ -303,7 +304,7 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <View style={styles.header}>
         <Ionicons name="volume-medium" size={28} color={colors.accentPrimary} />
         <Text style={styles.channelName}>{channelName}</Text>
@@ -385,6 +386,6 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
           toast.info(`Playing ${sound.emoji} ${sound.name}`);
         }}
       />
-    </View>
+    </PatternBackground>
   );
 }

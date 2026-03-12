@@ -6,6 +6,7 @@ export type FontFamily = 'inter' | 'outfit' | 'space-grotesk' | 'fira-code';
 export type FontSize = 'small' | 'medium' | 'large' | 'extra-large';
 export type GlassMode = 'off' | 'subtle' | 'full';
 export type ButtonShape = 'rounded' | 'sharp' | 'pill';
+export type FocusIndicatorSize = 'normal' | 'large';
 
 type ThemeContextType = {
     theme: AppTheme;
@@ -34,6 +35,14 @@ type ThemeContextType = {
     setCompactMode: (compact: boolean) => void;
     buttonShape: ButtonShape;
     setButtonShape: (shape: ButtonShape) => void;
+    screenReaderMode: boolean;
+    setScreenReaderMode: (sr: boolean) => void;
+    linkUnderlines: boolean;
+    setLinkUnderlines: (lu: boolean) => void;
+    focusIndicatorSize: FocusIndicatorSize;
+    setFocusIndicatorSize: (size: FocusIndicatorSize) => void;
+    colorBlindMode: boolean;
+    setColorBlindMode: (cb: boolean) => void;
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -114,6 +123,25 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         return (localStorage.getItem('gratonite_button_shape') as ButtonShape) || 'rounded';
     });
 
+    const [screenReaderMode, setScreenReaderModeState] = useState<boolean>(() => {
+        const saved = localStorage.getItem('gratonite_screen_reader_mode');
+        return saved !== null ? saved === 'true' : false;
+    });
+
+    const [linkUnderlines, setLinkUnderlinesState] = useState<boolean>(() => {
+        const saved = localStorage.getItem('gratonite_link_underlines');
+        return saved !== null ? saved === 'true' : false;
+    });
+
+    const [focusIndicatorSize, setFocusIndicatorSizeState] = useState<FocusIndicatorSize>(() => {
+        return (localStorage.getItem('gratonite_focus_indicator_size') as FocusIndicatorSize) || 'normal';
+    });
+
+    const [colorBlindMode, setColorBlindModeState] = useState<boolean>(() => {
+        const saved = localStorage.getItem('gratonite_color_blind_mode');
+        return saved !== null ? saved === 'true' : false;
+    });
+
     const setTheme = (newTheme: AppTheme) => {
         setThemeState(newTheme);
         localStorage.setItem('gratonite_theme', newTheme);
@@ -179,6 +207,26 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem('gratonite_button_shape', shape);
     };
 
+    const setScreenReaderMode = (sr: boolean) => {
+        setScreenReaderModeState(sr);
+        localStorage.setItem('gratonite_screen_reader_mode', sr.toString());
+    };
+
+    const setLinkUnderlines = (lu: boolean) => {
+        setLinkUnderlinesState(lu);
+        localStorage.setItem('gratonite_link_underlines', lu.toString());
+    };
+
+    const setFocusIndicatorSize = (size: FocusIndicatorSize) => {
+        setFocusIndicatorSizeState(size);
+        localStorage.setItem('gratonite_focus_indicator_size', size);
+    };
+
+    const setColorBlindMode = (cb: boolean) => {
+        setColorBlindModeState(cb);
+        localStorage.setItem('gratonite_color_blind_mode', cb.toString());
+    };
+
     // Apply data attributes so CSS can hook into them
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme);
@@ -199,6 +247,18 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
         if (compactMode) document.documentElement.classList.add('compact-mode');
         else document.documentElement.classList.remove('compact-mode');
+
+        if (screenReaderMode) document.documentElement.classList.add('screen-reader-mode');
+        else document.documentElement.classList.remove('screen-reader-mode');
+
+        if (linkUnderlines) document.documentElement.classList.add('link-underlines');
+        else document.documentElement.classList.remove('link-underlines');
+
+        if (focusIndicatorSize === 'large') document.documentElement.classList.add('focus-large');
+        else document.documentElement.classList.remove('focus-large');
+
+        if (colorBlindMode) document.documentElement.classList.add('color-blind-mode');
+        else document.documentElement.classList.remove('color-blind-mode');
 
         if (accentColor) {
             document.documentElement.style.setProperty('--accent-primary', accentColor);
@@ -230,7 +290,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         document.documentElement.style.fontSize = fontSizeMap[fontSize] ?? '100%';
         document.documentElement.style.setProperty('--font-scale', (scaleMap[fontSize] ?? 1.0).toString());
 
-    }, [theme, colorMode, fontFamily, fontSize, glassMode, reducedEffects, lowPower, accentColor, highContrast, compactMode, buttonShape]);
+    }, [theme, colorMode, fontFamily, fontSize, glassMode, reducedEffects, lowPower, accentColor, highContrast, compactMode, buttonShape, screenReaderMode, linkUnderlines, focusIndicatorSize, colorBlindMode]);
 
     return (
         <ThemeContext.Provider value={{
@@ -244,7 +304,11 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
             accentColor, setAccentColor,
             highContrast, setHighContrast,
             compactMode, setCompactMode,
-            buttonShape, setButtonShape
+            buttonShape, setButtonShape,
+            screenReaderMode, setScreenReaderMode,
+            linkUnderlines, setLinkUnderlines,
+            focusIndicatorSize, setFocusIndicatorSize,
+            colorBlindMode, setColorBlindMode
         }}>
             {children}
         </ThemeContext.Provider>

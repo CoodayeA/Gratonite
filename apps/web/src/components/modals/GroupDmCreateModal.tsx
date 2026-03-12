@@ -93,7 +93,7 @@ const GroupDmCreateModal = ({ onClose }: Props) => {
         }} onClick={onClose}>
             <div style={{
                 background: 'var(--bg-elevated)', borderRadius: '12px',
-                width: '440px', maxHeight: '560px', display: 'flex', flexDirection: 'column',
+                width: 'min(440px, 95vw)', maxHeight: '560px', display: 'flex', flexDirection: 'column',
                 boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
             }} onClick={(e) => e.stopPropagation()}>
                 {/* Header */}

@@ -2922,7 +2922,7 @@ const ChannelChat = () => {
                     <ChevronDown size={16} /> New messages
                 </button>
             )}
-            <div ref={parentRef} className="message-area" style={{ overflowY: 'auto', zIndex: 2, position: 'relative' }}>
+            <div ref={parentRef} className="message-area" role="log" aria-label={`Messages in #${channelName}`} aria-live="polite" style={{ overflowY: 'auto', zIndex: 2, position: 'relative' }}>
                 {!isLoadingMessages && messages.length === 0 && (
                     <EmptyState
                         type="chat"

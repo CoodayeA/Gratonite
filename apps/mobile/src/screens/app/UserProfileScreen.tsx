@@ -6,17 +6,18 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ActivityIndicator,
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { users as usersApi, relationships as relApi, showcase as showcaseApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
-import { useTheme } from '../../lib/theme';
+import { useTheme, useGlass } from '../../lib/theme';
+import LoadingScreen from '../../components/LoadingScreen';
 import Avatar from '../../components/Avatar';
 import type { User, PresenceStatus, ShowcaseItem } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'UserProfile'>;
 
@@ -31,6 +32,7 @@ const STATUS_LABELS: Record<PresenceStatus, string> = {
 export default function UserProfileScreen({ route, navigation }: Props) {
   const { userId } = route.params;
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const glass = useGlass();
   const toast = useToast();
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -170,7 +172,11 @@ export default function UserProfileScreen({ route, navigation }: Props) {
     },
     banner: {
       height: 120,
-      backgroundColor: colors.bgElevated,
+      backgroundColor: neo ? neo.palette.sky : glass ? colors.accentPrimary + '15' : colors.bgElevated,
+      ...(neo ? {
+        borderBottomWidth: neo.borderWidth,
+        borderBottomColor: colors.border,
+      } : {}),
     },
     avatarContainer: {
       alignItems: 'flex-start',
@@ -178,15 +184,23 @@ export default function UserProfileScreen({ route, navigation }: Props) {
       paddingHorizontal: spacing.lg,
     },
     avatarBorder: {
-      borderRadius: 44,
+      borderRadius: neo ? 0 : 44,
       borderWidth: 4,
-      borderColor: colors.bgPrimary,
+      borderColor: neo ? colors.border : colors.bgPrimary,
       borderCurve: 'continuous',
     },
     card: {
       paddingHorizontal: spacing.lg,
       paddingTop: spacing.md,
       paddingBottom: spacing.xxxl,
+      ...(glass ? {
+        marginHorizontal: spacing.md,
+        marginTop: spacing.sm,
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.lg,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : {}),
     },
     displayName: {
       fontSize: fontSize.xxl,
@@ -228,13 +242,13 @@ export default function UserProfileScreen({ route, navigation }: Props) {
     bioSection: {
       marginTop: spacing.lg,
       paddingTop: spacing.md,
-      borderTopWidth: 1,
+      borderTopWidth: glass ? 0 : 1,
       borderTopColor: colors.border,
     },
     sectionLabel: {
       color: colors.textMuted,
       fontSize: fontSize.xs,
-      fontWeight: '700',
+      fontWeight: neo ? '800' : '700',
       letterSpacing: 1,
       marginBottom: spacing.sm,
     },
@@ -256,8 +270,14 @@ export default function UserProfileScreen({ route, navigation }: Props) {
       gap: spacing.sm,
       backgroundColor: colors.accentPrimary,
       paddingVertical: spacing.md,
-      borderRadius: borderRadius.md,
+      borderRadius: neo ? 0 : glass ? borderRadius.xl : borderRadius.md,
       ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border, shadowColor: neo.shadowColor, shadowOffset: neo.shadowOffset, shadowOpacity: neo.shadowOpacity, shadowRadius: neo.shadowRadius } : {}),
+      ...(glass ? {
+        shadowColor: colors.accentPrimary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      } : {}),
     },
     actionButtonPrimaryText: {
       color: colors.white,
@@ -270,10 +290,21 @@ export default function UserProfileScreen({ route, navigation }: Props) {
       alignItems: 'center',
       justifyContent: 'center',
       gap: spacing.sm,
-      backgroundColor: colors.bgElevated,
       paddingVertical: spacing.md,
-      borderRadius: borderRadius.md,
-      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border } : {}),
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.xl,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : neo ? {
+        backgroundColor: colors.bgElevated,
+        borderRadius: 0,
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+      } : {
+        backgroundColor: colors.bgElevated,
+        borderRadius: borderRadius.md,
+      }),
     },
     actionButtonSecondaryText: {
       color: colors.accentPrimary,
@@ -290,11 +321,22 @@ export default function UserProfileScreen({ route, navigation }: Props) {
       alignItems: 'center',
       justifyContent: 'center',
       gap: spacing.sm,
-      backgroundColor: colors.bgElevated,
       paddingVertical: spacing.md,
-      borderRadius: borderRadius.md,
       marginTop: spacing.sm,
-      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border } : {}),
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.xl,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : neo ? {
+        backgroundColor: colors.bgElevated,
+        borderRadius: 0,
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+      } : {
+        backgroundColor: colors.bgElevated,
+        borderRadius: borderRadius.md,
+      }),
     },
     actionButtonDestructiveText: {
       color: colors.error,
@@ -304,7 +346,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
     showcaseSection: {
       marginTop: spacing.lg,
       paddingTop: spacing.md,
-      borderTopWidth: 1,
+      borderTopWidth: glass ? 0 : 1,
       borderTopColor: colors.border,
     },
     showcaseItem: {
@@ -342,10 +384,12 @@ export default function UserProfileScreen({ route, navigation }: Props) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,
-      backgroundColor: colors.bgElevated,
+      backgroundColor: glass ? glass.glassBackground : colors.bgElevated,
       paddingHorizontal: spacing.sm,
       paddingVertical: spacing.xs,
-      borderRadius: borderRadius.full,
+      borderRadius: neo ? 0 : borderRadius.full,
+      ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
+      ...(glass ? { borderWidth: 1, borderColor: glass.glassBorder } : {}),
     },
     badgeText: {
       color: colors.textSecondary,
@@ -355,7 +399,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
     mutualSection: {
       marginTop: spacing.lg,
       paddingTop: spacing.md,
-      borderTopWidth: 1,
+      borderTopWidth: glass ? 0 : 1,
       borderTopColor: colors.border,
     },
     mutualAvatarRow: {
@@ -383,12 +427,24 @@ export default function UserProfileScreen({ route, navigation }: Props) {
     },
     presenceCard: {
       marginTop: spacing.md,
-      backgroundColor: colors.bgElevated,
-      borderRadius: borderRadius.md,
       padding: spacing.md,
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.md,
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.lg,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+      } : neo ? {
+        backgroundColor: colors.bgElevated,
+        borderRadius: 0,
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+      } : {
+        backgroundColor: colors.bgElevated,
+        borderRadius: borderRadius.md,
+      }),
     },
     presenceType: {
       color: colors.textMuted,
@@ -408,14 +464,10 @@ export default function UserProfileScreen({ route, navigation }: Props) {
     statusEmojiText: {
       fontSize: fontSize.md,
     },
-  }), [colors, spacing, fontSize, borderRadius, neo]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.accentPrimary} />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   if (!profile) {
@@ -430,7 +482,8 @@ export default function UserProfileScreen({ route, navigation }: Props) {
   const displayName = profile.displayName || profile.username;
 
   return (
-    <ScrollView style={styles.container} bounces={false}>
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }} bounces={false}>
       {/* Banner */}
       <View style={styles.banner} />
 
@@ -616,5 +669,6 @@ export default function UserProfileScreen({ route, navigation }: Props) {
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </PatternBackground>
   );
 }

@@ -22,6 +22,7 @@ import LoadingScreen from '../../components/LoadingScreen';
 import type { UserSettings } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SettingsAppearance'>;
 
@@ -32,11 +33,13 @@ const FONT_SIZE_OPTIONS: { value: number; label: string }[] = [
   { value: 18, label: 'Large' },
 ];
 
-const THEME_OPTIONS: { name: ThemeName; label: string }[] = [
-  { name: 'neobrutalism', label: 'Neo Light' },
-  { name: 'neobrutalism-dark', label: 'Neo Dark' },
-  { name: 'light', label: 'Light' },
-  { name: 'dark', label: 'Dark' },
+const THEME_OPTIONS: { name: ThemeName; label: string; icon: string }[] = [
+  { name: 'neobrutalism', label: 'Neo Light', icon: 'flash' },
+  { name: 'neobrutalism-dark', label: 'Neo Dark', icon: 'flash' },
+  { name: 'glassmorphism', label: 'Glass Light', icon: 'water' },
+  { name: 'glassmorphism-dark', label: 'Glass Dark', icon: 'water' },
+  { name: 'light', label: 'Classic Light', icon: 'sunny' },
+  { name: 'dark', label: 'Classic Dark', icon: 'moon' },
 ];
 
 export default function SettingsAppearanceScreen({ navigation }: Props) {
@@ -109,7 +112,7 @@ export default function SettingsAppearanceScreen({ navigation }: Props) {
     },
     themeCard: {
       width: '47%',
-      borderRadius: borderRadius.md,
+      borderRadius: neo ? 0 : borderRadius.lg,
       backgroundColor: colors.bgSecondary,
       padding: spacing.md,
       borderWidth: 2,
@@ -117,9 +120,14 @@ export default function SettingsAppearanceScreen({ navigation }: Props) {
     },
     themeCardSelected: {
       borderColor: colors.accentPrimary,
+      shadowColor: colors.accentPrimary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 6,
     },
     themePreview: {
-      height: 60,
+      height: 70,
       borderRadius: borderRadius.sm,
       marginBottom: spacing.sm,
       padding: spacing.sm,
@@ -131,11 +139,19 @@ export default function SettingsAppearanceScreen({ navigation }: Props) {
       flex: 1,
       borderRadius: borderRadius.sm,
     },
+    themeIconRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.xs,
+      marginBottom: spacing.xs,
+    },
     themeCardLabel: {
       color: colors.textPrimary,
       fontSize: fontSize.sm,
-      fontWeight: '600',
+      fontWeight: neo ? '800' : '600',
       textAlign: 'center',
+      ...(neo ? { textTransform: 'uppercase' as const, letterSpacing: 0.5 } : {}),
     },
     checkmark: {
       position: 'absolute',
@@ -212,7 +228,8 @@ export default function SettingsAppearanceScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <PatternBackground>
+    <ScrollView style={{ flex: 1 }}>
       <SectionHeader title="Auto (Follow System)" />
       <View style={styles.section}>
         <View style={styles.switchRow}>
@@ -229,7 +246,17 @@ export default function SettingsAppearanceScreen({ navigation }: Props) {
               themeStore.setAutoMode(value);
               if (value) {
                 const colorScheme = Appearance.getColorScheme();
-                themeStore.setTheme(colorScheme === 'dark' ? 'dark' : 'light');
+                // Auto-switch within the same theme family
+                const current = themeStore.getThemeName();
+                let target: ThemeName;
+                if (current.startsWith('neobrutalism')) {
+                  target = colorScheme === 'dark' ? 'neobrutalism-dark' : 'neobrutalism';
+                } else if (current.startsWith('glassmorphism')) {
+                  target = colorScheme === 'dark' ? 'glassmorphism-dark' : 'glassmorphism';
+                } else {
+                  target = colorScheme === 'dark' ? 'dark' : 'light';
+                }
+                themeStore.setTheme(target);
               }
             }}
             trackColor={{ false: colors.bgElevated, true: colors.accentPrimary }}
@@ -244,7 +271,8 @@ export default function SettingsAppearanceScreen({ navigation }: Props) {
           {THEME_OPTIONS.map((opt) => {
             const t = themes[opt.name];
             const isSelected = currentTheme === opt.name;
-            const isNeo = opt.name === 'neobrutalism' || opt.name === 'neobrutalism-dark';
+            const isNeo = opt.name.startsWith('neobrutalism');
+            const isGlass = opt.name.startsWith('glassmorphism');
             return (
               <TouchableOpacity
                 key={opt.name}
@@ -255,13 +283,17 @@ export default function SettingsAppearanceScreen({ navigation }: Props) {
                 <View style={[
                   styles.themePreview,
                   { backgroundColor: t.colors.bgPrimary },
-                  isNeo && { borderWidth: 3, borderColor: '#000' },
+                  isNeo && { borderWidth: 3, borderColor: '#000', borderRadius: 0 },
+                  isGlass && { borderWidth: 1, borderColor: t.colors.border, borderRadius: 14 },
                 ]}>
-                  <View style={[styles.previewSwatch, { backgroundColor: t.colors.bgSecondary }]} />
-                  <View style={[styles.previewSwatch, { backgroundColor: t.colors.accentPrimary }]} />
-                  <View style={[styles.previewSwatch, { backgroundColor: t.colors.bgElevated }]} />
+                  <View style={[styles.previewSwatch, { backgroundColor: t.colors.bgSecondary }, isNeo && { borderRadius: 0 }, isGlass && { borderRadius: 8 }]} />
+                  <View style={[styles.previewSwatch, { backgroundColor: t.colors.accentPrimary }, isNeo && { borderRadius: 0 }, isGlass && { borderRadius: 8 }]} />
+                  <View style={[styles.previewSwatch, { backgroundColor: t.colors.bgElevated }, isNeo && { borderRadius: 0 }, isGlass && { borderRadius: 8 }]} />
                 </View>
-                <Text style={styles.themeCardLabel}>{opt.label}</Text>
+                <View style={styles.themeIconRow}>
+                  <Ionicons name={opt.icon as any} size={14} color={isSelected ? colors.accentPrimary : colors.textMuted} />
+                  <Text style={styles.themeCardLabel}>{opt.label}</Text>
+                </View>
                 {isSelected && (
                   <View style={styles.checkmark}>
                     <Ionicons name="checkmark-circle" size={22} color={colors.accentPrimary} />
@@ -324,5 +356,6 @@ export default function SettingsAppearanceScreen({ navigation }: Props) {
 
       <View style={styles.bottomPad} />
     </ScrollView>
+    </PatternBackground>
   );
 }

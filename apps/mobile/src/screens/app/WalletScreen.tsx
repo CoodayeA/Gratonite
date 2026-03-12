@@ -10,17 +10,19 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { economy as economyApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
-import { useTheme } from '../../lib/theme';
+import { useTheme, useGlass } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
 import type { WalletInfo, LedgerEntry } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Wallet'>;
 
 export default function WalletScreen({ navigation }: Props) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const glass = useGlass();
   const toast = useToast();
   const [wallet, setWallet] = useState<WalletInfo | null>(null);
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
@@ -90,12 +92,31 @@ export default function WalletScreen({ navigation }: Props) {
     balanceCard: {
       margin: spacing.lg,
       padding: spacing.xxl,
-      backgroundColor: colors.bgElevated,
-      borderRadius: borderRadius.xl,
       alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border, shadowColor: neo.shadowColor, shadowOffset: neo.shadowOffset, shadowOpacity: neo.shadowOpacity, shadowRadius: neo.shadowRadius } : {}),
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.xl,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+        shadowColor: colors.accentPrimary,
+        shadowOpacity: 0.1,
+        shadowOffset: { width: 0, height: 6 },
+        shadowRadius: 16,
+      } : neo ? {
+        backgroundColor: neo.palette.butter,
+        borderRadius: 0,
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+        shadowColor: neo.shadowColor,
+        shadowOffset: neo.shadowOffset,
+        shadowOpacity: neo.shadowOpacity,
+        shadowRadius: neo.shadowRadius,
+      } : {
+        backgroundColor: colors.bgElevated,
+        borderRadius: borderRadius.xl,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+      }),
     },
     balanceLabel: {
       color: colors.textSecondary,
@@ -130,8 +151,23 @@ export default function WalletScreen({ navigation }: Props) {
       marginBottom: spacing.xl,
       paddingVertical: spacing.lg,
       backgroundColor: colors.accentPrimary,
-      borderRadius: borderRadius.md,
-      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border, shadowColor: neo.shadowColor, shadowOffset: neo.shadowOffset, shadowOpacity: neo.shadowOpacity, shadowRadius: neo.shadowRadius } : {}),
+      ...(glass ? {
+        borderRadius: borderRadius.xl,
+        shadowColor: colors.accentPrimary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      } : neo ? {
+        borderRadius: 0,
+        borderWidth: neo.borderWidth,
+        borderColor: colors.border,
+        shadowColor: neo.shadowColor,
+        shadowOffset: neo.shadowOffset,
+        shadowOpacity: neo.shadowOpacity,
+        shadowRadius: neo.shadowRadius,
+      } : {
+        borderRadius: borderRadius.md,
+      }),
     },
     claimButtonDisabled: {
       backgroundColor: colors.bgElevated,
@@ -158,9 +194,21 @@ export default function WalletScreen({ navigation }: Props) {
       alignItems: 'center',
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
       gap: spacing.md,
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.lg,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+        marginHorizontal: spacing.md,
+        marginBottom: spacing.xs,
+      } : neo ? {
+        borderBottomWidth: 2,
+        borderBottomColor: colors.border,
+      } : {
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+      }),
     },
     amountIcon: {
       width: 32,
@@ -207,7 +255,7 @@ export default function WalletScreen({ navigation }: Props) {
       color: colors.textMuted,
       fontSize: fontSize.sm,
     },
-  }), [colors, spacing, fontSize, borderRadius, neo]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
 
   const renderLedgerEntry = ({ item }: { item: LedgerEntry }) => {
     const isPositive = item.amount > 0;
@@ -235,7 +283,7 @@ export default function WalletScreen({ navigation }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <View style={styles.container}>
+    <PatternBackground>
       <FlatList
         data={ledger}
         keyExtractor={(item) => item.id}
@@ -297,6 +345,6 @@ export default function WalletScreen({ navigation }: Props) {
           </View>
         }
       />
-    </View>
+    </PatternBackground>
   );
 }

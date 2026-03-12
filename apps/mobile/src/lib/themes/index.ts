@@ -74,7 +74,16 @@ export interface NeoExtras {
   };
 }
 
-export type ThemeName = 'dark' | 'light' | 'neobrutalism' | 'neobrutalism-dark';
+export interface GlassExtras {
+  blurIntensity: number;
+  blurTint: 'light' | 'dark' | 'default';
+  glassBackground: string;
+  glassBorder: string;
+  glassHighlight: string;
+  frostedOpacity: number;
+}
+
+export type ThemeName = 'dark' | 'light' | 'neobrutalism' | 'neobrutalism-dark' | 'glassmorphism' | 'glassmorphism-dark';
 
 export interface ThemeDefinition {
   colors: ThemeColors;
@@ -83,12 +92,15 @@ export interface ThemeDefinition {
   borderRadius: ThemeBorderRadius;
   isDark: boolean;
   neo: NeoExtras | null;
+  glass: GlassExtras | null;
 }
 
 import { darkColors, darkSpacing, darkFontSize, darkBorderRadius } from './dark';
 import { lightColors, lightSpacing, lightFontSize, lightBorderRadius } from './light';
 import { neoColors, neoSpacing, neoFontSize, neoBorderRadius, neoExtras } from './neobrutalism';
 import { neoDarkColors, neoDarkSpacing, neoDarkFontSize, neoDarkBorderRadius, neoDarkExtras } from './neobrutalism-dark';
+import { glassColors, glassSpacing, glassFontSize, glassBorderRadius, glassExtras } from './glassmorphism';
+import { glassDarkColors, glassDarkSpacing, glassDarkFontSize, glassDarkBorderRadius, glassDarkExtras } from './glassmorphism-dark';
 
 export const themes: Record<ThemeName, ThemeDefinition> = {
   dark: {
@@ -98,6 +110,7 @@ export const themes: Record<ThemeName, ThemeDefinition> = {
     borderRadius: darkBorderRadius,
     isDark: true,
     neo: null,
+    glass: null,
   },
   light: {
     colors: lightColors,
@@ -106,6 +119,7 @@ export const themes: Record<ThemeName, ThemeDefinition> = {
     borderRadius: lightBorderRadius,
     isDark: false,
     neo: null,
+    glass: null,
   },
   neobrutalism: {
     colors: neoColors,
@@ -114,6 +128,7 @@ export const themes: Record<ThemeName, ThemeDefinition> = {
     borderRadius: neoBorderRadius,
     isDark: false,
     neo: neoExtras,
+    glass: null,
   },
   'neobrutalism-dark': {
     colors: neoDarkColors,
@@ -122,5 +137,24 @@ export const themes: Record<ThemeName, ThemeDefinition> = {
     borderRadius: neoDarkBorderRadius,
     isDark: true,
     neo: neoDarkExtras,
+    glass: null,
+  },
+  glassmorphism: {
+    colors: glassColors,
+    spacing: glassSpacing,
+    fontSize: glassFontSize,
+    borderRadius: glassBorderRadius,
+    isDark: false,
+    glass: glassExtras,
+    neo: null,
+  },
+  'glassmorphism-dark': {
+    colors: glassDarkColors,
+    spacing: glassDarkSpacing,
+    fontSize: glassDarkFontSize,
+    borderRadius: glassDarkBorderRadius,
+    isDark: true,
+    glass: glassDarkExtras,
+    neo: null,
   },
 };
