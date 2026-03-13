@@ -34,6 +34,18 @@ contextBridge.exposeInMainWorld('gratoniteDesktop', {
     };
   },
 
+  // Fullscreen
+  getFullscreen: () => ipcRenderer.invoke('get-fullscreen'),
+  setFullscreen: (fs) => ipcRenderer.send('set-fullscreen', fs),
+  toggleFullscreen: () => ipcRenderer.send('toggle-fullscreen'),
+  onFullscreenChanged: (callback) => {
+    const handler = (_event, isFullscreen) => callback(isFullscreen);
+    ipcRenderer.on('fullscreen-changed', handler);
+    return () => {
+      ipcRenderer.removeListener('fullscreen-changed', handler);
+    };
+  },
+
   // Game activity detection
   onGameDetected: (callback) => {
     const handler = (_event, data) => callback(data);
@@ -50,5 +62,7 @@ contextBridge.exposeInMainWorld('gratoniteDesktop', {
 window.addEventListener('DOMContentLoaded', () => {
   if (process.platform === 'darwin') {
     document.body.classList.add('electron-mac');
+  } else if (process.platform === 'win32') {
+    document.body.classList.add('electron-win');
   }
 });
