@@ -122,6 +122,7 @@ export default function WebhookManagementScreen({ route, navigation }: Props) {
       <TouchableOpacity
         style={styles.deleteButton}
         onPress={() => handleDelete(item)}
+        accessibilityLabel="Delete webhook"
       >
         <Ionicons name="trash-outline" size={18} color={colors.error} />
       </TouchableOpacity>
@@ -329,7 +330,7 @@ export default function WebhookManagementScreen({ route, navigation }: Props) {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setShowCreate(false)}>
+              <TouchableOpacity onPress={() => setShowCreate(false)} accessibilityLabel="Close">
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>Create Webhook</Text>

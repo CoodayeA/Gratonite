@@ -76,7 +76,7 @@ export default function HelpCenterScreen({ navigation }: Props) {
       <View style={styles.searchBar}>
         <Ionicons name="search" size={18} color={colors.textMuted} />
         <TextInput style={styles.searchInput} placeholder="Search articles..." placeholderTextColor={colors.textMuted} value={search} onChangeText={setSearch} />
-        {search.length > 0 && <TouchableOpacity onPress={() => setSearch('')}><Ionicons name="close-circle" size={18} color={colors.textMuted} /></TouchableOpacity>}
+        {search.length > 0 && <TouchableOpacity onPress={() => setSearch('')} accessibilityLabel="Clear search"><Ionicons name="close-circle" size={18} color={colors.textMuted} /></TouchableOpacity>}
       </View>
 
       <FlatList

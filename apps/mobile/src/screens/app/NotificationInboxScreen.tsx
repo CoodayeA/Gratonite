@@ -66,10 +66,10 @@ export default function NotificationInboxScreen({ navigation }: any) {
     navigation.setOptions({
       headerRight: () => (
         <View style={{ flexDirection: 'row', gap: spacing.xs }}>
-          <TouchableOpacity onPress={handleMarkAllRead} style={{ padding: spacing.sm }}>
+          <TouchableOpacity onPress={handleMarkAllRead} style={{ padding: spacing.sm }} accessibilityLabel="Mark all as read">
             <Ionicons name="checkmark-done" size={22} color={colors.accentPrimary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleClearAll} style={{ padding: spacing.sm, marginRight: spacing.xs }}>
+          <TouchableOpacity onPress={handleClearAll} style={{ padding: spacing.sm, marginRight: spacing.xs }} accessibilityLabel="Clear all notifications">
             <Ionicons name="trash-outline" size={20} color={colors.textMuted} />
           </TouchableOpacity>
         </View>

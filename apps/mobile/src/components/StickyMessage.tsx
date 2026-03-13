@@ -63,7 +63,7 @@ export default function StickyMessage({ channelId }: StickyMessageProps) {
         <Text style={styles.label}>Pinned Message</Text>
         <Text style={styles.text} numberOfLines={2}>{sticky.content}</Text>
       </View>
-      <TouchableOpacity style={styles.dismiss} onPress={() => setDismissed(true)}>
+      <TouchableOpacity style={styles.dismiss} onPress={() => setDismissed(true)} accessibilityLabel="Dismiss">
         <Ionicons name="close" size={18} color={colors.textMuted} />
       </TouchableOpacity>
     </View>

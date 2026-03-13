@@ -256,6 +256,7 @@ export default function ScheduledEventsScreen({ route, navigation }: Props) {
       <TouchableOpacity
         style={styles.fab}
         onPress={() => navigation.navigate('EventCreate', { guildId })}
+        accessibilityLabel="Create event"
       >
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>

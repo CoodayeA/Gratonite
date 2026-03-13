@@ -195,7 +195,7 @@ export default function BookmarksScreen({ navigation }: Props) {
             </View>
           )}
         </View>
-        <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)}>
+        <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)} accessibilityLabel="Remove bookmark">
           <Ionicons name="trash-outline" size={18} color={colors.error} />
         </TouchableOpacity>
       </View>

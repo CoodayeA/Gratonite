@@ -122,6 +122,7 @@ export default function WordFilterScreen({ route, navigation }: Props) {
         <TouchableOpacity
           style={styles.deleteBtn}
           onPress={() => handleDelete(item)}
+          accessibilityLabel="Delete filter"
         >
           <Ionicons name="close-circle" size={20} color={colors.textMuted} />
         </TouchableOpacity>

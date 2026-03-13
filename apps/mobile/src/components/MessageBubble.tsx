@@ -258,7 +258,7 @@ function MessageBubbleInner({
     >
       {/* Reply preview */}
       {replyPreview && (
-        <TouchableOpacity style={styles.replyPreview} onPress={onReplyPress}>
+        <TouchableOpacity style={styles.replyPreview} onPress={onReplyPress} accessibilityLabel="Jump to replied message">
           <View style={styles.replyLine} />
           <Text style={styles.replyText} numberOfLines={1}>
             <Text style={styles.replyAuthor}>{replyPreview.authorName}</Text>{' '}
@@ -340,7 +340,7 @@ function MessageBubbleInner({
               <Text style={[styles.reactionCount, r.me && styles.reactionCountActive]}>{r.count}</Text>
             </TouchableOpacity>
           ))}
-          <TouchableOpacity style={styles.reactionAddBtn} onPress={onReactionAdd}>
+          <TouchableOpacity style={styles.reactionAddBtn} onPress={onReactionAdd} accessibilityLabel="Add reaction">
             <Text style={{ fontSize: 14, color: colors.textMuted }}>+</Text>
           </TouchableOpacity>
         </View>
@@ -359,6 +359,7 @@ function MessageBubbleInner({
               key={tr.text}
               style={[styles.textReactionChip, tr.me && styles.textReactionChipActive]}
               onPress={() => onTextReactionToggle?.(tr.text)}
+              accessibilityLabel={`Toggle ${tr.text} reaction`}
             >
               <Text style={styles.textReactionText}>{tr.text}</Text>
               <Text style={[styles.textReactionCount, tr.me && styles.textReactionCountActive]}>{tr.count}</Text>

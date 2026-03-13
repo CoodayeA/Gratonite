@@ -280,6 +280,7 @@ export default function RegisterScreen({ navigation }: Props) {
               <TouchableOpacity
                 style={styles.eyeButton}
                 onPress={() => setShowPassword(!showPassword)}
+                accessibilityLabel="Toggle password visibility"
               >
                 <Ionicons
                   name={showPassword ? 'eye-off-outline' : 'eye-outline'}

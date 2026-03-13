@@ -73,7 +73,7 @@ export default function GuildFormsScreen({ route, navigation }: Props) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchForms(); }} tintColor={colors.accentPrimary} />}
         contentContainerStyle={{ paddingBottom: 100 }}
       />
-      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('FormCreate', { guildId })}>
+      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('FormCreate', { guildId })} accessibilityLabel="Create form">
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
     </PatternBackground>

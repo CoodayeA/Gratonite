@@ -75,7 +75,7 @@ export default function ClipsScreen({ route }: Props) {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <TouchableOpacity style={styles.playBtn} onPress={() => { mediumImpact(); setPlayingId(playingId === item.id ? null : item.id); }}>
+            <TouchableOpacity style={styles.playBtn} onPress={() => { mediumImpact(); setPlayingId(playingId === item.id ? null : item.id); }} accessibilityLabel="Play clip">
               <Ionicons name={playingId === item.id ? 'pause' : 'play'} size={22} color={colors.white} />
             </TouchableOpacity>
             <View style={styles.info}>
@@ -83,7 +83,7 @@ export default function ClipsScreen({ route }: Props) {
               <Text style={styles.meta}>{item.creatorName || 'Unknown'} · {formatDuration(item.duration)} · {item.channelName || 'Voice'}</Text>
               <Text style={styles.meta}>{new Date(item.createdAt).toLocaleDateString()}</Text>
             </View>
-            <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id)}>
+            <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id)} accessibilityLabel="Delete clip">
               <Ionicons name="trash-outline" size={18} color={colors.error} />
             </TouchableOpacity>
           </View>

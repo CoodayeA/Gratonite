@@ -257,7 +257,7 @@ export default function PhotoAlbumsScreen({ route }: Props) {
         }
       />
 
-      <TouchableOpacity style={styles.fab} onPress={() => setCreateVisible(true)}>
+      <TouchableOpacity style={styles.fab} onPress={() => setCreateVisible(true)} accessibilityLabel="Create album">
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
 
@@ -265,7 +265,7 @@ export default function PhotoAlbumsScreen({ route }: Props) {
       <Modal visible={!!detailAlbum} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { flex: 1, marginTop: 80 }]}>
-            <TouchableOpacity style={styles.modalClose} onPress={() => setDetailAlbum(null)}>
+            <TouchableOpacity style={styles.modalClose} onPress={() => setDetailAlbum(null)} accessibilityLabel="Close">
               <Ionicons name="close" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>{detailAlbum?.name}</Text>

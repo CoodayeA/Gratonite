@@ -318,7 +318,7 @@ export default function TicketListScreen({ route }: Props) {
         }
       />
 
-      <TouchableOpacity style={styles.fab} onPress={() => setCreateVisible(true)}>
+      <TouchableOpacity style={styles.fab} onPress={() => setCreateVisible(true)} accessibilityLabel="Create ticket">
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
 

@@ -331,6 +331,7 @@ export default function GroupDMSettingsScreen({ route, navigation }: Props) {
           <TouchableOpacity
             style={styles.addBtn}
             onPress={() => setShowAddPicker(!showAddPicker)}
+            accessibilityLabel="Edit"
           >
             <Ionicons name="person-add-outline" size={20} color={colors.accentPrimary} />
           </TouchableOpacity>
@@ -388,6 +389,7 @@ export default function GroupDMSettingsScreen({ route, navigation }: Props) {
                   <TouchableOpacity
                     style={styles.removeBtn}
                     onPress={() => handleRemoveMember(item.id, name)}
+                    accessibilityLabel="Edit"
                   >
                     <Ionicons name="remove-circle-outline" size={22} color={colors.error} />
                   </TouchableOpacity>

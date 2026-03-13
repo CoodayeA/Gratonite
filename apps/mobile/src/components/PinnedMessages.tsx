@@ -79,7 +79,7 @@ export default function PinnedMessages({ visible, onClose, channelId }: PinnedMe
           </View>
           <Text style={styles.authorName}>{authorName}</Text>
           <Text style={styles.pinnedDate}>{formatRelativeTime(item.pinnedAt)}</Text>
-          <TouchableOpacity onPress={() => handleUnpin(item)} hitSlop={8}>
+          <TouchableOpacity onPress={() => handleUnpin(item)} hitSlop={8} accessibilityLabel="Unpin message">
             <Ionicons name="close-circle-outline" size={20} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
@@ -193,7 +193,7 @@ export default function PinnedMessages({ visible, onClose, channelId }: PinnedMe
 
           <View style={styles.titleRow}>
             <Text style={styles.title}>Pinned Messages</Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity onPress={onClose} accessibilityLabel="Close">
               <Ionicons name="close" size={22} color={colors.textMuted} />
             </TouchableOpacity>
           </View>

@@ -283,6 +283,7 @@ export default function RoleEditScreen({ route, navigation }: Props) {
               !selectedColor && styles.colorCircleSelected,
             ]}
             onPress={() => setSelectedColor(null)}
+            accessibilityLabel="No color"
           >
             {!selectedColor && (
               <Ionicons name="close" size={16} color={colors.textMuted} />
@@ -297,6 +298,7 @@ export default function RoleEditScreen({ route, navigation }: Props) {
                 selectedColor === c && styles.colorCircleSelected,
               ]}
               onPress={() => setSelectedColor(c)}
+              accessibilityLabel={`Select color ${c}`}
             >
               {selectedColor === c && (
                 <Ionicons name="checkmark" size={16} color={colors.white} />

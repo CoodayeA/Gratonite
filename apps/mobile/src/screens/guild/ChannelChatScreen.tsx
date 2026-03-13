@@ -344,16 +344,16 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     navigation?.setOptions?.({
       headerRight: () => (
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          <TouchableOpacity onPress={() => setShowNotifSheet(true)} style={{ padding: spacing.sm }}>
+          <TouchableOpacity onPress={() => setShowNotifSheet(true)} style={{ padding: spacing.sm }} accessibilityLabel="Channel notifications">
             <Ionicons name="notifications-outline" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowPinned(true)} style={{ padding: spacing.sm }}>
+          <TouchableOpacity onPress={() => setShowPinned(true)} style={{ padding: spacing.sm }} accessibilityLabel="Pinned messages">
             <Ionicons name="pin-outline" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => {
             const guildId = route.params?.guildId;
             if (guildId) navigation.navigate('GuildMemberList', { guildId, guildName: channelName });
-          }} style={{ padding: spacing.sm }}>
+          }} style={{ padding: spacing.sm }} accessibilityLabel="Member list">
             <Ionicons name="people-outline" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>

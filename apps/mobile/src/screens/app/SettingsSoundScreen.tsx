@@ -182,6 +182,7 @@ export default function SettingsSoundScreen({ navigation }: Props) {
             style={styles.volumeButton}
             onPress={() => adjustVolume(-10)}
             disabled={saving}
+            accessibilityLabel="Decrease volume"
           >
             <Ionicons name="remove" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
@@ -190,6 +191,7 @@ export default function SettingsSoundScreen({ navigation }: Props) {
             style={styles.volumeButton}
             onPress={() => adjustVolume(10)}
             disabled={saving}
+            accessibilityLabel="Increase volume"
           >
             <Ionicons name="add" size={24} color={colors.textPrimary} />
           </TouchableOpacity>

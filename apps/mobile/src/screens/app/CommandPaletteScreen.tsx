@@ -162,7 +162,7 @@ export default function CommandPaletteScreen({ navigation }: Props) {
           autoFocus
         />
         {query.length > 0 && (
-          <TouchableOpacity onPress={() => setQuery('')}>
+          <TouchableOpacity onPress={() => setQuery('')} accessibilityLabel="Clear search">
             <Ionicons name="close-circle" size={20} color={colors.textMuted} />
           </TouchableOpacity>
         )}

@@ -399,7 +399,7 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity onPress={() => setShowDisappearSheet(true)} style={{ padding: 8 }}>
+        <TouchableOpacity onPress={() => setShowDisappearSheet(true)} style={{ padding: 8 }} accessibilityLabel="Disappearing messages">
           <Ionicons name="time-outline" size={22} color={disappearTimer ? colors.accentPrimary : colors.textMuted} />
         </TouchableOpacity>
       ),

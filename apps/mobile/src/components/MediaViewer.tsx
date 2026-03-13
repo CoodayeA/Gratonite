@@ -72,7 +72,7 @@ export default function MediaViewer({ visible, urls, initialIndex = 0, onClose }
           flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
           paddingHorizontal: spacing.lg,
         }}>
-          <TouchableOpacity onPress={onClose} style={{ padding: spacing.sm }}>
+          <TouchableOpacity onPress={onClose} style={{ padding: spacing.sm }} accessibilityLabel="Close">
             <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
           {urls.length > 1 && (
@@ -81,10 +81,10 @@ export default function MediaViewer({ visible, urls, initialIndex = 0, onClose }
             </Text>
           )}
           <View style={{ flexDirection: 'row', gap: spacing.md }}>
-            <TouchableOpacity onPress={handleShare} style={{ padding: spacing.sm }}>
+            <TouchableOpacity onPress={handleShare} style={{ padding: spacing.sm }} accessibilityLabel="Share">
               <Ionicons name="share-outline" size={24} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleSave} style={{ padding: spacing.sm }}>
+            <TouchableOpacity onPress={handleSave} style={{ padding: spacing.sm }} accessibilityLabel="Save">
               <Ionicons name="download-outline" size={24} color="#fff" />
             </TouchableOpacity>
           </View>

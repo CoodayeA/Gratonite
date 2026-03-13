@@ -293,6 +293,7 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
         <TouchableOpacity
           style={[styles.controlBtn, { backgroundColor: colors.accentPrimary, marginTop: spacing.lg }]}
           onPress={() => connect().catch(() => {})}
+          accessibilityLabel="Refresh"
         >
           <Ionicons name="refresh" size={24} color={colors.white} />
         </TouchableOpacity>
@@ -351,6 +352,7 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
             backgroundColor: isMuted ? colors.error + '26' : colors.bgElevated,
           }]}
           onPress={handleMutePress}
+          accessibilityLabel="Toggle mute"
         >
           <Ionicons
             name={isMuted ? 'mic-off' : 'mic'}
@@ -364,6 +366,7 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
             backgroundColor: isDeafened ? colors.error + '26' : colors.bgElevated,
           }]}
           onPress={handleDeafenPress}
+          accessibilityLabel="Toggle deafen"
         >
           <Ionicons
             name={isDeafened ? 'volume-mute' : 'volume-medium'}
@@ -372,7 +375,7 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
           />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.disconnectBtn} onPress={handleDisconnect}>
+        <TouchableOpacity style={styles.disconnectBtn} onPress={handleDisconnect} accessibilityLabel="Disconnect">
           <Ionicons name="call" size={24} color={colors.white} style={{ transform: [{ rotate: '135deg' }] }} />
         </TouchableOpacity>
       </View>

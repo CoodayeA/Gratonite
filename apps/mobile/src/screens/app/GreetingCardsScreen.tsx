@@ -297,7 +297,7 @@ export default function GreetingCardsScreen({ navigation }: Props) {
         }
       />
 
-      <TouchableOpacity style={styles.fab} onPress={openCompose}>
+      <TouchableOpacity style={styles.fab} onPress={openCompose} accessibilityLabel="Create greeting card">
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
 

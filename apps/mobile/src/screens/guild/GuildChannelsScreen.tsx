@@ -50,6 +50,7 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
         <TouchableOpacity
           onPress={() => navigation.navigate('GuildSettings', { guildId, guildName })}
           style={{ marginRight: 8 }}
+          accessibilityLabel="Guild settings"
         >
           <Ionicons name="settings-outline" size={22} color={colors.textPrimary} />
         </TouchableOpacity>

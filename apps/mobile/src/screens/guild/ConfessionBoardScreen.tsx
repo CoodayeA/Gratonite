@@ -219,7 +219,7 @@ export default function ConfessionBoardScreen({ route }: Props) {
         }
       />
 
-      <TouchableOpacity style={styles.fab} onPress={() => setComposeVisible(true)}>
+      <TouchableOpacity style={styles.fab} onPress={() => setComposeVisible(true)} accessibilityLabel="New confession">
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
 
@@ -241,7 +241,7 @@ export default function ConfessionBoardScreen({ route }: Props) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>New Confession</Text>
-              <TouchableOpacity onPress={() => setComposeVisible(false)}>
+              <TouchableOpacity onPress={() => setComposeVisible(false)} accessibilityLabel="Close">
                 <Ionicons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>

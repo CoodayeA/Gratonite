@@ -250,7 +250,7 @@ function renderLeaf(text: string, ctx: InlineCtx, depth: number): React.ReactNod
             if (m) {
                 const userId = m[1];
                 const member = ctx.members?.find(u => u.id === userId);
-                const displayName = member ? (member.displayName || member.username) : userId;
+                const displayName = member ? (member.displayName || member.username) : 'Unknown User';
                 result.push(
                     <span key={`${kp}-umention-${i}`} className="mention">@{displayName}</span>
                 );

@@ -626,7 +626,7 @@ export default function BotStoreScreen({ navigation }: Props) {
           autoCorrect={false}
         />
         {searchText.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchText('')} style={styles.clearBtn}>
+          <TouchableOpacity onPress={() => setSearchText('')} style={styles.clearBtn} accessibilityLabel="Clear search">
             <Ionicons name="close-circle" size={18} color={colors.textMuted} />
           </TouchableOpacity>
         )}
@@ -680,7 +680,7 @@ export default function BotStoreScreen({ navigation }: Props) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setSelectedBot(null)}>
+              <TouchableOpacity onPress={() => setSelectedBot(null)} accessibilityLabel="Close">
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle} numberOfLines={1}>
