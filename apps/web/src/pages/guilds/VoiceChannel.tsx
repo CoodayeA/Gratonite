@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, Settings, Users, Headphones, HeadphoneOff, Volume2, X, Loader2, MessageSquare, Send, Hash, Wifi, ChevronDown, Check, Radio, Hand, Crown, Compass, Pin, PictureInPicture2 } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, Settings, Users, Headphones, HeadphoneOff, Volume2, X, Loader2, MessageSquare, Send, Hash, Wifi, ChevronDown, Check, Radio, Hand, Crown, Compass, Pin, PictureInPicture2, MoreHorizontal } from 'lucide-react';
 import { useOutletContext, useParams } from 'react-router-dom';
 import { TopBarActions } from '../../components/ui/TopBarActions';
 import { useToast } from '../../components/ui/ToastManager';
@@ -123,6 +123,14 @@ const VoiceChannel = () => {
     const chatEndRef = useRef<HTMLDivElement>(null);
     const chatPreviewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [manuallyDisconnected, setManuallyDisconnected] = useState(false);
+
+    // More controls popover state (I1)
+    const [showMoreControls, setShowMoreControls] = useState(false);
+    const moreControlsRef = useRef<HTMLDivElement>(null);
+
+    // Resizable chat sidebar state (I4)
+    const [chatWidth, setChatWidth] = useState(420);
+    const chatDraggingRef = useRef(false);
 
     // Noise suppression state (Item 18)
     const [noiseSuppression, setNoiseSuppression] = useState(() => localStorage.getItem('gratonite_noise_suppression') === 'true');
@@ -597,6 +605,19 @@ const VoiceChannel = () => {
         void refreshDevices();
     }, [isConnected, refreshDevices]);
 
+    // Chat sidebar drag-to-resize (I4)
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!chatDraggingRef.current) return;
+            const newWidth = window.innerWidth - e.clientX;
+            setChatWidth(Math.max(320, Math.min(600, newWidth)));
+        };
+        const handleMouseUp = () => { chatDraggingRef.current = false; };
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
+    }, []);
+
     // Close panels on outside click
     useEffect(() => {
         const handleClick = (e: MouseEvent) => {
@@ -608,6 +629,9 @@ const VoiceChannel = () => {
             }
             if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
                 setContextMenu(null);
+            }
+            if (moreControlsRef.current && !moreControlsRef.current.contains(e.target as Node)) {
+                setShowMoreControls(false);
             }
         };
         document.addEventListener('mousedown', handleClick);
@@ -894,20 +918,20 @@ const VoiceChannel = () => {
                 </div>
             )}
 
-            {/* Recording banner (Item 24) */}
+            {/* Recording banner (Item 24 — I3 enhanced) */}
             {isRecording && (
                 <div style={{
-                    padding: '6px 16px', background: 'rgba(239, 68, 68, 0.15)',
-                    borderBottom: '1px solid rgba(239, 68, 68, 0.3)',
-                    display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--error)',
+                    padding: '8px 16px', background: 'rgba(239, 68, 68, 0.25)',
+                    borderBottom: '1px solid rgba(239, 68, 68, 0.4)',
+                    display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', fontWeight: 700, color: 'var(--error)',
                 }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--error)', animation: 'speakingPulse 1.2s ease-in-out infinite' }} />
-                    <span style={{ fontWeight: 600 }}>Recording</span>
-                    <span style={{ color: 'var(--text-muted)' }}>{Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}</span>
+                    <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: 'var(--error)', animation: 'speakingPulse 1.2s ease-in-out infinite', flexShrink: 0 }} />
+                    <span>Recording in progress</span>
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}</span>
                     <span style={{ flex: 1 }} />
                     <button onClick={handleStopRecording} style={{
-                        padding: '2px 10px', borderRadius: 'var(--radius-sm)',
-                        background: 'var(--error)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 600,
+                        padding: '4px 14px', borderRadius: 'var(--radius-sm)',
+                        background: 'var(--error)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 700,
                     }}>Stop</button>
                 </div>
             )}
@@ -1019,14 +1043,14 @@ const VoiceChannel = () => {
                     const unpinned = pinned ? allParticipants.filter(p => p.id !== pinnedParticipant) : allParticipants;
 
                     const renderTile = (p: typeof allParticipants[0], isPinnedTile: boolean) => (
-                        <div key={p.id} className="voice-participant-card hover-lift" onContextMenu={(e) => handleParticipantContext(e, p.id)} style={{
+                        <div key={p.id} className={`voice-participant-card hover-lift${p.isSpeaking ? ' speaking-card' : ''}`} onContextMenu={(e) => handleParticipantContext(e, p.id)} title={`${p.name}${p.isSpeaking ? ' — Speaking' : ''}${p.isMuted ? ' — Muted' : ''}${p.isDeafened ? ' — Deafened' : ''}`} style={{
                             background: 'var(--bg-elevated)',
                             borderRadius: 'var(--radius-lg)',
                             border: p.isSpeaking ? '2px solid #43b581' : '2px solid transparent',
-                            boxShadow: p.isSpeaking ? '0 0 24px rgba(67, 181, 129, 0.3), var(--shadow-hover)' : 'var(--shadow-panel)',
+                            boxShadow: p.isSpeaking ? '0 0 0 3px #43b581, 0 0 20px rgba(67, 181, 129, 0.4), var(--shadow-hover)' : 'var(--shadow-panel)',
                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                             position: 'relative', overflow: 'hidden', transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.2s',
-                            minHeight: isPinnedTile ? '400px' : (allParticipants.length <= 2 ? '100%' : '240px'),
+                            minHeight: isPinnedTile ? '400px' : (allParticipants.length <= 2 ? '100%' : '160px'),
                             transform: p.isSpeaking ? 'scale(1.02)' : 'scale(1)',
                         }}>
                             {/* Pin button */}
@@ -1065,9 +1089,9 @@ const VoiceChannel = () => {
                                         <Avatar
                                             userId={p.id} displayName={p.name} avatarHash={getAvatarHash(p.id)}
                                             frame={p.id === localParticipant?.id ? ownAvatarFrame : 'none'}
-                                            size={isPinnedTile ? 140 : 100}
+                                            size={isPinnedTile ? 140 : 120}
                                             style={{
-                                                boxShadow: p.isSpeaking ? '0 0 0 3px #43b581' : '0 4px 12px rgba(0,0,0,0.5)',
+                                                boxShadow: p.isSpeaking ? '0 0 0 3px #43b581, 0 0 20px rgba(67, 181, 129, 0.4)' : '0 4px 12px rgba(0,0,0,0.5)',
                                                 transition: 'box-shadow 0.2s ease-in-out',
                                             }}
                                         />
@@ -1098,11 +1122,11 @@ const VoiceChannel = () => {
                                 <div className="speaker-spotlight" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '140px', height: '140px', borderRadius: '50%', background: '#43b581', filter: 'blur(40px)', opacity: 0.15, zIndex: 1, animation: 'spotlightPulse 1.5s infinite alternate' }}></div>
                             )}
 
-                            {/* Status Indicators */}
-                            <div style={{ position: 'absolute', bottom: '16px', right: '16px', display: 'flex', gap: '8px', zIndex: 2 }}>
-                                {p.isMuted && <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-app)', border: 'var(--border-structural)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--error)' }}><MicOff size={16} /></div>}
-                                {p.isDeafened && <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-app)', border: 'var(--border-structural)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--error)' }}><HeadphoneOff size={16} /></div>}
-                                {p.isScreenSharing && <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-sm)', background: 'var(--accent-primary)', border: 'var(--border-structural)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}><MonitorUp size={16} /></div>}
+                            {/* Status Indicators (P6: top-right corner) */}
+                            <div style={{ position: 'absolute', top: '12px', right: '48px', display: 'flex', gap: '6px', zIndex: 4 }}>
+                                {p.isMuted && <div style={{ width: '28px', height: '28px', borderRadius: 'var(--radius-sm)', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--error)' }}><MicOff size={14} /></div>}
+                                {p.isDeafened && <div style={{ width: '28px', height: '28px', borderRadius: 'var(--radius-sm)', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--error)' }}><HeadphoneOff size={14} /></div>}
+                                {p.isScreenSharing && <div style={{ width: '28px', height: '28px', borderRadius: 'var(--radius-sm)', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}><MonitorUp size={14} /></div>}
                             </div>
 
                             {/* Connection Quality Indicator */}
@@ -1374,10 +1398,15 @@ const VoiceChannel = () => {
                                 </button>
                                 {openDeviceMenu === 'audio' && (
                                     <div style={{
-                                        position: 'absolute', bottom: '56px', left: '-72px', width: '240px',
+                                        position: 'absolute', bottom: '56px', left: '50%', transform: 'translateX(-50%)', width: '240px',
                                         background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-md)',
                                         boxShadow: '0 10px 30px rgba(0,0,0,0.45)', padding: '8px', zIndex: 30,
                                     }}>
+                                        {/* Arrow pointing down */}
+                                        <div style={{
+                                            position: 'absolute', bottom: '-6px', left: '50%', transform: 'translateX(-50%) rotate(45deg)',
+                                            width: '10px', height: '10px', background: 'var(--bg-elevated)', borderRight: '1px solid var(--stroke)', borderBottom: '1px solid var(--stroke)',
+                                        }} />
                                         <div style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px', padding: '0 4px' }}>Detected Microphones</div>
                                         {audioInputDevices.length === 0 ? (
                                             <div style={{ fontSize: '12px', color: 'var(--text-muted)', padding: '6px 8px' }}>No microphones detected</div>
@@ -1462,10 +1491,15 @@ const VoiceChannel = () => {
                                 </button>
                                 {openDeviceMenu === 'video' && (
                                     <div style={{
-                                        position: 'absolute', bottom: '56px', left: '-72px', width: '240px',
+                                        position: 'absolute', bottom: '56px', left: '50%', transform: 'translateX(-50%)', width: '240px',
                                         background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-md)',
                                         boxShadow: '0 10px 30px rgba(0,0,0,0.45)', padding: '8px', zIndex: 30,
                                     }}>
+                                        {/* Arrow pointing down */}
+                                        <div style={{
+                                            position: 'absolute', bottom: '-6px', left: '50%', transform: 'translateX(-50%) rotate(45deg)',
+                                            width: '10px', height: '10px', background: 'var(--bg-elevated)', borderRight: '1px solid var(--stroke)', borderBottom: '1px solid var(--stroke)',
+                                        }} />
                                         <div style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px', padding: '0 4px' }}>Detected Cameras</div>
                                         {videoInputDevices.length === 0 ? (
                                             <div style={{ fontSize: '12px', color: 'var(--text-muted)', padding: '6px 8px' }}>No cameras detected</div>
@@ -1518,107 +1552,124 @@ const VoiceChannel = () => {
                         <div className="tooltip">{isScreenSharing ? 'Stop Sharing' : 'Share Screen'}</div>
                     </div>
 
-                    {/* Stream Quality Picker */}
-                    <div style={{ display: 'flex', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--stroke)', height: '36px', alignSelf: 'center' }}>
-                        {(['low', 'medium', 'high', 'source'] as const).map((q) => (
-                            <button
-                                key={q}
-                                onClick={() => setStreamQuality(q)}
-                                style={{
-                                    padding: '0 10px', border: 'none', fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                                    background: streamQuality === q ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                                    color: streamQuality === q ? '#000' : 'var(--text-secondary)',
-                                }}
-                            >
-                                {q === 'medium' ? 'Med' : q.charAt(0).toUpperCase() + q.slice(1)}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="tooltip-container">
+                    {/* More Controls Popover (I1) */}
+                    <div className="tooltip-container" ref={moreControlsRef} style={{ position: 'relative' }}>
                         <button
-                            onMouseEnter={() => setHoveredBtn('spatial')}
+                            onMouseEnter={() => setHoveredBtn('more')}
                             onMouseLeave={() => setHoveredBtn(null)}
-                            onClick={handleToggleSpatialMode}
-                            disabled={isConnecting}
+                            onClick={() => setShowMoreControls(!showMoreControls)}
                             style={{
                                 width: '48px', height: '48px', borderRadius: '50%',
-                                background: spatialMode ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                                border: '1px solid var(--stroke)', color: spatialMode ? '#000' : 'var(--text-primary)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isConnecting ? 'not-allowed' : 'pointer', transition: 'all 0.2s',
-                                transform: hoveredBtn === 'spatial' ? 'translateY(-2px)' : 'none',
-                                boxShadow: hoveredBtn === 'spatial' ? '0 4px 12px rgba(0,0,0,0.2)' : 'none',
-                                opacity: isConnecting ? 0.5 : 1,
-                            }}
-                        >
-                            <Compass size={20} />
-                        </button>
-                        <div className="tooltip">{spatialMode ? 'Disable Spatial Audio' : 'Enable Spatial Audio'}</div>
-                    </div>
-
-                    {/* Noise Suppression Toggle (Item 18) */}
-                    <div className="tooltip-container">
-                        <button
-                            onMouseEnter={() => setHoveredBtn('noise')}
-                            onMouseLeave={() => setHoveredBtn(null)}
-                            onClick={handleToggleNoiseSuppression}
-                            style={{
-                                width: '40px', height: '40px', borderRadius: '50%',
-                                background: noiseSuppression ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                                border: '1px solid var(--stroke)', color: noiseSuppression ? '#000' : 'var(--text-primary)',
+                                background: showMoreControls ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                border: '1px solid var(--stroke)', color: showMoreControls ? '#000' : 'var(--text-primary)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s',
-                                transform: hoveredBtn === 'noise' ? 'translateY(-2px)' : 'none',
-                                fontSize: '14px',
+                                transform: hoveredBtn === 'more' ? 'translateY(-2px)' : 'none',
+                                boxShadow: hoveredBtn === 'more' ? '0 4px 12px rgba(0,0,0,0.2)' : 'none',
                             }}
                         >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            <MoreHorizontal size={20} />
                         </button>
-                        <div className="tooltip">{noiseSuppression ? 'Disable Noise Suppression' : 'Enable Noise Suppression'}</div>
-                    </div>
+                        {!showMoreControls && <div className="tooltip">More Controls</div>}
 
-                    {/* Recording Toggle (Item 24) */}
-                    <div className="tooltip-container">
-                        <button
-                            onMouseEnter={() => setHoveredBtn('record')}
-                            onMouseLeave={() => setHoveredBtn(null)}
-                            onClick={isRecording ? handleStopRecording : handleStartRecording}
-                            style={{
-                                width: '40px', height: '40px', borderRadius: '50%',
-                                background: isRecording ? 'var(--error)' : 'var(--bg-tertiary)',
-                                border: '1px solid var(--stroke)', color: isRecording ? 'white' : 'var(--text-primary)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s',
-                                transform: hoveredBtn === 'record' ? 'translateY(-2px)' : 'none',
-                                animation: isRecording ? 'speakingPulse 1.2s ease-in-out infinite' : 'none',
-                            }}
-                        >
+                        {showMoreControls && (
                             <div style={{
-                                width: isRecording ? '10px' : '12px', height: isRecording ? '10px' : '12px',
-                                borderRadius: isRecording ? '2px' : '50%',
-                                background: isRecording ? 'white' : 'var(--error)',
-                            }} />
-                        </button>
-                        <div className="tooltip">{isRecording ? `Stop Recording (${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60).toString().padStart(2, '0')})` : 'Record Voice Channel'}</div>
-                    </div>
+                                position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)',
+                                background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-lg)',
+                                boxShadow: '0 12px 40px rgba(0,0,0,0.5)', padding: '16px', zIndex: 30,
+                                minWidth: '280px',
+                            }}>
+                                {/* Arrow pointing down */}
+                                <div style={{
+                                    position: 'absolute', bottom: '-6px', left: '50%', transform: 'translateX(-50%) rotate(45deg)',
+                                    width: '10px', height: '10px', background: 'var(--bg-elevated)', borderRight: '1px solid var(--stroke)', borderBottom: '1px solid var(--stroke)',
+                                }} />
+                                <div style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '12px', letterSpacing: '0.05em' }}>More Controls</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                    {/* Quality Picker */}
+                                    <div style={{ gridColumn: '1 / -1', marginBottom: '4px' }}>
+                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 600 }}>Stream Quality</div>
+                                        <div style={{ display: 'flex', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--stroke)', height: '32px' }}>
+                                            {(['low', 'medium', 'high', 'source'] as const).map((q) => (
+                                                <button
+                                                    key={q}
+                                                    onClick={() => setStreamQuality(q)}
+                                                    style={{
+                                                        flex: 1, padding: '0 8px', border: 'none', fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                                                        background: streamQuality === q ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                                        color: streamQuality === q ? '#000' : 'var(--text-secondary)',
+                                                    }}
+                                                >
+                                                    {q === 'medium' ? 'Med' : q.charAt(0).toUpperCase() + q.slice(1)}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
 
-                    <div style={{ width: '1px', height: '32px', background: 'var(--stroke)', margin: '0 8px' }}></div>
+                                    {/* Spatial Audio */}
+                                    <button
+                                        onClick={handleToggleSpatialMode}
+                                        disabled={isConnecting}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px',
+                                            background: spatialMode ? 'rgba(var(--accent-primary-rgb, 88, 101, 242), 0.15)' : 'var(--bg-tertiary)',
+                                            border: spatialMode ? '1px solid var(--accent-primary)' : '1px solid var(--stroke)',
+                                            borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: spatialMode ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                            fontSize: '12px', fontWeight: 600, transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        <Compass size={16} /> Spatial
+                                    </button>
 
-                    <div className="tooltip-container">
-                        <button
-                            onMouseEnter={() => setHoveredBtn('settings')}
-                            onMouseLeave={() => setHoveredBtn(null)}
-                            onClick={() => setShowVolumePanel(!showVolumePanel)}
-                            style={{
-                                width: '48px', height: '48px', borderRadius: '50%',
-                                background: showVolumePanel ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                                border: '1px solid var(--stroke)', color: showVolumePanel ? '#000' : 'var(--text-primary)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s',
-                                transform: hoveredBtn === 'settings' ? 'translateY(-2px)' : 'none',
-                                boxShadow: hoveredBtn === 'settings' ? '0 4px 12px rgba(0,0,0,0.2)' : 'none'
-                            }}
-                        >
-                            <Settings size={20} />
-                        </button>
-                        <div className="tooltip">Call Volume</div>
+                                    {/* Noise Suppression */}
+                                    <button
+                                        onClick={handleToggleNoiseSuppression}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px',
+                                            background: noiseSuppression ? 'rgba(var(--accent-primary-rgb, 88, 101, 242), 0.15)' : 'var(--bg-tertiary)',
+                                            border: noiseSuppression ? '1px solid var(--accent-primary)' : '1px solid var(--stroke)',
+                                            borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: noiseSuppression ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                            fontSize: '12px', fontWeight: 600, transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                        Noise
+                                    </button>
+
+                                    {/* Recording */}
+                                    <button
+                                        onClick={isRecording ? handleStopRecording : handleStartRecording}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px',
+                                            background: isRecording ? 'rgba(239, 68, 68, 0.2)' : 'var(--bg-tertiary)',
+                                            border: isRecording ? '1px solid var(--error)' : '1px solid var(--stroke)',
+                                            borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: isRecording ? 'var(--error)' : 'var(--text-secondary)',
+                                            fontSize: '12px', fontWeight: 600, transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        <div style={{
+                                            width: isRecording ? '8px' : '10px', height: isRecording ? '8px' : '10px',
+                                            borderRadius: isRecording ? '2px' : '50%', background: isRecording ? 'var(--error)' : 'var(--error)', flexShrink: 0,
+                                            animation: isRecording ? 'speakingPulse 1.2s ease-in-out infinite' : 'none',
+                                        }} />
+                                        {isRecording ? `Stop (${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60).toString().padStart(2, '0')})` : 'Record'}
+                                    </button>
+
+                                    {/* Volume Settings */}
+                                    <button
+                                        onClick={() => { setShowVolumePanel(!showVolumePanel); setShowMoreControls(false); }}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px',
+                                            background: showVolumePanel ? 'rgba(var(--accent-primary-rgb, 88, 101, 242), 0.15)' : 'var(--bg-tertiary)',
+                                            border: showVolumePanel ? '1px solid var(--accent-primary)' : '1px solid var(--stroke)',
+                                            borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: showVolumePanel ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                            fontSize: '12px', fontWeight: 600, transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        <Settings size={16} /> Volume
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="tooltip-container">
@@ -1654,6 +1705,16 @@ const VoiceChannel = () => {
                         0% { opacity: 1; transform: scale(1); }
                         50% { opacity: 0.5; transform: scale(1.08); }
                         100% { opacity: 1; transform: scale(1); }
+                    }
+
+                    @keyframes speakingGlow {
+                        0% { box-shadow: 0 0 0 3px #43b581, 0 0 20px rgba(67, 181, 129, 0.4); }
+                        50% { box-shadow: 0 0 0 4px #43b581, 0 0 30px rgba(67, 181, 129, 0.6); }
+                        100% { box-shadow: 0 0 0 3px #43b581, 0 0 20px rgba(67, 181, 129, 0.4); }
+                    }
+
+                    .speaking-card {
+                        animation: speakingGlow 1.5s ease-in-out infinite;
                     }
 
                     @keyframes spin {
@@ -1747,11 +1808,24 @@ const VoiceChannel = () => {
                         width: '100%', zIndex: 500,
                         background: 'var(--bg-primary)',
                     } : {
-                        position: 'absolute', top: '56px', right: 0, bottom: 0, width: '360px',
+                        position: 'absolute', top: '56px', right: 0, bottom: 0, width: `${chatWidth}px`,
                         background: 'var(--bg-primary)', borderLeft: '1px solid var(--stroke)',
                     }),
                     display: 'flex', flexDirection: 'column', zIndex: isMobile ? 500 : 15,
                 }}>
+                    {/* Drag handle for resizing (I4) */}
+                    {!isMobile && (
+                        <div
+                            onMouseDown={() => { chatDraggingRef.current = true; }}
+                            style={{
+                                position: 'absolute', top: 0, left: 0, bottom: 0, width: '4px',
+                                cursor: 'col-resize', zIndex: 20,
+                                background: 'transparent', transition: 'background 0.15s',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-primary)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                        />
+                    )}
                     {/* Chat Header */}
                     <div style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',

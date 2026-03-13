@@ -29,6 +29,7 @@ interface AuditEntry {
     user: string;
     target: string;
     timestamp: string;
+    rawTimestamp: string;
     type: 'role' | 'channel' | 'member' | 'settings' | 'message';
 }
 
@@ -119,6 +120,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
     const [memberSearch, setMemberSearch] = useState('');
     const [auditFilter, setAuditFilter] = useState<string>('all');
+    const [auditSearch, setAuditSearch] = useState('');
+    const [auditDateFrom, setAuditDateFrom] = useState('');
+    const [auditDateTo, setAuditDateTo] = useState('');
     const [serverName, setServerName] = useState('');
     const [serverDesc, setServerDesc] = useState('');
     const [welcomeMessage, setWelcomeMessage] = useState('');
@@ -138,6 +142,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [showCreateChannelInSettings, setShowCreateChannelInSettings] = useState<{ parentId?: string | null } | null>(null);
     const [newChannelNameInSettings, setNewChannelNameInSettings] = useState('');
     const [newChannelTypeInSettings, setNewChannelTypeInSettings] = useState<'GUILD_TEXT' | 'GUILD_VOICE'>('GUILD_TEXT');
+    const [tempChannelEnabled, setTempChannelEnabled] = useState(false);
+    const [tempChannelDuration, setTempChannelDuration] = useState('3600');
     const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
     const [editingCategoryName, setEditingCategoryName] = useState('');
 
@@ -177,6 +183,11 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             if (g.requireRulesAgreement) setRequireRulesAgreement(true);
             if (g.afkChannelId) setAfkChannelId(g.afkChannelId);
             if (g.afkTimeout != null) setAfkTimeout(g.afkTimeout);
+            if (g.verificationLevel) setVerificationLevel(g.verificationLevel);
+            if (g.systemChannelId) setSystemChannel(g.systemChannelId);
+            if (g.systemMsgJoin != null) setSystemMsgJoin(g.systemMsgJoin);
+            if (g.systemMsgBoost != null) setSystemMsgBoost(g.systemMsgBoost);
+            if (g.memberScreeningEnabled) setMemberScreeningEnabled(true);
         }).catch(() => {});
     }, [guildId]);
 
@@ -285,6 +296,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                 user: entry.userName || entry.user || 'System',
                 target: entry.target || entry.targetName || '',
                 timestamp: entry.createdAt ? new Date(entry.createdAt).toLocaleString() : (entry.timestamp || ''),
+                rawTimestamp: entry.createdAt || entry.timestamp || new Date().toISOString(),
                 type: (entry.type || 'settings') as AuditEntry['type'],
             }));
             setAuditLog(mapped);
@@ -356,10 +368,13 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                 name: newChannelNameInSettings.trim().toLowerCase().replace(/\s+/g, '-'),
                 type: newChannelTypeInSettings,
                 parentId: showCreateChannelInSettings.parentId ?? undefined,
-            });
+                ...(tempChannelEnabled ? { temporary: true, temporaryDuration: tempChannelDuration === 'empty' ? 'empty' : Number(tempChannelDuration) } : {}),
+            } as any);
             setNewChannelNameInSettings('');
             setShowCreateChannelInSettings(null);
             setNewChannelTypeInSettings('GUILD_TEXT');
+            setTempChannelEnabled(false);
+            setTempChannelDuration('3600');
             fetchChannels();
             addToast({ title: 'Channel Created', variant: 'success' });
         } catch (err: any) {
@@ -561,6 +576,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         if (activeTab === 'members') { fetchMembers(); setSelectedMemberIds(new Set()); }
         if (activeTab === 'invites') fetchInvites();
         if (activeTab === 'wordfilter' && guildId) {
+            if (roles.length === 0) fetchRoles();
             api.get<any>(`/guilds/${guildId}/word-filter`).then((data: any) => {
                 setWordFilterWords(Array.isArray(data.words) ? data.words : []);
                 setWordFilterAction(data.action || 'block');
@@ -585,6 +601,20 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         if (activeTab === 'audit') fetchAuditLog();
         if (activeTab === 'webhooks') fetchWebhooks();
         if (activeTab === 'automod') fetchAutomodRules();
+        if (activeTab === 'bots' && guildId) {
+            api.get<any[]>(`/guilds/${guildId}/bots`).then((data: any) => {
+                const bots = Array.isArray(data) ? data : [];
+                setInstalledBots(bots.map((b: any) => ({
+                    id: b.id,
+                    name: b.name || 'Unknown Bot',
+                    prefix: b.prefix || '!',
+                    status: b.status || 'active',
+                    avatar: b.avatarColor || '#526df5',
+                    installedAt: b.installedAt ? new Date(b.installedAt).toLocaleDateString() : 'Unknown',
+                    commands: b.commands ?? 0,
+                })));
+            }).catch(() => { /* bots endpoint may not exist yet */ });
+        }
         if (activeTab === 'overview' && guildId) {
             setVanityLoading(true);
             api.guilds.getVanityUrl?.(guildId)?.then?.((data: any) => {
@@ -775,6 +805,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [raidProtectionEnabled, setRaidProtectionEnabled] = useState(false);
     const [guildLocked, setGuildLocked] = useState(false);
     const [raidSaving, setRaidSaving] = useState(false);
+    const [memberScreeningEnabled, setMemberScreeningEnabled] = useState(false);
 
     // Batch moderation state
     const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
@@ -811,7 +842,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [dragOverRole, setDragOverRole] = useState<string | null>(null);
 
     const addAuditEntry = (action: string, user: string, target: string, type: AuditEntry['type']) => {
-        const entry: AuditEntry = { id: Date.now().toString(), action, user, target, timestamp: 'just now', type };
+        const entry: AuditEntry = { id: Date.now().toString(), action, user, target, timestamp: 'just now', rawTimestamp: new Date().toISOString(), type };
         setAuditLog(prev => [entry, ...prev]);
     };
 
@@ -954,6 +985,10 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                 tags: guildTags,
                 rulesText: rulesText || null,
                 requireRulesAgreement,
+                verificationLevel,
+                systemChannelId: systemChannel || null,
+                systemMsgJoin,
+                systemMsgBoost,
             } as any);
             addAuditEntry('Portal Settings Changed', actorName, `Name/Description updated`, 'settings');
             emitGuildUpdated();
@@ -1063,7 +1098,25 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     };
 
     const filteredMembers = members.filter(m => m.name.toLowerCase().includes(memberSearch.toLowerCase()));
-    const filteredAudit = auditFilter === 'all' ? auditLog : auditLog.filter(a => a.type === auditFilter);
+    const filteredAudit = auditLog.filter(a => {
+        if (auditFilter !== 'all' && a.type !== auditFilter) return false;
+        if (auditSearch) {
+            const q = auditSearch.toLowerCase();
+            if (!a.user.toLowerCase().includes(q) && !a.action.toLowerCase().includes(q) && !a.target.toLowerCase().includes(q)) return false;
+        }
+        if (auditDateFrom || auditDateTo) {
+            const entryDate = new Date(a.rawTimestamp);
+            if (!isNaN(entryDate.getTime())) {
+                if (auditDateFrom && entryDate < new Date(auditDateFrom)) return false;
+                if (auditDateTo) {
+                    const toEnd = new Date(auditDateTo);
+                    toEnd.setDate(toEnd.getDate() + 1);
+                    if (entryDate >= toEnd) return false;
+                }
+            }
+        }
+        return true;
+    });
     const onlineCount = members.filter(m => m.status === 'online').length;
 
     const tabStyle = (tab: string): React.CSSProperties => ({
@@ -1591,13 +1644,19 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                     {/* Temporary Channel option (Item 37) */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                                            <input type="checkbox" style={{ accentColor: 'var(--accent-primary)' }} />
+                                            <input type="checkbox" checked={tempChannelEnabled} onChange={e => setTempChannelEnabled(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
                                             Temporary channel
                                         </label>
-                                        <select style={{
-                                            padding: '4px 8px', background: 'var(--bg-app)', border: '1px solid var(--stroke)',
-                                            borderRadius: '4px', color: 'var(--text-primary)', fontSize: '11px',
-                                        }}>
+                                        <select
+                                            value={tempChannelDuration}
+                                            onChange={e => setTempChannelDuration(e.target.value)}
+                                            disabled={!tempChannelEnabled}
+                                            style={{
+                                                padding: '4px 8px', background: 'var(--bg-app)', border: '1px solid var(--stroke)',
+                                                borderRadius: '4px', color: 'var(--text-primary)', fontSize: '11px',
+                                                opacity: tempChannelEnabled ? 1 : 0.5,
+                                            }}
+                                        >
                                             <option value="3600">1 hour</option>
                                             <option value="21600">6 hours</option>
                                             <option value="86400">24 hours</option>
@@ -2213,6 +2272,34 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>What happens when a message contains a blocked word.</p>
                             </div>
 
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>EXEMPT ROLES</label>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Members with these roles will bypass the word filter.</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    {roles.map(role => (
+                                        <label key={role.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px 0' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={wordFilterExemptRoles.includes(role.id)}
+                                                onChange={e => {
+                                                    if (e.target.checked) {
+                                                        setWordFilterExemptRoles(prev => [...prev, role.id]);
+                                                    } else {
+                                                        setWordFilterExemptRoles(prev => prev.filter(id => id !== role.id));
+                                                    }
+                                                }}
+                                                style={{ accentColor: 'var(--accent-primary)' }}
+                                            />
+                                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: role.color, flexShrink: 0 }} />
+                                            {role.name}
+                                        </label>
+                                    ))}
+                                    {roles.length === 0 && (
+                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No roles loaded. Switch to Roles tab first.</span>
+                                    )}
+                                </div>
+                            </div>
+
                             <button
                                 disabled={wordFilterSaving}
                                 onClick={async () => {
@@ -2385,19 +2472,19 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
                                 <div style={{ position: 'relative', flex: 1, minWidth: '160px' }}>
                                     <Search size={14} style={{ position: 'absolute', left: 8, top: 8, color: 'var(--text-muted)' }} />
-                                    <input type="text" placeholder="Search by user..." style={{
+                                    <input type="text" placeholder="Search by user or action..." value={auditSearch} onChange={e => setAuditSearch(e.target.value)} style={{
                                         width: '100%', padding: '6px 8px 6px 28px', borderRadius: '6px',
                                         background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
                                         color: 'var(--text-primary)', fontSize: '12px', outline: 'none', boxSizing: 'border-box',
                                     }} />
                                 </div>
-                                <input type="date" style={{
+                                <input type="date" value={auditDateFrom} onChange={e => setAuditDateFrom(e.target.value)} style={{
                                     padding: '6px 8px', borderRadius: '6px',
                                     background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
                                     color: 'var(--text-primary)', fontSize: '12px',
                                 }} />
                                 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>to</span>
-                                <input type="date" style={{
+                                <input type="date" value={auditDateTo} onChange={e => setAuditDateTo(e.target.value)} style={{
                                     padding: '6px 8px', borderRadius: '6px',
                                     background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
                                     color: 'var(--text-primary)', fontSize: '12px',
@@ -2819,7 +2906,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                     <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>
                                         <Bot size={32} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
                                         <p style={{ fontSize: '14px', fontWeight: 600 }}>No bots installed</p>
-                                        <p style={{ fontSize: '13px', marginTop: '4px' }}>Visit the Bot Store to find and install bots.</p>
+                                        <p style={{ fontSize: '13px', marginTop: '4px' }}>Use /invite to add bots to this server.</p>
                                     </div>
                                 )}
                             </div>
@@ -3081,9 +3168,14 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                     New members must complete onboarding before sending messages.
                                 </div>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                                    <input type="checkbox" defaultChecked={false} onChange={e => {
+                                    <input type="checkbox" checked={memberScreeningEnabled} onChange={e => {
+                                        const newVal = e.target.checked;
+                                        setMemberScreeningEnabled(newVal);
                                         if (guildId) {
-                                            api.patch(`/guilds/${guildId}`, { memberScreeningEnabled: e.target.checked }).catch(() => {});
+                                            api.patch(`/guilds/${guildId}`, { memberScreeningEnabled: newVal }).catch(() => {
+                                                setMemberScreeningEnabled(!newVal);
+                                                addToast({ title: 'Failed to update member screening', variant: 'error' });
+                                            });
                                         }
                                     }} style={{ accentColor: 'var(--accent-primary)' }} />
                                     Enable member screening

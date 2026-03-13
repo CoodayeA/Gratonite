@@ -60,7 +60,7 @@ export default function SpatialCanvas({
         maxWidth: '1200px',
         height: '60vh',
         minHeight: '400px',
-        background: 'linear-gradient(135deg, rgba(15,15,30,0.95) 0%, rgba(25,20,50,0.9) 30%, rgba(10,25,40,0.95) 60%, rgba(20,15,35,0.95) 100%)',
+        background: 'radial-gradient(ellipse at 50% 40%, rgba(20,25,45,0.95) 0%, rgba(12,14,28,0.98) 50%, rgba(8,10,22,1) 100%)',
         borderRadius: 'var(--radius-lg)',
         border: 'var(--border-structural)',
         overflow: 'hidden',
@@ -77,8 +77,14 @@ export default function SpatialCanvas({
         Spatial Audio Room
       </div>
 
+      {/* Clean floor pattern with radial gradient */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'radial-gradient(circle at 50% 50%, rgba(67, 181, 129, 0.04) 0%, transparent 60%)',
+      }} />
+
       {/* Floor grid pattern */}
-      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', opacity: 0.08 }}>
+      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', opacity: 0.2 }}>
         <defs>
           <pattern id="spatialGrid" width="40" height="40" patternUnits="userSpaceOnUse">
             <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5"/>
@@ -87,11 +93,32 @@ export default function SpatialCanvas({
         <rect width="100%" height="100%" fill="url(#spatialGrid)" />
       </svg>
 
-      {/* Room furniture decorations */}
-      <div style={{ position: 'absolute', left: '8%', top: '15%', fontSize: '28px', opacity: 0.15, pointerEvents: 'none' }}>&#128715;</div>
-      <div style={{ position: 'absolute', right: '10%', top: '20%', fontSize: '24px', opacity: 0.12, pointerEvents: 'none' }}>&#127793;</div>
-      <div style={{ position: 'absolute', left: '45%', bottom: '18%', fontSize: '22px', opacity: 0.1, pointerEvents: 'none' }}>&#128214;</div>
-      <div style={{ position: 'absolute', right: '15%', bottom: '22%', fontSize: '26px', opacity: 0.12, pointerEvents: 'none' }}>&#127911;</div>
+      {/* Distance-based volume indicator rings (I7) */}
+      {[0.25, 0.5, 0.75].map((fraction, i) => (
+        <div
+          key={`ring-${i}`}
+          style={{
+            position: 'absolute',
+            left: `${localPosition.x * 100}%`,
+            top: `${localPosition.y * 100}%`,
+            width: `${AUDIBLE_RADIUS * 2 * fraction * 100}%`,
+            height: `${AUDIBLE_RADIUS * 2 * fraction * 100}%`,
+            transform: 'translate(-50%, -50%)',
+            borderRadius: '50%',
+            border: '1px dashed rgba(67, 181, 129, 0.15)',
+            pointerEvents: 'none',
+            transition: 'left 0.05s linear, top 0.05s linear',
+          }}
+        >
+          <span style={{
+            position: 'absolute', top: '-8px', left: '50%', transform: 'translateX(-50%)',
+            fontSize: '9px', fontWeight: 600, color: 'rgba(67, 181, 129, 0.35)',
+            textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap',
+          }}>
+            {i === 0 ? 'loud' : i === 1 ? 'medium' : 'quiet'}
+          </span>
+        </div>
+      ))}
 
       {/* Audible range circle around local user */}
       <div
