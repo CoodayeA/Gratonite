@@ -105,17 +105,23 @@ export default function AuditLogScreen({ route, navigation }: Props) {
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchAuditLog = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await moderationApi.getAuditLog(guildId, 100);
       setEntries(data);
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      if (err.status !== 401) {
+        const message = err.message || 'Failed to load audit log';
+        setLoadError(message);
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
     }
-  }, [guildId]);
+  }, [guildId, toast]);
 
   useEffect(() => {
     fetchAuditLog();
@@ -225,6 +231,27 @@ export default function AuditLogScreen({ route, navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && entries.length === 0) {
+    return (
+      <PatternBackground>
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl, gap: spacing.md }]}>
+          <Ionicons name="alert-circle-outline" size={56} color={colors.accentPrimary} />
+          <Text style={[styles.entryActor, { fontSize: fontSize.xl, textAlign: 'center' }]}>Failed to load audit log</Text>
+          <Text style={[styles.entryDescription, { textAlign: 'center' }]}>{loadError}</Text>
+          <TouchableOpacity
+            style={[styles.filterTab, styles.filterTabActive]}
+            onPress={() => {
+              setLoading(true);
+              fetchAuditLog();
+            }}
+          >
+            <Text style={styles.filterTabTextActive}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>

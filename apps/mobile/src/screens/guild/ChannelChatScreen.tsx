@@ -579,6 +579,15 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
 
   // --- Actions ---
 
+  const scrollToMessage = useCallback((messageId: string) => {
+    const targetIndex = invertedData.findIndex((m) => m.id === messageId);
+    if (targetIndex >= 0) {
+      flatListRef.current?.scrollToIndex({ index: targetIndex, animated: true, viewPosition: 0.5 });
+    } else {
+      toast.info('Original message is not loaded yet');
+    }
+  }, [invertedData, toast]);
+
   const handleSend = async () => {
     const text = inputText.trim();
     if (!text || sending) return;
@@ -614,11 +623,41 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
 
     setSending(true);
     setInputText('');
+    const optimisticId = `temp-${Date.now()}`;
+    const optimisticMessage: Message = {
+      id: optimisticId,
+      channelId,
+      authorId: user?.id || 'me',
+      content: text,
+      type: 0,
+      createdAt: new Date().toISOString(),
+      editedAt: null,
+      author: user ? {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatarHash: user.avatarHash,
+      } : undefined,
+      replyToId: replyingTo?.id ?? null,
+      replyTo: replyingTo?.replyTo ? replyingTo.replyTo : replyingTo ? {
+        id: replyingTo.id,
+        content: replyingTo.content,
+        authorId: replyingTo.authorId,
+        author: replyingTo.author ? {
+          id: replyingTo.author.id,
+          username: replyingTo.author.username,
+          displayName: replyingTo.author.displayName,
+        } : undefined,
+      } : null,
+    };
+    setMessageList((prev) => [...prev, optimisticMessage]);
     try {
       const msg = await messagesApi.send(channelId, text, replyingTo ? { replyToId: replyingTo.id } : undefined);
       setMessageList((prev) => {
-        if (prev.some((m) => m.id === msg.id)) return prev;
-        return [...prev, msg];
+        if (prev.some((m) => m.id === msg.id)) {
+          return prev.filter((m) => m.id !== optimisticId);
+        }
+        return prev.map((m) => m.id === optimisticId ? msg : m);
       });
       setReplyingTo(null);
       draftsApi.delete(channelId).catch(() => {});
@@ -626,6 +665,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       playSound('messageSend');
     } catch {
       toast.error('Failed to send message');
+      setMessageList((prev) => prev.filter((m) => m.id !== optimisticId));
       setInputText(text);
     } finally {
       setSending(false);
@@ -645,7 +685,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
         setHasMoreHistory(false);
       }
     } catch {
-      // ignore
+      toast.error('Failed to load older messages');
     } finally {
       setLoadingMore(false);
     }
@@ -667,6 +707,9 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       const asset = result.assets[0];
       setSending(true);
       try {
+        // MOBILE-POLISH: the message send API does not yet accept uploaded
+        // attachment IDs/metadata, so mobile can only send the uploaded URL
+        // as plain text until backend attachment support is added.
         const formData = new FormData();
         const filename = asset.uri.split('/').pop() || 'upload.jpg';
         formData.append('file', {
@@ -700,6 +743,8 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     draftSaveTimer.current = setTimeout(() => {
       if (text.trim()) {
         draftsApi.save(channelId, text).catch(() => {});
+      } else {
+        draftsApi.delete(channelId).catch(() => {});
       }
     }, 500);
   };
@@ -944,6 +989,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
             onReactionLongPress={(emoji) => handleReactionLongPress(item.id, emoji)}
             textReactions={txtRxns}
             onTextReactionToggle={(text) => handleTextReactionToggle(item.id, text)}
+            onReplyPress={item.replyToId ? () => scrollToMessage(item.replyToId!) : undefined}
           />
 
           {/* Quick emoji picker */}

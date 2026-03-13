@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { relationships as relApi, friendshipStreaks as streaksApi } from '../../lib/api';
+import { relationships as relApi, friendshipStreaks as streaksApi, users as usersApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme, useGlass } from '../../lib/theme';
 import Avatar from '../../components/Avatar';
@@ -48,12 +48,24 @@ export default function FriendsScreen({ navigation }: Props) {
       const data = await relApi.getAll();
       setRels(data);
 
-      // Feed statuses into presence store
-      data.forEach((r) => {
-        if (r.user?.id && r.user.status) {
-          presenceStore.set(r.user.id, r.user.status as any);
+      // Fetch real presence statuses for friends
+      const friendIds = data
+        .filter((r) => r.type === 'friend' && r.user?.id)
+        .map((r) => r.user!.id);
+      if (friendIds.length > 0) {
+        try {
+          presenceStore.setBulk(friendIds.map((userId) => ({ userId, status: 'offline' })));
+          for (let i = 0; i < friendIds.length; i += 200) {
+            const batch = friendIds.slice(i, i + 200);
+            const presences = await usersApi.getPresences(batch);
+            presenceStore.setBulk(
+              presences.map((p) => ({ userId: p.userId, status: p.status as any })),
+            );
+          }
+        } catch {
+          // Presence is best-effort
         }
-      });
+      }
 
       // Fetch friendship streaks
       try {
@@ -336,7 +348,6 @@ export default function FriendsScreen({ navigation }: Props) {
             name={name}
             size={44}
             showStatus
-            statusOverride={user?.status ?? undefined}
           />
         </PressableScale>
         <View style={styles.friendInfo}>

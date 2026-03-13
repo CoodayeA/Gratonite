@@ -27,7 +27,7 @@ export const connectionsRouter = Router();
 // ---------------------------------------------------------------------------
 
 const addConnectionSchema = z.object({
-  provider: z.enum(['github', 'twitch', 'steam', 'twitter', 'youtube']),
+  provider: z.enum(['github', 'twitch', 'steam', 'twitter', 'youtube', 'spotify']),
   providerUsername: z.string().min(1).max(100),
   profileUrl: z.string().url().optional(),
 });

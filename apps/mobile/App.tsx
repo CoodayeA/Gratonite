@@ -164,6 +164,7 @@ function ThemedApp() {
         DirectMessage: 'dm/:channelId',
         GuildDrawer: 'guild/:guildId',
         UserProfile: 'user/:userId',
+        ResetPassword: 'reset-password/:token',
       },
     },
   };

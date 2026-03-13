@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 import { db } from '../db/index';
 import { notifications } from '../db/schema/notifications';
+import { guilds } from '../db/schema/guilds';
 import { requireAuth } from '../middleware/auth';
 
 export const notificationsRouter = Router();
@@ -15,16 +16,34 @@ notificationsRouter.get('/', requireAuth, async (req: Request, res: Response): P
     .orderBy(desc(notifications.createdAt))
     .limit(limit);
 
+  // Collect unique guildIds to resolve names in a single query
+  const guildIds = new Set<string>();
+  for (const n of notifs) {
+    const d = (n.data ?? {}) as Record<string, unknown>;
+    const gid = d.guildId as string | undefined;
+    if (gid) guildIds.add(gid);
+  }
+
+  let guildNameMap: Record<string, string> = {};
+  if (guildIds.size > 0) {
+    const guildRows = await db.select({ id: guilds.id, name: guilds.name })
+      .from(guilds)
+      .where(inArray(guilds.id, [...guildIds]));
+    guildNameMap = Object.fromEntries(guildRows.map(g => [g.id, g.name]));
+  }
+
   // Flatten the data JSONB into top-level fields for the frontend
   const mapped = notifs.map(n => {
     const d = (n.data ?? {}) as Record<string, unknown>;
+    const guildId = (d.guildId as string) ?? null;
     return {
       id: n.id,
       type: n.type,
       senderId: (d.senderId as string) ?? null,
       senderName: (d.senderName as string) ?? null,
       channelId: (d.channelId as string) ?? null,
-      guildId: (d.guildId as string) ?? null,
+      guildId,
+      guildName: guildId ? (guildNameMap[guildId] ?? null) : null,
       content: n.title,
       preview: n.body ?? null,
       read: n.read,

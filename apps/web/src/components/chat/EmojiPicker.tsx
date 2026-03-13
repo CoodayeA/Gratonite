@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Clock, Smile, Image as ImageIcon, Heart, ThumbsUp, Coffee, Flag, Lightbulb, Cat, Car, Settings, Loader, Star } from 'lucide-react';
 import { useToast } from '../ui/ToastManager';
 import { api, API_BASE } from '../../lib/api';
+import { useDebounce } from '../../hooks/useDebounce';
 
 // ─── Built-in Unicode Emoji Data ──────────────────────────────────────────────
 const builtInCategories = [
@@ -209,6 +210,13 @@ interface ServerEmoji {
     name: string;
     url: string;
     animated?: boolean;
+    categoryId?: string | null;
+}
+
+interface EmojiCategoryInfo {
+    id: string;
+    name: string;
+    sortOrder: number;
 }
 
 // ─── Sticker Type ─────────────────────────────────────────────────────────────
@@ -227,6 +235,7 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
 }) => {
     const { addToast } = useToast();
     const [search, setSearch] = useState('');
+    const debouncedSearch = useDebounce(search, 150);
     const [activeTab, setActiveTab] = useState<'emoji' | 'gif' | 'sticker'>('emoji');
     const [activeCategory, setActiveCategory] = useState('recent');
     const [stickers, setStickers] = useState<Sticker[]>([]);
@@ -236,12 +245,14 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
     const [favoriteEmojis, setFavoriteEmojis] = useState<string[]>(getFavoriteEmojis());
     const [favoritesCollapsed, setFavoritesCollapsed] = useState(false);
     const [serverEmojis, setServerEmojis] = useState<ServerEmoji[]>([]);
+    const [emojiCats, setEmojiCats] = useState<EmojiCategoryInfo[]>([]);
     const [gifSearch, setGifSearch] = useState('');
     const { gifs, loading: gifsLoading } = useTenorGifs(activeTab === 'gif' ? gifSearch : '');
     const contentRef = useRef<HTMLDivElement>(null);
     const searchRef = useRef<HTMLInputElement>(null);
+    const [focusedIndex, setFocusedIndex] = useState(-1);
 
-    // Fetch server custom emojis
+    // Fetch server custom emojis and categories
     useEffect(() => {
         if (!guildId) return;
         api.guilds.getEmojis(guildId).then((emojis: any[]) => {
@@ -250,8 +261,10 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                 name: e.name,
                 url: e.imageHash ? `${API_BASE}/files/${e.imageHash}` : `https://placehold.co/32/526df5/FFF?text=${e.name.charAt(0).toUpperCase()}`,
                 animated: e.animated ?? false,
+                categoryId: e.categoryId || null,
             })));
         }).catch(() => { addToast({ title: 'Failed to load server emojis', variant: 'error' }); });
+        api.guilds.getEmojiCategories(guildId).then(setEmojiCats).catch(() => {});
     }, [guildId]);
 
     // Fetch stickers when sticker tab is active
@@ -302,8 +315,8 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
         return cat;
     });
 
-    // Filter emojis by search
-    const searchLower = search.toLowerCase().trim();
+    // Filter emojis by debounced search
+    const searchLower = debouncedSearch.toLowerCase().trim();
     const filteredCategories = searchLower
         ? categories.map(cat => ({
             ...cat,
@@ -315,6 +328,47 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
         ? serverEmojis.filter(e => e.name.toLowerCase().includes(searchLower))
         : serverEmojis;
 
+    // Build flat emoji list for keyboard navigation
+    const flatEmojis: { emoji: string; isCustom: boolean }[] = [];
+    if (activeTab === 'emoji') {
+        if (!searchLower && frequentEmojis.length > 0) {
+            frequentEmojis.forEach(e => flatEmojis.push({ emoji: e, isCustom: e.startsWith(':') }));
+        }
+        if (!searchLower && favoriteEmojis.length > 0 && !favoritesCollapsed) {
+            favoriteEmojis.forEach(e => flatEmojis.push({ emoji: e, isCustom: e.startsWith(':') }));
+        }
+        filteredServerEmojis.forEach(e => flatEmojis.push({ emoji: `:${e.name}:`, isCustom: true }));
+        filteredCategories.forEach(cat => {
+            cat.emojis.forEach(e => flatEmojis.push({ emoji: e, isCustom: e.startsWith(':') }));
+        });
+    }
+
+    // Reset focused index when search or tab changes
+    useEffect(() => { setFocusedIndex(-1); }, [search, activeTab]);
+
+    const GRID_COLS = 8;
+    const handleKeyboardNav = useCallback((e: React.KeyboardEvent) => {
+        if (activeTab !== 'emoji' || flatEmojis.length === 0) return;
+        const total = flatEmojis.length;
+        let idx = focusedIndex;
+
+        if (e.key === 'ArrowRight') { e.preventDefault(); idx = idx < total - 1 ? idx + 1 : 0; }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); idx = idx > 0 ? idx - 1 : total - 1; }
+        else if (e.key === 'ArrowDown') { e.preventDefault(); idx = Math.min(idx + GRID_COLS, total - 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); idx = idx >= GRID_COLS ? idx - GRID_COLS : idx; }
+        else if (e.key === 'Enter' && idx >= 0) {
+            e.preventDefault();
+            const item = flatEmojis[idx];
+            if (item.isCustom) handleSelectCustomEmoji(item.emoji.slice(1, -1));
+            else handleSelectEmoji(item.emoji);
+            return;
+        } else return;
+
+        setFocusedIndex(idx);
+        // Scroll focused emoji into view
+        const btn = contentRef.current?.querySelector(`[data-emoji-idx="${idx}"]`) as HTMLElement | null;
+        btn?.scrollIntoView({ block: 'nearest' });
+    }, [activeTab, flatEmojis, focusedIndex, handleSelectEmoji, handleSelectCustomEmoji]);
 
     // Scroll to category
     const scrollToCategory = (catId: string) => {
@@ -353,6 +407,7 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                         placeholder={activeTab === 'emoji' ? "Search emojis..." : "Search Tenor GIFs..."}
                         value={activeTab === 'emoji' ? search : gifSearch}
                         onChange={e => activeTab === 'emoji' ? setSearch(e.target.value) : setGifSearch(e.target.value)}
+                        onKeyDown={handleKeyboardNav}
                         style={{ width: '100%', height: '34px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', paddingLeft: '32px', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
                     />
                 </div>
@@ -360,7 +415,10 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
 
             {/* Content */}
             <div ref={contentRef} style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-                {activeTab === 'emoji' && (
+                {activeTab === 'emoji' && (() => {
+                    let eidx = 0;
+                    const focusBorder = '2px solid var(--accent-primary)';
+                    return (
                     <div style={{ padding: '8px 0' }}>
                         {/* Frequently Used */}
                         {!searchLower && frequentEmojis.length > 0 && (
@@ -369,13 +427,16 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                                     <Star size={12} /> Frequently Used
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '2px' }}>
-                                    {frequentEmojis.map((emoji, idx) => (
+                                    {frequentEmojis.map((emoji, idx) => {
+                                        const gi = eidx++;
+                                        return (
                                         <button
                                             key={`freq-${idx}`}
+                                            data-emoji-idx={gi}
                                             onClick={() => emoji.startsWith(':') ? handleSelectCustomEmoji(emoji.slice(1, -1)) : handleSelectEmoji(emoji)}
-                                            style={{ width: '36px', height: '36px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.1s, transform 0.1s' }}
+                                            style={{ width: '36px', height: '36px', background: gi === focusedIndex ? 'var(--bg-tertiary)' : 'transparent', border: gi === focusedIndex ? focusBorder : 'none', borderRadius: '6px', fontSize: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.1s, transform 0.1s', transform: gi === focusedIndex ? 'scale(1.15)' : 'scale(1)' }}
                                             onMouseOver={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.transform = 'scale(1.15)'; }}
-                                            onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'scale(1)'; }}
+                                            onMouseOut={e => { e.currentTarget.style.background = gi === focusedIndex ? 'var(--bg-tertiary)' : 'transparent'; e.currentTarget.style.transform = gi === focusedIndex ? 'scale(1.15)' : 'scale(1)'; }}
                                         >
                                             {emoji.startsWith(':') ? (
                                                 (() => {
@@ -387,7 +448,8 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                                                 })()
                                             ) : emoji}
                                         </button>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
@@ -403,14 +465,17 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                                 </div>
                                 {!favoritesCollapsed && (
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '2px' }}>
-                                        {favoriteEmojis.map((emoji, idx) => (
+                                        {favoriteEmojis.map((emoji, idx) => {
+                                            const gi = eidx++;
+                                            return (
                                             <button
                                                 key={`fav-${idx}`}
+                                                data-emoji-idx={gi}
                                                 onClick={() => emoji.startsWith(':') ? handleSelectCustomEmoji(emoji.slice(1, -1)) : handleSelectEmoji(emoji)}
                                                 onContextMenu={(e) => { e.preventDefault(); setFavoriteEmojis(toggleFavoriteEmoji(emoji)); }}
-                                                style={{ width: '36px', height: '36px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.1s, transform 0.1s', position: 'relative' }}
+                                                style={{ width: '36px', height: '36px', background: gi === focusedIndex ? 'var(--bg-tertiary)' : 'transparent', border: gi === focusedIndex ? focusBorder : 'none', borderRadius: '6px', fontSize: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.1s, transform 0.1s', position: 'relative', transform: gi === focusedIndex ? 'scale(1.15)' : 'scale(1)' }}
                                                 onMouseOver={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.transform = 'scale(1.15)'; }}
-                                                onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'scale(1)'; }}
+                                                onMouseOut={e => { e.currentTarget.style.background = gi === focusedIndex ? 'var(--bg-tertiary)' : 'transparent'; e.currentTarget.style.transform = gi === focusedIndex ? 'scale(1.15)' : 'scale(1)'; }}
                                                 title="Right-click to remove from favorites"
                                             >
                                                 {emoji.startsWith(':') ? (
@@ -423,34 +488,54 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                                                     })()
                                                 ) : emoji}
                                             </button>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
                         )}
 
-                        {/* Server Custom Emojis */}
-                        {filteredServerEmojis.length > 0 && (
-                            <div id="emoji-cat-server" style={{ padding: '0 12px', marginBottom: '12px' }}>
-                                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px', letterSpacing: '0.5px' }}>
-                                    <Settings size={12} /> Server Emojis
+                        {/* Server Custom Emojis — grouped by category */}
+                        {filteredServerEmojis.length > 0 && (() => {
+                            // Group server emojis by category
+                            const uncategorized = filteredServerEmojis.filter(e => !e.categoryId);
+                            const catGroups = emojiCats
+                                .map(cat => ({ cat, emojis: filteredServerEmojis.filter(e => e.categoryId === cat.id) }))
+                                .filter(g => g.emojis.length > 0);
+
+                            const renderGroup = (label: string, emojis: ServerEmoji[], key: string) => (
+                                <div key={key} id={`emoji-cat-server-${key}`} style={{ padding: '0 12px', marginBottom: '12px' }}>
+                                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px', letterSpacing: '0.5px' }}>
+                                        <Settings size={12} /> {label}
+                                    </div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
+                                        {emojis.map(emoji => {
+                                            const gi = eidx++;
+                                            return (
+                                            <button
+                                                key={emoji.id}
+                                                data-emoji-idx={gi}
+                                                onClick={() => handleSelectCustomEmoji(emoji.name)}
+                                                style={{ width: '36px', height: '36px', background: gi === focusedIndex ? 'var(--bg-tertiary)' : 'transparent', border: gi === focusedIndex ? focusBorder : 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.1s', position: 'relative' }}
+                                                onMouseOver={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                                                onMouseOut={e => e.currentTarget.style.background = gi === focusedIndex ? 'var(--bg-tertiary)' : 'transparent'}
+                                                title={`:${emoji.name}:`}
+                                            >
+                                                <img src={emoji.url} alt={emoji.name} style={{ width: '26px', height: '26px', borderRadius: '4px', objectFit: 'contain' }} />
+                                            </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
-                                    {filteredServerEmojis.map(emoji => (
-                                        <button
-                                            key={emoji.id}
-                                            onClick={() => handleSelectCustomEmoji(emoji.name)}
-                                            style={{ width: '36px', height: '36px', background: 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.1s', position: 'relative' }}
-                                            onMouseOver={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                                            onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                                            title={`:${emoji.name}:`}
-                                        >
-                                            <img src={emoji.url} alt={emoji.name} style={{ width: '26px', height: '26px', borderRadius: '4px', objectFit: 'contain' }} />
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                            );
+
+                            return (
+                                <>
+                                    {uncategorized.length > 0 && renderGroup('Server Emojis', uncategorized, 'uncategorized')}
+                                    {catGroups.map(g => renderGroup(g.cat.name, g.emojis, g.cat.id))}
+                                </>
+                            );
+                        })()}
 
                         {/* Built-in Categories */}
                         {filteredCategories.map(cat => (
@@ -459,14 +544,17 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                                     {cat.icon && <cat.icon size={12} />} {cat.label}
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '2px' }}>
-                                    {cat.emojis.map((emoji, idx) => (
+                                    {cat.emojis.map((emoji, idx) => {
+                                        const gi = eidx++;
+                                        return (
                                         <button
                                             key={`${cat.id}-${idx}`}
+                                            data-emoji-idx={gi}
                                             onClick={() => emoji.startsWith(':') ? handleSelectCustomEmoji(emoji.slice(1, -1)) : handleSelectEmoji(emoji)}
                                             onContextMenu={(e) => { e.preventDefault(); setFavoriteEmojis(toggleFavoriteEmoji(emoji)); }}
-                                            style={{ width: '36px', height: '36px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.1s, transform 0.1s', position: 'relative' }}
+                                            style={{ width: '36px', height: '36px', background: gi === focusedIndex ? 'var(--bg-tertiary)' : 'transparent', border: gi === focusedIndex ? focusBorder : 'none', borderRadius: '6px', fontSize: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.1s, transform 0.1s', position: 'relative', transform: gi === focusedIndex ? 'scale(1.15)' : 'scale(1)' }}
                                             onMouseOver={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.transform = 'scale(1.15)'; }}
-                                            onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'scale(1)'; }}
+                                            onMouseOut={e => { e.currentTarget.style.background = gi === focusedIndex ? 'var(--bg-tertiary)' : 'transparent'; e.currentTarget.style.transform = gi === focusedIndex ? 'scale(1.15)' : 'scale(1)'; }}
                                             title={favoriteEmojis.includes(emoji) ? 'Right-click to unfavorite' : 'Right-click to favorite'}
                                         >
                                             {emoji.startsWith(':') ? (
@@ -482,7 +570,8 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                                                 <Star size={8} fill="var(--accent-primary)" color="var(--accent-primary)" style={{ position: 'absolute', top: '2px', right: '2px' }} />
                                             )}
                                         </button>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         ))}
@@ -494,7 +583,8 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                             </div>
                         )}
                     </div>
-                )}
+                    );
+                })()}
 
                 {activeTab === 'gif' && (
                     <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: '200px' }}>

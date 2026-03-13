@@ -26,17 +26,23 @@ export default function GuildBansScreen({ route }: Props) {
   const toast = useToast();
   const [banList, setBanList] = useState<GuildBan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchBans = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await bansApi.list(guildId);
       setBanList(data);
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      if (err.status !== 401) {
+        const message = err.message || 'Failed to load bans';
+        setLoadError(message);
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
     }
-  }, [guildId]);
+  }, [guildId, toast]);
 
   useEffect(() => {
     fetchBans();
@@ -164,6 +170,24 @@ export default function GuildBansScreen({ route }: Props) {
   };
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && banList.length === 0) {
+    return (
+      <PatternBackground>
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl, gap: spacing.md }]}>
+          <Ionicons name="alert-circle-outline" size={56} color={colors.accentPrimary} />
+          <Text style={[styles.username, { fontSize: fontSize.xl, textAlign: 'center' }]}>Failed to load bans</Text>
+          <Text style={[styles.reason, { textAlign: 'center', marginTop: 0 }]}>{loadError}</Text>
+          <TouchableOpacity style={styles.unbanBtn} onPress={() => {
+            setLoading(true);
+            fetchBans();
+          }}>
+            <Text style={styles.unbanText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>

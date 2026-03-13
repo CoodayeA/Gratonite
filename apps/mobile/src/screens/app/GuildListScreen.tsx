@@ -316,7 +316,12 @@ export default function GuildListScreen({ navigation }: Props) {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await refreshGuilds();
-    fetchOnlineCounts(guilds);
+    try {
+      const freshGuilds = await guildsApi.getMine();
+      fetchOnlineCounts(freshGuilds);
+    } catch {
+      fetchOnlineCounts(guilds);
+    }
     setRefreshing(false);
     notificationSuccess();
   }, [refreshGuilds, guilds, fetchOnlineCounts]);
@@ -327,7 +332,7 @@ export default function GuildListScreen({ navigation }: Props) {
       case 'idle': return colors.idle;
       case 'dnd': return colors.dnd;
       case 'invisible': return colors.offline;
-      default: return colors.online;
+      default: return colors.offline;
     }
   };
 
@@ -451,7 +456,7 @@ export default function GuildListScreen({ navigation }: Props) {
       <StatusPicker
         visible={statusPickerVisible}
         onClose={() => setStatusPickerVisible(false)}
-        currentStatus={user?.status ?? 'online'}
+        currentStatus={user?.status ?? 'offline'}
       />
     </View>
     </PatternBackground>
@@ -464,6 +469,6 @@ function formatStatus(status?: PresenceStatus): string {
     case 'idle': return 'Idle';
     case 'dnd': return 'Do Not Disturb';
     case 'invisible': return 'Invisible';
-    default: return 'Online';
+    default: return 'Offline';
   }
 }

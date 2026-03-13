@@ -1,8 +1,8 @@
-import { Sparkles, Ghost, ShoppingBag, AlertTriangle } from 'lucide-react';
+import { Sparkles, Ghost, ShoppingBag, AlertTriangle, Users, Search, MessageSquare, Bell, Hash } from 'lucide-react';
 import { TiltCard, RippleWrapper } from './Physics';
 
 type EmptyStateProps = {
-    type: 'chat' | 'inventory' | '404';
+    type: 'chat' | 'inventory' | '404' | 'friends' | 'search' | 'dm' | 'notifications' | 'server';
     title: string;
     description: string;
     actionLabel?: string;
@@ -88,6 +88,69 @@ export const EmptyState = ({ type, title, description, actionLabel, onAction }: 
                                     404
                                 </div>
                             ))}
+                        </>
+                    )}
+
+                    {type === 'friends' && (
+                        <>
+                            <div style={{ position: 'absolute', inset: 0, background: 'var(--accent-primary)', opacity: 0.08, borderRadius: '50%', filter: 'blur(25px)', animation: 'pulse 5s infinite alternate' }} />
+                            <div style={{ position: 'absolute', top: '15%', left: '20%', width: '45px', height: '45px', borderRadius: '50%', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', animation: 'float 4s ease-in-out infinite', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Users size={20} style={{ color: 'var(--text-muted)' }} />
+                            </div>
+                            <div style={{ position: 'absolute', bottom: '20%', right: '15%', width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', animation: 'float 5s ease-in-out infinite reverse', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Users size={16} style={{ color: 'var(--text-muted)', opacity: 0.6 }} />
+                            </div>
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, var(--bg-tertiary), var(--bg-elevated))', borderRadius: '24px', border: '1px solid var(--stroke)', boxShadow: '0 12px 32px rgba(0,0,0,0.5)' }}>
+                                <Users size={48} style={{ color: 'var(--text-secondary)' }} />
+                            </div>
+                        </>
+                    )}
+
+                    {type === 'search' && (
+                        <>
+                            <div style={{ position: 'absolute', inset: 0, background: 'var(--accent-blue, #3b82f6)', opacity: 0.08, borderRadius: '50%', filter: 'blur(25px)', animation: 'pulse 4s infinite alternate' }} />
+                            <div style={{ position: 'absolute', top: '20%', left: '20%', width: '60%', height: '60%', border: '2px dashed var(--stroke)', borderRadius: '50%', animation: 'spin 10s linear infinite', opacity: 0.3 }} />
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, var(--bg-tertiary), var(--bg-elevated))', borderRadius: '24px', border: '1px solid var(--stroke)', boxShadow: '0 12px 32px rgba(0,0,0,0.5)' }}>
+                                <Search size={48} style={{ color: 'var(--text-secondary)' }} />
+                            </div>
+                        </>
+                    )}
+
+                    {type === 'dm' && (
+                        <>
+                            <div style={{ position: 'absolute', inset: 0, background: 'var(--accent-primary)', opacity: 0.08, borderRadius: '50%', filter: 'blur(25px)', animation: 'pulse 4s infinite alternate' }} />
+                            <div style={{ position: 'absolute', top: '10%', right: '10%', width: '30px', height: '30px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', animation: 'float 3.5s ease-in-out infinite', transform: 'rotate(15deg)' }} />
+                            <div style={{ position: 'absolute', bottom: '10%', left: '10%', width: '25px', height: '25px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', animation: 'float 4.5s ease-in-out infinite reverse', transform: 'rotate(-10deg)' }} />
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, var(--bg-tertiary), var(--bg-elevated))', borderRadius: '24px', border: '1px solid var(--stroke)', boxShadow: '0 12px 32px rgba(0,0,0,0.5)' }}>
+                                <MessageSquare size={48} style={{ color: 'var(--text-secondary)' }} />
+                            </div>
+                        </>
+                    )}
+
+                    {type === 'notifications' && (
+                        <>
+                            <div style={{ position: 'absolute', inset: 0, background: 'var(--warning, #faa61a)', opacity: 0.08, borderRadius: '50%', filter: 'blur(25px)', animation: 'pulse 3s infinite alternate' }} />
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, var(--bg-tertiary), var(--bg-elevated))', borderRadius: '24px', border: '1px solid var(--stroke)', boxShadow: '0 12px 32px rgba(0,0,0,0.5)' }}>
+                                <Bell size={48} style={{ color: 'var(--text-secondary)' }} />
+                            </div>
+                            <div style={{ position: 'absolute', top: '-8px', right: '-8px', animation: 'float 3s ease-in-out infinite' }}>
+                                <Sparkles size={20} color="var(--warning, #faa61a)" />
+                            </div>
+                        </>
+                    )}
+
+                    {type === 'server' && (
+                        <>
+                            <div style={{ position: 'absolute', inset: 0, background: 'var(--accent-primary)', opacity: 0.08, borderRadius: '50%', filter: 'blur(25px)', animation: 'pulse 4s infinite alternate' }} />
+                            <div style={{ position: 'absolute', top: '15%', left: '10%', width: '35px', height: '35px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', animation: 'float 4s ease-in-out infinite', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Hash size={16} style={{ color: 'var(--text-muted)' }} />
+                            </div>
+                            <div style={{ position: 'absolute', bottom: '15%', right: '10%', width: '30px', height: '30px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', animation: 'float 5s ease-in-out infinite reverse', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Hash size={14} style={{ color: 'var(--text-muted)', opacity: 0.6 }} />
+                            </div>
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, var(--bg-tertiary), var(--bg-elevated))', borderRadius: '24px', border: '1px solid var(--stroke)', boxShadow: '0 12px 32px rgba(0,0,0,0.5)' }}>
+                                <Hash size={48} style={{ color: 'var(--text-secondary)' }} />
+                            </div>
                         </>
                     )}
                 </div>

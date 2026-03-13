@@ -1,59 +1,80 @@
 /**
  * LiveAnnouncer — Hidden ARIA live region for screen reader announcements.
- * Usage: import { announce } from './LiveAnnouncer'; announce('New message from Alice');
+ * Usage: import { announce, announceAssertive } from './LiveAnnouncer';
+ *   announce('New message from Alice');          // polite
+ *   announceAssertive('Error: connection lost'); // assertive (interrupts)
  */
 
 import { useEffect, useRef } from 'react';
 
-let announceQueue: string[] = [];
-let setMessageFn: ((msg: string) => void) | null = null;
+type QueuedMsg = { text: string; priority: 'polite' | 'assertive' };
+let queue: QueuedMsg[] = [];
+let setPolite: ((msg: string) => void) | null = null;
+let setAssertive: ((msg: string) => void) | null = null;
 
-export function announce(message: string): void {
-  if (setMessageFn) {
-    setMessageFn(message);
+function enqueue(text: string, priority: 'polite' | 'assertive') {
+  const setter = priority === 'assertive' ? setAssertive : setPolite;
+  if (setter) {
+    setter(text);
   } else {
-    announceQueue.push(message);
+    queue.push({ text, priority });
   }
 }
 
+/** Announce politely — screen reader reads after current speech */
+export function announce(message: string): void {
+  enqueue(message, 'polite');
+}
+
+/** Announce assertively — interrupts current speech (use for errors) */
+export function announceAssertive(message: string): void {
+  enqueue(message, 'assertive');
+}
+
+const srOnly: React.CSSProperties = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  padding: 0,
+  margin: '-1px',
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+};
+
+function makeUpdater(ref: React.RefObject<HTMLDivElement | null>) {
+  return (msg: string) => {
+    if (ref.current) {
+      ref.current.textContent = '';
+      requestAnimationFrame(() => {
+        if (ref.current) ref.current.textContent = msg;
+      });
+    }
+  };
+}
+
 export default function LiveAnnouncer() {
-  const regionRef = useRef<HTMLDivElement>(null);
+  const politeRef = useRef<HTMLDivElement>(null);
+  const assertiveRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setMessageFn = (msg: string) => {
-      if (regionRef.current) {
-        // Clear then set to trigger re-announcement
-        regionRef.current.textContent = '';
-        requestAnimationFrame(() => {
-          if (regionRef.current) regionRef.current.textContent = msg;
-        });
-      }
-    };
+    setPolite = makeUpdater(politeRef);
+    setAssertive = makeUpdater(assertiveRef);
+
     // Flush queued announcements
-    while (announceQueue.length > 0) {
-      const msg = announceQueue.shift();
-      if (msg) setMessageFn(msg);
+    while (queue.length > 0) {
+      const item = queue.shift()!;
+      (item.priority === 'assertive' ? setAssertive : setPolite)(item.text);
     }
-    return () => { setMessageFn = null; };
+
+    return () => { setPolite = null; setAssertive = null; };
   }, []);
 
   return (
-    <div
-      ref={regionRef}
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
-      style={{
-        position: 'absolute',
-        width: '1px',
-        height: '1px',
-        padding: 0,
-        margin: '-1px',
-        overflow: 'hidden',
-        clip: 'rect(0, 0, 0, 0)',
-        whiteSpace: 'nowrap',
-        border: 0,
-      }}
-    />
+    <>
+      <div ref={politeRef} role="status" aria-live="polite" aria-atomic="true" style={srOnly} />
+      <div ref={assertiveRef} role="alert" aria-live="assertive" aria-atomic="true" style={srOnly} />
+    </>
   );
 }

@@ -48,9 +48,12 @@ export default function InviteAcceptScreen({ route, navigation }: Props) {
           guildId: result.guildId,
           guildName: preview?.guild.name ?? 'Portal',
         });
+        return;
       }
+      toast.error('Invite accepted, but the destination portal could not be opened.');
     } catch (err: any) {
       toast.error(err.message || 'Failed to join portal');
+    } finally {
       setJoining(false);
     }
   };
@@ -155,50 +158,58 @@ export default function InviteAcceptScreen({ route, navigation }: Props) {
   if (loading) {
     return (
       <PatternBackground>
-        <ActivityIndicator size="large" color={colors.accentPrimary} />
+        <View style={styles.container}>
+          <ActivityIndicator size="large" color={colors.accentPrimary} />
+        </View>
       </PatternBackground>
     );
   }
 
   if (error || !preview) {
     return (
-      <View style={styles.container}>
-        <Ionicons name="close-circle-outline" size={64} color={colors.error} />
-        <Text style={styles.errorText}>{error ?? 'Invite not found'}</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
+      <PatternBackground>
+        <View style={styles.container}>
+          <Ionicons name="close-circle-outline" size={64} color={colors.error} />
+          <Text style={styles.errorText}>{error ?? 'Invite not found'}</Text>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.guildIcon}>
-          <Text style={styles.guildIconText}>
-            {preview.guild.name.charAt(0).toUpperCase()}
-          </Text>
+    <PatternBackground>
+      <View style={styles.container}>
+        <View style={styles.card}>
+          <View style={styles.guildIcon}>
+            <Text style={styles.guildIconText}>
+              {preview.guild.name.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <Text style={styles.inviteLabel}>You have been invited to join</Text>
+          <Text style={styles.guildName}>{preview.guild.name}</Text>
+          {preview.guild.description ? (
+            <Text style={styles.guildDesc}>{preview.guild.description}</Text>
+          ) : null}
+          <View style={styles.statsRow}>
+            <Ionicons name="people-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.statText}>{preview.guild.memberCount} members</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.joinButton, joining && styles.joinButtonDisabled]}
+            onPress={handleJoin}
+            disabled={joining}
+          >
+            {joining ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Text style={styles.joinButtonText}>Accept Invite</Text>
+            )}
+          </TouchableOpacity>
         </View>
-        <Text style={styles.inviteLabel}>You have been invited to join</Text>
-        <Text style={styles.guildName}>{preview.guild.name}</Text>
-        {preview.guild.description ? (
-          <Text style={styles.guildDesc}>{preview.guild.description}</Text>
-        ) : null}
-        <View style={styles.statsRow}>
-          <Ionicons name="people-outline" size={16} color={colors.textMuted} />
-          <Text style={styles.statText}>{preview.guild.memberCount} members</Text>
-        </View>
-        <TouchableOpacity
-          style={[styles.joinButton, joining && styles.joinButtonDisabled]}
-          onPress={handleJoin}
-          disabled={joining}
-        >
-          <Text style={styles.joinButtonText}>
-            {joining ? 'Joining...' : 'Accept Invite'}
-          </Text>
-        </TouchableOpacity>
       </View>
-    </View>
+    </PatternBackground>
   );
 }

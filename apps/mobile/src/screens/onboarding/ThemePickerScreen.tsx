@@ -215,6 +215,11 @@ export default function ThemePickerScreen({ onComplete }: ThemePickerScreenProps
   const [neoDark, setNeoDark] = useState(false);
   const [glassDark, setGlassDark] = useState(true);
 
+  const previewTheme = useCallback((family: StyleFamily, isDark: boolean) => {
+    const themeName: ThemeName = isDark ? `${family}-dark` : family;
+    themeStore.setTheme(themeName);
+  }, []);
+
   const handleContinue = useCallback(async () => {
     const isDark = selectedFamily === 'neobrutalism' ? neoDark : glassDark;
     const themeName: ThemeName = isDark ? `${selectedFamily}-dark` : selectedFamily;
@@ -340,15 +345,29 @@ export default function ThemePickerScreen({ onComplete }: ThemePickerScreenProps
             family="neobrutalism"
             selected={selectedFamily === 'neobrutalism'}
             isDark={neoDark}
-            onSelect={() => setSelectedFamily('neobrutalism')}
-            onToggleDark={() => setNeoDark(!neoDark)}
+            onSelect={() => {
+              setSelectedFamily('neobrutalism');
+              previewTheme('neobrutalism', neoDark);
+            }}
+            onToggleDark={() => {
+              const next = !neoDark;
+              setNeoDark(next);
+              if (selectedFamily === 'neobrutalism') previewTheme('neobrutalism', next);
+            }}
           />
           <PreviewCard
             family="glassmorphism"
             selected={selectedFamily === 'glassmorphism'}
             isDark={glassDark}
-            onSelect={() => setSelectedFamily('glassmorphism')}
-            onToggleDark={() => setGlassDark(!glassDark)}
+            onSelect={() => {
+              setSelectedFamily('glassmorphism');
+              previewTheme('glassmorphism', glassDark);
+            }}
+            onToggleDark={() => {
+              const next = !glassDark;
+              setGlassDark(next);
+              if (selectedFamily === 'glassmorphism') previewTheme('glassmorphism', next);
+            }}
           />
         </Animated.View>
 

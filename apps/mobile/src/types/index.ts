@@ -117,6 +117,7 @@ export interface DMChannel {
   recipientId: string;
   recipient?: User;
   lastMessageAt: string | null;
+  lastMessagePreview?: string | null;
 }
 
 export type PresenceStatus = 'online' | 'idle' | 'dnd' | 'invisible' | 'offline';

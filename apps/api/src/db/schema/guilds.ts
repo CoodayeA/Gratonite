@@ -181,6 +181,9 @@ export const guilds = pgTable('guilds', {
 
   /** Federation settings (allowRemoteJoins, maxRemoteMembers, etc.). */
   federationSettings: jsonb('federation_settings').default({}),
+
+  /** Whether public stats page is enabled for this guild. */
+  publicStatsEnabled: boolean('public_stats_enabled').notNull().default(false),
 });
 
 /**

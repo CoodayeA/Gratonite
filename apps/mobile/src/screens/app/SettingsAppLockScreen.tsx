@@ -3,6 +3,7 @@ import { View, Text, Switch, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { appLockStore } from '../../lib/appLockStore';
 import { useTheme } from '../../lib/theme';
+import LoadingScreen from '../../components/LoadingScreen';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 import PatternBackground from '../../components/PatternBackground';
@@ -81,29 +82,31 @@ export default function SettingsAppLockScreen({ navigation }: Props) {
     },
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
-  if (loading) return null;
+  if (loading) return <LoadingScreen />;
 
   return (
     <PatternBackground>
-      <View style={styles.section}>
-        <View style={styles.row}>
-          <View style={styles.rowInfo}>
-            <Ionicons name="finger-print-outline" size={24} color={colors.accentPrimary} />
-            <Text style={styles.label}>Require {biometricType} Unlock</Text>
+      <View style={styles.container}>
+        <View style={styles.section}>
+          <View style={styles.row}>
+            <View style={styles.rowInfo}>
+              <Ionicons name="finger-print-outline" size={24} color={colors.accentPrimary} />
+              <Text style={styles.label}>Require {biometricType} Unlock</Text>
+            </View>
+            <Switch
+              value={enabled}
+              onValueChange={handleToggle}
+              trackColor={{ false: colors.bgElevated, true: colors.accentPrimary }}
+              thumbColor={colors.white}
+            />
           </View>
-          <Switch
-            value={enabled}
-            onValueChange={handleToggle}
-            trackColor={{ false: colors.bgElevated, true: colors.accentPrimary }}
-            thumbColor={colors.white}
-          />
+          <Text style={styles.description}>
+            When enabled, you'll need to use {biometricType} to open the app after being away for 30 seconds.
+          </Text>
+          <Text style={styles.biometricType}>
+            Detected: {biometricType}
+          </Text>
         </View>
-        <Text style={styles.description}>
-          When enabled, you'll need to use {biometricType} to open the app after being away for 30 seconds.
-        </Text>
-        <Text style={styles.biometricType}>
-          Detected: {biometricType}
-        </Text>
       </View>
     </PatternBackground>
   );

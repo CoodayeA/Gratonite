@@ -1,9 +1,16 @@
-import { useState } from 'react';
-import { X, BookOpen, Rocket } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, BookOpen, Rocket, Hash, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE } from '../../lib/api';
+import { API_BASE, api } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
 import { useToast } from '../ui/ToastManager';
+
+interface WelcomeBlock {
+    id: string;
+    type: 'message' | 'channels' | 'rules' | 'links';
+    enabled: boolean;
+    data: Record<string, any>;
+}
 
 interface GuildWelcomeModalProps {
     guildId: string;
@@ -15,6 +22,9 @@ interface GuildWelcomeModalProps {
     rulesChannelId?: string | null;
     onClose: () => void;
 }
+
+const WELCOME_STORAGE_KEY = 'gratonite-welcome-config';
+const DISMISS_KEY = 'gratonite-welcome-dismissed';
 
 const GuildWelcomeModal = ({
     guildId,
@@ -29,9 +39,49 @@ const GuildWelcomeModal = ({
     const navigate = useNavigate();
     const { addToast } = useToast();
     const [completing, setCompleting] = useState(false);
+    const [dontShowAgain, setDontShowAgain] = useState(false);
+    const [blocks, setBlocks] = useState<WelcomeBlock[]>([]);
+    const [channels, setChannels] = useState<{ id: string; name: string; topic: string | null }[]>([]);
+
+    // Load welcome blocks from localStorage
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(WELCOME_STORAGE_KEY);
+            if (raw) {
+                const all = JSON.parse(raw);
+                if (all[guildId]) {
+                    setBlocks(all[guildId]);
+                    return;
+                }
+            }
+        } catch { /* ignore */ }
+        // Default: just show message block
+        setBlocks([{ id: 'msg', type: 'message', enabled: true, data: { text: '' } }]);
+    }, [guildId]);
+
+    // Fetch channels for the recommended channels block
+    useEffect(() => {
+        const hasChannelBlock = blocks.some(b => b.type === 'channels' && b.enabled && b.data.channelIds?.length > 0);
+        if (!hasChannelBlock) return;
+        api.get<any>(`/guilds/${guildId}/channels`).then((data: any) => {
+            const mapped = (Array.isArray(data) ? data : data.channels || []).map((ch: any) => ({
+                id: ch.id,
+                name: ch.name,
+                topic: ch.topic || null,
+            }));
+            setChannels(mapped);
+        }).catch(() => {});
+    }, [guildId, blocks]);
 
     const handleComplete = async () => {
         setCompleting(true);
+        if (dontShowAgain) {
+            try {
+                const dismissed = JSON.parse(localStorage.getItem(DISMISS_KEY) || '{}');
+                dismissed[guildId] = true;
+                localStorage.setItem(DISMISS_KEY, JSON.stringify(dismissed));
+            } catch { /* ignore */ }
+        }
         try {
             await fetch(`${API_BASE}/guilds/${guildId}/onboarding/complete`, {
                 method: 'POST',
@@ -41,7 +91,6 @@ const GuildWelcomeModal = ({
                 },
             });
         } catch {
-            // Non-blocking — just close the modal even if the API call fails
             addToast({ title: 'Welcome!', description: `You joined ${guildName}.`, variant: 'info' });
         } finally {
             setCompleting(false);
@@ -57,6 +106,7 @@ const GuildWelcomeModal = ({
 
     const bannerUrl = bannerHash ? `${API_BASE}/files/${bannerHash}` : null;
     const guildInitial = guildName.charAt(0).toUpperCase();
+    const enabledBlocks = blocks.filter(b => b.enabled);
 
     return (
         <div
@@ -136,15 +186,114 @@ const GuildWelcomeModal = ({
                         {memberCount.toLocaleString()} {memberCount === 1 ? 'member' : 'members'}
                     </p>
 
-                    {/* Welcome message */}
-                    <div style={{
-                        background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
-                        borderRadius: '10px', padding: '16px', marginBottom: '24px',
-                        fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6,
-                        whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                    {/* Configurable blocks */}
+                    {enabledBlocks.map(block => (
+                        <div key={block.id} style={{ marginBottom: '16px' }}>
+                            {block.type === 'message' && (
+                                <div style={{
+                                    background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                    borderRadius: '10px', padding: '16px',
+                                    fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6,
+                                    whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                                }}>
+                                    {block.data.text || welcomeMessage}
+                                </div>
+                            )}
+                            {block.type === 'channels' && block.data.channelIds?.length > 0 && (
+                                <div>
+                                    <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '8px', letterSpacing: '0.05em' }}>
+                                        Recommended Channels
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        {block.data.channelIds.map((cid: string) => {
+                                            const ch = channels.find(c => c.id === cid);
+                                            return (
+                                                <button
+                                                    key={cid}
+                                                    onClick={async () => {
+                                                        await handleComplete();
+                                                        navigate(`/guild/${guildId}/channel/${cid}`);
+                                                    }}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '8px',
+                                                        padding: '10px 12px', background: 'var(--bg-tertiary)',
+                                                        border: '1px solid var(--stroke)', borderRadius: '8px',
+                                                        color: 'var(--text-primary)', fontSize: '14px',
+                                                        cursor: 'pointer', textAlign: 'left', width: '100%',
+                                                    }}
+                                                >
+                                                    <Hash size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                                    <span style={{ fontWeight: 500 }}>{ch?.name || cid}</span>
+                                                    {ch?.topic && (
+                                                        <span style={{ color: 'var(--text-muted)', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                                                            {ch.topic}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                            {block.type === 'rules' && block.data.summary && (
+                                <div>
+                                    <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '8px', letterSpacing: '0.05em' }}>
+                                        Server Rules
+                                    </div>
+                                    <div style={{
+                                        background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                        borderRadius: '10px', padding: '16px',
+                                        fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6,
+                                        whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                                    }}>
+                                        {block.data.summary}
+                                    </div>
+                                </div>
+                            )}
+                            {block.type === 'links' && block.data.items?.length > 0 && (
+                                <div>
+                                    <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '8px', letterSpacing: '0.05em' }}>
+                                        Resources
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        {block.data.items.map((item: { label: string; url: string }, i: number) => (
+                                            <a
+                                                key={i}
+                                                href={item.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                                    padding: '10px 12px', background: 'var(--bg-tertiary)',
+                                                    border: '1px solid var(--stroke)', borderRadius: '8px',
+                                                    color: 'var(--accent-primary)', fontSize: '14px',
+                                                    textDecoration: 'none',
+                                                }}
+                                            >
+                                                <ExternalLink size={16} style={{ flexShrink: 0 }} />
+                                                <span>{item.label || item.url}</span>
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+
+                    {/* Don't show again */}
+                    <label style={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer',
+                        marginBottom: '16px',
                     }}>
-                        {welcomeMessage}
-                    </div>
+                        <input
+                            type="checkbox"
+                            checked={dontShowAgain}
+                            onChange={e => setDontShowAgain(e.target.checked)}
+                            style={{ accentColor: 'var(--accent-primary)' }}
+                        />
+                        Don't show this again
+                    </label>
 
                     {/* Actions */}
                     <div style={{ display: 'flex', gap: '12px' }}>

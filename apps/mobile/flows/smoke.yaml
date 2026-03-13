@@ -1,0 +1,4 @@
+appId: chat.gratonite.mobile
+---
+- runFlow: login.yaml
+- runFlow: send-message.yaml

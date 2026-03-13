@@ -12,6 +12,7 @@ import {
 import { guilds as guildsApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme, useGlass } from '../../lib/theme';
+import { useAppState } from '../../contexts/AppStateContext';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 import PatternBackground from '../../components/PatternBackground';
@@ -22,6 +23,7 @@ export default function CreateGuildScreen({ navigation }: Props) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const glass = useGlass();
   const toast = useToast();
+  const { refreshGuilds } = useAppState();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,10 +36,13 @@ export default function CreateGuildScreen({ navigation }: Props) {
 
     setLoading(true);
     try {
+      // MOBILE-POLISH: backend/mobile API does not yet support guild icon upload
+      // during creation, so this flow can only create name/description for now.
       const guild = await guildsApi.create({
         name: name.trim(),
         description: description.trim() || undefined,
       });
+      await refreshGuilds().catch(() => {});
       navigation.replace('GuildChannels', { guildId: guild.id, guildName: guild.name });
     } catch (err: any) {
       toast.error(err.message || 'Failed to create portal');

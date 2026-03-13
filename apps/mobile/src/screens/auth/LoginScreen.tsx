@@ -190,6 +190,13 @@ export default function LoginScreen({ navigation }: Props) {
       marginBottom: spacing.lg,
       marginHorizontal: spacing.xl,
     },
+    forgotText: {
+      color: colors.accentPrimary,
+      fontSize: fontSize.sm,
+      fontWeight: '600',
+      textAlign: 'right',
+      marginTop: spacing.xs,
+    },
     linkButton: {
       alignItems: 'center',
       marginTop: spacing.md,
@@ -341,6 +348,14 @@ export default function LoginScreen({ navigation }: Props) {
                 />
               </TouchableOpacity>
             </View>
+
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ForgotPassword')}
+              accessibilityRole="button"
+              accessibilityLabel="Forgot password"
+            >
+              <Text style={styles.forgotText}>Forgot Password?</Text>
+            </TouchableOpacity>
 
             {mfaRequired && (
               <Animated.View entering={FadeInDown.duration(400)} style={styles.mfaCard}>

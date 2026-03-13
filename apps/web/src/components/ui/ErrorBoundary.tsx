@@ -1,4 +1,5 @@
 import React from 'react';
+import { reportError } from '../../lib/errorReporter';
 
 interface Props {
     children: React.ReactNode;
@@ -22,6 +23,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
     componentDidCatch(error: Error, info: React.ErrorInfo) {
         console.error('[ErrorBoundary]', error, info.componentStack);
+        reportError(error, { componentStack: info.componentStack ?? undefined });
     }
 
     render() {
@@ -33,22 +35,35 @@ export class ErrorBoundary extends React.Component<Props, State> {
                     justifyContent: 'center', flex: 1, padding: '48px',
                     color: 'var(--text-secondary)', gap: '16px'
                 }}>
-                    <div style={{ fontSize: '48px' }}>💥</div>
+                    <div style={{ fontSize: '48px' }}>!</div>
                     <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)' }}>
                         Something went wrong
                     </h2>
                     <p style={{ fontSize: '14px', maxWidth: '400px', textAlign: 'center', lineHeight: 1.6 }}>
                         {this.state.error?.message || 'An unexpected error occurred in this section.'}
                     </p>
-                    <button
-                        onClick={() => this.setState({ hasError: false })}
-                        style={{
-                            padding: '10px 24px', background: 'var(--accent-primary)', color: '#111',
-                            border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer'
-                        }}
-                    >
-                        Try Again
-                    </button>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                        <button
+                            onClick={() => window.location.reload()}
+                            style={{
+                                padding: '10px 24px', background: 'var(--accent-primary)', color: '#111',
+                                border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer'
+                            }}
+                        >
+                            Reload
+                        </button>
+                        <button
+                            onClick={() => this.setState({ hasError: false })}
+                            style={{
+                                padding: '10px 24px', background: 'transparent',
+                                color: 'var(--text-secondary)',
+                                border: '1px solid var(--text-muted)', borderRadius: '8px',
+                                fontWeight: 600, cursor: 'pointer'
+                            }}
+                        >
+                            Try Again
+                        </button>
+                    </div>
                 </div>
             );
         }

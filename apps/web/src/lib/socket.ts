@@ -463,6 +463,104 @@ export function onE2EStateChanged(cb: E2EStateChangedCallback): () => void {
   return () => { e2eStateChangedListeners.delete(cb); };
 }
 
+/* ── Watch Party events ────────────────────────────────────── */
+
+export interface WatchPartySyncPayload {
+  channelId: string;
+  partyId: string;
+  action: 'play' | 'pause' | 'seek';
+  currentTime: number;
+  userId: string;
+}
+
+export interface WatchPartyReactionPayload {
+  channelId: string;
+  emoji: string;
+  userId: string;
+}
+
+type WatchPartySyncCallback = (payload: WatchPartySyncPayload) => void;
+type WatchPartyReactionCallback = (payload: WatchPartyReactionPayload) => void;
+
+const watchPartySyncListeners = new Set<WatchPartySyncCallback>();
+const watchPartyReactionListeners = new Set<WatchPartyReactionCallback>();
+
+export function onWatchPartySync(cb: WatchPartySyncCallback): () => void {
+  watchPartySyncListeners.add(cb);
+  return () => { watchPartySyncListeners.delete(cb); };
+}
+
+export function onWatchPartyReaction(cb: WatchPartyReactionCallback): () => void {
+  watchPartyReactionListeners.add(cb);
+  return () => { watchPartyReactionListeners.delete(cb); };
+}
+
+/* ── Collaborative Playlist events ─────────────────────────── */
+
+export interface PlaylistUpdatePayload {
+  channelId: string;
+  playlistId: string;
+  action: string;
+  track: any;
+  userId: string;
+}
+
+export interface PlaylistVotePayload {
+  channelId: string;
+  trackId: string;
+  vote: 'skip' | 'keep';
+  userId: string;
+}
+
+type PlaylistUpdateCallback = (payload: PlaylistUpdatePayload) => void;
+type PlaylistVoteCallback = (payload: PlaylistVotePayload) => void;
+
+const playlistUpdateListeners = new Set<PlaylistUpdateCallback>();
+const playlistVoteListeners = new Set<PlaylistVoteCallback>();
+
+export function onPlaylistUpdate(cb: PlaylistUpdateCallback): () => void {
+  playlistUpdateListeners.add(cb);
+  return () => { playlistUpdateListeners.delete(cb); };
+}
+
+export function onPlaylistVote(cb: PlaylistVoteCallback): () => void {
+  playlistVoteListeners.add(cb);
+  return () => { playlistVoteListeners.delete(cb); };
+}
+
+/* ── Screen Annotation events ──────────────────────────────── */
+
+export interface ScreenAnnotationPayload {
+  channelId: string;
+  tool: string;
+  points: number[];
+  color: string;
+  width: number;
+  id: string;
+  userId: string;
+}
+
+export interface ScreenAnnotationClearPayload {
+  channelId: string;
+  userId: string;
+}
+
+type ScreenAnnotationCallback = (payload: ScreenAnnotationPayload) => void;
+type ScreenAnnotationClearCallback = (payload: ScreenAnnotationClearPayload) => void;
+
+const screenAnnotationListeners = new Set<ScreenAnnotationCallback>();
+const screenAnnotationClearListeners = new Set<ScreenAnnotationClearCallback>();
+
+export function onScreenAnnotation(cb: ScreenAnnotationCallback): () => void {
+  screenAnnotationListeners.add(cb);
+  return () => { screenAnnotationListeners.delete(cb); };
+}
+
+export function onScreenAnnotationClear(cb: ScreenAnnotationClearCallback): () => void {
+  screenAnnotationClearListeners.add(cb);
+  return () => { screenAnnotationClearListeners.delete(cb); };
+}
+
 /* ── Call signaling events ─────────────────────────────────── */
 
 export interface CallInvitePayload {
@@ -556,6 +654,68 @@ let userChosenStatus: string = 'online'; // tracks the user's explicit status ch
 
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
+/* ── Connection state tracking ─────────────────────────────── */
+
+export type ConnectionState = 'connected' | 'connecting' | 'disconnected' | 'reconnecting';
+
+type ConnectionStateListener = (state: ConnectionState) => void;
+
+let connectionState: ConnectionState = 'disconnected';
+const connectionStateListeners = new Set<ConnectionStateListener>();
+
+function setConnectionState(state: ConnectionState) {
+  if (connectionState === state) return;
+  connectionState = state;
+  connectionStateListeners.forEach(cb => cb(state));
+}
+
+export function getConnectionState(): ConnectionState {
+  return connectionState;
+}
+
+export function onConnectionStateChange(cb: ConnectionStateListener): () => void {
+  connectionStateListeners.add(cb);
+  return () => { connectionStateListeners.delete(cb); };
+}
+
+/* ── Outgoing event queue (buffered while disconnected) ──── */
+
+interface QueuedEvent {
+  event: string;
+  data: unknown;
+}
+
+const eventQueue: QueuedEvent[] = [];
+
+function enqueueEvent(event: string, data: unknown) {
+  eventQueue.push({ event, data });
+}
+
+function flushEventQueue() {
+  if (!socket?.connected) return;
+  while (eventQueue.length > 0) {
+    const { event, data } = eventQueue.shift()!;
+    socket.emit(event, data);
+  }
+}
+
+/**
+ * Emit a socket event, or queue it if currently disconnected.
+ * Use this for outgoing events that should survive brief disconnections.
+ */
+export function emitOrQueue(event: string, data: unknown): void {
+  if (socket?.connected) {
+    socket.emit(event, data);
+  } else {
+    enqueueEvent(event, data);
+  }
+}
+
+/* ── Track joined guild rooms for re-join on reconnect ────── */
+
+const joinedGuildRooms = new Set<string>();
+const joinedChannels = new Set<string>();
+
 function startHeartbeat() {
   stopHeartbeat();
   heartbeatInterval = setInterval(() => {
@@ -603,6 +763,8 @@ function stopIdleDetection() {
 export function connectSocket(): GratoniteSocket {
   if (socket && (socket.connected || socket.active)) return socket;
 
+  setConnectionState('connecting');
+
   const explicitWsUrl = import.meta.env.VITE_WS_URL;
   const apiBase = import.meta.env.VITE_API_URL as string | undefined;
   let derivedWsUrl: string | null = null;
@@ -632,19 +794,39 @@ export function connectSocket(): GratoniteSocket {
     reconnectionDelay: 1000,
     reconnectionDelayMax: 30000,
     reconnectionAttempts: Infinity,
-    randomizationFactor: 0.5,
+    randomizationFactor: 0.25,
     auth: token ? { token } : undefined,
     query: token ? { token } : undefined,
   });
 
   socket.on('connect', () => {
-    // Also send IDENTIFY for compatibility — server already authed via handshake
+    setConnectionState('connected');
+
+    // Re-authenticate with fresh token (may have refreshed during disconnection)
     const t = getAccessToken();
     if (t) {
       socket!.emit('IDENTIFY', { token: t });
     }
+
+    // Re-join all tracked guild rooms
+    for (const guildId of joinedGuildRooms) {
+      socket!.emit('JOIN_GUILD_ROOM', { guildId });
+    }
+
+    // Re-join all tracked channels
+    for (const channelId of joinedChannels) {
+      socket!.emit('CHANNEL_JOIN', { channelId });
+    }
+
+    // Flush any events queued while disconnected
+    flushEventQueue();
+
     // Notify reconnect listeners (fires on initial connect too, banner handles state)
     socketReconnectListeners.forEach(cb => cb());
+  });
+
+  socket.io.on('reconnect_attempt', () => {
+    setConnectionState('reconnecting');
   });
 
   socket.on('READY', (data: { userId?: string; sessionId?: string; status?: string }) => {
@@ -813,14 +995,39 @@ export function connectSocket(): GratoniteSocket {
     e2eStateChangedListeners.forEach(cb => cb(data));
   });
 
+  socket.on('WATCH_PARTY_SYNC', (data: WatchPartySyncPayload) => {
+    watchPartySyncListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('WATCH_PARTY_REACTION', (data: WatchPartyReactionPayload) => {
+    watchPartyReactionListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('PLAYLIST_UPDATE', (data: PlaylistUpdatePayload) => {
+    playlistUpdateListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('PLAYLIST_VOTE', (data: PlaylistVotePayload) => {
+    playlistVoteListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('SCREEN_ANNOTATION', (data: ScreenAnnotationPayload) => {
+    screenAnnotationListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('SCREEN_ANNOTATION_CLEAR', (data: ScreenAnnotationClearPayload) => {
+    screenAnnotationClearListeners.forEach(cb => cb(data));
+  });
+
   socket.on('disconnect', () => {
+    setConnectionState('disconnected');
     stopHeartbeat();
     stopIdleDetection();
     socketDisconnectListeners.forEach(cb => cb());
   });
 
   socket.on('connect_error', () => {
-    // Reconnection is handled automatically by socket.io
+    setConnectionState('reconnecting');
   });
 
   socket.connect();
@@ -828,8 +1035,12 @@ export function connectSocket(): GratoniteSocket {
 }
 
 export function disconnectSocket(): void {
+  setConnectionState('disconnected');
   stopHeartbeat();
   stopIdleDetection();
+  joinedGuildRooms.clear();
+  joinedChannels.clear();
+  eventQueue.length = 0;
   socket?.disconnect();
   socket = null;
 }
@@ -840,16 +1051,19 @@ export function getSocket(): GratoniteSocket | null {
 
 /** Join a channel room to receive real-time messages */
 export function joinChannel(channelId: string): void {
+  joinedChannels.add(channelId);
   socket?.emit('CHANNEL_JOIN', { channelId });
 }
 
 /** Leave a channel room */
 export function leaveChannel(channelId: string): void {
+  joinedChannels.delete(channelId);
   socket?.emit('CHANNEL_LEAVE', { channelId });
 }
 
 /** Join a guild room to receive guild-level real-time events */
 export function joinGuildRoom(guildId: string): void {
+  joinedGuildRooms.add(guildId);
   socket?.emit('JOIN_GUILD_ROOM', { guildId });
 }
 

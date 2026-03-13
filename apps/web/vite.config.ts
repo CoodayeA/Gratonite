@@ -9,9 +9,12 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-react': ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query', '@tanstack/react-virtual'],
           'vendor-socket': ['socket.io-client'],
           'vendor-livekit': ['livekit-client'],
+          'vendor-icons': ['lucide-react'],
+          'vendor-motion': ['framer-motion'],
+          'vendor-code': ['highlight.js', 'dompurify'],
         },
       },
     },

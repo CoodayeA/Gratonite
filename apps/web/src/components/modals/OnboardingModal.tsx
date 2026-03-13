@@ -121,7 +121,7 @@ const OnboardingModal = ({ onClose }: { onClose: () => void }) => {
                         <div style={{ width: '80px', height: '80px', background: 'var(--accent-purple)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
                             <Sparkles size={40} color="white" />
                         </div>
-                        <h1 className="auth-heading">Welcome to Gratonite</h1>
+                        <h2 className="auth-heading">Welcome to Gratonite</h2>
                         <p className="auth-subtext">Let's set up your profile so people know who you are.</p>
                     </div>
                 )}
@@ -273,7 +273,7 @@ const OnboardingModal = ({ onClose }: { onClose: () => void }) => {
                         <div style={{ width: '80px', height: '80px', background: 'var(--success)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
                             <Check size={40} color="white" />
                         </div>
-                        <h1 className="auth-heading">You're all set!</h1>
+                        <h2 className="auth-heading">You're all set!</h2>
                         <p className="auth-subtext">Dive into Gratonite and start exploring.</p>
                     </div>
                 )}

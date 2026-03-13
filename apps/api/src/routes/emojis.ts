@@ -18,10 +18,11 @@ import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, asc } from 'drizzle-orm';
 
 import { db } from '../db/index';
 import { guildEmojis } from '../db/schema/emojis';
+import { emojiCategories } from '../db/schema/emoji-categories';
 import { guilds, guildMembers } from '../db/schema/guilds';
 import { files } from '../db/schema/files';
 import { Permissions } from '../db/schema/roles';
@@ -148,6 +149,7 @@ emojisRouter.get('/', requireAuth, async (req: Request, res: Response): Promise<
       name: row.name,
       imageHash: row.imageUrl, // imageUrl column stores the file record ID
       uploadedBy: row.uploadedBy,
+      categoryId: row.categoryId || null,
       createdAt: row.createdAt,
     }));
 
@@ -235,6 +237,7 @@ emojisRouter.post('/', requireAuth, upload.single('file'), async (req: Request, 
       .returning();
 
     // Insert emoji record — store file record ID in imageUrl column
+    const categoryId = (req.body?.categoryId ?? '').trim() || null;
     const [emoji] = await db
       .insert(guildEmojis)
       .values({
@@ -242,6 +245,7 @@ emojisRouter.post('/', requireAuth, upload.single('file'), async (req: Request, 
         name,
         imageUrl: fileRecord.id,
         uploadedBy: req.userId!,
+        categoryId,
       })
       .returning();
 
@@ -251,6 +255,7 @@ emojisRouter.post('/', requireAuth, upload.single('file'), async (req: Request, 
       name: emoji.name,
       imageHash: fileRecord.id, // frontend uses this as /files/:imageHash
       uploadedBy: emoji.uploadedBy,
+      categoryId: emoji.categoryId || null,
       createdAt: emoji.createdAt,
     });
   } catch (err) {
@@ -311,6 +316,163 @@ emojisRouter.delete('/:emojiId', requireAuth, async (req: Request, res: Response
     }
 
     res.status(200).json({ code: 'OK', message: 'Emoji deleted' });
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /:emojiId — Update an emoji (category assignment)
+// ---------------------------------------------------------------------------
+
+emojisRouter.patch('/:emojiId', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { guildId, emojiId } = req.params as Record<string, string>;
+    await requireMember(guildId, req.userId!);
+
+    if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_EMOJIS))) {
+      throw new AppError(403, 'Missing MANAGE_EMOJIS permission', 'FORBIDDEN');
+    }
+
+    const [emoji] = await db
+      .select()
+      .from(guildEmojis)
+      .where(and(eq(guildEmojis.id, emojiId), eq(guildEmojis.guildId, guildId)))
+      .limit(1);
+
+    if (!emoji) {
+      throw new AppError(404, 'Emoji not found', 'NOT_FOUND');
+    }
+
+    const updates: Record<string, any> = {};
+    if ('categoryId' in req.body) {
+      updates.categoryId = req.body.categoryId || null;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await db.update(guildEmojis).set(updates).where(eq(guildEmojis.id, emojiId));
+    }
+
+    res.status(200).json({ code: 'OK', message: 'Emoji updated' });
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Emoji Categories CRUD
+// ---------------------------------------------------------------------------
+
+// GET /categories — List emoji categories for this guild
+emojisRouter.get('/categories/list', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { guildId } = req.params as Record<string, string>;
+    await requireMember(guildId, req.userId!);
+
+    const rows = await db
+      .select()
+      .from(emojiCategories)
+      .where(eq(emojiCategories.guildId, guildId))
+      .orderBy(asc(emojiCategories.sortOrder));
+
+    res.status(200).json(rows);
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// POST /categories — Create a new emoji category
+emojisRouter.post('/categories', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { guildId } = req.params as Record<string, string>;
+    await requireMember(guildId, req.userId!);
+
+    if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_EMOJIS))) {
+      throw new AppError(403, 'Missing MANAGE_EMOJIS permission', 'FORBIDDEN');
+    }
+
+    const name = (req.body?.name ?? '').trim();
+    if (!name || name.length > 32) {
+      throw new AppError(400, 'Category name must be 1-32 characters', 'VALIDATION_ERROR');
+    }
+
+    // Get next sort order
+    const existing = await db
+      .select({ sortOrder: emojiCategories.sortOrder })
+      .from(emojiCategories)
+      .where(eq(emojiCategories.guildId, guildId))
+      .orderBy(asc(emojiCategories.sortOrder));
+
+    const nextSort = existing.length > 0 ? existing[existing.length - 1].sortOrder + 1 : 0;
+
+    const [cat] = await db
+      .insert(emojiCategories)
+      .values({ guildId, name, sortOrder: nextSort })
+      .returning();
+
+    res.status(201).json(cat);
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// PATCH /categories/:categoryId — Rename a category
+emojisRouter.patch('/categories/:categoryId', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { guildId, categoryId } = req.params as Record<string, string>;
+    await requireMember(guildId, req.userId!);
+
+    if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_EMOJIS))) {
+      throw new AppError(403, 'Missing MANAGE_EMOJIS permission', 'FORBIDDEN');
+    }
+
+    const name = (req.body?.name ?? '').trim();
+    if (!name || name.length > 32) {
+      throw new AppError(400, 'Category name must be 1-32 characters', 'VALIDATION_ERROR');
+    }
+
+    const [cat] = await db
+      .select()
+      .from(emojiCategories)
+      .where(and(eq(emojiCategories.id, categoryId), eq(emojiCategories.guildId, guildId)))
+      .limit(1);
+
+    if (!cat) {
+      throw new AppError(404, 'Category not found', 'NOT_FOUND');
+    }
+
+    await db.update(emojiCategories).set({ name }).where(eq(emojiCategories.id, categoryId));
+
+    res.status(200).json({ ...cat, name });
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// DELETE /categories/:categoryId — Delete a category (emojis become uncategorized)
+emojisRouter.delete('/categories/:categoryId', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { guildId, categoryId } = req.params as Record<string, string>;
+    await requireMember(guildId, req.userId!);
+
+    if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_EMOJIS))) {
+      throw new AppError(403, 'Missing MANAGE_EMOJIS permission', 'FORBIDDEN');
+    }
+
+    const [cat] = await db
+      .select()
+      .from(emojiCategories)
+      .where(and(eq(emojiCategories.id, categoryId), eq(emojiCategories.guildId, guildId)))
+      .limit(1);
+
+    if (!cat) {
+      throw new AppError(404, 'Category not found', 'NOT_FOUND');
+    }
+
+    // Emojis referencing this category get SET NULL via FK constraint
+    await db.delete(emojiCategories).where(eq(emojiCategories.id, categoryId));
+
+    res.status(200).json({ code: 'OK', message: 'Category deleted' });
   } catch (err) {
     handleAppError(res, err);
   }

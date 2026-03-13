@@ -1,10 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, UserPlus, MoreHorizontal, Gamepad2, Headphones, Eye, Star, Clock, Music, Cake, Link2, Shield } from 'lucide-react';
+import { MessageSquare, UserPlus, MoreHorizontal, Gamepad2, Headphones, Eye, Star, Clock, Music, Cake, Link2, Shield, Code, Tv, Play } from 'lucide-react';
 import { api, API_BASE } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
 import { useUser } from '../../contexts/UserContext';
 import Avatar from './Avatar';
 import { ReputationBadge } from './ReputationBadge';
+
+const POPOVER_PROVIDER_ICONS: Record<string, React.ReactNode> = {
+    github: <Code size={12} />,
+    twitch: <Tv size={12} />,
+    steam: <Gamepad2 size={12} />,
+    twitter: <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>,
+    youtube: <Play size={12} />,
+    spotify: <Music size={12} />,
+};
 
 const BADGE_META: Record<string, { label: string; emoji: string; color: string }> = {
     admin: { label: 'Admin', emoji: '\u{1F6E1}\uFE0F', color: '#ed4245' },
@@ -437,6 +446,37 @@ const UserProfilePopover = ({
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px' }}>
                             {mutuals.mutualFriends.length} mutual friend{mutuals.mutualFriends.length !== 1 ? 's' : ''}
                         </p>
+                    )}
+
+                    {/* Connected Accounts */}
+                    {connections.length > 0 && (
+                        <div style={{ marginBottom: '8px' }}>
+                            <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '6px', letterSpacing: '0.05em' }}>
+                                Connections
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                {connections.map((conn) => {
+                                    const icon = POPOVER_PROVIDER_ICONS[conn.provider.toLowerCase()];
+                                    const label = conn.provider.charAt(0).toUpperCase() + conn.provider.slice(1);
+                                    const content = (
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                            {icon && <span style={{ display: 'flex', alignItems: 'center', color: 'var(--text-muted)' }}>{icon}</span>}
+                                            <span style={{ fontSize: '11px', color: 'var(--text-primary)', fontWeight: 500 }}>{conn.providerUsername}</span>
+                                        </span>
+                                    );
+                                    const style: React.CSSProperties = {
+                                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                        padding: '3px 8px', borderRadius: '12px',
+                                        background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                        fontSize: '11px', textDecoration: 'none', color: 'var(--text-secondary)',
+                                    };
+                                    if (conn.profileUrl) {
+                                        return <a key={conn.provider} href={conn.profileUrl} target="_blank" rel="noopener noreferrer" style={style} title={`${label}: ${conn.providerUsername}`}>{content}</a>;
+                                    }
+                                    return <div key={conn.provider} style={style} title={`${label}: ${conn.providerUsername}`}>{content}</div>;
+                                })}
+                            </div>
+                        </div>
                     )}
 
                     {/* Loading indicator */}

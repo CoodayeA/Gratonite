@@ -79,7 +79,10 @@ export default function ChannelCreateScreen({ route, navigation }: Props) {
         name: trimmedName,
         type,
         parentId: selectedParent,
+        nsfw,
+        slowModeSeconds: type === 'text' ? slowMode : undefined,
       });
+      // MOBILE-POLISH: The backend should return created-channel moderation fields like nsfw and slowModeSeconds so mobile can confirm they persisted without a refetch.
       toast.success(`Channel #${trimmedName} created`);
       navigation.goBack();
     } catch (err: any) {

@@ -64,6 +64,19 @@ const GuildOverview = () => {
     // Fetch onboarding status and show welcome modal if not completed
     useEffect(() => {
         if (!guildId) return;
+        // Check "don't show again" dismissal
+        try {
+            const dismissed = JSON.parse(localStorage.getItem('gratonite-welcome-dismissed') || '{}');
+            if (dismissed[guildId]) return;
+        } catch { /* ignore */ }
+        // Check if welcome screen is enabled for this guild
+        try {
+            const wcRaw = localStorage.getItem('gratonite-welcome-config');
+            if (wcRaw) {
+                const wcAll = JSON.parse(wcRaw);
+                if (wcAll[`${guildId}_enabled`] === false) return;
+            }
+        } catch { /* ignore */ }
         void fetch(`${API_BASE}/guilds/${guildId}/onboarding`, {
             credentials: 'include',
             headers: {

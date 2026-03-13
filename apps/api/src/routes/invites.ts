@@ -15,6 +15,7 @@ import { redis } from '../lib/redis';
 import { publicInviteRateLimit } from '../middleware/rateLimit';
 import { toRows } from '../lib/to-rows.js';
 import crypto from 'crypto';
+import { recordActivity } from './activity';
 
 export const invitesRouter = Router();
 
@@ -227,6 +228,10 @@ invitesRouter.post('/invites/:code', requireAuth, async (req: Request, res: Resp
   try {
     getIO().to(`guild:${invite.guildId}`).emit('GUILD_MEMBER_ADD', { guildId: invite.guildId, user });
   } catch {}
+
+  // Record activity event
+  const [guildInfo] = await db.select({ name: guilds.name }).from(guilds).where(eq(guilds.id, invite.guildId)).limit(1);
+  recordActivity(req.userId!, 'joined_server', { guildId: invite.guildId, guildName: guildInfo?.name ?? 'Unknown' });
 
   res.json({ code: 'OK', guildId: invite.guildId });
 });

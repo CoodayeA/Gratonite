@@ -1,0 +1,22 @@
+appId: chat.gratonite.mobile
+env:
+  TEST_REGISTER_USERNAME: ${MAESTRO_REGISTER_USERNAME}
+  TEST_REGISTER_EMAIL: ${MAESTRO_REGISTER_EMAIL}
+  TEST_REGISTER_PASSWORD: ${MAESTRO_REGISTER_PASSWORD}
+---
+- launchApp
+- assertVisible: "Sign In"
+- tapOn: "Create one"
+- assertVisible: "Create Account"
+- tapOn: "Username"
+- inputText: "${TEST_REGISTER_USERNAME}"
+- tapOn: "Email address"
+- inputText: "${TEST_REGISTER_EMAIL}"
+- tapOn: "Password"
+- inputText: "${TEST_REGISTER_PASSWORD}"
+- tapOn: "Confirm password"
+- inputText: "${TEST_REGISTER_PASSWORD}"
+- tapOn: "Create Account"
+- assertVisible:
+    text: "Verify"
+    optional: true

@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, AtSign, CheckCircle2, Trash2, X, ChevronDown, ChevronRight, MessageSquare, Heart, UserPlus } from 'lucide-react';
+import { Bell, AtSign, CheckCircle2, Trash2, X, ChevronDown, ChevronRight, MessageSquare, Heart, UserPlus, Mail, Settings, Gavel } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
 import Avatar from '../ui/Avatar';
@@ -18,6 +18,8 @@ type Notification = {
     dateRaw: number;
     read: boolean;
     channel: string;
+    guildName?: string;
+    guildId?: string;
 };
 
 type NotifGroup = {
@@ -29,7 +31,33 @@ type NotifGroup = {
     unreadCount: number;
 };
 
+type DaySection = {
+    key: string;
+    label: string;
+    items: (Notification | NotifGroup)[];
+};
+
+type FilterTab = 'all' | 'mentions' | 'dms' | 'social' | 'system';
+
+const FILTER_STORAGE_KEY = 'gratonite-notif-filter';
+
 const GROUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+
+function getFilterCategory(type: string): FilterTab {
+    switch (type) {
+        case 'mention': return 'mentions';
+        case 'dm': return 'dms';
+        case 'friend_request': return 'social';
+        case 'auction_new_bid':
+        case 'auction_outbid':
+        case 'auction_won':
+        case 'auction_sold':
+        case 'auction_ended':
+        case 'system':
+            return 'system';
+        default: return 'all';
+    }
+}
 
 function groupNotifications(notifications: Notification[]): (Notification | NotifGroup)[] {
     const result: (Notification | NotifGroup)[] = [];
@@ -39,7 +67,6 @@ function groupNotifications(notifications: Notification[]): (Notification | Noti
         if (used.has(notifications[i].id)) continue;
         const n = notifications[i];
 
-        // Try to group with subsequent notifications of same type+channel within time window
         const group: Notification[] = [n];
         used.add(n.id);
 
@@ -58,6 +85,9 @@ function groupNotifications(notifications: Notification[]): (Notification | Noti
                 'mention': 'mentions',
                 'reaction': 'reactions on your message',
                 'friend_request': 'friend requests',
+                'dm': 'direct messages',
+                'auction_new_bid': 'auction bids',
+                'auction_outbid': 'outbid alerts',
             };
             const typeLabel = typeLabels[n.type] || 'notifications';
             result.push({
@@ -76,25 +106,108 @@ function groupNotifications(notifications: Notification[]): (Notification | Noti
     return result;
 }
 
+function groupByDay(items: (Notification | NotifGroup)[]): DaySection[] {
+    const sections: DaySection[] = [];
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const yesterdayStart = todayStart - 86400000;
+    const weekAgoStart = todayStart - 7 * 86400000;
+
+    const getTimestamp = (item: Notification | NotifGroup): number => {
+        if ('items' in item) return item.items[0].dateRaw;
+        return item.dateRaw;
+    };
+
+    const buckets: Record<string, { label: string; order: number; items: (Notification | NotifGroup)[] }> = {};
+
+    for (const item of items) {
+        const ts = getTimestamp(item);
+        let key: string;
+        let label: string;
+        let order: number;
+
+        if (ts >= todayStart) {
+            key = 'today';
+            label = 'Today';
+            order = 0;
+        } else if (ts >= yesterdayStart) {
+            key = 'yesterday';
+            label = 'Yesterday';
+            order = 1;
+        } else if (ts >= weekAgoStart) {
+            key = 'this-week';
+            label = 'This Week';
+            order = 2;
+        } else {
+            const d = new Date(ts);
+            key = `${d.getFullYear()}-${d.getMonth()}`;
+            label = d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+            order = 3 + (Date.now() - ts);
+        }
+
+        if (!buckets[key]) {
+            buckets[key] = { label, order, items: [] };
+        }
+        buckets[key].items.push(item);
+    }
+
+    const sorted = Object.entries(buckets).sort(([, a], [, b]) => a.order - b.order);
+    for (const [key, bucket] of sorted) {
+        sections.push({ key, label: bucket.label, items: bucket.items });
+    }
+
+    return sections;
+}
+
 function isGroup(item: Notification | NotifGroup): item is NotifGroup {
     return 'items' in item;
 }
 
-const GroupIcon = ({ type }: { type: string }) => {
+const TypeIcon = ({ type }: { type: string }) => {
     switch (type) {
+        case 'mention': return <AtSign size={16} />;
+        case 'dm': return <Mail size={16} />;
         case 'reaction': return <Heart size={16} />;
         case 'friend_request': return <UserPlus size={16} />;
+        case 'auction_new_bid':
+        case 'auction_outbid':
+        case 'auction_won':
+        case 'auction_sold':
+        case 'auction_ended':
+            return <Gavel size={16} />;
+        case 'system': return <Settings size={16} />;
         default: return <MessageSquare size={16} />;
     }
 };
 
+const TABS: { id: FilterTab; label: string; icon?: typeof AtSign }[] = [
+    { id: 'all', label: 'All' },
+    { id: 'mentions', label: 'Mentions', icon: AtSign },
+    { id: 'dms', label: 'DMs', icon: Mail },
+    { id: 'social', label: 'Social', icon: UserPlus },
+    { id: 'system', label: 'System', icon: Settings },
+];
+
+function getSavedFilter(): FilterTab {
+    try {
+        const saved = localStorage.getItem(FILTER_STORAGE_KEY);
+        if (saved && TABS.some(t => t.id === saved)) return saved as FilterTab;
+    } catch {}
+    return 'all';
+}
+
 const NotificationModal = ({ onClose }: { onClose: () => void }) => {
     const navigate = useNavigate();
     const { addToast } = useToast();
-    const [activeTab, setActiveTab] = useState<'all' | 'mentions'>('all');
+    const [activeTab, setActiveTab] = useState<FilterTab>(getSavedFilter);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+    const handleTabChange = useCallback((tab: FilterTab) => {
+        setActiveTab(tab);
+        try { localStorage.setItem(FILTER_STORAGE_KEY, tab); } catch {}
+    }, []);
 
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -122,6 +235,8 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
                             ? buildGuildChannelRoute(n.guildId, n.channelId)
                             : buildDmRoute(n.channelId))
                         : '/',
+                    guildName: n.guildName || undefined,
+                    guildId: n.guildId || undefined,
                 }));
                 setNotifications(mapped);
             })
@@ -131,8 +246,25 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
             .finally(() => setIsLoading(false));
     }, []);
 
-    const filtered = notifications.filter(n => activeTab === 'all' || n.type === 'mention');
+    const filtered = useMemo(() => {
+        if (activeTab === 'all') return notifications;
+        return notifications.filter(n => getFilterCategory(n.type) === activeTab);
+    }, [notifications, activeTab]);
+
     const grouped = useMemo(() => groupNotifications(filtered), [filtered]);
+    const daySections = useMemo(() => groupByDay(grouped), [grouped]);
+
+    const unreadByTab = useMemo(() => {
+        const counts: Record<FilterTab, number> = { all: 0, mentions: 0, dms: 0, social: 0, system: 0 };
+        for (const n of notifications) {
+            if (!n.read) {
+                counts.all++;
+                const cat = getFilterCategory(n.type);
+                if (cat !== 'all') counts[cat]++;
+            }
+        }
+        return counts;
+    }, [notifications]);
 
     const toggleGroup = (key: string) => {
         setExpandedGroups(prev => {
@@ -177,22 +309,30 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
     };
 
     const renderNotification = (notif: Notification) => (
-        <div key={notif.id} onClick={() => handleNotificationClick(notif)} style={{ padding: '16px 24px', borderBottom: '1px solid var(--stroke)', display: 'flex', gap: '16px', background: notif.read ? 'transparent' : 'rgba(82, 109, 245, 0.05)', cursor: 'pointer', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = 'var(--bg-elevated)'} onMouseOut={e => e.currentTarget.style.background = notif.read ? 'transparent' : 'rgba(82, 109, 245, 0.05)'}>
+        <div key={notif.id} onClick={() => handleNotificationClick(notif)} style={{ padding: '12px 24px', borderBottom: '1px solid var(--stroke)', display: 'flex', gap: '12px', background: notif.read ? 'transparent' : 'rgba(82, 109, 245, 0.05)', cursor: 'pointer', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = 'var(--bg-elevated)'} onMouseOut={e => e.currentTarget.style.background = notif.read ? 'transparent' : 'rgba(82, 109, 245, 0.05)'}>
             <div style={{ position: 'relative' }}>
                 <Avatar userId={notif.userId || notif.id} displayName={notif.user} size={36} />
                 {!notif.read && <div style={{ position: 'absolute', top: -2, right: -2, width: '10px', height: '10px', borderRadius: '50%', background: 'var(--accent-blue)', border: '2px solid var(--bg-primary)' }} />}
             </div>
-            <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '14px', marginBottom: '4px' }}>
-                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{notif.user}</span>{' '}
-                    <span style={{ color: 'var(--text-secondary)' }}>{notif.content}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                    <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+                        <TypeIcon type={notif.type} />
+                    </span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px' }}>{notif.user}</span>
+                    {notif.guildName && (
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-tertiary)', padding: '1px 6px', borderRadius: '8px', flexShrink: 0 }}>{notif.guildName}</span>
+                    )}
+                </div>
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {notif.content}
                 </div>
                 {notif.preview && (
-                    <div style={{ fontSize: '14px', color: 'var(--text-muted)', background: 'var(--bg-tertiary)', padding: '8px 12px', borderRadius: '8px', borderLeft: '2px solid var(--stroke)', marginTop: '8px' }}>
+                    <div style={{ fontSize: '13px', color: 'var(--text-muted)', background: 'var(--bg-tertiary)', padding: '6px 10px', borderRadius: '6px', borderLeft: '2px solid var(--stroke)', marginTop: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {notif.preview}
                     </div>
                 )}
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>{notif.date}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{notif.date}</div>
             </div>
             <button onClick={(e) => dismissNotification(notif.id, e)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px', alignSelf: 'flex-start', flexShrink: 0, transition: 'color 0.2s' }} onMouseOver={e => (e.currentTarget.style.color = 'var(--text-primary)')} onMouseOut={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
                 <X size={16} />
@@ -206,7 +346,7 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
                 className="notification-panel"
                 onClick={e => e.stopPropagation()}
                 style={{
-                    width: '420px',
+                    width: '440px',
                     borderRadius: '16px',
                     border: '1px solid var(--stroke)',
                     boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
@@ -220,117 +360,174 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
                     background: 'var(--bg-primary)',
                 }}
             >
-                <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--stroke)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                {/* Header */}
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--stroke)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Bell size={20} color="var(--text-muted)" />
-                        <h2 style={{ fontSize: '18px', fontWeight: 600 }}>Notifications</h2>
+                        <h2 style={{ fontSize: '18px', fontWeight: 600, margin: 0 }}>Notifications</h2>
+                        {unreadByTab.all > 0 && (
+                            <span style={{ fontSize: '11px', fontWeight: 700, background: 'var(--error)', color: '#fff', borderRadius: '10px', padding: '1px 7px', minWidth: '18px', textAlign: 'center' }}>
+                                {unreadByTab.all > 99 ? '99+' : unreadByTab.all}
+                            </span>
+                        )}
                     </div>
-                    <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                        <X size={20} />
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button onClick={markAllRead} style={{ background: 'transparent', border: 'none', color: 'var(--accent-blue)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <CheckCircle2 size={14} /> Mark Read
+                        </button>
+                        <button onClick={clearAll} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} title="Clear all notifications">
+                            <Trash2 size={14} />
+                        </button>
+                        <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex' }}>
+                            <X size={18} />
+                        </button>
+                    </div>
                 </div>
 
-                <div style={{ padding: '16px 24px', display: 'flex', gap: '16px', borderBottom: '1px solid var(--stroke)' }}>
-                    <button
-                        onClick={() => setActiveTab('all')}
-                        style={{ background: activeTab === 'all' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', color: activeTab === 'all' ? 'white' : 'var(--text-muted)', padding: '6px 12px', borderRadius: '16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
-                    >
-                        For You
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('mentions')}
-                        style={{ background: activeTab === 'mentions' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', color: activeTab === 'mentions' ? 'white' : 'var(--text-muted)', padding: '6px 12px', borderRadius: '16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                        <AtSign size={14} /> Mentions
-                    </button>
-
-                    <div style={{ flex: 1 }} />
-                    <button onClick={markAllRead} style={{ background: 'transparent', border: 'none', color: 'var(--accent-blue)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <CheckCircle2 size={14} /> Mark Read
-                    </button>
-                    <button onClick={clearAll} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} title="Clear all notifications">
-                        <Trash2 size={14} /> Clear All
-                    </button>
+                {/* Filter Tabs */}
+                <div style={{ padding: '8px 12px', display: 'flex', gap: '4px', borderBottom: '1px solid var(--stroke)', background: 'var(--bg-primary)', overflowX: 'auto' }}>
+                    {TABS.map(tab => {
+                        const isActive = activeTab === tab.id;
+                        const count = unreadByTab[tab.id];
+                        const Icon = tab.icon;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => handleTabChange(tab.id)}
+                                style={{
+                                    background: isActive ? 'var(--bg-tertiary)' : 'transparent',
+                                    border: 'none',
+                                    color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                                    padding: '5px 10px',
+                                    borderRadius: '12px',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    whiteSpace: 'nowrap',
+                                    transition: 'background 0.15s, color 0.15s',
+                                    flexShrink: 0,
+                                }}
+                            >
+                                {Icon && <Icon size={13} />}
+                                {tab.label}
+                                {count > 0 && (
+                                    <span style={{
+                                        fontSize: '10px',
+                                        fontWeight: 700,
+                                        background: isActive ? 'var(--accent-blue)' : 'var(--bg-tertiary)',
+                                        color: isActive ? '#fff' : 'var(--text-muted)',
+                                        borderRadius: '8px',
+                                        padding: '0 5px',
+                                        minWidth: '16px',
+                                        textAlign: 'center',
+                                        lineHeight: '16px',
+                                    }}>
+                                        {count > 99 ? '99+' : count}
+                                    </span>
+                                )}
+                            </button>
+                        );
+                    })}
                 </div>
 
+                {/* Notification List */}
                 <div style={{ overflowY: 'auto', flex: 1, background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}>
                     {isLoading ? (
                         <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                             <div style={{ width: '32px', height: '32px', border: '3px solid var(--stroke)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
                             <span style={{ fontSize: '14px' }}>Loading notifications...</span>
                         </div>
+                    ) : daySections.length === 0 ? (
+                        <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                            <Bell size={32} style={{ opacity: 0.3, margin: '0 auto 16px' }} />
+                            <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>You're all caught up!</h3>
+                            <p style={{ fontSize: '14px' }}>
+                                {activeTab === 'all' ? 'No new notifications.' : `No ${activeTab} notifications.`}
+                            </p>
+                        </div>
                     ) : (
-                        <>
-                            {grouped.map(item => {
-                                if (isGroup(item)) {
-                                    const expanded = expandedGroups.has(item.key);
-                                    return (
-                                        <div key={item.key}>
-                                            <div
-                                                onClick={() => toggleGroup(item.key)}
-                                                style={{
-                                                    padding: '14px 24px', borderBottom: '1px solid var(--stroke)',
-                                                    display: 'flex', gap: '12px', alignItems: 'center',
-                                                    background: item.unreadCount > 0 ? 'rgba(82, 109, 245, 0.05)' : 'transparent',
-                                                    cursor: 'pointer', transition: 'background 0.2s',
-                                                }}
-                                                onMouseOver={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
-                                                onMouseOut={e => e.currentTarget.style.background = item.unreadCount > 0 ? 'rgba(82, 109, 245, 0.05)' : 'transparent'}
-                                            >
-                                                <div style={{
-                                                    width: '36px', height: '36px', borderRadius: '50%',
-                                                    background: 'var(--bg-tertiary)', display: 'flex',
-                                                    alignItems: 'center', justifyContent: 'center',
-                                                    color: 'var(--text-muted)', position: 'relative', flexShrink: 0,
-                                                }}>
-                                                    <GroupIcon type={item.type} />
-                                                    {item.unreadCount > 0 && (
-                                                        <div style={{
-                                                            position: 'absolute', top: -4, right: -4,
-                                                            background: 'var(--accent-blue)', color: 'white',
-                                                            borderRadius: '10px', padding: '0 5px',
-                                                            fontSize: '10px', fontWeight: 700, minWidth: '16px',
-                                                            textAlign: 'center', lineHeight: '16px',
-                                                            border: '2px solid var(--bg-primary)',
-                                                        }}>{item.unreadCount}</div>
-                                                    )}
-                                                </div>
-                                                <div style={{ flex: 1 }}>
-                                                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                                        {item.label}
-                                                    </div>
-                                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                                        {item.items[0].date}
-                                                    </div>
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                    {item.unreadCount > 0 && (
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); markGroupRead(item); }}
-                                                            style={{ background: 'transparent', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', padding: '4px', fontSize: '11px', fontWeight: 600 }}
-                                                            title="Mark group as read"
-                                                        >
-                                                            <CheckCircle2 size={14} />
-                                                        </button>
-                                                    )}
-                                                    {expanded ? <ChevronDown size={16} style={{ color: 'var(--text-muted)' }} /> : <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />}
-                                                </div>
-                                            </div>
-                                            {expanded && item.items.map(notif => renderNotification(notif))}
-                                        </div>
-                                    );
-                                }
-                                return renderNotification(item);
-                            })}
-
-                            {grouped.length === 0 && (
-                                <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                    <Bell size={32} style={{ opacity: 0.3, margin: '0 auto 16px' }} />
-                                    <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>You're all caught up!</h3>
-                                    <p style={{ fontSize: '14px' }}>No new notifications.</p>
+                        daySections.map(section => (
+                            <div key={section.key}>
+                                <div style={{
+                                    padding: '8px 24px 4px',
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    color: 'var(--text-muted)',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px',
+                                    position: 'sticky',
+                                    top: 0,
+                                    background: 'var(--bg-primary)',
+                                    zIndex: 1,
+                                }}>
+                                    {section.label}
                                 </div>
-                            )}
-                        </>
+                                {section.items.map(item => {
+                                    if (isGroup(item)) {
+                                        const expanded = expandedGroups.has(item.key);
+                                        return (
+                                            <div key={item.key}>
+                                                <div
+                                                    onClick={() => toggleGroup(item.key)}
+                                                    style={{
+                                                        padding: '10px 24px', borderBottom: '1px solid var(--stroke)',
+                                                        display: 'flex', gap: '12px', alignItems: 'center',
+                                                        background: item.unreadCount > 0 ? 'rgba(82, 109, 245, 0.05)' : 'transparent',
+                                                        cursor: 'pointer', transition: 'background 0.2s',
+                                                    }}
+                                                    onMouseOver={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
+                                                    onMouseOut={e => e.currentTarget.style.background = item.unreadCount > 0 ? 'rgba(82, 109, 245, 0.05)' : 'transparent'}
+                                                >
+                                                    <div style={{
+                                                        width: '36px', height: '36px', borderRadius: '50%',
+                                                        background: 'var(--bg-tertiary)', display: 'flex',
+                                                        alignItems: 'center', justifyContent: 'center',
+                                                        color: 'var(--text-muted)', position: 'relative', flexShrink: 0,
+                                                    }}>
+                                                        <TypeIcon type={item.type} />
+                                                        {item.unreadCount > 0 && (
+                                                            <div style={{
+                                                                position: 'absolute', top: -4, right: -4,
+                                                                background: 'var(--accent-blue)', color: 'white',
+                                                                borderRadius: '10px', padding: '0 5px',
+                                                                fontSize: '10px', fontWeight: 700, minWidth: '16px',
+                                                                textAlign: 'center', lineHeight: '16px',
+                                                                border: '2px solid var(--bg-primary)',
+                                                            }}>{item.unreadCount}</div>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                                            {item.label}
+                                                        </div>
+                                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                            {item.items[0].date}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                        {item.unreadCount > 0 && (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); markGroupRead(item); }}
+                                                                style={{ background: 'transparent', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', padding: '4px', fontSize: '11px', fontWeight: 600 }}
+                                                                title="Mark group as read"
+                                                            >
+                                                                <CheckCircle2 size={14} />
+                                                            </button>
+                                                        )}
+                                                        {expanded ? <ChevronDown size={16} style={{ color: 'var(--text-muted)' }} /> : <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />}
+                                                    </div>
+                                                </div>
+                                                {expanded && item.items.map(notif => renderNotification(notif))}
+                                            </div>
+                                        );
+                                    }
+                                    return renderNotification(item);
+                                })}
+                            </div>
+                        ))
                     )}
                 </div>
             </div>

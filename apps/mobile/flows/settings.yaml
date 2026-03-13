@@ -1,0 +1,22 @@
+appId: chat.gratonite.mobile
+---
+- assertVisible: "Servers"
+- tapOn: "Settings"
+- assertVisible: "Settings"
+- tapOn: "Account"
+- assertVisible: "Profile"
+- back
+- tapOn: "Appearance"
+- assertVisible: "Theme"
+- back
+- tapOn: "Notifications"
+- assertVisible: "Push Notifications"
+- back
+- tapOn: "Privacy"
+- assertVisible: "Direct Messages"
+- back
+- tapOn: "Security"
+- assertVisible:
+    text: "ENCRYPTION"
+    optional: true
+- back

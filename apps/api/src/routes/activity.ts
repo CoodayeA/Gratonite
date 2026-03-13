@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { logger } from '../lib/logger';
-import { eq, and, desc, inArray } from 'drizzle-orm';
+import { eq, and, desc, lt, inArray } from 'drizzle-orm';
 import { db } from '../db/index';
 import { activityEvents } from '../db/schema/activity-feed';
 import { relationships } from '../db/schema/relationships';
@@ -9,12 +9,24 @@ import { requireAuth } from '../middleware/auth';
 
 export const activityRouter = Router();
 
-// GET /users/@me/feed — activity from friends + self
+// Helper: record an activity event (fire-and-forget)
+export async function recordActivity(userId: string, type: string, payload: Record<string, unknown> = {}) {
+  try {
+    await db.insert(activityEvents).values({ userId, type, payload });
+  } catch (err) {
+    logger.error('[activity] record error:', err);
+  }
+}
+
+// GET /users/@me/feed — activity from friends + self, with cursor pagination + type filter
 activityRouter.get('/users/@me/feed', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const userId = req.userId!;
   try {
+    const limit = Math.min(Number(req.query.limit) || 50, 50);
+    const before = req.query.before as string | undefined;
+    const typeFilter = req.query.type as string | undefined;
+
     // Get friend IDs — relationships uses requesterId/addresseeId columns
-    // Only include FRIEND type rows to avoid showing activity from blocked/pending users
     const friends1 = await db
       .select({ otherId: relationships.addresseeId })
       .from(relationships)
@@ -33,6 +45,10 @@ activityRouter.get('/users/@me/feed', requireAuth, async (req: Request, res: Res
       ...friends2.map(f => f.otherId),
     ])];
 
+    const conditions = [inArray(activityEvents.userId, friendIds)];
+    if (before) conditions.push(lt(activityEvents.createdAt, new Date(before)));
+    if (typeFilter) conditions.push(eq(activityEvents.type, typeFilter));
+
     const events = await db.select({
       id: activityEvents.id,
       userId: activityEvents.userId,
@@ -45,9 +61,9 @@ activityRouter.get('/users/@me/feed', requireAuth, async (req: Request, res: Res
     })
       .from(activityEvents)
       .innerJoin(users, eq(activityEvents.userId, users.id))
-      .where(inArray(activityEvents.userId, friendIds))
+      .where(and(...conditions))
       .orderBy(desc(activityEvents.createdAt))
-      .limit(50);
+      .limit(limit);
 
     res.json(events);
   } catch (err) {

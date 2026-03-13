@@ -39,10 +39,12 @@ export default function RoleEditScreen({ route, navigation }: Props) {
   const [mentionable, setMentionable] = useState(false);
   const [loading, setLoading] = useState(isEditing);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchRole = useCallback(async () => {
     if (!roleId) return;
     try {
+      setLoadError(null);
       const allRoles = await rolesApi.list(guildId);
       const role = allRoles.find((r) => r.id === roleId);
       if (role) {
@@ -56,12 +58,14 @@ export default function RoleEditScreen({ route, navigation }: Props) {
       }
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load role');
+        const message = err.message || 'Failed to load role';
+        setLoadError(message);
+        toast.error(message);
       }
     } finally {
       setLoading(false);
     }
-  }, [guildId, roleId, navigation]);
+  }, [guildId, roleId, navigation, toast]);
 
   useEffect(() => {
     if (isEditing) {
@@ -252,6 +256,27 @@ export default function RoleEditScreen({ route, navigation }: Props) {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.accentPrimary} />
       </View>
+    );
+  }
+
+  if (isEditing && loadError) {
+    return (
+      <PatternBackground>
+        <View style={[styles.loadingContainer, { paddingHorizontal: spacing.xl, gap: spacing.md }]}>
+          <Ionicons name="alert-circle-outline" size={56} color={colors.accentPrimary} />
+          <Text style={[styles.switchLabel, { fontSize: fontSize.xl, textAlign: 'center' }]}>Failed to load role</Text>
+          <Text style={[styles.switchDescription, { textAlign: 'center' }]}>{loadError}</Text>
+          <TouchableOpacity
+            style={styles.saveBtn}
+            onPress={() => {
+              setLoading(true);
+              fetchRole();
+            }}
+          >
+            <Text style={styles.saveBtnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
     );
   }
 

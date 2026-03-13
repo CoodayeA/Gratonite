@@ -3,6 +3,7 @@ import { logger } from '../lib/logger';
 import { eq, and, lt, desc } from 'drizzle-orm';
 import { db } from '../db/index';
 import { messageBookmarks } from '../db/schema/message-bookmarks';
+import { bookmarkFolders } from '../db/schema/bookmark-folders';
 import { messages } from '../db/schema/messages';
 import { channels } from '../db/schema/channels';
 import { guilds } from '../db/schema/guilds';
@@ -16,10 +17,20 @@ bookmarksRouter.get('/users/@me/bookmarks', requireAuth, async (req: Request, re
   try {
     const limit = Math.min(Number(req.query.limit) || 50, 50);
     const before = req.query.before as string | undefined;
+    const folderId = req.query.folderId as string | undefined;
 
-    let query = db.select({
+    const conditions = [eq(messageBookmarks.userId, req.userId!)];
+    if (before) conditions.push(lt(messageBookmarks.createdAt, new Date(before)));
+    if (folderId === 'uncategorized') {
+      conditions.push(eq(messageBookmarks.folderId, null as any));
+    } else if (folderId) {
+      conditions.push(eq(messageBookmarks.folderId, folderId));
+    }
+
+    const bookmarks = await db.select({
       id: messageBookmarks.id,
       messageId: messageBookmarks.messageId,
+      folderId: messageBookmarks.folderId,
       note: messageBookmarks.note,
       createdAt: messageBookmarks.createdAt,
       messageContent: messages.content,
@@ -37,15 +48,10 @@ bookmarksRouter.get('/users/@me/bookmarks', requireAuth, async (req: Request, re
       .innerJoin(channels, eq(messages.channelId, channels.id))
       .leftJoin(guilds, eq(channels.guildId, guilds.id))
       .leftJoin(users, eq(messages.authorId, users.id))
-      .where(
-        before
-          ? and(eq(messageBookmarks.userId, req.userId!), lt(messageBookmarks.createdAt, new Date(before)))
-          : eq(messageBookmarks.userId, req.userId!)
-      )
+      .where(and(...conditions))
       .orderBy(desc(messageBookmarks.createdAt))
       .limit(limit);
 
-    const bookmarks = await query;
     res.json(bookmarks);
   } catch (err) {
     logger.error('[bookmarks] GET error:', err);
@@ -56,18 +62,45 @@ bookmarksRouter.get('/users/@me/bookmarks', requireAuth, async (req: Request, re
 // POST /users/@me/bookmarks — add bookmark
 bookmarksRouter.post('/users/@me/bookmarks', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const { messageId, note } = req.body as { messageId: string; note?: string };
+    const { messageId, note, folderId } = req.body as { messageId: string; note?: string; folderId?: string };
     if (!messageId) {
       res.status(400).json({ code: 'VALIDATION_ERROR', message: 'messageId is required' });
       return;
     }
     const [bookmark] = await db.insert(messageBookmarks)
-      .values({ userId: req.userId!, messageId, note: note || null })
+      .values({ userId: req.userId!, messageId, note: note || null, folderId: folderId || null })
       .onConflictDoNothing()
       .returning();
     res.status(201).json(bookmark || { messageId, alreadyBookmarked: true });
   } catch (err) {
     logger.error('[bookmarks] POST error:', err);
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+// PATCH /users/@me/bookmarks/:bookmarkId — update bookmark (move to folder, update note)
+bookmarksRouter.patch('/users/@me/bookmarks/:bookmarkId', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const bookmarkId = req.params.bookmarkId as string;
+    const { folderId, note } = req.body as { folderId?: string | null; note?: string | null };
+    const updates: Record<string, any> = {};
+    if (folderId !== undefined) updates.folderId = folderId;
+    if (note !== undefined) updates.note = note;
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Nothing to update' });
+      return;
+    }
+    const [updated] = await db.update(messageBookmarks)
+      .set(updates)
+      .where(and(eq(messageBookmarks.id, bookmarkId), eq(messageBookmarks.userId, req.userId!)))
+      .returning();
+    if (!updated) {
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Bookmark not found' });
+      return;
+    }
+    res.json(updated);
+  } catch (err) {
+    logger.error('[bookmarks] PATCH error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -81,6 +114,80 @@ bookmarksRouter.delete('/users/@me/bookmarks/:messageId', requireAuth, async (re
     res.json({ ok: true });
   } catch (err) {
     logger.error('[bookmarks] DELETE error:', err);
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+// --- Bookmark Folders CRUD ---
+
+// GET /users/@me/bookmark-folders — list folders
+bookmarksRouter.get('/users/@me/bookmark-folders', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const folders = await db.select()
+      .from(bookmarkFolders)
+      .where(eq(bookmarkFolders.userId, req.userId!))
+      .orderBy(bookmarkFolders.createdAt);
+    res.json(folders);
+  } catch (err) {
+    logger.error('[bookmark-folders] GET error:', err);
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+// POST /users/@me/bookmark-folders — create folder
+bookmarksRouter.post('/users/@me/bookmark-folders', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name, color } = req.body as { name: string; color?: string };
+    if (!name || !name.trim()) {
+      res.status(400).json({ code: 'VALIDATION_ERROR', message: 'name is required' });
+      return;
+    }
+    const [folder] = await db.insert(bookmarkFolders)
+      .values({ userId: req.userId!, name: name.trim().slice(0, 64), color: color || '#6366f1' })
+      .returning();
+    res.status(201).json(folder);
+  } catch (err) {
+    logger.error('[bookmark-folders] POST error:', err);
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+// PATCH /users/@me/bookmark-folders/:folderId — rename/recolor folder
+bookmarksRouter.patch('/users/@me/bookmark-folders/:folderId', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const folderId = req.params.folderId as string;
+    const { name, color } = req.body as { name?: string; color?: string };
+    const updates: Record<string, any> = {};
+    if (name !== undefined) updates.name = name.trim().slice(0, 64);
+    if (color !== undefined) updates.color = color;
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Nothing to update' });
+      return;
+    }
+    const [updated] = await db.update(bookmarkFolders)
+      .set(updates)
+      .where(and(eq(bookmarkFolders.id, folderId), eq(bookmarkFolders.userId, req.userId!)))
+      .returning();
+    if (!updated) {
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Folder not found' });
+      return;
+    }
+    res.json(updated);
+  } catch (err) {
+    logger.error('[bookmark-folders] PATCH error:', err);
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+// DELETE /users/@me/bookmark-folders/:folderId — delete folder (bookmarks become uncategorized)
+bookmarksRouter.delete('/users/@me/bookmark-folders/:folderId', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const folderId = req.params.folderId as string;
+    await db.delete(bookmarkFolders)
+      .where(and(eq(bookmarkFolders.id, folderId), eq(bookmarkFolders.userId, req.userId!)));
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error('[bookmark-folders] DELETE error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });

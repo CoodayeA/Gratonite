@@ -33,9 +33,11 @@ export default function ChannelEditScreen({ route, navigation }: Props) {
   const [disappearTimer, setDisappearTimer] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchChannel = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await channelsApi.get(channelId);
       setChannel(data);
       setName(data.name);
@@ -44,13 +46,14 @@ export default function ChannelEditScreen({ route, navigation }: Props) {
       setDisappearTimer(data.disappearTimer ?? null);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load channel');
-        navigation.goBack();
+        const message = err.message || 'Failed to load channel';
+        setLoadError(message);
+        toast.error(message);
       }
     } finally {
       setLoading(false);
     }
-  }, [channelId, navigation]);
+  }, [channelId, toast]);
 
   useEffect(() => {
     fetchChannel();
@@ -69,8 +72,8 @@ export default function ChannelEditScreen({ route, navigation }: Props) {
         name: trimmedName,
         topic: topic.trim() || null,
         slowModeSeconds,
-        disappearTimer,
       });
+      await channelsApi.setDisappearTimer(channelId, disappearTimer);
       toast.success('Channel updated');
       navigation.goBack();
     } catch (err: any) {
@@ -233,6 +236,29 @@ export default function ChannelEditScreen({ route, navigation }: Props) {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.accentPrimary} />
       </View>
+    );
+  }
+
+  if (loadError && !channel) {
+    return (
+      <PatternBackground>
+        <View style={[styles.loadingContainer, { paddingHorizontal: spacing.xl, gap: spacing.md }]}>
+          <Ionicons name="alert-circle-outline" size={56} color={colors.accentPrimary} />
+          <Text style={[styles.channelType, { fontSize: fontSize.xl, color: colors.textPrimary, textTransform: 'none', textAlign: 'center' }]}>
+            Failed to load channel
+          </Text>
+          <Text style={[styles.switchLabel, { textAlign: 'center', color: colors.textMuted, fontWeight: '400' }]}>{loadError}</Text>
+          <TouchableOpacity
+            style={styles.saveBtn}
+            onPress={() => {
+              setLoading(true);
+              fetchChannel();
+            }}
+          >
+            <Text style={styles.saveBtnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
     );
   }
 

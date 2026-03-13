@@ -52,6 +52,16 @@
                 background-color: rgba(255, 255, 255, 0.04);
             }
 
+            .message-standalone {
+                margin-top: 16px;
+                padding-top: 4px;
+            }
+
+            .message-grouped {
+                margin-top: 2px;
+                padding-top: 1px;
+            }
+
             .message-toolbar {
                 position: absolute;
                 top: -16px;
@@ -104,6 +114,8 @@
                 z-index: 30;
                 box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
                 animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                will-change: transform;
+                contain: layout style paint;
             }
 
             @keyframes slideInRight {
@@ -281,6 +293,7 @@
                 display: flex;
                 flex-direction: column;
                 overflow: hidden;
+                contain: layout style paint;
             }
             .member-list-scroll {
                 flex: 1;

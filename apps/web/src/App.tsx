@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense, type Dispatch, type SetStateAction } from 'react';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, Navigate, Outlet, Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar, Compass, User, Columns } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar, Compass, User, Columns, Paintbrush } from 'lucide-react';
 import './components/chat.css';
 import CommandPalette from './components/ui/CommandPalette';
 import { playSound, setSoundVolume } from './utils/SoundManager';
@@ -50,11 +51,15 @@ const BadgesGallery = lazy(() => import('./pages/app/BadgesGallery'));
 const FriendActivity = lazy(() => import('./pages/app/FriendActivity'));
 const Trading = lazy(() => import('./pages/app/Trading'));
 const GuildInsights = lazy(() => import('./pages/guilds/GuildInsights'));
+const PublicGuildStats = lazy(() => import('./pages/guilds/PublicGuildStats'));
 const WikiChannel = lazy(() => import('./pages/guilds/WikiChannel'));
 const PhotoAlbums = lazy(() => import('./pages/guilds/PhotoAlbums'));
 const FormBuilder = lazy(() => import('./pages/guilds/FormBuilder'));
+const MemberDirectory = lazy(() => import('./pages/guilds/MemberDirectory'));
 const Gacha = lazy(() => import('./pages/app/Gacha'));
 const StoreModal = lazy(() => import('./pages/app/StoreModal'));
+const DailyChallenges = lazy(() => import('./pages/app/DailyChallenges'));
+const MiniMode = lazy(() => import('./components/desktop/MiniMode'));
 
 import InviteAccept from './pages/InviteAccept';
 import { NotFound } from './pages/ErrorStates';
@@ -63,6 +68,15 @@ import { api, API_BASE, getAccessToken, setAccessToken, ApiRequestError } from '
 import { connectSocket, disconnectSocket, getSocket, onPresenceUpdate, onVoiceStateUpdate, onSocketReconnect, onCallInvite, onCallCancel, setPresence as setSocketPresence, onGuildJoined, onGuildLeft, onGuildUpdate, onGuildDelete, onChannelUpdate, onChannelDelete, onGuildMemberAdd, onGuildMemberRemove, onDmChannelCreate, joinGuildRoom, onTypingStart, onNotificationCreate, type CallInvitePayload } from './lib/socket';
 import { useMobileSwipe } from './hooks/useMobileSwipe';
 import { useIsMobile } from './hooks/useIsMobile';
+import { useQuerySocketSync, useGuildsQuery, useDmChannelsQuery, invalidateGuilds } from './hooks/queries';
+import { queryClient } from './lib/queryClient';
+import { messagesQueryKey } from './hooks/queries/useMessagesQuery';
+import { useSplitView, SplitViewContainer, SplitViewRightPane } from './components/SplitView';
+import { useDesktopDeepLinks } from './hooks/useDesktopDeepLinks';
+import { useDesktopIdleDetection } from './hooks/useDesktopIdleDetection';
+import { useDesktopMenuNavigation } from './hooks/useDesktopMenuNavigation';
+import { useDesktopNotifications } from './hooks/useDesktopNotifications';
+import UpdateBanner from './components/ui/UpdateBanner';
 
 // Lazy-loaded modal components for code splitting
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal'));
@@ -70,6 +84,7 @@ const UserProfileModal = lazy(() => import('./components/modals/UserProfileModal
 const GuildSettingsModal = lazy(() => import('./components/modals/GuildSettingsModal'));
 const WhatsNewModal = lazy(() => import('./components/modals/WhatsNewModal'));
 const OnboardingModal = lazy(() => import('./components/modals/OnboardingModal'));
+import { OnboardingTour, useShouldShowTour } from './components/ui/OnboardingTour';
 const BugReportModal = lazy(() => import('./components/modals/BugReportModal'));
 const KeyboardShortcutsModal = lazy(() => import('./components/modals/KeyboardShortcutsModal'));
 const NotificationModal = lazy(() => import('./components/modals/NotificationModal'));
@@ -85,18 +100,20 @@ import GroupDmCreateModal from './components/modals/GroupDmCreateModal';
 import { NotificationPrefsModal } from './components/modals/NotificationPrefsModal';
 import { Tooltip } from './components/ui/Tooltip';
 import { ModalWrapper } from './components/ui/ModalWrapper';
-import { useTheme } from './components/ui/ThemeProvider';
+import { useTheme, type AppTheme } from './components/ui/ThemeProvider';
+import { getGuildTheme, setGuildTheme, removeGuildTheme, hasGuildTheme } from './utils/guildTheme';
 import { ContextMenuProvider, useContextMenu } from './components/ui/ContextMenu';
 import { ToastProvider, useToast } from './components/ui/ToastManager';
 import { Shield as ShieldIcon } from 'lucide-react';
 import { StarRating } from './components/ui/StarRating';
 import AchievementToastProvider from './components/ui/AchievementToast';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
+import AnimatedGuildIcon from './components/ui/AnimatedGuildIcon';
 import { SkeletonChannelGroup, SkeletonDmList, SkeletonMemberList } from './components/ui/SkeletonLoader';
 import AmbientPlayer from './components/ui/AmbientPlayer';
 import ConnectionBanner from './components/ui/ConnectionBanner';
 import SeasonalOverlay from './components/ui/SeasonalOverlay';
-import LiveAnnouncer from './components/ui/LiveAnnouncer';
+import LiveAnnouncer, { announce } from './components/ui/LiveAnnouncer';
 import { VoiceProvider, useVoice } from './contexts/VoiceContext';
 import { useVoiceSounds } from './hooks/useVoiceSounds';
 import Avatar from './components/ui/Avatar';
@@ -185,7 +202,7 @@ const LegacyGuildVoiceRedirect = () => {
 
 // BackgroundMedia moved to src/components/ui/BackgroundMedia.tsx
 
-const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugReport, onOpenProfile, onOpenSettings, onOpenGuildSettings, onOpenInvite, onGuildsRefresh, onGuildLeave, guilds, userProfile }: { isOpen: boolean, onOpenCreateGuild: () => void, onOpenNotifications: () => void, onOpenBugReport: () => void, onOpenProfile: () => void, onOpenSettings: () => void, onOpenGuildSettings: () => void, onOpenInvite: () => void, onGuildsRefresh?: () => void, onGuildLeave?: (guildId: string) => void, guilds: Array<{ id: string; name: string; ownerId: string; iconHash: string | null; description: string | null; memberCount: number }>, userProfile: { id?: string; name: string; avatarHash?: string | null; avatarFrame?: 'none' | 'neon' | 'gold' | 'glass' } }) => {
+const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugReport, onOpenProfile, onOpenSettings, onOpenGuildSettings, onOpenInvite, onGuildsRefresh, onGuildLeave, guilds, userProfile }: { isOpen: boolean, onOpenCreateGuild: () => void, onOpenNotifications: () => void, onOpenBugReport: () => void, onOpenProfile: () => void, onOpenSettings: () => void, onOpenGuildSettings: () => void, onOpenInvite: () => void, onGuildsRefresh?: () => void, onGuildLeave?: (guildId: string) => void, guilds: Array<{ id: string; name: string; ownerId: string; iconHash: string | null; description: string | null; memberCount: number; boostTier?: number }>, userProfile: { id?: string; name: string; avatarHash?: string | null; avatarFrame?: 'none' | 'neon' | 'gold' | 'glass' } }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const { openMenu } = useContextMenu();
@@ -195,6 +212,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
     const [ratingValue, setRatingValue] = useState(0);
     const [ratingInfo, setRatingInfo] = useState<{ avg: number; total: number } | null>(null);
     const [ratingSubmitting, setRatingSubmitting] = useState(false);
+    const [themePickerGuild, setThemePickerGuild] = useState<{ id: string; name: string } | null>(null);
     const [guildFolders, setGuildFolders] = useState<Array<{ id: string; name: string; color: string; guildIds: string[]; collapsed: boolean }>>([]);
     const [notifCount, setNotifCount] = useState(0);
     useUnreadStore(); // subscribe to re-render on unread changes
@@ -280,6 +298,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                 addToast({ title: `Activity ${!activityEnabled ? 'enabled' : 'disabled'} for ${guild.name}`, variant: 'success' });
             }},
             { id: 'privacy-settings', label: 'Privacy Settings', icon: ShieldIcon, onClick: () => onOpenSettings() },
+            { id: 'guild-theme', label: 'Set Portal Theme', icon: Paintbrush, onClick: () => setThemePickerGuild({ id: guild.id, name: guild.name }) },
             { divider: true, id: 'div2', label: '', onClick: () => {} },
             { id: 'copy-id', label: 'Copy Portal ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(guild.id).catch(() => {}); addToast({ title: 'Portal ID copied', variant: 'info' }); } },
             { id: 'create-folder', label: 'Create Folder', icon: FolderIcon, onClick: () => {
@@ -293,11 +312,13 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                 const guildId = guild.id;
                 onGuildLeave?.(guildId);
                 if (location.pathname.startsWith(`/guild/${guildId}`)) navigate('/');
-                api.guilds.leave(guildId).then(() => {
-                    addToast({ title: `Left ${guild.name}`, variant: 'info' });
-                }).catch(() => {
-                    onGuildsRefresh?.();
-                    addToast({ title: 'Failed to leave portal', variant: 'error' });
+                addToast({
+                    title: `Left ${guild.name}`,
+                    variant: 'undo' as const,
+                    onUndo: () => { onGuildsRefresh?.(); },
+                    onExpire: () => {
+                        api.guilds.leave(guildId).catch(() => { onGuildsRefresh?.(); addToast({ title: 'Failed to leave portal', variant: 'error' }); });
+                    },
                 });
             }},
         ]);
@@ -369,10 +390,9 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                         <div className={`guild-icon ${activeGuildId === guild.id ? 'active' : ''}`}
                              style={{ background: getDeterministicGradient(guild.name), color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>
                             {guild.iconHash ? (
-                                <img
+                                <AnimatedGuildIcon
                                     src={`${API_BASE}/files/${guild.iconHash}`}
-                                    alt={guild.name}
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }}
+                                    alt={`${guild.name} server icon`}
                                 />
                             ) : (
                                 guild.name.charAt(0).toUpperCase()
@@ -383,6 +403,30 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                                 position: 'absolute', left: '-4px', top: '50%', transform: 'translateY(-50%)',
                                 width: '8px', height: '8px', borderRadius: '50%', background: 'var(--text-primary)',
                             }} />
+                        )}
+                        {hasGuildTheme(guild.id) && (
+                            <span style={{
+                                position: 'absolute', bottom: '-2px', right: '-2px',
+                                width: '14px', height: '14px', borderRadius: '50%',
+                                background: 'var(--accent-primary)', display: 'flex',
+                                alignItems: 'center', justifyContent: 'center',
+                                border: '2px solid var(--bg-primary)',
+                            }}>
+                                <Paintbrush size={8} style={{ color: 'white' }} />
+                            </span>
+                        )}
+                        {(guild.boostTier ?? 0) > 0 && (
+                            <span style={{
+                                position: 'absolute', top: '-3px', right: '-3px',
+                                fontSize: '9px', fontWeight: 800, lineHeight: '14px',
+                                minWidth: '14px', height: '14px', borderRadius: '7px',
+                                background: (guild.boostTier ?? 0) >= 3 ? '#ffd700' : '#ff73fa',
+                                color: (guild.boostTier ?? 0) >= 3 ? '#000' : '#fff',
+                                textAlign: 'center', padding: '0 3px',
+                                border: '2px solid var(--bg-primary)',
+                            }}>
+                                {guild.boostTier}
+                            </span>
                         )}
                     </Link>
                 </Tooltip>
@@ -452,6 +496,67 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                     </div>
                 </div>
             )}
+            {themePickerGuild && (() => {
+                const THEME_OPTIONS: { value: string; label: string }[] = [
+                    { value: '', label: 'Default (No Override)' },
+                    { value: 'default', label: 'Dark' }, { value: 'glass', label: 'Glass' },
+                    { value: 'synthwave', label: 'Synthwave' }, { value: 'nord', label: 'Nord' },
+                    { value: 'solarized', label: 'Solarized' }, { value: 'dracula', label: 'Dracula' },
+                    { value: 'monokai', label: 'Monokai' }, { value: 'catppuccin', label: 'Catppuccin' },
+                    { value: 'gruvbox', label: 'Gruvbox' }, { value: 'tokyo_night', label: 'Tokyo Night' },
+                    { value: 'everforest', label: 'Everforest' }, { value: 'cyberpunk', label: 'Cyberpunk' },
+                    { value: 'sakura', label: 'Sakura' }, { value: 'ocean', label: 'Ocean' },
+                    { value: 'forest', label: 'Forest' }, { value: 'midnight', label: 'Midnight' },
+                    { value: 'aurora', label: 'Aurora' }, { value: 'vaporwave', label: 'Vaporwave' },
+                    { value: 'terminal', label: 'Terminal' }, { value: 'matrix', label: 'Matrix' },
+                    { value: 'neon', label: 'Neon' }, { value: 'coffee', label: 'Coffee' },
+                    { value: 'lavender', label: 'Lavender' }, { value: 'rose_gold', label: 'Rose Gold' },
+                    { value: 'arctic', label: 'Arctic' }, { value: 'obsidian', label: 'Obsidian' },
+                    { value: 'fire', label: 'Fire' }, { value: 'desert', label: 'Desert' },
+                    { value: 'pastel', label: 'Pastel' }, { value: 'monochrome', label: 'Monochrome' },
+                ];
+                const currentGuildTheme = getGuildTheme(themePickerGuild.id) || '';
+                return (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }} onClick={() => setThemePickerGuild(null)}>
+                        <div style={{ width: '400px', maxHeight: '80vh', background: 'var(--bg-elevated)', borderRadius: '16px', padding: '24px', border: '1px solid var(--stroke)', boxShadow: '0 24px 48px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                <div>
+                                    <h3 style={{ fontSize: '18px', fontWeight: 700 }}>Portal Theme</h3>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{themePickerGuild.name}</div>
+                                </div>
+                                <button onClick={() => setThemePickerGuild(null)} aria-label="Close theme picker" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}><X size={18} /></button>
+                            </div>
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>Choose a theme that will be applied whenever you visit this portal.</p>
+                            <div style={{ overflowY: 'auto', flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                                {THEME_OPTIONS.map(opt => (
+                                    <button
+                                        key={opt.value}
+                                        onClick={() => {
+                                            if (opt.value === '') {
+                                                removeGuildTheme(themePickerGuild.id);
+                                            } else {
+                                                setGuildTheme(themePickerGuild.id, opt.value);
+                                            }
+                                            addToast({ title: opt.value ? `Theme set to ${opt.label}` : 'Portal theme removed', variant: 'success' });
+                                            setThemePickerGuild(null);
+                                        }}
+                                        style={{
+                                            padding: '10px 12px', borderRadius: '8px', cursor: 'pointer',
+                                            background: currentGuildTheme === opt.value || (!currentGuildTheme && opt.value === '') ? 'rgba(88, 101, 242, 0.15)' : 'var(--bg-tertiary)',
+                                            border: currentGuildTheme === opt.value || (!currentGuildTheme && opt.value === '') ? '1px solid var(--accent-primary)' : '1px solid var(--stroke)',
+                                            color: currentGuildTheme === opt.value || (!currentGuildTheme && opt.value === '') ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                            fontSize: '13px', fontWeight: 600, textAlign: 'left',
+                                            transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </nav>
     );
 };
@@ -467,8 +572,10 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const [showCreateChannel, setShowCreateChannel] = useState<{ type: 'text' | 'voice'; parentId?: string } | null>(null);
     const [notifPrefs, setNotifPrefs] = useState<{ type: 'guild' | 'channel'; id: string; name: string } | null>(null);
     const [newChannelName, setNewChannelName] = useState('');
+    const [selectedTemplate, setSelectedTemplate] = useState<{ name: string; topic?: string; rateLimitPerUser?: number; isAnnouncement?: boolean; channelType?: string } | null>(null);
     const [favoriteChannelIds, setFavoriteChannelIds] = useState<Set<string>>(new Set());
     const [channelTyping, setChannelTyping] = useState<Map<string, string[]>>(new Map());
+    const prefetchTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
     // Listen for typing events across channels for sidebar indicators
     useEffect(() => {
@@ -784,11 +891,22 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         if (!activeGuildId || !newChannelName.trim() || !showCreateChannel) return;
         try {
             const channelType = showCreateChannel.type === 'voice' ? 'GUILD_VOICE' : 'GUILD_TEXT';
-            await api.channels.create(activeGuildId, {
-                name: newChannelName.trim().toLowerCase().replace(/\s+/g, '-'),
-                type: channelType,
+            const slug = newChannelName.trim().toLowerCase().replace(/\s+/g, '-');
+            const created = await api.channels.create(activeGuildId, {
+                name: slug,
+                type: selectedTemplate?.channelType || channelType,
                 parentId: showCreateChannel.parentId,
             });
+            // Apply template settings after creation
+            if (selectedTemplate && created?.id) {
+                const updates: Record<string, unknown> = {};
+                if (selectedTemplate.topic) updates.topic = selectedTemplate.topic;
+                if (selectedTemplate.rateLimitPerUser) updates.rateLimitPerUser = selectedTemplate.rateLimitPerUser;
+                if (selectedTemplate.isAnnouncement) updates.isAnnouncement = true;
+                if (Object.keys(updates).length > 0) {
+                    await api.channels.update(created.id, updates as any).catch(() => {});
+                }
+            }
             if (guildSession.enabled) {
                 await guildSession.refresh();
             } else {
@@ -797,7 +915,8 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
             }
             setShowCreateChannel(null);
             setNewChannelName('');
-            addToast({ title: 'Channel Created', description: `#${newChannelName.trim().toLowerCase().replace(/\s+/g, '-')} has been created.`, variant: 'success' });
+            setSelectedTemplate(null);
+            addToast({ title: 'Channel Created', description: `#${slug} has been created.`, variant: 'success' });
         } catch (err: any) {
             addToast({ title: 'Failed to create channel', description: err?.message || 'Something went wrong.', variant: 'error' });
         }
@@ -822,6 +941,23 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     setMutedChannelIds(prev => { const next = new Set(prev); childChannelIds.forEach(id => next.add(id)); return next; });
                     addToast({ title: `${category.name} muted`, variant: 'info' });
                 }
+            }},
+            { id: 'collapse-toggle', label: collapsed[category.id] ? 'Expand Category' : 'Collapse Category', icon: collapsed[category.id] ? ChevronDown : ChevronRight, onClick: () => {
+                toggleCategory(category.id);
+            }},
+            { id: 'collapse-all', label: 'Collapse All Categories', icon: Minus, onClick: () => {
+                const isCategoryType = (type: string) => type === 'category' || type === 'GUILD_CATEGORY';
+                const allCats = guildChannels.filter(c => isCategoryType(c.type));
+                const newCollapsed: Record<string, boolean> = { ...collapsed };
+                allCats.forEach(c => { newCollapsed[c.id] = true; });
+                setCollapsed(newCollapsed);
+            }},
+            { id: 'expand-all', label: 'Expand All Categories', icon: Plus, onClick: () => {
+                const isCategoryType = (type: string) => type === 'category' || type === 'GUILD_CATEGORY';
+                const allCats = guildChannels.filter(c => isCategoryType(c.type));
+                const newCollapsed: Record<string, boolean> = { ...collapsed };
+                allCats.forEach(c => { newCollapsed[c.id] = false; });
+                setCollapsed(newCollapsed);
             }},
             { divider: true, id: 'div1', label: '', onClick: () => {} },
             ...(canManageChannels ? [
@@ -862,6 +998,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         openMenu(e, [
             { id: 'mark-read', label: 'Mark as Read', icon: Circle, onClick: () => {
                 api.messages.ack(channel.id).catch(() => {});
+                markReadStore(channel.id);
                 addToast({ title: 'Channel Marked as Read', variant: 'info' });
             }},
             { id: 'favorite', label: isFav ? 'Remove from Favorites' : 'Add to Favorites', icon: Star, onClick: () => {
@@ -1227,7 +1364,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
 
     if (isAppRoot) {
         return (
-            <aside className={`channel-sidebar glass-panel ${isOpen ? 'open' : ''}`} role="navigation" aria-label="App navigation">
+            <nav className={`channel-sidebar glass-panel ${isOpen ? 'open' : ''}`} aria-label="App navigation">
                 {/* Sidebar Customize Button */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 12px 0' }}>
                     <button
@@ -1296,6 +1433,22 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                             <span style={{ fontSize: '15px' }}>Friends</span>
                         </div>
                     </Link>
+                    <Link to="/friend-activity" style={{ textDecoration: 'none' }}>
+                        <div className={`channel-item ${location.pathname === '/friend-activity' ? 'active' : ''}`}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Activity size={18} />
+                            </div>
+                            <span style={{ fontSize: '15px' }}>Activity</span>
+                        </div>
+                    </Link>
+                    <Link to="/daily-challenges" style={{ textDecoration: 'none' }}>
+                        <div className={`channel-item ${location.pathname === '/daily-challenges' ? 'active' : ''}`}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Zap size={18} />
+                            </div>
+                            <span style={{ fontSize: '15px' }}>Challenges</span>
+                        </div>
+                    </Link>
                     <Link to="/discover" style={{ textDecoration: 'none' }}>
                         <div className={`channel-item ${location.pathname === '/discover' ? 'active' : ''}`}>
                             <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1335,7 +1488,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 <div className="channel-list" style={{ marginTop: '16px' }}>
                     <div className="channel-category" onClick={() => toggleCategory('dm')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            {collapsed['dm'] ? <ChevronRight size={14} /> : <ChevronDown size={14} />} <span>Direct Messages</span>
+                            <span style={{ transition: 'transform 0.15s ease', transform: collapsed['dm'] ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}><ChevronDown size={14} /></span> <span>Direct Messages</span>
                         </div>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                             <Users size={14} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} aria-label="New Group DM" onClick={(e) => { e.stopPropagation(); onOpenCreateGroupDm(); }} />
@@ -1402,50 +1555,112 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                         const groupLabel = dm.groupName || 'Group DM';
                                         const memberCount = dm.participants?.length || 0;
                                         return (
-                                            <Link key={dm.id} to={`/dm/${dm.id}`} style={{ textDecoration: 'none' }} onContextMenu={(e) => {
+                                            <Link key={dm.id} to={`/dm/${dm.id}`} style={{ textDecoration: 'none' }}
+                                                onMouseEnter={() => {
+                                                    const timer = setTimeout(() => {
+                                                        queryClient.prefetchQuery({
+                                                            queryKey: messagesQueryKey(dm.id),
+                                                            queryFn: () => api.messages.list(dm.id, { limit: 50 }),
+                                                            staleTime: 30_000,
+                                                        });
+                                                    }, 200);
+                                                    prefetchTimers.current.set(dm.id, timer);
+                                                }}
+                                                onMouseLeave={() => {
+                                                    const timer = prefetchTimers.current.get(dm.id);
+                                                    if (timer) { clearTimeout(timer); prefetchTimers.current.delete(dm.id); }
+                                                }}
+                                                onContextMenu={(e) => {
                                                 e.preventDefault();
                                                 openMenu(e, [
-                                                    { id: 'mark-read', label: 'Mark as Read', icon: Check, onClick: () => { api.messages.ack(dm.id).catch(() => {}); addToast({ title: 'Marked as read', variant: 'info' }); }},
+                                                    { id: 'mark-read', label: 'Mark as Read', icon: Check, onClick: () => { api.messages.ack(dm.id).catch(() => {}); markReadStore(dm.id); addToast({ title: 'Marked as read', variant: 'info' }); }},
                                                     { id: 'mute', label: 'Mute Conversation', icon: Volume1, onClick: () => { api.channels.setNotificationPrefs(dm.id, { level: 'none' }).then(() => addToast({ title: 'Conversation muted', variant: 'info' })).catch(() => addToast({ title: 'Failed to mute', variant: 'error' })); }},
                                                     { divider: true, id: 'div1', label: '', onClick: () => {} },
                                                     { id: 'copy-id', label: 'Copy Channel ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(dm.id).catch(() => {}); addToast({ title: 'Channel ID copied', variant: 'info' }); }},
                                                     { id: 'close', label: 'Close DM', icon: X, color: 'var(--error)', onClick: () => { setDmChannels(prev => prev.filter((d: any) => d.id !== dm.id)); addToast({ title: 'Conversation closed', variant: 'info' }); }},
                                                 ]);
                                             }}>
-                                                <div className={`channel-item ${location.pathname === `/dm/${dm.id}` ? 'active' : ''}`}>
-                                                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                        <Users size={16} color="var(--bg-app)" />
+                                                {(() => {
+                                                    const gdmActive = location.pathname === `/dm/${dm.id}`;
+                                                    const gdmUn = unreadMap.get(dm.id);
+                                                    const gdmHasUnread = !!gdmUn?.hasUnread && !gdmActive;
+                                                    const gdmMentions = gdmUn?.mentionCount ?? 0;
+                                                    return (
+                                                <div className={`channel-item ${gdmActive ? 'active' : ''}`} style={{ justifyContent: 'space-between' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                                                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                            <Users size={16} color="var(--bg-app)" />
+                                                        </div>
+                                                        <div style={{ overflow: 'hidden', flex: 1 }}>
+                                                            <span style={{ fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', fontWeight: gdmHasUnread ? 600 : undefined, color: gdmHasUnread ? 'var(--text-primary)' : undefined }}>{groupLabel}</span>
+                                                            {memberCount > 0 && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{memberCount} members</span>}
+                                                        </div>
                                                     </div>
-                                                    <div style={{ overflow: 'hidden', flex: 1 }}>
-                                                        <span style={{ fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{groupLabel}</span>
-                                                        {memberCount > 0 && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{memberCount} members</span>}
-                                                    </div>
+                                                    {gdmMentions > 0 && !gdmActive && (
+                                                        <span style={{ background: '#ed4245', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px', flexShrink: 0 }}>{gdmMentions}</span>
+                                                    )}
+                                                    {gdmHasUnread && gdmMentions === 0 && (
+                                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-primary)', flexShrink: 0 }} />
+                                                    )}
                                                 </div>
+                                                    );
+                                                })()}
                                             </Link>
                                         );
                                     }
                                     const recipient = dm.otherUser || dm.recipients?.[0];
                                     const displayName = recipient?.displayName || recipient?.username || 'Unknown';
                                     return (
-                                        <Link key={dm.id} to={`/dm/${dm.id}`} style={{ textDecoration: 'none' }} onContextMenu={(e) => {
+                                        <Link key={dm.id} to={`/dm/${dm.id}`} style={{ textDecoration: 'none' }}
+                                            onMouseEnter={() => {
+                                                const timer = setTimeout(() => {
+                                                    queryClient.prefetchQuery({
+                                                        queryKey: messagesQueryKey(dm.id),
+                                                        queryFn: () => api.messages.list(dm.id, { limit: 50 }),
+                                                        staleTime: 30_000,
+                                                    });
+                                                }, 200);
+                                                prefetchTimers.current.set(dm.id, timer);
+                                            }}
+                                            onMouseLeave={() => {
+                                                const timer = prefetchTimers.current.get(dm.id);
+                                                if (timer) { clearTimeout(timer); prefetchTimers.current.delete(dm.id); }
+                                            }}
+                                            onContextMenu={(e) => {
                                             e.preventDefault();
                                             openMenu(e, [
-                                                { id: 'mark-read', label: 'Mark as Read', icon: Check, onClick: () => { api.messages.ack(dm.id).catch(() => {}); addToast({ title: 'Marked as read', variant: 'info' }); }},
+                                                { id: 'mark-read', label: 'Mark as Read', icon: Check, onClick: () => { api.messages.ack(dm.id).catch(() => {}); markReadStore(dm.id); addToast({ title: 'Marked as read', variant: 'info' }); }},
                                                 { id: 'mute', label: 'Mute Conversation', icon: Volume1, onClick: () => { api.channels.setNotificationPrefs(dm.id, { level: 'none' }).then(() => addToast({ title: 'Conversation muted', variant: 'info' })).catch(() => addToast({ title: 'Failed to mute', variant: 'error' })); }},
                                                 { divider: true, id: 'div1', label: '', onClick: () => {} },
                                                 { id: 'copy-id', label: 'Copy Channel ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(dm.id).catch(() => {}); addToast({ title: 'Channel ID copied', variant: 'info' }); }},
                                                 { id: 'close', label: 'Close DM', icon: X, color: 'var(--error)', onClick: () => { setDmChannels(prev => prev.filter((d: any) => d.id !== dm.id)); addToast({ title: 'Conversation closed', variant: 'info' }); }},
                                             ]);
                                         }}>
-                                            <div className={`channel-item ${location.pathname === `/dm/${dm.id}` ? 'active' : ''}`}>
-                                                <Avatar
-                                                    userId={recipient?.id || dm.id}
-                                                    avatarHash={recipient?.avatarHash}
-                                                    displayName={displayName}
-                                                    size={32}
-                                                />
-                                                <span style={{ fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</span>
+                                            {(() => {
+                                                const dmActive = location.pathname === `/dm/${dm.id}`;
+                                                const dmUn = unreadMap.get(dm.id);
+                                                const dmUnreadFlag = !!dmUn?.hasUnread && !dmActive;
+                                                const dmMentionCount = dmUn?.mentionCount ?? 0;
+                                                return (
+                                            <div className={`channel-item ${dmActive ? 'active' : ''}`} style={{ justifyContent: 'space-between' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                                                    <Avatar
+                                                        userId={recipient?.id || dm.id}
+                                                        avatarHash={recipient?.avatarHash}
+                                                        displayName={displayName}
+                                                        size={32}
+                                                    />
+                                                    <span style={{ fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: dmUnreadFlag ? 600 : undefined, color: dmUnreadFlag ? 'var(--text-primary)' : undefined }}>{displayName}</span>
+                                                </div>
+                                                {dmMentionCount > 0 && !dmActive && (
+                                                    <span style={{ background: '#ed4245', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px', flexShrink: 0 }}>{dmMentionCount}</span>
+                                                )}
+                                                {dmUnreadFlag && dmMentionCount === 0 && (
+                                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-primary)', flexShrink: 0 }} />
+                                                )}
                                             </div>
+                                                );
+                                            })()}
                                         </Link>
                                     );
                                 })
@@ -1456,12 +1671,12 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 )}
 
                 <UserPanel />
-            </aside>
+            </nav>
         );
     }
 
     return (
-        <aside className={`channel-sidebar glass-panel ${isOpen ? 'open' : ''}`} role="navigation" aria-label="Channel navigation">
+        <nav className={`channel-sidebar glass-panel ${isOpen ? 'open' : ''}`} aria-label="Channel navigation">
             <header className="sidebar-header" style={{ cursor: 'pointer' }}>
                 <Link to={activeGuildId ? `/guild/${activeGuildId}` : '/guild'} style={{ color: 'inherit', textDecoration: 'none' }}>{guildInfo?.name || 'Loading...'}</Link>
             </header>
@@ -1478,14 +1693,38 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 </div>
             </div>
 
-            <div className="channel-list">
+            <div className="channel-list" role="listbox" aria-label="Channels" onKeyDown={(e) => {
+                const container = e.currentTarget;
+                const items = Array.from(container.querySelectorAll<HTMLElement>('.channel-item[tabindex]'));
+                const focused = document.activeElement as HTMLElement;
+                const idx = items.indexOf(focused);
+                if (e.key === 'ArrowDown') { e.preventDefault(); items[(idx + 1) % items.length]?.focus(); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); items[(idx - 1 + items.length) % items.length]?.focus(); }
+                else if (e.key === 'Home') { e.preventDefault(); items[0]?.focus(); }
+                else if (e.key === 'End') { e.preventDefault(); items[items.length - 1]?.focus(); }
+                else if (e.key === 'Enter' && idx >= 0) { e.preventDefault(); items[idx].click(); }
+                else if (e.key === 'Escape') { focused?.blur(); }
+            }}>
                 <div
                     className={`channel-item ${location.pathname.includes('/events') ? 'active' : ''}`}
+                    role="option"
+                    aria-selected={location.pathname.includes('/events')}
                     style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '6px 8px' }}
                     onClick={() => navigate(`/guild/${activeGuildId}/events`)}
                 >
                     <Calendar size={18} style={{ opacity: 0.7 }} />
                     <span>Events</span>
+                </div>
+                <div
+                    className={`channel-item ${location.pathname.includes('/members') ? 'active' : ''}`}
+                    role="option"
+                    aria-selected={location.pathname.includes('/members')}
+                    tabIndex={0}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '6px 8px' }}
+                    onClick={() => navigate(`/guild/${activeGuildId}/members`)}
+                >
+                    <Users size={18} style={{ opacity: 0.7 }} />
+                    <span>Members</span>
                 </div>
                 {guildLoadErrorCode === 'FORBIDDEN' && (
                     <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '13px' }}>
@@ -1552,12 +1791,8 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                     <div
                                         className={`channel-item ${isConnectedChannel ? 'active' : ''}`}
                                         tabIndex={0}
-                                        role="button"
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'ArrowDown') { e.preventDefault(); (e.currentTarget.closest('.channel-item')?.parentElement?.nextElementSibling?.querySelector('.channel-item') as HTMLElement)?.focus(); }
-                                            if (e.key === 'ArrowUp') { e.preventDefault(); (e.currentTarget.closest('.channel-item')?.parentElement?.previousElementSibling?.querySelector('.channel-item') as HTMLElement)?.focus(); }
-                                            if (e.key === 'Enter') { e.currentTarget.click(); }
-                                        }}
+                                        role="option"
+                                        aria-selected={isConnectedChannel}
                                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: canManageChannels ? 'grab' : 'pointer' }}
                                         onClick={() => {
                                             if (isConnectedChannel) {
@@ -1571,7 +1806,12 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                     >
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                                             <Volume2 size={18} style={{ flexShrink: 0, opacity: 0.7 }} />
-                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.name}</span>
+                                            <div style={{ minWidth: 0 }}>
+                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{ch.name}</span>
+                                                {ch.topic && (
+                                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', lineHeight: '14px', maxWidth: '140px' }}>{ch.topic}</span>
+                                                )}
+                                            </div>
                                         </div>
                                         {(voiceCount > 0 || ((ch as any).userLimit ?? 0) > 0) && (
                                             <span style={{
@@ -1621,11 +1861,22 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         const isPrivate = ch.type === 'GUILD_PRIVATE';
                         return (
                             <div key={ch.id} {...dragProps} style={{ opacity: isDragging ? 0.5 : undefined, ...dropIndicatorStyle }}>
-                                <Link to={linkTo} style={{ textDecoration: 'none' }} draggable={false} onContextMenu={(e) => handleChannelContext(e, ch)}>
-                                    <div className={`channel-item ${isActive ? 'active' : ''}`} tabIndex={0} onKeyDown={(e) => {
-                                            if (e.key === 'ArrowDown') { e.preventDefault(); (e.currentTarget.closest('.channel-item')?.parentElement?.parentElement?.nextElementSibling?.querySelector('.channel-item') as HTMLElement)?.focus(); }
-                                            if (e.key === 'ArrowUp') { e.preventDefault(); (e.currentTarget.closest('.channel-item')?.parentElement?.parentElement?.previousElementSibling?.querySelector('.channel-item') as HTMLElement)?.focus(); }
-                                        }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: isMuted ? 0.5 : undefined, cursor: canManageChannels ? 'grab' : undefined }}>
+                                <Link to={linkTo} style={{ textDecoration: 'none' }} draggable={false} onContextMenu={(e) => handleChannelContext(e, ch)}
+                                    onMouseEnter={() => {
+                                        const timer = setTimeout(() => {
+                                            queryClient.prefetchQuery({
+                                                queryKey: messagesQueryKey(ch.id),
+                                                queryFn: () => api.messages.list(ch.id, { limit: 50 }),
+                                                staleTime: 30_000,
+                                            });
+                                        }, 200);
+                                        prefetchTimers.current.set(ch.id, timer);
+                                    }}
+                                    onMouseLeave={() => {
+                                        const timer = prefetchTimers.current.get(ch.id);
+                                        if (timer) { clearTimeout(timer); prefetchTimers.current.delete(ch.id); }
+                                    }}>
+                                    <div className={`channel-item ${isActive ? 'active' : ''}`} tabIndex={0} role="option" aria-selected={isActive} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: isMuted ? 0.5 : undefined, cursor: canManageChannels ? 'grab' : undefined }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                                             {isPrivate ? <Lock size={18} style={{ flexShrink: 0, opacity: 0.7 }} /> : <HashIcon size={18} style={{ flexShrink: 0, opacity: 0.7 }} />}
                                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: hasUnread ? 600 : undefined, color: hasUnread ? 'var(--text-primary)' : undefined }}>{ch.name}</span>
@@ -1691,17 +1942,29 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
 
                     const renderCategory = (cat: typeof categories[0], defaultType: 'text' | 'voice') => {
                         const children = channelsByParent.get(cat.id) || [];
+                        const isCatCollapsed = !!collapsed[cat.id];
+                        // When collapsed, still show channels with unread messages or that are currently active
+                        const visibleChildren = isCatCollapsed
+                            ? children.filter(ch => {
+                                const entry = unreadMap.get(ch.id);
+                                const isActive = location.pathname.includes(`/channel/${ch.id}`) || location.pathname.includes(`/voice/${ch.id}`);
+                                return isActive || !!(entry?.hasUnread);
+                            })
+                            : children;
                         return (
                             <div key={cat.id}>
                                 <div className="channel-category" style={{ marginTop: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} onContextMenu={(e) => handleCategoryContext(e, cat, children.map(c => c.id))}>
                                     <div onClick={() => toggleCategory(cat.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
-                                        {collapsed[cat.id] ? <ChevronRight size={14} /> : <ChevronDown size={14} />} {cat.name.toUpperCase()}
+                                        <span style={{ transition: 'transform 0.15s ease', transform: isCatCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}>
+                                            <ChevronDown size={14} />
+                                        </span>
+                                        {cat.name.toUpperCase()}
                                     </div>
                                     {canManageChannels && <Plus size={14} style={{ cursor: 'pointer', color: 'var(--text-muted)', opacity: 0.7 }}
                                         onClick={(e) => { e.stopPropagation(); setShowCreateChannel({ type: defaultType, parentId: cat.id }); setNewChannelName(''); }}
                                     />}
                                 </div>
-                                {!collapsed[cat.id] && children.map(renderChannel)}
+                                {visibleChildren.map(renderChannel)}
                             </div>
                         );
                     };
@@ -1718,7 +1981,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                         onClick={() => toggleCategory('__favorites__')}
                                     >
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            {collapsed['__favorites__'] ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
+                                            <span style={{ transition: 'transform 0.15s ease', transform: collapsed['__favorites__'] ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}><ChevronDown size={10} /></span>
                                             <Star size={10} style={{ color: '#faa61a' }} />
                                             <span>Favorites</span>
                                         </div>
@@ -1733,7 +1996,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                 onClick={() => toggleCategory('__text_channels__')}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    {collapsed['__text_channels__'] ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
+                                    <span style={{ transition: 'transform 0.15s ease', transform: collapsed['__text_channels__'] ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}><ChevronDown size={10} /></span>
                                     <span>Text Channels</span>
                                 </div>
                                 {canManageChannels && <Plus size={14} style={{ cursor: 'pointer', opacity: 0.7 }}
@@ -1753,7 +2016,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                 onClick={() => toggleCategory('__voice_channels__')}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    {collapsed['__voice_channels__'] ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
+                                    <span style={{ transition: 'transform 0.15s ease', transform: collapsed['__voice_channels__'] ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}><ChevronDown size={10} /></span>
                                     <span>Voice Channels</span>
                                 </div>
                                 {canManageChannels && <Plus size={14} style={{ cursor: 'pointer', opacity: 0.7 }}
@@ -1779,44 +2042,64 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     </div>
 
                     {/* Channel Templates */}
-                    {showCreateChannel.type === 'text' && !newChannelName && (
+                    {!newChannelName && (
                         <div style={{ marginBottom: '10px' }}>
                             <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
-                                Quick Templates
+                                Templates
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
-                                {[
-                                    { name: 'general', icon: '#', desc: 'General chat' },
-                                    { name: 'announcements', icon: '!', desc: 'News & updates' },
-                                    { name: 'support', icon: '?', desc: 'Help & tickets' },
-                                    { name: 'gallery', icon: '*', desc: 'Art & media' },
-                                    { name: 'resources', icon: '+', desc: 'Links & files' },
-                                    { name: 'off-topic', icon: '~', desc: 'Casual chat' },
-                                ].map(tmpl => (
+                                {(showCreateChannel.type === 'text' ? [
+                                    { name: 'rules', icon: '\u{1F4DC}', desc: 'Server rules & guidelines', topic: 'Read and follow the server rules', rateLimitPerUser: 0, isAnnouncement: true },
+                                    { name: 'introductions', icon: '\u{1F44B}', desc: 'Introduce yourself, slow mode', topic: 'Tell us about yourself!', rateLimitPerUser: 60 },
+                                    { name: 'media-share', icon: '\u{1F3A8}', desc: 'Share art, screenshots & media', topic: 'Share your favorite media' },
+                                    { name: 'general', icon: '#', desc: 'General purpose chat', topic: '' },
+                                    { name: 'support', icon: '\u{2753}', desc: 'Help & ticket-like support', topic: 'Ask for help here', rateLimitPerUser: 10 },
+                                    { name: 'announcements', icon: '\u{1F4E2}', desc: 'Read-only news & updates', topic: 'Important announcements', isAnnouncement: true },
+                                ] : [
+                                    { name: 'voice-lounge', icon: '\u{1F3A7}', desc: 'Casual hangout voice channel', topic: 'Hang out and chat' },
+                                    { name: 'gaming', icon: '\u{1F3AE}', desc: 'Voice chat for gaming', topic: 'Game together' },
+                                    { name: 'music', icon: '\u{1F3B5}', desc: 'Listen to music together', topic: 'Music listening party' },
+                                    { name: 'meeting', icon: '\u{1F4CB}', desc: 'Team meetings & discussions', topic: 'Meetings' },
+                                ]).map(tmpl => (
                                     <button
                                         key={tmpl.name}
-                                        onClick={() => setNewChannelName(tmpl.name)}
-                                        style={{
-                                            padding: '6px 8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
-                                            borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
-                                            display: 'flex', alignItems: 'center', gap: '6px',
-                                            color: 'var(--text-secondary)', fontSize: '12px',
+                                        onClick={() => {
+                                            setNewChannelName(tmpl.name);
+                                            setSelectedTemplate({ name: tmpl.name, topic: tmpl.topic, rateLimitPerUser: (tmpl as any).rateLimitPerUser, isAnnouncement: (tmpl as any).isAnnouncement });
                                         }}
-                                        onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-                                        onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--stroke)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                                        style={{
+                                            padding: '8px 10px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                            borderRadius: '8px', cursor: 'pointer', textAlign: 'left',
+                                            display: 'flex', alignItems: 'center', gap: '8px',
+                                            color: 'var(--text-secondary)', fontSize: '12px',
+                                            transition: 'border-color 0.15s, background 0.15s',
+                                        }}
+                                        onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.background = 'rgba(88, 101, 242, 0.05)'; }}
+                                        onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--stroke)'; e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
                                     >
-                                        <span style={{ width: '18px', height: '18px', borderRadius: '4px', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>
+                                        <span style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', flexShrink: 0 }}>
                                             {tmpl.icon}
                                         </span>
-                                        <div>
-                                            <div style={{ fontWeight: 600, fontSize: '12px' }}>{tmpl.name}</div>
-                                            <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{tmpl.desc}</div>
+                                        <div style={{ minWidth: 0 }}>
+                                            <div style={{ fontWeight: 600, fontSize: '12px', color: 'var(--text-primary)' }}>{tmpl.name}</div>
+                                            <div style={{ fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tmpl.desc}</div>
                                         </div>
                                     </button>
                                 ))}
                             </div>
                             <div style={{ height: '1px', background: 'var(--stroke)', margin: '8px 0' }} />
                             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Or enter a custom name:</div>
+                        </div>
+                    )}
+                    {selectedTemplate && newChannelName && (
+                        <div style={{ marginBottom: '8px', padding: '6px 10px', background: 'rgba(88, 101, 242, 0.08)', borderRadius: '6px', border: '1px solid rgba(88, 101, 242, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                                Template: {selectedTemplate.name}
+                                {selectedTemplate.topic ? ` \u2022 Topic: "${selectedTemplate.topic}"` : ''}
+                                {selectedTemplate.rateLimitPerUser ? ` \u2022 Slow mode: ${selectedTemplate.rateLimitPerUser}s` : ''}
+                                {selectedTemplate.isAnnouncement ? ' \u2022 Announcement' : ''}
+                            </span>
+                            <button onClick={() => setSelectedTemplate(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex' }}><X size={12} /></button>
                         </div>
                     )}
 
@@ -1827,13 +2110,13 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                             placeholder={showCreateChannel.type === 'voice' ? 'new-voice' : 'new-channel'}
                             value={newChannelName}
                             onChange={(e) => setNewChannelName(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') handleCreateChannel(); if (e.key === 'Escape') { setShowCreateChannel(null); setNewChannelName(''); } }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleCreateChannel(); if (e.key === 'Escape') { setShowCreateChannel(null); setNewChannelName(''); setSelectedTemplate(null); } }}
                             autoFocus
                             style={{ flex: 1, background: 'var(--bg-app)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', padding: '6px 10px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
                         />
                     </div>
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <button onClick={() => { setShowCreateChannel(null); setNewChannelName(''); }} style={{ padding: '4px 12px', background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '12px', cursor: 'pointer', fontWeight: 500 }}>Cancel</button>
+                        <button onClick={() => { setShowCreateChannel(null); setNewChannelName(''); setSelectedTemplate(null); }} style={{ padding: '4px 12px', background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '12px', cursor: 'pointer', fontWeight: 500 }}>Cancel</button>
                         <button onClick={handleCreateChannel} disabled={!newChannelName.trim()} style={{ padding: '4px 12px', background: newChannelName.trim() ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: newChannelName.trim() ? '#000' : 'var(--text-muted)', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: newChannelName.trim() ? 'pointer' : 'default', fontWeight: 600 }}>Create</button>
                     </div>
                 </div>
@@ -1868,7 +2151,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     onClose={() => setNotifPrefs(null)}
                 />
             )}
-        </aside>
+        </nav>
     );
 };
 
@@ -2083,9 +2366,20 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile }: { onOpenProfile: () =
     const handleMemberContext = (e: React.MouseEvent, member: MemberWithPresence) => {
         const name = member.nickname || member.user?.displayName || member.user?.username || member.userId.slice(0, 8);
         openMenu(e, [
-            { id: 'profile', label: 'View Profile', onClick: () => handleMemberClick(member, e) },
-            { id: 'copy-id', label: 'Copy User ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(member.userId); addToast({ title: 'Copied to clipboard', variant: 'info' }); }, divider: true },
-            { id: 'ban', label: 'Ban', icon: Ban, color: '#ED4245', onClick: () => { setBanDialog({ userId: member.userId, name }); setBanReason(''); } },
+            { id: 'profile', label: 'View Profile', icon: User, onClick: () => handleMemberClick(member, e) },
+            { id: 'dm', label: 'Send DM', icon: MessageSquare, onClick: () => {
+                api.dms.openDm(member.userId).then((dm: any) => navigate(`/dm/${dm.id}`)).catch(() => addToast({ title: 'Failed to open DM', variant: 'error' }));
+            }},
+            { divider: true, id: 'div-m1', label: '', onClick: () => {} },
+            { id: 'copy-id', label: 'Copy User ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(member.userId); addToast({ title: 'Copied to clipboard', variant: 'info' }); }},
+            ...(guildId ? [
+                { divider: true, id: 'div-m2', label: '', onClick: () => {} },
+                { id: 'kick', label: 'Kick Member', icon: ShieldAlert, color: '#FFA500', onClick: () => {
+                    if (!confirm(`Kick ${name} from this server?`)) return;
+                    api.guilds.kickMember(guildId, member.userId).then(() => addToast({ title: `${name} was kicked`, variant: 'success' })).catch(() => addToast({ title: 'Failed to kick member', variant: 'error' }));
+                }},
+                { id: 'ban', label: 'Ban Member', icon: Ban, color: '#ED4245', onClick: () => { setBanDialog({ userId: member.userId, name }); setBanReason(''); } },
+            ] : []),
         ]);
     };
 
@@ -2140,7 +2434,7 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile }: { onOpenProfile: () =
     };
 
     return (
-        <aside className="members-sidebar glass-panel">
+        <aside className="members-sidebar glass-panel" aria-label="Members">
             <div style={{ padding: '10px 12px 8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <input
                     value={searchQuery}
@@ -2348,10 +2642,21 @@ export const AppLayout = () => {
     const navigate = useNavigate();
     const { addToast } = useToast();
     const isMobile = useIsMobile();
+    const { splitState, closeSplitView, setDividerPosition } = useSplitView();
     const [bgMedia, setBgMediaRaw] = useState<{ url: string, type: MediaType } | null>(null);
+    const tour = useShouldShowTour();
 
     // Play join/leave sounds globally for all voice channels
     useVoiceSounds();
+
+    // Sync React Query caches with real-time socket events
+    useQuerySocketSync();
+
+    // Desktop-specific hooks (no-ops when not in Electron)
+    useDesktopDeepLinks();
+    useDesktopIdleDetection();
+    useDesktopMenuNavigation();
+    useDesktopNotifications();
 
     // Voice context for keyboard shortcuts (mute/deafen)
     const voiceCtx = useVoice();
@@ -2393,14 +2698,51 @@ export const AppLayout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const mainContentRef = useRef<HTMLDivElement>(null);
     const { user: ctxUser, loading: userLoading, gratoniteBalance, setGratoniteBalance } = useUser();
-    const { setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects, screenReaderMode } = useTheme();
+    const { setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects, reducedEffects, screenReaderMode } = useTheme();
     const routeAnnouncerRef = useRef<HTMLDivElement>(null);
-    const [guilds, setGuilds] = useState<Array<{ id: string; name: string; ownerId: string; iconHash: string | null; description: string | null; memberCount: number }>>([]);
+    const [guilds, setGuilds] = useState<Array<{ id: string; name: string; ownerId: string; iconHash: string | null; description: string | null; memberCount: number; boostTier?: number }>>([]);
     const [dmChannels, setDmChannels] = useState<Array<{ id: string; recipientIds?: string[]; recipients?: Array<{ id: string; username: string; displayName: string; avatarHash: string | null }> }>>([]);
     const activeGuildId = useMemo(() => {
         const match = location.pathname.match(/\/guild\/([^/]+)/);
         return match ? match[1] : null;
     }, [location.pathname]);
+
+    // Per-guild theme override
+    const defaultThemeRef = useRef<string | null>(null);
+    useEffect(() => {
+        if (activeGuildId) {
+            const guildTheme = getGuildTheme(activeGuildId);
+            if (guildTheme) {
+                if (!defaultThemeRef.current) {
+                    // Store the user's base theme before overriding
+                    defaultThemeRef.current = document.documentElement.getAttribute('data-theme') || 'dark';
+                }
+                setTheme(guildTheme as AppTheme);
+            }
+        } else if (defaultThemeRef.current) {
+            // Revert to base theme when leaving guild
+            setTheme(defaultThemeRef.current as AppTheme);
+            defaultThemeRef.current = null;
+        }
+
+        // Also listen for guild-theme-changed events (from settings UI)
+        const handleGuildThemeChange = (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+            if (detail.guildId === activeGuildId) {
+                if (detail.theme) {
+                    if (!defaultThemeRef.current) {
+                        defaultThemeRef.current = document.documentElement.getAttribute('data-theme') || 'dark';
+                    }
+                    setTheme(detail.theme as AppTheme);
+                } else if (defaultThemeRef.current) {
+                    setTheme(defaultThemeRef.current as AppTheme);
+                    defaultThemeRef.current = null;
+                }
+            }
+        };
+        window.addEventListener('gratonite:guild-theme-changed', handleGuildThemeChange);
+        return () => window.removeEventListener('gratonite:guild-theme-changed', handleGuildThemeChange);
+    }, [activeGuildId, setTheme]);
 
     const guildFetchV2Enabled = useMemo(() => {
         return (import.meta.env.VITE_GUILD_FETCH_V2 ?? '1') !== '0';
@@ -2463,16 +2805,18 @@ export const AppLayout = () => {
         if (!socket) return;
 
         const onMsgCreate = (data: { channelId: string }) => {
-            const currentChannelMatch = location.pathname.match(/\/channel\/([^/]+)/);
-            const currentChannelId = currentChannelMatch?.[1];
+            const channelMatch = location.pathname.match(/\/channel\/([^/]+)/);
+            const dmMatch = location.pathname.match(/\/dm\/([^/]+)/);
+            const currentChannelId = channelMatch?.[1] || dmMatch?.[1];
             if (data.channelId !== currentChannelId) {
                 setChannelHasUnread(data.channelId);
             }
         };
 
         const onMentionCreated = (data: { channelId: string; guildId: string; mentionCount: number }) => {
-            const currentChannelMatch = location.pathname.match(/\/channel\/([^/]+)/);
-            const currentChannelId = currentChannelMatch?.[1];
+            const channelMatch = location.pathname.match(/\/channel\/([^/]+)/);
+            const dmMatch = location.pathname.match(/\/dm\/([^/]+)/);
+            const currentChannelId = channelMatch?.[1] || dmMatch?.[1];
             if (data.channelId !== currentChannelId) {
                 incrementUnread(data.channelId, 1);
             }
@@ -2589,17 +2933,47 @@ export const AppLayout = () => {
         document.title = totalUnread > 0 ? `(${totalUnread}) Gratonite` : 'Gratonite';
     }, [tabTitleUnreadMap]);
 
-    // Register service worker for web push
+    // Register service worker for web push + quick reply support
     useEffect(() => {
         if ('serviceWorker' in navigator && 'PushManager' in window) {
-            navigator.serviceWorker.register('/app/sw.js').catch(() => {});
+            navigator.serviceWorker.register('/app/sw.js').then(reg => {
+                // Send auth token to service worker for notification quick reply
+                const token = localStorage.getItem('gratonite_access_token');
+                if (token && reg.active) {
+                    reg.active.postMessage({ type: 'STORE_AUTH_TOKEN', token });
+                }
+            }).catch(() => {});
+
+            // Listen for messages from service worker
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data?.type === 'GET_AUTH_TOKEN' && event.ports?.[0]) {
+                    const token = localStorage.getItem('accessToken');
+                    event.ports[0].postMessage({ token });
+                }
+                if (event.data?.type === 'NAVIGATE_TO_CHANNEL' && event.data.channelId) {
+                    // Navigate to the channel - dispatch a custom event for the router
+                    window.dispatchEvent(new CustomEvent('navigate-to-channel', {
+                        detail: { channelId: event.data.channelId, guildId: event.data.guildId },
+                    }));
+                }
+                if (event.data?.type === 'REPLY_FAILED' && event.data.channelId) {
+                    // Could show a toast or pre-fill the chat input
+                    window.dispatchEvent(new CustomEvent('reply-failed', {
+                        detail: { channelId: event.data.channelId, content: event.data.content },
+                    }));
+                }
+            });
         }
     }, []);
 
-    const refreshGuilds = useCallback(() => {
-        if (!getAccessToken() || isAuthRuntimeExpired()) return;
-        api.guilds.getMine().then((list: any[]) => {
-            const normalized = Array.isArray(list) ? list.map((g) => ({
+    // React Query: guilds and DM channels
+    const guildsQuery = useGuildsQuery();
+    const dmChannelsQuery = useDmChannelsQuery();
+
+    // Sync React Query guilds data into local state for real-time socket mutations
+    useEffect(() => {
+        if (guildsQuery.data) {
+            const normalized = Array.isArray(guildsQuery.data) ? guildsQuery.data.map((g: any) => ({
                 id: g.id,
                 name: g.name,
                 ownerId: g.ownerId ?? '',
@@ -2608,19 +2982,23 @@ export const AppLayout = () => {
                 memberCount: typeof g.memberCount === 'number' ? g.memberCount : 0,
             })) : [];
             setGuilds(normalized);
-        }).catch(() => {});
+        }
+    }, [guildsQuery.data]);
+
+    // Sync React Query DM channels data into local state
+    useEffect(() => {
+        if (dmChannelsQuery.data) {
+            setDmChannels(dmChannelsQuery.data);
+        }
+    }, [dmChannelsQuery.data]);
+
+    const refreshGuilds = useCallback(() => {
+        invalidateGuilds();
     }, []);
 
     const handleGuildLeave = useCallback((guildId: string) => {
         setGuilds(prev => prev.filter(g => g.id !== guildId));
     }, []);
-
-    useEffect(() => {
-        refreshGuilds();
-        if (!isAuthRuntimeExpired()) {
-            api.relationships.getDmChannels().then((dms: any) => setDmChannels(dms)).catch(() => {});
-        }
-    }, [refreshGuilds]);
 
     useEffect(() => {
         const handler = (e: Event) => {
@@ -2630,11 +3008,11 @@ export const AppLayout = () => {
                     g.id === detail.guildId ? { ...g, iconHash: detail.iconHash } : g
                 ));
             }
-            refreshGuilds();
+            invalidateGuilds();
         };
         window.addEventListener('gratonite:guild-updated', handler);
         return () => window.removeEventListener('gratonite:guild-updated', handler);
-    }, [refreshGuilds]);
+    }, []);
 
     const [userProfile, setUserProfile] = useState<{
         id: string;
@@ -3023,11 +3401,43 @@ export const AppLayout = () => {
         return () => window.removeEventListener('popstate', onPopState);
     }, [activeModal]);
 
+    // Rate limit toast: listen for 429 events from API layer
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const { retryAfter } = (e as CustomEvent).detail ?? {};
+            const seconds = Math.ceil((retryAfter || 5000) / 1000);
+            addToast({ title: `Slow down! Try again in ${seconds}s`, variant: 'error' });
+        };
+        window.addEventListener('gratonite:rate-limited', handler);
+        return () => window.removeEventListener('gratonite:rate-limited', handler);
+    }, [addToast]);
+
+    // Request timeout toast
+    useEffect(() => {
+        const handler = () => {
+            addToast({ title: 'Request timed out. Please try again.', variant: 'error' });
+        };
+        window.addEventListener('gratonite:request-timeout', handler);
+        return () => window.removeEventListener('gratonite:request-timeout', handler);
+    }, [addToast]);
+
     // Only chat/channel routes show the members sidebar
     const isChatRoute = location.pathname.includes('/chat') || location.pathname.includes('/channel/');
     const isVoiceRoute = location.pathname.includes('/voice');
     const isDmRoute = location.pathname.match(/^\/dm\/[^/]+$/);
     const hideBottomNav = isChatRoute || isVoiceRoute || !!isDmRoute;
+
+    // Derive a section key for page transitions — same guild = same key (no animation)
+    const transitionKey = useMemo(() => {
+        const path = location.pathname;
+        const guildMatch = path.match(/^\/guild\/([^/]+)/);
+        if (guildMatch) return `guild-${guildMatch[1]}`;
+        const dmMatch = path.match(/^\/dm\//);
+        if (dmMatch) return 'dm';
+        // Top-level sections: /, /friends, /shop, /discover, etc.
+        const section = path.split('/')[1] || 'home';
+        return section;
+    }, [location.pathname]);
 
     // Mobile swipe gestures
     useMobileSwipe(mainContentRef, {
@@ -3066,46 +3476,40 @@ export const AppLayout = () => {
         routeAnnouncerRef.current.textContent = label;
     }, [location.pathname, screenReaderMode]);
 
+    // Screen reader: announce modal open/close
+    const prevModalRef = useRef<ModalType>(null);
+    useEffect(() => {
+        if (!screenReaderMode) { prevModalRef.current = activeModal; return; }
+        const MODAL_LABELS: Record<string, string> = {
+            settings: 'Settings',
+            userProfile: 'User Profile',
+            createGuild: 'Create Server',
+            guildSettings: 'Server Settings',
+            memberOptions: 'Member Options',
+            invite: 'Invite',
+            globalSearch: 'Search',
+            dmSearch: 'DM Search',
+            notifications: 'Notifications',
+            shortcuts: 'Keyboard Shortcuts',
+            bugReport: 'Bug Report',
+            onboarding: 'Onboarding',
+            createGroupDm: 'Create Group DM',
+            screenShare: 'Screen Share',
+        };
+        if (activeModal && !prevModalRef.current) {
+            announce(`${MODAL_LABELS[activeModal] || 'Dialog'} opened`);
+        } else if (!activeModal && prevModalRef.current) {
+            announce('Dialog closed');
+        }
+        prevModalRef.current = activeModal;
+    }, [activeModal, screenReaderMode]);
+
     return (
         <ContextMenuProvider>
             <div className="app-container">
                 {/* Visually hidden route announcer for screen readers */}
                 <div ref={routeAnnouncerRef} className="sr-route-announcer" aria-live="assertive" aria-atomic="true" role="status" />
-                <a
-                    href="#main-content"
-                    style={{
-                        position: 'absolute',
-                        left: '-9999px',
-                        top: 'auto',
-                        width: '1px',
-                        height: '1px',
-                        overflow: 'hidden',
-                        zIndex: 9999,
-                    }}
-                    onFocus={(e) => {
-                        e.currentTarget.style.position = 'fixed';
-                        e.currentTarget.style.left = '16px';
-                        e.currentTarget.style.top = '16px';
-                        e.currentTarget.style.width = 'auto';
-                        e.currentTarget.style.height = 'auto';
-                        e.currentTarget.style.overflow = 'visible';
-                        e.currentTarget.style.background = 'var(--accent-primary)';
-                        e.currentTarget.style.color = 'white';
-                        e.currentTarget.style.padding = '8px 16px';
-                        e.currentTarget.style.borderRadius = '6px';
-                        e.currentTarget.style.textDecoration = 'none';
-                        e.currentTarget.style.fontSize = '14px';
-                    }}
-                    onBlur={(e) => {
-                        e.currentTarget.style.position = 'absolute';
-                        e.currentTarget.style.left = '-9999px';
-                        e.currentTarget.style.width = '1px';
-                        e.currentTarget.style.height = '1px';
-                        e.currentTarget.style.overflow = 'hidden';
-                    }}
-                >
-                    Skip to main content
-                </a>
+                <a href="#main-content" className="skip-link">Skip to content</a>
                 <div
                     className={`mobile-backdrop ${isGuildRailOpen || isSidebarOpen ? 'visible' : ''}`}
                     onClick={() => { setIsGuildRailOpen(false); setIsSidebarOpen(false); }}
@@ -3136,8 +3540,8 @@ export const AppLayout = () => {
                     guildSession={guildSession}
                 />
                 <main id="main-content" ref={mainContentRef} className={`main-content-wrapper ${bgMedia !== null ? 'has-custom-bg' : ''} ${!hideBottomNav ? 'has-bottom-nav' : ''}`} tabIndex={-1} style={(!isChatRoute && !isVoiceRoute) ? { flex: 1, display: 'flex', flexDirection: 'column' } : {}}>
-                    <div className="route-transition-wrapper route-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-                        <Outlet context={{
+                    {(() => {
+                        const outletCtx = {
                             bgMedia,
                             hasCustomBg: bgMedia !== null,
                             setBgMedia,
@@ -3158,8 +3562,55 @@ export const AppLayout = () => {
                             setUserTheme,
                             guildSession,
                             guilds
-                        }} />
-                    </div>
+                        };
+                        const showSplit = splitState.enabled && splitState.rightChannelId && splitState.rightGuildId && isChatRoute && !isMobile;
+                        if (showSplit) {
+                            return (
+                                <SplitViewContainer
+                                    leftContent={
+                                        <AnimatePresence mode="wait" initial={false}>
+                                            <motion.div
+                                                key={transitionKey}
+                                                className="route-transition-wrapper route-container"
+                                                style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}
+                                                initial={reducedEffects ? false : { opacity: 0, y: 8 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={reducedEffects ? undefined : { opacity: 0 }}
+                                                transition={{ duration: 0.2, ease: 'easeOut' }}
+                                            >
+                                                <Outlet context={outletCtx} />
+                                            </motion.div>
+                                        </AnimatePresence>
+                                    }
+                                    rightContent={
+                                        <SplitViewRightPane
+                                            channelId={splitState.rightChannelId!}
+                                            guildId={splitState.rightGuildId!}
+                                            outletContext={outletCtx}
+                                        />
+                                    }
+                                    dividerPosition={splitState.dividerPosition}
+                                    onDividerChange={setDividerPosition}
+                                    onClose={closeSplitView}
+                                />
+                            );
+                        }
+                        return (
+                            <AnimatePresence mode="wait" initial={false}>
+                                <motion.div
+                                    key={transitionKey}
+                                    className="route-transition-wrapper route-container"
+                                    style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}
+                                    initial={reducedEffects ? false : { opacity: 0, y: 8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={reducedEffects ? undefined : { opacity: 0 }}
+                                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                                >
+                                    <Outlet context={outletCtx} />
+                                </motion.div>
+                            </AnimatePresence>
+                        );
+                    })()}
                     {isChatRoute && isSidebarOpen && <MembersSidebar onOpenProfile={() => setActiveModal('userProfile')} />}
                 </main>
 
@@ -3264,6 +3715,7 @@ export const AppLayout = () => {
                 style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}
                 id="sr-announcements"
             />
+            {tour.show && <OnboardingTour onClose={tour.dismiss} />}
         </ContextMenuProvider>
     );
 };
@@ -3290,6 +3742,9 @@ const appRouter = createBrowserRouter(
             {/* Public Invite Route */}
             <Route path="invite/:code" element={<InviteAccept />} />
 
+            {/* Task #89: Desktop Mini Mode */}
+            <Route path="mini-mode" element={<Suspense fallback={<LazyFallback />}><MiniMode /></Suspense>} />
+
             {/* Private App Routes */}
             <Route path="/" element={<RequireAuth><AppLayout /></RequireAuth>}>
                 <Route index element={<Suspense fallback={<LazyFallback />}><HomePage /></Suspense>} />
@@ -3312,6 +3767,7 @@ const appRouter = createBrowserRouter(
                 <Route path="saved-messages" element={<Navigate to="/read-later" replace />} />
                 <Route path="badges" element={<Suspense fallback={<LazyFallback />}><BadgesGallery /></Suspense>} />
                 <Route path="friend-activity" element={<Suspense fallback={<LazyFallback />}><FriendActivity /></Suspense>} />
+                <Route path="daily-challenges" element={<Suspense fallback={<LazyFallback />}><DailyChallenges /></Suspense>} />
                 <Route path="trading" element={<Suspense fallback={<LazyFallback />}><Trading /></Suspense>} />
                 <Route path="admin/team" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminTeam /></Suspense></RequireAdmin>} />
                 <Route path="admin/audit" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminAuditLog /></Suspense></RequireAdmin>} />
@@ -3332,6 +3788,8 @@ const appRouter = createBrowserRouter(
                 <Route path="guild/:guildId/workflows" element={<Suspense fallback={<LazyFallback />}><GuildWorkflows /></Suspense>} />
                 <Route path="guild/:guildId/events" element={<Suspense fallback={<LazyFallback />}><EventScheduler /></Suspense>} />
                 <Route path="guild/:guildId/moderation" element={<Suspense fallback={<LazyFallback />}><ModerationDashboard /></Suspense>} />
+                <Route path="guild/:guildId/members" element={<Suspense fallback={<LazyFallback />}><MemberDirectory /></Suspense>} />
+                <Route path="guild/:guildId/stats" element={<Suspense fallback={<LazyFallback />}><PublicGuildStats /></Suspense>} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
@@ -3349,8 +3807,32 @@ function App() {
             <AchievementToastProvider>
             <AmbientPlayer />
             <ConnectionBanner />
+            {(window as any).gratoniteDesktop?.isDesktop && <UpdateBanner />}
             <SeasonalOverlay />
             <LiveAnnouncer />
+            {/* SVG filters for color blind simulation modes */}
+            <svg style={{ position: 'absolute', width: 0, height: 0 }} aria-hidden="true">
+                <defs>
+                    <filter id="deuteranopia-filter">
+                        <feColorMatrix type="matrix" values="0.625 0.375 0     0 0
+                                                             0.7   0.3   0     0 0
+                                                             0     0.3   0.7   0 0
+                                                             0     0     0     1 0" />
+                    </filter>
+                    <filter id="protanopia-filter">
+                        <feColorMatrix type="matrix" values="0.567 0.433 0     0 0
+                                                             0.558 0.442 0     0 0
+                                                             0     0.242 0.758 0 0
+                                                             0     0     0     1 0" />
+                    </filter>
+                    <filter id="tritanopia-filter">
+                        <feColorMatrix type="matrix" values="0.95  0.05  0     0 0
+                                                             0     0.433 0.567 0 0
+                                                             0     0.475 0.525 0 0
+                                                             0     0     0     1 0" />
+                    </filter>
+                </defs>
+            </svg>
             <RouterProvider router={appRouter} />
             </AchievementToastProvider>
         </ToastProvider>

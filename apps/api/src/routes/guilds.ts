@@ -50,10 +50,11 @@ import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { hasPermission } from './roles';
 import { getIO } from '../lib/socket-io';
-import { logAuditEvent, AuditActionTypes } from '../lib/audit';
+import { logAuditEvent, AuditActionTypes, AuditTargetTypes } from '../lib/audit';
 import { redis } from '../lib/redis';
 import { toRows } from '../lib/to-rows.js';
 import { cacheControl } from '../middleware/cache';
+import { recordActivity } from './activity';
 
 export const guildsRouter = Router();
 
@@ -232,6 +233,7 @@ const updateGuildSchema = z.object({
   rulesText: z.string().max(5000).nullable().optional(),
   requireRulesAgreement: z.boolean().optional(),
   raidProtectionEnabled: z.boolean().optional(),
+  publicStatsEnabled: z.boolean().optional(),
   spotlightChannelId: z.string().uuid().nullable().optional(),
   spotlightMessage: z.string().max(2000).nullable().optional(),
 });
@@ -755,6 +757,9 @@ guildsRouter.post(
           guildId,
           user: joiningUser ? { id: joiningUser.id, username: joiningUser.username, displayName: joiningUser.displayName, avatarHash: joiningUser.avatarHash } : { id: req.userId! },
         });
+
+        // Record activity event
+        recordActivity(req.userId!, 'joined_server', { guildId, guildName: guild.name });
       }
 
       const [fresh] = await db
@@ -1024,7 +1029,7 @@ guildsRouter.patch(
         throw new AppError(403, 'Missing MANAGE_GUILD permission', 'FORBIDDEN');
       }
 
-      const { name, description, isDiscoverable, accentColor, welcomeMessage, rulesChannelId, category, tags, rulesText, requireRulesAgreement, raidProtectionEnabled, spotlightChannelId, spotlightMessage } = req.body as z.infer<typeof updateGuildSchema>;
+      const { name, description, isDiscoverable, accentColor, welcomeMessage, rulesChannelId, category, tags, rulesText, requireRulesAgreement, raidProtectionEnabled, publicStatsEnabled, spotlightChannelId, spotlightMessage } = req.body as z.infer<typeof updateGuildSchema>;
 
       const updateData: Partial<typeof guilds.$inferInsert> = { updatedAt: new Date() };
       if (name !== undefined) updateData.name = name;
@@ -1038,6 +1043,7 @@ guildsRouter.patch(
       if (requireRulesAgreement !== undefined) updateData.requireRulesAgreement = requireRulesAgreement;
       if (spotlightChannelId !== undefined) updateData.spotlightChannelId = spotlightChannelId;
       if (spotlightMessage !== undefined) updateData.spotlightMessage = spotlightMessage;
+      if (publicStatsEnabled !== undefined) updateData.publicStatsEnabled = publicStatsEnabled;
 
       const [updated] = await db
         .update(guilds)
@@ -2616,6 +2622,119 @@ guildsRouter.get('/:guildId/rating', requireAuth, async (req: Request, res: Resp
       totalRatings: stats?.totalRatings ?? 0,
       userRating: userRow?.rating ?? null,
     });
+  } catch (err) {
+    handleAppError(res, err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /:guildId/import — Import channels/roles from Discord or Slack export
+// ---------------------------------------------------------------------------
+const importSchema = z.object({
+  source: z.enum(['discord', 'slack']).default('discord'),
+  channels: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    type: z.number().or(z.string()),
+    parent_id: z.string().nullable().optional(),
+    topic: z.string().nullable().optional(),
+    position: z.number().optional(),
+    nsfw: z.boolean().optional(),
+  })).optional(),
+  roles: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    color: z.number().optional(),
+    position: z.number().optional(),
+    hoist: z.boolean().optional(),
+    mentionable: z.boolean().optional(),
+  })).optional(),
+});
+
+guildsRouter.post('/:guildId/import', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const guildId = req.params.guildId as string;
+  const userId = req.userId!;
+  try {
+    await requireOwner(guildId, userId);
+    const body = importSchema.parse(req.body);
+    const source = body.source;
+
+    const created: { categories: number; channels: number; roles: number } = { categories: 0, channels: 0, roles: 0 };
+
+    // Discord channel type mapping: 0=text, 2=voice, 4=category, 13=stage, 15=forum
+    const discordTypeMap: Record<number, string> = {
+      0: 'GUILD_TEXT', 2: 'GUILD_VOICE', 4: 'GUILD_CATEGORY', 5: 'GUILD_TEXT',
+      13: 'GUILD_STAGE', 15: 'GUILD_TEXT',
+    };
+
+    // Slack has no categories — all channels are text
+    function mapChannelType(raw: number | string, src: string): string {
+      if (src === 'slack') return 'GUILD_TEXT';
+      const num = typeof raw === 'number' ? raw : parseInt(raw, 10);
+      return discordTypeMap[num] || 'GUILD_TEXT';
+    }
+
+    // Map old IDs to new UUIDs (for parent references)
+    const idMap = new Map<string, string>();
+
+    if (body.channels && body.channels.length > 0) {
+      // Sanitize channel names: lowercase, replace spaces with hyphens, strip invalid chars
+      const sanitize = (name: string) => name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 100) || 'imported';
+
+      // Sort: categories first (position-ordered), then channels
+      const sorted = [...body.channels].sort((a, b) => {
+        const aIsCat = mapChannelType(a.type, source) === 'GUILD_CATEGORY';
+        const bIsCat = mapChannelType(b.type, source) === 'GUILD_CATEGORY';
+        if (aIsCat && !bIsCat) return -1;
+        if (!aIsCat && bIsCat) return 1;
+        return (a.position ?? 0) - (b.position ?? 0);
+      });
+
+      for (const ch of sorted) {
+        const chType = mapChannelType(ch.type, source);
+        const parentId = ch.parent_id ? idMap.get(ch.parent_id) ?? null : null;
+        const [inserted] = await db.insert(channels).values({
+          guildId,
+          name: sanitize(ch.name),
+          type: chType,
+          parentId,
+          topic: ch.topic ?? null,
+          position: ch.position ?? 0,
+          isNsfw: ch.nsfw ?? false,
+        }).returning({ id: channels.id });
+        idMap.set(ch.id, inserted.id);
+        if (chType === 'GUILD_CATEGORY') created.categories++;
+        else created.channels++;
+      }
+    }
+
+    if (body.roles && body.roles.length > 0) {
+      for (const r of body.roles) {
+        // Skip @everyone role (Discord id === guild id, or name === @everyone)
+        if (r.name === '@everyone') continue;
+        const color = r.color && r.color > 0 ? `#${r.color.toString(16).padStart(6, '0')}` : null;
+        await db.insert(roles).values({
+          guildId,
+          name: r.name.slice(0, 100),
+          color,
+          position: r.position ?? 0,
+          hoist: r.hoist ?? false,
+          mentionable: r.mentionable ?? false,
+        });
+        created.roles++;
+      }
+    }
+
+    await logAuditEvent(
+      guildId,
+      userId,
+      AuditActionTypes.GUILD_UPDATE,
+      guildId,
+      AuditTargetTypes.GUILD,
+      { import: { source, ...created } },
+    );
+
+    res.json({ success: true, created });
   } catch (err) {
     handleAppError(res, err);
   }

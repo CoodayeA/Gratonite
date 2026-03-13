@@ -1,0 +1,8 @@
+appId: chat.gratonite.mobile
+---
+- assertVisible: "Servers"
+- tapOn: "Settings"
+- assertVisible: "Settings"
+- tapOn: "Account"
+- assertVisible: "Display Name"
+- assertVisible: "Bio"

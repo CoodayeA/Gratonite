@@ -27,6 +27,12 @@
       "assets/**/*",
       "data/**/*"
     ],
+    "protocols": [
+      {
+        "name": "Gratonite",
+        "schemes": ["gratonite"]
+      }
+    ],
     "mac": {
       "category": "public.app-category.social-networking",
       "target": ["dmg", "zip"],

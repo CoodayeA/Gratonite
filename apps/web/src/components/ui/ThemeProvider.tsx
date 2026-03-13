@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { MotionConfig } from 'framer-motion';
 
 export type AppTheme = 'default' | 'glass' | 'neobrutalism' | 'synthwave' | 'y2k' | 'memphis' | 'artdeco' | 'terminal' | 'aurora' | 'vaporwave' | 'nord' | 'solarized' | 'bubblegum' | 'obsidian' | 'sakura' | 'midnight' | 'forest' | 'cyberpunk' | 'pastel' | 'monochrome' | 'ocean' | 'fire' | 'desert' | 'lavender' | 'coffee' | 'matrix' | 'rose_gold' | 'emerald' | 'dracula' | 'monokai' | 'catppuccin' | 'gruvbox' | 'tokyo_night' | 'everforest' | 'arctic' | 'neon' | 'midnight_blue' | 'high-contrast';
 export type ColorMode = 'light' | 'dark';
@@ -7,6 +8,7 @@ export type FontSize = 'small' | 'medium' | 'large' | 'extra-large';
 export type GlassMode = 'off' | 'subtle' | 'full';
 export type ButtonShape = 'rounded' | 'sharp' | 'pill';
 export type FocusIndicatorSize = 'normal' | 'large';
+export type ColorBlindMode = 'none' | 'deuteranopia' | 'protanopia' | 'tritanopia';
 
 type ThemeContextType = {
     theme: AppTheme;
@@ -41,8 +43,8 @@ type ThemeContextType = {
     setLinkUnderlines: (lu: boolean) => void;
     focusIndicatorSize: FocusIndicatorSize;
     setFocusIndicatorSize: (size: FocusIndicatorSize) => void;
-    colorBlindMode: boolean;
-    setColorBlindMode: (cb: boolean) => void;
+    colorBlindMode: ColorBlindMode;
+    setColorBlindMode: (cb: ColorBlindMode) => void;
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -137,9 +139,12 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         return (localStorage.getItem('gratonite_focus_indicator_size') as FocusIndicatorSize) || 'normal';
     });
 
-    const [colorBlindMode, setColorBlindModeState] = useState<boolean>(() => {
+    const [colorBlindMode, setColorBlindModeState] = useState<ColorBlindMode>(() => {
         const saved = localStorage.getItem('gratonite_color_blind_mode');
-        return saved !== null ? saved === 'true' : false;
+        // Migrate old boolean 'true' to 'deuteranopia'
+        if (saved === 'true') return 'deuteranopia';
+        if (saved === 'deuteranopia' || saved === 'protanopia' || saved === 'tritanopia') return saved;
+        return 'none';
     });
 
     const setTheme = (newTheme: AppTheme) => {
@@ -222,9 +227,9 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem('gratonite_focus_indicator_size', size);
     };
 
-    const setColorBlindMode = (cb: boolean) => {
+    const setColorBlindMode = (cb: ColorBlindMode) => {
         setColorBlindModeState(cb);
-        localStorage.setItem('gratonite_color_blind_mode', cb.toString());
+        localStorage.setItem('gratonite_color_blind_mode', cb);
     };
 
     // Apply data attributes so CSS can hook into them
@@ -257,8 +262,12 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         if (focusIndicatorSize === 'large') document.documentElement.classList.add('focus-large');
         else document.documentElement.classList.remove('focus-large');
 
-        if (colorBlindMode) document.documentElement.classList.add('color-blind-mode');
-        else document.documentElement.classList.remove('color-blind-mode');
+        document.documentElement.setAttribute('data-cb-mode', colorBlindMode);
+        if (colorBlindMode !== 'none') {
+            document.documentElement.classList.add('color-blind-mode');
+        } else {
+            document.documentElement.classList.remove('color-blind-mode');
+        }
 
         if (accentColor) {
             document.documentElement.style.setProperty('--accent-primary', accentColor);
@@ -310,7 +319,9 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
             focusIndicatorSize, setFocusIndicatorSize,
             colorBlindMode, setColorBlindMode
         }}>
-            {children}
+            <MotionConfig reducedMotion={reducedEffects ? 'always' : 'user'}>
+                {children}
+            </MotionConfig>
         </ThemeContext.Provider>
     );
 };

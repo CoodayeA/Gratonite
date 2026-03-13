@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Check, ZoomIn, ZoomOut, RotateCw, Volume2, VolumeX, Eye, EyeOff, Copy, Info, Link2, Globe } from 'lucide-react';
-import { useTheme, ButtonShape } from '../ui/ThemeProvider';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { X, Check, ZoomIn, ZoomOut, RotateCw, Volume2, VolumeX, Eye, EyeOff, Copy, Info, Link2, Globe, Search, Download, Upload } from 'lucide-react';
+import { useTheme, ButtonShape, AppTheme, ColorMode, FontFamily, FontSize, GlassMode, FocusIndicatorSize, ColorBlindMode } from '../ui/ThemeProvider';
 import { useToast } from '../ui/ToastManager';
 import { useUser } from '../../contexts/UserContext';
 import { isSoundMuted, setSoundMuted, getSoundVolume, setSoundVolume, getSoundPack, setSoundPack, playSound } from '../../utils/SoundManager';
@@ -10,6 +10,7 @@ import AccountRecoveryKitWidget from '../AccountRecoveryKit';
 import DataExportWidget from '../../pages/app/DataExport';
 import LoginHistoryPage from '../../pages/app/LoginHistory';
 import { AVAILABLE_LOCALES, getLocale, setLocale } from '../../i18n';
+import { CODE_THEMES as codeThemeOptions, getCodeTheme as codeThemeGet, setCodeTheme as codeThemeSet, type CodeThemeId } from '../../utils/codeTheme';
 
 // ─── Image Crop Modal ────────────────────────────────────────────────────────
 
@@ -257,10 +258,60 @@ const SettingsModal = ({
     setUserTheme?: any;
 }) => {
     const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections' | 'achievements' | 'stats' | 'wardrobe'>('account');
+    const [settingsSearch, setSettingsSearch] = useState('');
+    const settingsSearchRef = useRef<HTMLInputElement>(null);
+
+    // Settings search index — maps keywords to tabs
+    const settingsIndex = useMemo(() => [
+        { tab: 'account', label: 'My Account', keywords: ['account', 'email', 'username', 'password', 'delete account', 'two-factor', 'mfa', '2fa'] },
+        { tab: 'profile', label: 'Profile', keywords: ['profile', 'avatar', 'banner', 'display name', 'bio', 'about me', 'nameplate'] },
+        { tab: 'sessions', label: 'Sessions', keywords: ['sessions', 'devices', 'login', 'active sessions', 'mutes', 'muted users'] },
+        { tab: 'privacy', label: 'Privacy & Safety', keywords: ['privacy', 'safety', 'block', 'data export', 'gdpr', 'dm', 'direct message', 'friend request'] },
+        { tab: 'connections', label: 'Connections', keywords: ['connections', 'linked accounts', 'github', 'spotify', 'twitter'] },
+        { tab: 'achievements', label: 'Achievements', keywords: ['achievements', 'badges', 'trophies', 'unlocked'] },
+        { tab: 'stats', label: 'Stats', keywords: ['stats', 'statistics', 'messages sent', 'activity', 'analytics'] },
+        { tab: 'wardrobe', label: 'Wardrobe', keywords: ['wardrobe', 'cosmetics', 'avatar frame', 'decoration', 'nameplate style'] },
+        { tab: 'theme', label: 'Theme', keywords: ['theme', 'dark mode', 'light mode', 'color', 'accent', 'font', 'glass', 'compact', 'button shape', 'neobrutalism', 'import', 'export'] },
+        { tab: 'sound', label: 'Sound', keywords: ['sound', 'volume', 'notification', 'mute', 'audio', 'ambient'] },
+        { tab: 'accessibility', label: 'Accessibility', keywords: ['accessibility', 'screen reader', 'reduced motion', 'color blind', 'focus', 'underline', 'high contrast', 'link underlines'] },
+        { tab: 'feedback', label: 'Send Feedback', keywords: ['feedback', 'bug', 'report', 'suggestion', 'feature request'] },
+    ] as const, []);
+
+    // Filter tabs based on search
+    const matchingTabs = useMemo(() => {
+        if (!settingsSearch.trim()) return null;
+        const q = settingsSearch.toLowerCase();
+        return new Set(
+            settingsIndex
+                .filter(entry => entry.keywords.some(kw => kw.includes(q)) || entry.label.toLowerCase().includes(q))
+                .map(entry => entry.tab)
+        );
+    }, [settingsSearch, settingsIndex]);
+
+    // Auto-navigate to first matching tab when searching
+    useEffect(() => {
+        if (matchingTabs && matchingTabs.size > 0 && !matchingTabs.has(activeTab)) {
+            setActiveTab(matchingTabs.values().next().value as any);
+        }
+    }, [matchingTabs, activeTab]);
+
+    // Ctrl+F focuses search input
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+                e.preventDefault();
+                settingsSearchRef.current?.focus();
+            }
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, []);
+
     const [feedbackCategory, setFeedbackCategory] = useState('general');
     const [feedbackBody, setFeedbackBody] = useState('');
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
     const [customHex, setCustomHex] = useState('');
+    const [codeThemeId, setCodeThemeId] = useState<string>(codeThemeGet());
     const [hexError, setHexError] = useState(false);
     const [soundMuted, setSoundMutedState] = useState(isSoundMuted());
     const [soundVolume, setSoundVolumeState] = useState(getSoundVolume());
@@ -309,7 +360,13 @@ const SettingsModal = ({
 
     // Escape to close
     useEffect(() => {
-        const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        const handleKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+            if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+                e.preventDefault();
+                settingsSearchRef.current?.focus();
+            }
+        };
         window.addEventListener('keydown', handleKey);
         return () => window.removeEventListener('keydown', handleKey);
     }, [onClose]);
@@ -375,13 +432,13 @@ const SettingsModal = ({
     const [showBackupCodesVerify, setShowBackupCodesVerify] = useState(false);
 
     // Connections tab state
-    const PROVIDERS = ['github', 'twitch', 'steam', 'twitter', 'youtube'] as const;
+    const PROVIDERS = ['github', 'twitch', 'steam', 'twitter', 'youtube', 'spotify'] as const;
     type Provider = typeof PROVIDERS[number];
     const [connectionUsernames, setConnectionUsernames] = useState<Record<Provider, string>>({
-        github: '', twitch: '', steam: '', twitter: '', youtube: '',
+        github: '', twitch: '', steam: '', twitter: '', youtube: '', spotify: '',
     });
     const [connectionProfileUrls, setConnectionProfileUrls] = useState<Record<Provider, string>>({
-        github: '', twitch: '', steam: '', twitter: '', youtube: '',
+        github: '', twitch: '', steam: '', twitter: '', youtube: '', spotify: '',
     });
     const [connectionSaving, setConnectionSaving] = useState<Provider | null>(null);
     const [connectionRemoving, setConnectionRemoving] = useState<Provider | null>(null);
@@ -455,11 +512,23 @@ const SettingsModal = ({
         return () => controller.abort();
     }, [activeTab]);
 
+    const URL_TEMPLATES: Record<string, string> = {
+        github: 'https://github.com/',
+        twitch: 'https://twitch.tv/',
+        steam: 'https://steamcommunity.com/id/',
+        twitter: 'https://x.com/',
+        youtube: 'https://youtube.com/@',
+        spotify: 'https://open.spotify.com/user/',
+    };
+
     const saveConnection = async (provider: Provider) => {
         const username = connectionUsernames[provider];
         if (!username.trim()) return;
         setConnectionSaving(provider);
         try {
+            const explicitUrl = connectionProfileUrls[provider].trim();
+            const autoUrl = URL_TEMPLATES[provider] ? `${URL_TEMPLATES[provider]}${username.trim()}` : undefined;
+            const profileUrl = explicitUrl || autoUrl;
             await fetch(`${API_BASE}/users/@me/connections`, {
                 method: 'POST',
                 credentials: 'include',
@@ -470,9 +539,12 @@ const SettingsModal = ({
                 body: JSON.stringify({
                     provider,
                     providerUsername: username.trim(),
-                    profileUrl: connectionProfileUrls[provider].trim() || undefined,
+                    profileUrl,
                 }),
             });
+            if (profileUrl && !explicitUrl) {
+                setConnectionProfileUrls(prev => ({ ...prev, [provider]: profileUrl }));
+            }
             addToast({ title: `${provider} connected`, variant: 'success' });
         } catch {
             addToast({ title: `Failed to save ${provider}`, variant: 'error' });
@@ -505,6 +577,16 @@ const SettingsModal = ({
         steam: 'Steam',
         twitter: 'Twitter / X',
         youtube: 'YouTube',
+        spotify: 'Spotify',
+    };
+
+    const PROVIDER_URL_TEMPLATES: Record<Provider, string> = {
+        github: 'https://github.com/',
+        twitch: 'https://twitch.tv/',
+        steam: 'https://steamcommunity.com/id/',
+        twitter: 'https://x.com/',
+        youtube: 'https://youtube.com/@',
+        spotify: 'https://open.spotify.com/user/',
     };
 
     const [showServerOverrideInfo, setShowServerOverrideInfo] = useState(false);
@@ -582,6 +664,11 @@ const SettingsModal = ({
                 const vol = s.soundVolume > 1 ? s.soundVolume / 100 : s.soundVolume;
                 setSoundVolumeState(vol);
                 setSoundVolume(vol);
+            }
+            if (s?.colorBlindMode !== undefined) {
+                // Migrate old boolean true → 'deuteranopia'
+                const cb = s.colorBlindMode === true ? 'deuteranopia' : s.colorBlindMode === false ? 'none' : s.colorBlindMode;
+                if (cb === 'deuteranopia' || cb === 'protanopia' || cb === 'tritanopia' || cb === 'none') setColorBlindMode(cb);
             }
             // Mark as loaded AFTER applying server values so auto-save doesn't fire with defaults
             settingsLoadedRef.current = true;
@@ -745,28 +832,51 @@ const SettingsModal = ({
             <div className="modal-overlay" onClick={onClose} style={{ background: 'rgba(0, 0, 0, 0.6)' }}>
                 <div className="settings-modal flex-row glass-panel" onClick={e => e.stopPropagation()} style={{ width: 'min(960px, 90vw)', height: 'min(680px, 85vh)', padding: 0, overflow: 'hidden' }}>
                     {/* Left Sidebar */}
-                    <div className="settings-sidebar" style={{ width: '220px', background: 'var(--bg-elevated)', padding: '32px 16px', borderRight: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    <div className="settings-sidebar" style={{ width: '220px', background: 'var(--bg-elevated)', padding: '16px 16px 32px', borderRight: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
+                        {/* Search */}
+                        <div style={{ position: 'relative' }}>
+                            <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                            <input
+                                ref={settingsSearchRef}
+                                type="text"
+                                placeholder="Search settings..."
+                                value={settingsSearch}
+                                onChange={e => setSettingsSearch(e.target.value)}
+                                style={{ width: '100%', padding: '8px 10px 8px 30px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
+                            />
+                        </div>
+                        {matchingTabs && matchingTabs.size === 0 && (
+                            <div style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '16px 8px' }}>
+                                No settings match "{settingsSearch}". Try "theme", "privacy", or "sound".
+                            </div>
+                        )}
+                        {(!matchingTabs || matchingTabs.has('account') || matchingTabs.has('profile') || matchingTabs.has('sessions') || matchingTabs.has('privacy') || matchingTabs.has('connections') || matchingTabs.has('achievements') || matchingTabs.has('stats') || matchingTabs.has('wardrobe')) && (
                         <div>
                             <div className="sidebar-section-label">ACCOUNT</div>
-                            <div className={`sidebar-nav-item ${activeTab === 'account' ? 'active' : ''}`} onClick={() => setActiveTab('account')}>My Account</div>
-                            <div className={`sidebar-nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>Profile</div>
-                            <div className={`sidebar-nav-item ${activeTab === 'sessions' ? 'active' : ''}`} onClick={() => setActiveTab('sessions')}>Sessions</div>
-                            <div className={`sidebar-nav-item ${activeTab === 'privacy' ? 'active' : ''}`} onClick={() => setActiveTab('privacy')}>Privacy &amp; Safety</div>
-                            <div className={`sidebar-nav-item ${activeTab === 'connections' ? 'active' : ''}`} onClick={() => setActiveTab('connections')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Link2 size={14} />Connections</div>
-                            <div className={`sidebar-nav-item ${activeTab === 'achievements' ? 'active' : ''}`} onClick={() => setActiveTab('achievements')}>🏆 Achievements</div>
-                            <div className={`sidebar-nav-item ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>📊 Stats</div>
-                            <div className={`sidebar-nav-item ${activeTab === 'wardrobe' ? 'active' : ''}`} onClick={() => setActiveTab('wardrobe')}>👗 Wardrobe</div>
+                            {(!matchingTabs || matchingTabs.has('account')) && <div className={`sidebar-nav-item ${activeTab === 'account' ? 'active' : ''}`} onClick={() => { setActiveTab('account'); setSettingsSearch(''); }}>My Account</div>}
+                            {(!matchingTabs || matchingTabs.has('profile')) && <div className={`sidebar-nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => { setActiveTab('profile'); setSettingsSearch(''); }}>Profile</div>}
+                            {(!matchingTabs || matchingTabs.has('sessions')) && <div className={`sidebar-nav-item ${activeTab === 'sessions' ? 'active' : ''}`} onClick={() => { setActiveTab('sessions'); setSettingsSearch(''); }}>Sessions</div>}
+                            {(!matchingTabs || matchingTabs.has('privacy')) && <div className={`sidebar-nav-item ${activeTab === 'privacy' ? 'active' : ''}`} onClick={() => { setActiveTab('privacy'); setSettingsSearch(''); }}>Privacy &amp; Safety</div>}
+                            {(!matchingTabs || matchingTabs.has('connections')) && <div className={`sidebar-nav-item ${activeTab === 'connections' ? 'active' : ''}`} onClick={() => { setActiveTab('connections'); setSettingsSearch(''); }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Link2 size={14} />Connections</div>}
+                            {(!matchingTabs || matchingTabs.has('achievements')) && <div className={`sidebar-nav-item ${activeTab === 'achievements' ? 'active' : ''}`} onClick={() => { setActiveTab('achievements'); setSettingsSearch(''); }}>🏆 Achievements</div>}
+                            {(!matchingTabs || matchingTabs.has('stats')) && <div className={`sidebar-nav-item ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => { setActiveTab('stats'); setSettingsSearch(''); }}>📊 Stats</div>}
+                            {(!matchingTabs || matchingTabs.has('wardrobe')) && <div className={`sidebar-nav-item ${activeTab === 'wardrobe' ? 'active' : ''}`} onClick={() => { setActiveTab('wardrobe'); setSettingsSearch(''); }}>👗 Wardrobe</div>}
                         </div>
+                        )}
+                        {(!matchingTabs || matchingTabs.has('theme') || matchingTabs.has('sound') || matchingTabs.has('accessibility')) && (
                         <div>
                             <div className="sidebar-section-label">APPEARANCE</div>
-                            <div className={`sidebar-nav-item ${activeTab === 'theme' ? 'active' : ''}`} onClick={() => setActiveTab('theme')}>Theme</div>
-                            <div className={`sidebar-nav-item ${activeTab === 'sound' ? 'active' : ''}`} onClick={() => setActiveTab('sound')}>Sound</div>
-                            <div className={`sidebar-nav-item ${activeTab === 'accessibility' ? 'active' : ''}`} onClick={() => setActiveTab('accessibility')}>Accessibility</div>
+                            {(!matchingTabs || matchingTabs.has('theme')) && <div className={`sidebar-nav-item ${activeTab === 'theme' ? 'active' : ''}`} onClick={() => { setActiveTab('theme'); setSettingsSearch(''); }}>Theme</div>}
+                            {(!matchingTabs || matchingTabs.has('sound')) && <div className={`sidebar-nav-item ${activeTab === 'sound' ? 'active' : ''}`} onClick={() => { setActiveTab('sound'); setSettingsSearch(''); }}>Sound</div>}
+                            {(!matchingTabs || matchingTabs.has('accessibility')) && <div className={`sidebar-nav-item ${activeTab === 'accessibility' ? 'active' : ''}`} onClick={() => { setActiveTab('accessibility'); setSettingsSearch(''); }}>Accessibility</div>}
                         </div>
+                        )}
+                        {(!matchingTabs || matchingTabs.has('feedback')) && (
                         <div>
                             <div className="sidebar-section-label">SUPPORT</div>
-                            <div className={`sidebar-nav-item ${activeTab === 'feedback' ? 'active' : ''}`} onClick={() => setActiveTab('feedback')}>Send Feedback</div>
+                            <div className={`sidebar-nav-item ${activeTab === 'feedback' ? 'active' : ''}`} onClick={() => { setActiveTab('feedback'); setSettingsSearch(''); }}>Send Feedback</div>
                         </div>
+                        )}
                     </div>
 
                     {/* Mobile Tab Pills */}
@@ -1814,6 +1924,21 @@ const SettingsModal = ({
                                     </div>
                                 </div>
 
+                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Code Block Theme</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '40px' }}>
+                                    <label style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>SYNTAX HIGHLIGHTING</label>
+                                    <select value={codeThemeId} onChange={(e) => { const id = e.target.value; setCodeThemeId(id); codeThemeSet(id as any); }} className="auth-input" style={{ width: '100%', maxWidth: '300px', padding: '12px', margin: 0 }}>
+                                        {codeThemeOptions.map(t => (
+                                            <option key={t.id} value={t.id}>{t.label}</option>
+                                        ))}
+                                    </select>
+                                    <div style={{ marginTop: '8px', background: 'var(--bg-secondary)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--stroke)', maxWidth: '400px' }}>
+                                        <pre className="code-block" style={{ margin: 0, padding: '12px', fontSize: '13px' }}>
+                                            <code><span className="hljs-keyword">function</span> <span className="hljs-title function_">greet</span>(<span className="hljs-params">name</span>) {'{\n  '}<span className="hljs-keyword">return</span> <span className="hljs-string">{"`Hello, ${name}!`"}</span>{';\n}'}</code>
+                                        </pre>
+                                    </div>
+                                </div>
+
                                 <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Ambient Features</h3>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '40px' }}>
                                     {[
@@ -2050,13 +2175,21 @@ const SettingsModal = ({
                                         </div>
                                     </div>
                                     <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div style={{ fontWeight: 600 }}>Color-Blind Friendly</div>
-                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Replaces color-only status indicators with distinct shapes (circle, moon, minus, hollow).</div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                                            <div style={{ fontWeight: 600 }}>Color-Blind Mode</div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Applies color filters and shape-based status indicators for color vision deficiencies.</div>
                                         </div>
-                                        <div role="switch" aria-checked={colorBlindMode} aria-label="Color-Blind Friendly mode" tabIndex={0} onClick={() => { setColorBlindMode(!colorBlindMode); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setColorBlindMode(!colorBlindMode); playSound('click'); } }} style={{ width: '40px', height: '24px', background: colorBlindMode ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
-                                            <div style={{ position: 'absolute', height: '16px', width: '16px', left: colorBlindMode ? '20px' : '4px', bottom: '4px', backgroundColor: colorBlindMode ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
-                                        </div>
+                                        <select
+                                            value={colorBlindMode}
+                                            onChange={(e) => { setColorBlindMode(e.target.value as any); playSound('click'); }}
+                                            aria-label="Color-Blind Mode"
+                                            style={{ padding: '8px 12px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--stroke)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', flexShrink: 0 }}
+                                        >
+                                            <option value="none">Off</option>
+                                            <option value="deuteranopia">Deuteranopia (green-weak)</option>
+                                            <option value="protanopia">Protanopia (red-weak)</option>
+                                            <option value="tritanopia">Tritanopia (blue-weak)</option>
+                                        </select>
                                     </div>
                                 </div>
 
@@ -2128,6 +2261,106 @@ const SettingsModal = ({
                                             <div style={{ position: 'absolute', height: '16px', width: '16px', left: seasonalEnabled ? '20px' : '4px', bottom: '4px', backgroundColor: seasonalEnabled ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* Theme Import / Export */}
+                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px', marginTop: '32px' }}>Import / Export</h3>
+                                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                    <button
+                                        onClick={() => {
+                                            const themeData = {
+                                                _format: 'gratonite-theme',
+                                                _version: 1,
+                                                theme,
+                                                colorMode,
+                                                fontFamily,
+                                                fontSize,
+                                                glassMode,
+                                                buttonShape,
+                                                accentColor,
+                                                highContrast,
+                                                compactMode,
+                                                reducedEffects,
+                                                lowPower,
+                                                showChannelBackgrounds,
+                                                playMovingBackgrounds,
+                                                screenReaderMode,
+                                                linkUnderlines,
+                                                focusIndicatorSize,
+                                                colorBlindMode,
+                                            };
+                                            const blob = new Blob([JSON.stringify(themeData, null, 2)], { type: 'application/json' });
+                                            const url = URL.createObjectURL(blob);
+                                            const a = document.createElement('a');
+                                            a.href = url;
+                                            a.download = `gratonite-theme-${theme}.json`;
+                                            a.click();
+                                            URL.revokeObjectURL(url);
+                                            addToast({ title: 'Theme exported', variant: 'success' });
+                                            playSound('click');
+                                        }}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '8px',
+                                            background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                            borderRadius: '8px', padding: '10px 16px', color: 'var(--text-primary)',
+                                            cursor: 'pointer', fontSize: '14px', fontWeight: 500,
+                                        }}
+                                        onMouseOver={(e) => { e.currentTarget.style.background = 'var(--bg-elevated)'; }}
+                                        onMouseOut={(e) => { e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
+                                    >
+                                        <Download size={16} /> Export Theme
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const input = document.createElement('input');
+                                            input.type = 'file';
+                                            input.accept = '.json,.gratonite-theme';
+                                            input.onchange = (ev) => {
+                                                const file = (ev.target as HTMLInputElement).files?.[0];
+                                                if (!file) return;
+                                                const reader = new FileReader();
+                                                reader.onload = () => {
+                                                    try {
+                                                        const data = JSON.parse(reader.result as string);
+                                                        if (!data || typeof data !== 'object') throw new Error('Invalid file');
+                                                        if (data.theme) setTheme(data.theme as AppTheme);
+                                                        if (data.colorMode) setColorMode(data.colorMode as ColorMode);
+                                                        if (data.fontFamily) setFontFamily(data.fontFamily as FontFamily);
+                                                        if (data.fontSize) setFontSize(data.fontSize as FontSize);
+                                                        if (data.glassMode) setGlassMode(data.glassMode as GlassMode);
+                                                        if (data.buttonShape) setButtonShape(data.buttonShape as ButtonShape);
+                                                        if (data.accentColor) setAccentColor(data.accentColor);
+                                                        if (typeof data.highContrast === 'boolean') setHighContrast(data.highContrast);
+                                                        if (typeof data.compactMode === 'boolean') setCompactMode(data.compactMode);
+                                                        if (typeof data.reducedEffects === 'boolean') setReducedEffects(data.reducedEffects);
+                                                        if (typeof data.lowPower === 'boolean') setLowPower(data.lowPower);
+                                                        if (typeof data.showChannelBackgrounds === 'boolean') setShowChannelBackgrounds(data.showChannelBackgrounds);
+                                                        if (typeof data.playMovingBackgrounds === 'boolean') setPlayMovingBackgrounds(data.playMovingBackgrounds);
+                                                        if (typeof data.screenReaderMode === 'boolean') setScreenReaderMode(data.screenReaderMode);
+                                                        if (typeof data.linkUnderlines === 'boolean') setLinkUnderlines(data.linkUnderlines);
+                                                        if (data.focusIndicatorSize) setFocusIndicatorSize(data.focusIndicatorSize as FocusIndicatorSize);
+                                                        if (data.colorBlindMode) setColorBlindMode(data.colorBlindMode as ColorBlindMode);
+                                                        addToast({ title: 'Theme imported successfully', variant: 'success' });
+                                                        playSound('click');
+                                                    } catch {
+                                                        addToast({ title: 'Invalid theme file', variant: 'error' });
+                                                    }
+                                                };
+                                                reader.readAsText(file);
+                                            };
+                                            input.click();
+                                        }}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '8px',
+                                            background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                            borderRadius: '8px', padding: '10px 16px', color: 'var(--text-primary)',
+                                            cursor: 'pointer', fontSize: '14px', fontWeight: 500,
+                                        }}
+                                        onMouseOver={(e) => { e.currentTarget.style.background = 'var(--bg-elevated)'; }}
+                                        onMouseOut={(e) => { e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
+                                    >
+                                        <Upload size={16} /> Import Theme
+                                    </button>
                                 </div>
                             </>
                         )}
@@ -2517,46 +2750,62 @@ const SettingsModal = ({
                                 <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Link your third-party accounts to display them on your profile.</p>
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                    {PROVIDERS.map((provider) => (
+                                    {PROVIDERS.map((provider) => {
+                                        const hasUsername = !!connectionUsernames[provider].trim();
+                                        const autoUrl = hasUsername ? `${PROVIDER_URL_TEMPLATES[provider]}${connectionUsernames[provider].trim()}` : '';
+                                        const displayUrl = connectionProfileUrls[provider] || autoUrl;
+                                        return (
                                         <div key={provider} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                                                 <Link2 size={16} color="var(--accent-primary)" />
                                                 <span style={{ fontWeight: 600, fontSize: '14px' }}>{PROVIDER_LABELS[provider]}</span>
+                                                {hasUsername && (
+                                                    <span style={{ fontSize: '11px', color: 'var(--success, #10b981)', fontWeight: 500 }}>Connected</span>
+                                                )}
                                             </div>
-                                            <div style={{ display: 'flex', gap: '8px' }}>
-                                                <input
-                                                    type="text"
-                                                    placeholder={`Your ${PROVIDER_LABELS[provider]} username`}
-                                                    value={connectionUsernames[provider]}
-                                                    onChange={e => setConnectionUsernames(prev => ({ ...prev, [provider]: e.target.value }))}
-                                                    style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
-                                                />
-                                                <button
-                                                    onClick={() => saveConnection(provider)}
-                                                    disabled={connectionSaving === provider || !connectionUsernames[provider].trim()}
-                                                    style={{
-                                                        padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: 600, fontSize: '13px',
-                                                        background: 'var(--accent-primary)', color: '#000', cursor: 'pointer', whiteSpace: 'nowrap',
-                                                        opacity: (!connectionUsernames[provider].trim() || connectionSaving === provider) ? 0.6 : 1,
-                                                    }}
-                                                >
-                                                    {connectionSaving === provider ? 'Saving...' : 'Save'}
-                                                </button>
-                                                {connectionUsernames[provider] && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <input
+                                                        type="text"
+                                                        placeholder={`Your ${PROVIDER_LABELS[provider]} username`}
+                                                        value={connectionUsernames[provider]}
+                                                        onChange={e => setConnectionUsernames(prev => ({ ...prev, [provider]: e.target.value }))}
+                                                        style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
+                                                    />
                                                     <button
-                                                        onClick={() => removeConnection(provider)}
-                                                        disabled={connectionRemoving === provider}
+                                                        onClick={() => saveConnection(provider)}
+                                                        disabled={connectionSaving === provider || !connectionUsernames[provider].trim()}
                                                         style={{
-                                                            padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', fontWeight: 600, fontSize: '13px',
-                                                            background: 'var(--bg-elevated)', color: 'var(--error)', cursor: 'pointer',
+                                                            padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: 600, fontSize: '13px',
+                                                            background: 'var(--accent-primary)', color: '#000', cursor: 'pointer', whiteSpace: 'nowrap',
+                                                            opacity: (!connectionUsernames[provider].trim() || connectionSaving === provider) ? 0.6 : 1,
                                                         }}
                                                     >
-                                                        {connectionRemoving === provider ? '...' : 'Remove'}
+                                                        {connectionSaving === provider ? 'Saving...' : 'Save'}
                                                     </button>
+                                                    {hasUsername && (
+                                                        <button
+                                                            onClick={() => removeConnection(provider)}
+                                                            disabled={connectionRemoving === provider}
+                                                            style={{
+                                                                padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', fontWeight: 600, fontSize: '13px',
+                                                                background: 'var(--bg-elevated)', color: 'var(--error)', cursor: 'pointer',
+                                                            }}
+                                                        >
+                                                            {connectionRemoving === provider ? '...' : 'Remove'}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                {hasUsername && displayUrl && (
+                                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <Link2 size={12} />
+                                                        <a href={displayUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>{displayUrl}</a>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </>
                         )}

@@ -64,6 +64,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         .filter((r) => r.type === 'friend' && r.user?.id)
         .map((r) => r.user!.id);
       if (friendIds.length === 0) return;
+      // Treat missing users in the API response as offline so stale "online"
+      // dots don't stick around when a friend disconnects.
+      presenceStore.setBulk(friendIds.map((userId) => ({ userId, status: 'offline' })));
       // API caps at 200 per call
       for (let i = 0; i < friendIds.length; i += 200) {
         const batch = friendIds.slice(i, i + 200);

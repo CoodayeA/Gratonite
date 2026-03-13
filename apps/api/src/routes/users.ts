@@ -23,7 +23,7 @@ import fs from 'fs';
 import crypto from 'crypto';
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { eq, or, sql, inArray, and } from 'drizzle-orm';
+import { eq, or, sql, inArray, and, ne } from 'drizzle-orm';
 import multer from 'multer';
 
 import { db } from '../db/index';
@@ -1315,6 +1315,38 @@ usersRouter.delete('/@me/sessions/:sessionId', requireAuth, async (req: Request,
       .delete(refreshTokens)
       .where(and(eq(refreshTokens.id, sessionId), eq(refreshTokens.userId, userId)));
     res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/** DELETE /users/@me/sessions — revoke all sessions except the current one */
+usersRouter.delete('/@me/sessions', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const userId = req.userId!;
+  try {
+    // Find the current session by matching the refresh cookie hash
+    const rawToken = req.cookies?.gratonite_refresh;
+    let currentTokenHash: string | null = null;
+    if (rawToken) {
+      const crypto = await import('crypto');
+      currentTokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    }
+
+    if (currentTokenHash) {
+      await db
+        .delete(refreshTokens)
+        .where(
+          and(
+            eq(refreshTokens.userId, userId),
+            ne(refreshTokens.tokenHash, currentTokenHash),
+          ),
+        );
+    } else {
+      // No cookie available — revoke all sessions
+      await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
+    }
+
+    res.json({ success: true, message: 'All other sessions revoked' });
   } catch {
     res.status(500).json({ error: 'Internal server error' });
   }

@@ -5,6 +5,7 @@ import { api, API_BASE } from '../../lib/api';
 import { useToast } from '../../components/ui/ToastManager';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { getDeterministicGradient } from '../../utils/colors';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 const DailyCheckIn = lazy(() => import('../../components/ui/DailyCheckIn'));
 
@@ -169,9 +170,19 @@ const Home = () => {
 
                     {/* Guild list */}
                     {filteredGuilds.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '40px 16px', color: 'var(--text-muted)' }}>
-                            {searchQuery ? 'No servers match your search' : 'No servers yet — create or join one!'}
-                        </div>
+                        searchQuery ? (
+                            <EmptyState
+                                type="search"
+                                title="No servers match your search"
+                                description="Try a different search term to find your server."
+                            />
+                        ) : (
+                            <EmptyState
+                                type="server"
+                                title="No servers yet"
+                                description="Create your own server or join an existing one to get started!"
+                            />
+                        )
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {filteredGuilds.map(g => (

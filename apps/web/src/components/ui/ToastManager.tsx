@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { CheckCircle, AlertCircle, Info, Trophy, X } from 'lucide-react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { CheckCircle, AlertCircle, Info, Trophy, X, Undo2 } from 'lucide-react';
 import { playSound } from '../../utils/SoundManager';
 
-export type ToastVariant = 'success' | 'error' | 'info' | 'achievement';
+export type ToastVariant = 'success' | 'error' | 'info' | 'achievement' | 'undo';
 
 export type Toast = {
     id: string;
@@ -10,6 +10,9 @@ export type Toast = {
     description?: string;
     variant: ToastVariant;
     duration?: number;
+    onUndo?: () => void;
+    onExpire?: () => void;
+    count?: number;
 };
 
 type ToastContextType = {
@@ -25,17 +28,36 @@ export const useToast = () => {
     return ctx;
 };
 
+const MAX_VISIBLE = 3;
+
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
     const [toasts, setToasts] = useState<Toast[]>([]);
 
     const addToast = useCallback((toast: Omit<Toast, 'id'>) => {
-        const id = Math.random().toString(36).substring(2, 9);
-        setToasts(prev => [...prev, { ...toast, id }]);
+        setToasts(prev => {
+            // Dedup: if same variant+title is already showing, increment count
+            const existingIdx = prev.findIndex(
+                t => t.variant === toast.variant && t.title === toast.title && t.variant !== 'undo'
+            );
+            if (existingIdx !== -1) {
+                const updated = [...prev];
+                updated[existingIdx] = {
+                    ...updated[existingIdx],
+                    count: (updated[existingIdx].count || 1) + 1,
+                };
+                return updated;
+            }
+            const id = Math.random().toString(36).substring(2, 9);
+            return [...prev, { ...toast, id, count: 1 }];
+        });
     }, []);
 
     const removeToast = useCallback((id: string) => {
         setToasts(prev => prev.filter(t => t.id !== id));
     }, []);
+
+    // Only show max visible; the rest queue behind
+    const visible = toasts.slice(-MAX_VISIBLE);
 
     return (
         <ToastContext.Provider value={{ addToast, removeToast }}>
@@ -54,12 +76,11 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
                     gap: '12px',
                     zIndex: 99998,
                     perspective: '1000px',
-                    pointerEvents: 'none', // Letting clicks pass through the container
+                    pointerEvents: 'none',
                 }}
             >
-                {toasts.map((toast, index) => {
-                    const offset = toasts.length - 1 - index;
-                    // Provide a stacking effect via CSS transforms
+                {visible.map((toast, index) => {
+                    const offset = visible.length - 1 - index;
                     const scale = Math.max(0, 1 - offset * 0.05);
                     const translateY = offset * -10;
 
@@ -85,6 +106,14 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
     const [mounted, setMounted] = useState(false);
     const [exiting, setExiting] = useState(false);
     const [progress, setProgress] = useState(100);
+    const [isHovered, setIsHovered] = useState(false);
+    const undoneRef = useRef(false);
+    const hoveredRef = useRef(false);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const startRef = useRef(Date.now());
+    const remainingRef = useRef(0);
+
+    const toastDuration = toast.duration || (toast.variant === 'achievement' ? 6000 : toast.variant === 'undo' ? 5000 : 4000);
 
     const handleRemove = useCallback(() => {
         if (exiting) return;
@@ -94,8 +123,53 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
         }, 300);
     }, [exiting, onRemove]);
 
+    const handleUndo = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (undoneRef.current) return;
+        undoneRef.current = true;
+        toast.onUndo?.();
+        handleRemove();
+    }, [toast, handleRemove]);
+
+    // Start or restart timer
+    const startTimer = useCallback((duration: number) => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        remainingRef.current = duration;
+        startRef.current = Date.now();
+        timerRef.current = setTimeout(() => {
+            if (!undoneRef.current && toast.variant === 'undo') {
+                toast.onExpire?.();
+            }
+            handleRemove();
+        }, duration);
+    }, [handleRemove, toast]);
+
+    // Pause timer on hover
+    const handleMouseEnter = useCallback(() => {
+        hoveredRef.current = true;
+        setIsHovered(true);
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
+        const elapsed = Date.now() - startRef.current;
+        remainingRef.current = Math.max(0, remainingRef.current - elapsed);
+    }, []);
+
+    // Resume timer on mouse leave
+    const handleMouseLeave = useCallback(() => {
+        hoveredRef.current = false;
+        setIsHovered(false);
+        if (remainingRef.current > 0) {
+            startTimer(remainingRef.current);
+            // Resume progress bar from current position
+            const fraction = remainingRef.current / toastDuration;
+            setProgress(fraction * 100);
+            requestAnimationFrame(() => { requestAnimationFrame(() => { setProgress(0); }); });
+        }
+    }, [startTimer, toastDuration]);
+
     useEffect(() => {
-        // Trigger entrance animation after mount
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 setMounted(true);
@@ -106,16 +180,13 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
 
     useEffect(() => {
         if (toast.variant === 'achievement') {
-            // Routed through SoundManager so autoplay policy is handled
-            // consistently (no AudioContext creation before user gesture).
             playSound('achievement');
         }
-
-        const timer = setTimeout(() => {
-            handleRemove();
-        }, toast.duration || (toast.variant === 'achievement' ? 6000 : 4000));
-        return () => clearTimeout(timer);
-    }, [toast.variant, toast.duration, handleRemove]);
+        startTimer(toastDuration);
+        return () => {
+            if (timerRef.current) clearTimeout(timerRef.current);
+        };
+    }, [toast.variant, toastDuration, startTimer]);
 
     let Icon = Info;
     let iconColor = 'var(--accent-blue)';
@@ -140,6 +211,12 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
             bgGradient = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
             glow = '0 0 32px rgba(16, 185, 129, 0.6)';
             break;
+        case 'undo':
+            Icon = Undo2;
+            iconColor = 'var(--warning, #f59e0b)';
+            bgGradient = 'linear-gradient(135deg, rgba(245,158,11,0.12), var(--bg-elevated))';
+            glow = '0 0 16px rgba(245,158,11,0.2)';
+            break;
         case 'info':
         default:
             Icon = Info;
@@ -148,11 +225,13 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
     }
 
     const isAchievement = toast.variant === 'achievement';
-
-    const toastDuration = toast.duration || (isAchievement ? 6000 : 4000);
+    const isUndo = toast.variant === 'undo';
+    const count = toast.count || 1;
 
     return (
         <div
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
             style={{
                 background: bgGradient,
                 border: isAchievement ? '2px solid rgba(255,255,255,0.4)' : '1px solid var(--stroke)',
@@ -164,7 +243,7 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
                 alignItems: isAchievement ? 'center' : 'flex-start',
                 gap: '16px',
                 boxShadow: `0 8px 32px rgba(0,0,0,0.5), ${glow}`,
-                pointerEvents: 'auto', // So user can interact with the toast
+                pointerEvents: 'auto',
                 backdropFilter: 'blur(16px)',
                 cursor: 'pointer',
                 color: isAchievement ? 'white' : 'var(--text-primary)',
@@ -183,15 +262,53 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
             }}
             className="hover-lift"
             role="alert"
-            aria-label={`${toast.variant}: ${toast.title}${toast.description ? '. ' + toast.description : ''}`}
-            onClick={handleRemove}
+            aria-label={`${toast.variant}: ${toast.title}${count > 1 ? ` (${count})` : ''}${toast.description ? '. ' + toast.description : ''}`}
+            onClick={isUndo ? undefined : handleRemove}
         >
             <div style={{ color: iconColor, flexShrink: 0, marginTop: isAchievement ? '0' : '2px', background: isAchievement ? 'rgba(0,0,0,0.2)' : 'transparent', padding: isAchievement ? '8px' : '0', borderRadius: '50%', display: 'flex' }}>
                 <Icon size={isAchievement ? 28 : 24} />
             </div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <div style={{ fontWeight: isAchievement ? 700 : 600, color: 'inherit', fontSize: isAchievement ? '16px' : '15px', fontFamily: isAchievement ? 'var(--font-display)' : 'inherit' }}>
-                    {toast.title}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontWeight: isAchievement ? 700 : 600, color: 'inherit', fontSize: isAchievement ? '16px' : '15px', fontFamily: isAchievement ? 'var(--font-display)' : 'inherit' }}>
+                        {toast.title}
+                    </span>
+                    {count > 1 && (
+                        <span style={{
+                            background: iconColor,
+                            color: '#fff',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            borderRadius: '10px',
+                            padding: '1px 7px',
+                            minWidth: '20px',
+                            textAlign: 'center',
+                            lineHeight: '16px',
+                            flexShrink: 0,
+                        }}>
+                            {count}
+                        </span>
+                    )}
+                    {isUndo && toast.onUndo && (
+                        <button
+                            onClick={handleUndo}
+                            style={{
+                                background: 'rgba(245,158,11,0.2)',
+                                border: '1px solid rgba(245,158,11,0.4)',
+                                borderRadius: '6px',
+                                padding: '3px 10px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                color: 'var(--warning, #f59e0b)',
+                                cursor: 'pointer',
+                                flexShrink: 0,
+                            }}
+                            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.35)'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.2)'; }}
+                        >
+                            Undo
+                        </button>
+                    )}
                 </div>
                 {toast.description && (
                     <div style={{ color: isAchievement ? 'rgba(255,255,255,0.85)' : 'var(--text-muted)', fontSize: '13px', lineHeight: '1.4' }}>
@@ -218,6 +335,7 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
             >
                 <X size={16} />
             </button>
+            {/* Auto-dismiss progress bar */}
             <div style={{
                 position: 'absolute',
                 bottom: 0,
@@ -233,7 +351,7 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
                     background: iconColor,
                     borderRadius: 'inherit',
                     width: progress + '%',
-                    transition: `width ${toastDuration}ms linear`,
+                    transition: isHovered ? 'none' : `width ${isHovered ? 0 : toastDuration}ms linear`,
                     transformOrigin: 'left',
                 }} />
             </div>

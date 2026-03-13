@@ -34,17 +34,23 @@ export default function RaidProtectionScreen({ route, navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
   const [locking, setLocking] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchGuild = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await guildsApi.get(guildId);
       setGuild(data as GuildWithProtection);
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      if (err.status !== 401) {
+        const message = err.message || 'Failed to load raid protection settings';
+        setLoadError(message);
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
     }
-  }, [guildId]);
+  }, [guildId, toast]);
 
   useEffect(() => {
     fetchGuild();
@@ -248,9 +254,25 @@ export default function RaidProtectionScreen({ route, navigation }: Props) {
   if (loading) return <LoadingScreen />;
   if (!guild) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.errorText}>Failed to load portal info</Text>
-      </View>
+      <PatternBackground>
+        <View style={[styles.loadingContainer, { paddingHorizontal: spacing.xl, gap: spacing.md }]}>
+          <Ionicons name="alert-circle-outline" size={56} color={colors.accentPrimary} />
+          <Text style={[styles.headerTitle, { fontSize: fontSize.xl, marginBottom: 0, textAlign: 'center' }]}>Failed to load portal info</Text>
+          <Text style={[styles.errorText, { textAlign: 'center' }]}>{loadError || 'Unable to load raid protection settings'}</Text>
+          <TouchableOpacity
+            style={[styles.lockButton, styles.unlockButton, { minWidth: 160, justifyContent: 'center' }]}
+            onPress={() => {
+              setLoading(true);
+              fetchGuild();
+            }}
+          >
+            <Ionicons name="refresh-outline" size={20} color={colors.success} />
+            <View style={styles.lockButtonContent}>
+              <Text style={[styles.lockButtonText, { color: colors.success }]}>Retry</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
     );
   }
 

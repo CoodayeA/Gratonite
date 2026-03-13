@@ -9,6 +9,7 @@ import ActivityCard from '../../components/ui/ActivityCard';
 import Avatar from '../../components/ui/Avatar';
 import { SkeletonFriendList } from '../../components/ui/SkeletonLoader';
 import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 function ReferralCard() {
     const [refData, setRefData] = useState<{ code: string; referralLink: string; count: number } | null>(null);
@@ -74,6 +75,16 @@ const Friends = () => {
     const [requests, setRequests] = useState<{ id: string; username: string; displayName: string; type: string; avatar: string; avatarHash?: string; nameplateStyle?: string }[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [fetchError, setFetchError] = useState(false);
+
+    // Friend suggestions
+    const [suggestions, setSuggestions] = useState<{ id: string; username: string; display_name: string; avatar: string | null; sharedServers: number; mutualFriends: number }[]>([]);
+    const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+    useEffect(() => {
+        setSuggestionsLoading(true);
+        api.get<any[]>('/friend-suggestions').then(data => {
+            if (Array.isArray(data)) setSuggestions(data);
+        }).catch(() => {}).finally(() => setSuggestionsLoading(false));
+    }, []);
 
     const fetchRelationships = useCallback(async () => {
         setFetchError(false);
@@ -180,14 +191,20 @@ const Friends = () => {
     };
 
     const handleRemoveFriend = async (userId: string, displayName: string) => {
-        try {
-            await api.relationships.removeFriend(userId);
-            addToast({ title: 'Friend Removed', description: `${displayName} removed from friends.`, variant: 'info' });
-            setSelectedFriend(null);
-            fetchRelationships();
-        } catch {
-            addToast({ title: 'Failed', variant: 'error' });
-        }
+        // Optimistically remove from UI with undo option
+        setSelectedFriend(null);
+        fetchRelationships(); // will re-render without the removed friend after API call
+        addToast({
+            title: `${displayName} removed from friends`,
+            variant: 'undo' as const,
+            onUndo: () => { fetchRelationships(); },
+            onExpire: () => {
+                api.relationships.removeFriend(userId).catch(() => {
+                    fetchRelationships();
+                    addToast({ title: 'Failed to remove friend', variant: 'error' });
+                });
+            },
+        });
     };
 
     const handleBlock = async (userId: string, displayName: string) => {
@@ -626,53 +643,13 @@ const Friends = () => {
                                 </h3>
                                 {renderFriendList(onlineFriends)}
                                 {onlineFriends.length === 0 && (
-                                    <div style={{
-                                        textAlign: 'center',
-                                        padding: '64px 24px',
-                                        color: 'var(--text-muted)',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                    }}>
-                                        <div style={{
-                                            width: '80px',
-                                            height: '80px',
-                                            borderRadius: '50%',
-                                            background: 'var(--bg-tertiary)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            marginBottom: '8px',
-                                            border: '2px dashed var(--stroke)',
-                                        }}>
-                                            <span style={{ fontSize: '36px' }}>&#x1F634;</span>
-                                        </div>
-                                        <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>No friends online</p>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '300px', lineHeight: '1.5', margin: 0 }}>
-                                            Everyone's offline right now. Check back later or add more friends to grow your circle!
-                                        </p>
-                                        <button
-                                            onClick={() => setActiveTab('add')}
-                                            style={{
-                                                marginTop: '8px',
-                                                background: 'var(--accent-primary)',
-                                                color: 'var(--bg-primary)',
-                                                border: 'none',
-                                                padding: '10px 24px',
-                                                borderRadius: 'var(--radius-md)',
-                                                fontSize: '14px',
-                                                fontWeight: 600,
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '8px',
-                                            }}
-                                        >
-                                            <UserPlus size={16} />
-                                            Add Friend
-                                        </button>
-                                    </div>
+                                    <EmptyState
+                                        type="friends"
+                                        title="No friends online"
+                                        description="Everyone's offline right now. Check back later or add more friends to grow your circle!"
+                                        actionLabel="Add Friend"
+                                        onAction={() => setActiveTab('add')}
+                                    />
                                 )}
                             </div>
                         );
@@ -686,54 +663,61 @@ const Friends = () => {
                                     All Friends — {friends.length}
                                 </h3>
                                 {renderFriendList(allFiltered)}
-                                {allFiltered.length === 0 && (
-                                    <div style={{
-                                        textAlign: 'center',
-                                        padding: '64px 24px',
-                                        color: 'var(--text-muted)',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                    }}>
-                                        <div style={{
-                                            width: '80px',
-                                            height: '80px',
-                                            borderRadius: '50%',
-                                            background: 'var(--bg-tertiary)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            marginBottom: '8px',
-                                            border: '2px dashed var(--stroke)',
-                                        }}>
-                                            <span style={{ fontSize: '36px' }}>&#x1F44B;</span>
+
+                                {/* Suggested Friends */}
+                                {suggestions.length > 0 && (
+                                    <div style={{ marginTop: '32px' }}>
+                                        <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px', borderBottom: '1px solid var(--stroke)', paddingBottom: '8px' }}>
+                                            Suggested Friends — {suggestions.length}
+                                        </h3>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+                                            {suggestions.map(s => (
+                                                <div key={s.id} style={{
+                                                    background: 'var(--bg-tertiary)', borderRadius: '12px', padding: '16px',
+                                                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+                                                    border: '1px solid var(--stroke)', transition: 'border-color 0.2s',
+                                                }} onMouseOver={e => (e.currentTarget.style.borderColor = 'var(--accent-primary)')} onMouseOut={e => (e.currentTarget.style.borderColor = 'var(--stroke)')}>
+                                                    <Avatar userId={s.id} avatarHash={s.avatar} displayName={s.display_name || s.username} size={48} />
+                                                    <div style={{ textAlign: 'center' }}>
+                                                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{s.display_name || s.username}</div>
+                                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                                            {s.sharedServers > 0 && `${s.sharedServers} shared server${s.sharedServers > 1 ? 's' : ''}`}
+                                                            {s.sharedServers > 0 && s.mutualFriends > 0 && ' · '}
+                                                            {s.mutualFriends > 0 && `${s.mutualFriends} mutual friend${s.mutualFriends > 1 ? 's' : ''}`}
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={async () => {
+                                                            try {
+                                                                await api.relationships.sendFriendRequest(s.id);
+                                                                addToast({ title: 'Friend request sent!', variant: 'success' });
+                                                                setSuggestions(prev => prev.filter(x => x.id !== s.id));
+                                                            } catch (err) {
+                                                                addToast({ title: err instanceof ApiRequestError ? err.message : 'Failed to send request', variant: 'error' });
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            background: 'var(--accent-primary)', color: '#000', border: 'none',
+                                                            borderRadius: '6px', padding: '6px 16px', fontSize: '13px',
+                                                            fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                                                        }}
+                                                    >
+                                                        <UserPlus size={14} /> Add Friend
+                                                    </button>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>No friends yet</p>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '300px', lineHeight: '1.5', margin: 0 }}>
-                                            Search for people to add and start building your community!
-                                        </p>
-                                        <button
-                                            onClick={() => setActiveTab('add')}
-                                            style={{
-                                                marginTop: '8px',
-                                                background: 'var(--accent-primary)',
-                                                color: 'var(--bg-primary)',
-                                                border: 'none',
-                                                padding: '10px 24px',
-                                                borderRadius: 'var(--radius-md)',
-                                                fontSize: '14px',
-                                                fontWeight: 600,
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '8px',
-                                            }}
-                                        >
-                                            <UserPlus size={16} />
-                                            Add Friend
-                                        </button>
                                     </div>
+                                )}
+
+                                {allFiltered.length === 0 && (
+                                    <EmptyState
+                                        type="friends"
+                                        title="No friends yet"
+                                        description="Search for people to add and start building your community!"
+                                        actionLabel="Add Friend"
+                                        onAction={() => setActiveTab('add')}
+                                    />
                                 )}
                             </div>
                         );
@@ -853,13 +837,11 @@ const Friends = () => {
                                     </>
                                 )}
                                 {friendsWithActivity.length === 0 && onlineNoActivity.length === 0 && (
-                                    <div style={{ textAlign: 'center', padding: '64px 24px', color: 'var(--text-muted)' }}>
-                                        <Gamepad2 size={48} style={{ marginBottom: '16px', opacity: 0.3 }} />
-                                        <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>No friends are active right now</p>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '300px', margin: '8px auto 0' }}>
-                                            When your friends start an activity, it will show up here.
-                                        </p>
-                                    </div>
+                                    <EmptyState
+                                        type="friends"
+                                        title="No friends are active right now"
+                                        description="When your friends start an activity, it will show up here."
+                                    />
                                 )}
                             </div>
                         );

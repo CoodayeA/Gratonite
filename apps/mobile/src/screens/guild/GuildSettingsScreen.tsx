@@ -261,6 +261,7 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
   }
 
   const isOwner = guild?.ownerId === user?.id;
+  const canManageGuild = isOwner;
 
   return (
     <PatternBackground>
@@ -306,131 +307,140 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('RoleList', { guildId })}>
-          <Ionicons name="shield-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Roles</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+        {canManageGuild ? (
+          <>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('RoleList', { guildId })}>
+              <Ionicons name="shield-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Roles</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('InviteList', { guildId })}>
-          <Ionicons name="mail-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Invites</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('InviteList', { guildId })}>
+              <Ionicons name="mail-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Invites</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('ScheduledEvents', { guildId })}>
-          <Ionicons name="calendar-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Events</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('ScheduledEvents', { guildId })}>
+              <Ionicons name="calendar-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Events</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('OnboardingConfig', { guildId })}>
-          <Ionicons name="school-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Onboarding</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('OnboardingConfig', { guildId })}>
+              <Ionicons name="school-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Onboarding</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('StarboardConfig', { guildId })}>
-          <Ionicons name="star-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Starboard Settings</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('StarboardConfig', { guildId })}>
+              <Ionicons name="star-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Starboard Settings</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('AutoRoleConfig', { guildId })}>
-          <Ionicons name="person-circle-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Auto Roles</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('AutoRoleConfig', { guildId })}>
+              <Ionicons name="person-circle-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Auto Roles</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('DigestConfig', { guildId })}>
-          <Ionicons name="newspaper-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Digest</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('DigestConfig', { guildId })}>
+              <Ionicons name="newspaper-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Digest</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('ActivityLog', { guildId })}>
-          <Ionicons name="time-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Activity Log</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('ActivityLog', { guildId })}>
+              <Ionicons name="time-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Activity Log</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('GuildBans', { guildId })}>
-          <Ionicons name="ban-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Bans</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('GuildBans', { guildId })}>
+              <Ionicons name="ban-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Bans</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('EmojiManagement', { guildId })}>
-          <Ionicons name="happy-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Custom Emojis</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('EmojiManagement', { guildId })}>
+              <Ionicons name="happy-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Custom Emojis</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('AutomodConfig', { guildId })}>
-          <Ionicons name="hardware-chip-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Automod</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('AutomodConfig', { guildId })}>
+              <Ionicons name="hardware-chip-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Automod</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('ServerTemplates', { guildId })}>
-          <Ionicons name="copy-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Templates</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('ServerTemplates', { guildId })}>
+              <Ionicons name="copy-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Templates</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('AuditLog', { guildId })}>
-          <Ionicons name="document-text-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Audit Log</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('AuditLog', { guildId })}>
+              <Ionicons name="document-text-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Audit Log</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('WebhookManagement', { guildId })}>
-          <Ionicons name="code-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Webhooks</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('WebhookManagement', { guildId })}>
+              <Ionicons name="code-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Webhooks</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('WordFilterScreen', { guildId })}>
-          <Ionicons name="funnel-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Word Filter</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('WordFilterScreen', { guildId })}>
+              <Ionicons name="funnel-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Word Filter</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('RaidProtection', { guildId })}>
-          <Ionicons name="shield-checkmark-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Raid Protection</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('RaidProtection', { guildId })}>
+              <Ionicons name="shield-checkmark-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Raid Protection</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('BanAppeals', { guildId })}>
-          <Ionicons name="hand-left-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Ban Appeals</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('BanAppeals', { guildId })}>
+              <Ionicons name="hand-left-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Ban Appeals</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('GuildInsights', { guildId })}>
-          <Ionicons name="analytics-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Portal Insights</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('GuildInsights', { guildId })}>
+              <Ionicons name="analytics-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Portal Insights</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('GuildForms', { guildId })}>
-          <Ionicons name="document-text-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Forms & Surveys</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('GuildForms', { guildId })}>
+              <Ionicons name="document-text-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Forms & Surveys</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('Clips', { guildId })}>
-          <Ionicons name="videocam-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Clips</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('Clips', { guildId })}>
+              <Ionicons name="videocam-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Clips</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('InterestMatches', { guildId })}>
-          <Ionicons name="people-circle-outline" size={22} color={colors.textSecondary} />
-          <Text style={styles.actionText}>Interest Matches</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('InterestMatches', { guildId })}>
+              <Ionicons name="people-circle-outline" size={22} color={colors.textSecondary} />
+              <Text style={styles.actionText}>Interest Matches</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={styles.actionRow}>
+            <Ionicons name="lock-closed-outline" size={22} color={colors.textMuted} />
+            <Text style={styles.actionText}>Only the portal owner can manage server settings on mobile right now.</Text>
+          </View>
+        )}
       </View>
 
       {/* Danger zone */}

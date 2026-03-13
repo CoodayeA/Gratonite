@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Shield, Plus, Check, Search, ChevronDown, Trash2, Edit2, Ban, UserPlus, Hash, Mic, Settings, AlertTriangle, Clock, Save, Link2, Copy, RefreshCw, Bot, Power, Sliders, GripVertical, Upload, UserX, Lock } from 'lucide-react';
+import { X, Shield, Plus, Check, Search, ChevronDown, Trash2, Edit2, Ban, UserPlus, Hash, Mic, Settings, AlertTriangle, Clock, Save, Link2, Copy, RefreshCw, Bot, Power, Sliders, GripVertical, Upload, UserX, Lock, Eye, Type, ExternalLink, ArrowUp, ArrowDown, BookOpen } from 'lucide-react';
 import { useToast } from '../ui/ToastManager';
 import { useUser } from '../../contexts/UserContext';
 import { api, API_BASE } from '../../lib/api';
@@ -112,7 +112,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const { user: currentUser } = useUser();
     const navigate = useNavigate();
     const actorName = currentUser.name || currentUser.handle || 'Unknown';
-    const [activeTab, setActiveTab] = useState<'overview' | 'channels' | 'roles' | 'members' | 'bans' | 'invites' | 'emojis' | 'automod' | 'audit' | 'branding' | 'webhooks' | 'bots' | 'templates' | 'insights' | 'onboarding' | 'wordfilter' | 'security'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'channels' | 'roles' | 'members' | 'bans' | 'invites' | 'emojis' | 'automod' | 'audit' | 'branding' | 'webhooks' | 'bots' | 'templates' | 'insights' | 'onboarding' | 'wordfilter' | 'security' | 'import' | 'boosts' | 'welcome' | 'currency'>('overview');
     const [roles, setRoles] = useState<Role[]>([]);
     const [activeRole, setActiveRole] = useState<Role | null>(null);
     const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
@@ -188,6 +188,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             if (g.systemMsgJoin != null) setSystemMsgJoin(g.systemMsgJoin);
             if (g.systemMsgBoost != null) setSystemMsgBoost(g.systemMsgBoost);
             if (g.memberScreeningEnabled) setMemberScreeningEnabled(true);
+            if (g.boostCount != null) setBoostCount(g.boostCount);
+            if (g.boostTier != null) setBoostTier(g.boostTier);
         }).catch(() => {});
     }, [guildId]);
 
@@ -586,6 +588,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         if (activeTab === 'security' && guildId) {
             api.guilds.get(guildId).then((g: any) => {
                 setRaidProtectionEnabled(!!g.raidProtectionEnabled);
+                setPublicStatsEnabled(!!g.publicStatsEnabled);
                 setGuildLocked(!!g.lockedAt);
             }).catch(() => {});
         }
@@ -653,11 +656,16 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [editRuleName, setEditRuleName] = useState('');
     const [editRuleAction, setEditRuleAction] = useState('');
     const [editRuleKeywords, setEditRuleKeywords] = useState('');
-    const [customEmojis, setCustomEmojis] = useState<Array<{ id?: string; name: string; url: string }>>([]);
+    const [customEmojis, setCustomEmojis] = useState<Array<{ id?: string; name: string; url: string; categoryId?: string | null }>>([]);
     const [emojiUploading, setEmojiUploading] = useState(false);
     const [emojiNameInput, setEmojiNameInput] = useState('');
     const [emojiFileToUpload, setEmojiFileToUpload] = useState<File | null>(null);
     const [emojiFilePreview, setEmojiFilePreview] = useState<string | null>(null);
+    const [emojiCategories, setEmojiCategories] = useState<Array<{ id: string; name: string; sortOrder: number }>>([]);
+    const [newCatName, setNewCatName] = useState('');
+    const [editingCatId, setEditingCatId] = useState<string | null>(null);
+    const [editingCatName, setEditingCatName] = useState('');
+    const [selectedEmojiCategory, setSelectedEmojiCategory] = useState<string>('all');
 
     // Vanity URL state
     const [vanityCode, setVanityCode] = useState('');
@@ -711,7 +719,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         }
     };
 
-    // Fetch real server emojis
+    // Fetch real server emojis and categories
     useEffect(() => {
         if (!guildId) return;
         api.guilds.getEmojis(guildId).then((emojis: any[]) => {
@@ -719,8 +727,10 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                 id: e.id,
                 name: e.name,
                 url: e.imageHash ? `${API_BASE}/files/${e.imageHash}` : `https://placehold.co/32/526df5/FFF?text=${e.name.charAt(0).toUpperCase()}`,
+                categoryId: e.categoryId || null,
             })));
         }).catch(() => { addToast({ title: 'Failed to load server emojis', variant: 'error' }); });
+        api.guilds.getEmojiCategories(guildId).then(setEmojiCategories).catch(() => {});
     }, [guildId]);
 
     const validateEmojiFile = (file: File): string | null => {
@@ -805,7 +815,78 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [raidProtectionEnabled, setRaidProtectionEnabled] = useState(false);
     const [guildLocked, setGuildLocked] = useState(false);
     const [raidSaving, setRaidSaving] = useState(false);
+    const [publicStatsEnabled, setPublicStatsEnabled] = useState(false);
+    const [publicStatsSaving, setPublicStatsSaving] = useState(false);
     const [memberScreeningEnabled, setMemberScreeningEnabled] = useState(false);
+    const [boostCount, setBoostCount] = useState(0);
+    const [boostTier, setBoostTier] = useState(0);
+
+    // Server currency state
+    const [currencyEnabled, setCurrencyEnabled] = useState(false);
+    const [currencyName, setCurrencyName] = useState('');
+    const [currencyEmoji, setCurrencyEmoji] = useState('💰');
+    const [currencyEarnMsg, setCurrencyEarnMsg] = useState(1);
+    const [currencyEarnReact, setCurrencyEarnReact] = useState(1);
+    const [currencyEarnVoice, setCurrencyEarnVoice] = useState(2);
+    const [currencySaving, setCurrencySaving] = useState(false);
+    const [currencyLeaderboard, setCurrencyLeaderboard] = useState<Array<{ userId: string; balance: number; lifetimeEarned: number }>>([]);
+
+    // Welcome screen builder state
+    type WelcomeBlockType = 'message' | 'channels' | 'rules' | 'links';
+    interface WelcomeBlock {
+        id: string;
+        type: WelcomeBlockType;
+        enabled: boolean;
+        data: Record<string, any>;
+    }
+    const WELCOME_STORAGE_KEY = 'gratonite-welcome-config';
+    const loadWelcomeBlocks = (gid: string): WelcomeBlock[] => {
+        try {
+            const raw = localStorage.getItem(WELCOME_STORAGE_KEY);
+            if (raw) {
+                const all = JSON.parse(raw);
+                if (all[gid]) return all[gid];
+            }
+        } catch { /* ignore */ }
+        return [
+            { id: 'msg', type: 'message', enabled: true, data: { text: '' } },
+            { id: 'ch', type: 'channels', enabled: true, data: { channelIds: [] } },
+            { id: 'rules', type: 'rules', enabled: false, data: { summary: '' } },
+            { id: 'links', type: 'links', enabled: false, data: { items: [] } },
+        ];
+    };
+    const saveWelcomeBlocks = (gid: string, blocks: WelcomeBlock[]) => {
+        try {
+            const raw = localStorage.getItem(WELCOME_STORAGE_KEY);
+            const all = raw ? JSON.parse(raw) : {};
+            all[gid] = blocks;
+            localStorage.setItem(WELCOME_STORAGE_KEY, JSON.stringify(all));
+        } catch { /* ignore */ }
+        // Also persist to API (fire-and-forget)
+        try {
+            const apiBlocks = blocks.filter(b => b.enabled).map(b => ({
+                type: b.type === 'message' ? 'welcome_message' : b.type,
+                title: b.data?.title || (b.type === 'message' ? 'Welcome' : b.type === 'channels' ? 'Recommended Channels' : b.type === 'rules' ? 'Rules' : 'Links'),
+                content: b.data?.text || b.data?.summary,
+                channelIds: b.data?.channelIds,
+                links: b.data?.items,
+            }));
+            api.welcomeScreen.update(gid, { blocks: apiBlocks }).catch(() => {});
+        } catch { /* ignore */ }
+    };
+    const [welcomeBlocks, setWelcomeBlocks] = useState<WelcomeBlock[]>(() => guildId ? loadWelcomeBlocks(guildId) : []);
+    const [welcomeEnabled, setWelcomeEnabled] = useState(() => {
+        try {
+            const raw = localStorage.getItem(WELCOME_STORAGE_KEY);
+            if (raw && guildId) {
+                const all = JSON.parse(raw);
+                return all[`${guildId}_enabled`] !== false;
+            }
+        } catch { /* ignore */ }
+        return true;
+    });
+    const [welcomePreview, setWelcomePreview] = useState(false);
+    const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
 
     // Batch moderation state
     const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
@@ -1134,7 +1215,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                         <div style={{ padding: '0 8px', marginBottom: '16px', fontWeight: 600, color: 'var(--text-primary)', fontSize: '15px' }}>
                             {serverName}
                         </div>
-                        {(['overview', 'channels', 'roles', 'members', 'invites', 'templates'] as const).map(tab => (
+                        {(['overview', 'channels', 'roles', 'members', 'invites', 'templates', 'import'] as const).map(tab => (
                             <div key={tab} onClick={() => setActiveTab(tab)}
                                 onMouseEnter={() => setHoveredBtn(`tab-${tab}`)} onMouseLeave={() => setHoveredBtn(null)}
                                 style={tabStyle(tab)}
@@ -1160,6 +1241,17 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                         ))}
                     </div>
                     <div>
+                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>PREMIUM</div>
+                        <div onClick={() => setActiveTab('boosts')}
+                            onMouseEnter={() => setHoveredBtn('tab-boosts')} onMouseLeave={() => setHoveredBtn(null)}
+                            style={tabStyle('boosts')}
+                        >Server Boosts</div>
+                        <div onClick={() => setActiveTab('currency')}
+                            onMouseEnter={() => setHoveredBtn('tab-currency')} onMouseLeave={() => setHoveredBtn(null)}
+                            style={tabStyle('currency')}
+                        >Server Currency</div>
+                    </div>
+                    <div>
                         <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>MODERATION</div>
                         {(['automod', 'wordfilter', 'bans', 'audit', 'security'] as const).map(tab => (
                             <div key={tab} onClick={() => setActiveTab(tab)}
@@ -1178,6 +1270,10 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             onMouseEnter={() => setHoveredBtn('tab-onboarding')} onMouseLeave={() => setHoveredBtn(null)}
                             style={tabStyle('onboarding')}
                         >Onboarding</div>
+                        <div onClick={() => setActiveTab('welcome')}
+                            onMouseEnter={() => setHoveredBtn('tab-welcome')} onMouseLeave={() => setHoveredBtn(null)}
+                            style={tabStyle('welcome')}
+                        >Welcome Screen</div>
                     </div>
                 </div>
 
@@ -1186,9 +1282,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                     <button onClick={onClose} style={{ marginRight: 'auto', padding: '6px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '16px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600 }}>
                         <X size={14} /> Close
                     </button>
-                    {(['overview', 'channels', 'roles', 'members', 'invites', 'templates', 'emojis', 'branding', 'webhooks', 'bots', 'automod', 'wordfilter', 'bans', 'audit', 'security', 'insights', 'onboarding'] as const).map(tab => (
+                    {(['overview', 'channels', 'roles', 'members', 'invites', 'templates', 'import', 'emojis', 'branding', 'webhooks', 'bots', 'automod', 'wordfilter', 'bans', 'audit', 'security', 'insights', 'onboarding', 'welcome'] as const).map(tab => (
                         <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>
-                            {tab === 'emojis' ? 'Emojis' : tab === 'branding' ? 'Brand' : tab === 'webhooks' ? 'Webhooks' : tab === 'bots' ? 'Bots' : tab === 'automod' ? 'AutoMod' : tab === 'wordfilter' ? 'Word Filter' : tab === 'audit' ? 'Audit Log' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            {tab === 'emojis' ? 'Emojis' : tab === 'branding' ? 'Brand' : tab === 'webhooks' ? 'Webhooks' : tab === 'bots' ? 'Bots' : tab === 'automod' ? 'AutoMod' : tab === 'wordfilter' ? 'Word Filter' : tab === 'audit' ? 'Audit Log' : tab === 'welcome' ? 'Welcome' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                         </button>
                     ))}
                 </div>
@@ -2353,6 +2449,40 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             )}
 
                             <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <div>
+                                        <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>Public Server Stats</h3>
+                                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Allow anyone to view server statistics at a public URL. Shows member count, message activity, and more.</p>
+                                    </div>
+                                    <div
+                                        onClick={async () => {
+                                            if (!guildId || publicStatsSaving) return;
+                                            setPublicStatsSaving(true);
+                                            const newVal = !publicStatsEnabled;
+                                            setPublicStatsEnabled(newVal);
+                                            try {
+                                                await api.guilds.update(guildId, { publicStatsEnabled: newVal } as any);
+                                                addToast({ title: newVal ? 'Public stats enabled' : 'Public stats disabled', variant: 'success' });
+                                            } catch {
+                                                setPublicStatsEnabled(!newVal);
+                                                addToast({ title: 'Failed to update', variant: 'error' });
+                                            } finally {
+                                                setPublicStatsSaving(false);
+                                            }
+                                        }}
+                                        style={{ width: '40px', height: '24px', borderRadius: '12px', position: 'relative', cursor: publicStatsSaving ? 'wait' : 'pointer', flexShrink: 0, background: publicStatsEnabled ? 'var(--success)' : 'var(--bg-tertiary)', transition: 'background 0.2s' }}
+                                    >
+                                        <div style={{ width: '18px', height: '18px', background: 'white', borderRadius: '50%', position: 'absolute', top: '3px', transition: 'left 0.2s', left: publicStatsEnabled ? '19px' : '3px' }} />
+                                    </div>
+                                </div>
+                                {publicStatsEnabled && (
+                                    <div style={{ marginTop: '12px', padding: '8px 12px', background: 'var(--bg-tertiary)', borderRadius: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                                        Stats page: <a href={`/app/guild/${guildId}/stats`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>/guild/{guildId}/stats</a>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                                     <div>
                                         <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>Raid Protection</h3>
@@ -2719,6 +2849,104 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 </div>
                             </div>
 
+                            {/* Category Management */}
+                            <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '10px', padding: '20px', marginBottom: '24px' }}>
+                                <div style={{ fontSize: '12px', textTransform: 'uppercase', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '12px' }}>Emoji Categories</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                                    {emojiCategories.map(cat => (
+                                        <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '6px', padding: '4px 10px', fontSize: '13px' }}>
+                                            {editingCatId === cat.id ? (
+                                                <input
+                                                    value={editingCatName}
+                                                    onChange={e => setEditingCatName(e.target.value)}
+                                                    onBlur={async () => {
+                                                        if (editingCatName.trim() && editingCatName.trim() !== cat.name && guildId) {
+                                                            await api.guilds.updateEmojiCategory(guildId, cat.id, { name: editingCatName.trim() });
+                                                            setEmojiCategories(prev => prev.map(c => c.id === cat.id ? { ...c, name: editingCatName.trim() } : c));
+                                                        }
+                                                        setEditingCatId(null);
+                                                    }}
+                                                    onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                                                    autoFocus
+                                                    style={{ width: '100px', height: '24px', background: 'var(--bg-app)', border: '1px solid var(--stroke)', borderRadius: '4px', color: 'var(--text-primary)', padding: '0 6px', fontSize: '12px', outline: 'none' }}
+                                                />
+                                            ) : (
+                                                <span
+                                                    style={{ cursor: 'pointer' }}
+                                                    onClick={() => { setEditingCatId(cat.id); setEditingCatName(cat.name); }}
+                                                    title="Click to rename"
+                                                >{cat.name}</span>
+                                            )}
+                                            <button
+                                                onClick={async () => {
+                                                    if (!guildId) return;
+                                                    await api.guilds.deleteEmojiCategory(guildId, cat.id);
+                                                    setEmojiCategories(prev => prev.filter(c => c.id !== cat.id));
+                                                    setCustomEmojis(prev => prev.map(e => e.categoryId === cat.id ? { ...e, categoryId: null } : e));
+                                                    addToast({ title: `Category "${cat.name}" deleted`, variant: 'success' });
+                                                }}
+                                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0', display: 'flex' }}
+                                                title="Delete category"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <input
+                                        type="text"
+                                        value={newCatName}
+                                        onChange={e => setNewCatName(e.target.value)}
+                                        placeholder="New category name..."
+                                        maxLength={32}
+                                        style={{ flex: 1, height: '32px', background: 'var(--bg-app)', border: '1px solid var(--stroke)', borderRadius: '6px', color: 'var(--text-primary)', padding: '0 10px', fontSize: '13px', outline: 'none' }}
+                                        onKeyDown={async e => {
+                                            if (e.key === 'Enter' && newCatName.trim() && guildId) {
+                                                const cat = await api.guilds.createEmojiCategory(guildId, { name: newCatName.trim() });
+                                                setEmojiCategories(prev => [...prev, cat]);
+                                                setNewCatName('');
+                                                addToast({ title: `Category "${cat.name}" created`, variant: 'success' });
+                                            }
+                                        }}
+                                    />
+                                    <button
+                                        onClick={async () => {
+                                            if (!newCatName.trim() || !guildId) return;
+                                            const cat = await api.guilds.createEmojiCategory(guildId, { name: newCatName.trim() });
+                                            setEmojiCategories(prev => [...prev, cat]);
+                                            setNewCatName('');
+                                            addToast({ title: `Category "${cat.name}" created`, variant: 'success' });
+                                        }}
+                                        disabled={!newCatName.trim()}
+                                        style={{ padding: '6px 14px', background: newCatName.trim() ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: 'none', borderRadius: '6px', color: newCatName.trim() ? '#000' : 'var(--text-muted)', fontSize: '13px', fontWeight: 600, cursor: newCatName.trim() ? 'pointer' : 'default' }}
+                                    >
+                                        Add
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Category Filter Tabs */}
+                            {emojiCategories.length > 0 && customEmojis.length > 0 && (
+                                <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                                    <button
+                                        onClick={() => setSelectedEmojiCategory('all')}
+                                        style={{ padding: '5px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, border: 'none', cursor: 'pointer', background: selectedEmojiCategory === 'all' ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: selectedEmojiCategory === 'all' ? '#000' : 'var(--text-secondary)' }}
+                                    >All</button>
+                                    <button
+                                        onClick={() => setSelectedEmojiCategory('uncategorized')}
+                                        style={{ padding: '5px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, border: 'none', cursor: 'pointer', background: selectedEmojiCategory === 'uncategorized' ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: selectedEmojiCategory === 'uncategorized' ? '#000' : 'var(--text-secondary)' }}
+                                    >Uncategorized</button>
+                                    {emojiCategories.map(cat => (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => setSelectedEmojiCategory(cat.id)}
+                                            style={{ padding: '5px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, border: 'none', cursor: 'pointer', background: selectedEmojiCategory === cat.id ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: selectedEmojiCategory === cat.id ? '#000' : 'var(--text-secondary)' }}
+                                        >{cat.name}</button>
+                                    ))}
+                                </div>
+                            )}
+
                             {/* Existing Emojis Grid */}
                             {customEmojis.length === 0 ? (
                                 <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
@@ -2728,12 +2956,37 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 </div>
                             ) : (
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '12px' }}>
-                                    {customEmojis.map(emoji => (
+                                    {customEmojis
+                                        .filter(emoji => {
+                                            if (selectedEmojiCategory === 'all') return true;
+                                            if (selectedEmojiCategory === 'uncategorized') return !emoji.categoryId;
+                                            return emoji.categoryId === selectedEmojiCategory;
+                                        })
+                                        .map(emoji => (
                                         <div key={emoji.id || emoji.name} onMouseEnter={() => setHoveredBtn(`emoji-${emoji.name}`)} onMouseLeave={() => setHoveredBtn(null)}
                                             style={{ background: hoveredBtn === `emoji-${emoji.name}` ? 'var(--hover-overlay)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', position: 'relative', transition: 'background 0.15s' }}
                                         >
                                             <img src={emoji.url} alt={emoji.name} style={{ width: '32px', height: '32px', borderRadius: '4px', objectFit: 'contain' }} />
                                             <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', wordBreak: 'break-all' }}>:{emoji.name}:</div>
+                                            {/* Category selector */}
+                                            {emojiCategories.length > 0 && (
+                                                <select
+                                                    value={emoji.categoryId || ''}
+                                                    onChange={async e => {
+                                                        const newCatId = e.target.value || null;
+                                                        if (!guildId || !emoji.id) return;
+                                                        await api.guilds.updateEmoji(guildId, emoji.id, { categoryId: newCatId });
+                                                        setCustomEmojis(prev => prev.map(em => em.id === emoji.id ? { ...em, categoryId: newCatId } : em));
+                                                    }}
+                                                    onClick={e => e.stopPropagation()}
+                                                    style={{ width: '100%', fontSize: '10px', background: 'var(--bg-app)', border: '1px solid var(--stroke)', borderRadius: '4px', color: 'var(--text-secondary)', padding: '2px 4px', outline: 'none', cursor: 'pointer' }}
+                                                >
+                                                    <option value="">Uncategorized</option>
+                                                    {emojiCategories.map(cat => (
+                                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                                    ))}
+                                                </select>
+                                            )}
                                             {hoveredBtn === `emoji-${emoji.name}` && (
                                                 <button onClick={() => handleDeleteEmoji(emoji.id, emoji.name)}
                                                     style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(237,66,69,0.85)', border: 'none', borderRadius: '4px', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }}>
@@ -3183,6 +3436,467 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             </div>
                         </>
                     )}
+
+                    {activeTab === 'boosts' && (() => {
+                        const TIERS = [
+                            { tier: 0, name: 'No Tier', min: 0, color: '#72767d', perks: ['Base server features'] },
+                            { tier: 1, name: 'Tier 1', min: 2, color: '#ff73fa', perks: ['50 emoji slots', '128 Kbps audio', 'Custom server invite background', 'Animated server icon'] },
+                            { tier: 2, name: 'Tier 2', min: 7, color: '#ff73fa', perks: ['100 emoji slots', '256 Kbps audio', '50 MB upload limit', 'Server banner', 'Custom role icons'] },
+                            { tier: 3, name: 'Tier 3', min: 14, color: '#ffd700', perks: ['250 emoji slots', '384 Kbps audio', '100 MB upload limit', 'Vanity invite URL', 'Animated server banner', 'Custom sticker slots'] },
+                        ];
+                        const currentTierData = TIERS[boostTier] || TIERS[0];
+                        const nextTierData = boostTier < 3 ? TIERS[boostTier + 1] : null;
+                        const progressToNext = nextTierData ? Math.min((boostCount / nextTierData.min) * 100, 100) : 100;
+                        return (
+                            <>
+                                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Boosts</h2>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
+                                    Boost your server to unlock perks and features for everyone.
+                                </p>
+
+                                {/* Current Status */}
+                                <div style={{ background: `linear-gradient(135deg, ${currentTierData.color}22, var(--bg-tertiary))`, padding: '24px', borderRadius: '12px', border: `1px solid ${currentTierData.color}44`, marginBottom: '20px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                                        <div>
+                                            <div style={{ fontSize: '28px', fontWeight: 800, color: currentTierData.color }}>{currentTierData.name}</div>
+                                            <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '4px' }}>{boostCount} boost{boostCount !== 1 ? 's' : ''} active</div>
+                                        </div>
+                                        <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: `${currentTierData.color}20`, border: `2px solid ${currentTierData.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
+                                            {boostTier === 0 ? '\u26A1' : boostTier === 1 ? '\u26A1' : boostTier === 2 ? '\u26A1\u26A1' : '\u26A1\u26A1\u26A1'}
+                                        </div>
+                                    </div>
+
+                                    {nextTierData && (
+                                        <div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                                                <span>{boostCount} / {nextTierData.min} boosts</span>
+                                                <span>{nextTierData.name}</span>
+                                            </div>
+                                            <div style={{ height: '8px', borderRadius: '4px', background: 'var(--bg-primary)', overflow: 'hidden' }}>
+                                                <div style={{ height: '100%', borderRadius: '4px', background: `linear-gradient(90deg, ${currentTierData.color}, ${nextTierData.color})`, width: `${progressToNext}%`, transition: 'width 0.5s ease' }} />
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                                {nextTierData.min - boostCount} more boost{nextTierData.min - boostCount !== 1 ? 's' : ''} needed for {nextTierData.name}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {!nextTierData && (
+                                        <div style={{ fontSize: '13px', color: currentTierData.color, fontWeight: 600 }}>
+                                            Maximum tier reached!
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Tier Cards */}
+                                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>Tier Perks</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    {TIERS.filter(t => t.tier > 0).map(t => {
+                                        const isUnlocked = boostTier >= t.tier;
+                                        const isCurrent = boostTier === t.tier;
+                                        return (
+                                            <div key={t.tier} style={{
+                                                padding: '16px', borderRadius: '10px',
+                                                background: isCurrent ? `${t.color}10` : 'var(--bg-tertiary)',
+                                                border: isCurrent ? `1px solid ${t.color}55` : '1px solid var(--stroke)',
+                                                opacity: isUnlocked ? 1 : 0.6,
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span style={{ fontWeight: 700, fontSize: '14px', color: isUnlocked ? t.color : 'var(--text-muted)' }}>{t.name}</span>
+                                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-primary)', padding: '2px 6px', borderRadius: '4px' }}>{t.min} boosts</span>
+                                                    </div>
+                                                    {isUnlocked && (
+                                                        <span style={{ fontSize: '11px', fontWeight: 600, color: t.color, background: `${t.color}15`, padding: '3px 8px', borderRadius: '6px' }}>
+                                                            {isCurrent ? 'Current' : 'Unlocked'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                                    {t.perks.map((perk, i) => (
+                                                        <span key={i} style={{
+                                                            fontSize: '12px', color: isUnlocked ? 'var(--text-secondary)' : 'var(--text-muted)',
+                                                            background: 'var(--bg-primary)', padding: '3px 8px', borderRadius: '6px',
+                                                        }}>
+                                                            {isUnlocked ? '\u2713' : '\u2022'} {perk}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        );
+                    })()}
+
+                    {activeTab === 'currency' && (() => {
+                        const loadCurrency = () => {
+                            if (!guildId) return;
+                            api.get<any>(`/guilds/${guildId}/currency`).then((data: any) => {
+                                if (data.enabled) {
+                                    setCurrencyEnabled(true);
+                                    setCurrencyName(data.currency?.name ?? '');
+                                    setCurrencyEmoji(data.currency?.emoji ?? '💰');
+                                    setCurrencyEarnMsg(data.currency?.earnPerMessage ?? 1);
+                                    setCurrencyEarnReact(data.currency?.earnPerReaction ?? 1);
+                                    setCurrencyEarnVoice(data.currency?.earnPerVoiceMinute ?? 2);
+                                } else {
+                                    setCurrencyEnabled(false);
+                                }
+                            }).catch(() => {});
+                            api.get<any>(`/guilds/${guildId}/currency/leaderboard`).then((data: any) => {
+                                if (Array.isArray(data)) setCurrencyLeaderboard(data);
+                            }).catch(() => {});
+                        };
+                        // eslint-disable-next-line react-hooks/rules-of-hooks
+                        useEffect(() => { loadCurrency(); }, [guildId]);
+
+                        const saveCurrency = async () => {
+                            if (!guildId || !currencyName.trim()) {
+                                addToast({ title: 'Currency name required', variant: 'error' });
+                                return;
+                            }
+                            setCurrencySaving(true);
+                            try {
+                                await api.post(`/guilds/${guildId}/currency`, {
+                                    name: currencyName.trim(),
+                                    emoji: currencyEmoji,
+                                    earnPerMessage: currencyEarnMsg,
+                                    earnPerReaction: currencyEarnReact,
+                                    earnPerVoiceMinute: currencyEarnVoice,
+                                });
+                                setCurrencyEnabled(true);
+                                addToast({ title: 'Server currency saved', variant: 'success' });
+                            } catch {
+                                addToast({ title: 'Failed to save currency', variant: 'error' });
+                            } finally {
+                                setCurrencySaving(false);
+                            }
+                        };
+
+                        const deleteCurrency = async () => {
+                            if (!guildId) return;
+                            setCurrencySaving(true);
+                            try {
+                                await api.delete(`/guilds/${guildId}/currency`);
+                                setCurrencyEnabled(false);
+                                setCurrencyName('');
+                                setCurrencyEmoji('💰');
+                                setCurrencyLeaderboard([]);
+                                addToast({ title: 'Server currency disabled', variant: 'success' });
+                            } catch {
+                                addToast({ title: 'Failed to disable currency', variant: 'error' });
+                            } finally {
+                                setCurrencySaving(false);
+                            }
+                        };
+
+                        return (
+                            <>
+                                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Currency</h2>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
+                                    Create a custom currency for your server. Members earn it by participating and can compete on the leaderboard.
+                                </p>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Currency Name</label>
+                                            <input
+                                                type="text"
+                                                value={currencyName}
+                                                onChange={e => setCurrencyName(e.target.value)}
+                                                placeholder="e.g. Server Coins"
+                                                maxLength={50}
+                                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
+                                            />
+                                        </div>
+                                        <div style={{ width: '80px' }}>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Emoji</label>
+                                            <input
+                                                type="text"
+                                                value={currencyEmoji}
+                                                onChange={e => setCurrencyEmoji(e.target.value.slice(0, 4))}
+                                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '18px', textAlign: 'center', outline: 'none' }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', padding: '16px', border: '1px solid var(--stroke)' }}>
+                                        <h4 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px', color: 'var(--text-primary)' }}>Earning Rules</h4>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            {[
+                                                { label: 'Per Message', value: currencyEarnMsg, setter: setCurrencyEarnMsg },
+                                                { label: 'Per Reaction', value: currencyEarnReact, setter: setCurrencyEarnReact },
+                                                { label: 'Per Voice Minute', value: currencyEarnVoice, setter: setCurrencyEarnVoice },
+                                            ].map(({ label, value, setter }) => (
+                                                <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{label}</span>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <input
+                                                            type="number"
+                                                            min={0}
+                                                            max={100}
+                                                            value={value}
+                                                            onChange={e => setter(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
+                                                            style={{ width: '60px', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', textAlign: 'center', outline: 'none' }}
+                                                        />
+                                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{currencyEmoji}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button
+                                            onClick={saveCurrency}
+                                            disabled={currencySaving || !currencyName.trim()}
+                                            style={{
+                                                flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
+                                                background: 'var(--accent-primary)', color: '#000', fontWeight: 700,
+                                                cursor: currencySaving ? 'wait' : 'pointer', opacity: !currencyName.trim() ? 0.5 : 1,
+                                            }}
+                                        >
+                                            {currencySaving ? 'Saving...' : currencyEnabled ? 'Update Currency' : 'Enable Currency'}
+                                        </button>
+                                        {currencyEnabled && (
+                                            <button
+                                                onClick={deleteCurrency}
+                                                disabled={currencySaving}
+                                                style={{
+                                                    padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--error)',
+                                                    background: 'transparent', color: 'var(--error)', fontWeight: 600,
+                                                    cursor: currencySaving ? 'wait' : 'pointer',
+                                                }}
+                                            >
+                                                Disable
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {currencyEnabled && currencyLeaderboard.length > 0 && (
+                                    <div style={{ marginTop: '24px' }}>
+                                        <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '12px' }}>Leaderboard</h3>
+                                        <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
+                                            {currencyLeaderboard.map((entry, i) => (
+                                                <div key={entry.userId} style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                    padding: '10px 16px',
+                                                    borderBottom: i < currencyLeaderboard.length - 1 ? '1px solid var(--stroke)' : 'none',
+                                                }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <span style={{
+                                                            width: '24px', height: '24px', borderRadius: '50%',
+                                                            background: i === 0 ? '#ffd700' : i === 1 ? '#c0c0c0' : i === 2 ? '#cd7f32' : 'var(--bg-primary)',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                            fontSize: '11px', fontWeight: 700, color: i < 3 ? '#111' : 'var(--text-muted)',
+                                                        }}>
+                                                            {i + 1}
+                                                        </span>
+                                                        <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>
+                                                            {entry.userId.slice(0, 8)}...
+                                                        </span>
+                                                    </div>
+                                                    <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-primary)' }}>
+                                                        {entry.balance.toLocaleString()} {currencyEmoji}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {currencyEnabled && currencyLeaderboard.length === 0 && (
+                                    <div style={{ marginTop: '24px', textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                                        <p style={{ fontWeight: 600, marginBottom: '4px' }}>No balances yet</p>
+                                        <p style={{ fontSize: '13px' }}>Members will start earning {currencyEmoji} {currencyName} as they chat and participate.</p>
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
+
+                    {activeTab === 'welcome' && (() => {
+                        const BLOCK_META: Record<WelcomeBlockType, { label: string; icon: React.ReactNode; desc: string }> = {
+                            message: { label: 'Welcome Message', icon: <Type size={16} />, desc: 'Greeting text shown at the top' },
+                            channels: { label: 'Recommended Channels', icon: <Hash size={16} />, desc: 'Highlight channels for new members' },
+                            rules: { label: 'Rules Summary', icon: <BookOpen size={16} />, desc: 'Quick overview of server rules' },
+                            links: { label: 'Resource Links', icon: <ExternalLink size={16} />, desc: 'Useful links for newcomers' },
+                        };
+                        const updateBlock = (id: string, patch: Partial<WelcomeBlock>) => {
+                            setWelcomeBlocks(prev => {
+                                const next = prev.map(b => b.id === id ? { ...b, ...patch } : b);
+                                if (guildId) saveWelcomeBlocks(guildId, next);
+                                return next;
+                            });
+                        };
+                        const moveBlock = (idx: number, dir: -1 | 1) => {
+                            setWelcomeBlocks(prev => {
+                                const next = [...prev];
+                                const target = idx + dir;
+                                if (target < 0 || target >= next.length) return prev;
+                                [next[idx], next[target]] = [next[target], next[idx]];
+                                if (guildId) saveWelcomeBlocks(guildId, next);
+                                return next;
+                            });
+                        };
+                        const toggleWelcomeEnabled = () => {
+                            const next = !welcomeEnabled;
+                            setWelcomeEnabled(next);
+                            try {
+                                const raw = localStorage.getItem(WELCOME_STORAGE_KEY);
+                                const all = raw ? JSON.parse(raw) : {};
+                                all[`${guildId}_enabled`] = next;
+                                localStorage.setItem(WELCOME_STORAGE_KEY, JSON.stringify(all));
+                            } catch { /* ignore */ }
+                        };
+                        const wTextChannels = channelsList.filter(ch => ch.type === 'GUILD_TEXT' || ch.type === 'text');
+                        return (
+                            <>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                    <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Welcome Screen Builder</h2>
+                                    <button onClick={() => setWelcomePreview(!welcomePreview)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', background: welcomePreview ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: welcomePreview ? '#fff' : 'var(--text-secondary)', border: welcomePreview ? 'none' : '1px solid var(--stroke)' }}>
+                                        <Eye size={14} /> {welcomePreview ? 'Close Preview' : 'Preview'}
+                                    </button>
+                                </div>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>Design the welcome screen new members see when they join. Reorder blocks with the arrows.</p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', padding: '12px 16px', background: 'var(--bg-tertiary)', borderRadius: '10px', border: '1px solid var(--stroke)' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flex: 1 }}>
+                                        <input type="checkbox" checked={welcomeEnabled} onChange={toggleWelcomeEnabled} style={{ accentColor: 'var(--accent-primary)' }} />
+                                        <div>
+                                            <div style={{ fontWeight: 600, fontSize: '14px' }}>Enable Welcome Screen</div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Show a customized welcome screen to new members</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                {welcomePreview ? (
+                                    <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', overflow: 'hidden', maxWidth: '460px', margin: '0 auto' }}>
+                                        <div style={{ height: '100px', background: 'linear-gradient(135deg, var(--accent-primary), #6366f1)' }} />
+                                        <div style={{ padding: '20px 24px 24px' }}>
+                                            <div style={{ marginTop: '-40px', marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+                                                <div style={{ width: '56px', height: '56px', borderRadius: '14px', border: '3px solid var(--bg-elevated)', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '22px', fontWeight: 700 }}>{serverName.charAt(0).toUpperCase() || 'S'}</div>
+                                            </div>
+                                            <h3 style={{ textAlign: 'center', fontSize: '18px', fontWeight: 700, marginBottom: '4px' }}>Welcome to {serverName}!</h3>
+                                            <p style={{ textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>Preview Mode</p>
+                                            {welcomeBlocks.filter(b => b.enabled).map(block => (
+                                                <div key={block.id} style={{ marginBottom: '12px' }}>
+                                                    {block.type === 'message' && (block.data.text || welcomeMessage) && (<div style={{ background: 'var(--bg-tertiary)', borderRadius: '8px', padding: '12px', fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{block.data.text || welcomeMessage}</div>)}
+                                                    {block.type === 'channels' && (block.data.channelIds?.length > 0 || wTextChannels.length > 0) && (
+                                                        <div>
+                                                            <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '6px', letterSpacing: '0.05em' }}>Recommended Channels</div>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                {(block.data.channelIds?.length > 0 ? block.data.channelIds.map((cid: string) => wTextChannels.find(c => c.id === cid)).filter(Boolean) : wTextChannels.slice(0, 3)).map((ch: any) => (
+                                                                    <div key={ch.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 10px', background: 'var(--bg-tertiary)', borderRadius: '6px', fontSize: '13px' }}>
+                                                                        <Hash size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /><span style={{ fontWeight: 500 }}>{ch.name}</span>
+                                                                        {ch.topic && <span style={{ color: 'var(--text-muted)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}> - {ch.topic}</span>}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {block.type === 'rules' && block.data.summary && (
+                                                        <div>
+                                                            <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '6px', letterSpacing: '0.05em' }}>Server Rules</div>
+                                                            <div style={{ background: 'var(--bg-tertiary)', borderRadius: '8px', padding: '12px', fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{block.data.summary}</div>
+                                                        </div>
+                                                    )}
+                                                    {block.type === 'links' && block.data.items?.length > 0 && (
+                                                        <div>
+                                                            <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '6px', letterSpacing: '0.05em' }}>Resources</div>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                {block.data.items.map((item: { label: string; url: string }, li: number) => (
+                                                                    <div key={li} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 10px', background: 'var(--bg-tertiary)', borderRadius: '6px', fontSize: '13px', color: 'var(--accent-primary)' }}><ExternalLink size={14} style={{ flexShrink: 0 }} /><span>{item.label || item.url}</span></div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            <button style={{ width: '100%', padding: '10px', borderRadius: '8px', border: 'none', background: 'var(--accent-primary)', color: '#fff', fontWeight: 700, fontSize: '14px', cursor: 'default', marginTop: '8px' }}>Let's go!</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                        {welcomeBlocks.map((block, idx) => {
+                                            const meta = BLOCK_META[block.type];
+                                            const isBlockEditing = editingBlockId === block.id;
+                                            return (
+                                                <div key={block.id} style={{ background: block.enabled ? 'var(--bg-tertiary)' : 'var(--bg-secondary)', border: isBlockEditing ? '1px solid var(--accent-primary)' : '1px solid var(--stroke)', borderRadius: '10px', padding: '14px 16px', opacity: block.enabled ? 1 : 0.6 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: isBlockEditing ? '12px' : 0 }}>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                            <button onClick={() => moveBlock(idx, -1)} disabled={idx === 0} style={{ background: 'none', border: 'none', padding: 0, cursor: idx === 0 ? 'default' : 'pointer', color: idx === 0 ? 'var(--bg-secondary)' : 'var(--text-muted)', display: 'flex' }}><ArrowUp size={12} /></button>
+                                                            <button onClick={() => moveBlock(idx, 1)} disabled={idx === welcomeBlocks.length - 1} style={{ background: 'none', border: 'none', padding: 0, cursor: idx === welcomeBlocks.length - 1 ? 'default' : 'pointer', color: idx === welcomeBlocks.length - 1 ? 'var(--bg-secondary)' : 'var(--text-muted)', display: 'flex' }}><ArrowDown size={12} /></button>
+                                                        </div>
+                                                        <div style={{ color: 'var(--text-muted)' }}>{meta.icon}</div>
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={{ fontWeight: 600, fontSize: '14px' }}>{meta.label}</div>
+                                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{meta.desc}</div>
+                                                        </div>
+                                                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                                            <input type="checkbox" checked={block.enabled} onChange={e => updateBlock(block.id, { enabled: e.target.checked })} style={{ accentColor: 'var(--accent-primary)' }} />
+                                                        </label>
+                                                        <button onClick={() => setEditingBlockId(isBlockEditing ? null : block.id)} style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: isBlockEditing ? 'var(--accent-primary)' : 'var(--text-muted)', display: 'flex' }}><Edit2 size={14} /></button>
+                                                    </div>
+                                                    {isBlockEditing && block.type === 'message' && (
+                                                        <div>
+                                                            <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>WELCOME TEXT</label>
+                                                            <textarea value={block.data.text || ''} onChange={e => updateBlock(block.id, { data: { ...block.data, text: e.target.value } })} rows={3} placeholder={welcomeMessage || 'Welcome to our server!'} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Leave empty to use the server welcome message.</div>
+                                                        </div>
+                                                    )}
+                                                    {isBlockEditing && block.type === 'channels' && (
+                                                        <div>
+                                                            <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>SELECT CHANNELS TO HIGHLIGHT</label>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '200px', overflowY: 'auto' }}>
+                                                                {wTextChannels.map(ch => {
+                                                                    const sel = (block.data.channelIds || []).includes(ch.id);
+                                                                    return (
+                                                                        <label key={ch.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', background: sel ? 'var(--active-overlay)' : 'transparent', fontSize: '13px' }}>
+                                                                            <input type="checkbox" checked={sel} onChange={() => { const ids = block.data.channelIds || []; const nxt = sel ? ids.filter((id: string) => id !== ch.id) : [...ids, ch.id]; updateBlock(block.id, { data: { ...block.data, channelIds: nxt } }); }} style={{ accentColor: 'var(--accent-primary)' }} />
+                                                                            <Hash size={14} style={{ color: 'var(--text-muted)' }} />{ch.name}
+                                                                        </label>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                            {wTextChannels.length === 0 && <div style={{ fontSize: '12px', color: 'var(--text-muted)', padding: '8px 0' }}>No text channels found.</div>}
+                                                        </div>
+                                                    )}
+                                                    {isBlockEditing && block.type === 'rules' && (
+                                                        <div>
+                                                            <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>RULES SUMMARY</label>
+                                                            <textarea value={block.data.summary || ''} onChange={e => updateBlock(block.id, { data: { ...block.data, summary: e.target.value } })} rows={4} placeholder={"1. Be respectful\n2. No spam\n3. Stay on topic"} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Brief rules summary shown on the welcome screen.</div>
+                                                        </div>
+                                                    )}
+                                                    {isBlockEditing && block.type === 'links' && (
+                                                        <div>
+                                                            <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>RESOURCE LINKS</label>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}>
+                                                                {(block.data.items || []).map((item: { label: string; url: string }, li: number) => (
+                                                                    <div key={li} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                                                        <input value={item.label} onChange={e => { const items = [...(block.data.items || [])]; items[li] = { ...items[li], label: e.target.value }; updateBlock(block.id, { data: { ...block.data, items } }); }} placeholder="Label" style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }} />
+                                                                        <input value={item.url} onChange={e => { const items = [...(block.data.items || [])]; items[li] = { ...items[li], url: e.target.value }; updateBlock(block.id, { data: { ...block.data, items } }); }} placeholder="https://..." style={{ flex: 2, padding: '6px 10px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }} />
+                                                                        <button onClick={() => { const items = (block.data.items || []).filter((_: any, j: number) => j !== li); updateBlock(block.id, { data: { ...block.data, items } }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '4px' }}><Trash2 size={14} /></button>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                            <button onClick={() => { const items = [...(block.data.items || []), { label: '', url: '' }]; updateBlock(block.id, { data: { ...block.data, items } }); }} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}><Plus size={12} /> Add Link</button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
+
+                    {activeTab === 'import' && (
+                        <ImportWizard guildId={guildId!} addToast={addToast} />
+                    )}
                 </div>
             </div>
         </div>
@@ -3252,6 +3966,217 @@ function GuildInsightsPanel({ guildId }: { guildId: string }) {
                     </div>
                 </>
             )}
+        </>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// ImportWizard — Upload Discord/Slack export JSON and import channels & roles
+// ---------------------------------------------------------------------------
+function ImportWizard({ guildId, addToast }: { guildId: string; addToast: (t: any) => void }) {
+    const [step, setStep] = useState<'upload' | 'preview' | 'importing' | 'done'>('upload');
+    const [source, setSource] = useState<'discord' | 'slack'>('discord');
+    const [parsedData, setParsedData] = useState<{ channels: any[]; roles: any[] } | null>(null);
+    const [result, setResult] = useState<{ categories: number; channels: number; roles: number } | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFile = (file: File) => {
+        setError(null);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const json = JSON.parse(e.target?.result as string);
+                // Discord exports have guild.channels and guild.roles, or top-level channels/roles
+                const channels = json.channels || json.guild?.channels || [];
+                const roles = json.roles || json.guild?.roles || [];
+                if (channels.length === 0 && roles.length === 0) {
+                    setError('No channels or roles found in the export file. Make sure the file is a valid Discord or Slack export.');
+                    return;
+                }
+                setParsedData({ channels, roles });
+                setStep('preview');
+            } catch {
+                setError('Invalid JSON file. Please upload a valid export file.');
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    const handleImport = async () => {
+        if (!parsedData) return;
+        setStep('importing');
+        setError(null);
+        try {
+            const res = await api.guilds.importServer(guildId, {
+                source,
+                channels: parsedData.channels,
+                roles: parsedData.roles,
+            });
+            setResult(res.created);
+            setStep('done');
+            addToast({ title: 'Import complete!', variant: 'success' });
+        } catch (err: any) {
+            setError(err?.message || 'Import failed');
+            setStep('preview');
+        }
+    };
+
+    const discordTypeNames: Record<number, string> = { 0: 'Text', 2: 'Voice', 4: 'Category', 5: 'Announcement', 13: 'Stage', 15: 'Forum' };
+
+    if (step === 'done' && result) {
+        return (
+            <>
+                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Import Complete</h2>
+                <div style={{ background: 'var(--bg-tertiary)', padding: '24px', borderRadius: '12px', border: '1px solid var(--stroke)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>&#10003;</div>
+                    <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>Successfully imported</div>
+                    <div style={{ display: 'flex', gap: '24px', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '14px' }}>
+                        <div><strong>{result.categories}</strong> categories</div>
+                        <div><strong>{result.channels}</strong> channels</div>
+                        <div><strong>{result.roles}</strong> roles</div>
+                    </div>
+                    <button onClick={() => { setStep('upload'); setParsedData(null); setResult(null); }}
+                        style={{ marginTop: '20px', padding: '8px 20px', background: 'var(--accent-primary)', color: '#000', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
+                        Import Another
+                    </button>
+                </div>
+            </>
+        );
+    }
+
+    if (step === 'importing') {
+        return (
+            <>
+                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Importing...</h2>
+                <div style={{ background: 'var(--bg-tertiary)', padding: '40px', borderRadius: '12px', border: '1px solid var(--stroke)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Creating channels and roles, please wait...</div>
+                </div>
+            </>
+        );
+    }
+
+    if (step === 'preview' && parsedData) {
+        const categories = parsedData.channels.filter((c: any) => (typeof c.type === 'number' ? c.type : parseInt(c.type)) === 4);
+        const textChannels = parsedData.channels.filter((c: any) => { const t = typeof c.type === 'number' ? c.type : parseInt(c.type); return t === 0 || t === 5 || t === 15; });
+        const voiceChannels = parsedData.channels.filter((c: any) => { const t = typeof c.type === 'number' ? c.type : parseInt(c.type); return t === 2 || t === 13; });
+        const filteredRoles = parsedData.roles.filter((r: any) => r.name !== '@everyone');
+
+        return (
+            <>
+                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Preview Import</h2>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontSize: '13px' }}>
+                    Review what will be imported from your {source === 'discord' ? 'Discord' : 'Slack'} export.
+                </p>
+                {error && <div style={{ background: 'var(--error)', color: 'white', padding: '8px 12px', borderRadius: '8px', marginBottom: '12px', fontSize: '13px' }}>{error}</div>}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '10px', border: '1px solid var(--stroke)' }}>
+                        <div style={{ fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>Channels ({parsedData.channels.length})</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                            {categories.length} categories, {textChannels.length} text, {voiceChannels.length} voice
+                        </div>
+                    </div>
+                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '10px', border: '1px solid var(--stroke)' }}>
+                        <div style={{ fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>Roles ({filteredRoles.length})</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                            {filteredRoles.slice(0, 5).map((r: any) => r.name).join(', ')}{filteredRoles.length > 5 ? ` +${filteredRoles.length - 5} more` : ''}
+                        </div>
+                    </div>
+                </div>
+
+                {parsedData.channels.length > 0 && (
+                    <div style={{ marginBottom: '16px' }}>
+                        <div style={{ fontWeight: 600, marginBottom: '8px', fontSize: '13px' }}>Channels to create:</div>
+                        <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {parsedData.channels.slice(0, 50).map((ch: any, i: number) => {
+                                const typeNum = typeof ch.type === 'number' ? ch.type : parseInt(ch.type);
+                                return (
+                                    <div key={ch.id || i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px', background: 'var(--bg-tertiary)', borderRadius: '6px', fontSize: '13px' }}>
+                                        <span style={{ color: 'var(--text-muted)', fontSize: '11px', minWidth: '60px' }}>{discordTypeNames[typeNum] || 'Text'}</span>
+                                        <span>{ch.name}</span>
+                                    </div>
+                                );
+                            })}
+                            {parsedData.channels.length > 50 && <div style={{ color: 'var(--text-muted)', fontSize: '12px', padding: '4px 8px' }}>...and {parsedData.channels.length - 50} more</div>}
+                        </div>
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={() => { setStep('upload'); setParsedData(null); setError(null); }}
+                        style={{ padding: '8px 16px', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--stroke)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>
+                        Back
+                    </button>
+                    <button onClick={handleImport}
+                        style={{ padding: '8px 20px', background: 'var(--accent-primary)', color: '#000', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
+                        Import {parsedData.channels.length} channels and {filteredRoles.length} roles
+                    </button>
+                </div>
+            </>
+        );
+    }
+
+    // Upload step
+    return (
+        <>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Import Server</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
+                Import channels and roles from a Discord or Slack server export.
+            </p>
+
+            <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>Source</div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    {(['discord', 'slack'] as const).map(s => (
+                        <button key={s} onClick={() => setSource(s)}
+                            style={{
+                                padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
+                                background: source === s ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                color: source === s ? '#000' : 'var(--text-secondary)',
+                                border: source === s ? 'none' : '1px solid var(--stroke)',
+                            }}>
+                            {s === 'discord' ? 'Discord' : 'Slack'}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {error && <div style={{ background: 'var(--error)', color: 'white', padding: '8px 12px', borderRadius: '8px', marginBottom: '12px', fontSize: '13px' }}>{error}</div>}
+
+            <div
+                onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--accent-primary)'; }}
+                onDragLeave={e => { e.currentTarget.style.borderColor = 'var(--stroke)'; }}
+                onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--stroke)'; const file = e.dataTransfer.files[0]; if (file) handleFile(file); }}
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                    border: '2px dashed var(--stroke)', borderRadius: '12px', padding: '48px 24px',
+                    textAlign: 'center', cursor: 'pointer', transition: 'border-color 0.2s',
+                    background: 'var(--bg-tertiary)',
+                }}>
+                <div style={{ fontSize: '36px', marginBottom: '12px', opacity: 0.5 }}>&#128196;</div>
+                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Drop your export file here</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>or click to browse. Accepts .json files.</div>
+                <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }}
+                    onChange={e => { const file = e.target.files?.[0]; if (file) handleFile(file); }} />
+            </div>
+
+            <div style={{ marginTop: '20px', background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '10px', border: '1px solid var(--stroke)' }}>
+                <div style={{ fontWeight: 600, marginBottom: '8px', fontSize: '13px' }}>How to export from {source === 'discord' ? 'Discord' : 'Slack'}</div>
+                {source === 'discord' ? (
+                    <ol style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0, paddingLeft: '16px', lineHeight: 1.8 }}>
+                        <li>Use a Discord export tool (e.g. DiscordChatExporter) to export your server</li>
+                        <li>Select JSON format and include channels and roles</li>
+                        <li>Upload the exported .json file above</li>
+                    </ol>
+                ) : (
+                    <ol style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0, paddingLeft: '16px', lineHeight: 1.8 }}>
+                        <li>Go to your Slack workspace settings</li>
+                        <li>Navigate to Import/Export Data and click Export</li>
+                        <li>Extract the .zip and upload the channels.json file above</li>
+                    </ol>
+                )}
+            </div>
         </>
     );
 }

@@ -262,3 +262,127 @@ export async function sendPasswordResetEmail(
     html,
   });
 }
+
+// ---------------------------------------------------------------------------
+// New device login alert
+// ---------------------------------------------------------------------------
+
+interface NewDeviceAlertOptions {
+  to: string;
+  ip: string;
+  device: string;
+  timestamp: Date;
+  appUrl: string;
+}
+
+/**
+ * sendNewDeviceLoginAlert — Notifies a user that their account was accessed
+ * from an unrecognized device/IP combination.
+ */
+export async function sendNewDeviceLoginAlert({
+  to,
+  ip,
+  device,
+  timestamp,
+  appUrl,
+}: NewDeviceAlertOptions): Promise<void> {
+  const changePasswordUrl = `${appUrl}/app/settings`;
+  const time = timestamp.toLocaleString('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'UTC',
+  });
+
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>New login to your Gratonite account</title>
+</head>
+<body style="margin:0;padding:0;background:#0f0f10;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f10;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="520" cellpadding="0" cellspacing="0" style="background:#1a1b1e;border-radius:12px;overflow:hidden;max-width:520px;width:100%;">
+          <tr>
+            <td style="background:#e67e22;padding:32px 40px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">
+                Gratonite
+              </h1>
+              <p style="margin:6px 0 0;color:#fde8d0;font-size:14px;">
+                Security Alert
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="margin:0 0 16px;color:#ffffff;font-size:20px;font-weight:600;">
+                New login detected
+              </h2>
+              <p style="margin:0 0 24px;color:#a0a3b1;font-size:15px;line-height:1.6;">
+                Your Gratonite account was just accessed from a new device or location.
+              </p>
+
+              <table cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 24px;background:#25262b;border-radius:8px;overflow:hidden;">
+                <tr>
+                  <td style="padding:12px 16px;border-bottom:1px solid #2c2d32;">
+                    <span style="color:#a0a3b1;font-size:13px;">Device</span><br />
+                    <span style="color:#ffffff;font-size:14px;font-weight:500;">${device}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 16px;border-bottom:1px solid #2c2d32;">
+                    <span style="color:#a0a3b1;font-size:13px;">IP Address</span><br />
+                    <span style="color:#ffffff;font-size:14px;font-weight:500;">${ip}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 16px;">
+                    <span style="color:#a0a3b1;font-size:13px;">Time (UTC)</span><br />
+                    <span style="color:#ffffff;font-size:14px;font-weight:500;">${time}</span>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 24px;color:#a0a3b1;font-size:15px;line-height:1.6;">
+                If this was you, no action is needed. If you don't recognize this login,
+                please change your password immediately.
+              </p>
+
+              <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                <tr>
+                  <td style="border-radius:8px;background:#e67e22;">
+                    <a href="${changePasswordUrl}"
+                       style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;">
+                      Change Password
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 40px;border-top:1px solid #2c2d32;">
+              <p style="margin:0;color:#5a5c6a;font-size:12px;line-height:1.6;">
+                You received this email because a new login was detected on your Gratonite
+                account. If you have concerns about your account security, please change
+                your password and enable two-factor authentication.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+
+  await sendMail({
+    to,
+    subject: 'New login to your Gratonite account',
+    html,
+  });
+}

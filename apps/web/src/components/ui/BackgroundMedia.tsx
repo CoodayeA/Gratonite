@@ -55,7 +55,7 @@ export const BackgroundMedia = ({ media }: { media: { url: string, type: MediaTy
                     style={mediaStyle}
                 />
             ) : (
-                <img src={media.url} alt="Background" style={mediaStyle} />
+                <img src={media.url} alt="" style={mediaStyle} />
             )}
             <div style={overlayStyle} />
         </div>

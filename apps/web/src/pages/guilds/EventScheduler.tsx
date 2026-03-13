@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Calendar, Clock, MapPin, Users, Plus, MoreHorizontal, X, Link, Share2, Trash2, Edit3 } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Plus, MoreHorizontal, X, Link, Share2, Trash2, Edit3, List, Grid } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { api } from '../../lib/api';
+import { EventCalendarView } from '../../components/EventCalendarView';
 
 interface ScheduledEvent {
     id: string;
@@ -134,6 +135,7 @@ const EventScheduler = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [optionsOpenFor, setOptionsOpenFor] = useState<string | null>(null);
+    const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
 
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [newTitle, setNewTitle] = useState('');
@@ -323,9 +325,19 @@ const EventScheduler = () => {
                             <h1 style={{ fontSize: '28px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '8px' }}>Upcoming Events</h1>
                             <p style={{ color: 'var(--text-secondary)' }}>See what's happening in this server.</p>
                         </div>
-                        <button onClick={() => setShowCreateForm(true)} className="auth-button" style={{ margin: 0, width: 'auto', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--accent-primary)', height: '40px' }}>
-                            <Plus size={16} /> Create Event
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ display: 'flex', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
+                                <button onClick={() => setViewMode('list')} style={{ padding: '8px 12px', background: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', border: 'none', color: viewMode === 'list' ? '#fff' : 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600 }} title="List View">
+                                    <List size={14} /> List
+                                </button>
+                                <button onClick={() => setViewMode('calendar')} style={{ padding: '8px 12px', background: viewMode === 'calendar' ? 'var(--accent-primary)' : 'transparent', border: 'none', color: viewMode === 'calendar' ? '#fff' : 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600 }} title="Calendar View">
+                                    <Grid size={14} /> Calendar
+                                </button>
+                            </div>
+                            <button onClick={() => setShowCreateForm(true)} className="auth-button" style={{ margin: 0, width: 'auto', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--accent-primary)', height: '40px' }}>
+                                <Plus size={16} /> Create Event
+                            </button>
+                        </div>
                     </div>
 
                     {showCreateForm && (
@@ -418,6 +430,31 @@ const EventScheduler = () => {
                         </div>
                     )}
 
+                    {viewMode === 'calendar' ? (
+                        <EventCalendarView
+                            events={events}
+                            onEventClick={(eventId) => {
+                                const el = document.getElementById(`event-${eventId}`);
+                                if (el) {
+                                    setViewMode('list');
+                                    setTimeout(() => {
+                                        const target = document.getElementById(`event-${eventId}`);
+                                        target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }, 100);
+                                } else {
+                                    setViewMode('list');
+                                }
+                            }}
+                            onDateClick={(date) => {
+                                setShowCreateForm(true);
+                                const yyyy = date.getFullYear();
+                                const mm = String(date.getMonth() + 1).padStart(2, '0');
+                                const dd = String(date.getDate()).padStart(2, '0');
+                                setNewDate(`${yyyy}-${mm}-${dd}`);
+                            }}
+                        />
+                    ) : (
+                    <>
                     {events.length === 0 && !showCreateForm && (
                         <div style={{ textAlign: 'center', padding: '64px 0' }}>
                             <Calendar size={48} color="var(--text-muted)" style={{ marginBottom: '16px', opacity: 0.5 }} />
@@ -430,7 +467,7 @@ const EventScheduler = () => {
                         {events.map(event => {
                             const badge = getDateBadge(event.startTime);
                             return (
-                            <div key={event.id} style={{ background: 'var(--bg-elevated)', border: `1px solid ${event.isInterested ? 'var(--success)' : 'var(--stroke)'}`, borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'border-color 0.2s' }}>
+                            <div key={event.id} id={`event-${event.id}`} style={{ background: 'var(--bg-elevated)', border: `1px solid ${event.isInterested ? 'var(--success)' : 'var(--stroke)'}`, borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'border-color 0.2s' }}>
                                 <div style={{ height: '80px', background: 'linear-gradient(135deg, rgba(82, 109, 245, 0.2), rgba(0,0,0,0.5))', borderBottom: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', padding: '0 24px' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', width: '56px', height: '56px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
                                         <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: '2px' }}>{badge.label}</span>
@@ -522,6 +559,8 @@ const EventScheduler = () => {
                             );
                         })}
                     </div>
+                    </>
+                    )}
 
                 </div>
             </div>

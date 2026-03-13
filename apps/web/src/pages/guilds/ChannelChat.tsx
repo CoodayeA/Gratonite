@@ -7,7 +7,7 @@ import {
     Volume2, Trash2, Copy, Pin, Share2, Link2, FileText, Download,
     Pause, MessageSquare, MoreHorizontal, Square, Plus, Mic, BarChart2, Clock, Users,
     ThumbsUp, Star, Flag, Edit2, Search, ChevronUp, ChevronDown, Eye, ChevronLeft, ChevronRight,
-    BookOpen
+    BookOpen, User as UserIcon, Ban, ShieldAlert, VolumeX
 } from 'lucide-react';
 import Skeleton from '../../components/ui/Skeleton';
 import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
@@ -23,7 +23,11 @@ import { markRead, setChannelHasUnread } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
 import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onMessageDeleteBulk, onReactionAdd, onReactionRemove, onChannelPinsUpdate, onSocketReconnect, onChannelBackgroundUpdated, onGroupKeyRotationNeeded, onThreadCreate, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type MessageDeleteBulkPayload, type ReactionPayload, type ChannelPinsUpdatePayload, type GroupKeyRotationNeededPayload } from '../../lib/socket';
 import Avatar from '../../components/ui/Avatar';
+import ImageLightbox from '../../components/ui/ImageLightbox';
 import SwipeableMessage from '../../components/chat/SwipeableMessage';
+import { saveScrollPosition, getScrollPosition } from '../../store/scrollPositionStore';
+import { queryClient } from '../../lib/queryClient';
+import { userQueryKey } from '../../hooks/queries/useUserQuery';
 import { encrypt, decrypt, getOrCreateKeyPair, decryptGroupKey, generateGroupKey, encryptGroupKey, importPublicKey, encryptFile, decryptFile } from '../../lib/e2e';
 import { Lock, Loader2 as Loader2Icon } from 'lucide-react';
 
@@ -91,11 +95,14 @@ type Message = {
     expiresAt?: string | null;
     createdAt?: string | null;
     widgetData?: { type: 'countdown' | 'progress' | 'server-stats' | 'weather'; data: any };
+    sendStatus?: 'sending' | 'failed';
+    _retryPayload?: { channelId: string; payload: any };
 };
 
-import { EmbedCard, OgEmbed } from '../../components/chat/EmbedCard';
+import { LazyEmbed, OgEmbed } from '../../components/chat/EmbedCard';
 import ThreadPanel from '../../components/chat/ThreadPanel';
 import ThreadsPanel from '../../components/chat/ThreadsPanel';
+import ChannelNotesPanel from '../../components/chat/ChannelNotesPanel';
 import EventCountdownBanner from '../../components/EventCountdownBanner';
 import EmbeddedWidget from '../../components/chat/EmbeddedWidget';
 import SoundboardMenu from '../../components/chat/SoundboardMenu';
@@ -111,9 +118,11 @@ import { MemberListPanel } from '../../components/guild/MemberListPanel';
 import { ReactionSummaryPopover } from '../../components/chat/ReactionSummaryPopover';
 import { SlowClapReaction } from '../../components/chat/SlowClapReaction';
 import { FormattingToolbar } from '../../components/chat/FormattingToolbar';
+import { EmbedBuilder, type CustomEmbed } from '../../components/chat/EmbedBuilder';
 import { ChannelWelcomeCard } from '../../components/chat/ChannelWelcomeCard';
 import { VoiceMessagePlayer } from '../../components/chat/VoiceMessagePlayer';
-import { Languages } from 'lucide-react';
+import { JumpToDatePicker } from '../../components/chat/JumpToDatePicker';
+import { Languages, Calendar } from 'lucide-react';
 
 const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApiId, channelId, onReaction }: { emoji: string; emojiUrl?: string; isCustom?: boolean; count: number; me: boolean; messageApiId?: string; channelId?: string; onReaction?: (apiId: string, emoji: string, me: boolean) => void }) => {
     const [tooltip, setTooltip] = useState<{ users: Array<{ id?: string; displayName?: string; username: string; avatarHash?: string | null }>; total: number } | null>(null);
@@ -190,6 +199,7 @@ const MemoizedMessageItem = memo(({
     onForward,
     onReaction,
     onReplyHighlight,
+    onUserContext,
     channelId: msgChannelId,
     customEmojis,
     members,
@@ -214,6 +224,20 @@ const MemoizedMessageItem = memo(({
     const [translatedText, setTranslatedText] = useState<string | null>(null);
     const [translatedLang, setTranslatedLang] = useState<string | null>(null);
     const [translating, setTranslating] = useState(false);
+    const userPrefetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const prefetchUserOnEnter = useCallback(() => {
+        if (!msg.authorId || msg.system) return;
+        userPrefetchTimer.current = setTimeout(() => {
+            queryClient.prefetchQuery({
+                queryKey: userQueryKey(msg.authorId),
+                queryFn: () => api.users.get(msg.authorId),
+                staleTime: 60_000,
+            });
+        }, 200);
+    }, [msg.authorId, msg.system]);
+    const cancelUserPrefetch = useCallback(() => {
+        if (userPrefetchTimer.current) { clearTimeout(userPrefetchTimer.current); userPrefetchTimer.current = null; }
+    }, []);
 
     // Close reaction picker on click-outside
     useEffect(() => {
@@ -251,10 +275,12 @@ const MemoizedMessageItem = memo(({
         }
     };
 
-    const isGrouped = prevMsg &&
+    const isGrouped = !!(prevMsg &&
         !msg.system && !prevMsg.system &&
-        prevMsg.author === msg.author &&
-        (Math.abs(msg.id - prevMsg.id) < 5 * 60 * 1000 || msg.time === prevMsg.time);
+        !msg.replyToId &&
+        (msg.authorId && prevMsg.authorId ? msg.authorId === prevMsg.authorId : prevMsg.author === msg.author) &&
+        msg.createdAt && prevMsg.createdAt &&
+        new Date(msg.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() < 5 * 60 * 1000);
 
     // Feature 3: Mention highlight detection
     const isMentioned = Boolean(
@@ -287,9 +313,9 @@ const MemoizedMessageItem = memo(({
             <motion.div
                 layout
                 initial={isNew ? { opacity: 0, y: 20, scale: 0.98 } : false}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
+                animate={{ opacity: msg.sendStatus === 'sending' ? 0.6 : msg.sendStatus === 'failed' ? 0.75 : 1, y: 0, scale: 1 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                className={`message ${isGrouped ? 'grouped' : ''} ${highlightedMessageId === msg.id ? 'highlighted-message' : ''} ${activeThreadMessageId === msg.id ? 'active-thread-message' : ''} ${isMentioned ? 'mentioned-message' : ''} ${compactMode ? 'compact-message' : ''}`}
+                className={`message ${isGrouped ? 'grouped message-grouped' : 'message-standalone'} ${highlightedMessageId === msg.id ? 'highlighted-message' : ''} ${activeThreadMessageId === msg.id ? 'active-thread-message' : ''} ${isMentioned ? 'mentioned-message' : ''} ${compactMode ? 'compact-message' : ''}`}
                 data-message-id={msg.apiId}
                 style={{
                     position: 'relative',
@@ -322,6 +348,9 @@ const MemoizedMessageItem = memo(({
                         style={{ position: 'relative', flexShrink: 0, cursor: msg.system ? 'default' : 'pointer' }}
                         ref={avatarRef}
                         onClick={(e) => { if (!msg.system) onProfileClick?.({ user: msg.author, userId: msg.authorId || '', x: e.clientX, y: e.clientY }); }}
+                        onContextMenu={(e) => { if (!msg.system && msg.authorId) onUserContext?.(e, msg.authorId, msg.author); }}
+                        onMouseEnter={prefetchUserOnEnter}
+                        onMouseLeave={cancelUserPrefetch}
                     >
                         {typeof msg.avatar === 'string' ? (
                             <Avatar
@@ -367,6 +396,9 @@ const MemoizedMessageItem = memo(({
                                 <span
                                     className={`msg-author ${msg.system ? 'system' : ''} ${msg.authorNameplateStyle && msg.authorNameplateStyle !== 'none' ? `nameplate-${msg.authorNameplateStyle}` : (isCurrentUserMessage && currentUserNameplateStyle && currentUserNameplateStyle !== 'none' ? `nameplate-${currentUserNameplateStyle}` : '')}`}
                                     onClick={(e) => { if (!msg.system) onProfileClick?.({ user: msg.author, userId: msg.authorId || '', x: e.clientX, y: e.clientY }); }}
+                                    onContextMenu={(e) => { if (!msg.system && msg.authorId) onUserContext?.(e, msg.authorId, msg.author); }}
+                                    onMouseEnter={prefetchUserOnEnter}
+                                    onMouseLeave={cancelUserPrefetch}
                                     style={{ cursor: msg.system ? 'default' : 'pointer', color: msg.authorRoleColor || undefined, fontSize: '13px' }}
                                 >
                                     {msg.author}:
@@ -379,6 +411,9 @@ const MemoizedMessageItem = memo(({
                                 <span
                                     className={`msg-author ${msg.system ? 'system' : ''} ${msg.authorNameplateStyle && msg.authorNameplateStyle !== 'none' ? `nameplate-${msg.authorNameplateStyle}` : (isCurrentUserMessage && currentUserNameplateStyle && currentUserNameplateStyle !== 'none' ? `nameplate-${currentUserNameplateStyle}` : '')}`}
                                     onClick={(e) => { if (!msg.system) onProfileClick?.({ user: msg.author, userId: msg.authorId || '', x: e.clientX, y: e.clientY }); }}
+                                    onContextMenu={(e) => { if (!msg.system && msg.authorId) onUserContext?.(e, msg.authorId, msg.author); }}
+                                    onMouseEnter={prefetchUserOnEnter}
+                                    onMouseLeave={cancelUserPrefetch}
                                     style={{ cursor: msg.system ? 'default' : 'pointer', color: msg.authorRoleColor || undefined }}
                                 >
                                     {msg.author}
@@ -458,7 +493,7 @@ const MemoizedMessageItem = memo(({
                                     border: '1px solid var(--stroke)',
                                     cursor: 'pointer'
                                 }}>
-                                    <img src={msg.mediaUrl} alt="Attached Media" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <img src={msg.mediaUrl} alt="Attached Media" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 </div>
                             </div>
                         ) : (
@@ -494,7 +529,7 @@ const MemoizedMessageItem = memo(({
                                     const isSticker = (att as any).type === 'sticker';
                                     if (isSticker) {
                                         return (
-                                            <img key={att.id} src={displayUrl} alt={displayName} style={{ width: '160px', height: '160px', objectFit: 'contain' }} />
+                                            <img key={att.id} src={displayUrl} alt={displayName} loading="lazy" decoding="async" width={160} height={160} style={{ width: '160px', height: '160px', objectFit: 'contain' }} />
                                         );
                                     }
                                     if (isImage) {
@@ -504,7 +539,7 @@ const MemoizedMessageItem = memo(({
                                                 border: '1px solid var(--stroke)', cursor: 'pointer',
                                                 background: 'var(--bg-tertiary)',
                                             }}>
-                                                <img src={displayUrl} alt={displayName} loading="lazy" style={{ width: '100%', display: 'block', objectFit: 'contain', maxHeight: '350px' }} />
+                                                <img src={displayUrl} alt={displayName} loading="lazy" decoding="async" style={{ width: '100%', display: 'block', objectFit: 'contain', maxHeight: '350px' }} />
                                             </div>
                                         );
                                     }
@@ -584,7 +619,7 @@ const MemoizedMessageItem = memo(({
                         {/* URL Embeds */}
                         {msg.embeds && msg.embeds.length > 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
-                                {msg.embeds.map((embed: OgEmbed, i: number) => <EmbedCard key={i} embed={embed} />)}
+                                {msg.embeds.map((embed: OgEmbed, i: number) => <LazyEmbed key={i} embed={embed} />)}
                             </div>
                         )}
                         {msg.widgetData && (
@@ -596,6 +631,26 @@ const MemoizedMessageItem = memo(({
                                 {reactions.map((r: any) => (
                                     <ReactionBadge key={r.emoji} emoji={r.emoji} emojiUrl={r.emojiUrl} isCustom={r.isCustom} count={r.count} me={r.me} messageApiId={msg.apiId} channelId={msgChannelId} onReaction={onReaction} />
                                 ))}
+                            </div>
+                        )}
+                        {/* Optimistic send status indicator */}
+                        {msg.sendStatus === 'sending' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                                <div style={{ width: '10px', height: '10px', border: '1.5px solid var(--text-muted)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                                Sending...
+                            </div>
+                        )}
+                        {msg.sendStatus === 'failed' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', fontSize: '11px', color: '#ef4444' }}>
+                                <span>Failed to send.</span>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); (window as any).__gratoniteRetryMessage?.(msg.id); }}
+                                    style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '11px', fontWeight: 600, textDecoration: 'underline', padding: 0 }}
+                                >Retry</button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); (window as any).__gratoniteDismissMessage?.(msg.id); }}
+                                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px', padding: 0 }}
+                                >Dismiss</button>
                             </div>
                         )}
                         {/* Thread reply count — auto-collapse at 3+ */}
@@ -837,9 +892,6 @@ const ChannelChat = () => {
 
     // Image Lightbox State
     const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-    const [lightboxZoom, setLightboxZoom] = useState(1);
-    const [lightboxPan, setLightboxPan] = useState({ x: 0, y: 0 });
-    const lightboxDragRef = useRef<{ dragging: boolean; startX: number; startY: number; startPanX: number; startPanY: number }>({ dragging: false, startX: 0, startY: 0, startPanX: 0, startPanY: 0 });
 
     // Feature 5: Markdown Preview State
     const [showPreview, setShowPreview] = useState(false);
@@ -861,12 +913,15 @@ const ChannelChat = () => {
     // Formatting Toolbar State
     const [showFormattingToolbar, setShowFormattingToolbar] = useState(false);
 
+    // Embed Builder State
+    const [showEmbedBuilder, setShowEmbedBuilder] = useState(false);
+
     // Member List Panel State
     const [memberListOpen, setMemberListOpen] = useState(() => localStorage.getItem('memberListOpen') !== 'false');
 
     // Chat File Attachment State
     const chatFileInputRef = useRef<HTMLInputElement>(null);
-    const [chatAttachedFiles, setChatAttachedFiles] = useState<{name: string, size: string, file: File}[]>([]);
+    const [chatAttachedFiles, setChatAttachedFiles] = useState<{name: string, size: string, file: File, previewUrl?: string}[]>([]);
     const [isDragOver, setIsDragOver] = useState(false);
 
     // E2E Encryption state for guild channels
@@ -905,6 +960,11 @@ const ChannelChat = () => {
 
     // Soundboard State
     const [soundboardOpen, setSoundboardOpen] = useState(false);
+
+    // Jump-to-Date State
+    const [showJumpToDate, setShowJumpToDate] = useState(false);
+    const [jumpToDateLoading, setJumpToDateLoading] = useState(false);
+    const [isViewingHistory, setIsViewingHistory] = useState(false);
 
     // Channel management permission state (admin/moderator only can set themes)
     const [canManageChannel, setCanManageChannel] = useState(false);
@@ -987,6 +1047,25 @@ const ChannelChat = () => {
         const interval = setInterval(tick, 1000);
         return () => clearInterval(interval);
     }, [lastSentAt, rateLimitPerUser]);
+
+    // API 429 rate-limit cooldown with countdown
+    const [rateLimitRemaining, setRateLimitRemaining] = useState(0);
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const { retryAfter } = (e as CustomEvent).detail ?? {};
+            const seconds = Math.ceil((retryAfter || 5000) / 1000);
+            setRateLimitRemaining(seconds);
+        };
+        window.addEventListener('gratonite:rate-limited', handler);
+        return () => window.removeEventListener('gratonite:rate-limited', handler);
+    }, []);
+    useEffect(() => {
+        if (rateLimitRemaining <= 0) return;
+        const id = setInterval(() => {
+            setRateLimitRemaining(prev => Math.max(0, prev - 1));
+        }, 1000);
+        return () => clearInterval(id);
+    }, [rateLimitRemaining]);
 
     // Typing indicator state: map of userId -> username, with auto-expiry
     const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map());
@@ -1413,16 +1492,40 @@ const ChannelChat = () => {
             }] : []),
             ...((isOwn || canManageChannel) ? [{
                 id: 'delete', label: 'Delete Message', icon: Trash2, color: 'var(--error)', onClick: () => {
-                    if (channelId && msg.apiId) {
-                        api.messages.delete(channelId, msg.apiId).then(() => {
-                            setMessages(prev => prev.filter(m => m.id !== msg.id));
-                            addToast({ title: 'Message Deleted', variant: 'success' });
-                        }).catch(() => addToast({ title: 'Failed to delete message', variant: 'error' }));
-                    } else {
-                        setMessages(prev => prev.filter(m => m.id !== msg.id));
-                    }
+                    const removedMsg = messages.find(m => m.id === msg.id);
+                    setMessages(prev => prev.filter(m => m.id !== msg.id));
+                    addToast({
+                        title: 'Message deleted',
+                        variant: 'undo' as const,
+                        onUndo: () => { if (removedMsg) setMessages(prev => [...prev, removedMsg].sort((a, b) => a.id - b.id)); },
+                        onExpire: () => { if (channelId && msg.apiId) { api.messages.delete(channelId, msg.apiId).catch(() => { if (removedMsg) setMessages(prev => [...prev, removedMsg].sort((a, b) => a.id - b.id)); addToast({ title: 'Failed to delete message', variant: 'error' }); }); } },
+                    });
                 }
             }] : [])
+        ]);
+    };
+
+    const handleUserContext = (e: React.MouseEvent, userId: string, username: string) => {
+        if (!userId) return;
+        const isOwnUser = userId === currentUserId;
+        openMenu(e, [
+            { id: 'profile', label: 'View Profile', icon: UserIcon, onClick: () => setProfilePopover({ user: username, userId, x: e.clientX, y: e.clientY }) },
+            ...(!isOwnUser ? [{ id: 'dm', label: 'Send DM', icon: MessageSquare, onClick: () => {
+                api.dms.openDm(userId).then((dm: any) => navigate(`/dm/${dm.id}`)).catch(() => addToast({ title: 'Failed to open DM', variant: 'error' }));
+            }}] : []),
+            { divider: true, id: 'div-user-1', label: '', onClick: () => {} },
+            { id: 'copy-id', label: 'Copy User ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(userId).catch(() => {}); addToast({ title: 'User ID copied', variant: 'info' }); }},
+            ...(!isOwnUser && canManageChannel && guildId ? [
+                { divider: true, id: 'div-user-2', label: '', onClick: () => {} },
+                { id: 'kick', label: 'Kick Member', icon: ShieldAlert, color: 'var(--warning)', onClick: () => {
+                    if (!confirm(`Kick ${username} from this server?`)) return;
+                    api.guilds.kickMember(guildId, userId).then(() => addToast({ title: `${username} was kicked`, variant: 'success' })).catch(() => addToast({ title: 'Failed to kick member', variant: 'error' }));
+                }},
+                { id: 'ban', label: 'Ban Member', icon: Ban, color: 'var(--error)', onClick: () => {
+                    if (!confirm(`Ban ${username} from this server?`)) return;
+                    api.guilds.ban(guildId, userId, 'Banned via context menu').then(() => addToast({ title: `${username} was banned`, variant: 'success' })).catch(() => addToast({ title: 'Failed to ban member', variant: 'error' }));
+                }},
+            ] : []),
         ]);
     };
 
@@ -1438,6 +1541,7 @@ const ChannelChat = () => {
     const [pinnedMessages, setPinnedMessages] = useState<any[]>([]);
     const [pinBoardView, setPinBoardView] = useState(false);
     const [showThreadsPanel, setShowThreadsPanel] = useState(false);
+    const [showNotesPanel, setShowNotesPanel] = useState(false);
     const [isLoadingPins, setIsLoadingPins] = useState(false);
 
     const handleAddToReadLater = useCallback(() => {
@@ -1610,12 +1714,58 @@ const ChannelChat = () => {
         setIsLoadingMessages(true);
         setMessagesError(false);
         setHasMoreMessages(true);
+        setIsViewingHistory(false);
         oldestMessageIdRef.current = null;
 
         const abortController = new AbortController();
         fetchMessages({ signal: abortController.signal });
         return () => { abortController.abort(); };
     }, [fetchMessages]);
+
+    // Jump to a specific date — replaces current messages with a window around the target
+    const handleJumpToDate = useCallback(async (dateStr: string) => {
+        if (!channelId) return;
+        setJumpToDateLoading(true);
+        try {
+            const result = await api.messages.jumpToDate(channelId, dateStr);
+            const authorIds = [...new Set(result.messages.map((m: any) => m.authorId))];
+            await resolveAuthors(authorIds);
+            const converted = result.messages.map(convertApiMessage);
+            // Resolve reply references
+            const apiMap = new Map(result.messages.map((m: any) => [m.id, m]));
+            for (const msg of converted) {
+                if (msg.replyToId && apiMap.has(msg.replyToId)) {
+                    const ref = apiMap.get(msg.replyToId);
+                    msg.replyToAuthor = ref.author?.displayName || ref.author?.username || 'Unknown';
+                    msg.replyToContent = (ref.content || '').slice(0, 100);
+                }
+            }
+            setMessages(converted);
+            setHasMoreMessages(true);
+            if (result.messages.length > 0) {
+                oldestMessageIdRef.current = result.messages[0].id;
+            }
+            // Highlight and scroll to the target message
+            const targetConverted = converted.find(m => m.apiId === result.targetMessageId);
+            if (targetConverted) {
+                setHighlightedMessageId(targetConverted.id);
+                setTimeout(() => setHighlightedMessageId(null), 3000);
+                // Scroll to the target after render
+                requestAnimationFrame(() => {
+                    const el = document.querySelector(`[data-message-id="${result.targetMessageId}"]`);
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                });
+            }
+            setShowJumpToDate(false);
+            setIsViewingHistory(true);
+        } catch {
+            addToast({ title: 'No messages found for this date', variant: 'error' });
+        } finally {
+            setJumpToDateLoading(false);
+        }
+    }, [channelId, addToast]);
 
     // Load draft and scheduled messages when channel changes
     useEffect(() => {
@@ -2173,7 +2323,8 @@ const ChannelChat = () => {
         }
     }, [messages.length]);
 
-    // Load older messages when user scrolls near top
+    // Load older messages when user scrolls near top + save scroll position
+    const scrollSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(() => {
         const el = parentRef.current;
         if (!el) return;
@@ -2183,10 +2334,18 @@ const ChannelChat = () => {
             }
             const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
             setShowScrollButton(distFromBottom > 200);
+            // Debounced save of scroll position per channel
+            if (channelId) {
+                if (scrollSaveTimer.current) clearTimeout(scrollSaveTimer.current);
+                scrollSaveTimer.current = setTimeout(() => saveScrollPosition(channelId, el.scrollTop), 150);
+            }
         };
         el.addEventListener('scroll', handleScroll, { passive: true });
-        return () => el.removeEventListener('scroll', handleScroll);
-    }, [hasMoreMessages, isLoadingOlder, loadOlderMessages]);
+        return () => {
+            el.removeEventListener('scroll', handleScroll);
+            if (scrollSaveTimer.current) clearTimeout(scrollSaveTimer.current);
+        };
+    }, [hasMoreMessages, isLoadingOlder, loadOlderMessages, channelId]);
 
     // Track whether we need to scroll to bottom after initial load
     const needsInitialScrollRef = useRef(false);
@@ -2201,13 +2360,19 @@ const ChannelChat = () => {
         if (messages.length === 0) return;
         if (needsInitialScrollRef.current) {
             needsInitialScrollRef.current = false;
-            // Scroll to first unread (NEW divider) if present, otherwise to bottom
+            // Restore saved scroll position, or scroll to unread divider, or scroll to bottom
             requestAnimationFrame(() => {
-                const unreadDivider = parentRef.current?.querySelector('.new-messages-divider');
-                if (unreadDivider) {
-                    unreadDivider.scrollIntoView({ block: 'center' });
-                } else if (parentRef.current) {
-                    parentRef.current.scrollTop = parentRef.current.scrollHeight;
+                if (!parentRef.current) return;
+                const savedPos = channelId ? getScrollPosition(channelId) : null;
+                if (savedPos !== null && savedPos > 0) {
+                    parentRef.current.scrollTop = savedPos;
+                } else {
+                    const unreadDivider = parentRef.current.querySelector('.new-messages-divider');
+                    if (unreadDivider) {
+                        unreadDivider.scrollIntoView({ block: 'center' });
+                    } else {
+                        parentRef.current.scrollTop = parentRef.current.scrollHeight;
+                    }
                 }
             });
             return;
@@ -2306,6 +2471,10 @@ const ChannelChat = () => {
             addToast({ title: `Slowmode active. Wait ${slowRemaining}s`, variant: 'error' });
             return;
         }
+        if (rateLimitRemaining > 0) {
+            addToast({ title: `Rate limited. Wait ${rateLimitRemaining}s`, variant: 'error' });
+            return;
+        }
         playSound('messageSend');
 
         const processedContent = processEmojis(inputValue);
@@ -2341,25 +2510,7 @@ const ChannelChat = () => {
         const replyToAuthor = replyingTo?.author || undefined;
         const replyToContent = replyingTo?.content || undefined;
 
-        // Optimistic local message
-        const optimisticId = Date.now();
-        setMessages(prev => [...prev, {
-            id: optimisticId,
-            authorId: currentUserId,
-            author: currentUserName || 'You',
-            system: false,
-            avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            content: processedContent,
-            ...(replyToApiId ? { replyToId: replyToApiId, replyToAuthor, replyToContent } : {}),
-            authorRoleColor: currentUserId ? roleColorCacheRef.current.get(currentUserId) : undefined,
-            authorAvatarHash: currentUserAvatarHash,
-        }]);
-
-        // Track slowmode
-        if (rateLimitPerUser > 0) setLastSentAt(Date.now());
-
-        // Send to API — encrypt if channel has E2E enabled
+        // Build the send payload early so we can attach it to the optimistic message for retry
         const sendPayload: any = {
             content: processedContent || ' ',
             ...(replyToApiId ? { replyToId: replyToApiId } : {}),
@@ -2367,7 +2518,6 @@ const ChannelChat = () => {
         };
         if (channelE2EKey && channelIsEncrypted) {
             try {
-                // Build structured payload when files are present
                 const plainPayload = encryptedFileMeta.length > 0
                     ? JSON.stringify({ _e2e: 2, text: processedContent || ' ', files: encryptedFileMeta })
                     : processedContent || ' ';
@@ -2377,8 +2527,32 @@ const ChannelChat = () => {
                 sendPayload.encryptedContent = encrypted;
             } catch { /* fall back to plaintext */ }
         }
+
+        // Optimistic local message with "sending" status
+        const optimisticId = Date.now();
+        const optimisticCreatedAt = new Date().toISOString();
+        setMessages(prev => [...prev, {
+            id: optimisticId,
+            authorId: currentUserId,
+            author: currentUserName || 'You',
+            system: false,
+            avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            content: processedContent,
+            createdAt: optimisticCreatedAt,
+            sendStatus: 'sending',
+            _retryPayload: { channelId, payload: sendPayload },
+            ...(replyToApiId ? { replyToId: replyToApiId, replyToAuthor, replyToContent } : {}),
+            authorRoleColor: currentUserId ? roleColorCacheRef.current.get(currentUserId) : undefined,
+            authorAvatarHash: currentUserAvatarHash,
+        }]);
+
+        // Track slowmode
+        if (rateLimitPerUser > 0) setLastSentAt(Date.now());
+
+        // Send to API
         api.messages.send(channelId, sendPayload).then((sent: any) => {
-            // Patch optimistic message with real API ID and attachments
+            // Patch optimistic message with real API ID and clear sending status
             if (sent?.id) {
                 setMessages(prev => prev.map(m =>
                     m.id === optimisticId ? {
@@ -2387,16 +2561,21 @@ const ChannelChat = () => {
                         authorId: sent.authorId,
                         authorAvatarHash: sent.author?.avatarHash ?? m.authorAvatarHash,
                         attachments: sent.attachments?.length > 0 ? sent.attachments : undefined,
+                        sendStatus: undefined,
+                        _retryPayload: undefined,
                     } : m
                 ));
             }
         }).catch(() => {
-            // Remove optimistic message on failure
-            setMessages(prev => prev.filter(m => m.id !== optimisticId));
-            addToast({ title: 'Failed to send message', variant: 'error' });
+            // Mark as failed (keep message visible for retry)
+            setMessages(prev => prev.map(m =>
+                m.id === optimisticId ? { ...m, sendStatus: 'failed' as const } : m
+            ));
+            addToast({ title: 'Failed to send message. Click to retry.', variant: 'error' });
         });
 
         setInputValue('');
+        chatAttachedFiles.forEach(f => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl); });
         setChatAttachedFiles([]);
         setReplyingTo(null);
         setMentionSearch(null);
@@ -2409,6 +2588,50 @@ const ChannelChat = () => {
         setHasDraft(false);
         if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
     };
+
+    // Retry a failed optimistic message
+    const handleRetryMessage = useCallback((messageId: number) => {
+        const msg = messages.find(m => m.id === messageId);
+        if (!msg?._retryPayload || msg.sendStatus !== 'failed') return;
+        const { channelId: cId, payload } = msg._retryPayload;
+        setMessages(prev => prev.map(m =>
+            m.id === messageId ? { ...m, sendStatus: 'sending' as const } : m
+        ));
+        api.messages.send(cId, payload).then((sent: any) => {
+            if (sent?.id) {
+                setMessages(prev => prev.map(m =>
+                    m.id === messageId ? {
+                        ...m,
+                        apiId: sent.id,
+                        authorId: sent.authorId,
+                        authorAvatarHash: sent.author?.avatarHash ?? m.authorAvatarHash,
+                        attachments: sent.attachments?.length > 0 ? sent.attachments : undefined,
+                        sendStatus: undefined,
+                        _retryPayload: undefined,
+                    } : m
+                ));
+            }
+        }).catch(() => {
+            setMessages(prev => prev.map(m =>
+                m.id === messageId ? { ...m, sendStatus: 'failed' as const } : m
+            ));
+        });
+    }, [messages]);
+
+    // Dismiss a failed optimistic message
+    const handleDismissFailedMessage = useCallback((messageId: number) => {
+        setMessages(prev => prev.filter(m => m.id !== messageId));
+    }, []);
+
+    // Expose retry/dismiss to window for the MemoizedMessageItem buttons
+    useEffect(() => {
+        (window as any).__gratoniteRetryMessage = handleRetryMessage;
+        (window as any).__gratoniteDismissMessage = handleDismissFailedMessage;
+        return () => {
+            delete (window as any).__gratoniteRetryMessage;
+            delete (window as any).__gratoniteDismissMessage;
+        };
+    }, [handleRetryMessage, handleDismissFailedMessage]);
 
     // Edit message handler
     const handleEditSubmit = useCallback(async () => {
@@ -2432,29 +2655,50 @@ const ChannelChat = () => {
     // Reaction handler — toggles add/remove via API
     const handleReaction = useCallback(async (messageApiId: string, emoji: string, alreadyReacted: boolean) => {
         if (!channelId || !messageApiId) return;
+
+        // Optimistically update local state BEFORE the API call
+        setMessages(prev => prev.map(m => {
+            if (m.apiId !== messageApiId) return m;
+            const existing = (m.reactions || []).slice();
+            const idx = existing.findIndex((r: any) => r.emoji === emoji);
+            if (alreadyReacted) {
+                if (idx >= 0) {
+                    if (existing[idx].count <= 1) existing.splice(idx, 1);
+                    else existing[idx] = { ...existing[idx], count: existing[idx].count - 1, me: false };
+                }
+            } else {
+                if (idx >= 0) existing[idx] = { ...existing[idx], count: existing[idx].count + 1, me: true };
+                else existing.push({ emoji, count: 1, me: true });
+            }
+            return { ...m, reactions: existing };
+        }));
+
         try {
             if (alreadyReacted) {
                 await api.messages.removeReaction(channelId, messageApiId, emoji);
             } else {
                 await api.messages.addReaction(channelId, messageApiId, emoji);
             }
-            // Optimistically update local state
+        } catch {
+            // Revert on failure
             setMessages(prev => prev.map(m => {
                 if (m.apiId !== messageApiId) return m;
                 const existing = (m.reactions || []).slice();
                 const idx = existing.findIndex((r: any) => r.emoji === emoji);
                 if (alreadyReacted) {
+                    // Revert removal: re-add the reaction
+                    if (idx >= 0) existing[idx] = { ...existing[idx], count: existing[idx].count + 1, me: true };
+                    else existing.push({ emoji, count: 1, me: true });
+                } else {
+                    // Revert addition: remove the reaction
                     if (idx >= 0) {
                         if (existing[idx].count <= 1) existing.splice(idx, 1);
                         else existing[idx] = { ...existing[idx], count: existing[idx].count - 1, me: false };
                     }
-                } else {
-                    if (idx >= 0) existing[idx] = { ...existing[idx], count: existing[idx].count + 1, me: true };
-                    else existing.push({ emoji, count: 1, me: true });
                 }
                 return { ...m, reactions: existing };
             }));
-        } catch { /* ignore */ }
+        }
     }, [channelId]);
 
     const handleSendGif = (url: string, _previewUrl: string) => {
@@ -2467,6 +2711,7 @@ const ChannelChat = () => {
             avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             content: url,
+            createdAt: new Date().toISOString(),
             type: 'media' as const,
             mediaUrl: url,
             mediaAspectRatio: 16 / 9
@@ -2494,6 +2739,7 @@ const ChannelChat = () => {
             avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             content: '',
+            createdAt: new Date().toISOString(),
             attachments: [{ id: sticker.id, url: sticker.url, filename: sticker.name, size: 0, mimeType: 'image/png', type: 'sticker' } as any],
         }]);
         setIsEmojiPickerOpen(false);
@@ -2777,6 +3023,7 @@ const ChannelChat = () => {
                 avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 content: '',
+                createdAt: new Date().toISOString(),
                 type: 'voice' as const,
                 duration: durationStr,
                 attachments: [{ id: uploaded.id, url: uploaded.url, filename: audioFile.name, size: audioFile.size, mimeType }],
@@ -2819,6 +3066,7 @@ const ChannelChat = () => {
                     avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
                     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                     content: 'Created a poll',
+                    createdAt: new Date().toISOString(),
                     type: 'poll' as const,
                     pollData: {
                         pollId: poll?.id,
@@ -2890,6 +3138,7 @@ const ChannelChat = () => {
                     name: f.name,
                     size: f.size < 1024 ? `${f.size} B` : f.size < 1048576 ? `${(f.size / 1024).toFixed(1)} KB` : `${(f.size / 1048576).toFixed(1)} MB`,
                     file: f,
+                    previewUrl: f.type.startsWith('image/') ? URL.createObjectURL(f) : undefined,
                 }));
                 setChatAttachedFiles(prev => [...prev, ...newFiles]);
             }}
@@ -2989,6 +3238,31 @@ const ChannelChat = () => {
                         title="Threads"
                     >
                         <MessageSquare size={18} style={{ color: showThreadsPanel ? 'var(--accent-primary)' : 'var(--text-secondary)' }} />
+                    </div>
+
+                    <div
+                        className="action-icon-btn hidden-on-mobile"
+                        onClick={() => setShowNotesPanel(!showNotesPanel)}
+                        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        title="Notes"
+                    >
+                        <FileText size={18} style={{ color: showNotesPanel ? 'var(--accent-primary)' : 'var(--text-secondary)' }} />
+                    </div>
+
+                    <div
+                        className="action-icon-btn hidden-on-mobile"
+                        onClick={() => setShowJumpToDate(!showJumpToDate)}
+                        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}
+                        title="Jump to Date"
+                    >
+                        <Calendar size={18} style={{ color: showJumpToDate ? 'var(--accent-primary)' : 'var(--text-secondary)' }} />
+                        {showJumpToDate && (
+                            <JumpToDatePicker
+                                onSelect={handleJumpToDate}
+                                onClose={() => setShowJumpToDate(false)}
+                                loading={jumpToDateLoading}
+                            />
+                        )}
                     </div>
 
                     <div
@@ -3116,7 +3390,34 @@ const ChannelChat = () => {
 
             {/* Content area wrapper — positions pinned panel between header and input */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', minHeight: 0 }}>
-            {showScrollButton && (
+            {isViewingHistory && (
+                <button
+                    onClick={() => { setIsViewingHistory(false); fetchMessages(); }}
+                    style={{
+                        position: 'absolute',
+                        bottom: 80,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        background: 'var(--accent-primary)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 20,
+                        padding: '8px 16px',
+                        cursor: 'pointer',
+                        zIndex: 10,
+                        fontSize: 13,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                        fontWeight: 600,
+                    }}
+                    aria-label="Jump to present"
+                >
+                    <ChevronDown size={16} /> Jump to Present
+                </button>
+            )}
+            {!isViewingHistory && showScrollButton && (
                 <button
                     onClick={() => parentRef.current?.scrollTo({ top: parentRef.current.scrollHeight, behavior: 'smooth' })}
                     style={{
@@ -3222,6 +3523,7 @@ const ChannelChat = () => {
                                                 setTimeout(() => setHighlightedMessageId(null), 2500);
                                             }
                                         }}
+                                        onUserContext={handleUserContext}
                                         channelId={channelId}
                                         customEmojis={guildCustomEmojis}
                                         members={guildMembers}
@@ -3371,7 +3673,7 @@ const ChannelChat = () => {
                                     >
                                         {pin.attachments?.[0]?.url && (
                                             <div style={{ width: '100%', height: '80px', borderRadius: '6px', background: 'var(--bg-tertiary)', marginBottom: '8px', overflow: 'hidden' }}>
-                                                <img src={pin.attachments[0].url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => (e.currentTarget.style.display = 'none')} />
+                                                <img src={pin.attachments[0].url} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => (e.currentTarget.style.display = 'none')} />
                                             </div>
                                         )}
                                         <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-primary)', lineHeight: '1.4', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' as any, flex: 1 }}>
@@ -3457,6 +3759,14 @@ const ChannelChat = () => {
                         if (msg) setActiveThreadMessage(msg);
                         setShowThreadsPanel(false);
                     }}
+                />
+            )}
+
+            {/* Notes Panel */}
+            {showNotesPanel && channelId && (
+                <ChannelNotesPanel
+                    channelId={channelId}
+                    onClose={() => setShowNotesPanel(false)}
                 />
             )}
             </div>{/* end content area wrapper */}
@@ -3574,10 +3884,10 @@ const ChannelChat = () => {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '0 16px 8px' }}>
                         {chatAttachedFiles.map((f, i) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                <ImageIcon size={12} />
+                                {f.previewUrl ? <img src={f.previewUrl} style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover' }} alt="" /> : <ImageIcon size={12} />}
                                 <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
                                 <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{f.size}</span>
-                                <button onClick={() => setChatAttachedFiles(prev => prev.filter((_, idx) => idx !== i))} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex' }}>
+                                <button onClick={() => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl); setChatAttachedFiles(prev => prev.filter((_, idx) => idx !== i)); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex' }}>
                                     <X size={12} />
                                 </button>
                             </div>
@@ -3609,6 +3919,22 @@ const ChannelChat = () => {
                             getValue={() => inputValue}
                         />
                     </div>
+                )}
+
+                {/* Embed Builder */}
+                {showEmbedBuilder && !editingMessage && (
+                    <EmbedBuilder
+                        onSend={(embed: CustomEmbed) => {
+                            if (!channelId) return;
+                            api.messages.send(channelId, { content: ' ', embeds: [embed as Record<string, unknown>] } as any).then(() => {
+                                setShowEmbedBuilder(false);
+                                playSound('messageSend');
+                            }).catch(() => {
+                                addToast({ title: 'Failed to send embed', variant: 'error' });
+                            });
+                        }}
+                        onClose={() => setShowEmbedBuilder(false)}
+                    />
                 )}
 
                 <div className="chat-input-wrapper" style={{ position: 'relative' }}>
@@ -3723,7 +4049,8 @@ const ChannelChat = () => {
                                 const newFiles = Array.from(files).map(f => ({
                                     name: f.name,
                                     size: f.size < 1024 ? `${f.size} B` : f.size < 1048576 ? `${(f.size / 1024).toFixed(1)} KB` : `${(f.size / 1048576).toFixed(1)} MB`,
-                                    file: f
+                                    file: f,
+                                    previewUrl: f.type.startsWith('image/') ? URL.createObjectURL(f) : undefined,
                                 }));
                                 setChatAttachedFiles(prev => [...prev, ...newFiles]);
                                 e.target.value = '';
@@ -3755,6 +4082,7 @@ const ChannelChat = () => {
                                                     name: file.name || `pasted-image.${item.type.split('/')[1] || 'png'}`,
                                                     size: file.size < 1024 ? `${file.size} B` : file.size < 1048576 ? `${(file.size / 1024).toFixed(1)} KB` : `${(file.size / 1048576).toFixed(1)} MB`,
                                                     file,
+                                                    previewUrl: URL.createObjectURL(file),
                                                 }]);
                                             }
                                             break;
@@ -3777,6 +4105,14 @@ const ChannelChat = () => {
                                 onClick={() => setShowFormattingToolbar(p => !p)}
                             >
                                 <Edit2 size={16} />
+                            </button>
+                            {/* Embed Builder Toggle */}
+                            <button
+                                className={`input-icon-btn ${showEmbedBuilder ? 'primary' : ''}`}
+                                title="Embed Builder"
+                                onClick={() => setShowEmbedBuilder(p => !p)}
+                            >
+                                <FileText size={16} />
                             </button>
                             {/* Feature 5: Markdown Preview Toggle */}
                             <button
@@ -3818,11 +4154,12 @@ const ChannelChat = () => {
                                     )}
                                     <button
                                         className="input-icon-btn primary"
-                                        aria-label="Send message"
+                                        aria-label={rateLimitRemaining > 0 ? `Rate limited, wait ${rateLimitRemaining}s` : 'Send message'}
                                         onClick={editingMessage ? handleEditSubmit : handleSendMessage}
-                                        style={{ position: 'relative' }}
+                                        disabled={rateLimitRemaining > 0}
+                                        style={{ position: 'relative', opacity: rateLimitRemaining > 0 ? 0.5 : 1, cursor: rateLimitRemaining > 0 ? 'not-allowed' : undefined }}
                                     >
-                                        <Send size={18} />
+                                        {rateLimitRemaining > 0 ? <span style={{ fontSize: '12px', fontWeight: 700 }}>{rateLimitRemaining}s</span> : <Send size={18} />}
                                         <span className="shortcut-hint" style={{ position: 'absolute', bottom: '-14px', left: '50%', transform: 'translateX(-50%)', fontSize: '9px', color: 'var(--text-muted)', opacity: 0.4, whiteSpace: 'nowrap', pointerEvents: 'none', fontWeight: 500 }}>Enter</span>
                                     </button>
                                 </div>
@@ -3871,7 +4208,7 @@ const ChannelChat = () => {
                                     onMouseEnter={() => setEmojiIndex(idx)}
                                 >
                                     {emoji.isCustom && emoji.url ? (
-                                        <img src={emoji.url} alt={emoji.name} style={{ width: '20px', height: '20px', objectFit: 'contain' }} />
+                                        <img src={emoji.url} alt={emoji.name} loading="lazy" decoding="async" width={20} height={20} style={{ width: '20px', height: '20px', objectFit: 'contain' }} />
                                     ) : (
                                         <span style={{ fontSize: '20px' }}>{emoji.isCustom ? emoji.name : (emoji as any).emoji}</span>
                                     )}
@@ -3946,7 +4283,7 @@ const ChannelChat = () => {
                                                             onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
                                                             title={sticker.name}
                                                         >
-                                                            <img src={sticker.url} alt={sticker.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                                            <img src={sticker.url} alt={sticker.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                                                         </div>
                                                     ))}
                                                 </div>
@@ -4167,7 +4504,6 @@ const ChannelChat = () => {
 
             {/* Feature 4: Image Gallery Lightbox */}
             {lightboxUrl && (() => {
-                // Collect all image URLs from messages for gallery navigation
                 const allImageUrls: string[] = [];
                 for (const m of messages) {
                     if (m.mediaUrl && /\.(png|jpe?g|gif|webp|svg|bmp)(\?|$)/i.test(m.mediaUrl)) {
@@ -4181,142 +4517,13 @@ const ChannelChat = () => {
                         }
                     }
                 }
-                const currentIndex = allImageUrls.indexOf(lightboxUrl);
-                const hasGallery = allImageUrls.length > 1 && currentIndex >= 0;
-                const goToImage = (dir: number) => {
-                    if (!hasGallery) return;
-                    const nextIdx = (currentIndex + dir + allImageUrls.length) % allImageUrls.length;
-                    setLightboxUrl(allImageUrls[nextIdx]);
-                    setLightboxZoom(1);
-                    setLightboxPan({ x: 0, y: 0 });
-                };
-
                 return (
-                    <div
-                        onClick={() => { setLightboxUrl(null); setLightboxZoom(1); }}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Escape') { setLightboxUrl(null); setLightboxZoom(1); }
-                            if (e.key === 'ArrowLeft') goToImage(-1);
-                            if (e.key === 'ArrowRight') goToImage(1);
-                        }}
-                        tabIndex={0}
-                        ref={(el) => el?.focus()}
-                        style={{
-                            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
-                            backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            zIndex: 9000, cursor: 'zoom-out', outline: 'none',
-                        }}
-                    >
-                        {/* Close button */}
-                        <button onClick={(e) => { e.stopPropagation(); setLightboxUrl(null); setLightboxZoom(1); }} style={{
-                            position: 'absolute', top: '24px', right: '24px',
-                            background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%',
-                            width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', color: 'white', backdropFilter: 'blur(8px)',
-                            transition: 'background 0.2s', zIndex: 2,
-                        }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')} onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}>
-                            <X size={20} />
-                        </button>
-
-                        {/* Download button */}
-                        <a
-                            href={lightboxUrl}
-                            download
-                            onClick={e => e.stopPropagation()}
-                            style={{
-                                position: 'absolute', top: '24px', right: '80px',
-                                background: 'rgba(255,255,255,0.1)', borderRadius: '50%',
-                                width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                cursor: 'pointer', color: 'white', backdropFilter: 'blur(8px)',
-                                transition: 'background 0.2s', textDecoration: 'none', zIndex: 2,
-                            }}
-                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
-                            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
-                        >
-                            <Download size={18} />
-                        </a>
-
-                        {/* Gallery counter */}
-                        {hasGallery && (
-                            <div style={{
-                                position: 'absolute', top: '32px', left: '50%', transform: 'translateX(-50%)',
-                                color: 'rgba(255,255,255,0.7)', fontSize: '14px', fontWeight: 600,
-                                background: 'rgba(0,0,0,0.5)', padding: '4px 12px', borderRadius: '12px',
-                                backdropFilter: 'blur(8px)', zIndex: 2,
-                            }}>
-                                {currentIndex + 1} / {allImageUrls.length}
-                            </div>
-                        )}
-
-                        {/* Left arrow */}
-                        {hasGallery && (
-                            <button onClick={(e) => { e.stopPropagation(); goToImage(-1); }} style={{
-                                position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)',
-                                background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%',
-                                width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                cursor: 'pointer', color: 'white', backdropFilter: 'blur(8px)',
-                                transition: 'background 0.2s', zIndex: 2,
-                            }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')} onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}>
-                                <ChevronLeft size={24} />
-                            </button>
-                        )}
-
-                        {/* Right arrow */}
-                        {hasGallery && (
-                            <button onClick={(e) => { e.stopPropagation(); goToImage(1); }} style={{
-                                position: 'absolute', right: '24px', top: '50%', transform: 'translateY(-50%)',
-                                background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%',
-                                width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                cursor: 'pointer', color: 'white', backdropFilter: 'blur(8px)',
-                                transition: 'background 0.2s', zIndex: 2,
-                            }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')} onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}>
-                                <ChevronRight size={24} />
-                            </button>
-                        )}
-
-                        <img
-                            src={lightboxUrl}
-                            alt="Enlarged"
-                            onClick={e => e.stopPropagation()}
-                            onWheel={(e) => {
-                                e.stopPropagation();
-                                const newZoom = Math.max(0.5, Math.min(5, lightboxZoom + (e.deltaY < 0 ? 0.25 : -0.25)));
-                                setLightboxZoom(newZoom);
-                                if (newZoom <= 1) setLightboxPan({ x: 0, y: 0 });
-                            }}
-                            onMouseDown={(e) => {
-                                if (lightboxZoom > 1) {
-                                    e.preventDefault();
-                                    lightboxDragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, startPanX: lightboxPan.x, startPanY: lightboxPan.y };
-                                }
-                            }}
-                            onMouseMove={(e) => {
-                                if (lightboxDragRef.current.dragging) {
-                                    const dx = e.clientX - lightboxDragRef.current.startX;
-                                    const dy = e.clientY - lightboxDragRef.current.startY;
-                                    setLightboxPan({ x: lightboxDragRef.current.startPanX + dx, y: lightboxDragRef.current.startPanY + dy });
-                                }
-                            }}
-                            onMouseUp={() => { lightboxDragRef.current.dragging = false; }}
-                            onMouseLeave={() => { lightboxDragRef.current.dragging = false; }}
-                            onDoubleClick={(e) => {
-                                e.stopPropagation();
-                                if (lightboxZoom > 1) { setLightboxZoom(1); setLightboxPan({ x: 0, y: 0 }); }
-                                else { setLightboxZoom(2); }
-                            }}
-                            style={{
-                                maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain',
-                                borderRadius: '8px',
-                                cursor: lightboxZoom > 1 ? (lightboxDragRef.current.dragging ? 'grabbing' : 'grab') : 'zoom-in',
-                                boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
-                                transform: `scale(${lightboxZoom}) translate(${lightboxPan.x / lightboxZoom}px, ${lightboxPan.y / lightboxZoom}px)`,
-                                transition: lightboxDragRef.current.dragging ? 'none' : 'transform 0.15s ease-out',
-                                userSelect: 'none',
-                            }}
-                            draggable={false}
-                        />
-                    </div>
+                    <ImageLightbox
+                        url={lightboxUrl}
+                        imageUrls={allImageUrls}
+                        onClose={() => setLightboxUrl(null)}
+                        onNavigate={(url) => setLightboxUrl(url)}
+                    />
                 );
             })()}
 
