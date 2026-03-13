@@ -318,7 +318,7 @@ function buildQuery(params?: CursorPaginationParams): string {
 
 export const auth = {
   register(data: { username: string; email: string; password: string }) {
-    return apiFetch<AuthResponse>('/auth/register', {
+    return apiFetch<{ email: string }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -337,6 +337,13 @@ export const auth = {
 
   refresh() {
     return refreshAccessToken();
+  },
+
+  requestVerifyEmail(email: string) {
+    return apiFetch<{ message: string }>('/auth/verify-email/request', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
   },
 
   verifyEmailConfirm(token: string) {
@@ -364,7 +371,7 @@ function flattenUserProfile(raw: any): User {
     bannerHash: profile.bannerHash ?? raw.bannerHash ?? null,
     bio: profile.bio ?? raw.bio ?? null,
     pronouns: profile.pronouns ?? raw.pronouns ?? null,
-    status: raw.status ?? 'online',
+    status: raw.status ?? 'offline',
     customStatus: raw.customStatus ?? null,
   };
 }

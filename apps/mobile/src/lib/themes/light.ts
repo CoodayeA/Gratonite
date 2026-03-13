@@ -27,7 +27,9 @@ export const lightColors: ThemeColors = {
   inputBg: '#ffffff',
   inputBorder: 'rgba(0,0,0,0.12)',
   inputFocus: '#6c63ff',
-  white: '#ffffff',
+  // In light themes, many shared UI elements use `white` as a high-contrast foreground token.
+  // Keep it dark here so legacy usages stay readable on pale surfaces.
+  white: '#000000',
   black: '#000000',
   transparent: 'transparent',
 };

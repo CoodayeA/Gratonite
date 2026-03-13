@@ -30,14 +30,18 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
   const [guild, setGuild] = useState<Guild | null>(null);
   const [loading, setLoading] = useState(true);
   const [creatingInvite, setCreatingInvite] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchGuild = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await guildsApi.get(guildId);
       setGuild(data);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load portal info');
+        const message = err.message || 'Failed to load portal settings';
+        setLoadError(message);
+        toast.error(message);
       }
     } finally {
       setLoading(false);
@@ -232,6 +236,28 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
 
   if (loading) {
     return <LoadingScreen />;
+  }
+
+  if (loadError && !guild) {
+    return (
+      <PatternBackground>
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl, gap: spacing.md }]}>
+          <Ionicons name="alert-circle-outline" size={56} color={colors.accentPrimary} />
+          <Text style={[styles.guildName, { fontSize: fontSize.xl, textAlign: 'center' }]}>Failed to load portal settings</Text>
+          <Text style={[styles.guildDescription, { textAlign: 'center' }]}>{loadError}</Text>
+          <TouchableOpacity
+            style={[styles.actionRow, { marginTop: spacing.sm, borderTopWidth: 0 }]}
+            onPress={() => {
+              setLoading(true);
+              fetchGuild();
+            }}
+          >
+            <Ionicons name="refresh-outline" size={20} color={colors.accentPrimary} />
+            <Text style={styles.actionText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
+    );
   }
 
   const isOwner = guild?.ownerId === user?.id;

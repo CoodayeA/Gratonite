@@ -101,6 +101,7 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMoreHistory, setHasMoreHistory] = useState(true);
   const flatListRef = useRef<FlatList>(null);
   const [showScrollFAB, setShowScrollFAB] = useState(false);
   const initialLoadDone = useRef(false);
@@ -144,13 +145,19 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
       const data = await messagesApi.list(channelId, { limit: 50 });
       const reversed = data.reverse();
       setMessageList(reversed);
+      setHasMoreHistory(data.length >= 50);
       cacheMessages(channelId, reversed).catch(() => {});
       initialLoadDone.current = true;
     } catch (err: any) {
       if (err.status !== 401) {
         toast.error('Failed to load messages');
       }
-      getCachedMessages(channelId).then(cached => { if (cached.length > 0) setMessageList(cached); });
+      getCachedMessages(channelId).then(cached => {
+        if (cached.length > 0) {
+          setMessageList(cached);
+          setHasMoreHistory(cached.length >= 50);
+        }
+      });
     } finally {
       setLoading(false);
     }
@@ -468,13 +475,16 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
   };
 
   const loadMore = async () => {
-    if (loadingMore || messageList.length === 0) return;
+    if (loadingMore || !hasMoreHistory || messageList.length === 0) return;
     setLoadingMore(true);
     try {
       const oldest = messageList[0];
       const more = await messagesApi.list(channelId, { before: oldest.id, limit: 50 });
       if (more.length > 0) {
         setMessageList((prev) => [...more.reverse(), ...prev]);
+      }
+      if (more.length < 50) {
+        setHasMoreHistory(false);
       }
     } catch {
       // ignore
@@ -703,6 +713,9 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
     },
+    emptyStateWrapper: {
+      transform: [{ scaleY: -1 }],
+    },
     loadingMore: {
       paddingVertical: spacing.md,
     },
@@ -892,20 +905,23 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
           inverted
           keyboardDismissMode="interactive"
           scrollEventThrottle={16}
+          maintainVisibleContentPosition={{ minIndexForVisible: 1 }}
           onScroll={(e) => setShowScrollFAB(e.nativeEvent.contentOffset.y > 200)}
           onEndReached={loadMore}
           onEndReachedThreshold={0.3}
           ListFooterComponent={
-            loadingMore ? (
+            loadingMore && hasMoreHistory ? (
               <ActivityIndicator style={styles.loadingMore} color={colors.accentPrimary} />
             ) : null
           }
           ListEmptyComponent={
-            <EmptyState
-              icon="chatbubble-outline"
-              title={`Start a conversation with ${recipientName}`}
-              subtitle="Send a message to get started"
-            />
+            <View style={styles.emptyStateWrapper}>
+              <EmptyState
+                icon="chatbubble-outline"
+                title={`Start a conversation with ${recipientName}`}
+                subtitle="Send a message to get started"
+              />
+            </View>
           }
         />
         <ScrollToBottomFAB

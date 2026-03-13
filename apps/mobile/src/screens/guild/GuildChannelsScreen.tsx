@@ -42,6 +42,7 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [notifChannel, setNotifChannel] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Add settings button to header
   React.useEffect(() => {
@@ -60,11 +61,14 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
 
   const fetchChannels = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await channelsApi.getForGuild(guildId);
       setChannelList(data ?? []);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error(err.message || 'Failed to load channels');
+        const message = err.message || 'Failed to load channels';
+        setLoadError(message);
+        toast.error(message);
       }
     } finally {
       setLoading(false);
@@ -252,10 +256,17 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
             </View>
           ) : (
             <View style={styles.empty}>
-              <Ionicons name="chatbubble-ellipses-outline" size={64} color={colors.accentPrimary} style={{ opacity: 0.5, transform: [{ rotate: '-3deg' }] }} />
-              <Text style={styles.emptyText}>No channels yet</Text>
+              <Ionicons
+                name={loadError ? 'alert-circle-outline' : 'chatbubble-ellipses-outline'}
+                size={64}
+                color={colors.accentPrimary}
+                style={{ opacity: 0.5, transform: [{ rotate: '-3deg' }] }}
+              />
+              <Text style={styles.emptyText}>{loadError ? loadError : 'No channels yet'}</Text>
               <TouchableOpacity onPress={() => { setLoading(true); fetchChannels(); }}>
-                <Text style={{ color: colors.accentPrimary, fontSize: fontSize.md, marginTop: spacing.sm }}>Tap to retry</Text>
+                <Text style={{ color: colors.accentPrimary, fontSize: fontSize.md, marginTop: spacing.sm }}>
+                  {loadError ? 'Retry' : 'Tap to retry'}
+                </Text>
               </TouchableOpacity>
             </View>
           )

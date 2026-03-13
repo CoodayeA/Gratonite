@@ -16,9 +16,12 @@ interface AttachmentPreviewProps {
 
 export default function AttachmentPreview({ attachment, onImagePress, allImageUrls, imageIndex }: AttachmentPreviewProps) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
-  const isImage = attachment.contentType.startsWith('image/');
-  const isVideo = attachment.contentType.startsWith('video/');
-  const isAudio = attachment.contentType.startsWith('audio/');
+  const contentType = attachment.contentType ?? '';
+  const fileName = attachment.filename || 'Attachment';
+  const fileSize = typeof attachment.size === 'number' ? attachment.size : 0;
+  const isImage = contentType.startsWith('image/');
+  const isVideo = contentType.startsWith('video/');
+  const isAudio = contentType.startsWith('audio/');
 
   const styles = useMemo(() => StyleSheet.create({
     fileCard: {
@@ -75,8 +78,8 @@ export default function AttachmentPreview({ attachment, onImagePress, allImageUr
           color={colors.accentPrimary}
         />
         <View style={styles.fileInfo}>
-          <Text style={styles.fileName} numberOfLines={1}>{attachment.filename}</Text>
-          <Text style={styles.fileSize}>{formatFileSize(attachment.size)}</Text>
+          <Text style={styles.fileName} numberOfLines={1}>{fileName}</Text>
+          <Text style={styles.fileSize}>{formatFileSize(fileSize)}</Text>
         </View>
         <Ionicons name="play-circle-outline" size={24} color={colors.textMuted} />
       </TouchableOpacity>
@@ -91,8 +94,8 @@ export default function AttachmentPreview({ attachment, onImagePress, allImageUr
     >
       <Ionicons name="document-outline" size={24} color={colors.accentPrimary} />
       <View style={styles.fileInfo}>
-        <Text style={styles.fileName} numberOfLines={1}>{attachment.filename}</Text>
-        <Text style={styles.fileSize}>{formatFileSize(attachment.size)}</Text>
+        <Text style={styles.fileName} numberOfLines={1}>{fileName}</Text>
+        <Text style={styles.fileSize}>{formatFileSize(fileSize)}</Text>
       </View>
       <Ionicons name="download-outline" size={20} color={colors.textMuted} />
     </TouchableOpacity>

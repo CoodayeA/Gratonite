@@ -7,7 +7,13 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test": "jest"
+    "test": "jest",
+    "maestro:studio": "./scripts/maestro.sh studio",
+    "maestro:test": "./scripts/maestro.sh test flows",
+    "maestro:login": "./scripts/maestro.sh test flows/login.yaml",
+    "maestro:dm": "./scripts/maestro.sh test flows/dm-flow.yaml",
+    "maestro:send-message": "./scripts/maestro.sh test flows/send-message.yaml",
+    "maestro:smoke": "./scripts/maestro.sh test flows/smoke.yaml"
   },
   "jest": {
     "preset": "jest-expo",

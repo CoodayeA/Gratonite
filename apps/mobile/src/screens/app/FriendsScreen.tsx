@@ -336,6 +336,7 @@ export default function FriendsScreen({ navigation }: Props) {
             name={name}
             size={44}
             showStatus
+            statusOverride={user?.status ?? undefined}
           />
         </PressableScale>
         <View style={styles.friendInfo}>

@@ -15,7 +15,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (login: string, password: string, mfaCode?: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  register: (username: string, email: string, password: string) => Promise<string>;
   logout: () => Promise<void>;
   refetchUser: () => Promise<void>;
   updateProfile: (data: Partial<Pick<User, 'displayName' | 'bio' | 'pronouns'>>) => Promise<void>;
@@ -37,7 +37,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const savedTheme = await SecureStore.getItemAsync('gratonite_theme');
         if (savedTheme) themeStore.setTheme(savedTheme as ThemeName);
 
-        if (getAccessToken()) {
+        let token = getAccessToken();
+        if (!token) {
+          token = await auth.refresh();
+        }
+
+        if (token) {
           const me = await users.getMe();
           setUser(me);
           connectSocket();
@@ -68,14 +73,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getOrCreateKeyPair(me.id, (pubJwk) => encryptionApi.uploadPublicKey(pubJwk)).catch(() => {});
   };
 
-  const register = async (username: string, email: string, password: string) => {
+  const register = async (username: string, email: string, password: string): Promise<string> => {
     const res = await auth.register({ username, email, password });
-    await setTokens(res.accessToken, res.refreshToken);
-    const me = await users.getMe();
-    setUser(me);
-    connectSocket();
-    // Initialize E2E keys (fire-and-forget)
-    getOrCreateKeyPair(me.id, (pubJwk) => encryptionApi.uploadPublicKey(pubJwk)).catch(() => {});
+    return res.email;
   };
 
   const logout = async () => {
