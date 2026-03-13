@@ -27,9 +27,7 @@ export const glassColors: ThemeColors = {
   inputBg: 'rgba(255, 255, 255, 0.6)',
   inputBorder: 'rgba(255, 255, 255, 0.5)',
   inputFocus: '#0ea5e9',
-  // In light themes, many shared UI elements use `white` as a high-contrast foreground token.
-  // Keep it dark here so legacy usages stay readable on pale surfaces.
-  white: '#000000',
+  white: '#ffffff',
   black: '#000000',
   transparent: 'transparent',
 };
