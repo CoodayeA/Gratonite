@@ -502,6 +502,7 @@ const SettingsModal = ({
     };
 
     const [showServerOverrideInfo, setShowServerOverrideInfo] = useState(false);
+    const [seasonalEnabled, setSeasonalEnabled] = useState(() => localStorage.getItem('gratonite-seasonal-effects') !== 'false');
 
     useEffect(() => {
         setNameplateStyle(userProfile?.nameplateStyle || 'none');
@@ -2065,8 +2066,8 @@ const SettingsModal = ({
                                             <div style={{ fontWeight: 600 }}>Seasonal Effects</div>
                                             <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Show seasonal particle effects (snowflakes, cherry blossoms, etc.).</div>
                                         </div>
-                                        <div role="switch" aria-checked={localStorage.getItem('gratonite-seasonal-effects') !== 'false'} aria-label="Seasonal Effects" tabIndex={0} onClick={() => { const cur = localStorage.getItem('gratonite-seasonal-effects') !== 'false'; localStorage.setItem('gratonite-seasonal-effects', cur ? 'false' : 'true'); window.dispatchEvent(new Event('seasonal-effects-toggle')); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const cur = localStorage.getItem('gratonite-seasonal-effects') !== 'false'; localStorage.setItem('gratonite-seasonal-effects', cur ? 'false' : 'true'); window.dispatchEvent(new Event('seasonal-effects-toggle')); playSound('click'); } }} style={{ width: '40px', height: '24px', background: localStorage.getItem('gratonite-seasonal-effects') !== 'false' ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
-                                            <div style={{ position: 'absolute', height: '16px', width: '16px', left: localStorage.getItem('gratonite-seasonal-effects') !== 'false' ? '20px' : '4px', bottom: '4px', backgroundColor: localStorage.getItem('gratonite-seasonal-effects') !== 'false' ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
+                                        <div role="switch" aria-checked={seasonalEnabled} aria-label="Seasonal Effects" tabIndex={0} onClick={() => { const next = !seasonalEnabled; setSeasonalEnabled(next); localStorage.setItem('gratonite-seasonal-effects', next ? 'true' : 'false'); window.dispatchEvent(new Event('seasonal-effects-toggle')); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const next = !seasonalEnabled; setSeasonalEnabled(next); localStorage.setItem('gratonite-seasonal-effects', next ? 'true' : 'false'); window.dispatchEvent(new Event('seasonal-effects-toggle')); playSound('click'); } }} style={{ width: '40px', height: '24px', background: seasonalEnabled ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
+                                            <div style={{ position: 'absolute', height: '16px', width: '16px', left: seasonalEnabled ? '20px' : '4px', bottom: '4px', backgroundColor: seasonalEnabled ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
                                         </div>
                                     </div>
                                 </div>
