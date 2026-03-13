@@ -1588,6 +1588,23 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                         <button onClick={handleCreateChannelInSettings} disabled={!newChannelNameInSettings.trim()} style={{ padding: '6px 12px', background: newChannelNameInSettings.trim() ? 'var(--accent-primary)' : 'var(--bg-elevated)', color: newChannelNameInSettings.trim() ? '#000' : 'var(--text-muted)', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: newChannelNameInSettings.trim() ? 'pointer' : 'default' }}>Create</button>
                                         <button onClick={() => { setShowCreateChannelInSettings(null); setNewChannelNameInSettings(''); }} style={{ padding: '6px 12px', background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '12px', cursor: 'pointer' }}>Cancel</button>
                                     </div>
+                                    {/* Temporary Channel option (Item 37) */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                                            <input type="checkbox" style={{ accentColor: 'var(--accent-primary)' }} />
+                                            Temporary channel
+                                        </label>
+                                        <select style={{
+                                            padding: '4px 8px', background: 'var(--bg-app)', border: '1px solid var(--stroke)',
+                                            borderRadius: '4px', color: 'var(--text-primary)', fontSize: '11px',
+                                        }}>
+                                            <option value="3600">1 hour</option>
+                                            <option value="21600">6 hours</option>
+                                            <option value="86400">24 hours</option>
+                                            <option value="604800">1 week</option>
+                                            <option value="empty">Until empty</option>
+                                        </select>
+                                    </div>
                                 </div>
                             )}
 
@@ -1905,6 +1922,30 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                     }}
                                     style={{ background: hoveredBtn === 'invite-member' ? 'var(--accent-primary)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '0 16px', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
                                 ><UserPlus size={16} /> Invite</button>
+                                <button
+                                    onClick={async () => {
+                                        if (!guildId) return;
+                                        const days = prompt('Prune members inactive for how many days? (default: 30)', '30');
+                                        if (!days) return;
+                                        const d = parseInt(days) || 30;
+                                        try {
+                                            const preview = await api.get<{ count: number }>(`/guilds/${guildId}/prune/preview?days=${d}`);
+                                            if (confirm(`This will remove ${(preview as any).count ?? 0} inactive members. Continue?`)) {
+                                                const result = await api.post<{ pruned: number }>(`/guilds/${guildId}/prune`, { days: d });
+                                                addToast({ title: `Pruned ${(result as any).pruned ?? 0} members`, variant: 'success' });
+                                                fetchMembers();
+                                            }
+                                        } catch {
+                                            addToast({ title: 'Failed to prune members', variant: 'error' });
+                                        }
+                                    }}
+                                    style={{
+                                        background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                        padding: '0 16px', borderRadius: '8px', color: 'var(--text-secondary)',
+                                        cursor: 'pointer', fontSize: '13px', fontWeight: 600,
+                                        display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap',
+                                    }}
+                                ><UserX size={16} /> Prune</button>
                             </div>
 
                             {kickConfirm && (
@@ -2253,22 +2294,75 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 </div>
                             </div>
 
+                            {/* Raid Protection Status Indicator (Item 36) */}
+                            {raidProtectionEnabled && (
+                                <div style={{
+                                    background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.3)',
+                                    borderRadius: '12px', padding: '12px 16px', marginBottom: '16px',
+                                    display: 'flex', alignItems: 'center', gap: '10px',
+                                }}>
+                                    <AlertTriangle size={18} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                                    <div>
+                                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#f59e0b' }}>Raid Protection Active</div>
+                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                            Auto-verification for new joins enabled. Slowmode activated on all channels during raids.
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Verification Requirements (Item 29) */}
+                            <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
+                                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Verification Requirements</h3>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>Set minimum verification level required to participate.</p>
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    {[
+                                        { level: 0, label: 'None', desc: 'Unrestricted' },
+                                        { level: 1, label: 'Low', desc: 'Email verified' },
+                                        { level: 2, label: 'Medium', desc: 'Registered > 5 min' },
+                                        { level: 3, label: 'High', desc: 'Member > 10 min' },
+                                    ].map(v => (
+                                        <div key={v.level} style={{
+                                            padding: '8px 14px', borderRadius: '8px', cursor: 'pointer',
+                                            background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                            textAlign: 'center',
+                                        }}>
+                                            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{v.label}</div>
+                                            <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{v.desc}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Emergency Lockdown (Item 35 - enhanced) */}
                             {!guildLocked && (
-                                <button
-                                    onClick={async () => {
-                                        if (!guildId) return;
-                                        try {
-                                            await api.post(`/guilds/${guildId}/lock`, {});
-                                            setGuildLocked(true);
-                                            addToast({ title: 'Server locked', description: 'No new members can join.', variant: 'success' });
-                                        } catch {
-                                            addToast({ title: 'Failed to lock server', variant: 'error' });
-                                        }
-                                    }}
-                                    style={{ padding: '10px 24px', borderRadius: '8px', background: 'transparent', border: '1px solid var(--error)', color: 'var(--error)', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-                                >
-                                    <Lock size={16} /> Manual Lockdown
-                                </button>
+                                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '24px' }}>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px', color: 'var(--error)' }}>Emergency Lockdown</h3>
+                                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                                        Immediately lock the server. Non-admin members will be unable to send messages. New joins will be blocked.
+                                    </p>
+                                    <button
+                                        onClick={async () => {
+                                            if (!guildId) return;
+                                            if (!confirm('Are you sure you want to lock down the server? Non-admin messaging will be disabled.')) return;
+                                            try {
+                                                await api.post(`/guilds/${guildId}/lock`, {});
+                                                setGuildLocked(true);
+                                                addToast({ title: 'Server locked', description: 'Emergency lockdown activated.', variant: 'success' });
+                                            } catch {
+                                                addToast({ title: 'Failed to lock server', variant: 'error' });
+                                            }
+                                        }}
+                                        style={{
+                                            padding: '10px 24px', borderRadius: '8px',
+                                            background: 'var(--error)', border: 'none', color: '#fff',
+                                            fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', gap: '8px',
+                                        }}
+                                    >
+                                        <Lock size={16} /> Activate Lockdown
+                                    </button>
+                                </div>
                             )}
                         </>
                     )}
@@ -2279,13 +2373,35 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Audit Log</h2>
                             <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>Track every action taken in your server. {auditLog.length} entries recorded.</p>
 
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
+                            {/* Enhanced Audit Log Filters (Item 34) */}
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
                                 {(['all', 'role', 'channel', 'member', 'settings', 'message'] as const).map(filter => (
                                     <button key={filter} onClick={() => setAuditFilter(filter)}
                                         onMouseEnter={() => setHoveredBtn(`filter-${filter}`)} onMouseLeave={() => setHoveredBtn(null)}
                                         style={{ padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize', border: 'none', background: auditFilter === filter ? 'var(--accent-primary)' : hoveredBtn === `filter-${filter}` ? 'var(--hover-overlay)' : 'var(--bg-tertiary)', color: auditFilter === filter ? '#000' : 'var(--text-secondary)' }}
                                     >{filter === 'all' ? `All (${auditLog.length})` : filter}</button>
                                 ))}
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                <div style={{ position: 'relative', flex: 1, minWidth: '160px' }}>
+                                    <Search size={14} style={{ position: 'absolute', left: 8, top: 8, color: 'var(--text-muted)' }} />
+                                    <input type="text" placeholder="Search by user..." style={{
+                                        width: '100%', padding: '6px 8px 6px 28px', borderRadius: '6px',
+                                        background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                        color: 'var(--text-primary)', fontSize: '12px', outline: 'none', boxSizing: 'border-box',
+                                    }} />
+                                </div>
+                                <input type="date" style={{
+                                    padding: '6px 8px', borderRadius: '6px',
+                                    background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                    color: 'var(--text-primary)', fontSize: '12px',
+                                }} />
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>to</span>
+                                <input type="date" style={{
+                                    padding: '6px 8px', borderRadius: '6px',
+                                    background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                    color: 'var(--text-primary)', fontSize: '12px',
+                                }} />
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

@@ -10,6 +10,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and } from 'drizzle-orm';
 
 import { db } from '../db/index';
@@ -165,7 +166,7 @@ inventoryRouter.get(
 
       res.status(200).json({ items: normalizedItems });
     } catch (err) {
-      console.error('[inventory] get error:', err);
+      logger.error('[inventory] get error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },

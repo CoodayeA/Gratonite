@@ -5,6 +5,10 @@ import { useToast } from '../ui/ToastManager';
 import { useUser } from '../../contexts/UserContext';
 import { isSoundMuted, setSoundMuted, getSoundVolume, setSoundVolume, getSoundPack, setSoundPack, playSound } from '../../utils/SoundManager';
 import { api, API_BASE } from '../../lib/api';
+import PrivacyScoreWidget from '../PrivacyScore';
+import AccountRecoveryKitWidget from '../AccountRecoveryKit';
+import DataExportWidget from '../../pages/app/DataExport';
+import LoginHistoryPage from '../../pages/app/LoginHistory';
 import { AVAILABLE_LOCALES, getLocale, setLocale } from '../../i18n';
 
 // ─── Image Crop Modal ────────────────────────────────────────────────────────
@@ -1331,6 +1335,123 @@ const SettingsModal = ({
 
                                         <div style={{ height: '1px', background: 'var(--stroke)' }}></div>
 
+                                        {/* Timezone */}
+                                        <div>
+                                            <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Timezone</h3>
+                                            <select
+                                                className="auth-input"
+                                                style={{ width: '100%', height: '38px' }}
+                                                value={localStorage.getItem('gratonite_timezone') ?? Intl.DateTimeFormat().resolvedOptions().timeZone}
+                                                onChange={async (e) => {
+                                                    const tz = e.target.value;
+                                                    localStorage.setItem('gratonite_timezone', tz);
+                                                    try { await api.users.updateSettings({ timezone: tz }); } catch {}
+                                                    addToast({ title: 'Timezone updated', variant: 'success' });
+                                                }}
+                                            >
+                                                {(() => {
+                                                    try { return Intl.supportedValuesOf('timeZone'); } catch { return ['UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Asia/Tokyo', 'Asia/Shanghai', 'Australia/Sydney']; }
+                                                })().map((tz: string) => <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>)}
+                                            </select>
+                                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Shown on your profile so friends know your local time.</p>
+                                        </div>
+
+                                        <div style={{ height: '1px', background: 'var(--stroke)' }}></div>
+
+                                        {/* Birthday */}
+                                        <div>
+                                            <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Birthday</h3>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <select
+                                                    className="auth-input"
+                                                    style={{ flex: 1, height: '38px' }}
+                                                    value={localStorage.getItem('gratonite_birthday_month') ?? ''}
+                                                    onChange={(e) => localStorage.setItem('gratonite_birthday_month', e.target.value)}
+                                                >
+                                                    <option value="">Month</option>
+                                                    {['January','February','March','April','May','June','July','August','September','October','November','December'].map((m, i) => (
+                                                        <option key={i} value={String(i + 1)}>{m}</option>
+                                                    ))}
+                                                </select>
+                                                <select
+                                                    className="auth-input"
+                                                    style={{ flex: 1, height: '38px' }}
+                                                    value={localStorage.getItem('gratonite_birthday_day') ?? ''}
+                                                    onChange={(e) => localStorage.setItem('gratonite_birthday_day', e.target.value)}
+                                                >
+                                                    <option value="">Day</option>
+                                                    {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                                                        <option key={d} value={String(d)}>{d}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <button
+                                                className="auth-button"
+                                                onClick={async () => {
+                                                    const month = parseInt(localStorage.getItem('gratonite_birthday_month') ?? '0');
+                                                    const day = parseInt(localStorage.getItem('gratonite_birthday_day') ?? '0');
+                                                    if (!month || !day) { addToast({ title: 'Select month and day', variant: 'error' }); return; }
+                                                    try {
+                                                        await api.users.updateSettings({ birthday: { month, day } });
+                                                        addToast({ title: 'Birthday saved', variant: 'success' });
+                                                    } catch { addToast({ title: 'Failed to save birthday', variant: 'error' }); }
+                                                }}
+                                                style={{ marginTop: '8px', width: 'auto', padding: '0 20px', height: '36px', background: 'var(--accent-primary)' }}
+                                            >
+                                                Save Birthday
+                                            </button>
+                                        </div>
+
+                                        <div style={{ height: '1px', background: 'var(--stroke)' }}></div>
+
+                                        {/* Profile Song */}
+                                        <div>
+                                            <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Profile Song</h3>
+                                            <input
+                                                className="auth-input"
+                                                type="text"
+                                                placeholder="Song title"
+                                                value={localStorage.getItem('gratonite_song_title') ?? ''}
+                                                onChange={e => localStorage.setItem('gratonite_song_title', e.target.value)}
+                                                style={{ marginBottom: '6px' }}
+                                            />
+                                            <input
+                                                className="auth-input"
+                                                type="text"
+                                                placeholder="Artist"
+                                                value={localStorage.getItem('gratonite_song_artist') ?? ''}
+                                                onChange={e => localStorage.setItem('gratonite_song_artist', e.target.value)}
+                                                style={{ marginBottom: '6px' }}
+                                            />
+                                            <input
+                                                className="auth-input"
+                                                type="url"
+                                                placeholder="URL (YouTube, Spotify, etc.)"
+                                                value={localStorage.getItem('gratonite_song_url') ?? ''}
+                                                onChange={e => localStorage.setItem('gratonite_song_url', e.target.value)}
+                                            />
+                                            <button
+                                                className="auth-button"
+                                                onClick={async () => {
+                                                    const title = localStorage.getItem('gratonite_song_title') ?? '';
+                                                    const artist = localStorage.getItem('gratonite_song_artist') ?? '';
+                                                    const url = localStorage.getItem('gratonite_song_url') ?? '';
+                                                    if (!title) { addToast({ title: 'Enter a song title', variant: 'error' }); return; }
+                                                    const platform = url.includes('youtube') || url.includes('youtu.be') ? 'youtube' : url.includes('spotify') ? 'spotify' : 'other';
+                                                    try {
+                                                        await api.users.updateSettings({ profileSong: { title, artist, url, platform } });
+                                                        addToast({ title: 'Profile song saved', variant: 'success' });
+                                                    } catch { addToast({ title: 'Failed to save', variant: 'error' }); }
+                                                }}
+                                                style={{ marginTop: '8px', width: 'auto', padding: '0 20px', height: '36px', background: 'var(--accent-primary)' }}
+                                            >
+                                                Save Song
+                                            </button>
+                                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Shows a mini music card on your profile popover.</p>
+                                        </div>
+
+                                        <div style={{ height: '1px', background: 'var(--stroke)' }}></div>
+
                                         <div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                                                 <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600 }}>Display Name Style</h3>
@@ -1518,40 +1639,9 @@ const SettingsModal = ({
                             </>
                         )}
 
-                        {activeTab === 'sessions' && (() => {
-                            const getDeviceInfo = () => {
-                                const ua = navigator.userAgent;
-                                let browser = 'Unknown Browser';
-                                let os = 'Unknown OS';
-                                if (ua.includes('Chrome')) browser = 'Chrome';
-                                else if (ua.includes('Firefox')) browser = 'Firefox';
-                                else if (ua.includes('Safari')) browser = 'Safari';
-                                if (ua.includes('Mac')) os = 'macOS';
-                                else if (ua.includes('Windows')) os = 'Windows';
-                                else if (ua.includes('Linux')) os = 'Linux';
-                                return `${os} \u2022 ${browser}`;
-                            };
-                            return (
-                            <>
-                                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Active Sessions</h2>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>This is your current active session.</p>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                            <div style={{ width: '40px', height: '40px', background: 'var(--bg-elevated)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-                                            </div>
-                                            <div>
-                                                <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>{getDeviceInfo()} <span style={{ background: 'var(--success)', color: 'white', fontSize: '10px', padding: '2px 6px', borderRadius: '10px', textTransform: 'uppercase' }}>Current</span></div>
-                                                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Last active: Now</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </>
-                            );
-                        })()}
+                        {activeTab === 'sessions' && (
+                            <LoginHistoryPage />
+                        )}
 
                         {/* Connections tab hidden — OAuth integration not yet available */}
                         {/* Activity Privacy tab hidden — game activity detection not yet available */}
@@ -1970,6 +2060,15 @@ const SettingsModal = ({
                                             <div style={{ position: 'absolute', height: '16px', width: '16px', left: compactMode ? '20px' : '4px', bottom: '4px', backgroundColor: compactMode ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
                                         </div>
                                     </div>
+                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <div style={{ fontWeight: 600 }}>Seasonal Effects</div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Show seasonal particle effects (snowflakes, cherry blossoms, etc.).</div>
+                                        </div>
+                                        <div role="switch" aria-checked={localStorage.getItem('gratonite-seasonal-effects') !== 'false'} aria-label="Seasonal Effects" tabIndex={0} onClick={() => { const cur = localStorage.getItem('gratonite-seasonal-effects') !== 'false'; localStorage.setItem('gratonite-seasonal-effects', cur ? 'false' : 'true'); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const cur = localStorage.getItem('gratonite-seasonal-effects') !== 'false'; localStorage.setItem('gratonite-seasonal-effects', cur ? 'false' : 'true'); playSound('click'); } }} style={{ width: '40px', height: '24px', background: localStorage.getItem('gratonite-seasonal-effects') !== 'false' ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
+                                            <div style={{ position: 'absolute', height: '16px', width: '16px', left: localStorage.getItem('gratonite-seasonal-effects') !== 'false' ? '20px' : '4px', bottom: '4px', backgroundColor: localStorage.getItem('gratonite-seasonal-effects') !== 'false' ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
+                                        </div>
+                                    </div>
                                 </div>
                             </>
                         )}
@@ -2268,6 +2367,19 @@ const SettingsModal = ({
                                     </div>
                                 </div>
 
+                                {/* Profile Visitors */}
+                                <div style={{ marginBottom: '32px' }}>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Profile Visitors</h3>
+                                    <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
+                                        <PrivacyToggle
+                                            label="Allow others to see when I view profiles"
+                                            description="When enabled, your visits will appear in other users' profile visitors list."
+                                            storageKey="privacy-profile-visitors"
+                                            defaultValue={false}
+                                        />
+                                    </div>
+                                </div>
+
                                 {/* Streamer Mode */}
                                 <div style={{ marginBottom: '32px' }}>
                                     <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Streamer Mode</h3>
@@ -2284,6 +2396,19 @@ const SettingsModal = ({
                                                     document.body.classList.remove('streamer-mode');
                                                 }
                                             }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Read Receipts */}
+                                <div style={{ marginBottom: '32px' }}>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Read Receipts</h3>
+                                    <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
+                                        <PrivacyToggle
+                                            label="Show Read Receipts"
+                                            description="Allow others to see when you've read their messages. When disabled, your read status won't be shared with other users."
+                                            storageKey="gratonite:show-read-receipts"
+                                            defaultValue={false}
                                         />
                                     </div>
                                 </div>
@@ -2309,29 +2434,21 @@ const SettingsModal = ({
                                     </div>
                                 </div>
 
+                                {/* Privacy Score */}
+                                <div style={{ marginBottom: '32px' }}>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Privacy Score</h3>
+                                    <PrivacyScoreWidget userSettings={{}} userProfile={user} onNavigate={(tab: string) => setActiveTab(tab as any)} />
+                                </div>
+
                                 {/* Data Export (GDPR) */}
                                 <div style={{ marginBottom: '32px' }}>
-                                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Your Data</h3>
-                                    <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '16px', lineHeight: '1.4' }}>
-                                        Request a copy of all your Gratonite data, including messages, profile info, and server memberships. You will receive an email when your export is ready.
-                                    </p>
-                                    <button
-                                        onClick={async () => {
-                                            try {
-                                                const token = localStorage.getItem('gratonite_access_token');
-                                                await fetch(`${API_BASE}/users/@me/data-export`, {
-                                                    method: 'POST',
-                                                    headers: { Authorization: `Bearer ${token}` },
-                                                });
-                                                addToast({ title: 'Data export requested', description: 'You will receive an email when your data is ready to download.', variant: 'success' });
-                                            } catch {
-                                                addToast({ title: 'Failed to request data export', variant: 'error' });
-                                            }
-                                        }}
-                                        style={{ padding: '8px 16px', background: 'var(--bg-elevated)', border: '1px solid var(--border-primary, var(--stroke))', color: 'var(--text-primary)', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
-                                    >
-                                        Request My Data
-                                    </button>
+                                    <DataExportWidget />
+                                </div>
+
+                                {/* Account Recovery Kit */}
+                                <div style={{ marginBottom: '32px' }}>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Account Recovery</h3>
+                                    <AccountRecoveryKitWidget userId={user?.id || ''} username={user?.username || ''} email={user?.email || ''} />
                                 </div>
                             </>
                         )}

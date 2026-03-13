@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import { textReactions, textReactionStats } from '../db/schema/text-reactions';
@@ -70,7 +71,7 @@ textReactionsRouter.post('/', requireAuth, async (req: Request, res: Response): 
 
     res.status(201).json(reaction);
   } catch (err) {
-    console.error('[text-reactions] POST error:', err);
+    logger.error('[text-reactions] POST error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -98,7 +99,7 @@ textReactionsRouter.delete('/:text', requireAuth, async (req: Request, res: Resp
 
     res.json({ success: true });
   } catch (err) {
-    console.error('[text-reactions] DELETE error:', err);
+    logger.error('[text-reactions] DELETE error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -130,7 +131,7 @@ textReactionsRouter.get('/', requireAuth, async (req: Request, res: Response): P
 
     res.json(Object.values(grouped));
   } catch (err) {
-    console.error('[text-reactions] GET error:', err);
+    logger.error('[text-reactions] GET error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -148,7 +149,7 @@ textReactionPopularRouter.get('/popular', requireAuth, async (req: Request, res:
 
     res.json(rows);
   } catch (err) {
-    console.error('[text-reactions] GET popular error:', err);
+    logger.error('[text-reactions] GET popular error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

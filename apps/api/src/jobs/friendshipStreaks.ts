@@ -1,4 +1,5 @@
 import { db } from '../db/index';
+import { logger } from '../lib/logger';
 import { friendshipStreaks, friendshipMilestones } from '../db/schema/friendship-streaks';
 import { lt, sql, and, isNotNull } from 'drizzle-orm';
 
@@ -47,7 +48,7 @@ export function startFriendshipStreaksJob() {
         }
       }
     } catch (err) {
-      console.error('[friendshipStreaks] Job error:', err);
+      logger.error('[friendshipStreaks] Job error:', err);
     }
   }, 24 * 60 * 60 * 1000); // 24 hours
 }

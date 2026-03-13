@@ -1,4 +1,5 @@
 import { db } from '../db/index';
+import { logger } from '../lib/logger';
 import { giveaways, giveawayEntries, giveawayWinners } from '../db/schema/giveaways';
 import { lte, and, eq } from 'drizzle-orm';
 
@@ -35,11 +36,11 @@ export function startGiveawaysJob() {
 
           console.log(`[giveaways] Ended giveaway ${giveaway.id} with ${winners.length} winner(s)`);
         } catch (err) {
-          console.error(`[giveaways] Error ending giveaway ${giveaway.id}:`, err);
+          logger.error(`[giveaways] Error ending giveaway ${giveaway.id}:`, err);
         }
       }
     } catch (err) {
-      console.error('[giveaways] Job error:', err);
+      logger.error('[giveaways] Job error:', err);
     }
   }, 30_000);
 }

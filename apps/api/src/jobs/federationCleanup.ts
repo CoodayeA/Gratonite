@@ -4,6 +4,7 @@
  */
 
 import { db } from '../db/index';
+import { logger } from '../lib/logger';
 import { federationActivities } from '../db/schema/federation-activities';
 import { and, or, eq, lt } from 'drizzle-orm';
 import { isFederationEnabled } from '../federation/index';
@@ -31,7 +32,7 @@ export function startFederationCleanupJob(): void {
       // Note: Drizzle delete doesn't easily return count, but that's fine
       console.info(`[federationCleanup] Pruned activities older than ${RETENTION_DAYS} days`);
     } catch (err) {
-      console.error('[federationCleanup] Error:', err);
+      logger.error('[federationCleanup] Error:', err);
     }
   }, CLEANUP_INTERVAL).unref();
 

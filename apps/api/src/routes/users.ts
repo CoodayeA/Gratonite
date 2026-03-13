@@ -18,6 +18,7 @@
  */
 
 import path from 'path';
+import { logger } from '../lib/logger';
 import fs from 'fs';
 import crypto from 'crypto';
 import { Router, Request, Response, NextFunction } from 'express';
@@ -41,6 +42,8 @@ import { files } from '../db/schema/files';
 import { guildFolders } from '../db/schema/guild-folders';
 import { favoriteChannels } from '../db/schema/favorite-channels';
 import { channels, dmChannelMembers } from '../db/schema/channels';
+import { userSessions } from '../db/schema/settings';
+import { dataExports } from '../db/schema/data-exports';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { redis } from '../lib/redis';
@@ -287,7 +290,7 @@ usersRouter.get('/@me/bootstrap', requireAuth, asyncHandler(async (req: Request,
       dmChannelIds: dmResult.map(d => d.channelId),
     });
   } catch (err) {
-    console.error('[bootstrap] error:', err);
+    logger.error('[bootstrap] error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 }));
@@ -712,7 +715,7 @@ usersRouter.get(
 
       res.json({ mutualServers, mutualFriends });
     } catch (err) {
-      console.error('[users] mutuals error:', err);
+      logger.error('[users] mutuals error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   }),
@@ -852,7 +855,7 @@ usersRouter.get('/@me/equipped-cosmetics', requireAuth, asyncHandler(async (req:
       previewImageUrl: r.previewImageUrl,
     })));
   } catch (err) {
-    console.error('[users] equipped-cosmetics error:', err);
+    logger.error('[users] equipped-cosmetics error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 }));
@@ -1253,6 +1256,79 @@ usersRouter.post('/@me/onboarding-complete', requireAuth, async (req: Request, r
       await db.insert(userAchievements).values({ userId, achievementId: 'early_adopter' }).onConflictDoNothing();
     }
     res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ─── Sessions (Login History) ───────────────────────────────────────────
+
+/** GET /users/@me/sessions — list active sessions */
+usersRouter.get('/@me/sessions', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const userId = req.userId!;
+  try {
+    const sessions = await db
+      .select()
+      .from(userSessions)
+      .where(eq(userSessions.userId, userId))
+      .orderBy(sql`${userSessions.lastActiveAt} DESC`);
+
+    // Determine current session by matching token hash
+    const currentTokenHash = (req as any).tokenHash;
+    res.json(sessions.map(s => ({
+      id: s.id,
+      deviceName: s.deviceName,
+      ipAddress: s.ipAddress,
+      userAgent: s.userAgent,
+      lastActiveAt: s.lastActiveAt,
+      createdAt: s.createdAt,
+      current: s.tokenHash === currentTokenHash,
+    })));
+  } catch {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/** DELETE /users/@me/sessions/:sessionId — revoke a session */
+usersRouter.delete('/@me/sessions/:sessionId', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const userId = req.userId!;
+  const sessionId = req.params.sessionId as string;
+  try {
+    await db
+      .delete(userSessions)
+      .where(and(eq(userSessions.id, sessionId), eq(userSessions.userId, userId)));
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ─── Data Exports (GDPR) ───────────────────────────────────────────────
+
+/** GET /users/@me/data-exports — list user's data exports */
+usersRouter.get('/@me/data-exports', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const userId = req.userId!;
+  try {
+    const exports = await db
+      .select()
+      .from(dataExports)
+      .where(eq(dataExports.userId, userId))
+      .orderBy(sql`${dataExports.createdAt} DESC`);
+    res.json(exports);
+  } catch {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/** POST /users/@me/data-exports — request a new data export */
+usersRouter.post('/@me/data-exports', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const userId = req.userId!;
+  try {
+    const [exported] = await db
+      .insert(dataExports)
+      .values({ userId, status: 'pending' })
+      .returning();
+    res.status(201).json(exported);
   } catch {
     res.status(500).json({ error: 'Internal server error' });
   }

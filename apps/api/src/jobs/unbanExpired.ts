@@ -1,4 +1,5 @@
 import { eq, lt, and, isNotNull, inArray } from 'drizzle-orm';
+import { logger } from '../lib/logger';
 import { db } from '../db/index';
 import { guildBans } from '../db/schema/bans';
 import { getIO } from '../lib/socket-io';
@@ -32,7 +33,7 @@ export function startUnbanExpiredJob(): void {
         console.info(`[unban-expired] Removed ${expired.length} expired ban(s)`);
       }
     } catch (err) {
-      console.error('[unban-expired] Error:', err);
+      logger.error('[unban-expired] Error:', err);
     }
   }, 60_000);
 }

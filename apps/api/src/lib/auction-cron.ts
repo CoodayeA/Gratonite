@@ -11,6 +11,7 @@
  */
 
 import { eq, and, lte } from 'drizzle-orm';
+import { logger } from './logger';
 import { db } from '../db/index';
 import { auctions } from '../db/schema/auctions';
 import { cosmetics } from '../db/schema/cosmetics';
@@ -175,7 +176,7 @@ async function closeExpiredAuctions(): Promise<void> {
         `[auction-cron] Closed auction ${auction.id} (winner: ${auction.currentBidderId ?? 'none'})`,
       );
     } catch (err) {
-      console.error(`[auction-cron] Failed to close auction ${auction.id}:`, err);
+      logger.error(`[auction-cron] Failed to close auction ${auction.id}:`, err);
     }
   }
 }
@@ -185,11 +186,11 @@ export function startAuctionCron(): void {
   console.log('[auction-cron] Starting auction closure job (interval: 60s)');
   // Run immediately on startup, then on interval
   closeExpiredAuctions().catch((err) =>
-    console.error('[auction-cron] Initial run error:', err),
+    logger.error('[auction-cron] Initial run error:', err),
   );
   setInterval(() => {
     closeExpiredAuctions().catch((err) =>
-      console.error('[auction-cron] Run error:', err),
+      logger.error('[auction-cron] Run error:', err),
     );
   }, 60_000);
 }

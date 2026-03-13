@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../db/index';
 import { messageDrafts } from '../db/schema/message-drafts';
@@ -16,7 +17,7 @@ draftsRouter.get('/channels/:channelId/draft', requireAuth, async (req: Request,
       .limit(1);
     res.json(draft || null);
   } catch (err) {
-    console.error('[drafts] GET error:', err);
+    logger.error('[drafts] GET error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -39,7 +40,7 @@ draftsRouter.put('/channels/:channelId/draft', requireAuth, async (req: Request,
       .returning();
     res.json(draft);
   } catch (err) {
-    console.error('[drafts] PUT error:', err);
+    logger.error('[drafts] PUT error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -52,7 +53,7 @@ draftsRouter.delete('/channels/:channelId/draft', requireAuth, async (req: Reque
       .where(and(eq(messageDrafts.userId, req.userId!), eq(messageDrafts.channelId, channelId)));
     res.json({ ok: true });
   } catch (err) {
-    console.error('[drafts] DELETE error:', err);
+    logger.error('[drafts] DELETE error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });

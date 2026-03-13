@@ -13,6 +13,7 @@
  */
 
 import { db } from '../db/index';
+import { logger } from './logger';
 import { notifications } from '../db/schema/notifications';
 import { getIO } from './socket-io';
 import { redis } from './redis';
@@ -64,6 +65,6 @@ export async function createNotification(params: CreateNotificationParams): Prom
       }
     }
   } catch (err) {
-    console.error('[notifications] failed to create notification:', err);
+    logger.error('[notifications] failed to create notification:', err);
   }
 }

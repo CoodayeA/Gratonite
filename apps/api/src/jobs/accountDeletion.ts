@@ -1,4 +1,5 @@
 import { db } from '../db/index';
+import { logger } from '../lib/logger';
 import { sql } from 'drizzle-orm';
 
 export function startAccountDeletionJob() {
@@ -20,7 +21,7 @@ export function startAccountDeletionJob() {
         `);
       });
     } catch (err) {
-      console.error('[accountDeletion] Job error:', err);
+      logger.error('[accountDeletion] Job error:', err);
     }
   }, 24 * 60 * 60 * 1000);
 }

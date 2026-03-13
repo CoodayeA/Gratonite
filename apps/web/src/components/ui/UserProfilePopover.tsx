@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, UserPlus, MoreHorizontal, Gamepad2, Headphones, Eye, Star } from 'lucide-react';
+import { MessageSquare, UserPlus, MoreHorizontal, Gamepad2, Headphones, Eye, Star, Clock, Music, Cake, Link2, Shield } from 'lucide-react';
 import { api, API_BASE } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
 import { useUser } from '../../contexts/UserContext';
 import Avatar from './Avatar';
+import { ReputationBadge } from './ReputationBadge';
 
 const BADGE_META: Record<string, { label: string; emoji: string; color: string }> = {
     admin: { label: 'Admin', emoji: '\u{1F6E1}\uFE0F', color: '#ed4245' },
@@ -38,6 +39,16 @@ type ProfileData = {
     accentColor: string | null;
     primaryColor: string | null;
     createdAt: string;
+    timezone?: string | null;
+    profileSong?: { url: string; title: string; artist: string; platform: string } | null;
+    birthday?: { month: number; day: number } | null;
+    messageCount?: number;
+};
+
+type ConnectionData = {
+    provider: string;
+    providerUsername: string;
+    profileUrl: string | null;
 };
 
 type MutualData = {
@@ -77,6 +88,7 @@ const UserProfilePopover = ({
     const [note, setNote] = useState('');
     const [noteLoaded, setNoteLoaded] = useState(false);
     const [fameStats, setFameStats] = useState<{ fameReceived: number; fameGiven: number } | null>(null);
+    const [connections, setConnections] = useState<ConnectionData[]>([]);
     const { user: currentUser } = useUser();
     const isOwnProfile = user.id === currentUser?.id;
 
@@ -99,11 +111,19 @@ const UserProfilePopover = ({
 
         const fetchAll = async () => {
             try {
-                const [profileRes, mutualsRes, fameRes] = await Promise.all([
+                const [profileRes, mutualsRes, fameRes, connectionsRes] = await Promise.all([
                     api.users.getProfile(user.id).catch(() => null),
                     api.users.getMutuals(user.id).catch(() => null),
                     api.fame.getStats(user.id).catch(() => null),
+                    api.users.getConnections(user.id).catch(() => []),
                 ]);
+
+                // Record profile view (non-blocking)
+                if (user.id !== currentUser?.id) {
+                    api.profileVisitors.record(user.id).catch(() => {});
+                }
+
+                if (Array.isArray(connectionsRes)) setConnections(connectionsRes);
 
                 if (cancelled) return;
 
@@ -191,6 +211,19 @@ const UserProfilePopover = ({
     const pronouns = profile?.pronouns;
     const statusColor = STATUS_COLORS[user.status || 'online'];
 
+    // Birthday check
+    const today = new Date();
+    const isBirthday = profile?.birthday
+        ? profile.birthday.month === (today.getMonth() + 1) && profile.birthday.day === today.getDate()
+        : false;
+
+    // Timezone local time
+    const localTime = profile?.timezone ? (() => {
+        try {
+            return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: profile.timezone }).format(new Date());
+        } catch { return null; }
+    })() : null;
+
     // Banner: use real bannerHash if available, else accentColor gradient, else fallback
     const bannerBg = profile?.bannerHash
         ? `url(${API_BASE}/files/${profile.bannerHash}) center/cover`
@@ -249,7 +282,7 @@ const UserProfilePopover = ({
                         />
                     </div>
 
-                    {/* Name + Handle */}
+                    {/* Name + Handle + Reputation */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
                         <h3
                             style={{
@@ -264,6 +297,14 @@ const UserProfilePopover = ({
                         >
                             {displayName}
                         </h3>
+                        {profile?.profileSong && <Music size={12} color="#8b5cf6" />}
+                        {isBirthday && <span title="Birthday today!" style={{ fontSize: '14px' }}>🎂</span>}
+                        <ReputationBadge
+                            accountAge={profile?.createdAt}
+                            fameReceived={fameStats?.fameReceived}
+                            achievementCount={badges.length}
+                            size="sm"
+                        />
                     </div>
                     <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{handle}</p>
 

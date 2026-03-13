@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Hash, MessageSquare, Settings, Users, Command, CornerDownLeft, Globe, User } from 'lucide-react';
+import { Search, Hash, MessageSquare, Settings, Users, Command, CornerDownLeft, Globe, User, Clock, Volume2 } from 'lucide-react';
 import { api } from '../../lib/api';
 
 type CommandItem = {
@@ -40,12 +40,60 @@ type Props = {
     onOpenSettings: () => void;
 };
 
+const RECENT_ACTIONS_KEY = 'gratonite-cmd-recent';
+const MAX_RECENT = 8;
+
+function getRecentActions(): string[] {
+    try {
+        const raw = localStorage.getItem(RECENT_ACTIONS_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+}
+
+function trackRecentAction(id: string) {
+    const recent = getRecentActions().filter(r => r !== id);
+    recent.unshift(id);
+    localStorage.setItem(RECENT_ACTIONS_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
+}
+
+/** Fuzzy score: higher is better. Returns -1 for no match. */
+function fuzzyScore(query: string, text: string): number {
+    const q = query.toLowerCase();
+    const t = text.toLowerCase();
+    if (t === q) return 100;
+    if (t.startsWith(q)) return 80;
+    const idx = t.indexOf(q);
+    if (idx >= 0) return 60 - idx;
+    // Check if all chars appear in order
+    let qi = 0;
+    let score = 0;
+    for (let ti = 0; ti < t.length && qi < q.length; ti++) {
+        if (t[ti] === q[qi]) {
+            score += (ti === 0 || t[ti - 1] === ' ' || t[ti - 1] === '-') ? 3 : 1;
+            qi++;
+        }
+    }
+    return qi === q.length ? score : -1;
+}
+
+function bestScore(query: string, item: CommandItem): number {
+    let best = fuzzyScore(query, item.label);
+    if (item.description) best = Math.max(best, fuzzyScore(query, item.description) * 0.8);
+    if (item.keywords) {
+        for (const k of item.keywords) {
+            best = Math.max(best, fuzzyScore(query, k) * 0.9);
+        }
+    }
+    return best;
+}
+
 const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }: Props) => {
     const [query, setQuery] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [channelCache, setChannelCache] = useState<ChannelCacheEntry[]>([]);
     const [userResults, setUserResults] = useState<Array<{ id: string; username: string; displayName: string; avatarHash: string | null }>>([]);
     const [userSearchLoading, setUserSearchLoading] = useState(false);
+    const [recentActionIds, setRecentActionIds] = useState<string[]>(getRecentActions());
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
     const userSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -54,7 +102,7 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
     // Load channels for all guilds on mount
     useEffect(() => {
         if (!isOpen) return;
-        if (channelCache.length > 0) return; // already loaded
+        if (channelCache.length > 0) return;
 
         const loadChannels = async () => {
             const results: ChannelCacheEntry[] = [];
@@ -74,14 +122,15 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
     // Debounced user search
     useEffect(() => {
         if (userSearchTimer.current) clearTimeout(userSearchTimer.current);
-        if (!query.trim() || query.trim().length < 2) {
+        const rawQuery = query.startsWith('>') ? query.slice(1).trim() : query;
+        if (!rawQuery.trim() || rawQuery.trim().length < 2) {
             setUserResults([]);
             return;
         }
         setUserSearchLoading(true);
         userSearchTimer.current = setTimeout(async () => {
             try {
-                const results = await api.users.searchUsers(query.trim());
+                const results = await api.users.searchUsers(rawQuery.trim());
                 setUserResults(results);
             } catch {
                 setUserResults([]);
@@ -94,6 +143,14 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
         };
     }, [query]);
 
+    const wrapAction = useCallback((id: string, action: () => void) => {
+        return () => {
+            trackRecentAction(id);
+            setRecentActionIds(getRecentActions());
+            action();
+        };
+    }, []);
+
     // Build command list from real data
     const commands: CommandItem[] = useMemo(() => {
         const items: CommandItem[] = [];
@@ -104,7 +161,7 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
             label: 'Go to Home',
             description: 'Dashboard & quick actions',
             icon: <Globe size={18} />,
-            action: () => { navigate('/'); onClose(); },
+            action: wrapAction('nav-home', () => { navigate('/'); onClose(); }),
             category: 'Navigation',
             keywords: ['home', 'dashboard'],
         });
@@ -113,7 +170,7 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
             label: 'Friends',
             description: 'View friends & pending requests',
             icon: <Users size={18} />,
-            action: () => { navigate('/friends'); onClose(); },
+            action: wrapAction('nav-friends', () => { navigate('/friends'); onClose(); }),
             category: 'Navigation',
             keywords: ['friends', 'people'],
         });
@@ -122,7 +179,7 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
             label: 'Discover',
             description: 'Explore servers',
             icon: <Globe size={18} />,
-            action: () => { navigate('/discover'); onClose(); },
+            action: wrapAction('nav-discover', () => { navigate('/discover'); onClose(); }),
             category: 'Navigation',
             keywords: ['discover', 'explore', 'browse'],
         });
@@ -133,14 +190,13 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
             label: 'Open Settings',
             description: 'Customize your experience',
             icon: <Settings size={18} />,
-            action: () => { onOpenSettings(); onClose(); },
+            action: wrapAction('settings', () => { onOpenSettings(); onClose(); }),
             category: 'Settings',
-            keywords: ['settings', 'preferences', 'config', 'account'],
+            keywords: ['settings', 'preferences', 'config', 'account', 'profile', 'privacy', 'appearance'],
         });
 
         // -- Guilds --
         for (const guild of guilds) {
-            // Find the first text channel as default
             const guildChannelEntry = channelCache.find(c => c.guildId === guild.id);
             const defaultChannel = guildChannelEntry?.channels.find(c => c.type === 'text' || c.type === 'TEXT');
             const targetPath = defaultChannel
@@ -152,7 +208,7 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
                 label: guild.name,
                 description: guild.description || `${guild.memberCount} members`,
                 icon: <Users size={18} />,
-                action: () => { navigate(targetPath); onClose(); },
+                action: wrapAction(`guild-${guild.id}`, () => { navigate(targetPath); onClose(); }),
                 category: 'Servers',
                 keywords: [guild.name.toLowerCase()],
             });
@@ -163,13 +219,19 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
             const guild = guilds.find(g => g.id === entry.guildId);
             if (!guild) continue;
             for (const channel of entry.channels) {
-                if (channel.type !== 'text' && channel.type !== 'TEXT') continue;
+                const isVoice = channel.type === 'voice' || channel.type === 'GUILD_VOICE';
+                const isText = channel.type === 'text' || channel.type === 'TEXT';
+                if (!isText && !isVoice) continue;
                 items.push({
                     id: `channel-${channel.id}`,
-                    label: `#${channel.name}`,
+                    label: isVoice ? `${channel.name}` : `#${channel.name}`,
                     description: `in ${guild.name}`,
-                    icon: <Hash size={18} />,
-                    action: () => { navigate(`/guild/${guild.id}/channel/${channel.id}`); onClose(); },
+                    icon: isVoice ? <Volume2 size={18} /> : <Hash size={18} />,
+                    action: wrapAction(`channel-${channel.id}`, () => {
+                        const prefix = isVoice ? 'voice' : 'channel';
+                        navigate(`/guild/${guild.id}/${prefix}/${channel.id}`);
+                        onClose();
+                    }),
                     category: 'Channels',
                     keywords: [channel.name.toLowerCase(), guild.name.toLowerCase()],
                 });
@@ -186,62 +248,115 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
                 label: displayName,
                 description: `@${recipient.username}`,
                 icon: <MessageSquare size={18} />,
-                action: () => { navigate(`/dm/${dm.id}`); onClose(); },
-                category: 'Direct Messages',
+                action: wrapAction(`dm-${dm.id}`, () => { navigate(`/dm/${dm.id}`); onClose(); }),
+                category: 'Members',
                 keywords: [recipient.username.toLowerCase(), displayName.toLowerCase()],
             });
         }
 
         // -- User search results (dynamic) --
         for (const user of userResults) {
-            // Skip users already in DM results
             if (dmChannels.some(dm => dm.recipients?.some(r => r.id === user.id))) continue;
             items.push({
                 id: `user-${user.id}`,
                 label: user.displayName || user.username,
                 description: `@${user.username}`,
                 icon: <User size={18} />,
-                action: async () => {
+                action: wrapAction(`user-${user.id}`, async () => {
                     try {
                         const dmChannel = await api.relationships.openDm(user.id);
                         navigate(`/dm/${dmChannel.id}`);
                     } catch {
-                        // fallback: just navigate to friends
                         navigate('/friends');
                     }
                     onClose();
-                },
-                category: 'Users',
+                }),
+                category: 'Members',
                 keywords: [user.username.toLowerCase(), (user.displayName || '').toLowerCase()],
             });
         }
 
         return items;
-    }, [guilds, channelCache, dmChannels, userResults, navigate, onClose, onOpenSettings]);
+    }, [guilds, channelCache, dmChannels, userResults, navigate, onClose, onOpenSettings, wrapAction]);
 
-    const filteredCommands = query.trim()
-        ? commands.filter(cmd => {
-            const q = query.toLowerCase();
-            return cmd.label.toLowerCase().includes(q)
-                || (cmd.description?.toLowerCase().includes(q))
-                || cmd.keywords?.some(k => k.includes(q));
-        })
-        : commands;
+    // Parse type filter prefix
+    const typeFilter = query.startsWith('>') ? query.slice(1).split(' ')[0]?.toLowerCase() : null;
+    const searchQuery = typeFilter ? query.slice(1 + (query.slice(1).split(' ')[0]?.length || 0)).trim() : query.trim();
 
-    // Group by category
-    const grouped = filteredCommands.reduce((acc, cmd) => {
-        if (!acc[cmd.category]) acc[cmd.category] = [];
-        acc[cmd.category].push(cmd);
-        return acc;
-    }, {} as Record<string, CommandItem[]>);
+    const filteredCommands = useMemo(() => {
+        let pool = commands;
 
-    const flatList = filteredCommands;
+        // Apply type filter
+        if (typeFilter) {
+            const filterMap: Record<string, string[]> = {
+                'channel': ['Channels'],
+                'channels': ['Channels'],
+                'member': ['Members'],
+                'members': ['Members'],
+                'user': ['Members'],
+                'users': ['Members'],
+                'server': ['Servers'],
+                'servers': ['Servers'],
+                'setting': ['Settings'],
+                'settings': ['Settings'],
+                'nav': ['Navigation'],
+                'navigation': ['Navigation'],
+            };
+            const categories = filterMap[typeFilter];
+            if (categories) {
+                pool = pool.filter(cmd => categories.includes(cmd.category));
+            }
+        }
+
+        if (!searchQuery) return pool;
+
+        // Fuzzy search with scoring
+        const scored = pool
+            .map(cmd => ({ cmd, score: bestScore(searchQuery, cmd) }))
+            .filter(({ score }) => score > 0)
+            .sort((a, b) => b.score - a.score);
+
+        return scored.map(({ cmd }) => cmd);
+    }, [commands, typeFilter, searchQuery]);
+
+    // Build recent actions section
+    const recentItems = useMemo(() => {
+        if (query.trim()) return [];
+        return recentActionIds
+            .map(id => commands.find(c => c.id === id))
+            .filter((c): c is CommandItem => !!c)
+            .slice(0, 5);
+    }, [recentActionIds, commands, query]);
+
+    // Group by category, with recent actions on top
+    const grouped = useMemo(() => {
+        const groups: Record<string, CommandItem[]> = {};
+        if (recentItems.length > 0) {
+            groups['Recent Actions'] = recentItems;
+        }
+        for (const cmd of filteredCommands) {
+            // Skip items already in recent
+            if (recentItems.some(r => r.id === cmd.id) && !query.trim()) continue;
+            if (!groups[cmd.category]) groups[cmd.category] = [];
+            groups[cmd.category].push(cmd);
+        }
+        return groups;
+    }, [filteredCommands, recentItems, query]);
+
+    const flatList = useMemo(() => {
+        const flat: CommandItem[] = [];
+        for (const items of Object.values(grouped)) {
+            flat.push(...items);
+        }
+        return flat;
+    }, [grouped]);
 
     useEffect(() => {
         if (isOpen) {
             setQuery('');
             setSelectedIndex(0);
             setUserResults([]);
+            setRecentActionIds(getRecentActions());
             setTimeout(() => inputRef.current?.focus(), 50);
         }
     }, [isOpen]);
@@ -287,6 +402,16 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
 
     let flatIndex = -1;
 
+    // Category icons
+    const categoryIcons: Record<string, React.ReactNode> = {
+        'Recent Actions': <Clock size={12} />,
+        'Channels': <Hash size={12} />,
+        'Members': <User size={12} />,
+        'Servers': <Users size={12} />,
+        'Settings': <Settings size={12} />,
+        'Navigation': <Globe size={12} />,
+    };
+
     return (
         <div
             style={{
@@ -331,7 +456,7 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Search servers, channels, users..."
+                        placeholder='Search servers, channels, users... (prefix ">" to filter by type)'
                         style={{
                             flex: 1, background: 'none', border: 'none', outline: 'none',
                             color: 'var(--text-primary)', fontSize: '16px', fontWeight: 500,
@@ -345,6 +470,25 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
                     }}>ESC</kbd>
                 </div>
 
+                {/* Type filter hints */}
+                {query === '>' && (
+                    <div style={{ padding: '8px 20px', display: 'flex', gap: '8px', flexWrap: 'wrap', borderBottom: '1px solid var(--stroke)' }}>
+                        {['channel', 'member', 'server', 'settings', 'nav'].map(t => (
+                            <button
+                                key={t}
+                                onClick={() => setQuery(`>${t} `)}
+                                style={{
+                                    background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                    borderRadius: '4px', padding: '3px 8px', fontSize: '11px',
+                                    fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer',
+                                }}
+                            >
+                                {t}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 {/* Results */}
                 <div ref={listRef} style={{ maxHeight: '360px', overflowY: 'auto', padding: '8px 0' }}>
                     {Object.entries(grouped).map(([category, items]) => (
@@ -355,7 +499,11 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
                                 textTransform: 'uppercase',
                                 letterSpacing: '2px',
                                 color: 'var(--text-muted)',
-                            }}>{category}</div>
+                                display: 'flex', alignItems: 'center', gap: '6px',
+                            }}>
+                                {categoryIcons[category]}
+                                {category}
+                            </div>
 
                             {items.map((cmd) => {
                                 flatIndex++;
@@ -411,7 +559,14 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
                             padding: '32px 20px', textAlign: 'center',
                             color: 'var(--text-muted)', fontSize: '14px',
                         }}>
-                            {userSearchLoading ? 'Searching...' : `No results for "${query}"`}
+                            {userSearchLoading ? 'Searching...' : (
+                                <div>
+                                    <div>No results for "{query}"</div>
+                                    <div style={{ fontSize: '12px', marginTop: '8px', opacity: 0.7 }}>
+                                        {'Try: >channel, >member, >server, or >settings'}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -429,6 +584,9 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
                         </span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <kbd style={{ padding: '1px 4px', border: '1px solid var(--stroke)', fontSize: '10px', fontFamily: 'var(--font-mono)' }}>↵</kbd> Select
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <kbd style={{ padding: '1px 4px', border: '1px solid var(--stroke)', fontSize: '10px', fontFamily: 'var(--font-mono)' }}>&gt;</kbd> Filter
                         </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>

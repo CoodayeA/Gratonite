@@ -112,6 +112,28 @@ function addRecentEmoji(emoji: string) {
     localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
 }
 
+// ─── Favorite Emojis (localStorage) ───────────────────────────────────────────
+const FAVORITES_KEY = 'gratonite-emoji-favorites';
+
+function getFavoriteEmojis(): string[] {
+    try {
+        const raw = localStorage.getItem(FAVORITES_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+}
+
+function toggleFavoriteEmoji(emoji: string): string[] {
+    const favs = getFavoriteEmojis();
+    const idx = favs.indexOf(emoji);
+    if (idx >= 0) {
+        favs.splice(idx, 1);
+    } else {
+        favs.push(emoji);
+    }
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs));
+    return favs;
+}
+
 // ─── Frequently Used Emojis (localStorage) ────────────────────────────────────
 const FREQ_KEY = 'emojiUsage';
 const MAX_FREQUENT = 16;
@@ -211,6 +233,8 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
     const [stickersLoading, setStickersLoading] = useState(false);
     const [recentEmojis, setRecentEmojis] = useState<string[]>(getRecentEmojis());
     const [frequentEmojis, setFrequentEmojis] = useState<string[]>(getFrequentEmojis());
+    const [favoriteEmojis, setFavoriteEmojis] = useState<string[]>(getFavoriteEmojis());
+    const [favoritesCollapsed, setFavoritesCollapsed] = useState(false);
     const [serverEmojis, setServerEmojis] = useState<ServerEmoji[]>([]);
     const [gifSearch, setGifSearch] = useState('');
     const { gifs, loading: gifsLoading } = useTenorGifs(activeTab === 'gif' ? gifSearch : '');
@@ -368,6 +392,43 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                             </div>
                         )}
 
+                        {/* Favorites */}
+                        {!searchLower && favoriteEmojis.length > 0 && (
+                            <div id="emoji-cat-favorites" style={{ padding: '0 12px', marginBottom: '12px' }}>
+                                <div
+                                    onClick={() => setFavoritesCollapsed(!favoritesCollapsed)}
+                                    style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px', letterSpacing: '0.5px', position: 'sticky', top: 0, background: 'var(--bg-elevated)', padding: '4px 0', zIndex: 1, cursor: 'pointer', userSelect: 'none' }}>
+                                    <Star size={12} fill="currentColor" /> Favorites
+                                    <span style={{ fontSize: '10px', opacity: 0.6, marginLeft: 'auto' }}>{favoritesCollapsed ? '+' : '-'}</span>
+                                </div>
+                                {!favoritesCollapsed && (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '2px' }}>
+                                        {favoriteEmojis.map((emoji, idx) => (
+                                            <button
+                                                key={`fav-${idx}`}
+                                                onClick={() => emoji.startsWith(':') ? handleSelectCustomEmoji(emoji.slice(1, -1)) : handleSelectEmoji(emoji)}
+                                                onContextMenu={(e) => { e.preventDefault(); setFavoriteEmojis(toggleFavoriteEmoji(emoji)); }}
+                                                style={{ width: '36px', height: '36px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.1s, transform 0.1s', position: 'relative' }}
+                                                onMouseOver={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.transform = 'scale(1.15)'; }}
+                                                onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'scale(1)'; }}
+                                                title="Right-click to remove from favorites"
+                                            >
+                                                {emoji.startsWith(':') ? (
+                                                    (() => {
+                                                        const name = emoji.slice(1, -1);
+                                                        const match = serverEmojis.find(e => e.name === name);
+                                                        return match
+                                                            ? <img src={match.url} alt={name} style={{ width: '26px', height: '26px', borderRadius: '4px', objectFit: 'contain' }} />
+                                                            : <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{emoji}</span>;
+                                                    })()
+                                                ) : emoji}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* Server Custom Emojis */}
                         {filteredServerEmojis.length > 0 && (
                             <div id="emoji-cat-server" style={{ padding: '0 12px', marginBottom: '12px' }}>
@@ -402,9 +463,11 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                                         <button
                                             key={`${cat.id}-${idx}`}
                                             onClick={() => emoji.startsWith(':') ? handleSelectCustomEmoji(emoji.slice(1, -1)) : handleSelectEmoji(emoji)}
-                                            style={{ width: '36px', height: '36px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.1s, transform 0.1s' }}
+                                            onContextMenu={(e) => { e.preventDefault(); setFavoriteEmojis(toggleFavoriteEmoji(emoji)); }}
+                                            style={{ width: '36px', height: '36px', background: 'transparent', border: 'none', borderRadius: '6px', fontSize: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.1s, transform 0.1s', position: 'relative' }}
                                             onMouseOver={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.transform = 'scale(1.15)'; }}
                                             onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'scale(1)'; }}
+                                            title={favoriteEmojis.includes(emoji) ? 'Right-click to unfavorite' : 'Right-click to favorite'}
                                         >
                                             {emoji.startsWith(':') ? (
                                                 (() => {
@@ -415,6 +478,9 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                                                         : <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{emoji}</span>;
                                                 })()
                                             ) : emoji}
+                                            {favoriteEmojis.includes(emoji) && (
+                                                <Star size={8} fill="var(--accent-primary)" color="var(--accent-primary)" style={{ position: 'absolute', top: '2px', right: '2px' }} />
+                                            )}
                                         </button>
                                     ))}
                                 </div>

@@ -108,11 +108,47 @@ export const GachaReveal: React.FC<GachaRevealProps> = ({ items, onClose }) => {
         setTimeout(() => setFireworks([]), 2500);
     }, []);
 
+    // Rarity-specific sound via Web Audio API
+    const playRarityTone = useCallback((rarity: string) => {
+        try {
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            gain.gain.setValueAtTime(0.15, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+
+            const freqs: Record<string, number[]> = {
+                Common: [440],
+                Uncommon: [523, 659],
+                Rare: [659, 784, 988],
+                Epic: [784, 988, 1175],
+                Legendary: [988, 1175, 1397, 1568],
+            };
+            const notes = freqs[rarity] ?? [440];
+            osc.frequency.setValueAtTime(notes[0], ctx.currentTime);
+            notes.forEach((freq, i) => {
+                if (i > 0) osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.15);
+            });
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.8);
+        } catch { /* Web Audio not available */ }
+    }, []);
+
     const flipCard = (index: number) => {
         if (!flippedCards.includes(index)) {
             setFlippedCards(prev => [...prev, index]);
             const item = items[index];
             playSound('gachaReveal');
+            playRarityTone(item.rarity);
+
+            if (item.rarity === 'Epic') {
+                // Purple lightning flash
+                setScreenFlashGold(true);
+                setTimeout(() => setScreenFlashGold(false), 400);
+            }
+
             if (item.rarity === 'Legendary') {
                 playSound('gachaLegendary');
                 setShowChromatic(true);
@@ -252,6 +288,9 @@ export const GachaReveal: React.FC<GachaRevealProps> = ({ items, onClose }) => {
                                         <div className="card-face card-back" style={{
                                             borderColor: rarityColor,
                                             ...(isLegendary && isFlipped ? { animation: 'legendaryCardGlow 2s infinite' } : {}),
+                                            ...(isEpic && isFlipped ? { boxShadow: `0 0 20px ${rarityColor}60, 0 10px 30px rgba(0,0,0,0.5)` } : {}),
+                                            ...(item.rarity === 'Rare' && isFlipped ? { boxShadow: `0 0 15px ${rarityColor}40, 0 10px 30px rgba(0,0,0,0.5)` } : {}),
+                                            ...(item.rarity === 'Uncommon' && isFlipped ? { boxShadow: `0 0 10px ${rarityColor}30, 0 10px 30px rgba(0,0,0,0.5)` } : {}),
                                         }}>
                                             {isLegendary && <div className="legendary-burst"></div>}
                                             {/* Card image */}

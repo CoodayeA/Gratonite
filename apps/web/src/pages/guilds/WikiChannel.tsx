@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useOutletContext, useParams } from 'react-router-dom';
-import { FileText, Folder, History, Edit3, Settings, Save, Plus, X, Check, Clock, User, Lock, Archive, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { FileText, Folder, History, Edit3, Settings, Save, Plus, X, Check, Clock, User, Lock, Archive, Eye, EyeOff, Loader2, Search } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { api } from '../../lib/api';
 
@@ -27,6 +27,9 @@ const WikiChannel = () => {
     const [revisionsLoading, setRevisionsLoading] = useState(false);
     const [pageSettings, setPageSettings] = useState<Record<string, { readOnly: boolean; archived: boolean; visible: boolean }>>({});
     const [draftContent, setDraftContent] = useState('');
+    const [wikiSearchQuery, setWikiSearchQuery] = useState('');
+    const [wikiSearchResults, setWikiSearchResults] = useState<Array<{ id: string; title: string; snippet: string; folder?: string }>>([]);
+    const [isSearching, setIsSearching] = useState(false);
 
     // Fetch wiki pages on mount / channel change
     useEffect(() => {
@@ -125,11 +128,48 @@ const WikiChannel = () => {
         }
     };
 
+    // Wiki search - debounced client-side search across pages
+    useEffect(() => {
+        if (!wikiSearchQuery.trim()) {
+            setWikiSearchResults([]);
+            setIsSearching(false);
+            return;
+        }
+        setIsSearching(true);
+        const timer = setTimeout(() => {
+            const q = wikiSearchQuery.trim().toLowerCase();
+            const results = pages
+                .filter(p => {
+                    const title = (p.title ?? '').toLowerCase();
+                    const content = (p.content ?? '').toLowerCase();
+                    return title.includes(q) || content.includes(q);
+                })
+                .map(p => {
+                    const content = p.content ?? '';
+                    const idx = content.toLowerCase().indexOf(q);
+                    let snippet = '';
+                    if (idx >= 0) {
+                        const start = Math.max(0, idx - 40);
+                        const end = Math.min(content.length, idx + q.length + 60);
+                        snippet = (start > 0 ? '...' : '') + content.slice(start, end) + (end < content.length ? '...' : '');
+                    } else {
+                        snippet = content.slice(0, 100) + (content.length > 100 ? '...' : '');
+                    }
+                    return { id: p.id, title: p.title, snippet, folder: p.folder ?? 'General' };
+                });
+            setWikiSearchResults(results);
+            setIsSearching(false);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [wikiSearchQuery, pages]);
+
     const handleSelectPage = (pageId: string) => {
         setSelectedPageId(pageId);
         setIsEditing(false);
         setShowHistory(false);
         setShowSettings(false);
+        setWikiSearchQuery('');
+        setWikiSearchResults([]);
         const page = pages.find(p => p.id === pageId);
         if (page) setDraftContent(page.content ?? '');
     };
@@ -150,7 +190,7 @@ const WikiChannel = () => {
             <main className={`main-view ${hasCustomBg ? 'has-custom-bg' : ''}`} style={{ alignItems: 'center', justifyContent: 'center' }}>
                 <p style={{ color: 'var(--error)', fontSize: '15px' }}>{error}</p>
                 <button
-                    onClick={() => { setError(null); setLoading(true); api.wiki.listPages(channelId!).then(setPages).catch(() => {}).finally(() => setLoading(false)); }}
+                    onClick={() => { setError(null); setLoading(true); api.wiki.listPages(channelId!).then(setPages).catch((err) => { console.error('Failed to reload wiki pages:', err); }).finally(() => setLoading(false)); }}
                     className="auth-button"
                     style={{ marginTop: '16px', width: 'auto', padding: '0 24px', height: '36px' }}
                 >
@@ -234,13 +274,76 @@ const WikiChannel = () => {
                     </div>
                 )}
 
+                {/* Wiki Search */}
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--stroke)' }}>
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        background: 'var(--bg-tertiary)', borderRadius: '6px', padding: '6px 10px',
+                        border: '1px solid var(--stroke)',
+                    }}>
+                        <Search size={14} color="var(--text-muted)" />
+                        <input
+                            type="text"
+                            placeholder="Search wiki..."
+                            value={wikiSearchQuery}
+                            onChange={e => setWikiSearchQuery(e.target.value)}
+                            style={{
+                                flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                                color: 'var(--text-primary)', fontSize: '13px',
+                            }}
+                        />
+                        {wikiSearchQuery && (
+                            <button onClick={() => { setWikiSearchQuery(''); setWikiSearchResults([]); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0, display: 'flex' }}>
+                                <X size={12} />
+                            </button>
+                        )}
+                    </div>
+                </div>
+
                 <div style={{ overflowY: 'auto', flex: 1, padding: '16px' }}>
-                    {pages.length === 0 && (
+                    {/* Search Results */}
+                    {wikiSearchQuery.trim() && (
+                        <div style={{ marginBottom: '16px' }}>
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>
+                                {isSearching ? 'Searching...' : `${wikiSearchResults.length} result${wikiSearchResults.length !== 1 ? 's' : ''}`}
+                            </div>
+                            {wikiSearchResults.map(result => (
+                                <div
+                                    key={result.id}
+                                    onClick={() => handleSelectPage(result.id)}
+                                    style={{
+                                        padding: '8px 12px', borderRadius: '6px', cursor: 'pointer',
+                                        marginBottom: '4px', background: 'var(--bg-tertiary)',
+                                        border: '1px solid var(--stroke)',
+                                    }}
+                                    onMouseOver={e => e.currentTarget.style.borderColor = 'var(--accent-primary)'}
+                                    onMouseOut={e => e.currentTarget.style.borderColor = 'var(--stroke)'}
+                                >
+                                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>
+                                        {result.title}
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                                        {result.folder}
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.4', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+                                        {result.snippet}
+                                    </div>
+                                </div>
+                            ))}
+                            {wikiSearchResults.length === 0 && !isSearching && (
+                                <div style={{ textAlign: 'center', padding: '12px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                                    No pages match your search.
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {!wikiSearchQuery.trim() && pages.length === 0 && (
                         <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', marginTop: '24px' }}>
                             No pages yet. Create the first one!
                         </p>
                     )}
-                    {FOLDERS.map(folder => {
+                    {!wikiSearchQuery.trim() && FOLDERS.map(folder => {
                         const folderPages = pages.filter(p => (p.folder ?? 'General') === folder);
                         if (folderPages.length === 0) return null;
                         return (
@@ -270,7 +373,7 @@ const WikiChannel = () => {
                         );
                     })}
                     {/* Pages without a matching folder */}
-                    {(() => {
+                    {!wikiSearchQuery.trim() && (() => {
                         const ungrouped = pages.filter(p => !FOLDERS.includes(p.folder ?? ''));
                         if (ungrouped.length === 0) return null;
                         return (

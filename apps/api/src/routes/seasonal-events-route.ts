@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, lte, gte } from 'drizzle-orm';
 import { db } from '../db/index';
 import { seasonalEvents, userEventProgress } from '../db/schema/seasonal-events';
@@ -14,7 +15,7 @@ seasonalEventsRouter.get('/events/active', requireAuth, async (req: Request, res
       .where(and(lte(seasonalEvents.startAt, now), gte(seasonalEvents.endAt, now)));
     res.json(active);
   } catch (err) {
-    console.error('[seasonal-events] GET active error:', err);
+    logger.error('[seasonal-events] GET active error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -28,7 +29,7 @@ seasonalEventsRouter.get('/events/:eventId/progress', requireAuth, async (req: R
       .where(and(eq(userEventProgress.userId, userId), eq(userEventProgress.eventId, eventId)));
     res.json(progress ?? { userId, eventId, points: 0, claimedRewards: [] });
   } catch (err) {
-    console.error('[seasonal-events] GET progress error:', err);
+    logger.error('[seasonal-events] GET progress error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -83,7 +84,7 @@ seasonalEventsRouter.post('/events/:eventId/claim', requireAuth, async (req: Req
 
     res.json({ userId, eventId, points: progress?.points ?? 0, claimedRewards: updatedRewards });
   } catch (err) {
-    console.error('[seasonal-events] POST claim error:', err);
+    logger.error('[seasonal-events] POST claim error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import { friendshipStreaks, friendshipMilestones } from '../db/schema/friendship-streaks';
@@ -28,7 +29,7 @@ friendshipStreaksRouter.get('/:friendId/streak', requireAuth, async (req: Reques
 
     res.json(streak);
   } catch (err) {
-    console.error('[friendship-streaks] GET streak error:', err);
+    logger.error('[friendship-streaks] GET streak error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -54,7 +55,7 @@ friendshipStreaksRouter.get('/streaks', requireAuth, async (req: Request, res: R
 
     res.json(rows.map(r => ({ ...r.streak, friend: r.friend })));
   } catch (err) {
-    console.error('[friendship-streaks] GET streaks error:', err);
+    logger.error('[friendship-streaks] GET streaks error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -74,7 +75,7 @@ friendshipStreaksRouter.get('/:friendId/milestones', requireAuth, async (req: Re
 
     res.json(rows);
   } catch (err) {
-    console.error('[friendship-streaks] GET milestones error:', err);
+    logger.error('[friendship-streaks] GET milestones error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -121,7 +122,7 @@ friendshipStreaksRouter.post('/:friendId/interact', requireAuth, async (req: Req
 
     res.json(streak);
   } catch (err) {
-    console.error('[friendship-streaks] POST interact error:', err);
+    logger.error('[friendship-streaks] POST interact error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

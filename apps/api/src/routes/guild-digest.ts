@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, gte, desc, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import { guildDigestConfig, guildDigests } from '../db/schema/guild-digest';
@@ -101,7 +102,7 @@ guildDigestRouter.get('/config', requireAuth, async (req: Request, res: Response
       .where(eq(guildDigestConfig.guildId, guildId)).limit(1);
     res.json(config || { guildId, targetChannelId: null, enabled: false, sections: ['top_messages', 'new_members', 'message_count', 'active_channels', 'active_members'], dayOfWeek: 1, lastSentAt: null });
   } catch (err) {
-    console.error('[guild-digest] GET config error:', err);
+    logger.error('[guild-digest] GET config error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -138,7 +139,7 @@ guildDigestRouter.put('/config', requireAuth, async (req: Request, res: Response
 
     res.json(upserted);
   } catch (err) {
-    console.error('[guild-digest] PUT config error:', err);
+    logger.error('[guild-digest] PUT config error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -150,7 +151,7 @@ guildDigestRouter.get('/preview', requireAuth, async (req: Request, res: Respons
     const content = await generateDigestContent(guildId);
     res.json(content);
   } catch (err) {
-    console.error('[guild-digest] GET preview error:', err);
+    logger.error('[guild-digest] GET preview error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -166,7 +167,7 @@ guildDigestRouter.get('/history', requireAuth, async (req: Request, res: Respons
       .limit(20);
     res.json(rows);
   } catch (err) {
-    console.error('[guild-digest] GET history error:', err);
+    logger.error('[guild-digest] GET history error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });

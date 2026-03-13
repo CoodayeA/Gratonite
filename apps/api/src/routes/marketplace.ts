@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { z } from 'zod';
 
 import { db } from '../db/index';
@@ -63,7 +64,7 @@ marketplaceRouter.post(
         createdAt: created.createdAt.toISOString(),
       });
     } catch (err) {
-      console.error('[marketplace] create listing error:', err);
+      logger.error('[marketplace] create listing error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },

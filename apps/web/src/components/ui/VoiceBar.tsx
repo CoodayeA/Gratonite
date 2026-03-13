@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mic, MicOff, Headphones, HeadphoneOff, PhoneOff } from 'lucide-react';
+import { Mic, MicOff, Headphones, HeadphoneOff, PhoneOff, Settings } from 'lucide-react';
 import { useVoice } from '../../contexts/VoiceContext';
 import { leaveVoiceSession } from '../../lib/voiceSession';
 
@@ -21,9 +21,10 @@ export default function VoiceBar() {
     await leaveVoiceSession({ clearVoiceState: leaveVoice });
   };
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const btnBase: React.CSSProperties = {
-    width: '40px',
-    height: '40px',
+    width: isMobile ? '48px' : '40px',
+    height: isMobile ? '48px' : '40px',
     borderRadius: '50%',
     border: 'none',
     display: 'flex',
@@ -31,6 +32,8 @@ export default function VoiceBar() {
     justifyContent: 'center',
     cursor: 'pointer',
     transition: 'background 0.15s, color 0.15s, transform 0.15s, box-shadow 0.15s',
+    minWidth: '48px', // Ensure minimum touch target
+    minHeight: '48px',
   };
 
   return (
@@ -103,7 +106,7 @@ export default function VoiceBar() {
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}>
-            {channelName} / {guildName}
+            {channelName} &middot; {guildName}
           </span>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import { tickets, ticketConfig } from '../db/schema/tickets';
@@ -18,7 +19,7 @@ ticketsRouter.get('/config', requireAuth, async (req: Request, res: Response): P
     const [config] = await db.select().from(ticketConfig).where(eq(ticketConfig.guildId, guildId)).limit(1);
     res.json(config || { guildId, categoryChannelId: null, supportRoleId: null, autoCloseHours: 48, greeting: 'A staff member will be with you shortly.' });
   } catch (err) {
-    console.error('[tickets] GET config error:', err);
+    logger.error('[tickets] GET config error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -41,7 +42,7 @@ ticketsRouter.put('/config', requireAuth, async (req: Request, res: Response): P
       .returning();
     res.json(upserted);
   } catch (err) {
-    console.error('[tickets] PUT config error:', err);
+    logger.error('[tickets] PUT config error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -79,7 +80,7 @@ ticketsRouter.get('/', requireAuth, async (req: Request, res: Response): Promise
 
     res.json(rows);
   } catch (err) {
-    console.error('[tickets] GET error:', err);
+    logger.error('[tickets] GET error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -129,7 +130,7 @@ ticketsRouter.post('/', requireAuth, async (req: Request, res: Response): Promis
 
     res.status(201).json({ ...ticket, channel });
   } catch (err) {
-    console.error('[tickets] POST error:', err);
+    logger.error('[tickets] POST error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -167,7 +168,7 @@ ticketsRouter.patch('/:id', requireAuth, async (req: Request, res: Response): Pr
     }
     res.json(updated);
   } catch (err) {
-    console.error('[tickets] PATCH error:', err);
+    logger.error('[tickets] PATCH error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -218,7 +219,7 @@ ticketsRouter.post('/:id/close', requireAuth, async (req: Request, res: Response
 
     res.json(closed);
   } catch (err) {
-    console.error('[tickets] POST close error:', err);
+    logger.error('[tickets] POST close error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });

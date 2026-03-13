@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import { logger } from './lib/logger';
 import http from 'http';
 import path from 'path';
 import cors from 'cors';
@@ -257,7 +258,7 @@ app.use('/api/v1', router);
 // ---------------------------------------------------------------------------
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error('Unhandled error:', err);
+  logger.error('Unhandled error:', err.message);
   res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
 });
 
@@ -297,7 +298,7 @@ server.listen(PORT, async () => {
       startFederationDiscoverSyncJob();
     }
   } catch (err) {
-    console.error('[federation] Failed to initialize:', err);
+    logger.error('[federation] Failed to initialize:', (err as Error).message);
   }
 
   // Update check runs regardless of federation status

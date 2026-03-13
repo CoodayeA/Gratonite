@@ -23,6 +23,7 @@
  */
 
 import path from 'path';
+import { logger } from '../lib/logger';
 import fs from 'fs';
 import { randomUUID } from 'crypto';
 
@@ -166,7 +167,7 @@ cosmeticsRouter.get(
 
       res.status(200).json(rows.map(cosmeticJson));
     } catch (err) {
-      console.error('[cosmetics] marketplace error:', err);
+      logger.error('[cosmetics] marketplace error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -189,7 +190,7 @@ cosmeticsRouter.get(
 
       res.status(200).json(rows.map(cosmeticJson));
     } catch (err) {
-      console.error('[cosmetics] mine error:', err);
+      logger.error('[cosmetics] mine error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -218,7 +219,7 @@ cosmeticsRouter.get(
 
       res.status(200).json(rows.map(cosmeticJson));
     } catch (err) {
-      console.error('[cosmetics] creator error:', err);
+      logger.error('[cosmetics] creator error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -254,7 +255,7 @@ cosmeticsRouter.get(
         rows.map((r) => ({ ...cosmeticJson(r.cosmetic), creator: r.creator })),
       );
     } catch (err) {
-      console.error('[cosmetics] admin pending error:', err);
+      logger.error('[cosmetics] admin pending error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -291,7 +292,7 @@ cosmeticsRouter.patch(
 
       res.status(200).json(cosmeticJson(updated));
     } catch (err) {
-      console.error('[cosmetics] admin approve error:', err);
+      logger.error('[cosmetics] admin approve error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -331,7 +332,7 @@ cosmeticsRouter.patch(
 
       res.status(200).json(cosmeticJson(updated));
     } catch (err) {
-      console.error('[cosmetics] admin reject error:', err);
+      logger.error('[cosmetics] admin reject error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -376,7 +377,7 @@ cosmeticsRouter.post(
 
       res.status(201).json(cosmeticJson(row));
     } catch (err) {
-      console.error('[cosmetics] create error:', err);
+      logger.error('[cosmetics] create error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -401,7 +402,7 @@ cosmeticsRouter.get(
 
       res.status(200).json(cosmeticJson(row));
     } catch (err) {
-      console.error('[cosmetics] get error:', err);
+      logger.error('[cosmetics] get error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -455,7 +456,7 @@ cosmeticsRouter.patch(
 
       res.status(200).json(cosmeticJson(updated));
     } catch (err) {
-      console.error('[cosmetics] update error:', err);
+      logger.error('[cosmetics] update error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -485,7 +486,7 @@ cosmeticsRouter.delete(
       await db.delete(cosmetics).where(eq(cosmetics.id, id));
       res.status(204).send();
     } catch (err) {
-      console.error('[cosmetics] delete error:', err);
+      logger.error('[cosmetics] delete error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -567,7 +568,7 @@ cosmeticsRouter.post(
 
       res.status(200).json({ assetUrl: updated.assetUrl });
     } catch (err) {
-      console.error('[cosmetics] upload error:', err);
+      logger.error('[cosmetics] upload error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -619,7 +620,7 @@ cosmeticsRouter.patch(
 
       res.status(200).json(cosmeticJson(updated));
     } catch (err) {
-      console.error('[cosmetics] submit error:', err);
+      logger.error('[cosmetics] submit error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -702,7 +703,7 @@ cosmeticsRouter.post(
         },
       });
     } catch (err) {
-      console.error('[cosmetics] purchase error:', err);
+      logger.error('[cosmetics] purchase error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -771,7 +772,7 @@ cosmeticsRouter.patch(
         name: cosmeticRow.name,
       });
     } catch (err) {
-      console.error('[cosmetics] equip error:', err);
+      logger.error('[cosmetics] equip error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -802,7 +803,7 @@ cosmeticsRouter.delete(
       await db.update(userCosmetics).set({ equipped: false }).where(eq(userCosmetics.id, uc.id));
       res.status(204).send();
     } catch (err) {
-      console.error('[cosmetics] unequip error:', err);
+      logger.error('[cosmetics] unequip error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -841,7 +842,7 @@ cosmeticsRouter.get(
         updatedAt: item.updatedAt.toISOString(),
       });
     } catch (err) {
-      console.error('[cosmetics] stats error:', err);
+      logger.error('[cosmetics] stats error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },

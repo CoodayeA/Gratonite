@@ -95,6 +95,7 @@ import { guildFormsRouter } from './guild-forms';
 import { confessionsRouter } from './confessions';
 import { federationRouter } from './federation';
 import { tasksRouter } from './tasks';
+import { profilesSocialRouter } from './profiles-social';
 
 export const router = Router();
 
@@ -316,3 +317,6 @@ router.use('/federation', federationRouter);
 
 // Task boards (Kanban per channel)
 router.use('/tasks', tasksRouter);
+
+// Stream 3: Profiles, Social & Economy
+router.use('/', profilesSocialRouter);

@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import { fameTransactions } from '../db/schema/fameTransactions';
@@ -130,7 +131,7 @@ fameRouter.post(
       const newCount = currentCount + 1;
       res.status(200).json({ success: true, fameGiven: newCount, remaining: DAILY_FAME_LIMIT - newCount });
     } catch (err) {
-      console.error('[fame] give error:', err);
+      logger.error('[fame] give error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -154,7 +155,7 @@ fameRouter.get(
       const used = row?.count ?? 0;
       res.json({ remaining: Math.max(0, DAILY_FAME_LIMIT - used), used });
     } catch (err) {
-      console.error('[fame] remaining error:', err);
+      logger.error('[fame] remaining error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -184,7 +185,7 @@ fameRouter.get(
         fameGiven: given?.count ?? 0,
       });
     } catch (err) {
-      console.error('[fame] stats error:', err);
+      logger.error('[fame] stats error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },

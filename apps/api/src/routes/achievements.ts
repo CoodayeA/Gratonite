@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 import { db } from '../db/index';
@@ -24,7 +25,7 @@ achievementsRouter.get('/users/@me/achievements', requireAuth, async (req: Reque
       }));
     res.json(result);
   } catch (err) {
-    console.error('[achievements] GET error:', err);
+    logger.error('[achievements] GET error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -88,6 +89,6 @@ export async function checkAchievements(userId: string, event: 'message_sent' | 
     }
   } catch (err) {
     // Non-critical — don't throw
-    console.error('checkAchievements error:', err);
+    logger.error('checkAchievements error:', err);
   }
 }

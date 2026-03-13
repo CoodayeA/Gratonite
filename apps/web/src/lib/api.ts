@@ -915,6 +915,18 @@ export const api = {
 
     removeFavorite: (channelId: string) =>
       apiFetch<void>(`/users/@me/favorites/${channelId}`, { method: 'DELETE' }),
+
+    // Sessions (login history)
+    getSessions: () =>
+      apiFetch<any[]>('/users/@me/sessions'),
+    revokeSession: (sessionId: string) =>
+      apiFetch<void>(`/users/@me/sessions/${sessionId}`, { method: 'DELETE' }),
+
+    // Data exports (GDPR)
+    getDataExports: () =>
+      apiFetch<any[]>('/users/@me/data-exports'),
+    requestDataExport: () =>
+      apiFetch<any>('/users/@me/data-exports', { method: 'POST', body: '{}' }),
   },
 
   profiles: {
@@ -1639,6 +1651,12 @@ export const api = {
 
     setDisappearTimer: (channelId: string, seconds: number | null) =>
       apiFetch<{ disappearTimer: number | null }>(`/channels/${channelId}/messages/disappear-timer`, { method: 'PATCH', body: JSON.stringify({ seconds }) }),
+
+    translate: (channelId: string, messageId: string, targetLang?: string) =>
+      apiFetch<{ translatedText: string; detectedLanguage: string }>(`/channels/${channelId}/messages/${messageId}/translate`, {
+        method: 'POST',
+        body: JSON.stringify({ targetLang: targetLang || 'en' }),
+      }),
   },
 
   search: {
@@ -2727,6 +2745,39 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({}),
       }),
+  },
+
+  // Stream 3: Profiles, Social & Economy
+  profileVisitors: {
+    record: (userId: string) =>
+      apiFetch<{ recorded: boolean }>(`/users/${userId}/profile-view`, { method: 'POST', body: '{}' }),
+    getVisitors: () => apiFetch<{ totalThisWeek: number; visitors: any[] }>('/users/me/profile-visitors'),
+  },
+
+  friendActivity: {
+    get: () => apiFetch<any[]>('/users/me/friend-activity'),
+  },
+
+  dailySpin: {
+    spin: () => apiFetch<{ reward: { type: string; amount: number; label: string } }>('/economy/daily-spin', { method: 'POST', body: '{}' }),
+  },
+
+  gifts: {
+    send: (itemId: string, recipientId: string) =>
+      apiFetch<{ success: boolean; giftedItem: string; price: number }>('/shop/gift', { method: 'POST', body: JSON.stringify({ itemId, recipientId }) }),
+  },
+
+  bundlePurchase: {
+    buy: (itemIds: string[]) =>
+      apiFetch<{ success: boolean; totalPrice: number; discountedPrice: number; savings: number; discount: number; wallet: { balance: number } }>('/shop/bundle-purchase', { method: 'POST', body: JSON.stringify({ itemIds }) }),
+  },
+
+  trades: {
+    propose: (data: { recipientId: string; proposerItems: any[]; recipientItems: any[]; proposerGratonites: number; recipientGratonites: number }) =>
+      apiFetch<any>('/trades/propose', { method: 'POST', body: JSON.stringify(data) }),
+    pending: () => apiFetch<any[]>('/trades/pending'),
+    accept: (tradeId: string) => apiFetch<any>(`/trades/${tradeId}/accept`, { method: 'POST', body: '{}' }),
+    reject: (tradeId: string) => apiFetch<any>(`/trades/${tradeId}/reject`, { method: 'POST', body: '{}' }),
   },
 
   // Generic helpers for custom endpoints not covered by typed methods above

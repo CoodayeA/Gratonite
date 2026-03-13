@@ -12,6 +12,7 @@
  */
 
 import path from 'path';
+import { logger } from '../lib/logger';
 import fs from 'fs';
 import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
@@ -89,7 +90,7 @@ function handleAppError(res: Response, err: unknown): void {
   } else if (err instanceof Error && err.message === 'File must be PNG, GIF, or JPEG') {
     res.status(400).json({ code: 'VALIDATION_ERROR', message: err.message });
   } else {
-    console.error('[emojis] unexpected error:', err);
+    logger.error('[emojis] unexpected error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 }

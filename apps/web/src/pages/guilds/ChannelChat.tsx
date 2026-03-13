@@ -6,7 +6,8 @@ import {
     Send, Smile, Image as ImageIcon, Reply, X, Play, Hash, Menu, ArrowLeft,
     Volume2, Trash2, Copy, Pin, Share2, Link2, FileText, Download,
     Pause, MessageSquare, MoreHorizontal, Square, Plus, Mic, BarChart2, Clock, Users,
-    ThumbsUp, Star, Flag, Edit2, Search, ChevronUp, ChevronDown, Eye, ChevronLeft, ChevronRight
+    ThumbsUp, Star, Flag, Edit2, Search, ChevronUp, ChevronDown, Eye, ChevronLeft, ChevronRight,
+    BookOpen
 } from 'lucide-react';
 import Skeleton from '../../components/ui/Skeleton';
 import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
@@ -22,6 +23,7 @@ import { markRead, setChannelHasUnread } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
 import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onMessageDeleteBulk, onReactionAdd, onReactionRemove, onChannelPinsUpdate, onSocketReconnect, onChannelBackgroundUpdated, onGroupKeyRotationNeeded, onThreadCreate, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type MessageDeleteBulkPayload, type ReactionPayload, type ChannelPinsUpdatePayload, type GroupKeyRotationNeededPayload } from '../../lib/socket';
 import Avatar from '../../components/ui/Avatar';
+import SwipeableMessage from '../../components/chat/SwipeableMessage';
 import { encrypt, decrypt, getOrCreateKeyPair, decryptGroupKey, generateGroupKey, encryptGroupKey, importPublicKey, encryptFile, decryptFile } from '../../lib/e2e';
 import { Lock, Loader2 as Loader2Icon } from 'lucide-react';
 
@@ -88,10 +90,14 @@ type Message = {
     encryptedContent?: string | null;
     expiresAt?: string | null;
     createdAt?: string | null;
+    widgetData?: { type: 'countdown' | 'progress' | 'server-stats' | 'weather'; data: any };
 };
 
 import { EmbedCard, OgEmbed } from '../../components/chat/EmbedCard';
 import ThreadPanel from '../../components/chat/ThreadPanel';
+import ThreadsPanel from '../../components/chat/ThreadsPanel';
+import EventCountdownBanner from '../../components/EventCountdownBanner';
+import EmbeddedWidget from '../../components/chat/EmbeddedWidget';
 import SoundboardMenu from '../../components/chat/SoundboardMenu';
 import { playSynthSound } from '../../lib/soundSynth';
 import EmojiPicker from '../../components/chat/EmojiPicker';
@@ -102,9 +108,15 @@ import { Tooltip } from '../../components/ui/Tooltip';
 import ForwardModal from '../../components/modals/ForwardModal';
 import EditHistoryPopover from '../../components/chat/EditHistoryPopover';
 import { MemberListPanel } from '../../components/guild/MemberListPanel';
+import { ReactionSummaryPopover } from '../../components/chat/ReactionSummaryPopover';
+import { SlowClapReaction } from '../../components/chat/SlowClapReaction';
+import { FormattingToolbar } from '../../components/chat/FormattingToolbar';
+import { ChannelWelcomeCard } from '../../components/chat/ChannelWelcomeCard';
+import { VoiceMessagePlayer } from '../../components/chat/VoiceMessagePlayer';
+import { Languages } from 'lucide-react';
 
 const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApiId, channelId, onReaction }: { emoji: string; emojiUrl?: string; isCustom?: boolean; count: number; me: boolean; messageApiId?: string; channelId?: string; onReaction?: (apiId: string, emoji: string, me: boolean) => void }) => {
-    const [tooltip, setTooltip] = useState<{ users: Array<{ displayName?: string; username: string }>; total: number } | null>(null);
+    const [tooltip, setTooltip] = useState<{ users: Array<{ id?: string; displayName?: string; username: string; avatarHash?: string | null }>; total: number } | null>(null);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const handleMouseEnter = () => {
@@ -116,7 +128,7 @@ const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApiId, cha
                 if (Array.isArray(data) && data.length > 0) {
                     setTooltip({ users: data.slice(0, 5), total: count });
                 }
-            }).catch(() => {});
+            }).catch((err) => { console.error('Failed to fetch reaction users:', err); });
         }, 300);
     };
 
@@ -125,23 +137,40 @@ const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApiId, cha
         setTooltip(null);
     };
 
+    const [showAllReactors, setShowAllReactors] = useState(false);
+
     return (
-        <button
-            onClick={() => onReaction?.(messageApiId!, emoji, me)}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '12px', background: me ? 'rgba(var(--accent-primary-rgb, 139,92,246), 0.15)' : 'var(--bg-tertiary)', border: `1px solid ${me ? 'var(--accent-primary)' : 'var(--stroke)'}`, cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'all 0.15s', position: 'relative' }}
-        >
-            {isCustom && emojiUrl ? <img src={emojiUrl} width={16} height={16} alt={emoji} style={{ verticalAlign: 'middle' }} /> : <span>{emoji}</span>} <span style={{ fontSize: '11px', fontWeight: 600 }}>{count}</span>
-            {tooltip && (
-                <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '6px 10px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', zIndex: 50, whiteSpace: 'nowrap', fontSize: '12px', color: 'var(--text-primary)', pointerEvents: 'none' }}>
-                    {tooltip.users.map((u, i) => (
-                        <span key={i}>{u.displayName || u.username}{i < tooltip.users.length - 1 ? ', ' : ''}</span>
-                    ))}
-                    {tooltip.total > 5 && <span style={{ color: 'var(--text-muted)' }}> and {tooltip.total - 5} more</span>}
-                </div>
+        <>
+            <button
+                onClick={() => onReaction?.(messageApiId!, emoji, me)}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '12px', background: me ? 'rgba(var(--accent-primary-rgb, 139,92,246), 0.15)' : 'var(--bg-tertiary)', border: `1px solid ${me ? 'var(--accent-primary)' : 'var(--stroke)'}`, cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'all 0.15s', position: 'relative' }}
+            >
+                {isCustom && emojiUrl ? <img src={emojiUrl} width={16} height={16} alt={emoji} style={{ verticalAlign: 'middle' }} /> : <span>{emoji}</span>} <span style={{ fontSize: '11px', fontWeight: 600 }}>{count}</span>
+                {tooltip && (
+                    <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '8px 10px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', zIndex: 50, minWidth: '120px', fontSize: '12px', color: 'var(--text-primary)', pointerEvents: 'auto' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {tooltip.users.map((u, i) => (
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Avatar userId={u.id || ''} displayName={u.displayName || u.username} avatarHash={u.avatarHash} size={20} />
+                                    <span style={{ whiteSpace: 'nowrap' }}>{u.displayName || u.username}</span>
+                                </div>
+                            ))}
+                        </div>
+                        {tooltip.total > 5 && (
+                            <div style={{ marginTop: '4px', color: 'var(--text-muted)', fontSize: '11px' }}>
+                                and {tooltip.total - 5} more...
+                                <button onClick={(e) => { e.stopPropagation(); setShowAllReactors(true); }} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '11px', padding: '0 4px', fontWeight: 600 }}>View all</button>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </button>
+            {showAllReactors && messageApiId && channelId && (
+                <ReactionSummaryPopover emoji={emoji} emojiUrl={emojiUrl} isCustom={isCustom} count={count} messageApiId={messageApiId} channelId={channelId} />
             )}
-        </button>
+        </>
     );
 };
 
@@ -182,6 +211,9 @@ const MemoizedMessageItem = memo(({
     const [showReactionPicker, setShowReactionPicker] = useState(false);
     const reactionPickerRef = useRef<HTMLDivElement>(null);
     const avatarRef = useRef<HTMLDivElement>(null);
+    const [translatedText, setTranslatedText] = useState<string | null>(null);
+    const [translatedLang, setTranslatedLang] = useState<string | null>(null);
+    const [translating, setTranslating] = useState(false);
 
     // Close reaction picker on click-outside
     useEffect(() => {
@@ -195,7 +227,7 @@ const MemoizedMessageItem = memo(({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [showReactionPicker]);
 
-    const quickReactions = ['👍', '❤️', '😂', '🔥', '👀', '🎉', '😮', '💯'];
+    const quickReactions = ['👍', '❤️', '😂', '🔥', '👀', '🎉', '😮', '💯', '\u{1F44F}'];
     // Use reactions from message props (persisted via API), fall back to empty
     const reactions: Array<{ emoji: string; emojiUrl?: string; isCustom?: boolean; count: number; me: boolean }> = msg.reactions || [];
 
@@ -395,7 +427,7 @@ const MemoizedMessageItem = memo(({
                         )}
                         {msg.type === 'voice' ? (
                             msg.attachments?.[0]?.url
-                                ? <VoicePlayer url={msg.attachments[0].url} duration={msg.duration} />
+                                ? <VoiceMessagePlayer url={msg.attachments[0].url} duration={msg.duration} />
                                 : <div style={{ background: 'var(--bg-tertiary)', padding: '8px 16px', borderRadius: '24px', display: 'inline-flex', alignItems: 'center', gap: '12px', marginTop: '4px', border: '1px solid var(--stroke)', color: 'var(--text-muted)', fontSize: '13px' }}>
                                     <Mic size={16} />
                                     <span>Voice message unavailable</span>
@@ -478,7 +510,31 @@ const MemoizedMessageItem = memo(({
                                     }
                                     if (isVideo) {
                                         return (
-                                            <video key={att.id} controls preload="metadata" src={displayUrl} style={{ maxWidth: '400px', borderRadius: '8px', display: 'block' }} />
+                                            <video
+                                                key={att.id}
+                                                controls
+                                                preload="metadata"
+                                                src={displayUrl}
+                                                style={{ maxWidth: '400px', borderRadius: '8px', display: 'block' }}
+                                                onPlay={(e) => {
+                                                    const video = e.currentTarget;
+                                                    if (document.pictureInPictureEnabled && !document.pictureInPictureElement) {
+                                                        // Set up IntersectionObserver for PiP
+                                                        const observer = new IntersectionObserver((entries) => {
+                                                            entries.forEach(entry => {
+                                                                if (!entry.isIntersecting && !video.paused && document.pictureInPictureEnabled) {
+                                                                    video.requestPictureInPicture().catch(() => {});
+                                                                }
+                                                            });
+                                                        }, { threshold: 0.5 });
+                                                        observer.observe(video);
+                                                        video.dataset.pipObserver = 'true';
+                                                        const cleanup = () => { observer.disconnect(); video.removeEventListener('pause', cleanup); video.removeEventListener('ended', cleanup); };
+                                                        video.addEventListener('pause', cleanup);
+                                                        video.addEventListener('ended', cleanup);
+                                                    }
+                                                }}
+                                            />
                                         );
                                     }
                                     if (isAudio) {
@@ -509,11 +565,30 @@ const MemoizedMessageItem = memo(({
                             </div>
                             );
                         })()}
+                        {/* Translated text */}
+                        {translatedText && (
+                            <div style={{
+                                marginTop: '6px', padding: '8px 12px',
+                                background: 'rgba(var(--accent-primary-rgb, 99,102,241), 0.08)',
+                                borderLeft: '3px solid var(--accent-primary)',
+                                borderRadius: '0 6px 6px 0',
+                                fontSize: '14px', fontStyle: 'italic',
+                                color: 'var(--text-secondary)', lineHeight: '1.5',
+                            }}>
+                                <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.5px' }}>
+                                    Translated from {translatedLang || 'Unknown'}
+                                </div>
+                                <RichTextRenderer content={translatedText} customEmojis={customEmojis} members={members} channels={channels} />
+                            </div>
+                        )}
                         {/* URL Embeds */}
                         {msg.embeds && msg.embeds.length > 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
                                 {msg.embeds.map((embed: OgEmbed, i: number) => <EmbedCard key={i} embed={embed} />)}
                             </div>
+                        )}
+                        {msg.widgetData && (
+                            <EmbeddedWidget type={msg.widgetData.type} data={msg.widgetData.data} />
                         )}
                         {/* Reaction badges */}
                         {reactions.length > 0 && (
@@ -523,18 +598,27 @@ const MemoizedMessageItem = memo(({
                                 ))}
                             </div>
                         )}
-                        {/* Thread reply count */}
+                        {/* Thread reply count — auto-collapse at 3+ */}
                         {(msg.threadReplyCount ?? 0) > 0 && (
                             <div
                                 style={{
                                     display: 'inline-flex', alignItems: 'center', gap: '5px',
                                     marginTop: '4px', cursor: 'pointer', color: 'var(--accent-primary)',
                                     fontSize: '12px', fontWeight: 600,
+                                    padding: '4px 8px',
+                                    background: (msg.threadReplyCount ?? 0) >= 3 ? 'rgba(var(--accent-primary-rgb, 99,102,241), 0.08)' : 'transparent',
+                                    borderRadius: '6px',
+                                    transition: 'background 0.15s',
                                 }}
                                 onClick={() => setActiveThreadMessage?.(msg)}
+                                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(var(--accent-primary-rgb, 99,102,241), 0.15)')}
+                                onMouseLeave={e => (e.currentTarget.style.background = (msg.threadReplyCount ?? 0) >= 3 ? 'rgba(var(--accent-primary-rgb, 99,102,241), 0.08)' : 'transparent')}
                             >
                                 <MessageSquare size={12} />
-                                {msg.threadReplyCount} {msg.threadReplyCount === 1 ? 'reply' : 'replies'}
+                                {(msg.threadReplyCount ?? 0) >= 3
+                                    ? `View ${msg.threadReplyCount} replies`
+                                    : `${msg.threadReplyCount} ${msg.threadReplyCount === 1 ? 'reply' : 'replies'}`
+                                }
                             </div>
                         )}
                     </div>
@@ -542,10 +626,14 @@ const MemoizedMessageItem = memo(({
                 {/* Reaction Picker Popup */}
                 {showReactionPicker && (
                     <div ref={reactionPickerRef} style={{ position: 'absolute', top: '-44px', right: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '20px', padding: '4px 8px', display: 'flex', gap: '2px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 20 }}>
-                        {quickReactions.map(emoji => (
-                            <button key={emoji} onClick={() => { onReaction?.(msg.apiId, emoji, false); setShowReactionPicker(false); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px 6px', borderRadius: '8px', transition: 'all 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                                {emoji}
-                            </button>
+                        {quickReactions.map(qEmoji => (
+                            qEmoji === '\u{1F44F}' ? (
+                                <SlowClapReaction key={qEmoji} onClap={() => { onReaction?.(msg.apiId, qEmoji, false); setShowReactionPicker(false); }} />
+                            ) : (
+                                <button key={qEmoji} onClick={() => { onReaction?.(msg.apiId, qEmoji, false); setShowReactionPicker(false); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px 6px', borderRadius: '8px', transition: 'all 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                                    {qEmoji}
+                                </button>
+                            )
                         ))}
                     </div>
                 )}
@@ -579,6 +667,35 @@ const MemoizedMessageItem = memo(({
                                     }}
                                 >
                                     <ThumbsUp size={16} fill={famGiven ? 'var(--warning)' : 'none'} />
+                                </button>
+                            </Tooltip>
+                        )}
+                        {!msg.system && msg.content && (
+                            <Tooltip content={translating ? 'Translating...' : (translatedText ? 'Show Original' : 'Translate')} position="top">
+                                <button
+                                    className="message-action-btn"
+                                    onClick={async (e) => {
+                                        e.stopPropagation();
+                                        if (translatedText) {
+                                            setTranslatedText(null);
+                                            setTranslatedLang(null);
+                                            return;
+                                        }
+                                        if (!msg.apiId || !msgChannelId || translating) return;
+                                        setTranslating(true);
+                                        try {
+                                            const result = await api.messages.translate(msgChannelId, msg.apiId);
+                                            setTranslatedText(result.translatedText);
+                                            setTranslatedLang(result.detectedLanguage);
+                                        } catch {
+                                            addToast?.({ title: 'Translation failed', variant: 'error' });
+                                        } finally {
+                                            setTranslating(false);
+                                        }
+                                    }}
+                                    style={{ opacity: translating ? 0.5 : 1 }}
+                                >
+                                    <Languages size={16} />
                                 </button>
                             </Tooltip>
                         )}
@@ -721,6 +838,8 @@ const ChannelChat = () => {
     // Image Lightbox State
     const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
     const [lightboxZoom, setLightboxZoom] = useState(1);
+    const [lightboxPan, setLightboxPan] = useState({ x: 0, y: 0 });
+    const lightboxDragRef = useRef<{ dragging: boolean; startX: number; startY: number; startPanX: number; startPanY: number }>({ dragging: false, startX: 0, startY: 0, startPanX: 0, startPanY: 0 });
 
     // Feature 5: Markdown Preview State
     const [showPreview, setShowPreview] = useState(false);
@@ -728,12 +847,19 @@ const ChannelChat = () => {
     // Feature 9: New Messages Divider — lastReadMessageId per channel
     const [lastReadMessageId, setLastReadMessageId] = useState<string | null>(null);
 
+    // Feature 12: Read Receipts — other users' read positions
+    const [otherReadStates, setOtherReadStates] = useState<{ userId: string; lastReadMessageId: string | null }[]>([]);
+    const showReadReceipts = (() => { try { return localStorage.getItem('gratonite:show-read-receipts') === 'true'; } catch { return false; } })();
+
     // Feature 13: Compact Mode State
     const [compactMode, setCompactMode] = useState(() => localStorage.getItem('messageDisplay') === 'compact');
 
     // Feature 19: Sticker Picker State
     const [stickerPickerOpen, setStickerPickerOpen] = useState(false);
     const [guildStickers, setGuildStickers] = useState<Array<{ id: string; name: string; url: string; packName?: string }>>([]);
+
+    // Formatting Toolbar State
+    const [showFormattingToolbar, setShowFormattingToolbar] = useState(false);
 
     // Member List Panel State
     const [memberListOpen, setMemberListOpen] = useState(() => localStorage.getItem('memberListOpen') !== 'false');
@@ -844,6 +970,7 @@ const ChannelChat = () => {
     const [currentUserId, setCurrentUserId] = useState('');
     const [currentUserAvatarHash, setCurrentUserAvatarHash] = useState<string | null>(null);
     const [channelName, setChannelName] = useState('general');
+    const [channelTopic, setChannelTopic] = useState<string | null>(null);
     const [rateLimitPerUser, setRateLimitPerUser] = useState(0);
     const [lastSentAt, setLastSentAt] = useState<number | null>(null);
     const [slowRemaining, setSlowRemaining] = useState(0);
@@ -897,7 +1024,9 @@ const ChannelChat = () => {
             } else {
                 setLastReadMessageId(null);
             }
-        }).catch(() => setLastReadMessageId(null));
+            // Feature 12: Store other users' read states for read receipts
+            setOtherReadStates(states.filter((s: any) => s.userId !== currentUserId).map((s: any) => ({ userId: s.userId, lastReadMessageId: s.lastReadMessageId })));
+        }).catch(() => { setLastReadMessageId(null); setOtherReadStates([]); });
     }, [channelId, currentUserId]);
 
     // Mark channel as read in client store on mount (server ack deferred until messages load)
@@ -955,6 +1084,12 @@ const ChannelChat = () => {
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'P') {
                 e.preventDefault();
                 setShowPreview(p => !p);
+                return;
+            }
+            // Ctrl+E: Toggle emoji picker
+            if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+                e.preventDefault();
+                setIsEmojiPickerOpen(prev => !prev);
                 return;
             }
             if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
@@ -1075,6 +1210,7 @@ const ChannelChat = () => {
         if (channelId) {
             api.channels.get(channelId).then(async (ch) => {
                 setChannelName(ch.name);
+                setChannelTopic((ch as any).topic || null);
                 setRateLimitPerUser((ch as any).rateLimitPerUser || 0);
                 setChannelIsEncrypted(!!(ch as any).isEncrypted);
                 setChannelAttachmentsEnabled((ch as any).attachmentsEnabled !== false);
@@ -1300,7 +1436,33 @@ const ChannelChat = () => {
     // Pinned Messages Panel State
     const [showPinnedPanel, setShowPinnedPanel] = useState(false);
     const [pinnedMessages, setPinnedMessages] = useState<any[]>([]);
+    const [pinBoardView, setPinBoardView] = useState(false);
+    const [showThreadsPanel, setShowThreadsPanel] = useState(false);
     const [isLoadingPins, setIsLoadingPins] = useState(false);
+
+    const handleAddToReadLater = useCallback(() => {
+        if (!channelId) return;
+        const STORAGE_KEY = 'gratonite-read-later-queue';
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            const items = saved ? JSON.parse(saved) : [];
+            if (items.some((i: any) => i.id === channelId)) {
+                addToast({ title: 'Already in Read Later', variant: 'info' });
+                return;
+            }
+            items.push({
+                id: channelId,
+                type: 'channel',
+                channelId,
+                channelName,
+                guildId,
+                addedAt: new Date().toISOString(),
+                unreadCount: 0,
+            });
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+            addToast({ title: 'Added to Read Later', variant: 'success' });
+        } catch {}
+    }, [channelId, channelName, guildId, addToast]);
 
     const loadPinnedMessages = useCallback(async () => {
         if (!channelId) return;
@@ -1468,13 +1630,13 @@ const ChannelChat = () => {
             } else {
                 setHasDraft(false);
             }
-        }).catch(() => {});
+        }).catch((err) => { console.error('Failed to load draft:', err); });
         // Load scheduled messages
         fetch(`${API_BASE}/channels/${channelId}/messages/scheduled`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
         }).then(r => r.ok ? r.json() : []).then(data => {
             setScheduledMessages(Array.isArray(data) ? data : []);
-        }).catch(() => {});
+        }).catch((err) => { console.error('Failed to load scheduled messages:', err); });
     }, [channelId]);
 
     // Load older messages when scrolling to top
@@ -1571,7 +1733,7 @@ const ChannelChat = () => {
         if (!guildId) { setGuildChannelsList([]); return; }
         api.channels.getGuildChannels(guildId).then((channels: any[]) => {
             setGuildChannelsList(channels.map((c: any) => ({ id: c.id, name: c.name, type: c.type })));
-        }).catch(() => {});
+        }).catch((err) => { console.error('Failed to load guild channels:', err); });
     }, [guildId]);
 
     // Fetch slash commands for this guild
@@ -1581,7 +1743,7 @@ const ChannelChat = () => {
             if (Array.isArray(cmds)) {
                 setGuildCommands(cmds.map((c: any) => ({ id: c.id, name: c.name, description: c.description || '', options: c.options })));
             }
-        }).catch(() => {});
+        }).catch((err) => { console.error('Failed to load guild commands:', err); });
     }, [guildId]);
 
     // Feature 19: Fetch guild stickers
@@ -1598,7 +1760,7 @@ const ChannelChat = () => {
                     packName: s.packName || 'Stickers',
                 })).filter((s: any) => s.url));
             }
-        }).catch(() => {});
+        }).catch((err) => { console.error('Failed to load stickers:', err); });
     }, [guildId]);
 
     // Fetch guild custom emojis for :name: rendering in messages
@@ -1609,7 +1771,7 @@ const ChannelChat = () => {
                 name: e.name,
                 url: e.imageHash ? `${API_BASE}/files/${e.imageHash}` : '',
             })).filter((e: { name: string; url: string }) => e.url));
-        }).catch(() => {});
+        }).catch((err) => { console.error('Failed to load custom emojis:', err); });
     }, [guildId]);
 
     const STANDARD_EMOJIS = [
@@ -1634,10 +1796,25 @@ const ChannelChat = () => {
         emojiSearch !== null && e.name.toLowerCase().includes(emojiSearch.toLowerCase())
     );
 
-    const filteredUsers = guildMembers.filter(u =>
-        mentionSearch !== null &&
-        (u.username.toLowerCase().includes(mentionSearch.toLowerCase()) || u.displayName.toLowerCase().includes(mentionSearch.toLowerCase()))
-    );
+    const filteredUsers = React.useMemo(() => {
+        if (mentionSearch === null) return [];
+        const search = mentionSearch.toLowerCase();
+        const matching = guildMembers.filter(u =>
+            u.username.toLowerCase().includes(search) || u.displayName.toLowerCase().includes(search)
+        );
+        // Smart sort: recently active in channel first, then alphabetical
+        const recentAuthorIds = new Set<string>();
+        // Use last 50 messages to determine "recently active" users
+        for (let i = messages.length - 1; i >= Math.max(0, messages.length - 50); i--) {
+            if (messages[i].authorId) recentAuthorIds.add(messages[i].authorId!);
+        }
+        return matching.sort((a, b) => {
+            const aRecent = recentAuthorIds.has(a.id) ? 0 : 1;
+            const bRecent = recentAuthorIds.has(b.id) ? 0 : 1;
+            if (aRecent !== bRecent) return aRecent - bRecent;
+            return a.displayName.localeCompare(b.displayName);
+        });
+    }, [guildMembers, mentionSearch, messages]);
 
     const filteredChannels = guildChannelsList.filter(c =>
         channelSearch !== null &&
@@ -1707,6 +1884,7 @@ const ChannelChat = () => {
         setForwardingMessage(null);
         setLightboxUrl(null);
         setLightboxZoom(1);
+        setLightboxPan({ x: 0, y: 0 });
         setShowPinnedPanel(false);
         setPinnedMessages([]);
         setShowSearchBar(false);
@@ -2418,7 +2596,7 @@ const ChannelChat = () => {
         setSlashSearch(null);
         // If command has no options, send it immediately
         if (!cmd.options || cmd.options.length === 0) {
-            api.messages.send(channelId!, { content: `/${cmd.name}` }).catch(() => {});
+            api.messages.send(channelId!, { content: `/${cmd.name}` }).catch((err) => { console.error('Failed to send slash command:', err); addToast({ title: 'Failed to send command', variant: 'error' }); });
             setInputValue('');
         }
     };
@@ -2718,24 +2896,42 @@ const ChannelChat = () => {
         >
             {/* Drag & Drop Overlay */}
             {isDragOver && (
-                <div style={{
-                    position: 'absolute', inset: 0, zIndex: 100,
-                    background: 'rgba(0,0,0,0.5)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    pointerEvents: 'none',
-                    border: '3px dashed var(--accent-primary)',
-                    borderRadius: '8px',
-                }}>
-                    <div style={{
-                        background: 'var(--bg-elevated)', padding: '24px 40px',
-                        borderRadius: '12px', textAlign: 'center',
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-                    }}>
-                        <ImageIcon size={40} style={{ color: 'var(--accent-primary)', marginBottom: '8px' }} />
-                        <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>Drop files to upload</div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Files will be attached to your message</div>
-                    </div>
-                </div>
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    style={{
+                        position: 'absolute', inset: 0, zIndex: 100,
+                        background: 'rgba(0,0,0,0.6)',
+                        backdropFilter: 'blur(4px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        pointerEvents: 'none',
+                        border: '3px dashed var(--accent-primary)',
+                        borderRadius: '8px',
+                    }}
+                >
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                        style={{
+                            background: 'var(--bg-elevated)', padding: '32px 48px',
+                            borderRadius: '16px', textAlign: 'center',
+                            boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+                            border: '1px solid var(--stroke)',
+                        }}
+                    >
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '12px' }}>
+                            <ImageIcon size={28} style={{ color: 'var(--accent-primary)' }} />
+                            <FileText size={28} style={{ color: 'var(--accent-blue, #3b82f6)' }} />
+                            <Play size={28} style={{ color: 'var(--accent-purple, #8b5cf6)' }} />
+                            <Volume2 size={28} style={{ color: 'var(--success, #22c55e)' }} />
+                        </div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>Drop files to upload</div>
+                        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '6px' }}>Images, videos, audio, documents</div>
+                    </motion.div>
+                </motion.div>
             )}
             <EmojiRain active={isHypeMode} />
             <BackgroundMedia media={bgMedia} />
@@ -2761,7 +2957,11 @@ const ChannelChat = () => {
 
                 <Hash size={24} className="desktop-hash-icon" style={{ color: 'var(--text-muted)' }} />
                 <h2>{channelName}</h2>
-                {channelIsEncrypted && <span title="End-to-end encrypted"><Lock size={14} style={{ color: 'var(--success, #22c55e)', marginLeft: '4px' }} /></span>}
+                {channelIsEncrypted && (
+                    <span title="End-to-end encrypted" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '8px', padding: '2px 8px', borderRadius: '10px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)', fontSize: '11px', fontWeight: 600, color: '#22c55e' }}>
+                        <Lock size={12} /> Encrypted
+                    </span>
+                )}
 
                 <div style={{ flex: 1 }}></div>
 
@@ -2780,6 +2980,24 @@ const ChannelChat = () => {
                         style={{ cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center', gap: '4px' }}
                     >
                         <Pin size={18} style={{ color: showPinnedPanel ? 'var(--accent-primary)' : 'var(--text-secondary)' }} />
+                    </div>
+
+                    <div
+                        className="action-icon-btn hidden-on-mobile"
+                        onClick={() => setShowThreadsPanel(!showThreadsPanel)}
+                        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        title="Threads"
+                    >
+                        <MessageSquare size={18} style={{ color: showThreadsPanel ? 'var(--accent-primary)' : 'var(--text-secondary)' }} />
+                    </div>
+
+                    <div
+                        className="action-icon-btn hidden-on-mobile"
+                        onClick={handleAddToReadLater}
+                        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        title="Read Later"
+                    >
+                        <BookOpen size={18} style={{ color: 'var(--text-secondary)' }} />
                     </div>
 
                     <TopBarActions />
@@ -2805,6 +3023,8 @@ const ChannelChat = () => {
                     </div>
                 </div>
             </header>
+
+            {guildId && <EventCountdownBanner guildId={guildId} />}
 
             {/* Ctrl+F Search Bar */}
             {showSearchBar && (
@@ -2923,6 +3143,10 @@ const ChannelChat = () => {
                 </button>
             )}
             <div ref={parentRef} className="message-area" role="log" aria-label={`Messages in #${channelName}`} aria-live="polite" style={{ overflowY: 'auto', zIndex: 2, position: 'relative' }}>
+                {/* Channel Welcome Card */}
+                {channelId && !isLoadingMessages && (
+                    <ChannelWelcomeCard channelId={channelId} channelName={channelName} topic={channelTopic} />
+                )}
                 {!isLoadingMessages && messages.length === 0 && (
                     <EmptyState
                         type="chat"
@@ -2975,6 +3199,7 @@ const ChannelChat = () => {
                                         ...(msg.apiId && selectedMessages.has(msg.apiId) ? { background: 'rgba(88, 101, 242, 0.15)', borderLeft: '3px solid var(--accent-primary, #5865f2)' } : {}),
                                     }}
                                 >
+                                    <SwipeableMessage onSwipeRight={() => !msg.system && msg.apiId && setReplyingTo({ id: msg.apiId, author: msg.author, content: msg.content })} disabled={msg.system}>
                                     <MemoizedMessageItem
                                         msg={msg}
                                         prevMsg={prevMsg}
@@ -3011,6 +3236,31 @@ const ChannelChat = () => {
                                         isNewMessageDivider={!!(lastReadMessageId && prevMsg?.apiId === lastReadMessageId && msg.apiId !== lastReadMessageId)}
                                         decryptedFileUrls={decryptedFileUrls}
                                     />
+                                    </SwipeableMessage>
+                                    {/* Feature 12: Read Receipt Dots */}
+                                    {showReadReceipts && msg.apiId && (() => {
+                                        const nextMsg = messages[virtualRow.index + 1];
+                                        const readers = otherReadStates.filter(s => s.lastReadMessageId === msg.apiId);
+                                        if (readers.length === 0) return null;
+                                        const readerMembers = readers.map(r => guildMembers.find(m => m.id === r.userId)).filter(Boolean);
+                                        if (readerMembers.length === 0) return null;
+                                        return (
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '2px 8px 0', gap: '2px' }}>
+                                                {readerMembers.slice(0, 5).map((member: any) => (
+                                                    <img
+                                                        key={member.id}
+                                                        src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.displayName || member.username)}&size=24&background=5865f2&color=fff`}
+                                                        alt={member.displayName || member.username}
+                                                        title={`Read by ${member.displayName || member.username}`}
+                                                        style={{ width: '12px', height: '12px', borderRadius: '50%', objectFit: 'cover' }}
+                                                    />
+                                                ))}
+                                                {readerMembers.length > 5 && (
+                                                    <span style={{ fontSize: '9px', color: 'var(--text-muted)', lineHeight: '12px' }}>+{readerMembers.length - 5}</span>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             );
                         })}
@@ -3065,12 +3315,26 @@ const ChannelChat = () => {
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between'
                     }}>
                         <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Pinned Messages</h3>
-                        <button onClick={() => setShowPinnedPanel(false)} style={{
-                            background: 'transparent', border: 'none', cursor: 'pointer',
-                            color: 'var(--text-muted)', padding: '4px', borderRadius: '4px'
-                        }}>
-                            <X size={18} />
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <button
+                                onClick={() => setPinBoardView(!pinBoardView)}
+                                title={pinBoardView ? 'List View' : 'Board View'}
+                                style={{
+                                    background: pinBoardView ? 'var(--bg-tertiary)' : 'transparent',
+                                    border: '1px solid var(--stroke)', cursor: 'pointer',
+                                    color: pinBoardView ? 'var(--accent-primary)' : 'var(--text-muted)',
+                                    padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center',
+                                }}
+                            >
+                                <Square size={16} />
+                            </button>
+                            <button onClick={() => setShowPinnedPanel(false)} style={{
+                                background: 'transparent', border: 'none', cursor: 'pointer',
+                                color: 'var(--text-muted)', padding: '4px', borderRadius: '4px'
+                            }}>
+                                <X size={18} />
+                            </button>
+                        </div>
                     </div>
                     <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
                         {isLoadingPins ? (
@@ -3083,7 +3347,49 @@ const ChannelChat = () => {
                                 <p style={{ fontWeight: 600 }}>No pinned messages</p>
                                 <p style={{ fontSize: '13px' }}>Pin important messages to keep them here.</p>
                             </div>
+                        ) : pinBoardView ? (
+                            /* Board/Grid View */
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px' }}>
+                                {pinnedMessages.map((pin: any) => (
+                                    <div key={pin.id} style={{
+                                        padding: '10px', borderRadius: '10px',
+                                        background: 'var(--bg-primary)', border: '1px solid var(--stroke)',
+                                        cursor: 'pointer', display: 'flex', flexDirection: 'column',
+                                        transition: 'border-color 0.15s',
+                                    }}
+                                    onClick={() => {
+                                        setShowPinnedPanel(false);
+                                        const msgEl = document.querySelector(`[data-message-id="${pin.id}"]`);
+                                        if (msgEl) {
+                                            msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                            const localMsg = messages.find(m => m.apiId === pin.id);
+                                            if (localMsg) { setHighlightedMessageId(localMsg.id); setTimeout(() => setHighlightedMessageId(null), 2500); }
+                                        }
+                                    }}
+                                    onMouseOver={e => e.currentTarget.style.borderColor = 'var(--accent-primary)'}
+                                    onMouseOut={e => e.currentTarget.style.borderColor = 'var(--stroke)'}
+                                    >
+                                        {pin.attachments?.[0]?.url && (
+                                            <div style={{ width: '100%', height: '80px', borderRadius: '6px', background: 'var(--bg-tertiary)', marginBottom: '8px', overflow: 'hidden' }}>
+                                                <img src={pin.attachments[0].url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => (e.currentTarget.style.display = 'none')} />
+                                            </div>
+                                        )}
+                                        <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-primary)', lineHeight: '1.4', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' as any, flex: 1 }}>
+                                            {pin.content || '(attachment)'}
+                                        </p>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px', fontSize: '10px', color: 'var(--text-muted)' }}>
+                                            <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', fontWeight: 600 }}>
+                                                {(pin.author?.displayName || pin.author?.username || '?').charAt(0).toUpperCase()}
+                                            </div>
+                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {pin.author?.displayName || pin.author?.username || 'Unknown'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         ) : (
+                            /* List View */
                             pinnedMessages.map((pin: any) => (
                                 <div key={pin.id} style={{
                                     padding: '12px', margin: '4px 0', borderRadius: 'var(--radius-sm)',
@@ -3096,10 +3402,7 @@ const ChannelChat = () => {
                                     if (msgEl) {
                                         msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                         const localMsg = messages.find(m => m.apiId === pin.id);
-                                        if (localMsg) {
-                                            setHighlightedMessageId(localMsg.id);
-                                            setTimeout(() => setHighlightedMessageId(null), 2500);
-                                        }
+                                        if (localMsg) { setHighlightedMessageId(localMsg.id); setTimeout(() => setHighlightedMessageId(null), 2500); }
                                     }
                                 }}
                                 >
@@ -3143,6 +3446,19 @@ const ChannelChat = () => {
                     </div>
                 </div>
             )}
+
+            {/* Threads Panel */}
+            {showThreadsPanel && channelId && (
+                <ThreadsPanel
+                    channelId={channelId}
+                    onClose={() => setShowThreadsPanel(false)}
+                    onThreadSelect={(threadId) => {
+                        const msg = messages.find(m => m.apiId === threadId);
+                        if (msg) setActiveThreadMessage(msg);
+                        setShowThreadsPanel(false);
+                    }}
+                />
+            )}
             </div>{/* end content area wrapper */}
 
             <div className="input-area" style={{ zIndex: 2, position: 'relative' }}>
@@ -3158,6 +3474,11 @@ const ChannelChat = () => {
                 )}
                 {typingUsers.size > 0 && (
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', paddingLeft: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ display: 'flex', gap: '2px', alignItems: 'center', flexShrink: 0 }}>
+                            {[...typingUsers.entries()].slice(0, 3).map(([userId, uname]) => (
+                                <Avatar key={userId} userId={userId} displayName={uname} size={18} />
+                            ))}
+                        </span>
                         <span style={{ display: 'flex', gap: '4px' }}>
                             <span className="typing-dot" style={{ animationDelay: '0ms' }}></span>
                             <span className="typing-dot" style={{ animationDelay: '150ms' }}></span>
@@ -3276,6 +3597,17 @@ const ChannelChat = () => {
                             Preview
                         </div>
                         <RichTextRenderer content={inputValue} customEmojis={guildCustomEmojis} members={guildMembers} channels={guildChannelsList} />
+                    </div>
+                )}
+
+                {/* Formatting Toolbar */}
+                {showFormattingToolbar && !editingMessage && (
+                    <div style={{ margin: '0 16px' }}>
+                        <FormattingToolbar
+                            textareaSelector=".chat-input"
+                            onInputChange={setInputValue}
+                            getValue={() => inputValue}
+                        />
                     </div>
                 )}
 
@@ -3438,6 +3770,14 @@ const ChannelChat = () => {
                             <button className="input-icon-btn" title="Record Voice Note" aria-label="Record voice note" onClick={startRecording}>
                                 <Mic size={20} />
                             </button>
+                            {/* Formatting Toolbar Toggle */}
+                            <button
+                                className={`input-icon-btn ${showFormattingToolbar ? 'primary' : ''}`}
+                                title="Toggle Formatting Toolbar"
+                                onClick={() => setShowFormattingToolbar(p => !p)}
+                            >
+                                <Edit2 size={16} />
+                            </button>
                             {/* Feature 5: Markdown Preview Toggle */}
                             <button
                                 className={`input-icon-btn ${showPreview ? 'primary' : ''}`}
@@ -3448,8 +3788,9 @@ const ChannelChat = () => {
                             </button>
                             {inputValue.trim().length === 0 && (
                                 <>
-                                    <button className={`input-icon-btn ${isEmojiPickerOpen ? 'primary' : ''}`} title="Select Emoji" aria-label="Open emoji picker" onClick={() => { setIsEmojiPickerOpen(!isEmojiPickerOpen); setStickerPickerOpen(false); }}>
+                                    <button className={`input-icon-btn ${isEmojiPickerOpen ? 'primary' : ''}`} title="Select Emoji" aria-label="Open emoji picker" onClick={() => { setIsEmojiPickerOpen(!isEmojiPickerOpen); setStickerPickerOpen(false); }} style={{ position: 'relative' }}>
                                         <Smile size={20} />
+                                        <span className="shortcut-hint" style={{ position: 'absolute', bottom: '-14px', left: '50%', transform: 'translateX(-50%)', fontSize: '9px', color: 'var(--text-muted)', opacity: 0.4, whiteSpace: 'nowrap', pointerEvents: 'none', fontWeight: 500 }}>Ctrl+E</span>
                                     </button>
                                     {/* Feature 19: Sticker Picker Button */}
                                     <button className={`input-icon-btn ${stickerPickerOpen ? 'primary' : ''}`} title="Sticker Picker" onClick={() => { setStickerPickerOpen(!stickerPickerOpen); setIsEmojiPickerOpen(false); }}>
@@ -3479,8 +3820,10 @@ const ChannelChat = () => {
                                         className="input-icon-btn primary"
                                         aria-label="Send message"
                                         onClick={editingMessage ? handleEditSubmit : handleSendMessage}
+                                        style={{ position: 'relative' }}
                                     >
                                         <Send size={18} />
+                                        <span className="shortcut-hint" style={{ position: 'absolute', bottom: '-14px', left: '50%', transform: 'translateX(-50%)', fontSize: '9px', color: 'var(--text-muted)', opacity: 0.4, whiteSpace: 'nowrap', pointerEvents: 'none', fontWeight: 500 }}>Enter</span>
                                     </button>
                                 </div>
                             )}
@@ -3845,6 +4188,7 @@ const ChannelChat = () => {
                     const nextIdx = (currentIndex + dir + allImageUrls.length) % allImageUrls.length;
                     setLightboxUrl(allImageUrls[nextIdx]);
                     setLightboxZoom(1);
+                    setLightboxPan({ x: 0, y: 0 });
                 };
 
                 return (
@@ -3859,6 +4203,7 @@ const ChannelChat = () => {
                         ref={(el) => el?.focus()}
                         style={{
                             position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
+                            backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             zIndex: 9000, cursor: 'zoom-out', outline: 'none',
                         }}
@@ -3936,15 +4281,40 @@ const ChannelChat = () => {
                             onClick={e => e.stopPropagation()}
                             onWheel={(e) => {
                                 e.stopPropagation();
-                                setLightboxZoom(prev => Math.max(0.5, Math.min(5, prev + (e.deltaY < 0 ? 0.25 : -0.25))));
+                                const newZoom = Math.max(0.5, Math.min(5, lightboxZoom + (e.deltaY < 0 ? 0.25 : -0.25)));
+                                setLightboxZoom(newZoom);
+                                if (newZoom <= 1) setLightboxPan({ x: 0, y: 0 });
+                            }}
+                            onMouseDown={(e) => {
+                                if (lightboxZoom > 1) {
+                                    e.preventDefault();
+                                    lightboxDragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, startPanX: lightboxPan.x, startPanY: lightboxPan.y };
+                                }
+                            }}
+                            onMouseMove={(e) => {
+                                if (lightboxDragRef.current.dragging) {
+                                    const dx = e.clientX - lightboxDragRef.current.startX;
+                                    const dy = e.clientY - lightboxDragRef.current.startY;
+                                    setLightboxPan({ x: lightboxDragRef.current.startPanX + dx, y: lightboxDragRef.current.startPanY + dy });
+                                }
+                            }}
+                            onMouseUp={() => { lightboxDragRef.current.dragging = false; }}
+                            onMouseLeave={() => { lightboxDragRef.current.dragging = false; }}
+                            onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                if (lightboxZoom > 1) { setLightboxZoom(1); setLightboxPan({ x: 0, y: 0 }); }
+                                else { setLightboxZoom(2); }
                             }}
                             style={{
                                 maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain',
-                                borderRadius: '8px', cursor: 'default',
+                                borderRadius: '8px',
+                                cursor: lightboxZoom > 1 ? (lightboxDragRef.current.dragging ? 'grabbing' : 'grab') : 'zoom-in',
                                 boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
-                                transform: `scale(${lightboxZoom})`,
-                                transition: 'transform 0.15s ease-out',
+                                transform: `scale(${lightboxZoom}) translate(${lightboxPan.x / lightboxZoom}px, ${lightboxPan.y / lightboxZoom}px)`,
+                                transition: lightboxDragRef.current.dragging ? 'none' : 'transform 0.15s ease-out',
+                                userSelect: 'none',
                             }}
+                            draggable={false}
                         />
                     </div>
                 );

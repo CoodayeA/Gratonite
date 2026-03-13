@@ -10,6 +10,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, desc, asc, gt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -133,7 +134,7 @@ auctionsRouter.post(
 
       res.status(201).json(auctionJson(auction));
     } catch (err) {
-      console.error('[auctions] create error:', err);
+      logger.error('[auctions] create error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -210,7 +211,7 @@ auctionsRouter.get(
         })),
       );
     } catch (err) {
-      console.error('[auctions] list error:', err);
+      logger.error('[auctions] list error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -250,7 +251,7 @@ auctionsRouter.get(
         })),
       );
     } catch (err) {
-      console.error('[auctions] me/selling error:', err);
+      logger.error('[auctions] me/selling error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -303,7 +304,7 @@ auctionsRouter.get(
         })),
       );
     } catch (err) {
-      console.error('[auctions] me/bids error:', err);
+      logger.error('[auctions] me/bids error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -367,7 +368,7 @@ auctionsRouter.get(
         })),
       });
     } catch (err) {
-      console.error('[auctions] get error:', err);
+      logger.error('[auctions] get error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -585,7 +586,7 @@ auctionsRouter.post(
           return;
         }
       }
-      console.error('[auctions] bid error:', err);
+      logger.error('[auctions] bid error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -637,7 +638,7 @@ auctionsRouter.delete(
 
       res.status(200).json(auctionJson(updated));
     } catch (err) {
-      console.error('[auctions] cancel error:', err);
+      logger.error('[auctions] cancel error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },

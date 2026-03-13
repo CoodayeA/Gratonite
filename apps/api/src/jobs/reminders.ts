@@ -1,4 +1,5 @@
 import { db } from '../db/index';
+import { logger } from '../lib/logger';
 import { messageReminders } from '../db/schema/message-reminders';
 import { messages } from '../db/schema/messages';
 import { lte, and, eq } from 'drizzle-orm';
@@ -41,11 +42,11 @@ export function startRemindersJob() {
             });
           } catch { /* socket not ready */ }
         } catch (err) {
-          console.error('[reminders] Error firing reminder:', err);
+          logger.error('[reminders] Error firing reminder:', err);
         }
       }
     } catch (err) {
-      console.error('[reminders] Job error:', err);
+      logger.error('[reminders] Job error:', err);
     }
   }, 30_000);
 }
