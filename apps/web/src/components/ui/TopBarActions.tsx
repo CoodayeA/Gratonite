@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Bell, Search, HelpCircle, X, Users, MessageSquare, Hash, Loader2, Trash2 } from 'lucide-react';
+import { useDebounce } from '../../hooks/useDebounce';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from './ToastManager';
 import { api } from '../../lib/api';
@@ -29,7 +30,7 @@ export const TopBarActions = () => {
     const popupRef = useRef<HTMLDivElement>(null);
     const searchRef = useRef<HTMLDivElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
-    const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -50,24 +51,27 @@ export const TopBarActions = () => {
         }
     }, [searchOpen]);
 
+    // Show loading indicator while debouncing
+    useEffect(() => {
+        if (searchQuery.trim() && searchQuery !== debouncedSearchQuery) setSearching(true);
+    }, [searchQuery, debouncedSearchQuery]);
+
     // Debounced search
     useEffect(() => {
-        if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-
-        if (!searchQuery.trim()) {
+        if (!debouncedSearchQuery.trim()) {
             setSearchResults([]);
             setSearching(false);
             return;
         }
 
         setSearching(true);
-        searchTimerRef.current = setTimeout(async () => {
+        let cancelled = false;
+        (async () => {
             const results: SearchResult[] = [];
             try {
-                // Search users and messages in parallel
                 const [users, messages] = await Promise.all([
-                    api.users.searchUsers(searchQuery).catch(() => []),
-                    api.search.messages({ query: searchQuery, limit: 10 }).catch(() => ({ results: [] })),
+                    api.users.searchUsers(debouncedSearchQuery).catch(() => []),
+                    api.search.messages({ query: debouncedSearchQuery, limit: 10 }).catch(() => ({ results: [] })),
                 ]);
 
                 for (const u of users.slice(0, 5)) {
@@ -93,14 +97,15 @@ export const TopBarActions = () => {
                     });
                 }
             } catch {
-                addToast({ title: 'Search failed', variant: 'error' });
+                if (!cancelled) addToast({ title: 'Search failed', variant: 'error' });
             }
-            setSearchResults(results);
-            setSearching(false);
-        }, 300);
-
-        return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
-    }, [searchQuery]);
+            if (!cancelled) {
+                setSearchResults(results);
+                setSearching(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [debouncedSearchQuery]);
 
     // Unread notification count – fetched on mount, updated via socket
     const [unreadCount, setUnreadCount] = useState(0);

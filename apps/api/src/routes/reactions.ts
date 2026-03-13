@@ -9,6 +9,7 @@ import { guildEmojis } from '../db/schema/emojis';
 import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
 import { getIO } from '../lib/socket-io';
+import { incrementChallengeProgress } from './daily-challenges';
 
 export const reactionsRouter = Router({ mergeParams: true });
 
@@ -37,6 +38,10 @@ reactionsRouter.put(
         messageId, channelId, userId: req.userId!, emoji: decodedEmoji,
       });
     } catch {}
+
+    // Daily challenge progress (fire-and-forget)
+    incrementChallengeProgress(req.userId!, 'react_to_messages');
+    incrementChallengeProgress(req.userId!, 'send_reactions');
 
     res.json({ code: 'OK' });
   },

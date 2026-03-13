@@ -125,6 +125,8 @@ const updateChannelSchema = z.object({
   attachmentsEnabled: z.boolean().optional(),
   permissionSynced: z.boolean().optional(),
   parentId: z.string().uuid().nullable().optional(),
+  archived: z.boolean().optional(),
+  autoArchiveDays: z.number().int().min(0).max(365).nullable().optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -493,7 +495,7 @@ channelsRouter.patch(
         throw new AppError(403, 'Missing MANAGE_CHANNELS permission', 'FORBIDDEN');
       }
 
-      const { name, topic, isNsfw, rateLimitPerUser, position, backgroundUrl, backgroundType, linkedTextChannelId, isAnnouncement, forumTags, isEncrypted, attachmentsEnabled, permissionSynced, parentId } = req.body as z.infer<
+      const { name, topic, isNsfw, rateLimitPerUser, position, backgroundUrl, backgroundType, linkedTextChannelId, isAnnouncement, forumTags, isEncrypted, attachmentsEnabled, permissionSynced, parentId, archived, autoArchiveDays } = req.body as z.infer<
         typeof updateChannelSchema
       >;
 
@@ -512,6 +514,8 @@ channelsRouter.patch(
       if (attachmentsEnabled !== undefined) updateData.attachmentsEnabled = attachmentsEnabled;
       if (permissionSynced !== undefined) updateData.permissionSynced = permissionSynced;
       if (parentId !== undefined) updateData.parentId = parentId;
+      if (archived !== undefined) updateData.archived = archived;
+      if (autoArchiveDays !== undefined) updateData.autoArchiveDays = autoArchiveDays;
 
       const [updated] = await db
         .update(channels)

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Hash, MessageSquare, Settings, Users, Command, CornerDownLeft, Globe, User, Clock, Volume2 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useDebounce } from '../../hooks/useDebounce';
 
 type CommandItem = {
     id: string;
@@ -96,8 +97,8 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
     const [recentActionIds, setRecentActionIds] = useState<string[]>(getRecentActions());
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
-    const userSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const navigate = useNavigate();
+    const debouncedQuery = useDebounce(query, 300);
 
     // Load channels for all guilds on mount
     useEffect(() => {
@@ -119,29 +120,34 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
         if (guilds.length > 0) loadChannels();
     }, [isOpen, guilds, channelCache.length]);
 
+    // Show loading indicator while debouncing
+    useEffect(() => {
+        const rawQuery = query.startsWith('>') ? query.slice(1).trim() : query;
+        if (rawQuery.trim().length >= 2 && query !== debouncedQuery) setUserSearchLoading(true);
+    }, [query, debouncedQuery]);
+
     // Debounced user search
     useEffect(() => {
-        if (userSearchTimer.current) clearTimeout(userSearchTimer.current);
-        const rawQuery = query.startsWith('>') ? query.slice(1).trim() : query;
+        const rawQuery = debouncedQuery.startsWith('>') ? debouncedQuery.slice(1).trim() : debouncedQuery;
         if (!rawQuery.trim() || rawQuery.trim().length < 2) {
             setUserResults([]);
+            setUserSearchLoading(false);
             return;
         }
         setUserSearchLoading(true);
-        userSearchTimer.current = setTimeout(async () => {
+        let cancelled = false;
+        (async () => {
             try {
                 const results = await api.users.searchUsers(rawQuery.trim());
-                setUserResults(results);
+                if (!cancelled) setUserResults(results);
             } catch {
-                setUserResults([]);
+                if (!cancelled) setUserResults([]);
             } finally {
-                setUserSearchLoading(false);
+                if (!cancelled) setUserSearchLoading(false);
             }
-        }, 300);
-        return () => {
-            if (userSearchTimer.current) clearTimeout(userSearchTimer.current);
-        };
-    }, [query]);
+        })();
+        return () => { cancelled = true; };
+    }, [debouncedQuery]);
 
     const wrapAction = useCallback((id: string, action: () => void) => {
         return () => {

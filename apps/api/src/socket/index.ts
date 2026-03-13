@@ -537,6 +537,92 @@ export function initSocket(io: SocketIOServer): void {
     });
 
     // -------------------------------------------------------------------------
+    // WATCH_PARTY_SYNC — host broadcasts play/pause/seek to all viewers
+    // -------------------------------------------------------------------------
+    socket.on('WATCH_PARTY_SYNC', (data: { channelId: string; partyId: string; action: 'play' | 'pause' | 'seek'; currentTime: number }) => {
+      if (!data?.channelId || !data?.partyId || !data?.action) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      socket.to(`channel:${data.channelId}`).emit('WATCH_PARTY_SYNC', {
+        channelId: data.channelId,
+        partyId: data.partyId,
+        action: data.action,
+        currentTime: data.currentTime ?? 0,
+        userId,
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // WATCH_PARTY_REACTION — emoji reactions during watch party
+    // -------------------------------------------------------------------------
+    socket.on('WATCH_PARTY_REACTION', (data: { channelId: string; emoji: string }) => {
+      if (!data?.channelId || !data?.emoji) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      socket.to(`channel:${data.channelId}`).emit('WATCH_PARTY_REACTION', {
+        channelId: data.channelId,
+        emoji: String(data.emoji).slice(0, 4),
+        userId,
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // PLAYLIST_UPDATE — real-time playlist queue changes
+    // -------------------------------------------------------------------------
+    socket.on('PLAYLIST_UPDATE', (data: { channelId: string; playlistId: string; action: string; track?: any }) => {
+      if (!data?.channelId || !data?.playlistId) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      socket.to(`channel:${data.channelId}`).emit('PLAYLIST_UPDATE', {
+        channelId: data.channelId,
+        playlistId: data.playlistId,
+        action: data.action,
+        track: data.track || null,
+        userId,
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // PLAYLIST_VOTE — real-time vote to skip
+    // -------------------------------------------------------------------------
+    socket.on('PLAYLIST_VOTE', (data: { channelId: string; trackId: string; vote: 'skip' | 'keep' }) => {
+      if (!data?.channelId || !data?.trackId) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      io.to(`channel:${data.channelId}`).emit('PLAYLIST_VOTE', {
+        channelId: data.channelId,
+        trackId: data.trackId,
+        vote: data.vote,
+        userId,
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // SCREEN_ANNOTATION — draw/highlight events on shared screen
+    // -------------------------------------------------------------------------
+    socket.on('SCREEN_ANNOTATION', (data: { channelId: string; tool: string; points: number[]; color: string; width: number; id: string }) => {
+      if (!data?.channelId || !data?.points) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      socket.to(`channel:${data.channelId}`).emit('SCREEN_ANNOTATION', {
+        channelId: data.channelId,
+        tool: data.tool,
+        points: data.points,
+        color: data.color,
+        width: data.width,
+        id: data.id,
+        userId,
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // SCREEN_ANNOTATION_CLEAR — clear annotations
+    // -------------------------------------------------------------------------
+    socket.on('SCREEN_ANNOTATION_CLEAR', (data: { channelId: string }) => {
+      if (!data?.channelId) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      io.to(`channel:${data.channelId}`).emit('SCREEN_ANNOTATION_CLEAR', {
+        channelId: data.channelId,
+        userId,
+      });
+    });
+
+    // -------------------------------------------------------------------------
     // Disconnect handler
     // -------------------------------------------------------------------------
     socket.on('disconnect', async () => {

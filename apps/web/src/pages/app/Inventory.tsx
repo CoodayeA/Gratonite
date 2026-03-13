@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Archive, LayoutTemplate, Check, ShoppingBag, Store, Sparkles, Crown, Star, Gem, Shield, Tag, Music, Wallet, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
+import { Archive, LayoutTemplate, Check, ShoppingBag, Store, Sparkles, Crown, Star, Gem, Shield, Tag, Music, Wallet, TrendingUp, TrendingDown, ArrowRight, Eye, X } from 'lucide-react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import Skeleton from '../../components/ui/Skeleton';
 import { TiltCard, RippleWrapper } from '../../components/ui/Physics';
 import { useToast } from '../../components/ui/ToastManager';
 import { api } from '../../lib/api';
 import { applyEquippedItem, clearEquippedItem } from '../../lib/cosmetics';
+import { useUser } from '../../contexts/UserContext';
+import Avatar from '../../components/ui/Avatar';
 
 
 /* ------------------------------------------------------------------ */
@@ -87,11 +89,13 @@ const Inventory = () => {
     const { hasCustomBg, userProfile, setUserProfile } = useOutletContext<any>();
     const navigate = useNavigate();
     const { addToast } = useToast();
+    const { user } = useUser();
     const [activeTab, setActiveTab] = useState<TabKey>('all');
     const [inventory, setInventory] = useState<ApiInventoryItem[]>([]);
     const [justSaved, setJustSaved] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [equippingId, setEquippingId] = useState<string | null>(null);
+    const [previewItem, setPreviewItem] = useState<ApiInventoryItem | null>(null);
     const [walletData, setWalletData] = useState<{ balance: number; lifetimeEarned: number; lifetimeSpent: number } | null>(null);
     const [ledger, setLedger] = useState<Array<{ id: string; direction: string; amount: number; source: string; description: string | null; createdAt: string }>>([]);
     const [walletLoading, setWalletLoading] = useState(false);
@@ -826,12 +830,28 @@ const Inventory = () => {
                                                         {item.type.replace(/_/g, ' ')}
                                                     </span>
                                                 </div>
-                                                <div style={{ marginTop: '8px' }}>
+                                                <div style={{ marginTop: '8px', display: 'flex', gap: '4px' }}>
+                                                    <button
+                                                        onClick={e => { e.stopPropagation(); setPreviewItem(item); }}
+                                                        style={{
+                                                            flex: '0 0 auto', padding: '6px 8px',
+                                                            borderRadius: '6px', border: 'none',
+                                                            background: 'var(--bg-tertiary)',
+                                                            color: 'var(--text-muted)',
+                                                            fontWeight: 600, fontSize: '11px',
+                                                            cursor: 'pointer',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                            transition: 'all 0.2s ease',
+                                                        }}
+                                                        title="Preview"
+                                                    >
+                                                        <Eye size={11} />
+                                                    </button>
                                                     <button
                                                         onClick={e => { e.stopPropagation(); handleEquip(item); }}
                                                         disabled={!!equippingId}
                                                         style={{
-                                                            width: '100%', padding: '6px 0',
+                                                            flex: 1, padding: '6px 0',
                                                             borderRadius: '6px', border: 'none',
                                                             background: item.equipped
                                                                 ? 'rgba(16,185,129,0.15)'
@@ -856,6 +876,102 @@ const Inventory = () => {
                 </div>
 
             </div>
+
+            {/* Cosmetic Preview in Chat Modal */}
+            {previewItem && (() => {
+                const cfg = (previewItem.assetConfig ?? {}) as Record<string, unknown>;
+                const frameStyle = cfg.frameStyle as string | undefined;
+                const glowColor = (cfg.glowColor as string | undefined) ?? 'var(--accent-primary)';
+                const effectType = cfg.effectType as string | undefined;
+                const nameplateStyleVal = cfg.nameplateStyle as string | undefined;
+
+                const getFrameCSS = (): React.CSSProperties => {
+                    switch (frameStyle) {
+                        case 'neon': return { border: `3px solid ${glowColor}`, boxShadow: `0 0 10px ${glowColor}, 0 0 20px ${glowColor}60` };
+                        case 'gold': return { border: '3px solid #ffd700', boxShadow: '0 0 10px #ffd70060' };
+                        case 'glass': return { border: '3px solid rgba(255,255,255,0.3)', boxShadow: '0 0 10px rgba(255,255,255,0.15)' };
+                        case 'rainbow': return { border: '3px solid transparent', backgroundImage: `linear-gradient(var(--bg-primary), var(--bg-primary)), linear-gradient(90deg, #ff0000, #ff7700, #ffff00, #00ff00, #0000ff, #8b00ff)`, backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box' };
+                        case 'pulse': return { border: `3px solid ${glowColor}`, animation: 'inv-pulse-ring 2s ease-in-out infinite', boxShadow: `0 0 10px ${glowColor}80` };
+                        case 'fire': return { border: '3px solid #ff6b35', boxShadow: '0 0 10px #ff6b3580', animation: 'inv-pulse-ring 1.5s ease-in-out infinite' };
+                        case 'glitch': return { border: '3px solid #00ffff', boxShadow: '0 0 10px #00ffff80, -2px 0 6px #ff00ff40', animation: 'inv-pulse-ring 2s steps(4) infinite' };
+                        default: return { border: `3px solid ${glowColor}`, boxShadow: `0 0 10px ${glowColor}60` };
+                    }
+                };
+
+                const getEffectOverlay = (): React.CSSProperties | null => {
+                    switch (effectType) {
+                        case 'sparkle': return { background: `radial-gradient(circle at 30% 20%, ${glowColor}30 0%, transparent 50%), radial-gradient(circle at 70% 80%, ${glowColor}20 0%, transparent 40%)` };
+                        case 'glow': return { background: `radial-gradient(circle at center, ${glowColor}15 0%, transparent 70%)` };
+                        case 'particles': return { background: `radial-gradient(circle at 20% 30%, ${glowColor}20 0%, transparent 30%), radial-gradient(circle at 80% 70%, ${glowColor}15 0%, transparent 25%), radial-gradient(circle at 50% 10%, ${glowColor}10 0%, transparent 20%)` };
+                        default: return null;
+                    }
+                };
+
+                const nameplateCSS: React.CSSProperties = previewItem.type === 'nameplate' && nameplateStyleVal ? {
+                    background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary, #a855f7))',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    fontFamily: 'var(--font-display)',
+                } : {};
+
+                const effectOverlay = previewItem.type === 'profile_effect' ? getEffectOverlay() : null;
+
+                const renderMessageBubble = (label: string, withCosmetic: boolean) => (
+                    <div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
+                        <div style={{ background: 'var(--bg-primary)', borderRadius: '12px', padding: '12px', position: 'relative', overflow: 'hidden' }}>
+                            {withCosmetic && effectOverlay && (
+                                <div style={{ position: 'absolute', inset: 0, ...effectOverlay, pointerEvents: 'none', zIndex: 1 }} />
+                            )}
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', position: 'relative', zIndex: 2 }}>
+                                <div style={{ position: 'relative', flexShrink: 0 }}>
+                                    <Avatar userId={user.id} avatarHash={user.avatarHash} displayName={user.name} size={36} />
+                                    {withCosmetic && previewItem.type === 'avatar_frame' && (
+                                        <div style={{ position: 'absolute', inset: -4, borderRadius: '50%', ...getFrameCSS(), pointerEvents: 'none' }} />
+                                    )}
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '2px' }}>
+                                        <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)', ...(withCosmetic ? nameplateCSS : {}) }}>
+                                            {user.name || 'You'}
+                                        </span>
+                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Today at 12:00 PM</span>
+                                    </div>
+                                    <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                                        This is what your messages will look like!
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+
+                return (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setPreviewItem(null)}>
+                        <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-elevated)', borderRadius: '16px', border: '1px solid var(--stroke)', padding: '32px', width: '520px', maxWidth: '95vw' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Preview: {previewItem.name}</h3>
+                                <button onClick={() => setPreviewItem(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}><X size={18} /></button>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                                {renderMessageBubble('Current', false)}
+                                {renderMessageBubble(`With ${previewItem.name}`, true)}
+                            </div>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button onClick={() => setPreviewItem(null)} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}>Close</button>
+                                <button
+                                    onClick={() => { handleEquip(previewItem); setPreviewItem(null); }}
+                                    disabled={!!equippingId}
+                                    style={{ flex: 1, padding: '10px', borderRadius: '8px', background: previewItem.equipped ? 'rgba(239,68,68,0.15)' : 'var(--accent-primary)', border: 'none', color: previewItem.equipped ? '#ef4444' : '#000', fontWeight: 700, cursor: 'pointer' }}
+                                >
+                                    {previewItem.equipped ? 'Unequip' : 'Equip'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </main>
     );
 };

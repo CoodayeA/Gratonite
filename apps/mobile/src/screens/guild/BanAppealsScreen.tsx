@@ -35,17 +35,23 @@ export default function BanAppealsScreen({ route, navigation }: Props) {
   const [appeals, setAppeals] = useState<BanAppeal[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchAppeals = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await moderationApi.getBanAppeals(guildId);
       setAppeals(data);
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      if (err.status !== 401) {
+        const message = err.message || 'Failed to load ban appeals';
+        setLoadError(message);
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
     }
-  }, [guildId]);
+  }, [guildId, toast]);
 
   useEffect(() => {
     fetchAppeals();
@@ -247,6 +253,27 @@ export default function BanAppealsScreen({ route, navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && appeals.length === 0) {
+    return (
+      <PatternBackground>
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl, gap: spacing.md }]}>
+          <Ionicons name="alert-circle-outline" size={56} color={colors.accentPrimary} />
+          <Text style={[styles.username, { fontSize: fontSize.xl, textAlign: 'center' }]}>Failed to load ban appeals</Text>
+          <Text style={[styles.reasonText, { textAlign: 'center' }]}>{loadError}</Text>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.acceptButton, { flex: 0, minWidth: 140 }]}
+            onPress={() => {
+              setLoading(true);
+              fetchAppeals();
+            }}
+          >
+            <Text style={styles.acceptButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>

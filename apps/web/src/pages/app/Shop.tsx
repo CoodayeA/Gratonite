@@ -6,6 +6,7 @@ import { useToast } from '../../components/ui/ToastManager';
 import { TiltCard, RippleWrapper, MagneticButton } from '../../components/ui/Physics';
 import { api } from '../../lib/api';
 import { applyEquippedItem } from '../../lib/cosmetics';
+import { useUser } from '../../contexts/UserContext';
 import Avatar from '../../components/ui/Avatar';
 
 type ViewType = 'frames' | 'decorations' | 'effects' | 'nameplates';
@@ -58,6 +59,7 @@ const Shop = () => {
     const { gratoniteBalance, setGratoniteBalance } = useOutletContext<any>();
     const navigate = useNavigate();
     const { addToast } = useToast();
+    const { user } = useUser();
     const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
     const [purchaseState, setPurchaseState] = useState<'idle' | 'confirming' | 'processing' | 'success' | 'insufficient'>('idle');
     const [isLoading, setIsLoading] = useState(true);
@@ -674,28 +676,98 @@ const Shop = () => {
                 </div>
             )}
 
-            {/* Cosmetic Preview */}
-            {previewItem && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setPreviewItem(null)}>
-                    <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-elevated)', borderRadius: '16px', border: '1px solid var(--stroke)', padding: '32px', width: '440px', textAlign: 'center' }}>
-                        <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>Preview: {previewItem.name}</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
-                            <div>
-                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600 }}>CURRENT</div>
-                                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', margin: '0 auto' }} />
+            {/* Cosmetic Preview in Chat */}
+            {previewItem && (() => {
+                const previewColor = previewItem.color ?? 'var(--accent-primary)';
+                const cfg = previewItem.assetConfig ?? {};
+                const frameStyle = (cfg as any)?.frameStyle as string | undefined;
+                const glowColor = (cfg as any)?.glowColor as string | undefined ?? previewColor;
+                const effectType = (cfg as any)?.effectType as string | undefined;
+
+                const getFrameCSS = (): React.CSSProperties => {
+                    switch (frameStyle) {
+                        case 'neon': return { border: `3px solid ${glowColor}`, boxShadow: `0 0 10px ${glowColor}, 0 0 20px ${glowColor}60` };
+                        case 'gold': return { border: '3px solid #ffd700', boxShadow: '0 0 10px #ffd70060' };
+                        case 'glass': return { border: '3px solid rgba(255,255,255,0.3)', boxShadow: '0 0 10px rgba(255,255,255,0.15)' };
+                        case 'rainbow': return { border: '3px solid transparent', backgroundImage: `linear-gradient(var(--bg-primary), var(--bg-primary)), linear-gradient(90deg, #ff0000, #ff7700, #ffff00, #00ff00, #0000ff, #8b00ff)`, backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box' };
+                        case 'pulse': return { border: `3px solid ${glowColor}`, animation: 'shop-pulse-glow 2s ease-in-out infinite', boxShadow: `0 0 10px ${glowColor}80` };
+                        case 'fire': return { border: '3px solid #ff6b35', boxShadow: '0 0 10px #ff6b3580', animation: 'shop-pulse-glow 1.5s ease-in-out infinite' };
+                        case 'glitch': return { border: '3px solid #00ffff', boxShadow: '0 0 10px #00ffff80, -2px 0 6px #ff00ff40', animation: 'shop-pulse-glow 2s steps(4) infinite' };
+                        default: return { border: `3px solid ${glowColor}`, boxShadow: `0 0 10px ${glowColor}60` };
+                    }
+                };
+
+                const getEffectOverlay = (): React.CSSProperties | null => {
+                    switch (effectType) {
+                        case 'sparkle': return { background: `radial-gradient(circle at 30% 20%, ${glowColor}30 0%, transparent 50%), radial-gradient(circle at 70% 80%, ${glowColor}20 0%, transparent 40%)` };
+                        case 'glow': return { background: `radial-gradient(circle at center, ${glowColor}15 0%, transparent 70%)` };
+                        case 'particles': return { background: `radial-gradient(circle at 20% 30%, ${glowColor}20 0%, transparent 30%), radial-gradient(circle at 80% 70%, ${glowColor}15 0%, transparent 25%), radial-gradient(circle at 50% 10%, ${glowColor}10 0%, transparent 20%)` };
+                        default: return null;
+                    }
+                };
+
+                const nameplateStyle: React.CSSProperties = previewItem.type === 'nameplate' ? {
+                    background: previewItem.nameplateGradient,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    fontFamily: previewItem.nameplateFont ?? 'var(--font-display)',
+                } : {};
+
+                const effectOverlay = previewItem.type === 'effect' ? getEffectOverlay() : null;
+
+                const renderMessageBubble = (label: string, withCosmetic: boolean) => (
+                    <div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
+                        <div style={{ background: 'var(--bg-primary)', borderRadius: '12px', padding: '12px', position: 'relative', overflow: 'hidden' }}>
+                            {withCosmetic && effectOverlay && (
+                                <div style={{ position: 'absolute', inset: 0, ...effectOverlay, pointerEvents: 'none', zIndex: 1 }} />
+                            )}
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', position: 'relative', zIndex: 2 }}>
+                                <div style={{ position: 'relative', flexShrink: 0 }}>
+                                    <Avatar userId={user.id} avatarHash={user.avatarHash} displayName={user.name} size={36} />
+                                    {withCosmetic && previewItem.type === 'frame' && (
+                                        <div style={{ position: 'absolute', inset: -4, borderRadius: '50%', ...getFrameCSS(), pointerEvents: 'none' }} />
+                                    )}
+                                    {withCosmetic && previewItem.type === 'decoration' && previewItem.decorationEmoji && (
+                                        <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', fontSize: '14px', pointerEvents: 'none' }}>{previewItem.decorationEmoji}</div>
+                                    )}
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '2px' }}>
+                                        <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)', ...(withCosmetic ? nameplateStyle : {}) }}>
+                                            {user.name || 'You'}
+                                        </span>
+                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Today at 12:00 PM</span>
+                                    </div>
+                                    <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                                        This is what your messages will look like!
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600 }}>PREVIEW</div>
-                                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', margin: '0 auto', border: `3px solid ${previewItem.color ?? 'var(--accent-primary)'}`, boxShadow: `0 0 16px ${previewItem.color ?? 'var(--accent-primary)'}60` }} />
-                            </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <button onClick={() => setPreviewItem(null)} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}>Remove Preview</button>
-                            <button onClick={() => { openModal(previewItem); setPreviewItem(null); }} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 700, cursor: 'pointer' }}>Buy & Apply</button>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+
+                return (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setPreviewItem(null)}>
+                        <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-elevated)', borderRadius: '16px', border: '1px solid var(--stroke)', padding: '32px', width: '520px', maxWidth: '95vw' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Preview: {previewItem.name}</h3>
+                                <button onClick={() => setPreviewItem(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}><X size={18} /></button>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                                {renderMessageBubble('Current', false)}
+                                {renderMessageBubble(`With ${previewItem.name}`, true)}
+                            </div>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button onClick={() => setPreviewItem(null)} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}>Close</button>
+                                <button onClick={() => { openModal(previewItem); setPreviewItem(null); }} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 700, cursor: 'pointer' }}>Buy & Apply</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Purchase Modal */}
             {selectedItem && (

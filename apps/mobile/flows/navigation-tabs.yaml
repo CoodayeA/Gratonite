@@ -1,0 +1,13 @@
+appId: chat.gratonite.mobile
+---
+- assertVisible: "Servers"
+- tapOn: "Chats"
+- assertVisible: "Messages"
+- tapOn: "Friends"
+- assertVisible: "Friends"
+- tapOn: "Alerts"
+- assertVisible:
+    text: "Alerts"
+    optional: true
+- tapOn: "Servers"
+- assertVisible: "Servers"

@@ -436,6 +436,10 @@ const Gacha = () => {
     const [pullHistory, setPullHistory] = useState<PullHistoryEntry[]>(loadPullHistory);
     const [manifestLoaded, setManifestLoaded] = useState(false);
 
+    // Server-side collectible cards (DB-backed)
+    const [serverCards, setServerCards] = useState<CollectibleItem[]>([]);
+    const [serverPacks, setServerPacks] = useState<any[]>([]);
+
     // Drag-to-tear state
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -457,19 +461,42 @@ const Gacha = () => {
             .catch(err => {
                 console.error('Failed to load gacha manifest:', err);
             });
+
+        // Also load server-side collectible cards
+        api.collectibleCards.getCollection()
+            .then((cards: any[]) => {
+                setServerCards(cards.map((c: any) => ({
+                    id: c.id,
+                    name: c.name,
+                    rarity: capitalizeRarity(c.rarity),
+                    image: c.image,
+                    owned: c.owned,
+                    count: c.count,
+                })));
+            })
+            .catch(() => { /* server cards not available yet */ });
+
+        api.collectibleCards.getPacks()
+            .then((packs: any[]) => setServerPacks(packs))
+            .catch(() => { /* no packs yet */ });
     }, []);
 
-    const totalCount = manifestItems.length;
-    const ownedCount = ownedIds.size;
-
-    // Build collectibles from manifest
-    const allCollectibles: CollectibleItem[] = manifestItems.map(item => ({
+    // Build collectibles from manifest + merge server cards
+    const manifestCollectibles: CollectibleItem[] = manifestItems.map(item => ({
         id: item.id,
         name: item.name,
         rarity: capitalizeRarity(item.rarity),
         image: imagePath(item.file),
         owned: ownedIds.has(item.id),
     }));
+
+    // Merge: server cards that aren't already in manifest get appended
+    const manifestIdSet = new Set(manifestCollectibles.map(c => c.id));
+    const extraServerCards = serverCards.filter(c => !manifestIdSet.has(c.id));
+    const allCollectibles = [...manifestCollectibles, ...extraServerCards];
+
+    const totalCount = allCollectibles.length;
+    const ownedCount = allCollectibles.filter(c => c.owned).length;
 
     const addPulledItemsToOwned = useCallback((pulls: PullItem[]) => {
         setOwnedIds(prev => {
@@ -500,7 +527,38 @@ const Gacha = () => {
         if (gratoniteBalance < 500 || !manifestLoaded) return;
         setPackState('opening');
 
-        // Server-validated spend
+        // If server packs are available, use the server-side open-pack endpoint
+        if (serverPacks.length > 0) {
+            try {
+                const pack = serverPacks[0]; // default pack
+                const result = await api.collectibleCards.openPack(pack.id);
+                const pulls: PullItem[] = result.cards.map((c: any) => ({
+                    id: c.id,
+                    name: c.name,
+                    rarity: capitalizeRarity(c.rarity),
+                    image: c.image,
+                }));
+                setGratoniteBalance((prev: number) => prev - result.coinsSpent);
+                setCurrentPulls(pulls);
+                addPulledItemsToOwned(pulls);
+                addToHistory(pulls);
+                // Refresh server collection
+                api.collectibleCards.getCollection().then((cards: any[]) => {
+                    setServerCards(cards.map((c: any) => ({
+                        id: c.id, name: c.name, rarity: capitalizeRarity(c.rarity),
+                        image: c.image, owned: c.owned, count: c.count,
+                    })));
+                }).catch(() => {});
+                setTimeout(() => setPackState('results'), 1200);
+                return;
+            } catch {
+                setPackState('idle');
+                addToast({ title: 'Purchase failed', description: 'Could not open the card pack.', variant: 'error' });
+                return;
+            }
+        }
+
+        // Fallback: local manifest-based pull with economy spend
         try {
             const result = await api.economy.spend({
                 source: 'shop_purchase',
@@ -526,7 +584,7 @@ const Gacha = () => {
         addToHistory(pulls);
 
         setTimeout(() => setPackState('results'), 1200);
-    }, [gratoniteBalance, manifestLoaded, manifestItems, setGratoniteBalance, addPulledItemsToOwned, addToHistory]);
+    }, [gratoniteBalance, manifestLoaded, manifestItems, serverPacks, setGratoniteBalance, addPulledItemsToOwned, addToHistory]);
 
     const triggerTear = useCallback((cx: number, cy: number) => {
         if (toreRef.current) return;

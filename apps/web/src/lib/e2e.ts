@@ -80,17 +80,60 @@ export async function deriveSharedKey(
 }
 
 // ---------------------------------------------------------------------------
-// Encrypt / decrypt
+// Crypto Worker — offload encrypt/decrypt to a Web Worker so the UI stays
+// responsive. Falls back to main thread if Workers are unavailable.
 // ---------------------------------------------------------------------------
 
-/**
- * Encrypt a plaintext string with AES-GCM.
- *
- * Returns a base64 string containing a 12-byte random IV prepended to the
- * ciphertext. The IV is unique per message (random nonce) so the same
- * plaintext always produces different ciphertext.
- */
-export async function encrypt(key: CryptoKey, plaintext: string): Promise<string> {
+let _worker: Worker | null = null;
+let _workerFailed = false;
+let _nextId = 0;
+const _pending = new Map<number, { resolve: (v: any) => void; reject: (e: Error) => void }>();
+
+function getCryptoWorker(): Worker | null {
+  if (_workerFailed) return null;
+  if (_worker) return _worker;
+  try {
+    _worker = new Worker(
+      new URL('../workers/crypto.worker.ts', import.meta.url),
+      { type: 'module' },
+    );
+    _worker.onmessage = (e: MessageEvent) => {
+      const { id, result, error } = e.data;
+      const p = _pending.get(id);
+      if (!p) return;
+      _pending.delete(id);
+      if (error) p.reject(new Error(error));
+      else p.resolve(result);
+    };
+    _worker.onerror = () => {
+      // Worker failed to load — mark as unavailable and reject all pending
+      _workerFailed = true;
+      _worker = null;
+      for (const [, p] of _pending) p.reject(new Error('Worker unavailable'));
+      _pending.clear();
+    };
+    return _worker;
+  } catch {
+    _workerFailed = true;
+    return null;
+  }
+}
+
+function postToWorker<T>(op: string, payload: Record<string, any>, transfer?: Transferable[]): Promise<T> | null {
+  const w = getCryptoWorker();
+  if (!w) return null;
+  const id = _nextId++;
+  return new Promise<T>((resolve, reject) => {
+    _pending.set(id, { resolve, reject });
+    w.postMessage({ id, op, payload }, transfer ?? []);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Encrypt / decrypt (main-thread implementations kept as fallbacks)
+// ---------------------------------------------------------------------------
+
+async function _encryptMainThread(key: CryptoKey, plaintext: string): Promise<string> {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const encoded = new TextEncoder().encode(plaintext);
   const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoded);
@@ -102,16 +145,36 @@ export async function encrypt(key: CryptoKey, plaintext: string): Promise<string
   return btoa(String.fromCharCode(...combined));
 }
 
-/**
- * Decrypt a base64-encoded AES-GCM ciphertext (IV-prepended format produced
- * by `encrypt`).
- */
-export async function decrypt(key: CryptoKey, ciphertextBase64: string): Promise<string> {
+async function _decryptMainThread(key: CryptoKey, ciphertextBase64: string): Promise<string> {
   const combined = Uint8Array.from(atob(ciphertextBase64), (c) => c.charCodeAt(0));
   const iv = combined.slice(0, 12);
   const ciphertext = combined.slice(12);
   const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
   return new TextDecoder().decode(plaintext);
+}
+
+/**
+ * Encrypt a plaintext string with AES-GCM.
+ * Uses a Web Worker when available; falls back to main thread.
+ */
+export async function encrypt(key: CryptoKey, plaintext: string): Promise<string> {
+  const workerResult = postToWorker<string>('encrypt', { key, plaintext });
+  if (workerResult) {
+    try { return await workerResult; } catch { /* fall through to main thread */ }
+  }
+  return _encryptMainThread(key, plaintext);
+}
+
+/**
+ * Decrypt a base64-encoded AES-GCM ciphertext.
+ * Uses a Web Worker when available; falls back to main thread.
+ */
+export async function decrypt(key: CryptoKey, ciphertextBase64: string): Promise<string> {
+  const workerResult = postToWorker<string>('decrypt', { key, ciphertextBase64 });
+  if (workerResult) {
+    try { return await workerResult; } catch { /* fall through to main thread */ }
+  }
+  return _decryptMainThread(key, ciphertextBase64);
 }
 
 // ---------------------------------------------------------------------------
@@ -198,20 +261,33 @@ export function isE2ESupported(): boolean {
 
 /**
  * Encrypt a File or Blob with AES-GCM using the given key.
- * Returns the encrypted blob, a random IV, and the encrypted original filename.
- * Max recommended size: ~25 MB (reads entire file into memory).
+ * Uses a Web Worker when available; falls back to main thread.
  */
 export async function encryptFile(
   key: CryptoKey,
   file: File,
 ): Promise<{ encryptedBlob: Blob; encryptedFilename: string; iv: string }> {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
   const buffer = await file.arrayBuffer();
-  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, buffer);
-
-  // Encrypt the filename so it's not visible in transit/storage
-  const filenameEncrypted = await encrypt(key, file.name);
-
+  const workerResult = postToWorker<{ encryptedBuffer: ArrayBuffer; encryptedFilename: string; iv: string }>(
+    'encryptFile',
+    { key, buffer, filename: file.name },
+    [buffer],
+  );
+  if (workerResult) {
+    try {
+      const r = await workerResult;
+      return {
+        encryptedBlob: new Blob([r.encryptedBuffer], { type: 'application/octet-stream' }),
+        encryptedFilename: r.encryptedFilename,
+        iv: r.iv,
+      };
+    } catch { /* fall through */ }
+  }
+  // Main thread fallback
+  const freshBuffer = await file.arrayBuffer(); // re-read since original was transferred
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, freshBuffer);
+  const filenameEncrypted = await _encryptMainThread(key, file.name);
   return {
     encryptedBlob: new Blob([ciphertext], { type: 'application/octet-stream' }),
     encryptedFilename: filenameEncrypted,
@@ -221,10 +297,7 @@ export async function encryptFile(
 
 /**
  * Decrypt an encrypted blob back into a File.
- * @param key    — AES-GCM key used to encrypt the file.
- * @param blob   — The encrypted blob.
- * @param ivB64  — Base64-encoded 12-byte IV.
- * @param encryptedFilename — Encrypted original filename (from encryptFile).
+ * Uses a Web Worker when available; falls back to main thread.
  */
 export async function decryptFile(
   key: CryptoKey,
@@ -232,10 +305,23 @@ export async function decryptFile(
   ivB64: string,
   encryptedFilename: string,
 ): Promise<File> {
+  const buffer = await blob.arrayBuffer();
+  const workerResult = postToWorker<{ decryptedBuffer: ArrayBuffer; filename: string }>(
+    'decryptFile',
+    { key, buffer, ivB64, encryptedFilename },
+    [buffer],
+  );
+  if (workerResult) {
+    try {
+      const r = await workerResult;
+      return new File([r.decryptedBuffer], r.filename);
+    } catch { /* fall through */ }
+  }
+  // Main thread fallback
+  const freshBuffer = await blob.arrayBuffer();
   const iv = Uint8Array.from(atob(ivB64), (c) => c.charCodeAt(0));
-  const ciphertext = await blob.arrayBuffer();
-  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
-  const filename = await decrypt(key, encryptedFilename);
+  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, freshBuffer);
+  const filename = await _decryptMainThread(key, encryptedFilename);
   return new File([plaintext], filename);
 }
 
@@ -413,4 +499,138 @@ export async function encryptWithGroupKey(key: CryptoKey, plaintext: string): Pr
  */
 export async function decryptWithGroupKey(key: CryptoKey, ciphertext: string): Promise<string> {
   return decrypt(key, ciphertext);
+}
+
+// ---------------------------------------------------------------------------
+// Web Worker bridge — offloads encrypt/decrypt to a background thread
+// ---------------------------------------------------------------------------
+
+let worker: Worker | null = null;
+let workerReady = false;
+let msgId = 0;
+const pending = new Map<number, { resolve: (v: any) => void; reject: (e: Error) => void }>();
+
+/**
+ * Initialise the E2E web worker. Call once at app startup.
+ * Returns false if web workers are not supported.
+ */
+export function initE2EWorker(): boolean {
+  if (worker) return true;
+  if (typeof Worker === 'undefined') return false;
+
+  try {
+    worker = new Worker('/e2e-worker.js');
+    worker.onmessage = (e: MessageEvent) => {
+      const { id, result, error } = e.data;
+      const p = pending.get(id);
+      if (!p) return;
+      pending.delete(id);
+      if (error) {
+        p.reject(new Error(error));
+      } else {
+        p.resolve(result);
+      }
+    };
+    worker.onerror = () => {
+      // Worker failed to load — fall back to main thread
+      worker = null;
+      workerReady = false;
+    };
+    workerReady = true;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function workerCall<T>(action: string, payload: Record<string, unknown>, transfer?: Transferable[]): Promise<T> {
+  return new Promise((resolve, reject) => {
+    if (!worker) {
+      reject(new Error('Worker not initialised'));
+      return;
+    }
+    const id = ++msgId;
+    pending.set(id, { resolve, reject });
+    if (transfer) {
+      worker.postMessage({ id, action, payload }, transfer);
+    } else {
+      worker.postMessage({ id, action, payload });
+    }
+  });
+}
+
+/**
+ * Returns true if the E2E worker is active and can accept operations.
+ */
+export function isWorkerReady(): boolean {
+  return workerReady && worker !== null;
+}
+
+/**
+ * Encrypt text using the worker (falls back to main thread if worker unavailable).
+ */
+export async function workerEncrypt(key: CryptoKey | string, plaintext: string): Promise<string> {
+  if (!isWorkerReady() || typeof key !== 'string') {
+    // Fall back to main-thread encryption
+    return encrypt(key as CryptoKey, plaintext);
+  }
+  return workerCall<string>('encrypt', { keyId: key, plaintext });
+}
+
+/**
+ * Decrypt text using the worker (falls back to main thread if worker unavailable).
+ */
+export async function workerDecrypt(key: CryptoKey | string, ciphertext: string): Promise<string> {
+  if (!isWorkerReady() || typeof key !== 'string') {
+    return decrypt(key as CryptoKey, ciphertext);
+  }
+  return workerCall<string>('decrypt', { keyId: key, ciphertext });
+}
+
+/**
+ * Generate a key pair in the worker. Returns key IDs (references to keys held
+ * inside the worker). Use workerExportPublicKey() to extract the public key JWK.
+ */
+export async function workerGenerateKeyPair(): Promise<{ publicKeyId: string; privateKeyId: string }> {
+  return workerCall('generateKeyPair', {});
+}
+
+/**
+ * Export a public key from the worker as a JWK string.
+ */
+export async function workerExportPublicKey(keyId: string): Promise<string> {
+  return workerCall('exportPublicKey', { keyId });
+}
+
+/**
+ * Import a public key JWK string into the worker. Returns the key ID.
+ */
+export async function workerImportPublicKey(jwkString: string): Promise<string> {
+  return workerCall('importPublicKey', { jwkString });
+}
+
+/**
+ * Derive a shared AES-GCM key in the worker. Returns the key ID.
+ */
+export async function workerDeriveSharedKey(privateKeyId: string, publicKeyId: string): Promise<string> {
+  return workerCall('deriveSharedKey', { privateKeyId, publicKeyId });
+}
+
+/**
+ * Release a key from the worker's memory when no longer needed.
+ */
+export async function workerReleaseKey(keyId: string): Promise<void> {
+  await workerCall('releaseKey', { keyId });
+}
+
+/**
+ * Terminate the worker and clean up.
+ */
+export function terminateE2EWorker(): void {
+  if (worker) {
+    worker.terminate();
+    worker = null;
+    workerReady = false;
+    pending.clear();
+  }
 }

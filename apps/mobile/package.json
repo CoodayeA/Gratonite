@@ -13,7 +13,8 @@
     "maestro:login": "./scripts/maestro.sh test flows/login.yaml",
     "maestro:dm": "./scripts/maestro.sh test flows/dm-flow.yaml",
     "maestro:send-message": "./scripts/maestro.sh test flows/send-message.yaml",
-    "maestro:smoke": "./scripts/maestro.sh test flows/smoke.yaml"
+    "maestro:smoke": "./scripts/maestro.sh test flows/smoke.yaml",
+    "maestro:regression": "./scripts/maestro.sh test flows/full-regression.yaml"
   },
   "jest": {
     "preset": "jest-expo",

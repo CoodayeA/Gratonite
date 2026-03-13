@@ -27,20 +27,26 @@ export default function RoleListScreen({ route, navigation }: Props) {
   const [roleList, setRoleList] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchRoles = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await rolesApi.list(guildId);
       // Sort by position descending (highest position = most important)
       data.sort((a, b) => b.position - a.position);
       setRoleList(data);
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      if (err.status !== 401) {
+        const message = err.message || 'Failed to load roles';
+        setLoadError(message);
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [guildId]);
+  }, [guildId, toast]);
 
   useEffect(() => {
     fetchRoles();
@@ -129,6 +135,28 @@ export default function RoleListScreen({ route, navigation }: Props) {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.accentPrimary} />
       </View>
+    );
+  }
+
+  if (loadError && roleList.length === 0) {
+    return (
+      <PatternBackground>
+        <View style={[styles.loadingContainer, { paddingHorizontal: spacing.xl, gap: spacing.md }]}>
+          <Ionicons name="alert-circle-outline" size={56} color={colors.accentPrimary} />
+          <Text style={[styles.headerTitle, { textAlign: 'center' }]}>Failed to load roles</Text>
+          <Text style={[styles.roleMeta, { textAlign: 'center', fontSize: fontSize.sm }]}>{loadError}</Text>
+          <TouchableOpacity
+            style={[styles.createBtn, { marginTop: spacing.sm }]}
+            onPress={() => {
+              setLoading(true);
+              fetchRoles();
+            }}
+          >
+            <Ionicons name="refresh" size={18} color={colors.white} />
+            <Text style={styles.createBtnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
     );
   }
 

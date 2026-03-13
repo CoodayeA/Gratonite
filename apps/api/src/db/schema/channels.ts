@@ -206,6 +206,12 @@ export const channels = pgTable('channels', {
 
   /** Whether this channel's permissions are synced with its parent category. */
   permissionSynced: boolean('permission_synced').notNull().default(true),
+
+  /** Whether this channel is archived (read-only). */
+  archived: boolean('archived').notNull().default(false),
+
+  /** Auto-archive after N days of inactivity. Null = disabled. */
+  autoArchiveDays: integer('auto_archive_days'),
 });
 
 /**

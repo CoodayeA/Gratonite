@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, Settings, Users, Headphones, HeadphoneOff, Volume2, X, Loader2, MessageSquare, Send, Hash, Wifi, ChevronDown, Check, Radio, Hand, Crown, Compass, Pin, PictureInPicture2, MoreHorizontal } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, Settings, Users, Headphones, HeadphoneOff, Volume2, X, Loader2, MessageSquare, Send, Hash, Wifi, ChevronDown, Check, Radio, Hand, Crown, Compass, Pin, PictureInPicture2, MoreHorizontal, Edit3 } from 'lucide-react';
 import { useOutletContext, useParams } from 'react-router-dom';
 import { TopBarActions } from '../../components/ui/TopBarActions';
 import { useToast } from '../../components/ui/ToastManager';
@@ -107,6 +107,9 @@ const VoiceChannel = () => {
     const contextMenuRef = useRef<HTMLDivElement>(null);
     const [channelName, setChannelName] = useState('Voice');
     const [channelType, setChannelType] = useState<string>('GUILD_VOICE');
+    const [channelTopic, setChannelTopic] = useState<string | null>(null);
+    const [editingTopic, setEditingTopic] = useState(false);
+    const [topicDraft, setTopicDraft] = useState('');
     const [linkedTextChannelId, setLinkedTextChannelId] = useState<string | null>(null);
     const [hasAutoConnected, setHasAutoConnected] = useState(false);
 
@@ -358,6 +361,7 @@ const VoiceChannel = () => {
             .then((ch: any) => {
                 setChannelName(ch.name || 'Voice');
                 setChannelType(ch.type || 'GUILD_VOICE');
+                setChannelTopic(ch.topic ?? null);
                 setLinkedTextChannelId(ch.linkedTextChannelId ?? null);
             })
             .catch(() => { addToast({ title: 'Failed to load channel info', variant: 'error' }); });
@@ -795,6 +799,73 @@ const VoiceChannel = () => {
             <header className="top-bar">
                 {channelType === 'GUILD_STAGE' ? <Radio size={24} style={{ color: 'var(--accent-primary)' }} /> : <Mic size={24} style={{ color: 'var(--text-muted)' }} />}
                 <h2>{channelName}</h2>
+                {channelTopic && !editingTopic && (
+                    <>
+                        <span style={{ width: '1px', height: '20px', background: 'var(--stroke)', margin: '0 8px', flexShrink: 0 }} />
+                        <span
+                            title="Click to edit topic"
+                            onClick={() => { setEditingTopic(true); setTopicDraft(channelTopic); }}
+                            style={{ fontSize: '13px', color: 'var(--text-muted)', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '300px' }}
+                        >
+                            {channelTopic}
+                        </span>
+                    </>
+                )}
+                {!channelTopic && !editingTopic && (
+                    <button
+                        onClick={() => { setEditingTopic(true); setTopicDraft(''); }}
+                        title="Set a topic"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', display: 'flex', alignItems: 'center', marginLeft: '4px' }}
+                    >
+                        <Edit3 size={14} />
+                    </button>
+                )}
+                {editingTopic && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '8px' }}>
+                        <input
+                            autoFocus
+                            value={topicDraft}
+                            onChange={e => setTopicDraft(e.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                    const newTopic = topicDraft.trim();
+                                    if (channelId) {
+                                        api.channels.update(channelId, { topic: newTopic || undefined }).then(() => {
+                                            setChannelTopic(newTopic || null);
+                                            addToast({ title: newTopic ? 'Topic updated' : 'Topic removed', variant: 'success' });
+                                        }).catch(() => addToast({ title: 'Failed to update topic', variant: 'error' }));
+                                    }
+                                    setEditingTopic(false);
+                                } else if (e.key === 'Escape') {
+                                    setEditingTopic(false);
+                                }
+                            }}
+                            placeholder="Set a channel topic..."
+                            style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '6px', padding: '4px 8px', color: 'var(--text-primary)', fontSize: '13px', width: '250px', outline: 'none' }}
+                        />
+                        <button
+                            onClick={() => {
+                                const newTopic = topicDraft.trim();
+                                if (channelId) {
+                                    api.channels.update(channelId, { topic: newTopic || undefined }).then(() => {
+                                        setChannelTopic(newTopic || null);
+                                        addToast({ title: newTopic ? 'Topic updated' : 'Topic removed', variant: 'success' });
+                                    }).catch(() => addToast({ title: 'Failed to update topic', variant: 'error' }));
+                                }
+                                setEditingTopic(false);
+                            }}
+                            style={{ background: 'var(--accent-primary)', border: 'none', borderRadius: '4px', padding: '4px 8px', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                        >
+                            Save
+                        </button>
+                        <button
+                            onClick={() => setEditingTopic(false)}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                )}
                 {isConnecting && (
                     <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '13px' }}>
                         <Loader2 size={14} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />

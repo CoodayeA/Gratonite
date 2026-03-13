@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, FileText, Calendar, User, Hash, X } from 'lucide-react';
 import { api } from '../../lib/api';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 interface SearchResult {
   id: string;
@@ -172,7 +173,11 @@ export default function GlobalSearch() {
       )}
 
       {!loading && searched && results.length === 0 && (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>No results found</div>
+        <EmptyState
+          type="search"
+          title="No results found"
+          description="Try adjusting your search filters or using different keywords."
+        />
       )}
 
       {!loading && results.map(r => (

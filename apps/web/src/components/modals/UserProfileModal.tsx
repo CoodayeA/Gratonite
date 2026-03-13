@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { MoreHorizontal, MessageSquare, X, Star, Palette, Lock, Copy, ShieldOff, ShieldCheck, Flag, Check, Loader2, Code, Tv, Gamepad2, Play } from 'lucide-react';
+import { MoreHorizontal, MessageSquare, X, Star, Palette, Lock, Copy, ShieldOff, ShieldCheck, Flag, Check, Loader2, Code, Tv, Gamepad2, Play, Headphones, Eye, Music } from 'lucide-react';
+import { onPresenceUpdate, type PresenceUpdatePayload } from '../../lib/socket';
 import { Tooltip } from '../ui/Tooltip';
 import { useToast } from '../ui/ToastManager';
 import { useUser } from '../../contexts/UserContext';
@@ -22,6 +23,7 @@ const PROVIDER_ICONS: Record<string, React.ReactNode> = {
     steam: <Gamepad2 size={14} />,
     twitter: <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>,
     youtube: <Play size={14} />,
+    spotify: <Music size={14} />,
 };
 
 // ─── Live Canvas Backgrounds ─────────────────────────────────────────────────
@@ -176,6 +178,38 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
     const [gifting, setGifting] = useState(false);
 
     const getCanvasStorageKey = (userId?: string) => `gratonite-profile-canvas:${userId || 'me'}`;
+
+    // Live activity from presence system
+    const [activity, setActivity] = useState<{ name: string; type: string; startedAt?: string } | null>(null);
+    useEffect(() => {
+        const userId = userProfile?.id;
+        if (!userId) return;
+        const unsub = onPresenceUpdate((payload: PresenceUpdatePayload) => {
+            if (payload.userId === userId) {
+                setActivity(payload.activity ?? null);
+            }
+        });
+        return unsub;
+    }, [userProfile?.id]);
+
+    // Elapsed time for PLAYING activity
+    const [elapsed, setElapsed] = useState('');
+    useEffect(() => {
+        if (!activity || activity.type !== 'PLAYING' || !activity.startedAt) {
+            setElapsed('');
+            return;
+        }
+        const tick = () => {
+            const diff = Math.max(0, Math.floor((Date.now() - new Date(activity.startedAt!).getTime()) / 1000));
+            const h = Math.floor(diff / 3600);
+            const m = Math.floor((diff % 3600) / 60);
+            const s = diff % 60;
+            setElapsed(h > 0 ? `${h}h ${m}m` : `${m}m ${s}s`);
+        };
+        tick();
+        const id = setInterval(tick, 1000);
+        return () => clearInterval(id);
+    }, [activity]);
 
     // Real profile and mutuals data
     const [profile, setProfile] = useState<any>(null);
@@ -428,6 +462,55 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                     {customStatus && (
                         <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{customStatus}</div>
+                        </div>
+                    )}
+
+                    {activity && (
+                        <div style={{
+                            marginTop: '12px',
+                            padding: '10px 12px',
+                            background: 'var(--bg-tertiary)',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                        }}>
+                            <div style={{
+                                color: activity.type === 'PLAYING' ? '#10b981'
+                                    : activity.type === 'LISTENING' ? '#8b5cf6'
+                                    : '#3b82f6',
+                                display: 'flex',
+                                alignItems: 'center',
+                            }}>
+                                {activity.type === 'PLAYING' && <Gamepad2 size={16} />}
+                                {activity.type === 'LISTENING' && <Headphones size={16} />}
+                                {activity.type === 'WATCHING' && <Eye size={16} />}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.05em',
+                                    color: activity.type === 'PLAYING' ? '#10b981'
+                                        : activity.type === 'LISTENING' ? '#8b5cf6'
+                                        : '#3b82f6',
+                                    marginBottom: '2px',
+                                }}>
+                                    {activity.type === 'PLAYING' ? 'Playing'
+                                        : activity.type === 'LISTENING' ? 'Listening to'
+                                        : activity.type === 'WATCHING' ? 'Watching'
+                                        : activity.type}
+                                </div>
+                                <div style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {activity.name}
+                                </div>
+                                {activity.type === 'PLAYING' && elapsed && (
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                        {elapsed}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 

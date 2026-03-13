@@ -54,6 +54,7 @@ import { pushRouter } from './push';
 import { referralsRouter } from './referrals';
 import { draftsRouter } from './drafts';
 import { bookmarksRouter } from './bookmarks';
+import { channelDocumentsRouter } from './channel-documents';
 import { mutesRouter } from './mutes';
 import { oauthRouter } from './oauth';
 import { wordFilterRouter } from './word-filter';
@@ -96,6 +97,15 @@ import { confessionsRouter } from './confessions';
 import { federationRouter } from './federation';
 import { tasksRouter } from './tasks';
 import { profilesSocialRouter } from './profiles-social';
+import { clientErrorsRouter } from './client-errors';
+import { friendSuggestionsRouter } from './friend-suggestions';
+import { dailyChallengesRouter } from './daily-challenges';
+import { watchPartiesRouter } from './watch-parties';
+import { playlistsRouter } from './playlists';
+import { guildCurrencyRouter } from './guild-currency';
+import { giftsRouter } from './gifts';
+import { welcomeScreenRouter } from './welcome-screen';
+import { cardsRouter } from './cards';
 
 export const router = Router();
 
@@ -133,6 +143,9 @@ router.get('/capabilities', (_req, res) => {
 // Public stats (no auth, before rate limiter)
 router.use('/stats', statsRouter);
 
+// Client error reports (no auth — errors happen during login too)
+router.use('/client-errors', clientErrorsRouter);
+
 // Global API rate limit (60 req/min per authenticated user).
 // Applied before feature routers so every authenticated endpoint is covered.
 // Keyed by req.userId — requests without a userId pass through (auth
@@ -159,6 +172,7 @@ router.use('/push', pushRouter);
 router.use('/referrals', referralsRouter);
 router.use('/', invitesRouter); // invites has mixed mount paths
 router.use('/relationships', relationshipsRouter);
+router.use('/friend-suggestions', friendSuggestionsRouter);
 router.use('/dms/group', groupDmsRouter);
 router.use('/users', connectionsRouter);
 router.use('/files', filesRouter);
@@ -194,6 +208,9 @@ router.use('/shop', shopRouter);
 router.use('/economy', economyRouter);
 router.use('/cosmetics', cosmeticsRouter);
 router.use('/inventory', inventoryRouter);
+
+// Daily challenges
+router.use('/daily-challenges', dailyChallengesRouter);
 
 // Auctions
 router.use('/auctions', auctionsRouter);
@@ -255,6 +272,9 @@ router.use('/', draftsRouter);
 
 // Message bookmarks (user-scoped)
 router.use('/', bookmarksRouter);
+
+// Channel documents (shared notes)
+router.use('/', channelDocumentsRouter);
 
 // User mutes
 router.use('/users', mutesRouter);
@@ -320,3 +340,21 @@ router.use('/tasks', tasksRouter);
 
 // Stream 3: Profiles, Social & Economy
 router.use('/', profilesSocialRouter);
+
+// Watch parties (synchronized video)
+router.use('/channels/:channelId/watch-party', watchPartiesRouter);
+
+// Collaborative playlists
+router.use('/channels/:channelId/playlists', playlistsRouter);
+
+// Server-specific currency
+router.use('/guilds/:guildId/currency', guildCurrencyRouter);
+
+// Gift subscriptions
+router.use('/gifts', giftsRouter);
+
+// Guild welcome screens
+router.use('/guilds/:guildId/welcome-screen', welcomeScreenRouter);
+
+// Collectible cards (gacha system)
+router.use('/cards', cardsRouter);

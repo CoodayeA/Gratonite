@@ -14,6 +14,7 @@ import { channels as channelsApi } from '../../lib/api';
 import ChannelNotificationSheet from '../../components/ChannelNotificationSheet';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme, useGlass } from '../../lib/theme';
+import { useChannelUnread } from '../../lib/unreadStore';
 import type { Channel } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -22,8 +23,10 @@ import PatternBackground from '../../components/PatternBackground';
 type Props = NativeStackScreenProps<AppStackParamList, 'GuildChannels'>;
 
 interface Section {
+  id: string;
   title: string;
   data: Channel[];
+  collapsible?: boolean;
 }
 
 const CHANNEL_TYPE_COLORS: Record<string, string> = {
@@ -31,7 +34,49 @@ const CHANNEL_TYPE_COLORS: Record<string, string> = {
   GUILD_VOICE: '#22c55e',
   GUILD_ANNOUNCEMENT: '#f59e0b',
   GUILD_FORUM: '#8b5cf6',
+  GUILD_STAGE: '#ec4899',
 };
+
+function ChannelRow({
+  channel,
+  onPress,
+  onLongPress,
+  styles,
+  colors,
+}: {
+  channel: Channel;
+  onPress: () => void;
+  onLongPress: () => void;
+  styles: any;
+  colors: any;
+}) {
+  const unread = useChannelUnread(channel.id);
+  const typeColor = CHANNEL_TYPE_COLORS[channel.type] || colors.textMuted;
+
+  return (
+    <TouchableOpacity
+      style={styles.channelItem}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.channelIconWrap, { backgroundColor: typeColor + '15' }]}>
+        <Ionicons
+          name={(channel.type === 'GUILD_STAGE' ? 'mic-outline' : channel.type === 'GUILD_FORUM' ? 'albums-outline' : channel.type === 'GUILD_ANNOUNCEMENT' ? 'megaphone-outline' : channel.type === 'GUILD_VOICE' ? 'volume-medium-outline' : 'chatbubble-outline') as any}
+          size={18}
+          color={typeColor}
+        />
+      </View>
+      <Text style={styles.channelName} numberOfLines={1}>{channel.name}</Text>
+      {unread.count > 0 ? (
+        <View style={styles.unreadBadge}>
+          <Text style={styles.unreadBadgeText}>{unread.count > 99 ? '99+' : unread.count}</Text>
+        </View>
+      ) : null}
+      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} style={{ opacity: 0.5 }} />
+    </TouchableOpacity>
+  );
+}
 
 export default function GuildChannelsScreen({ route, navigation }: Props) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
@@ -43,6 +88,7 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [notifChannel, setNotifChannel] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [collapsedSectionIds, setCollapsedSectionIds] = useState<Set<string>>(new Set());
 
   // Add settings button to header
   React.useEffect(() => {
@@ -90,7 +136,7 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
     const result: Section[] = [];
 
     if (uncategorized.length > 0) {
-      result.push({ title: 'Channels', data: uncategorized });
+      result.push({ id: 'uncategorized', title: 'Channels', data: uncategorized, collapsible: false });
     }
 
     categories.forEach((cat) => {
@@ -98,67 +144,80 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
         .filter((c) => c.parentId === cat.id)
         .sort((a, b) => a.position - b.position);
       if (children.length > 0) {
-        result.push({ title: (cat.name || 'Untitled').toUpperCase(), data: children });
+        result.push({
+          id: cat.id,
+          title: (cat.name || 'Untitled').toUpperCase(),
+          data: collapsedSectionIds.has(cat.id) ? [] : children,
+          collapsible: true,
+        });
       }
     });
 
     return result;
-  }, [channelList]);
-
-  const getChannelIcon = (type: string): string => {
-    switch (type) {
-      case 'GUILD_TEXT': return 'chatbubble-outline';
-      case 'GUILD_VOICE': return 'volume-medium-outline';
-      case 'GUILD_ANNOUNCEMENT': return 'megaphone-outline';
-      case 'GUILD_FORUM': return 'albums-outline';
-      default: return 'chatbubble-outline';
-    }
-  };
+  }, [channelList, collapsedSectionIds]);
 
   const handleChannelPress = (channel: Channel) => {
-    if (channel.type === 'GUILD_VOICE') {
-      navigation.navigate('VoiceChannel', {
-        channelId: channel.id,
-        channelName: channel.name,
-        guildId,
-      });
-    } else {
-      navigation.navigate('ChannelChat', {
-        channelId: channel.id,
-        channelName: channel.name,
-        guildId,
-      });
+    switch (channel.type) {
+      case 'GUILD_VOICE':
+        navigation.navigate('VoiceChannel', {
+          channelId: channel.id,
+          channelName: channel.name,
+          guildId,
+        });
+        return;
+      case 'GUILD_ANNOUNCEMENT':
+        navigation.navigate('AnnouncementChannel', {
+          channelId: channel.id,
+          channelName: channel.name,
+          guildId,
+        });
+        return;
+      case 'GUILD_FORUM':
+        navigation.navigate('ForumChannel', {
+          channelId: channel.id,
+          channelName: channel.name,
+        });
+        return;
+      case 'GUILD_STAGE':
+        navigation.navigate('StageChannel', {
+          channelId: channel.id,
+          channelName: channel.name,
+          guildId,
+        });
+        return;
+      default:
+        navigation.navigate('ChannelChat', {
+          channelId: channel.id,
+          channelName: channel.name,
+          guildId,
+        });
     }
-  };
-
-  const renderChannel = ({ item }: { item: Channel }) => {
-    const typeColor = CHANNEL_TYPE_COLORS[item.type] || colors.textMuted;
-
-    return (
-      <TouchableOpacity
-        style={styles.channelItem}
-        onPress={() => handleChannelPress(item)}
-        onLongPress={() => setNotifChannel(item.id)}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.channelIconWrap, { backgroundColor: typeColor + '15' }]}>
-          <Ionicons
-            name={getChannelIcon(item.type) as any}
-            size={18}
-            color={typeColor}
-          />
-        </View>
-        <Text style={styles.channelName} numberOfLines={1}>{item.name}</Text>
-        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} style={{ opacity: 0.5 }} />
-      </TouchableOpacity>
-    );
   };
 
   const renderSectionHeader = ({ section }: { section: Section }) => (
-    <View style={styles.sectionHeader}>
+    <TouchableOpacity
+      style={styles.sectionHeader}
+      activeOpacity={section.collapsible ? 0.7 : 1}
+      onPress={() => {
+        if (!section.collapsible) return;
+        setCollapsedSectionIds((prev) => {
+          const next = new Set(prev);
+          if (next.has(section.id)) next.delete(section.id);
+          else next.add(section.id);
+          return next;
+        });
+      }}
+    >
       <View style={styles.sectionAccent} />
       <Text style={styles.sectionTitle}>{section.title}</Text>
-    </View>
+      {section.collapsible ? (
+        <Ionicons
+          name={collapsedSectionIds.has(section.id) ? 'chevron-forward' : 'chevron-down'}
+          size={14}
+          color={colors.textMuted}
+        />
+      ) : null}
+    </TouchableOpacity>
   );
 
   const styles = useMemo(() => StyleSheet.create({
@@ -226,6 +285,24 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
       flex: 1,
       ...(neo ? { textTransform: 'uppercase' as const, letterSpacing: 0.3 } : {}),
     },
+    unreadBadge: {
+      minWidth: 22,
+      height: 22,
+      paddingHorizontal: spacing.xs,
+      borderRadius: neo ? 0 : 11,
+      backgroundColor: colors.accentPrimary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...(neo ? {
+        borderWidth: 2,
+        borderColor: colors.border,
+      } : {}),
+    },
+    unreadBadgeText: {
+      color: colors.white,
+      fontSize: fontSize.xs,
+      fontWeight: '700',
+    },
     empty: {
       alignItems: 'center',
       paddingTop: 80,
@@ -242,7 +319,15 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
-        renderItem={renderChannel}
+        renderItem={({ item }) => (
+          <ChannelRow
+            channel={item}
+            onPress={() => handleChannelPress(item)}
+            onLongPress={() => setNotifChannel(item.id)}
+            styles={styles}
+            colors={colors}
+          />
+        )}
         renderSectionHeader={renderSectionHeader}
         contentContainerStyle={styles.list}
         refreshControl={

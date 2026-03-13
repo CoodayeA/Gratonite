@@ -36,11 +36,12 @@ import { db } from '../db/index';
 import { users } from '../db/schema/users';
 import { refreshTokens, emailVerificationTokens, passwordResetTokens } from '../db/schema/auth';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../lib/jwt';
-import { sendVerificationEmail, sendPasswordResetEmail } from '../lib/mailer';
+import { sendVerificationEmail, sendPasswordResetEmail, sendNewDeviceLoginAlert } from '../lib/mailer';
 import { requireAuth } from '../middleware/auth';
 import { redis } from '../lib/redis';
 import { usernameCheckRateLimit, emailVerifyRateLimit, mfaSetupRateLimit } from '../middleware/rateLimit';
 import { referrals as referralsTable } from '../db/schema/referrals';
+import { userDevices } from '../db/schema/user-devices';
 
 export const authRouter = Router();
 
@@ -668,7 +669,49 @@ authRouter.post('/login', asyncHandler(async (req: Request, res: Response): Prom
     lastActiveAt: new Date(),
   });
 
-  // 8. Set the refresh token as an httpOnly cookie.
+  // 8. New-device login alert (non-blocking)
+  try {
+    const loginIp = getClientIp(req);
+    const loginDevice = parseDevice(req.headers['user-agent']);
+    const uaHash = crypto
+      .createHash('sha256')
+      .update(req.headers['user-agent'] || '')
+      .digest('hex');
+
+    // Try to insert the device. If the unique constraint fires, this is a known device.
+    const [inserted] = await db
+      .insert(userDevices)
+      .values({
+        userId: user.id,
+        ip: loginIp,
+        userAgentHash: uaHash,
+        deviceLabel: loginDevice,
+      })
+      .onConflictDoUpdate({
+        target: [userDevices.userId, userDevices.ip, userDevices.userAgentHash],
+        set: { lastSeenAt: new Date() },
+      })
+      .returning({ firstSeenAt: userDevices.firstSeenAt });
+
+    // If the device was just created (firstSeenAt ~= now), send an alert email.
+    // Allow a 5-second tolerance for clock drift.
+    const isNewDevice = inserted && (Date.now() - new Date(inserted.firstSeenAt).getTime()) < 5000;
+
+    if (isNewDevice && user.email) {
+      const appUrl = process.env.APP_URL || 'https://gratonite.chat';
+      sendNewDeviceLoginAlert({
+        to: user.email,
+        ip: loginIp,
+        device: loginDevice,
+        timestamp: new Date(),
+        appUrl,
+      }).catch(() => { /* email delivery failure is non-critical */ });
+    }
+  } catch {
+    // Device tracking is non-critical — don't block login
+  }
+
+  // 9. Set the refresh token as an httpOnly cookie.
   //    httpOnly: the cookie cannot be read by JavaScript — prevents XSS theft.
   //    sameSite: 'lax' allows top-level navigations but blocks CSRF from third
   //    party sites — a good balance for a SPA.
@@ -682,7 +725,7 @@ authRouter.post('/login', asyncHandler(async (req: Request, res: Response): Prom
     path: '/',
   });
 
-  // 9. Streak logic (non-critical)
+  // 10. Streak logic (non-critical)
   try {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     const lastStreak = user.lastStreakAt;
@@ -729,7 +772,7 @@ authRouter.post('/login', asyncHandler(async (req: Request, res: Response): Prom
     // Non-critical
   }
 
-  // 10. Return access token and safe user object.
+  // 11. Return access token and safe user object.
   res.status(200).json({
     accessToken,
     user: safeUserResponse(user),
@@ -1365,4 +1408,50 @@ authRouter.post('/reset-password', asyncHandler(async (req: Request, res: Respon
   await db.delete(refreshTokens).where(eq(refreshTokens.userId, record.userId));
 
   res.status(200).json({ ok: true, message: 'Password updated successfully.' });
+}));
+
+// ---------------------------------------------------------------------------
+// Known devices management (Login Alerts)
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /devices — List all known devices for the authenticated user.
+ */
+authRouter.get('/devices', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const rows = await db
+    .select({
+      id: userDevices.id,
+      ip: userDevices.ip,
+      deviceLabel: userDevices.deviceLabel,
+      firstSeenAt: userDevices.firstSeenAt,
+      lastSeenAt: userDevices.lastSeenAt,
+    })
+    .from(userDevices)
+    .where(eq(userDevices.userId, req.userId!));
+
+  res.json(rows.map(r => ({
+    id: r.id,
+    ip: r.ip,
+    device: r.deviceLabel,
+    firstSeenAt: r.firstSeenAt.toISOString(),
+    lastSeenAt: r.lastSeenAt.toISOString(),
+  })));
+}));
+
+/**
+ * DELETE /devices/:id — Remove a known device (will trigger alert on next login from it).
+ */
+authRouter.delete('/devices/:id', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const deviceId = req.params.id as string;
+  const result = await db.delete(userDevices)
+    .where(and(eq(userDevices.id, deviceId), eq(userDevices.userId, req.userId!)));
+  res.json({ message: 'Device removed' });
+}));
+
+/**
+ * DELETE /devices — Remove all known devices (will trigger alerts on next logins).
+ */
+authRouter.delete('/devices', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  await db.delete(userDevices).where(eq(userDevices.userId, req.userId!));
+  res.json({ message: 'All known devices cleared' });
 }));

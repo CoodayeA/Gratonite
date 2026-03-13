@@ -63,6 +63,7 @@ import { guildWordFilters } from '../db/schema/guild-word-filters';
 import { messagesSentTotal } from '../lib/metrics';
 import { AppError, handleAppError } from '../lib/errors.js';
 import { safeJsonParse } from '../lib/safe-json.js';
+import { incrementChallengeProgress } from './daily-challenges';
 
 /** Use mergeParams so `:channelId` from the parent mount path is accessible. */
 export const messagesRouter = Router({ mergeParams: true });
@@ -184,9 +185,23 @@ const sendMessageSchema = z
     isEncrypted: z.boolean().optional(),
     encryptedContent: z.string().optional(),
     keyVersion: z.number().int().optional(),
+    embeds: z.array(z.object({
+      type: z.literal('rich'),
+      title: z.string().max(256).optional(),
+      description: z.string().max(4096).optional(),
+      url: z.string().max(2000).optional(),
+      color: z.string().max(7).optional(),
+      image: z.string().max(2000).optional(),
+      thumbnail: z.string().max(2000).optional(),
+      fields: z.array(z.object({
+        name: z.string().max(256),
+        value: z.string().max(1024),
+        inline: z.boolean().optional(),
+      })).max(25).optional(),
+    })).max(5).optional(),
   })
-  .refine((d) => d.content || (d.attachmentIds && d.attachmentIds.length > 0) || (d.isEncrypted && d.encryptedContent), {
-    message: 'Message must have content, at least one attachment, or encrypted content',
+  .refine((d) => d.content || (d.attachmentIds && d.attachmentIds.length > 0) || (d.isEncrypted && d.encryptedContent) || (d.embeds && d.embeds.length > 0), {
+    message: 'Message must have content, at least one attachment, encrypted content, or embeds',
   });
 
 /**
@@ -380,6 +395,194 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
 });
 
 // ---------------------------------------------------------------------------
+// GET /jump-to-date
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/v1/channels/:channelId/messages/jump-to-date
+ *
+ * Find the first message on or after a given date and return a window of
+ * messages around it (25 before + target + 25 after = ~51 messages).
+ * Used by the "Jump to Date" calendar picker.
+ *
+ * @auth    requireAuth, canAccessChannel
+ * @param   channelId {string}    — Channel UUID (from parent router path)
+ * @query   date      {string}    — ISO date string (YYYY-MM-DD or full ISO 8601)
+ * @returns 200 { targetMessageId, messages: [...] }
+ * @returns 400 Missing or invalid date
+ * @returns 404 No messages found on or after date
+ */
+messagesRouter.get('/jump-to-date', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { channelId } = req.params as Record<string, string>;
+    await resolveChannel(channelId, req.userId!);
+
+    const dateStr = typeof req.query.date === 'string' ? req.query.date : undefined;
+    if (!dateStr) {
+      res.status(400).json({ error: 'Missing required query parameter: date' });
+      return;
+    }
+
+    const targetDate = new Date(dateStr);
+    if (isNaN(targetDate.getTime())) {
+      res.status(400).json({ error: 'Invalid date format' });
+      return;
+    }
+
+    // Find the first message on or after the target date
+    const [targetMsg] = await db
+      .select({ id: messages.id, createdAt: messages.createdAt })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.channelId, channelId),
+          gt(messages.createdAt, targetDate),
+          or(isNull(messages.threadId), sql`${messages.id} IN (SELECT origin_message_id FROM threads WHERE origin_message_id IS NOT NULL)`),
+          or(isNull(messages.expiresAt), gt(messages.expiresAt, new Date())),
+        ),
+      )
+      .orderBy(messages.createdAt)
+      .limit(1);
+
+    if (!targetMsg) {
+      res.status(404).json({ error: 'No messages found on or after this date' });
+      return;
+    }
+
+    // Fetch 25 messages before and 25 after the target (inclusive)
+    const [beforeRows, afterRows] = await Promise.all([
+      db
+        .select({
+          id: messages.id, channelId: messages.channelId, content: messages.content,
+          attachments: messages.attachments, edited: messages.edited, editedAt: messages.editedAt,
+          createdAt: messages.createdAt, expiresAt: messages.expiresAt, replyToId: messages.replyToId,
+          embeds: messages.embeds, isEncrypted: messages.isEncrypted, encryptedContent: messages.encryptedContent,
+          keyVersion: messages.keyVersion, authorId: messages.authorId,
+          authorUsername: users.username, authorDisplayName: users.displayName,
+          authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle,
+        })
+        .from(messages)
+        .leftJoin(users, eq(users.id, messages.authorId))
+        .where(
+          and(
+            eq(messages.channelId, channelId),
+            lt(messages.createdAt, targetMsg.createdAt),
+            or(isNull(messages.threadId), sql`${messages.id} IN (SELECT origin_message_id FROM threads WHERE origin_message_id IS NOT NULL)`),
+            or(isNull(messages.expiresAt), gt(messages.expiresAt, new Date())),
+          ),
+        )
+        .orderBy(desc(messages.createdAt))
+        .limit(25),
+      db
+        .select({
+          id: messages.id, channelId: messages.channelId, content: messages.content,
+          attachments: messages.attachments, edited: messages.edited, editedAt: messages.editedAt,
+          createdAt: messages.createdAt, expiresAt: messages.expiresAt, replyToId: messages.replyToId,
+          embeds: messages.embeds, isEncrypted: messages.isEncrypted, encryptedContent: messages.encryptedContent,
+          keyVersion: messages.keyVersion, authorId: messages.authorId,
+          authorUsername: users.username, authorDisplayName: users.displayName,
+          authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle,
+        })
+        .from(messages)
+        .leftJoin(users, eq(users.id, messages.authorId))
+        .where(
+          and(
+            eq(messages.channelId, channelId),
+            gt(messages.createdAt, targetMsg.createdAt),
+            or(isNull(messages.threadId), sql`${messages.id} IN (SELECT origin_message_id FROM threads WHERE origin_message_id IS NOT NULL)`),
+            or(isNull(messages.expiresAt), gt(messages.expiresAt, new Date())),
+          ),
+        )
+        .orderBy(messages.createdAt)
+        .limit(25),
+    ]);
+
+    // Also fetch the target message itself
+    const [targetRow] = await db
+      .select({
+        id: messages.id, channelId: messages.channelId, content: messages.content,
+        attachments: messages.attachments, edited: messages.edited, editedAt: messages.editedAt,
+        createdAt: messages.createdAt, expiresAt: messages.expiresAt, replyToId: messages.replyToId,
+        embeds: messages.embeds, isEncrypted: messages.isEncrypted, encryptedContent: messages.encryptedContent,
+        keyVersion: messages.keyVersion, authorId: messages.authorId,
+        authorUsername: users.username, authorDisplayName: users.displayName,
+        authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle,
+      })
+      .from(messages)
+      .leftJoin(users, eq(users.id, messages.authorId))
+      .where(eq(messages.id, targetMsg.id))
+      .limit(1);
+
+    // Combine: before (reversed to chronological) + target + after
+    const allRows = [...beforeRows.reverse(), ...(targetRow ? [targetRow] : []), ...afterRows];
+
+    // Fetch reactions for all returned messages
+    const messageIds = allRows.map((r) => r.id);
+    let reactionRows: { messageId: string; userId: string; emoji: string }[] = [];
+    if (messageIds.length > 0) {
+      reactionRows = await db
+        .select({ messageId: messageReactions.messageId, userId: messageReactions.userId, emoji: messageReactions.emoji })
+        .from(messageReactions)
+        .where(inArray(messageReactions.messageId, messageIds));
+    }
+    const reactionsByMessage = new Map<string, Map<string, { emoji: string; count: number; userIds: string[] }>>();
+    for (const r of reactionRows) {
+      if (!reactionsByMessage.has(r.messageId)) reactionsByMessage.set(r.messageId, new Map());
+      const emojiMap = reactionsByMessage.get(r.messageId)!;
+      if (!emojiMap.has(r.emoji)) emojiMap.set(r.emoji, { emoji: r.emoji, count: 0, userIds: [] });
+      const entry = emojiMap.get(r.emoji)!;
+      entry.count++;
+      entry.userIds.push(r.userId);
+    }
+
+    const formatted = allRows.map((row) => {
+      const emojiMap = reactionsByMessage.get(row.id);
+      const reactions = emojiMap
+        ? Array.from(emojiMap.values()).map((e) => ({
+            emoji: e.emoji,
+            count: e.count,
+            me: e.userIds.includes(req.userId!),
+          }))
+        : [];
+
+      return {
+        id: row.id,
+        channelId: row.channelId,
+        authorId: row.authorId,
+        content: row.content,
+        attachments: row.attachments,
+        edited: row.edited,
+        editedAt: row.editedAt,
+        createdAt: row.createdAt,
+        embeds: row.embeds ?? [],
+        expiresAt: row.expiresAt ?? null,
+        replyToId: row.replyToId ?? null,
+        isEncrypted: row.isEncrypted ?? false,
+        encryptedContent: row.encryptedContent ?? null,
+        keyVersion: row.keyVersion ?? null,
+        reactions,
+        author: row.authorId
+          ? {
+              id: row.authorId,
+              username: row.authorUsername,
+              displayName: row.authorDisplayName,
+              avatarHash: row.authorAvatarHash,
+              nameplateStyle: row.authorNameplateStyle ?? 'none',
+            }
+          : null,
+      };
+    });
+
+    res.status(200).json({
+      targetMessageId: targetMsg.id,
+      messages: formatted,
+    });
+  } catch (err) {
+    handleAppError(res, err, 'messages');
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /
 // ---------------------------------------------------------------------------
 
@@ -446,7 +649,7 @@ messagesRouter.post(
         }
       }
 
-      const { content, attachmentIds, replyToId, threadId, expiresIn, scheduledAt, forwardedFromMessageId, isEncrypted, encryptedContent, keyVersion } = req.body as z.infer<typeof sendMessageSchema>;
+      const { content, attachmentIds, replyToId, threadId, expiresIn, scheduledAt, forwardedFromMessageId, isEncrypted, encryptedContent, keyVersion, embeds: userEmbeds } = req.body as z.infer<typeof sendMessageSchema>;
 
       // Handle scheduled messages: insert into scheduled_messages instead of messages
       if (scheduledAt) {
@@ -617,6 +820,9 @@ messagesRouter.post(
           }
         }
         embeds.push({ type: 'forwarded', messageId: forwardedFromMessageId });
+      }
+      if (userEmbeds && userEmbeds.length > 0) {
+        embeds.push(...userEmbeds);
       }
 
       // Insert the message.
@@ -879,6 +1085,10 @@ messagesRouter.post(
       db.delete(messageDrafts)
         .where(and(eq(messageDrafts.userId, req.userId!), eq(messageDrafts.channelId, channelId)))
         .catch(err => logger.error('[messages] draft cleanup failed:', err));
+
+      // Daily challenge progress (fire-and-forget)
+      incrementChallengeProgress(req.userId!, 'send_messages');
+      if (req.body.replyToId) incrementChallengeProgress(req.userId!, 'reply_to_messages');
 
       // Fire-and-forget URL embed scraping
       (async () => {

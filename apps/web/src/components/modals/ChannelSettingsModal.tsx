@@ -74,6 +74,7 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
     const [roleSlowmodeOverrides, setRoleSlowmodeOverrides] = useState<Record<string, number>>({});
     const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
     const [isArchived, setIsArchived] = useState(false);
+    const [autoArchiveDays, setAutoArchiveDays] = useState<number | null>(null);
     const isVoice = channelType === 'GUILD_VOICE' || channelType === 'voice' || channelType === 'GUILD_STAGE_VOICE';
 
     // Permissions state
@@ -93,6 +94,7 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
             if (ch.parentId) setParentId(ch.parentId);
             if (ch.permissionSynced === false) setPermissionSynced(false);
             if (ch.archived) setIsArchived(true);
+            if (ch.autoArchiveDays != null) setAutoArchiveDays(ch.autoArchiveDays);
             if (ch.slowmodeOverrides) setRoleSlowmodeOverrides(ch.slowmodeOverrides);
         }).catch(() => {});
     }, [channelId, guildId]);
@@ -131,7 +133,7 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
     async function saveOverview() {
         setSaving(true);
         try {
-            await api.channels.update(channelId, { name, topic, rateLimitPerUser: slowmode, nsfw, isAnnouncement, isEncrypted, attachmentsEnabled, permissionSynced, ...(isVoice ? { userLimit } : {}), ...(Object.keys(roleSlowmodeOverrides).length > 0 ? { slowmodeOverrides: roleSlowmodeOverrides } : {}) });
+            await api.channels.update(channelId, { name, topic, rateLimitPerUser: slowmode, nsfw, isAnnouncement, isEncrypted, attachmentsEnabled, permissionSynced, autoArchiveDays, ...(isVoice ? { userLimit } : {}), ...(Object.keys(roleSlowmodeOverrides).length > 0 ? { slowmodeOverrides: roleSlowmodeOverrides } : {}) });
             onUpdate?.({ name, topic, rateLimitPerUser: slowmode, ...(isVoice ? { userLimit } : {}) });
             addToast({ title: 'Channel Updated', variant: 'success' });
             onClose();
@@ -335,7 +337,7 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                                     <button
                                         onClick={async () => {
                                             try {
-                                                await api.channels.update(channelId, { archived: false } as any);
+                                                await api.channels.update(channelId, { archived: false });
                                                 setIsArchived(false);
                                                 addToast({ title: 'Channel unarchived', variant: 'success' });
                                                 onClose();
@@ -365,7 +367,7 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                                                 <button
                                                     onClick={async () => {
                                                         try {
-                                                            await api.channels.update(channelId, { archived: true } as any);
+                                                            await api.channels.update(channelId, { archived: true });
                                                             addToast({ title: 'Channel archived', variant: 'success' });
                                                             onClose();
                                                         } catch {
@@ -417,6 +419,35 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                                     )}
                                 </div>
                             )}
+
+                            {/* Auto-Archive After */}
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
+                                    Auto-Archive After
+                                </label>
+                                <select
+                                    value={autoArchiveDays ?? 0}
+                                    onChange={e => {
+                                        const v = Number(e.target.value);
+                                        setAutoArchiveDays(v === 0 ? null : v);
+                                    }}
+                                    style={{
+                                        padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                        borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', fontFamily: 'inherit',
+                                        width: '100%', boxSizing: 'border-box',
+                                    }}
+                                >
+                                    <option value={0}>Disabled</option>
+                                    <option value={7}>7 days of inactivity</option>
+                                    <option value={14}>14 days of inactivity</option>
+                                    <option value={30}>30 days of inactivity</option>
+                                    <option value={60}>60 days of inactivity</option>
+                                    <option value={90}>90 days of inactivity</option>
+                                </select>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                    Automatically archive this channel if no messages are sent for the specified period.
+                                </div>
+                            </div>
 
                             {isVoice && (
                                 <>

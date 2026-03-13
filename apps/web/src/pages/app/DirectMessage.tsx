@@ -13,8 +13,10 @@ import ForwardModal from '../../components/modals/ForwardModal';
 import EditHistoryPopover from '../../components/chat/EditHistoryPopover';
 import { RichTextRenderer } from '../../components/chat/RichTextRenderer';
 import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { api, ApiRequestError, API_BASE } from '../../lib/api';
+import { markRead as markReadStore } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
 import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onMessageRead, onCallAnswer, onCallReject, onPresenceUpdate, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type MessageReadPayload, type PresenceUpdatePayload } from '../../lib/socket';
 import { getDeterministicGradient } from '../../utils/colors';
@@ -22,6 +24,7 @@ import { useLiveKit, type LiveKitParticipant } from '../../lib/useLiveKit';
 import Avatar from '../../components/ui/Avatar';
 import UserProfilePopover from '../../components/ui/UserProfilePopover';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { saveScrollPosition, getScrollPosition } from '../../store/scrollPositionStore';
 
 type MediaType = 'image' | 'video';
 
@@ -159,6 +162,7 @@ const DirectMessage = () => {
     const attachmentInputRef = useRef<HTMLInputElement>(null);
     const [inputValue, setInputValue] = useState('');
     const [dmAttachedFiles, setDmAttachedFiles] = useState<{file: File, name: string, size: string, previewUrl?: string}[]>([]);
+    const [isDragOver, setIsDragOver] = useState(false);
     const [infoPanelOpen, setInfoPanelOpen] = useState(false);
     const isMobile = useIsMobile();
     const { addToast } = useToast();
@@ -166,6 +170,25 @@ const DirectMessage = () => {
 
     // Emoji picker state
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+
+    // API 429 rate-limit cooldown with countdown
+    const [rateLimitRemaining, setRateLimitRemaining] = useState(0);
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const { retryAfter } = (e as CustomEvent).detail ?? {};
+            const seconds = Math.ceil((retryAfter || 5000) / 1000);
+            setRateLimitRemaining(seconds);
+        };
+        window.addEventListener('gratonite:rate-limited', handler);
+        return () => window.removeEventListener('gratonite:rate-limited', handler);
+    }, []);
+    useEffect(() => {
+        if (rateLimitRemaining <= 0) return;
+        const id = setInterval(() => {
+            setRateLimitRemaining(prev => Math.max(0, prev - 1));
+        }, 1000);
+        return () => clearInterval(id);
+    }, [rateLimitRemaining]);
 
     // Call history state
     const [callHistory, setCallHistory] = useState<Array<{ id: string; startedAt: string; endedAt?: string; duration?: number; participants: string[]; missed?: boolean }>>([]);
@@ -254,6 +277,11 @@ const DirectMessage = () => {
         run();
         return () => { cancelled = true; };
     }, [id, navigate, resolveDmChannelId, searchParams, addToast]);
+
+    // Clear unread state in sidebar when DM channel is opened
+    useEffect(() => {
+        if (dmChannelId) markReadStore(dmChannelId);
+    }, [dmChannelId]);
 
     // Forward modal state
     const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
@@ -761,7 +789,8 @@ const DirectMessage = () => {
         }
     }, [dmChannelId, hasMoreMessages, isLoadingOlder, addToast]);
 
-    // Scroll-based pagination trigger
+    // Scroll-based pagination trigger + save scroll position
+    const dmScrollSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(() => {
         const el = messageListRef.current;
         if (!el) return;
@@ -769,10 +798,17 @@ const DirectMessage = () => {
             if (el.scrollTop < 200 && hasMoreMessages && !isLoadingOlder) {
                 loadOlderMessages();
             }
+            if (dmChannelId) {
+                if (dmScrollSaveTimer.current) clearTimeout(dmScrollSaveTimer.current);
+                dmScrollSaveTimer.current = setTimeout(() => saveScrollPosition(dmChannelId, el.scrollTop), 150);
+            }
         };
         el.addEventListener('scroll', handleScroll, { passive: true });
-        return () => el.removeEventListener('scroll', handleScroll);
-    }, [hasMoreMessages, isLoadingOlder, loadOlderMessages]);
+        return () => {
+            el.removeEventListener('scroll', handleScroll);
+            if (dmScrollSaveTimer.current) clearTimeout(dmScrollSaveTimer.current);
+        };
+    }, [hasMoreMessages, isLoadingOlder, loadOlderMessages, dmChannelId]);
 
     // Join/leave DM channel room for real-time events
     useEffect(() => {
@@ -1263,7 +1299,21 @@ const DirectMessage = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
+    const dmNeedsInitialScroll = useRef(true);
     useEffect(() => {
+        dmNeedsInitialScroll.current = true;
+    }, [dmChannelId]);
+
+    useEffect(() => {
+        if (messages.length === 0) return;
+        if (dmNeedsInitialScroll.current) {
+            dmNeedsInitialScroll.current = false;
+            const savedPos = dmChannelId ? getScrollPosition(dmChannelId) : null;
+            if (savedPos !== null && savedPos > 0 && messageListRef.current) {
+                messageListRef.current.scrollTop = savedPos;
+                return;
+            }
+        }
         scrollToBottom();
     }, [messages]);
 
@@ -1570,6 +1620,10 @@ const DirectMessage = () => {
             addToast({ title: 'Message unavailable', description: 'Conversation is not ready yet. Please retry.', variant: 'error' });
             return;
         }
+        if (rateLimitRemaining > 0) {
+            addToast({ title: `Rate limited. Wait ${rateLimitRemaining}s`, variant: 'error' });
+            return;
+        }
         if (inputValue.length > 2000) {
             addToast({ title: `Message too long (${inputValue.length}/2000)`, variant: 'error' });
             return;
@@ -1647,6 +1701,7 @@ const DirectMessage = () => {
                 avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 content: isOptimisticEncrypted ? '' : optimisticContent,
+                createdAt: new Date().toISOString(),
                 isEncrypted: isOptimisticEncrypted,
                 encryptedContent: isOptimisticEncrypted ? sendPayload.encryptedContent ?? null : null,
                 attachments,
@@ -1695,6 +1750,7 @@ const DirectMessage = () => {
             avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             content: url,
+            createdAt: new Date().toISOString(),
             type: 'media' as const,
             mediaUrl: url,
             mediaAspectRatio: 16 / 9
@@ -2210,10 +2266,13 @@ const DirectMessage = () => {
                     </div>
                 ) : (
                     <>
-                        <div ref={messageListRef} className="message-area" role="log" aria-label={`Direct messages with ${userName}`} aria-live="polite" style={{ overflowY: 'auto' }}
-                            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        <div ref={messageListRef} className="message-area" role="log" aria-label={`Direct messages with ${userName}`} aria-live="polite" style={{ overflowY: 'auto', position: 'relative' }}
+                            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true); }}
+                            onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); }}
                             onDrop={(e) => {
                                 e.preventDefault();
+                                e.stopPropagation();
+                                setIsDragOver(false);
                                 const files = e.dataTransfer.files;
                                 if (!files.length) return;
                                 const newFiles = Array.from(files).map(f => ({
@@ -2225,6 +2284,28 @@ const DirectMessage = () => {
                                 setDmAttachedFiles(prev => [...prev, ...newFiles]);
                             }}
                         >
+                            {/* Drag & Drop Overlay */}
+                            {isDragOver && (
+                                <div style={{
+                                    position: 'absolute', inset: 0, zIndex: 100,
+                                    background: 'rgba(0,0,0,0.6)',
+                                    backdropFilter: 'blur(4px)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    pointerEvents: 'none',
+                                    border: '3px dashed var(--accent-primary)',
+                                    borderRadius: '8px',
+                                }}>
+                                    <div style={{
+                                        background: 'var(--bg-elevated)', padding: '32px 48px',
+                                        borderRadius: '16px', textAlign: 'center',
+                                        boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+                                        border: '1px solid var(--stroke)',
+                                    }}>
+                                        <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>Drop files to upload</div>
+                                        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '6px' }}>Images, videos, audio, documents</div>
+                                    </div>
+                                </div>
+                            )}
                             {isLoadingMessages ? (
                                 <SkeletonMessageList count={5} />
                             ) : messagesError ? (
@@ -2305,10 +2386,15 @@ const DirectMessage = () => {
                             )}
 
                             {messages.length === 0 && (
-                                <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>
-                                    <p style={{ fontSize: '16px', fontWeight: 600 }}>No messages yet</p>
-                                    <p style={{ fontSize: '13px' }}>Send a message to start the conversation</p>
-                                </div>
+                                <EmptyState
+                                    type="dm"
+                                    title="No messages yet"
+                                    description="Send a message to start the conversation. Your messages are end-to-end encrypted."
+                                    actionLabel="Say hello"
+                                    onAction={() => {
+                                        document.querySelector<HTMLInputElement>('.chat-input')?.focus();
+                                    }}
+                                />
                             )}
                             {messages.map((msg, index) => {
                                 const isCurrentUserMessage =
@@ -2320,7 +2406,7 @@ const DirectMessage = () => {
                                 const isGrouped = !!(prevMsg &&
                                     !msg.system && !prevMsg.system &&
                                     !msg.replyToId &&
-                                    prevMsg.author === msg.author &&
+                                    (msg.authorId && prevMsg.authorId ? msg.authorId === prevMsg.authorId : prevMsg.author === msg.author) &&
                                     msg.createdAt && prevMsg.createdAt &&
                                     new Date(msg.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() < 5 * 60 * 1000);
 
@@ -2344,7 +2430,7 @@ const DirectMessage = () => {
                                 )}
                                 <div
                                     data-message-id={msg.apiId}
-                                    className={`message${isGrouped ? ' grouped' : ''}${highlightedMsgId === msg.id ? ' highlighted-message' : ''}`}
+                                    className={`message${isGrouped ? ' grouped message-grouped' : ' message-standalone'}${highlightedMsgId === msg.id ? ' highlighted-message' : ''}`}
                                     style={{ margin: 0, marginTop: isGrouped ? '1px' : '12px', padding: isGrouped ? '1px 16px' : '4px 16px', display: 'flex', gap: '12px', position: 'relative' }}
                                     onMouseEnter={() => setHoveredMessageId(msg.id)}
                                     onMouseLeave={() => { setHoveredMessageId(null); }}
@@ -2471,7 +2557,7 @@ const DirectMessage = () => {
                                                         cursor: 'pointer',
                                                         background: 'var(--bg-tertiary)'
                                                     }}>
-                                                        <img src={msg.mediaUrl} alt="Media" loading="lazy" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
+                                                        <img src={msg.mediaUrl} alt="Media" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
                                                     </div>
                                                 </div>
                                             ) : (
@@ -2536,7 +2622,7 @@ const DirectMessage = () => {
                                                         }
                                                         return displayType?.startsWith('image/') ? (
                                                             <div key={att.id} style={{ maxWidth: '400px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--stroke)', cursor: 'pointer', background: 'var(--bg-tertiary)' }}>
-                                                                <img src={displayUrl} alt={displayName} loading="lazy" style={{ width: '100%', display: 'block', objectFit: 'cover' }} />
+                                                                <img src={displayUrl} alt={displayName} loading="lazy" decoding="async" style={{ width: '100%', display: 'block', objectFit: 'cover' }} />
                                                             </div>
                                                         ) : (
                                                             <a key={att.id} href={displayUrl} download={displayName} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-primary)', maxWidth: '320px' }}>
@@ -2653,7 +2739,7 @@ const DirectMessage = () => {
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '0 16px 8px' }}>
                                     {dmAttachedFiles.map((f, i) => (
                                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                            {f.previewUrl && <img src={f.previewUrl} style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover' }} />}
+                                            {f.previewUrl && <img src={f.previewUrl} alt="" style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover' }} />}
                                             <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
                                             <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{f.size}</span>
                                             <button onClick={() => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl); setDmAttachedFiles(prev => prev.filter((_, idx) => idx !== i)); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex' }}>
@@ -2736,11 +2822,12 @@ const DirectMessage = () => {
                                 </button>
                                 <button
                                     className={`input-icon-btn ${inputValue.trim().length > 0 ? 'primary' : ''}`}
+                                    aria-label={rateLimitRemaining > 0 ? `Rate limited, wait ${rateLimitRemaining}s` : 'Send message'}
                                     onClick={editingMessage ? handleEditSubmit : handleSendMessage}
-                                    disabled={inputValue.trim().length === 0 && (!dmAttachedFiles || dmAttachedFiles.length === 0)}
-                                    style={{ opacity: (inputValue.trim().length > 0 || (dmAttachedFiles && dmAttachedFiles.length > 0)) ? 1 : 0.5, cursor: (inputValue.trim().length > 0 || (dmAttachedFiles && dmAttachedFiles.length > 0)) ? 'pointer' : 'default' }}
+                                    disabled={rateLimitRemaining > 0 || (inputValue.trim().length === 0 && (!dmAttachedFiles || dmAttachedFiles.length === 0))}
+                                    style={{ opacity: rateLimitRemaining > 0 ? 0.5 : (inputValue.trim().length > 0 || (dmAttachedFiles && dmAttachedFiles.length > 0)) ? 1 : 0.5, cursor: rateLimitRemaining > 0 ? 'not-allowed' : (inputValue.trim().length > 0 || (dmAttachedFiles && dmAttachedFiles.length > 0)) ? 'pointer' : 'default' }}
                                 >
-                                    {editingMessage ? <Check size={18} /> : <Send size={18} />}
+                                    {rateLimitRemaining > 0 ? <span style={{ fontSize: '12px', fontWeight: 700 }}>{rateLimitRemaining}s</span> : editingMessage ? <Check size={18} /> : <Send size={18} />}
                                 </button>
                             </div>
                         </div>
@@ -2750,7 +2837,7 @@ const DirectMessage = () => {
 
             {/* Group DM Member Panel */}
             {isGroupDm && (
-                <aside style={{
+                <aside aria-label="Group members" style={{
                     width: memberPanelOpen ? '260px' : '0px',
                     background: 'var(--bg-elevated)',
                     borderLeft: memberPanelOpen ? '1px solid var(--stroke)' : 'none',
@@ -2852,7 +2939,7 @@ const DirectMessage = () => {
             )}
 
             {/* Sliding Info Panel */}
-            <aside style={{
+            <aside aria-label="User info" style={{
                 ...(isMobile && infoPanelOpen ? {
                     position: 'fixed' as const, top: 0, right: 0, bottom: 0,
                     width: '100%', height: '100%', zIndex: 500,

@@ -48,9 +48,11 @@ export default function MemberModerateScreen({ route, navigation }: Props) {
   const [roleList, setRoleList] = useState<RoleWithAssigned[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTimeoutPicker, setShowTimeoutPicker] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
+      setLoadError(null);
       const [profile, allRoles] = await Promise.all([
         usersApi.getProfile(userId).catch(() => null),
         rolesApi.list(guildId).catch(() => [] as Role[]),
@@ -58,8 +60,8 @@ export default function MemberModerateScreen({ route, navigation }: Props) {
 
       setUserProfile(profile);
 
-      // For now, mark all roles as unassigned. In a real implementation,
-      // the member's roles would be fetched from the member detail endpoint.
+      // MOBILE-POLISH: Expose the member's assigned role IDs from a guild-member
+      // detail endpoint so mobile can render current role assignments accurately.
       setRoleList(
         allRoles
           .sort((a, b) => b.position - a.position)
@@ -67,12 +69,14 @@ export default function MemberModerateScreen({ route, navigation }: Props) {
       );
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load member info');
+        const message = err.message || 'Failed to load member info';
+        setLoadError(message);
+        toast.error(message);
       }
     } finally {
       setLoading(false);
     }
-  }, [guildId, userId]);
+  }, [guildId, userId, toast]);
 
   useEffect(() => {
     fetchData();
@@ -306,6 +310,28 @@ export default function MemberModerateScreen({ route, navigation }: Props) {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.accentPrimary} />
       </View>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <PatternBackground>
+        <View style={[styles.loadingContainer, { paddingHorizontal: spacing.xl, gap: spacing.md }]}>
+          <Ionicons name="alert-circle-outline" size={56} color={colors.accentPrimary} />
+          <Text style={[styles.userName, { fontSize: fontSize.xl, textAlign: 'center' }]}>Failed to load member</Text>
+          <Text style={[styles.userBio, { marginTop: 0 }]}>{loadError}</Text>
+          <TouchableOpacity
+            style={styles.actionRow}
+            onPress={() => {
+              setLoading(true);
+              fetchData();
+            }}
+          >
+            <Ionicons name="refresh-outline" size={20} color={colors.accentPrimary} />
+            <Text style={styles.actionText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
     );
   }
 

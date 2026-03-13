@@ -211,7 +211,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                 {/* ── Step 1: Template picker ── */}
                 {step === 'template' && (
                     <>
-                        <h1 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>Create Your Portal</h1>
+                        <h2 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>Create Your Portal</h2>
                         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', textAlign: 'center' }}>Choose a template to get started, or start from scratch.</p>
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '20px' }}>
@@ -286,9 +286,9 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                 {step === 'import' && selectedTemplate?.isImport && (
                     <>
                         <button onClick={() => setStep('template')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', marginBottom: '16px', padding: 0 }}>← Back</button>
-                        <h1 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>
+                        <h2 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>
                             Import from {selectedTemplate.importSource}
-                        </h1>
+                        </h2>
                         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '28px', textAlign: 'center' }}>
                             We'll import your channels, roles, and members. Messages are not imported.
                         </p>
@@ -337,7 +337,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                 {step === 'from-template' && (
                     <>
                         <button onClick={() => setStep('template')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', marginBottom: '16px', padding: 0 }}>← Back</button>
-                        <h1 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>Use a Template</h1>
+                        <h2 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>Use a Template</h2>
                         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', textAlign: 'center' }}>Enter a template code to create a portal from an existing template.</p>
 
                         <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Template Code</label>
@@ -383,9 +383,9 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                             <button onClick={() => setStep('template')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', marginBottom: '16px', padding: 0 }}>← Back</button>
                         )}
 
-                        <h1 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>
+                        <h2 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>
                             {selectedTemplate ? `${selectedTemplate.emoji} ${selectedTemplate.name}` : 'Create Your Portal'}
-                        </h1>
+                        </h2>
                         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', textAlign: 'center' }}>Customize your portal before creating it.</p>
 
                         {/* Icon upload */}

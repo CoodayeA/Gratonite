@@ -43,6 +43,12 @@ export default function SettingsAccountScreen({ navigation }: Props) {
     mfa.status().then((res) => setMfaEnabled(res.enabled)).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    setDisplayName(user?.displayName || '');
+    setBio(user?.bio || '');
+    setPronouns(user?.pronouns || '');
+  }, [user?.displayName, user?.bio, user?.pronouns]);
+
   const handleSaveProfile = async () => {
     setSaving(true);
     try {
@@ -70,9 +76,9 @@ export default function SettingsAccountScreen({ navigation }: Props) {
     }
     setChangingPassword(true);
     try {
-      toast.success('Password changed successfully');
-      setCurrentPassword('');
-      setNewPassword('');
+      // MOBILE-POLISH: backend/mobile API does not yet expose an authenticated
+      // password-change endpoint, so this screen cannot complete the flow yet.
+      toast.error('Password changes are not available in mobile yet. Please use password reset for now.');
     } catch (err: any) {
       toast.error(err.message || 'Failed to change password');
     } finally {
@@ -83,27 +89,16 @@ export default function SettingsAccountScreen({ navigation }: Props) {
   const handleDeleteAccount = () => {
     Alert.alert(
       'Delete Account',
-      'This action is permanent and cannot be undone. All your data will be deleted.',
+      'This action is permanent and cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete My Account',
           style: 'destructive',
           onPress: () => {
-            Alert.alert(
-              'Are you absolutely sure?',
-              'Type DELETE to confirm.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Yes, Delete',
-                  style: 'destructive',
-                  onPress: () => {
-                    Alert.alert('Account Scheduled for Deletion', 'Your account will be deleted within 30 days.');
-                  },
-                },
-              ],
-            );
+            // MOBILE-POLISH: backend/mobile API does not yet expose an account
+            // deletion endpoint or verification flow for destructive deletion.
+            toast.error('Account deletion is not available in mobile yet. Please contact support.');
           },
         },
       ],

@@ -1,5 +1,8 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, Suspense, lazy } from 'react';
+import { MemoryRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { X, Columns } from 'lucide-react';
+
+const LazyChannelChat = lazy(() => import('../pages/guilds/ChannelChat'));
 
 const SPLIT_VIEW_KEY = 'gratonite-split-view';
 
@@ -25,6 +28,13 @@ function saveSplitState(state: SplitViewState) {
 
 export function useSplitView() {
     const [splitState, setSplitState] = useState<SplitViewState>(getSplitState);
+
+    // Listen for split-view-update events dispatched from context menus
+    useEffect(() => {
+        const handler = () => setSplitState(getSplitState());
+        window.addEventListener('split-view-update', handler);
+        return () => window.removeEventListener('split-view-update', handler);
+    }, []);
 
     const openSplitView = useCallback((channelId: string, guildId: string) => {
         const newState: SplitViewState = { enabled: true, rightChannelId: channelId, rightGuildId: guildId, dividerPosition: 50 };
@@ -143,4 +153,36 @@ export const SplitViewButton = ({ onClick }: { onClick: () => void }) => (
     >
         <Columns size={16} /> Split View
     </button>
+);
+
+/** Provides outlet context for the split view right pane */
+const ContextLayout = ({ ctx }: { ctx: Record<string, unknown> }) => <Outlet context={ctx} />;
+
+/**
+ * Renders a ChannelChat instance in an isolated MemoryRouter so that
+ * useParams returns the split pane's channelId/guildId instead of the URL's.
+ */
+export const SplitViewRightPane = ({
+    channelId,
+    guildId,
+    outletContext,
+}: {
+    channelId: string;
+    guildId: string;
+    outletContext: Record<string, unknown>;
+}) => (
+    <MemoryRouter initialEntries={[`/guild/${guildId}/channel/${channelId}`]}>
+        <Routes>
+            <Route element={<ContextLayout ctx={outletContext} />}>
+                <Route
+                    path="guild/:guildId/channel/:channelId"
+                    element={
+                        <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>Loading...</div>}>
+                            <LazyChannelChat />
+                        </Suspense>
+                    }
+                />
+            </Route>
+        </Routes>
+    </MemoryRouter>
 );

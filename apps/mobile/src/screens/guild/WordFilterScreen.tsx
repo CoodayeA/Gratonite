@@ -43,6 +43,7 @@ export default function WordFilterScreen({ route, navigation }: Props) {
   const { guildId } = route.params;
   const [filters, setFilters] = useState<WordFilter[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Add word form
   const [newWord, setNewWord] = useState('');
@@ -51,14 +52,19 @@ export default function WordFilterScreen({ route, navigation }: Props) {
 
   const fetchFilters = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await wordFilterApi.list(guildId);
       setFilters(data);
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      if (err.status !== 401) {
+        const message = err.message || 'Failed to load word filters';
+        setLoadError(message);
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
     }
-  }, [guildId]);
+  }, [guildId, toast]);
 
   useEffect(() => {
     fetchFilters();
@@ -247,6 +253,25 @@ export default function WordFilterScreen({ route, navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && filters.length === 0) {
+    return (
+      <PatternBackground>
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl, gap: spacing.md }]}>
+          <Ionicons name="alert-circle-outline" size={56} color={colors.accentPrimary} />
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary, fontSize: fontSize.xl, textAlign: 'center', marginBottom: 0 }]}>Failed to load word filters</Text>
+          <Text style={[styles.actionOptionText, { textAlign: 'center', color: colors.textMuted }]}>{loadError}</Text>
+          <TouchableOpacity style={styles.addButton} onPress={() => {
+            setLoading(true);
+            fetchFilters();
+          }}>
+            <Ionicons name="refresh" size={18} color={colors.white} />
+            <Text style={styles.addButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>

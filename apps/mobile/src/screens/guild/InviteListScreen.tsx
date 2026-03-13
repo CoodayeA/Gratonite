@@ -30,18 +30,24 @@ export default function InviteListScreen({ route, navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [creatingInvite, setCreatingInvite] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchInvites = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await invitesApi.listForGuild(guildId);
       setInviteList(data);
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      if (err.status !== 401) {
+        const message = err.message || 'Failed to load invites';
+        setLoadError(message);
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [guildId]);
+  }, [guildId, toast]);
 
   useEffect(() => {
     fetchInvites();
@@ -189,6 +195,28 @@ export default function InviteListScreen({ route, navigation }: Props) {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.accentPrimary} />
       </View>
+    );
+  }
+
+  if (loadError && inviteList.length === 0) {
+    return (
+      <PatternBackground>
+        <View style={[styles.loadingContainer, { paddingHorizontal: spacing.xl, gap: spacing.md }]}>
+          <Ionicons name="alert-circle-outline" size={56} color={colors.accentPrimary} />
+          <Text style={[styles.headerTitle, { textAlign: 'center' }]}>Failed to load invites</Text>
+          <Text style={[styles.metaText, { textAlign: 'center', fontSize: fontSize.sm }]}>{loadError}</Text>
+          <TouchableOpacity
+            style={[styles.createBtn, { marginTop: spacing.sm }]}
+            onPress={() => {
+              setLoading(true);
+              fetchInvites();
+            }}
+          >
+            <Ionicons name="refresh" size={18} color={colors.white} />
+            <Text style={styles.createBtnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
     );
   }
 

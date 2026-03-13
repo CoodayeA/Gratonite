@@ -26,6 +26,7 @@ export default function GuildMemberListScreen({ route, navigation }: Props) {
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { colors, spacing, fontSize, borderRadius } = useTheme();
 
   const styles = useMemo(() => StyleSheet.create({
@@ -99,18 +100,23 @@ export default function GuildMemberListScreen({ route, navigation }: Props) {
 
   const fetchMembers = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await guildsApi.getMembers(guildId);
       setMembers(data as any[]);
       // Feed presence data into store
       const updates = data.map((m: any) => ({ userId: m.userId, status: m.status ?? 'offline' }));
       presenceStore.setBulk(updates);
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      if (err.status !== 401) {
+        const message = err.message || 'Failed to load members';
+        setLoadError(message);
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [guildId]);
+  }, [guildId, toast]);
 
   const sections = useMemo(() => {
     const online = members.filter((m: any) => m.status && m.status !== 'offline' && m.status !== 'invisible');
@@ -151,6 +157,28 @@ export default function GuildMemberListScreen({ route, navigation }: Props) {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.accentPrimary} />
       </View>
+    );
+  }
+
+  if (loadError && members.length === 0) {
+    return (
+      <PatternBackground>
+        <View style={[styles.loadingContainer, { paddingHorizontal: spacing.xl, gap: spacing.md }]}>
+          <Ionicons name="alert-circle-outline" size={56} color={colors.accentPrimary} />
+          <Text style={[styles.memberName, { fontSize: fontSize.xl, textAlign: 'center' }]}>Failed to load members</Text>
+          <Text style={[styles.memberUsername, { textAlign: 'center' }]}>{loadError}</Text>
+          <TouchableOpacity
+            style={[styles.memberRow, { flex: 0, paddingHorizontal: spacing.xl }]}
+            onPress={() => {
+              setLoading(true);
+              fetchMembers();
+            }}
+          >
+            <Ionicons name="refresh-outline" size={20} color={colors.accentPrimary} />
+            <Text style={[styles.memberName, { color: colors.accentPrimary }]}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
     );
   }
 

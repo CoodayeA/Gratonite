@@ -1,0 +1,14 @@
+appId: chat.gratonite.mobile
+---
+- assertVisible: "Servers"
+- tapOn:
+    id: "guild-item"
+    index: 0
+    optional: true
+- tapOn:
+    id: "channel-item"
+    index: 0
+    optional: true
+- assertVisible:
+    text: "Message"
+    optional: true

@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, memo } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { api } from '../../lib/api';
 import { onPresenceUpdate, onSocketReconnect } from '../../lib/socket';
 import Avatar from '../ui/Avatar';
@@ -28,7 +29,14 @@ function activityLabel(type: string): string {
   return '';
 }
 
-function MemberRow({ member, onMemberClick }: { member: Member; onMemberClick?: Props['onMemberClick'] }) {
+type VirtualRow =
+  | { type: 'header'; label: string; count: number; collapsed: boolean; toggle: () => void }
+  | { type: 'member'; member: Member };
+
+const HEADER_HEIGHT = 32;
+const MEMBER_HEIGHT = 44;
+
+const MemberRow = memo(function MemberRow({ member, onMemberClick }: { member: Member; onMemberClick?: Props['onMemberClick'] }) {
   const name = member.nickname || member.displayName || member.username;
 
   return (
@@ -55,7 +63,7 @@ function MemberRow({ member, onMemberClick }: { member: Member; onMemberClick?: 
       </div>
     </div>
   );
-}
+});
 
 export function MemberListPanel({ guildId, onMemberClick }: Props) {
   const [members, setMembers] = useState<Member[]>([]);
@@ -122,40 +130,79 @@ export function MemberListPanel({ guildId, onMemberClick }: Props) {
   const online = members.filter((m) => m.status && m.status !== 'offline' && m.status !== 'invisible');
   const offline = members.filter((m) => !m.status || m.status === 'offline' || m.status === 'invisible');
 
+  // Build flat virtualized row list
+  const rows: VirtualRow[] = [];
+  rows.push({ type: 'header', label: 'ONLINE', count: online.length, collapsed: onlineCollapsed, toggle: () => setOnlineCollapsed(p => !p) });
+  if (!onlineCollapsed) {
+    online.forEach(m => rows.push({ type: 'member', member: m }));
+  }
+  if (offline.length > 0) {
+    rows.push({ type: 'header', label: 'OFFLINE', count: offline.length, collapsed: offlineCollapsed, toggle: () => setOfflineCollapsed(p => !p) });
+    if (!offlineCollapsed) {
+      offline.forEach(m => rows.push({ type: 'member', member: m }));
+    }
+  }
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: (index) => rows[index].type === 'header' ? HEADER_HEIGHT : MEMBER_HEIGHT,
+    overscan: 10,
+  });
+
   return (
     <div className="member-list-panel">
-      <div className="member-list-scroll">
+      <div className="member-list-scroll" ref={scrollRef}>
         {loading ? (
           <div className="member-list-loading">Loading...</div>
         ) : (
-          <>
-            <div
-              className="member-list-section-header"
-              onClick={() => setOnlineCollapsed(p => !p)}
-              style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              <span style={{ display: 'inline-block', transition: 'transform 0.15s', transform: onlineCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', fontSize: '10px' }}>▼</span>
-              ONLINE — {online.length}
-            </div>
-            {!onlineCollapsed && online.map((m) => (
-              <MemberRow key={m.userId} member={m} onMemberClick={onMemberClick} />
-            ))}
-            {offline.length > 0 && (
-              <>
+          <div style={{ height: virtualizer.getTotalSize(), width: '100%', position: 'relative' }}>
+            {virtualizer.getVirtualItems().map((vItem) => {
+              const row = rows[vItem.index];
+              if (row.type === 'header') {
+                return (
+                  <div
+                    key={`header-${row.label}`}
+                    className="member-list-section-header"
+                    onClick={row.toggle}
+                    style={{
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: `${vItem.size}px`,
+                      transform: `translateY(${vItem.start}px)`,
+                    }}
+                  >
+                    <span style={{ display: 'inline-block', transition: 'transform 0.15s', transform: row.collapsed ? 'rotate(-90deg)' : 'rotate(0deg)', fontSize: '10px' }}>▼</span>
+                    {row.label} — {row.count}
+                  </div>
+                );
+              }
+              return (
                 <div
-                  className="member-list-section-header"
-                  onClick={() => setOfflineCollapsed(p => !p)}
-                  style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  key={row.member.userId}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: `${vItem.size}px`,
+                    transform: `translateY(${vItem.start}px)`,
+                  }}
                 >
-                  <span style={{ display: 'inline-block', transition: 'transform 0.15s', transform: offlineCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', fontSize: '10px' }}>▼</span>
-                  OFFLINE — {offline.length}
+                  <MemberRow member={row.member} onMemberClick={onMemberClick} />
                 </div>
-                {!offlineCollapsed && offline.map((m) => (
-                  <MemberRow key={m.userId} member={m} onMemberClick={onMemberClick} />
-                ))}
-              </>
-            )}
-          </>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>

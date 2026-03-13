@@ -1,0 +1,122 @@
+# Phase 03: Full Screen Audit & Functional Gap Fixes
+
+This phase extends the audit from Phase 02 to cover the remaining ~90 screens: guild management, settings, economy/marketplace, social features, and content types. The goal is the same — find and fix bugs, ensure every screen is fully wired to the API (no stubs, no placeholder data, no dead buttons), and confirm that navigation works correctly. After this phase, every screen in the app should be genuinely functional.
+
+## Tasks
+
+- [ ] Audit and fix all Settings screens:
+  - Read each settings screen and verify it loads data from the API and saves changes correctly:
+    - `apps/mobile/src/screens/app/SettingsScreen.tsx` — main settings hub, verify all navigation links work
+    - `apps/mobile/src/screens/app/SettingsAccountScreen.tsx` — profile editing (displayName, bio, pronouns, avatar upload), verify PATCH /@me works
+    - `apps/mobile/src/screens/app/SettingsAppearanceScreen.tsx` — theme switching, font size, verify changes persist
+    - `apps/mobile/src/screens/app/SettingsNotificationsScreen.tsx` — notification preferences, verify toggle states save
+    - `apps/mobile/src/screens/app/SettingsPrivacyScreen.tsx` — privacy settings, verify API integration
+    - `apps/mobile/src/screens/app/SettingsSecurityScreen.tsx` — MFA, app lock, sessions overview
+    - `apps/mobile/src/screens/app/SettingsSessionsScreen.tsx` — active sessions list, revoke sessions
+    - `apps/mobile/src/screens/app/SettingsSoundScreen.tsx` — sound preferences
+    - `apps/mobile/src/screens/app/SettingsAppLockScreen.tsx` — biometric/PIN lock settings
+    - `apps/mobile/src/screens/app/SettingsMutedUsersScreen.tsx` — muted users list, unmute functionality
+  - For each screen, verify: data loads correctly, changes save to API, error handling exists, loading states exist, theme is applied correctly
+  - Fix any issues found inline
+
+- [ ] Audit and fix Guild Management screens (settings, roles, moderation):
+  - Read and verify these guild admin screens work end-to-end:
+    - `apps/mobile/src/screens/guild/GuildSettingsScreen.tsx` — guild name, icon, description editing
+    - `apps/mobile/src/screens/guild/RoleListScreen.tsx` and `RoleEditScreen.tsx` — role CRUD, permission toggles
+    - `apps/mobile/src/screens/guild/ChannelCreateScreen.tsx` and `ChannelEditScreen.tsx` — channel CRUD
+    - `apps/mobile/src/screens/guild/GuildMemberListScreen.tsx` and `MemberModerateScreen.tsx` — member list, kick/ban/role assignment
+    - `apps/mobile/src/screens/guild/GuildBansScreen.tsx` and `BanAppealsScreen.tsx` — ban management
+    - `apps/mobile/src/screens/guild/InviteListScreen.tsx` — invite management
+    - `apps/mobile/src/screens/guild/AutomodConfigScreen.tsx` — automod rules
+    - `apps/mobile/src/screens/guild/WordFilterScreen.tsx` — word filter configuration
+    - `apps/mobile/src/screens/guild/RaidProtectionScreen.tsx` — raid protection settings
+    - `apps/mobile/src/screens/guild/AuditLogScreen.tsx` and `ActivityLogScreen.tsx` — audit log viewing
+    - `apps/mobile/src/screens/guild/WebhookManagementScreen.tsx` — webhook CRUD
+  - Check that permission-gated screens show appropriate "no access" states when the user lacks permissions
+  - Fix any issues found inline
+
+- [ ] Audit and fix content-type channel screens (forum, wiki, Q&A, announcements, threads, timeline):
+  - Read and verify these specialized channel screens:
+    - `apps/mobile/src/screens/guild/ForumChannelScreen.tsx` — forum post listing, creation, replies
+    - `apps/mobile/src/screens/guild/WikiChannelScreen.tsx` — wiki page viewing/editing
+    - `apps/mobile/src/screens/guild/QAChannelScreen.tsx` — Q&A posts with voting
+    - `apps/mobile/src/screens/guild/AnnouncementChannelScreen.tsx` — announcements with crosspost
+    - `apps/mobile/src/screens/guild/ThreadListScreen.tsx` and `ThreadViewScreen.tsx` — thread browsing and viewing
+    - `apps/mobile/src/screens/guild/TimelineChannelScreen.tsx` — timeline view
+    - `apps/mobile/src/screens/guild/StageChannelScreen.tsx` — stage channels
+    - `apps/mobile/src/screens/guild/VoiceChannelScreen.tsx` — voice channel join/leave
+    - `apps/mobile/src/screens/guild/MusicRoomScreen.tsx` — music room
+  - For each: verify content loads from API, creation/editing works, navigation in/out works
+  - Fix any issues found inline
+
+- [ ] Audit and fix economy and marketplace screens:
+  - Read and verify these FAME system / economy screens:
+    - `apps/mobile/src/screens/app/ShopScreen.tsx` — item browsing and purchase
+    - `apps/mobile/src/screens/app/WalletScreen.tsx` — Gratonites balance, transaction history
+    - `apps/mobile/src/screens/app/InventoryScreen.tsx` — owned items
+    - `apps/mobile/src/screens/app/MarketplaceScreen.tsx` — user-to-user marketplace
+    - `apps/mobile/src/screens/app/CosmeticsScreen.tsx` — cosmetic items
+    - `apps/mobile/src/screens/app/AuctionsScreen.tsx` and `AuctionDetailScreen.tsx` and `CreateAuctionScreen.tsx` — auction system
+    - `apps/mobile/src/screens/app/FameDashboardScreen.tsx` — FAME stats and progress
+    - `apps/mobile/src/screens/app/AchievementsScreen.tsx` — achievement tracking
+    - `apps/mobile/src/screens/app/UserStatsScreen.tsx` — user statistics
+    - `apps/mobile/src/screens/guild/LeaderboardScreen.tsx` — server leaderboard
+  - Verify each screen loads real data from the API (not hardcoded/mock data)
+  - Verify purchase/transaction flows complete end-to-end
+  - Fix any issues found inline
+
+- [ ] Audit and fix social and discovery screens:
+  - Read and verify:
+    - `apps/mobile/src/screens/app/UserProfileScreen.tsx` — full profile view with showcase, mutual friends/guilds
+    - `apps/mobile/src/screens/app/FriendAddScreen.tsx` — add friend by username
+    - `apps/mobile/src/screens/app/MessageRequestsScreen.tsx` — message request management
+    - `apps/mobile/src/screens/app/ConnectionsScreen.tsx` — linked accounts
+    - `apps/mobile/src/screens/app/ServerDiscoverScreen.tsx` — public server discovery
+    - `apps/mobile/src/screens/app/ServerFoldersScreen.tsx` — server organization
+    - `apps/mobile/src/screens/app/InterestTagsScreen.tsx` — interest tagging
+    - `apps/mobile/src/screens/guild/InterestMatchesScreen.tsx` — interest-based matching
+    - `apps/mobile/src/screens/app/GreetingCardsScreen.tsx` — greeting cards
+    - `apps/mobile/src/screens/app/BookmarksScreen.tsx` — saved messages
+    - `apps/mobile/src/screens/app/RemindersScreen.tsx` — message reminders
+    - `apps/mobile/src/screens/app/GlobalSearchScreen.tsx` — global search
+    - `apps/mobile/src/screens/app/CommandPaletteScreen.tsx` — command palette
+    - `apps/mobile/src/screens/app/ActivityFeedScreen.tsx` — activity feed
+  - For each: verify API integration, navigation, and error handling
+  - Fix any issues found inline
+
+- [ ] Audit and fix remaining specialized screens:
+  - Read and verify:
+    - `apps/mobile/src/screens/guild/ScheduledEventsScreen.tsx`, `EventCreateScreen.tsx`, `EventDetailScreen.tsx` — events system
+    - `apps/mobile/src/screens/guild/GuildFormsScreen.tsx`, `FormCreateScreen.tsx`, `FormFillScreen.tsx`, `FormResponsesScreen.tsx` — forms system
+    - `apps/mobile/src/screens/guild/TicketListScreen.tsx` — ticket/support system
+    - `apps/mobile/src/screens/guild/GiveawayListScreen.tsx` — giveaway management
+    - `apps/mobile/src/screens/guild/QuestBoardScreen.tsx` — quest board
+    - `apps/mobile/src/screens/guild/ConfessionBoardScreen.tsx` — confession board
+    - `apps/mobile/src/screens/guild/PhotoAlbumsScreen.tsx` — photo albums
+    - `apps/mobile/src/screens/guild/ClipsScreen.tsx` — clips
+    - `apps/mobile/src/screens/guild/StudyRoomScreen.tsx` and `StudyLeaderboardScreen.tsx` — study rooms
+    - `apps/mobile/src/screens/guild/StarboardScreen.tsx` and `StarboardConfigScreen.tsx` — starboard
+    - `apps/mobile/src/screens/guild/DigestConfigScreen.tsx` — digest configuration
+    - `apps/mobile/src/screens/guild/OnboardingConfigScreen.tsx` — server onboarding config
+    - `apps/mobile/src/screens/guild/AutoRoleConfigScreen.tsx` — auto-role assignment
+    - `apps/mobile/src/screens/guild/ReactionRoleConfigScreen.tsx` — reaction roles
+    - `apps/mobile/src/screens/guild/GuildInsightsScreen.tsx` — server analytics
+    - `apps/mobile/src/screens/guild/EmojiManagementScreen.tsx` — custom emoji management
+    - `apps/mobile/src/screens/guild/WorkflowListScreen.tsx` — automation workflows
+    - `apps/mobile/src/screens/app/BotStoreScreen.tsx` — bot marketplace
+    - `apps/mobile/src/screens/app/HelpCenterScreen.tsx` and `HelpArticleScreen.tsx` — help/support
+    - `apps/mobile/src/screens/app/FeedbackScreen.tsx` — feedback submission
+    - `apps/mobile/src/screens/app/SeasonalEventsScreen.tsx` — seasonal events
+    - `apps/mobile/src/screens/app/MFASetupScreen.tsx` — MFA setup flow
+    - `apps/mobile/src/screens/app/KeyVerificationScreen.tsx` — E2E key verification
+    - `apps/mobile/src/screens/app/GroupDMCreateScreen.tsx` and `GroupDMSettingsScreen.tsx` — group DM management
+  - For each: verify it loads data, handles errors, and navigation works
+  - Fix any issues found inline
+
+- [ ] Update the audit report with all findings from this phase:
+  - Read the existing report at `apps/mobile/Auto Run Docs/2026-03-13-Millie/Working/critical-path-audit-report.md` (created in Phase 02)
+  - Append a new section for Phase 03 findings:
+    - All bugs found and fixed (with file path and description)
+    - Any issues requiring API changes (tagged with `// MOBILE-POLISH:` in code)
+    - Screens that were clean
+    - Summary statistics: screens audited, bugs fixed, issues deferred

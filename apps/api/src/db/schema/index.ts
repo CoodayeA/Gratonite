@@ -19,6 +19,7 @@ export * from './reactions';
 export * from './pins';
 export * from './threads';
 export * from './emojis';
+export * from './emoji-categories';
 export * from './audit';
 export * from './notifications';
 export * from './channel-overrides';
@@ -57,6 +58,8 @@ export * from './call-history';
 export * from './message-drafts';
 export * from './scheduled-messages';
 export * from './message-bookmarks';
+export * from './bookmark-folders';
+export * from './channel-documents';
 export * from './data-exports';
 export * from './user-mutes';
 export * from './oauth';
@@ -109,3 +112,25 @@ export * from './guild-replicas';
 export * from './federation-activities';
 export * from './instance-blocks';
 export * from './account-imports';
+
+// Daily challenges
+export * from './daily-challenges';
+
+// Login alerts
+export * from './user-devices';
+
+// Watch parties & collaborative playlists
+export * from './watch-parties';
+export * from './playlists';
+
+// Server-specific currencies
+export * from './guild-currencies';
+
+// Gift subscriptions
+export * from './gift-transactions';
+
+// Collectible cards
+export * from './collectible-cards';
+
+// Guild welcome screens
+export * from './guild-welcome-screens';

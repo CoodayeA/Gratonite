@@ -229,6 +229,10 @@ export function setAccessToken(token: string | null) {
     } else {
       window.localStorage.removeItem('gratonite_access_token');
     }
+    // Push token to service worker for notification quick reply
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'STORE_AUTH_TOKEN', token });
+    }
   }
   scheduleProactiveRefresh(token);
 }
@@ -406,19 +410,38 @@ async function apiFetch<T>(
   }
 
   // Default Content-Type for JSON bodies — skip for FormData (browser sets multipart boundary)
-  if (options.body && !(options.body instanceof FormData) && !headers['Content-Type']) {
+  const isUpload = options.body instanceof FormData;
+  if (options.body && !isUpload && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-    credentials: 'include', // always send cookies
-  });
+  // Timeout: 120s for uploads, 15s for regular requests
+  const timeoutMs = isUpload ? 120_000 : 15_000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      credentials: 'include',
+      signal: options.signal || controller.signal,
+    });
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err?.name === 'AbortError') {
+      window.dispatchEvent(new CustomEvent('gratonite:request-timeout', { detail: { path } }));
+      throw new Error(`Request timed out after ${timeoutMs / 1000}s`);
+    }
+    throw err;
+  }
+  clearTimeout(timeoutId);
 
   // Rate limited
   if (res.status === 429) {
     const retryAfter = Number(res.headers.get('Retry-After') ?? 5000);
+    window.dispatchEvent(new CustomEvent('gratonite:rate-limited', { detail: { retryAfter } }));
     throw new RateLimitError(retryAfter);
   }
 
@@ -697,6 +720,14 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ code }),
       }),
+
+    // Known devices (login alerts)
+    getKnownDevices: () =>
+      apiFetch<any[]>('/auth/devices'),
+    removeKnownDevice: (deviceId: string) =>
+      apiFetch<void>(`/auth/devices/${deviceId}`, { method: 'DELETE' }),
+    clearAllKnownDevices: () =>
+      apiFetch<void>('/auth/devices', { method: 'DELETE' }),
   },
 
   users: {
@@ -840,7 +871,16 @@ export const api = {
       }>(`/users/${userId}/mutuals`),
 
     getConnections: (userId: string) =>
-      apiFetch<Array<{ provider: string; providerUsername: string; profileUrl: string | null }>>(`/users/${userId}/connections`),
+      apiFetch<Array<{ id: string; provider: string; providerUsername: string; profileUrl: string | null }>>(`/users/${userId}/connections`),
+
+    getMyConnections: () =>
+      apiFetch<Array<{ id: string; provider: string; providerUsername: string; profileUrl: string | null }>>('/users/@me/connections'),
+
+    addConnection: (data: { provider: string; providerUsername: string; profileUrl?: string }) =>
+      apiFetch<any>('/users/@me/connections', { method: 'POST', body: JSON.stringify(data) }),
+
+    removeConnection: (provider: string) =>
+      apiFetch<void>(`/users/@me/connections/${provider}`, { method: 'DELETE' }),
 
     getNote: (userId: string) =>
       apiFetch<{ content: string }>(`/users/${userId}/note`),
@@ -921,6 +961,8 @@ export const api = {
       apiFetch<any[]>('/users/@me/sessions'),
     revokeSession: (sessionId: string) =>
       apiFetch<void>(`/users/@me/sessions/${sessionId}`, { method: 'DELETE' }),
+    revokeAllOtherSessions: () =>
+      apiFetch<void>('/users/@me/sessions', { method: 'DELETE' }),
 
     // Data exports (GDPR)
     getDataExports: () =>
@@ -1259,6 +1301,19 @@ export const api = {
 
     get: (guildId: string, options?: RequestInit) => apiFetch<Guild>(`/guilds/${guildId}`, options),
 
+    getPublicStats: (guildId: string) =>
+      apiFetch<{
+        guild: { id: string; name: string; iconHash: string | null; bannerHash: string | null; description: string | null; createdAt: string };
+        memberCount: number;
+        onlineCount: number;
+        messagesToday: number;
+        messagesThisWeek: number;
+        channelsCount: number;
+        boostCount: number;
+        boostTier: number;
+        activity: Array<{ date: string; messages: number }>;
+      }>(`/stats/guilds/${guildId}`),
+
     getChannelsUnread: (guildId: string) =>
       apiFetch<Array<{ channelId: string; mentionCount: number; lastReadAt: string }>>(`/guilds/${guildId}/channels/unread`),
 
@@ -1302,7 +1357,7 @@ export const api = {
         body: JSON.stringify(data),
       }),
 
-    update: (guildId: string, data: { name?: string; description?: string; tags?: string[]; categories?: string[]; accentColor?: string | null }) =>
+    update: (guildId: string, data: { name?: string; description?: string; tags?: string[]; categories?: string[]; accentColor?: string | null; publicStatsEnabled?: boolean }) =>
       apiFetch<Guild>(`/guilds/${guildId}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
@@ -1443,18 +1498,43 @@ export const api = {
     getEmojis: (guildId: string) =>
       apiFetch<GuildEmoji[]>(`/guilds/${guildId}/emojis`),
 
-    createEmoji: (guildId: string, data: { name: string; file: File }) => {
+    createEmoji: (guildId: string, data: { name: string; file: File; categoryId?: string }) => {
       const formData = new FormData();
       formData.append('name', data.name);
       formData.append('file', data.file);
+      if (data.categoryId) formData.append('categoryId', data.categoryId);
       return apiFetch<GuildEmoji>(`/guilds/${guildId}/emojis`, {
         method: 'POST',
         body: formData,
       });
     },
 
+    updateEmoji: (guildId: string, emojiId: string, data: { categoryId?: string | null }) =>
+      apiFetch<void>(`/guilds/${guildId}/emojis/${emojiId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
     deleteEmoji: (guildId: string, emojiId: string) =>
       apiFetch<void>(`/guilds/${guildId}/emojis/${emojiId}`, { method: 'DELETE' }),
+
+    getEmojiCategories: (guildId: string) =>
+      apiFetch<Array<{ id: string; guildId: string; name: string; sortOrder: number }>>(`/guilds/${guildId}/emojis/categories/list`),
+
+    createEmojiCategory: (guildId: string, data: { name: string }) =>
+      apiFetch<{ id: string; guildId: string; name: string; sortOrder: number }>(`/guilds/${guildId}/emojis/categories`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    updateEmojiCategory: (guildId: string, categoryId: string, data: { name: string }) =>
+      apiFetch<{ id: string; name: string }>(`/guilds/${guildId}/emojis/categories/${categoryId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    deleteEmojiCategory: (guildId: string, categoryId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/emojis/categories/${categoryId}`, { method: 'DELETE' }),
 
     rate: (guildId: string, rating: number) =>
       apiFetch<{ ok: boolean }>(`/guilds/${guildId}/rating`, {
@@ -1464,6 +1544,12 @@ export const api = {
 
     getRating: (guildId: string) =>
       apiFetch<{ averageRating: number; totalRatings: number; userRating: number | null }>(`/guilds/${guildId}/rating`),
+
+    importServer: (guildId: string, data: { source: 'discord' | 'slack'; channels?: any[]; roles?: any[] }) =>
+      apiFetch<{ success: boolean; created: { categories: number; channels: number; roles: number } }>(`/guilds/${guildId}/import`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 
   channels: {
@@ -1511,7 +1597,7 @@ export const api = {
       });
     },
 
-    update: (channelId: string, data: { name?: string; topic?: string; nsfw?: boolean; rateLimitPerUser?: number; backgroundUrl?: string | null; backgroundType?: 'image' | 'video' | null; isAnnouncement?: boolean; isEncrypted?: boolean; attachmentsEnabled?: boolean; permissionSynced?: boolean; parentId?: string | null; userLimit?: number }) =>
+    update: (channelId: string, data: { name?: string; topic?: string; nsfw?: boolean; rateLimitPerUser?: number; backgroundUrl?: string | null; backgroundType?: 'image' | 'video' | null; isAnnouncement?: boolean; isEncrypted?: boolean; attachmentsEnabled?: boolean; permissionSynced?: boolean; parentId?: string | null; userLimit?: number; archived?: boolean; autoArchiveDays?: number | null }) =>
       apiFetch<Channel>(`/channels/${channelId}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
@@ -1592,7 +1678,7 @@ export const api = {
         `/channels/${channelId}/messages${params ? '?' + buildQuery(params) : ''}`,
       ),
 
-    send: (channelId: string, data: { content?: string | null; nonce?: string; messageReference?: { messageId: string }; attachmentIds?: string[]; replyToId?: string; threadId?: string; expiresIn?: number; isEncrypted?: boolean; encryptedContent?: string; keyVersion?: number }) =>
+    send: (channelId: string, data: { content?: string | null; nonce?: string; messageReference?: { messageId: string }; attachmentIds?: string[]; replyToId?: string; threadId?: string; expiresIn?: number; isEncrypted?: boolean; encryptedContent?: string; keyVersion?: number; embeds?: Record<string, unknown>[] }) =>
       apiFetch<Message>(`/channels/${channelId}/messages`, {
         method: 'POST',
         body: JSON.stringify(data),
@@ -1657,6 +1743,9 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ targetLang: targetLang || 'en' }),
       }),
+
+    jumpToDate: (channelId: string, date: string) =>
+      apiFetch<{ targetMessageId: string; messages: Message[] }>(`/channels/${channelId}/messages/jump-to-date?date=${encodeURIComponent(date)}`),
   },
 
   search: {
@@ -2318,7 +2407,7 @@ export const api = {
 
   notifications: {
     list: (limit = 50) =>
-      apiFetch<{ id: string; type: string; senderId: string | null; senderName: string | null; channelId: string | null; guildId: string | null; content: string; preview: string | null; read: boolean; createdAt: string }[]>(`/notifications?limit=${limit}`),
+      apiFetch<{ id: string; type: string; senderId: string | null; senderName: string | null; channelId: string | null; guildId: string | null; guildName: string | null; content: string; preview: string | null; read: boolean; createdAt: string }[]>(`/notifications?limit=${limit}`),
 
     markRead: (notificationId: string) =>
       apiFetch<void>(`/notifications/${notificationId}/read`, { method: 'POST' }),
@@ -2331,6 +2420,43 @@ export const api = {
 
     clearAll: () =>
       apiFetch<void>('/notifications', { method: 'DELETE' }),
+  },
+
+  bookmarks: {
+    list: (params?: { folderId?: string; limit?: number }) => {
+      const query = new URLSearchParams();
+      if (params?.folderId) query.set('folderId', params.folderId);
+      if (params?.limit) query.set('limit', String(params.limit));
+      const qs = query.toString();
+      return apiFetch<any[]>(`/users/@me/bookmarks${qs ? '?' + qs : ''}`);
+    },
+    add: (messageId: string, data?: { note?: string; folderId?: string }) =>
+      apiFetch<any>('/users/@me/bookmarks', {
+        method: 'POST',
+        body: JSON.stringify({ messageId, ...data }),
+      }),
+    update: (bookmarkId: string, data: { folderId?: string | null; note?: string | null }) =>
+      apiFetch<any>(`/users/@me/bookmarks/${bookmarkId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    remove: (messageId: string) =>
+      apiFetch<void>(`/users/@me/bookmarks/${messageId}`, { method: 'DELETE' }),
+    folders: {
+      list: () => apiFetch<any[]>('/users/@me/bookmark-folders'),
+      create: (data: { name: string; color?: string }) =>
+        apiFetch<any>('/users/@me/bookmark-folders', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }),
+      update: (folderId: string, data: { name?: string; color?: string }) =>
+        apiFetch<any>(`/users/@me/bookmark-folders/${folderId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(data),
+        }),
+      remove: (folderId: string) =>
+        apiFetch<void>(`/users/@me/bookmark-folders/${folderId}`, { method: 'DELETE' }),
+    },
   },
 
   workflows: {
@@ -2764,6 +2890,17 @@ export const api = {
     get: () => apiFetch<any[]>('/users/me/friend-activity'),
   },
 
+  activityFeed: {
+    list: (params?: { before?: string; type?: string; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.before) q.set('before', params.before);
+      if (params?.type) q.set('type', params.type);
+      if (params?.limit) q.set('limit', String(params.limit));
+      const qs = q.toString();
+      return apiFetch<any[]>(`/users/@me/feed${qs ? `?${qs}` : ''}`);
+    },
+  },
+
   dailySpin: {
     spin: () => apiFetch<{ reward: { type: string; amount: number; label: string } }>('/economy/daily-spin', { method: 'POST', body: '{}' }),
   },
@@ -2784,6 +2921,86 @@ export const api = {
     pending: () => apiFetch<any[]>('/trades/pending'),
     accept: (tradeId: string) => apiFetch<any>(`/trades/${tradeId}/accept`, { method: 'POST', body: '{}' }),
     reject: (tradeId: string) => apiFetch<any>(`/trades/${tradeId}/reject`, { method: 'POST', body: '{}' }),
+  },
+
+  channelDocuments: {
+    list: (channelId: string) =>
+      apiFetch<Array<{
+        id: string;
+        channelId: string;
+        title: string;
+        content: string;
+        lastEditorId: string | null;
+        createdAt: string;
+        updatedAt: string;
+        editorUsername: string | null;
+        editorDisplayName: string | null;
+      }>>(`/channels/${channelId}/documents`),
+    create: (channelId: string, data: { title: string; content?: string }) =>
+      apiFetch<any>(`/channels/${channelId}/documents`, { method: 'POST', body: JSON.stringify(data) }),
+    update: (channelId: string, docId: string, data: { title?: string; content?: string }) =>
+      apiFetch<any>(`/channels/${channelId}/documents/${docId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    remove: (channelId: string, docId: string) =>
+      apiFetch<{ ok: boolean }>(`/channels/${channelId}/documents/${docId}`, { method: 'DELETE' }),
+  },
+
+  dailyChallenges: {
+    get: () => apiFetch<{
+      date: string;
+      challenges: Array<{
+        id: string;
+        type: string;
+        description: string;
+        target: number;
+        progress: number;
+        completed: boolean;
+        claimed: boolean;
+        reward: number;
+      }>;
+      streak: {
+        current: number;
+        longest: number;
+        allCompleted: boolean;
+        allClaimed: boolean;
+        streakBonus: number;
+      };
+    }>('/daily-challenges'),
+    claim: (challengeId: string) =>
+      apiFetch<{ ok: boolean; reward: number }>(`/daily-challenges/${challengeId}/claim`, { method: 'POST', body: '{}' }),
+    claimStreak: () =>
+      apiFetch<{ ok: boolean; streakBonus: number; currentStreak: number; longestStreak: number }>('/daily-challenges/claim-streak', { method: 'POST', body: '{}' }),
+  },
+
+  welcomeScreen: {
+    get: (guildId: string) =>
+      apiFetch<any>(`/guilds/${guildId}/welcome-screen`),
+    update: (guildId: string, data: { enabled?: boolean; description?: string; blocks?: any[] }) =>
+      apiFetch<any>(`/guilds/${guildId}/welcome-screen`, { method: 'PUT', body: JSON.stringify(data) }),
+    remove: (guildId: string) =>
+      apiFetch<void>(`/guilds/${guildId}/welcome-screen`, { method: 'DELETE' }),
+  },
+
+  gifts: {
+    create: (data: { recipientId: string; giftType: string; guildId?: string; quantity?: number; message?: string }) =>
+      apiFetch<any>('/gifts', { method: 'POST', body: JSON.stringify(data) }),
+    redeem: (code: string) =>
+      apiFetch<any>('/gifts/redeem', { method: 'POST', body: JSON.stringify({ code }) }),
+    getSent: () => apiFetch<any[]>('/gifts/sent'),
+    getReceived: () => apiFetch<any[]>('/gifts/received'),
+  },
+
+  collectibleCards: {
+    getCollection: () => apiFetch<any[]>('/cards/collection'),
+    getPacks: () => apiFetch<any[]>('/cards/packs'),
+    openPack: (packId: string) =>
+      apiFetch<{ cards: any[]; coinsSpent: number }>('/cards/open-pack', { method: 'POST', body: JSON.stringify({ packId }) }),
+    getTrades: () => apiFetch<any[]>('/cards/trades'),
+    proposeTrade: (data: { toUserId: string; offerCardIds: string[]; requestCardIds?: string[] }) =>
+      apiFetch<{ tradeId: string; status: string }>('/cards/trade', { method: 'POST', body: JSON.stringify(data) }),
+    acceptTrade: (tradeId: string) =>
+      apiFetch<{ status: string }>(`/cards/trade/${tradeId}/accept`, { method: 'POST', body: '{}' }),
+    declineTrade: (tradeId: string) =>
+      apiFetch<{ status: string }>(`/cards/trade/${tradeId}/decline`, { method: 'POST', body: '{}' }),
   },
 
   // Generic helpers for custom endpoints not covered by typed methods above

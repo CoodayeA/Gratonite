@@ -352,6 +352,20 @@ export const auth = {
       body: JSON.stringify({ token }),
     });
   },
+
+  forgotPassword(email: string) {
+    return apiFetch<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  resetPassword(token: string, password: string) {
+    return apiFetch<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    });
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -502,7 +516,7 @@ export const channels = {
     return apiFetch<Channel>(`/channels/${channelId}`);
   },
 
-  create(guildId: string, data: { name: string; type: string; parentId?: string }) {
+  create(guildId: string, data: { name: string; type: string; parentId?: string; nsfw?: boolean; slowModeSeconds?: number }) {
     return apiFetch<Channel>(`/guilds/${guildId}/channels`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -618,6 +632,10 @@ export const relationships = {
       recipientId: ch.otherUser?.id ?? '',
       recipient: ch.otherUser ?? undefined,
       lastMessageAt: ch.lastMessage?.createdAt ?? null,
+      lastMessagePreview:
+        ch.lastMessage?.attachments?.length
+          ? '[Attachment]'
+          : ch.lastMessage?.content ?? null,
     }));
   },
 
@@ -631,6 +649,10 @@ export const relationships = {
       recipientId,
       recipient: raw.otherUser ?? undefined,
       lastMessageAt: raw.lastMessage?.createdAt ?? null,
+      lastMessagePreview:
+        raw.lastMessage?.attachments?.length
+          ? '[Attachment]'
+          : raw.lastMessage?.content ?? null,
     } as DMChannel;
   },
 };

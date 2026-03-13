@@ -43,6 +43,7 @@ export default function AutomodConfigScreen({ route }: Props) {
   const TYPE_CONFIG = useMemo(() => TYPE_CONFIG_FACTORY(colors), [colors]);
   const [rules, setRules] = useState<AutomodRule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Add rule form
   const [showForm, setShowForm] = useState(false);
@@ -52,14 +53,19 @@ export default function AutomodConfigScreen({ route }: Props) {
 
   const fetchRules = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await automodApi.listRules(guildId);
       setRules(data);
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      if (err.status !== 401) {
+        const message = err.message || 'Failed to load automod rules';
+        setLoadError(message);
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
     }
-  }, [guildId]);
+  }, [guildId, toast]);
 
   useEffect(() => {
     fetchRules();
@@ -284,6 +290,25 @@ export default function AutomodConfigScreen({ route }: Props) {
   };
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && rules.length === 0) {
+    return (
+      <PatternBackground>
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl, gap: spacing.md }]}>
+          <Ionicons name="alert-circle-outline" size={56} color={colors.accentPrimary} />
+          <Text style={[styles.headerCount, { color: colors.textPrimary, fontSize: fontSize.xl, textAlign: 'center' }]}>Failed to load automod rules</Text>
+          <Text style={[styles.headerCount, { textAlign: 'center' }]}>{loadError}</Text>
+          <TouchableOpacity style={styles.addBtn} onPress={() => {
+            setLoading(true);
+            fetchRules();
+          }}>
+            <Ionicons name="refresh" size={18} color={colors.white} />
+            <Text style={styles.addBtnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>

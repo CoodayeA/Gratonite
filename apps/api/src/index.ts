@@ -21,11 +21,13 @@ import { startAccountDeletionJob } from './jobs/accountDeletion';
 import { startAfkMoverJob } from './jobs/afkMover';
 import { startRemindersJob } from './jobs/reminders';
 import { startAutoRolesJob } from './jobs/autoRoles';
+import { startAutoArchiveChannelsJob } from './jobs/autoArchiveChannels';
 import { startFriendshipStreaksJob } from './jobs/friendshipStreaks';
 import { startGiveawaysJob } from './jobs/giveaways';
 import { startGuildDigestJob } from './jobs/guildDigest';
 import { httpRequestDuration, activeWebSocketConnections, registry } from './lib/metrics';
 import { globalIpRateLimit } from './middleware/rateLimit';
+import { autoCacheHeaders } from './middleware/cache';
 import { initFederation, isFederationEnabled } from './federation/index';
 import { initFederationNamespace } from './federation/realtime';
 import { wellKnownHandler } from './routes/federation';
@@ -203,7 +205,11 @@ app.use(globalIpRateLimit);
 app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(cookieParser());
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+app.use(autoCacheHeaders);
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), {
+  maxAge: '1d',
+  immutable: true,
+}));
 
 // Request logging
 app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -285,6 +291,7 @@ server.listen(PORT, async () => {
   startFriendshipStreaksJob();
   startGiveawaysJob();
   startGuildDigestJob();
+  startAutoArchiveChannelsJob();
 
   // Initialize federation subsystem (gated behind FEDERATION_ENABLED)
   try {

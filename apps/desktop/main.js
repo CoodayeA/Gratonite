@@ -1,5 +1,6 @@
-const { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage, globalShortcut } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage, globalShortcut, Notification, crashReporter, powerMonitor, screen, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 // In production, load from the deployed web app.
 // In dev, load from the local Vite dev server.
@@ -9,8 +10,121 @@ const PROD_URL = process.env.GRATONITE_DESKTOP_URL || 'https://gratonite.chat/ap
 const isDev = process.argv.includes('--dev') || process.env.NODE_ENV === 'development';
 
 let mainWindow = null;
+let miniWindow = null;
 let tray = null;
 let isMuted = false;
+
+// --- Task #91: Crash Reporting ---
+crashReporter.start({
+  productName: 'Gratonite',
+  submitURL: 'https://api.gratonite.chat/crash-reports',
+  uploadToServer: !isDev,
+  compress: true,
+});
+
+const crashLogDir = path.join(app.getPath('userData'), 'crashes');
+
+function ensureCrashLogDir() {
+  try { fs.mkdirSync(crashLogDir, { recursive: true }); } catch {}
+}
+
+function writeCrashLog(type, error) {
+  ensureCrashLogDir();
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const logFile = path.join(crashLogDir, `${type}-${timestamp}.log`);
+  const content = `${type}: ${new Date().toISOString()}\n${error.stack || error.message || String(error)}\n`;
+  try { fs.writeFileSync(logFile, content); } catch {}
+  rotateCrashLogs();
+}
+
+function rotateCrashLogs() {
+  try {
+    const files = fs.readdirSync(crashLogDir)
+      .filter(f => f.endsWith('.log'))
+      .map(f => ({ name: f, time: fs.statSync(path.join(crashLogDir, f)).mtimeMs }))
+      .sort((a, b) => b.time - a.time);
+    for (const file of files.slice(10)) {
+      fs.unlinkSync(path.join(crashLogDir, file.name));
+    }
+  } catch {}
+}
+
+process.on('uncaughtException', (error) => {
+  writeCrashLog('uncaughtException', error);
+  console.error('Uncaught exception:', error);
+});
+
+process.on('unhandledRejection', (reason) => {
+  const error = reason instanceof Error ? reason : new Error(String(reason));
+  writeCrashLog('unhandledRejection', error);
+  console.error('Unhandled rejection:', error);
+});
+
+// --- Task #44: Window State Persistence ---
+const windowStateFile = path.join(app.getPath('userData'), 'window-state.json');
+
+function loadWindowState() {
+  try {
+    const data = JSON.parse(fs.readFileSync(windowStateFile, 'utf8'));
+    // Validate bounds are on a visible display
+    const displays = screen.getAllDisplays();
+    const onScreen = displays.some(d => {
+      const b = d.bounds;
+      return data.x >= b.x - 100 && data.x < b.x + b.width + 100 &&
+             data.y >= b.y - 100 && data.y < b.y + b.height + 100;
+    });
+    if (onScreen && data.width >= 940 && data.height >= 600) {
+      return data;
+    }
+  } catch {}
+  return null;
+}
+
+function saveWindowState() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const isMaximized = mainWindow.isMaximized();
+  const isFullScreen = mainWindow.isFullScreen();
+  // Only save normal bounds (not maximized/fullscreen dimensions)
+  const bounds = isMaximized || isFullScreen ? (mainWindow._lastNormalBounds || mainWindow.getBounds()) : mainWindow.getBounds();
+  const state = { ...bounds, isMaximized, isFullScreen };
+  try { fs.writeFileSync(windowStateFile, JSON.stringify(state)); } catch {}
+}
+
+let saveStateTimeout = null;
+function debouncedSaveWindowState() {
+  if (saveStateTimeout) clearTimeout(saveStateTimeout);
+  saveStateTimeout = setTimeout(saveWindowState, 500);
+}
+
+// --- Task #88: System Idle Detection ---
+let idleCheckInterval = null;
+let idleThresholdMinutes = 5;
+let wasIdle = false;
+let manualStatus = null; // track manual DND/invisible so we don't override
+
+function startIdleDetection() {
+  idleCheckInterval = setInterval(() => {
+    const idleSeconds = powerMonitor.getSystemIdleTime();
+    const isIdle = idleSeconds >= idleThresholdMinutes * 60;
+
+    if (isIdle && !wasIdle) {
+      wasIdle = true;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('system-idle-changed', { idle: true, idleSeconds });
+      }
+    } else if (!isIdle && wasIdle) {
+      wasIdle = false;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('system-idle-changed', { idle: false, idleSeconds });
+      }
+    }
+  }, 30000);
+}
+
+function stopIdleDetection() {
+  if (idleCheckInterval) clearInterval(idleCheckInterval);
+  idleCheckInterval = null;
+}
 
 // --- Game Activity Detection ---
 const knownGames = require('./data/known-games.json');
@@ -78,9 +192,14 @@ function stopGameDetection() {
 }
 
 function createWindow() {
+  // Task #44: Restore saved window state
+  const savedState = loadWindowState();
+
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
+    width: savedState ? savedState.width : 1280,
+    height: savedState ? savedState.height : 800,
+    x: savedState ? savedState.x : undefined,
+    y: savedState ? savedState.y : undefined,
     minWidth: 940,
     minHeight: 600,
     title: 'Gratonite',
@@ -109,10 +228,29 @@ function createWindow() {
     show: false, // Show after ready-to-show to prevent flash
   });
 
-  // Show window when content is ready
+  // Show window when content is ready; restore maximized state
   mainWindow.once('ready-to-show', () => {
+    if (savedState && savedState.isMaximized) {
+      mainWindow.maximize();
+    }
     mainWindow.show();
   });
+
+  // Task #44: Track normal bounds and save on changes (debounced)
+  mainWindow.on('resize', () => {
+    if (!mainWindow.isMaximized() && !mainWindow.isFullScreen()) {
+      mainWindow._lastNormalBounds = mainWindow.getBounds();
+    }
+    debouncedSaveWindowState();
+  });
+  mainWindow.on('move', () => {
+    if (!mainWindow.isMaximized() && !mainWindow.isFullScreen()) {
+      mainWindow._lastNormalBounds = mainWindow.getBounds();
+    }
+    debouncedSaveWindowState();
+  });
+  mainWindow.on('maximize', debouncedSaveWindowState);
+  mainWindow.on('unmaximize', debouncedSaveWindowState);
 
   // Load the app
   const url = isDev ? DEV_URL : PROD_URL;
@@ -133,6 +271,84 @@ function createWindow() {
         scroll-behavior: smooth;
       }
     `);
+  });
+
+  // Task #45: Native Context Menus
+  mainWindow.webContents.on('context-menu', (_event, params) => {
+    const menuTemplate = [];
+
+    // Spell check suggestions
+    if (params.misspelledWord && params.dictionarySuggestions.length > 0) {
+      for (const suggestion of params.dictionarySuggestions.slice(0, 5)) {
+        menuTemplate.push({
+          label: suggestion,
+          click: () => mainWindow.webContents.replaceMisspelling(suggestion),
+        });
+      }
+      menuTemplate.push({ type: 'separator' });
+    }
+
+    // Link context
+    if (params.linkURL) {
+      menuTemplate.push(
+        { label: 'Open Link in Browser', click: () => shell.openExternal(params.linkURL) },
+        { label: 'Copy Link', click: () => { require('electron').clipboard.writeText(params.linkURL); } },
+        { type: 'separator' },
+      );
+    }
+
+    // Image context
+    if (params.hasImageContents) {
+      menuTemplate.push(
+        { label: 'Copy Image', click: () => mainWindow.webContents.copyImageAt(params.x, params.y) },
+        { label: 'Save Image As...', click: () => {
+          const { dialog: dlg } = require('electron');
+          const ext = path.extname(new URL(params.srcURL).pathname) || '.png';
+          dlg.showSaveDialog(mainWindow, {
+            defaultPath: `image${ext}`,
+            filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }],
+          }).then(({ filePath }) => {
+            if (filePath) {
+              const { net } = require('electron');
+              const request = net.request(params.srcURL);
+              request.on('response', (response) => {
+                const chunks = [];
+                response.on('data', (chunk) => chunks.push(chunk));
+                response.on('end', () => {
+                  fs.writeFileSync(filePath, Buffer.concat(chunks));
+                });
+              });
+              request.end();
+            }
+          });
+        }},
+        { label: 'Open Image in Browser', click: () => shell.openExternal(params.srcURL) },
+        { type: 'separator' },
+      );
+    }
+
+    // Text editing context
+    if (params.isEditable) {
+      menuTemplate.push(
+        { label: 'Undo', role: 'undo', enabled: params.editFlags.canUndo },
+        { label: 'Redo', role: 'redo', enabled: params.editFlags.canRedo },
+        { type: 'separator' },
+        { label: 'Cut', role: 'cut', enabled: params.editFlags.canCut },
+        { label: 'Copy', role: 'copy', enabled: params.editFlags.canCopy },
+        { label: 'Paste', role: 'paste', enabled: params.editFlags.canPaste },
+        { label: 'Select All', role: 'selectAll', enabled: params.editFlags.canSelectAll },
+      );
+    } else if (params.selectionText) {
+      menuTemplate.push(
+        { label: 'Copy', role: 'copy' },
+        { label: 'Select All', role: 'selectAll' },
+      );
+    }
+
+    if (menuTemplate.length > 0) {
+      const menu = Menu.buildFromTemplate(menuTemplate);
+      menu.popup({ window: mainWindow });
+    }
   });
 
   // F11 fullscreen toggle
@@ -174,11 +390,65 @@ function createWindow() {
 
   // On macOS, clicking the dock icon re-opens the window
   mainWindow.on('close', (event) => {
+    // Task #44: Save state before closing
+    saveWindowState();
     if (process.platform === 'darwin' && !app.isQuitting) {
       event.preventDefault();
       mainWindow.hide();
     }
   });
+}
+
+// --- Task #89: Mini Mode ---
+function createMiniWindow() {
+  if (miniWindow && !miniWindow.isDestroyed()) {
+    miniWindow.focus();
+    return;
+  }
+
+  miniWindow = new BrowserWindow({
+    width: 320,
+    height: 400,
+    minWidth: 280,
+    minHeight: 300,
+    maxWidth: 480,
+    maxHeight: 600,
+    frame: false,
+    alwaysOnTop: true,
+    resizable: true,
+    skipTaskbar: true,
+    transparent: false,
+    backgroundColor: '#1a1a2e',
+    title: 'Gratonite Mini',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      backgroundThrottling: false,
+    },
+  });
+
+  const miniUrl = isDev ? `${DEV_URL}/mini-mode` : `${PROD_URL}/mini-mode`;
+  miniWindow.loadURL(miniUrl);
+
+  miniWindow.on('closed', () => {
+    miniWindow = null;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('mini-mode-changed', false);
+    }
+  });
+
+  // Hide main window when entering mini mode
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('mini-mode-changed', true);
+  }
+}
+
+function closeMiniWindow() {
+  if (miniWindow && !miniWindow.isDestroyed()) {
+    miniWindow.close();
+    miniWindow = null;
+  }
 }
 
 // --- Item 259: System Tray Icon with Context Menu ---
@@ -235,6 +505,19 @@ function updateTrayMenu() {
           mainWindow.webContents.send('mute-toggled', isMuted);
         }
         updateTrayMenu();
+      },
+    },
+    // Task #89: Mini Mode toggle in tray
+    {
+      label: 'Mini Mode',
+      type: 'checkbox',
+      checked: !!(miniWindow && !miniWindow.isDestroyed()),
+      click: (menuItem) => {
+        if (menuItem.checked) {
+          createMiniWindow();
+        } else {
+          closeMiniWindow();
+        }
       },
     },
     { type: 'separator' },
@@ -316,18 +599,59 @@ function registerGlobalShortcuts() {
   }
 }
 
+// --- Task #86: Deep Link Protocol ---
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('gratonite', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('gratonite');
+}
+
+function handleDeepLink(url) {
+  if (!url || !url.startsWith('gratonite://')) return;
+  // Wait for window to be ready
+  const sendToRenderer = () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('deep-link', url);
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  };
+  if (mainWindow) {
+    sendToRenderer();
+  } else {
+    // Window not created yet — queue for when ready
+    app.once('browser-window-created', () => {
+      setTimeout(sendToRenderer, 1000);
+    });
+  }
+}
+
 // Single instance lock — prevent multiple windows
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  // Task #86: On Windows/Linux, second-instance passes the deep link URL
+  app.on('second-instance', (_event, commandLine) => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
+    // The deep link URL is typically the last argument
+    const deepLinkUrl = commandLine.find(arg => arg.startsWith('gratonite://'));
+    if (deepLinkUrl) {
+      handleDeepLink(deepLinkUrl);
+    }
   });
 }
+
+// Task #86: On macOS, open-url event is used for protocol handler
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  handleDeepLink(url);
+});
 
 // GPU & rendering performance flags (cross-platform)
 app.commandLine.appendSwitch('enable-gpu-rasterization');
@@ -341,11 +665,147 @@ app.commandLine.appendSwitch('disable-renderer-backgrounding');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 app.commandLine.appendSwitch('force-gpu-mem-available-mb', '512');
 
+// --- Task #90: App Menu Bar ---
+function createAppMenu() {
+  const isMac = process.platform === 'darwin';
+
+  const template = [
+    // macOS app menu
+    ...(isMac ? [{
+      label: app.name,
+      submenu: [
+        { role: 'about' },
+        { type: 'separator' },
+        { label: 'Settings', accelerator: 'Cmd+,', click: () => {
+          if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('navigate', '/app/settings');
+        }},
+        { type: 'separator' },
+        { role: 'services' },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideOthers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        { role: 'quit' },
+      ],
+    }] : []),
+    // File
+    {
+      label: 'File',
+      submenu: [
+        { label: 'New Server', accelerator: 'CmdOrCtrl+N', click: () => {
+          if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('navigate', '/app/create-server');
+        }},
+        ...(!isMac ? [
+          { type: 'separator' },
+          { label: 'Settings', accelerator: 'Ctrl+,', click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('navigate', '/app/settings');
+          }},
+          { type: 'separator' },
+          { role: 'quit' },
+        ] : [
+          { type: 'separator' },
+          { role: 'close' },
+        ]),
+      ],
+    },
+    // Edit
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        ...(isMac ? [
+          { role: 'pasteAndMatchStyle' },
+          { role: 'delete' },
+          { role: 'selectAll' },
+        ] : [
+          { role: 'delete' },
+          { type: 'separator' },
+          { role: 'selectAll' },
+        ]),
+      ],
+    },
+    // View
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+        { type: 'separator' },
+        { label: 'Mini Mode', accelerator: 'CmdOrCtrl+Shift+K', click: () => {
+          if (miniWindow && !miniWindow.isDestroyed()) {
+            closeMiniWindow();
+          } else {
+            createMiniWindow();
+          }
+          updateTrayMenu();
+        }},
+      ],
+    },
+    // Window (macOS)
+    ...(isMac ? [{
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'zoom' },
+        { type: 'separator' },
+        { role: 'front' },
+      ],
+    }] : []),
+    // Help
+    {
+      label: 'Help',
+      submenu: [
+        { label: 'About Gratonite', click: () => {
+          dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: 'About Gratonite',
+            message: `Gratonite v${app.getVersion()}`,
+            detail: 'A modern chat platform.\nhttps://gratonite.chat',
+          });
+        }},
+        { label: 'Check for Updates', click: () => {
+          if (!isDev) {
+            try {
+              const { autoUpdater } = require('electron-updater');
+              autoUpdater.checkForUpdates();
+            } catch {}
+          }
+        }},
+        { type: 'separator' },
+        { label: 'Report a Bug', click: () => shell.openExternal('https://gratonite.chat/feedback') },
+        { label: 'Visit Website', click: () => shell.openExternal('https://gratonite.chat') },
+      ],
+    },
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
+
 app.whenReady().then(() => {
+  createAppMenu();
   createWindow();
   createTray();
   registerGlobalShortcuts();
   startGameDetection();
+  startIdleDetection();
+
+  // Handle deep link from initial launch (macOS)
+  const launchUrl = process.argv.find(arg => arg.startsWith('gratonite://'));
+  if (launchUrl) handleDeepLink(launchUrl);
 
   // macOS: re-create window when dock icon is clicked
   app.on('activate', () => {
@@ -366,6 +826,8 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   app.isQuitting = true;
   stopGameDetection();
+  stopIdleDetection();
+  saveWindowState();
 });
 
 app.on('will-quit', () => {
@@ -402,33 +864,174 @@ ipcMain.on('toggle-fullscreen', () => {
   }
 });
 
-// Auto-update (production only)
+// --- Task #88: Idle detection IPC ---
+ipcMain.on('set-idle-threshold', (_event, minutes) => {
+  if (typeof minutes === 'number' && minutes >= 1 && minutes <= 60) {
+    idleThresholdMinutes = minutes;
+  }
+});
+ipcMain.handle('get-idle-threshold', () => idleThresholdMinutes);
+
+// --- Task #89: Mini mode IPC ---
+ipcMain.on('toggle-mini-mode', () => {
+  if (miniWindow && !miniWindow.isDestroyed()) {
+    closeMiniWindow();
+  } else {
+    createMiniWindow();
+  }
+  updateTrayMenu();
+});
+ipcMain.on('exit-mini-mode', () => {
+  closeMiniWindow();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    mainWindow.focus();
+  }
+  updateTrayMenu();
+});
+ipcMain.handle('is-mini-mode', () => !!(miniWindow && !miniWindow.isDestroyed()));
+
+// --- Task #92: Desktop Notification Actions ---
+ipcMain.on('show-message-notification', (_event, data) => {
+  // data: { title, body, channelId, messageId, guildId }
+  if (isMuted) return;
+
+  const isMac = process.platform === 'darwin';
+  const notification = new Notification({
+    title: data.title || 'Gratonite',
+    body: data.body || '',
+    silent: false,
+    ...(isMac ? { hasReply: true, replyPlaceholder: 'Type a reply...' } : {}),
+    actions: isMac ? [] : [
+      { type: 'button', text: 'Reply' },
+      { type: 'button', text: 'Mark Read' },
+    ],
+  });
+
+  notification.on('click', () => {
+    if (mainWindow) {
+      mainWindow.show();
+      mainWindow.focus();
+      mainWindow.webContents.send('notification-clicked', {
+        channelId: data.channelId,
+        guildId: data.guildId,
+      });
+    }
+  });
+
+  // macOS inline reply
+  notification.on('reply', (_event, reply) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('notification-reply', {
+        channelId: data.channelId,
+        messageId: data.messageId,
+        reply,
+      });
+    }
+  });
+
+  // Action buttons (Windows/Linux)
+  notification.on('action', (_event, index) => {
+    if (index === 0) {
+      // Reply — focus window and go to channel
+      if (mainWindow) {
+        mainWindow.show();
+        mainWindow.focus();
+        mainWindow.webContents.send('notification-clicked', {
+          channelId: data.channelId,
+          guildId: data.guildId,
+          focusInput: true,
+        });
+      }
+    } else if (index === 1) {
+      // Mark Read
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('notification-mark-read', {
+          channelId: data.channelId,
+        });
+      }
+    }
+  });
+
+  notification.show();
+});
+
+// --- Task #104: Rich Presence Integration IPC ---
+ipcMain.handle('get-current-game', () => {
+  if (!currentGame) return null;
+  return { name: currentGame.displayName, startedAt: currentGame.startedAt };
+});
+
+ipcMain.on('set-game-activity-enabled', (_event, enabled) => {
+  if (enabled) {
+    if (!gameCheckInterval) startGameDetection();
+  } else {
+    stopGameDetection();
+    if (currentGame) {
+      currentGame = null;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('game-stopped');
+      }
+    }
+  }
+});
+
+// --- Task #87: Auto-Update Progress UI (production only) ---
 if (!isDev) {
   try {
     const { autoUpdater } = require('electron-updater');
-    const { dialog } = require('electron');
 
-    autoUpdater.autoDownload = true;
+    autoUpdater.autoDownload = false; // Don't auto-download; let renderer control it
     autoUpdater.autoInstallOnAppQuit = true;
 
+    autoUpdater.on('update-available', (info) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-available', {
+          version: info.version,
+          releaseNotes: info.releaseNotes || '',
+          releaseDate: info.releaseDate || '',
+        });
+      }
+    });
+
+    autoUpdater.on('download-progress', (progress) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-download-progress', {
+          percent: progress.percent,
+          bytesPerSecond: progress.bytesPerSecond,
+          transferred: progress.transferred,
+          total: progress.total,
+        });
+      }
+    });
+
     autoUpdater.on('update-downloaded', (info) => {
-      dialog.showMessageBox({
-        type: 'info',
-        title: 'Update Ready',
-        message: `Gratonite ${info.version} is ready to install.`,
-        detail: 'Restart Gratonite now to apply the update, or it will install the next time you quit.',
-        buttons: ['Restart Now', 'Later'],
-        defaultId: 0,
-        cancelId: 1,
-      }).then(({ response }) => {
-        if (response === 0) {
-          autoUpdater.quitAndInstall();
-        }
-      });
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-downloaded', {
+          version: info.version,
+          releaseNotes: info.releaseNotes || '',
+        });
+      }
     });
 
     autoUpdater.on('error', (err) => {
       console.error('Auto-updater error:', err.message);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-error', { message: err.message });
+      }
+    });
+
+    // IPC from renderer to control updates
+    ipcMain.on('update-download', () => {
+      autoUpdater.downloadUpdate();
+    });
+
+    ipcMain.on('update-install', () => {
+      autoUpdater.quitAndInstall();
+    });
+
+    ipcMain.on('update-check', () => {
+      autoUpdater.checkForUpdates();
     });
 
     app.whenReady().then(() => {

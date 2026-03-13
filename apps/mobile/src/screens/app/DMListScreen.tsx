@@ -62,6 +62,11 @@ function DMItem({ item, index, onPress, styles, colors, neo, glass }: { item: DM
         <Text style={[styles.dmName, unread.count > 0 && styles.dmNameUnread]} numberOfLines={1}>
           {name}
         </Text>
+        {item.lastMessagePreview ? (
+          <Text style={[styles.dmPreview, unread.count > 0 && styles.dmPreviewUnread]} numberOfLines={1}>
+            {item.lastMessagePreview}
+          </Text>
+        ) : null}
         {item.lastMessageAt && (
           <Text style={styles.dmMeta} numberOfLines={1}>
             {formatRelativeTime(item.lastMessageAt)}
@@ -188,6 +193,15 @@ export default function DMListScreen({ navigation }: Props) {
     dmNameUnread: {
       fontWeight: '800',
     },
+    dmPreview: {
+      color: colors.textMuted,
+      fontSize: fontSize.sm,
+      marginTop: 2,
+    },
+    dmPreviewUnread: {
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
     dmMeta: {
       color: colors.textMuted,
       fontSize: fontSize.xs,
@@ -238,6 +252,15 @@ export default function DMListScreen({ navigation }: Props) {
     },
   }), [colors, spacing, fontSize, borderRadius, neo, glass]);
 
+  const sortedChannels = useMemo(
+    () => [...dmChannels].sort((a, b) => {
+      const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+      const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+      return bTime - aTime;
+    }),
+    [dmChannels],
+  );
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await refreshDMs();
@@ -263,7 +286,7 @@ export default function DMListScreen({ navigation }: Props) {
       </View>
 
       <FlatList
-        data={dmChannels}
+        data={sortedChannels}
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
           <DMItem

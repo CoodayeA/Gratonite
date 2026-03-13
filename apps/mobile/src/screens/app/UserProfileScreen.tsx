@@ -14,6 +14,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme, useGlass } from '../../lib/theme';
 import LoadingScreen from '../../components/LoadingScreen';
 import Avatar from '../../components/Avatar';
+import { useUserPresence, presenceStore } from '../../lib/presenceStore';
 import type { User, PresenceStatus, ShowcaseItem } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -40,6 +41,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
   const [showcaseItems, setShowcaseItems] = useState<ShowcaseItem[]>([]);
   const [mutualFriends, setMutualFriends] = useState<Array<{ id: string; username: string; displayName: string | null; avatarHash: string | null }>>([]);
   const [mutualGuilds, setMutualGuilds] = useState<Array<{ id: string; name: string; iconHash: string | null }>>([]);
+  const livePresence = useUserPresence(userId);
 
   const STATUS_COLORS: Record<PresenceStatus, string> = useMemo(() => ({
     online: colors.online,
@@ -61,6 +63,19 @@ export default function UserProfileScreen({ route, navigation }: Props) {
       setShowcaseItems(sc);
       setMutualFriends(friends);
       setMutualGuilds(guilds);
+
+      // Fetch live presence for this user
+      try {
+        const presences = await usersApi.getPresences([userId]);
+        if (presences.length > 0) {
+          presenceStore.set(presences[0].userId, presences[0].status as any);
+        }
+      } catch {
+        // Best-effort: fall back to profile status
+        if (data.status) {
+          presenceStore.set(userId, data.status);
+        }
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to load profile');
     } finally {
@@ -496,7 +511,6 @@ export default function UserProfileScreen({ route, navigation }: Props) {
             name={displayName}
             size={80}
             showStatus
-            statusOverride={profile.status}
           />
         </View>
       </View>
@@ -520,8 +534,8 @@ export default function UserProfileScreen({ route, navigation }: Props) {
 
         {/* Status */}
         <View style={styles.statusRow}>
-          <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[profile.status] }]} />
-          <Text style={styles.statusText}>{STATUS_LABELS[profile.status]}</Text>
+          <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[livePresence] }]} />
+          <Text style={styles.statusText}>{STATUS_LABELS[livePresence]}</Text>
         </View>
 
         {profile.customStatus && (

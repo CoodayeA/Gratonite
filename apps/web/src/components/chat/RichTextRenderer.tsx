@@ -1,7 +1,10 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import hljs from 'highlight.js';
 import DOMPurify from 'dompurify';
-import 'highlight.js/styles/github-dark.css';
+import { getCodeTheme, applyCodeTheme } from '../../utils/codeTheme';
+
+// Apply the saved code theme on first load
+applyCodeTheme(getCodeTheme());
 
 // Code block with copy button — HTML is sanitized via DOMPurify before rendering
 const CodeBlock = ({ code, lang, idx }: { code: string; lang: string; idx: number }) => {

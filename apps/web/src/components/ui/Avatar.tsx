@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, memo } from 'react';
 import { API_BASE } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
 import { useUser } from '../../contexts/UserContext';
@@ -60,7 +60,7 @@ const DECORATION_POSITIONS: Record<string, React.CSSProperties> = {
 
 type FrameType = 'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse' | 'fire' | 'glitch';
 
-const Avatar = ({
+const Avatar = memo(({
   userId,
   avatarHash,
   avatarAnimated,
@@ -220,7 +220,11 @@ const Avatar = ({
               const staticSuffix = isAnimated && !isHovered ? '_static' : '';
               return `${API_BASE}/files/${avatarHash}${staticSuffix}${retryNonce ? `?r=${retryNonce}` : ''}`;
             })()}
-            alt={label}
+            alt={`${label}'s avatar`}
+            width={size}
+            height={size}
+            loading="lazy"
+            decoding="async"
             style={{
               width: '100%',
               height: '100%',
@@ -301,6 +305,6 @@ const Avatar = ({
       })()}
     </div>
   );
-};
+});
 
 export default Avatar;

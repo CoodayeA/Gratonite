@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, Hash, MessageSquare, User, Loader, X, SlidersHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import Avatar from '../ui/Avatar';
 import { buildDmRoute, buildGuildChannelRoute, normalizeLegacyRoute } from '../../lib/routes';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useDebounce } from '../../hooks/useDebounce';
 
 type SearchResult = {
     id: string;
@@ -15,6 +16,38 @@ type SearchResult = {
     targetUserId?: string;
 };
 
+/** Parse inline search operators from the query string */
+function parseSearchOperators(raw: string): {
+    text: string;
+    from: string;
+    has: string;
+    before: string;
+    after: string;
+    inChannel: string;
+} {
+    let text = raw;
+    let from = '';
+    let has = '';
+    let before = '';
+    let after = '';
+    let inChannel = '';
+
+    // Extract known operators
+    const operatorRe = /\b(from|has|before|after|in):(\S+)/gi;
+    text = raw.replace(operatorRe, (_, op, value) => {
+        switch (op.toLowerCase()) {
+            case 'from': from = value; break;
+            case 'has': has = value; break;
+            case 'before': before = value; break;
+            case 'after': after = value; break;
+            case 'in': inChannel = value; break;
+        }
+        return '';
+    }).trim();
+
+    return { text, from, has, before, after, inChannel };
+}
+
 const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<SearchResult[]>([]);
@@ -23,11 +56,22 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
     const [filterBefore, setFilterBefore] = useState('');
     const [filterAfter, setFilterAfter] = useState('');
     const [filterHas, setFilterHas] = useState('');
+    const [filterInChannel, setFilterInChannel] = useState('');
     const [filtersExpanded, setFiltersExpanded] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
-    const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const navigate = useNavigate();
     const isMobile = useIsMobile();
+    const debouncedQuery = useDebounce(query, 300);
+
+    // Parse inline operators from the query
+    const parsed = useMemo(() => parseSearchOperators(query), [query]);
+    // Effective filter values: inline operators take precedence, then UI filter fields
+    const effectiveFrom = parsed.from || filterFrom;
+    const effectiveHas = parsed.has || filterHas;
+    const effectiveBefore = parsed.before || filterBefore;
+    const effectiveAfter = parsed.after || filterAfter;
+    const effectiveInChannel = parsed.inChannel || filterInChannel;
+    const effectiveText = parsed.text;
 
     useEffect(() => {
         setTimeout(() => inputRef.current?.focus(), 50);
@@ -36,27 +80,36 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
         return () => window.removeEventListener('keydown', handleEsc);
     }, [onClose]);
 
+    // Show loading indicator while debouncing
+    useEffect(() => {
+        if (query.trim() && query !== debouncedQuery) setSearching(true);
+    }, [query, debouncedQuery]);
+
     // Debounced search
     useEffect(() => {
-        if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-        if (!query.trim()) {
+        if (!debouncedQuery.trim()) {
             setResults([]);
             setSearching(false);
             return;
         }
         setSearching(true);
-        searchTimerRef.current = setTimeout(async () => {
+        let cancelled = false;
+        (async () => {
             try {
-                const searchParams: { query: string; limit: number; authorId?: string; before?: string; after?: string; has?: string } = { query, limit: 10 };
-                if (filterFrom.trim()) searchParams.authorId = filterFrom.trim();
-                if (filterBefore) searchParams.before = filterBefore;
-                if (filterAfter) searchParams.after = filterAfter;
-                if (filterHas) searchParams.has = filterHas;
+                const searchParams: { query: string; limit: number; authorId?: string; channelId?: string; before?: string; after?: string; has?: string } = { query: effectiveText || debouncedQuery, limit: 15 };
+                if (effectiveFrom.trim()) searchParams.authorId = effectiveFrom.trim();
+                if (effectiveInChannel.trim()) searchParams.channelId = effectiveInChannel.trim();
+                if (effectiveBefore) searchParams.before = effectiveBefore;
+                if (effectiveAfter) searchParams.after = effectiveAfter;
+                if (effectiveHas) searchParams.has = effectiveHas;
+
+                const hasMessageFilters = !!(effectiveFrom || effectiveInChannel || effectiveBefore || effectiveAfter || effectiveHas);
                 const [users, messages] = await Promise.all([
-                    api.users.searchUsers(query).catch(() => []),
+                    hasMessageFilters ? [] : api.users.searchUsers(effectiveText || debouncedQuery).catch(() => []),
                     api.search.messages(searchParams).catch(() => ({ results: [] })),
                 ]);
 
+                if (cancelled) return;
                 const combined: SearchResult[] = [];
                 for (const u of users as any[]) {
                     combined.push({
@@ -81,14 +134,13 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                 }
                 setResults(combined);
             } catch {
-                setResults([]);
+                if (!cancelled) setResults([]);
             } finally {
-                setSearching(false);
+                if (!cancelled) setSearching(false);
             }
-        }, 300);
-
-        return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
-    }, [query, filterFrom, filterBefore, filterAfter, filterHas]);
+        })();
+        return () => { cancelled = true; };
+    }, [debouncedQuery, effectiveText, effectiveFrom, effectiveInChannel, effectiveBefore, effectiveAfter, effectiveHas]);
 
     const handleResultClick = async (result: SearchResult) => {
         try {
@@ -130,7 +182,7 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                     <input
                         ref={inputRef}
                         type="text"
-                        placeholder="Search across all channels, messages, and users..."
+                        placeholder="Search... (try from:user has:file in:channel)"
                         value={query}
                         onChange={e => setQuery(e.target.value)}
                         style={{ flex: 1, background: 'transparent', border: 'none', color: 'white', fontSize: '16px', outline: 'none' }}
@@ -152,18 +204,55 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                     >
                         <SlidersHorizontal size={14} />
                         Filters
-                        {(filterFrom || filterBefore || filterAfter || filterHas) && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-primary)' }} />}
+                        {(filterFrom || filterBefore || filterAfter || filterHas || filterInChannel) && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-primary)' }} />}
                     </button>
+                )}
+                {/* Active filter chips (from inline operators or manual filters) */}
+                {(effectiveFrom || effectiveHas || effectiveBefore || effectiveAfter || effectiveInChannel) && (
+                    <div style={{ display: 'flex', gap: 6, padding: '6px 16px', flexWrap: 'wrap', borderBottom: '1px solid var(--stroke)', background: 'var(--bg-elevated)' }}>
+                        {effectiveFrom && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 12, background: 'rgba(88,101,242,0.15)', color: 'var(--accent-primary)', fontSize: 11, fontWeight: 600 }}>
+                                from:{effectiveFrom}
+                                <button onClick={() => { setFilterFrom(''); setQuery(q => q.replace(/\bfrom:\S+/gi, '').trim()); }} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: 11, lineHeight: 1 }}><X size={10} /></button>
+                            </span>
+                        )}
+                        {effectiveInChannel && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 12, background: 'rgba(88,101,242,0.15)', color: 'var(--accent-primary)', fontSize: 11, fontWeight: 600 }}>
+                                in:{effectiveInChannel}
+                                <button onClick={() => { setFilterInChannel(''); setQuery(q => q.replace(/\bin:\S+/gi, '').trim()); }} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: 11, lineHeight: 1 }}><X size={10} /></button>
+                            </span>
+                        )}
+                        {effectiveHas && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 12, background: 'rgba(88,101,242,0.15)', color: 'var(--accent-primary)', fontSize: 11, fontWeight: 600 }}>
+                                has:{effectiveHas}
+                                <button onClick={() => { setFilterHas(''); setQuery(q => q.replace(/\bhas:\S+/gi, '').trim()); }} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: 11, lineHeight: 1 }}><X size={10} /></button>
+                            </span>
+                        )}
+                        {effectiveBefore && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 12, background: 'rgba(88,101,242,0.15)', color: 'var(--accent-primary)', fontSize: 11, fontWeight: 600 }}>
+                                before:{effectiveBefore}
+                                <button onClick={() => { setFilterBefore(''); setQuery(q => q.replace(/\bbefore:\S+/gi, '').trim()); }} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: 11, lineHeight: 1 }}><X size={10} /></button>
+                            </span>
+                        )}
+                        {effectiveAfter && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 12, background: 'rgba(88,101,242,0.15)', color: 'var(--accent-primary)', fontSize: 11, fontWeight: 600 }}>
+                                after:{effectiveAfter}
+                                <button onClick={() => { setFilterAfter(''); setQuery(q => q.replace(/\bafter:\S+/gi, '').trim()); }} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: 11, lineHeight: 1 }}><X size={10} /></button>
+                            </span>
+                        )}
+                    </div>
                 )}
                 {(!isMobile || filtersExpanded) && (
                     <div style={{ display: 'flex', gap: 8, padding: '8px 16px', flexWrap: 'wrap', borderBottom: '1px solid var(--stroke)', background: 'var(--bg-elevated)' }}>
-                        <input placeholder="from:user" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} style={{ flex: '1 1 120px', minWidth: 100, padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} />
+                        <input placeholder="from:user" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} style={{ flex: '1 1 100px', minWidth: 80, padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} />
+                        <input placeholder="in:channel" value={filterInChannel} onChange={e => setFilterInChannel(e.target.value)} style={{ flex: '1 1 100px', minWidth: 80, padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} />
                         <input type="date" value={filterAfter} onChange={e => setFilterAfter(e.target.value)} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} title="After date" />
                         <input type="date" value={filterBefore} onChange={e => setFilterBefore(e.target.value)} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} title="Before date" />
                         <select value={filterHas} onChange={e => setFilterHas(e.target.value)} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }}>
                             <option value="">has:...</option>
                             <option value="file">file</option>
                             <option value="image">image</option>
+                            <option value="embed">embed</option>
                             <option value="link">link</option>
                         </select>
                     </div>

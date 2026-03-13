@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -29,8 +29,9 @@ export default function DMSearchScreen({ navigation }: Props) {
   const [searching, setSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [openingDM, setOpeningDM] = useState<string | null>(null);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleSearch = useCallback(async (text: string) => {
+  const performSearch = useCallback(async (text: string) => {
     setQuery(text);
     if (text.trim().length < 2) {
       setResults([]);
@@ -50,6 +51,25 @@ export default function DMSearchScreen({ navigation }: Props) {
     } finally {
       setSearching(false);
     }
+  }, []);
+
+  const handleSearch = useCallback((text: string) => {
+    setQuery(text);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    if (text.trim().length < 2) {
+      setResults([]);
+      setHasSearched(false);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    debounceTimer.current = setTimeout(() => {
+      performSearch(text);
+    }, 250);
+  }, [performSearch]);
+
+  useEffect(() => () => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
   }, []);
 
   const handleOpenDM = async (userId: string, username: string) => {

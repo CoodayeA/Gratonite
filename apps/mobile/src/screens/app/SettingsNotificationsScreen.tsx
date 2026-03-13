@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import { userSettings as settingsApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
@@ -18,6 +19,10 @@ import type { AppStackParamList } from '../../navigation/types';
 import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SettingsNotifications'>;
+
+const MESSAGE_PREF_KEY = 'gratonite_notify_messages';
+const MENTION_PREF_KEY = 'gratonite_notify_mentions';
+const FRIEND_REQUEST_PREF_KEY = 'gratonite_notify_friend_requests';
 
 export default function SettingsNotificationsScreen({ navigation }: Props) {
   const { colors, spacing, fontSize, borderRadius } = useTheme();
@@ -37,12 +42,20 @@ export default function SettingsNotificationsScreen({ navigation }: Props) {
       const data = await settingsApi.get();
       setSettings(data);
       setPushEnabled(data.pushEnabled ?? false);
+      const [messagesPref, mentionsPref, friendRequestsPref] = await Promise.all([
+        SecureStore.getItemAsync(MESSAGE_PREF_KEY),
+        SecureStore.getItemAsync(MENTION_PREF_KEY),
+        SecureStore.getItemAsync(FRIEND_REQUEST_PREF_KEY),
+      ]);
+      setMessagesEnabled(messagesPref !== 'false');
+      setMentionsEnabled(mentionsPref !== 'false');
+      setFriendRequestsEnabled(friendRequestsPref !== 'false');
     } catch (err: any) {
       toast.error(err.message || 'Failed to load settings');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchSettings();
@@ -59,6 +72,24 @@ export default function SettingsNotificationsScreen({ navigation }: Props) {
       toast.error(err.message || 'Failed to save settings');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const updateLocalPreference = async (
+    key: string,
+    value: boolean,
+    setter: (value: boolean) => void,
+    label: string,
+  ) => {
+    setter(value);
+    try {
+      // MOBILE-POLISH: backend/mobile API currently exposes only the master
+      // pushEnabled preference, so granular notification categories are
+      // persisted locally on-device until server-side fields are available.
+      await SecureStore.setItemAsync(key, String(value));
+    } catch {
+      setter(!value);
+      toast.error(`Failed to save ${label.toLowerCase()} preference`);
     }
   };
 
@@ -160,7 +191,7 @@ export default function SettingsNotificationsScreen({ navigation }: Props) {
           </View>
           <Switch
             value={messagesEnabled}
-            onValueChange={setMessagesEnabled}
+            onValueChange={(value) => updateLocalPreference(MESSAGE_PREF_KEY, value, setMessagesEnabled, 'Messages')}
             trackColor={{ false: colors.bgElevated, true: colors.accentPrimary }}
             thumbColor={colors.white}
             disabled={!pushEnabled}
@@ -178,7 +209,7 @@ export default function SettingsNotificationsScreen({ navigation }: Props) {
           </View>
           <Switch
             value={mentionsEnabled}
-            onValueChange={setMentionsEnabled}
+            onValueChange={(value) => updateLocalPreference(MENTION_PREF_KEY, value, setMentionsEnabled, 'Mentions')}
             trackColor={{ false: colors.bgElevated, true: colors.accentPrimary }}
             thumbColor={colors.white}
             disabled={!pushEnabled}
@@ -196,7 +227,7 @@ export default function SettingsNotificationsScreen({ navigation }: Props) {
           </View>
           <Switch
             value={friendRequestsEnabled}
-            onValueChange={setFriendRequestsEnabled}
+            onValueChange={(value) => updateLocalPreference(FRIEND_REQUEST_PREF_KEY, value, setFriendRequestsEnabled, 'Friend Requests')}
             trackColor={{ false: colors.bgElevated, true: colors.accentPrimary }}
             thumbColor={colors.white}
             disabled={!pushEnabled}

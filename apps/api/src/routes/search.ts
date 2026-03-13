@@ -13,13 +13,16 @@ export const searchRouter = Router();
 
 /** GET /api/v1/search/messages */
 searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request, res: Response): Promise<void> => {
-  const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  const q = (typeof req.query.query === 'string' ? req.query.query.trim() : '') || (typeof req.query.q === 'string' ? req.query.q.trim() : '');
   if (q.length < 2) {
     res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Query must be at least 2 characters' }); return;
   }
 
   const channelId = typeof req.query.channelId === 'string' ? req.query.channelId : undefined;
   const authorId = typeof req.query.authorId === 'string' ? req.query.authorId : undefined;
+  const before = typeof req.query.before === 'string' ? req.query.before : undefined;
+  const after = typeof req.query.after === 'string' ? req.query.after : undefined;
+  const has = typeof req.query.has === 'string' ? req.query.has : undefined;
   const limit = Math.min(Number(req.query.limit) || 25, 50);
 
   const escaped = q.replace(/[%_\\]/g, '\\$&');
@@ -29,6 +32,25 @@ searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request,
   const conditions = [sql`${messages.content} ILIKE ${pattern}`];
   if (channelId) conditions.push(eq(messages.channelId, channelId));
   if (authorId) conditions.push(eq(messages.authorId, authorId));
+  if (before) {
+    const beforeDate = new Date(before);
+    if (!isNaN(beforeDate.getTime())) {
+      conditions.push(lt(messages.createdAt, beforeDate));
+    }
+  }
+  if (after) {
+    const afterDate = new Date(after);
+    if (!isNaN(afterDate.getTime())) {
+      conditions.push(gt(messages.createdAt, afterDate));
+    }
+  }
+  if (has === 'file' || has === 'image') {
+    conditions.push(sql`jsonb_array_length(COALESCE(${messages.attachments}, '[]'::jsonb)) > 0`);
+  } else if (has === 'embed') {
+    conditions.push(sql`jsonb_array_length(COALESCE(${messages.embeds}, '[]'::jsonb)) > 0`);
+  } else if (has === 'link') {
+    conditions.push(sql`${messages.content} ~ 'https?://'`);
+  }
 
   // Access control: only search channels the user can access.
   // Fetch guild IDs where the user is a member.
@@ -91,7 +113,7 @@ searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request,
     }
   }
 
-  res.json(results.map(r => ({
+  const mapped = results.map(r => ({
     id: r.id,
     channelId: r.channelId,
     channelName: r.channelName,
@@ -99,11 +121,13 @@ searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request,
     guildName: r.guildId ? guildNames[r.guildId] : null,
     content: r.content,
     createdAt: r.createdAt,
+    authorUsername: r.authorUsername,
     author: r.authorId ? {
       id: r.authorId,
       username: r.authorUsername,
       displayName: r.authorDisplayName,
       avatarHash: r.authorAvatarHash,
     } : null,
-  })));
+  }));
+  res.json({ results: mapped, total: mapped.length, limit, offset: 0 });
 });

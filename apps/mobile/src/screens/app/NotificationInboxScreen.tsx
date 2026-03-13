@@ -18,6 +18,8 @@ import { formatRelativeTime } from '../../lib/formatters';
 import { lightImpact } from '../../lib/haptics';
 import EmptyState from '../../components/EmptyState';
 import LoadingScreen from '../../components/LoadingScreen';
+import { onNotificationCreate } from '../../lib/socket';
+import { useAppState } from '../../contexts/AppStateContext';
 import type { Notification } from '../../types';
 import PatternBackground from '../../components/PatternBackground';
 
@@ -41,6 +43,7 @@ export default function NotificationInboxScreen({ navigation }: any) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const glassExtras = useGlass();
   const toast = useToast();
+  const { refreshNotificationCount } = useAppState();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -67,6 +70,14 @@ export default function NotificationInboxScreen({ navigation }: any) {
   }, [fetchNotifications]);
 
   useEffect(() => {
+    const unsub = onNotificationCreate(() => {
+      fetchNotifications();
+      refreshNotificationCount().catch(() => {});
+    });
+    return unsub;
+  }, [fetchNotifications, refreshNotificationCount]);
+
+  useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
         <View style={{ flexDirection: 'row', gap: spacing.xs }}>
@@ -87,6 +98,7 @@ export default function NotificationInboxScreen({ navigation }: any) {
       setNotifications((prev) =>
         prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n)),
       );
+      refreshNotificationCount().catch(() => {});
     } catch (err: any) {
       toast.error(err.message || 'Failed to mark notification as read');
     }
@@ -97,6 +109,7 @@ export default function NotificationInboxScreen({ navigation }: any) {
     try {
       await notifApi.dismiss(notificationId);
       setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+      refreshNotificationCount().catch(() => {});
     } catch (err: any) {
       toast.error(err.message || 'Failed to dismiss notification');
     }
@@ -112,6 +125,7 @@ export default function NotificationInboxScreen({ navigation }: any) {
     try {
       await notifApi.markAllRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      refreshNotificationCount().catch(() => {});
     } catch (err: any) {
       toast.error(err.message || 'Failed to mark all as read');
     }
@@ -128,6 +142,7 @@ export default function NotificationInboxScreen({ navigation }: any) {
           try {
             await Promise.all(notifications.map((n) => notifApi.dismiss(n.id)));
             setNotifications([]);
+            refreshNotificationCount().catch(() => {});
             toast.success('Notifications cleared');
           } catch (err: any) {
             toast.error(err.message || 'Failed to clear notifications');
@@ -148,6 +163,7 @@ export default function NotificationInboxScreen({ navigation }: any) {
           try {
             await Promise.all(readNotifications.map((n) => notifApi.dismiss(n.id)));
             setNotifications((prev) => prev.filter((n) => !n.read));
+            refreshNotificationCount().catch(() => {});
             toast.success('Read alerts cleared');
           } catch (err: any) {
             toast.error(err.message || 'Failed to clear read alerts');
@@ -346,6 +362,41 @@ export default function NotificationInboxScreen({ navigation }: any) {
     </TouchableOpacity>
   );
 
+  const handleNotificationPress = async (item: Notification) => {
+    if (!item.read) {
+      await handleMarkRead(item.id);
+    }
+
+    if (item.channelId) {
+      if (item.guildId) {
+        navigation.navigate('ChannelChat', {
+          channelId: item.channelId,
+          channelName: 'Channel',
+          guildId: item.guildId,
+        });
+        return;
+      }
+      navigation.navigate('DirectMessage', {
+        channelId: item.channelId,
+        recipientName: item.senderName || 'User',
+        recipientId: item.senderId || undefined,
+      });
+      return;
+    }
+
+    if (item.type === 'friend_request' || item.type === 'friend_accept') {
+      navigation.navigate('Friends');
+      return;
+    }
+
+    if (item.guildId) {
+      navigation.navigate('GuildChannels', {
+        guildId: item.guildId,
+        guildName: 'Portal',
+      });
+    }
+  };
+
   const renderItem = ({ item, index }: { item: Notification; index: number }) => {
     // For neo theme, cycle through palette colors for each card's background
     const neoCardStyle = neo
@@ -381,7 +432,7 @@ export default function NotificationInboxScreen({ navigation }: any) {
             neoCardStyle,
             !item.read && styles.notifItemUnread,
           ]}
-          onPress={() => handleMarkRead(item.id)}
+          onPress={() => handleNotificationPress(item)}
           activeOpacity={0.6}
         >
           <View

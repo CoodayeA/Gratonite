@@ -1,0 +1,7 @@
+appId: chat.gratonite.mobile
+---
+- runFlow: login.yaml
+- runFlow: navigation-tabs.yaml
+- runFlow: guild-browse.yaml
+- runFlow: settings.yaml
+- runFlow: friend-list.yaml

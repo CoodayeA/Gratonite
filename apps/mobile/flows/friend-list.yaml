@@ -1,0 +1,7 @@
+appId: chat.gratonite.mobile
+---
+- tapOn: "Friends"
+- assertVisible: "Friends"
+- assertVisible:
+    text: "Add Friend"
+    optional: true
