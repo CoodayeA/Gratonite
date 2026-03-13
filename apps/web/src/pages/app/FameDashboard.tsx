@@ -383,7 +383,7 @@ const FameDashboard = () => {
             // Fetch user's guilds for fame giving context
             api.guilds.getMine().then(guilds => {
                 if (guilds.length > 0) setMyGuildId(guilds[0].id);
-            }).catch(() => {});
+            }).catch(e => console.error('Failed to load guilds:', e));
         }).catch(() => {
             addToast({ title: 'Failed to load user data', description: 'Could not fetch your profile.', variant: 'error' });
         }),
@@ -446,7 +446,7 @@ const FameDashboard = () => {
         if (!currentUserId) return;
         api.fame.getStats(currentUserId).then(stats => {
             setMyFameStats(stats);
-        }).catch(() => {});
+        }).catch(e => console.error('Failed to load fame stats:', e));
     }, [currentUserId]);
 
     useEffect(() => {
@@ -455,7 +455,7 @@ const FameDashboard = () => {
             setFameToday(r.remaining);
             const today = new Date().toISOString().slice(0, 10);
             localStorage.setItem('gratonite-fame-tokens', JSON.stringify({ date: today, used: r.used }));
-        }).catch(() => {});
+        }).catch(e => console.error('Failed to load remaining fame:', e));
     }, [currentUserId]);
 
     // Mark current user once both data are available

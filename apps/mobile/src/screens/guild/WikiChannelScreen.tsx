@@ -378,6 +378,7 @@ export default function WikiChannelScreen({ route, navigation }: Props) {
       <TouchableOpacity
         style={styles.fab}
         onPress={() => setShowCreate(true)}
+        accessibilityLabel="Create page"
       >
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
@@ -387,17 +388,17 @@ export default function WikiChannelScreen({ route, navigation }: Props) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => { setViewingPage(null); setShowRevisions(false); }}>
+              <TouchableOpacity onPress={() => { setViewingPage(null); setShowRevisions(false); }} accessibilityLabel="Close">
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle} numberOfLines={1}>
                 {viewingPage?.title}
               </Text>
               <View style={styles.headerActions}>
-                <TouchableOpacity onPress={handleShowRevisions} style={styles.headerAction}>
+                <TouchableOpacity onPress={handleShowRevisions} style={styles.headerAction} accessibilityLabel="View revisions">
                   <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleStartEdit} style={styles.headerAction}>
+                <TouchableOpacity onPress={handleStartEdit} style={styles.headerAction} accessibilityLabel="Edit page">
                   <Ionicons name="create-outline" size={20} color={colors.accentPrimary} />
                 </TouchableOpacity>
               </View>
@@ -476,7 +477,7 @@ export default function WikiChannelScreen({ route, navigation }: Props) {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setShowCreate(false)}>
+              <TouchableOpacity onPress={() => setShowCreate(false)} accessibilityLabel="Close">
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>New Page</Text>

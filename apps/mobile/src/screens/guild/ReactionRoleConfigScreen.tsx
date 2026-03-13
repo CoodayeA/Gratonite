@@ -80,7 +80,7 @@ export default function ReactionRoleConfigScreen({ route, navigation }: Props) {
           </Text>
         </View>
       </View>
-      <TouchableOpacity onPress={() => handleDelete(item)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+      <TouchableOpacity onPress={() => handleDelete(item)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityLabel="Delete reaction role">
         <Ionicons name="trash-outline" size={20} color={colors.error} />
       </TouchableOpacity>
     </View>

@@ -345,7 +345,7 @@ export default function ServerFoldersScreen({ navigation }: Props) {
       />
 
       {/* FAB */}
-      <TouchableOpacity style={styles.fab} onPress={openCreateModal}>
+      <TouchableOpacity style={styles.fab} onPress={openCreateModal} accessibilityLabel="Create folder">
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
 

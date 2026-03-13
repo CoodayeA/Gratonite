@@ -173,6 +173,7 @@ export default function ThreadViewScreen({ route }: Props) {
           style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
           onPress={handleSend}
           disabled={!inputText.trim() || sending}
+          accessibilityLabel="Send message"
         >
           <Ionicons
             name="send"

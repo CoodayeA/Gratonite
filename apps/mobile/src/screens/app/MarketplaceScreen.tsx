@@ -498,6 +498,7 @@ export default function MarketplaceScreen({ navigation }: Props) {
       <TouchableOpacity
         style={styles.fab}
         onPress={() => setShowNewListing(true)}
+        accessibilityLabel="Edit listing"
       >
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
@@ -507,7 +508,7 @@ export default function MarketplaceScreen({ navigation }: Props) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setSelectedListing(null)}>
+              <TouchableOpacity onPress={() => setSelectedListing(null)} accessibilityLabel="Close">
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle} numberOfLines={1}>
@@ -562,7 +563,7 @@ export default function MarketplaceScreen({ navigation }: Props) {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setShowNewListing(false)}>
+              <TouchableOpacity onPress={() => setShowNewListing(false)} accessibilityLabel="Close">
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>New Listing</Text>

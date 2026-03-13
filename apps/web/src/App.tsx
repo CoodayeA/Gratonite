@@ -221,7 +221,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
         '/friends', '/discover', '/shop', '/marketplace', '/inventory',
         '/creator-dashboard', '/fame', '/dm',
         '/admin', '/help-center', '/message-requests',
-        '/me', '/saved-messages', '/login-history', '/settings'
+        '/me', '/saved-messages'
     ].some(path => location.pathname.startsWith(path));
 
     const activeGuildId = (() => {
@@ -940,7 +940,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         '/friends', '/discover', '/shop', '/marketplace', '/inventory',
         '/creator-dashboard', '/fame', '/dm',
         '/admin', '/help-center', '/message-requests',
-        '/me', '/saved-messages', '/login-history', '/settings'
+        '/me', '/saved-messages'
     ].some(path => location.pathname.startsWith(path));
 
     const [presenceMenuOpen, setPresenceMenuOpen] = useState(false);
@@ -3309,6 +3309,7 @@ const appRouter = createBrowserRouter(
                 <Route path="me" element={<Suspense fallback={<LazyFallback />}><MeProfile /></Suspense>} />
                 <Route path="message-requests" element={<Suspense fallback={<LazyFallback />}><MessageRequests /></Suspense>} />
                 <Route path="read-later" element={<Suspense fallback={<LazyFallback />}><ReadLater /></Suspense>} />
+                <Route path="saved-messages" element={<Navigate to="/read-later" replace />} />
                 <Route path="badges" element={<Suspense fallback={<LazyFallback />}><BadgesGallery /></Suspense>} />
                 <Route path="friend-activity" element={<Suspense fallback={<LazyFallback />}><FriendActivity /></Suspense>} />
                 <Route path="trading" element={<Suspense fallback={<LazyFallback />}><Trading /></Suspense>} />

@@ -253,10 +253,10 @@ export default function DMListScreen({ navigation }: Props) {
           {glass && !neo && <View style={styles.headerAccentBar} />}
         </View>
         <View style={styles.headerActions}>
-          <PressableScale onPress={() => navigation.navigate('DMSearch')} style={styles.headerBtn}>
+          <PressableScale onPress={() => navigation.navigate('DMSearch')} style={styles.headerBtn} accessibilityLabel="Search conversations">
             <Ionicons name="search-outline" size={24} color={colors.textPrimary} />
           </PressableScale>
-          <PressableScale onPress={() => navigation.navigate('GroupDMCreate')} style={styles.headerBtn}>
+          <PressableScale onPress={() => navigation.navigate('GroupDMCreate')} style={styles.headerBtn} accessibilityLabel="Create group chat">
             <Ionicons name="people-circle-outline" size={26} color={colors.accentPrimary} />
           </PressableScale>
         </View>

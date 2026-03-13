@@ -247,12 +247,14 @@ export default function InviteListScreen({ route, navigation }: Props) {
               <TouchableOpacity
                 style={styles.actionBtn}
                 onPress={() => handleShare(item.code)}
+                accessibilityLabel="Copy invite link"
               >
                 <Ionicons name="share-outline" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.actionBtn}
                 onPress={() => handleRevoke(item.code)}
+                accessibilityLabel="Delete invite"
               >
                 <Ionicons name="trash-outline" size={20} color={colors.error} />
               </TouchableOpacity>

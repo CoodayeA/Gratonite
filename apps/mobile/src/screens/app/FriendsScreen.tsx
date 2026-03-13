@@ -352,17 +352,17 @@ export default function FriendsScreen({ navigation }: Props) {
         </View>
         <View style={styles.actions}>
           {item.type === 'pending_incoming' && (
-            <PressableScale style={styles.acceptBtn} scaleTo={0.9} onPress={() => handleAccept(item.targetId)}>
+            <PressableScale style={styles.acceptBtn} scaleTo={0.9} onPress={() => handleAccept(item.targetId)} accessibilityLabel="Accept friend request">
               <Ionicons name="checkmark" size={20} color={colors.success} />
             </PressableScale>
           )}
           {item.type === 'friend' && (
-            <PressableScale style={styles.chatBtn} scaleTo={0.9} onPress={() => handleOpenDM(item.targetId, user?.username || 'User')}>
+            <PressableScale style={styles.chatBtn} scaleTo={0.9} onPress={() => handleOpenDM(item.targetId, user?.username || 'User')} accessibilityLabel="Send message">
               <Ionicons name="chatbubble-outline" size={18} color={colors.accentPrimary} />
             </PressableScale>
           )}
           {(item.type === 'friend' || item.type === 'pending_incoming' || item.type === 'pending_outgoing') && (
-            <PressableScale style={styles.actionBtn} scaleTo={0.9} onPress={() => handleRemove(item.targetId)}>
+            <PressableScale style={styles.actionBtn} scaleTo={0.9} onPress={() => handleRemove(item.targetId)} accessibilityLabel="Remove friend">
               <Ionicons name="close" size={18} color={colors.error} />
             </PressableScale>
           )}
@@ -381,10 +381,10 @@ export default function FriendsScreen({ navigation }: Props) {
           {glass && !neo && <View style={styles.headerAccentBar} />}
         </View>
         <View style={styles.headerActions}>
-          <PressableScale style={styles.headerBtn} onPress={() => navigation.navigate('MessageRequests')}>
+          <PressableScale style={styles.headerBtn} onPress={() => navigation.navigate('MessageRequests')} accessibilityLabel="Message requests">
             <Ionicons name="mail-outline" size={22} color={colors.textPrimary} />
           </PressableScale>
-          <PressableScale style={styles.headerBtn} onPress={() => navigation.navigate('FriendAdd')}>
+          <PressableScale style={styles.headerBtn} onPress={() => navigation.navigate('FriendAdd')} accessibilityLabel="Add friend">
             <Ionicons name="person-add-outline" size={22} color={colors.accentPrimary} />
           </PressableScale>
         </View>

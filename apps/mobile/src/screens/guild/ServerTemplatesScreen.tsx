@@ -252,7 +252,7 @@ export default function ServerTemplatesScreen({ route }: Props) {
             Used {item.usageCount} time{item.usageCount !== 1 ? 's' : ''}
           </Text>
         </View>
-        <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item)}>
+        <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item)} accessibilityLabel="Delete template">
           <Ionicons name="trash-outline" size={20} color={colors.error} />
         </TouchableOpacity>
       </View>

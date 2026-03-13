@@ -94,7 +94,11 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
     if (activeIndex === SLIDES.length - 1) {
       handleComplete();
     } else {
-      flatListRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true });
+      try {
+        flatListRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true });
+      } catch {
+        // list may not have rendered yet
+      }
     }
   };
 

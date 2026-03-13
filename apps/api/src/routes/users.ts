@@ -42,7 +42,7 @@ import { files } from '../db/schema/files';
 import { guildFolders } from '../db/schema/guild-folders';
 import { favoriteChannels } from '../db/schema/favorite-channels';
 import { channels, dmChannelMembers } from '../db/schema/channels';
-import { userSessions } from '../db/schema/settings';
+import { refreshTokens } from '../db/schema/auth';
 import { dataExports } from '../db/schema/data-exports';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
@@ -1267,23 +1267,40 @@ usersRouter.post('/@me/onboarding-complete', requireAuth, async (req: Request, r
 usersRouter.get('/@me/sessions', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const userId = req.userId!;
   try {
-    const sessions = await db
-      .select()
-      .from(userSessions)
-      .where(eq(userSessions.userId, userId))
-      .orderBy(sql`${userSessions.lastActiveAt} DESC`);
+    const now = new Date();
+    const rows = await db
+      .select({
+        id: refreshTokens.id,
+        tokenHash: refreshTokens.tokenHash,
+        device: refreshTokens.device,
+        ip: refreshTokens.ip,
+        lastActiveAt: refreshTokens.lastActiveAt,
+        createdAt: refreshTokens.createdAt,
+        expiresAt: refreshTokens.expiresAt,
+      })
+      .from(refreshTokens)
+      .where(eq(refreshTokens.userId, userId))
+      .orderBy(sql`${refreshTokens.lastActiveAt} DESC`);
 
-    // Determine current session by matching token hash
-    const currentTokenHash = (req as any).tokenHash;
-    res.json(sessions.map(s => ({
-      id: s.id,
-      deviceName: s.deviceName,
-      ipAddress: s.ipAddress,
-      userAgent: s.userAgent,
-      lastActiveAt: s.lastActiveAt,
-      createdAt: s.createdAt,
-      current: s.tokenHash === currentTokenHash,
-    })));
+    // Determine current session by matching the refresh cookie hash
+    const rawToken: string | undefined = req.cookies?.['gratonite_refresh'];
+    const currentHash = rawToken
+      ? crypto.createHash('sha256').update(rawToken).digest('hex')
+      : null;
+
+    const sessions = rows
+      .filter(r => r.expiresAt > now)
+      .map(r => ({
+        id: r.id,
+        deviceName: r.device || 'Unknown Device',
+        ipAddress: r.ip || '',
+        userAgent: null,
+        lastActiveAt: (r.lastActiveAt || r.createdAt)?.toISOString(),
+        createdAt: r.createdAt?.toISOString(),
+        current: r.tokenHash === currentHash,
+      }));
+
+    res.json(sessions);
   } catch {
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -1295,8 +1312,8 @@ usersRouter.delete('/@me/sessions/:sessionId', requireAuth, async (req: Request,
   const sessionId = req.params.sessionId as string;
   try {
     await db
-      .delete(userSessions)
-      .where(and(eq(userSessions.id, sessionId), eq(userSessions.userId, userId)));
+      .delete(refreshTokens)
+      .where(and(eq(refreshTokens.id, sessionId), eq(refreshTokens.userId, userId)));
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Internal server error' });

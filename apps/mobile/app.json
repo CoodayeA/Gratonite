@@ -15,12 +15,17 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "chat.gratonite.mobile",
-      "buildNumber": "2",
+      "buildNumber": "10",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
         "NSCameraUsageDescription": "Allow Gratonite to access your camera for video calls.",
         "NSMicrophoneUsageDescription": "Allow Gratonite to access your microphone for voice channels.",
-        "ITSAppUsesNonExemptEncryption": true,
-        "UIBackgroundModes": ["audio", "voip"]
+        "UIBackgroundModes": [
+          "audio",
+          "voip"
+        ]
       }
     },
     "android": {

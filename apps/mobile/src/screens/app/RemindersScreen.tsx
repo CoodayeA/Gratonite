@@ -151,7 +151,7 @@ export default function RemindersScreen({ navigation }: Props) {
           </Text>
         </View>
       </View>
-      <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)}>
+      <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item)} accessibilityLabel="Delete reminder">
         <Ionicons name="trash-outline" size={18} color={colors.error} />
       </TouchableOpacity>
     </View>

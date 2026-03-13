@@ -196,7 +196,7 @@ export default function StageChannelScreen({ route, navigation }: Props) {
               <Avatar userId={item.userId} avatarHash={item.avatarHash} name={item.displayName || item.username} size={32} />
               <Text style={styles.audienceName}>{item.displayName || item.username}</Text>
               {isHost && (
-                <TouchableOpacity style={styles.manageBtn} onPress={() => handlePromote(item.userId)}>
+                <TouchableOpacity style={styles.manageBtn} onPress={() => handlePromote(item.userId)} accessibilityLabel="Promote to speaker">
                   <Ionicons name="mic-outline" size={20} color={colors.accentPrimary} />
                 </TouchableOpacity>
               )}
@@ -207,16 +207,16 @@ export default function StageChannelScreen({ route, navigation }: Props) {
 
       <View style={styles.controls}>
         {!isSpeaker && (
-          <TouchableOpacity style={[styles.controlBtn, { backgroundColor: colors.accentPrimary }]} onPress={handleRaiseHand}>
+          <TouchableOpacity style={[styles.controlBtn, { backgroundColor: colors.accentPrimary }]} onPress={handleRaiseHand} accessibilityLabel="Raise hand">
             <Ionicons name="hand-left" size={24} color={colors.white} />
           </TouchableOpacity>
         )}
         {isHost && (
-          <TouchableOpacity style={[styles.controlBtn, { backgroundColor: colors.error }]} onPress={handleEnd}>
+          <TouchableOpacity style={[styles.controlBtn, { backgroundColor: colors.error }]} onPress={handleEnd} accessibilityLabel="End stage">
             <Ionicons name="close" size={24} color={colors.white} />
           </TouchableOpacity>
         )}
-        <TouchableOpacity style={[styles.controlBtn, { backgroundColor: colors.error }]} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={[styles.controlBtn, { backgroundColor: colors.error }]} onPress={() => navigation.goBack()} accessibilityLabel="Leave stage">
           <Ionicons name="exit-outline" size={24} color={colors.white} />
         </TouchableOpacity>
       </View>

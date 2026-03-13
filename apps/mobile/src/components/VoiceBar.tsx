@@ -93,6 +93,7 @@ export default function VoiceBar() {
         <TouchableOpacity
           style={[styles.controlBtn, { backgroundColor: muted ? 'rgba(237,66,69,0.15)' : 'transparent' }]}
           onPress={toggleMute}
+          accessibilityLabel="Toggle mute"
         >
           <Ionicons
             name={muted ? 'mic-off' : 'mic'}
@@ -104,6 +105,7 @@ export default function VoiceBar() {
         <TouchableOpacity
           style={[styles.controlBtn, { backgroundColor: deafened ? 'rgba(237,66,69,0.15)' : 'transparent' }]}
           onPress={toggleDeafen}
+          accessibilityLabel="Toggle deafen"
         >
           <Ionicons
             name={deafened ? 'volume-mute' : 'volume-medium'}
@@ -112,7 +114,7 @@ export default function VoiceBar() {
           />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.disconnectBtn} onPress={leaveVoice}>
+        <TouchableOpacity style={styles.disconnectBtn} onPress={leaveVoice} accessibilityLabel="Disconnect from voice">
           <Ionicons name="call" size={18} color="#fff" style={{ transform: [{ rotate: '135deg' }] }} />
         </TouchableOpacity>
       </View>

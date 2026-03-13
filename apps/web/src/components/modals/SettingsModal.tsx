@@ -322,7 +322,7 @@ const SettingsModal = ({
                 setEmailDms(settings.emailNotifications.dms ?? false);
                 setEmailFrequency(settings.emailNotifications.frequency ?? 'never');
             }
-        }).catch(() => {});
+        }).catch(e => console.error('Failed to load settings:', e));
     }, []);
 
     // Inline editing states for account fields
@@ -434,7 +434,7 @@ const SettingsModal = ({
                 const cfg = (equippedNameplate.assetConfig ?? {}) as Record<string, unknown>;
                 setWardrobePreviewNameplate((cfg.nameplateStyle as string) ?? 'none');
             }
-        }).catch(() => {}).finally(() => setWardrobeLoading(false));
+        }).catch(e => console.error('Failed to load wardrobe:', e)).finally(() => setWardrobeLoading(false));
     }, [activeTab]);
 
     // Fetch achievements and stats
@@ -824,7 +824,7 @@ const SettingsModal = ({
                                                         autoFocus
                                                         style={{ flex: 1, padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--accent-primary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
                                                     />
-                                                    <button onClick={() => { api.users.updateAccountBasics({ displayName: tempEditValue }).then(() => { setEditDisplayName(tempEditValue); updateUser({ name: tempEditValue }); setEditingField(null); addToast({ title: 'Display Name Updated', description: `Display name changed to "${tempEditValue}".`, variant: 'success' }); }).catch(() => addToast({ title: 'Failed to update display name', variant: 'error' })); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Save</button>
+                                                    <button onClick={() => { api.users.updateAccountBasics({ displayName: tempEditValue }).then(() => { setEditDisplayName(tempEditValue); updateUser({ name: tempEditValue }); if (setUserProfile) setUserProfile((prev: any) => ({ ...prev, name: tempEditValue })); setEditingField(null); addToast({ title: 'Display Name Updated', description: `Display name changed to "${tempEditValue}".`, variant: 'success' }); }).catch(() => addToast({ title: 'Failed to update display name', variant: 'error' })); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Save</button>
                                                     <button onClick={() => setEditingField(null)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Cancel</button>
                                                 </div>
                                             )}
@@ -1643,18 +1643,18 @@ const SettingsModal = ({
                                                     position: 'relative',
                                                     boxShadow: avatarFrame === 'neon' ? '0 0 20px 6px rgba(56, 189, 248, 0.6)' : avatarFrame === 'gold' ? '0 0 0 3px #f59e0b, 0 0 12px rgba(245, 158, 11, 0.4)' : 'none',
                                                     ...(avatarFrame === 'glass' ? {
-                                                        backdropFilter: 'blur(10px)',
-                                                        background: 'rgba(255,255,255,0.1)',
-                                                        borderColor: 'rgba(255,255,255,0.2)'
+                                                        backdropFilter: 'blur(2px)',
+                                                        borderColor: 'rgba(255,255,255,0.3)',
+                                                        boxShadow: 'inset 0 0 20px rgba(255,255,255,0.1)',
                                                     } : {})
                                                 }}>
-                                                    {avatarStyle.includes('gradient') || avatarFrame === 'glass' ? (userProfile?.name?.[0]?.toUpperCase() || '?') : ''}
+                                                    {avatarStyle.includes('gradient') ? (userProfile?.name?.[0]?.toUpperCase() || '?') : ''}
                                                     <div style={{ position: 'absolute', bottom: 2, right: 2, width: '18px', height: '18px', background: 'var(--bg-elevated)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                         <div style={{ width: '12px', height: '12px', background: 'var(--success)', borderRadius: '50%' }}></div>
                                                     </div>
                                                 </div>
-                                                <h2 className={nameplateStyle !== 'none' ? `nameplate-${nameplateStyle}` : ''} style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: '2px', letterSpacing: '-0.02em' }}>{userProfile?.name || 'User'}</h2>
-                                                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>{userProfile?.handle || ''}</p>
+                                                <h2 className={nameplateStyle !== 'none' ? `nameplate-${nameplateStyle}` : ''} style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: '2px', letterSpacing: '-0.02em' }}>{editDisplayName || userProfile?.name || 'User'}</h2>
+                                                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>{editUsername || userProfile?.handle || ''}</p>
 
                                                 <div style={{ height: '1px', background: 'var(--stroke)', marginBottom: '14px' }}></div>
 

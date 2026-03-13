@@ -390,6 +390,7 @@ export default function ForumChannelScreen({ route, navigation }: Props) {
       <TouchableOpacity
         style={styles.fab}
         onPress={() => setShowNewPost(true)}
+        accessibilityLabel="New post"
       >
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
@@ -402,7 +403,7 @@ export default function ForumChannelScreen({ route, navigation }: Props) {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setShowNewPost(false)}>
+              <TouchableOpacity onPress={() => setShowNewPost(false)} accessibilityLabel="Close">
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>New Post</Text>
@@ -449,7 +450,7 @@ export default function ForumChannelScreen({ route, navigation }: Props) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => { setSelectedPost(null); setReplies([]); }}>
+              <TouchableOpacity onPress={() => { setSelectedPost(null); setReplies([]); }} accessibilityLabel="Close">
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle} numberOfLines={1}>

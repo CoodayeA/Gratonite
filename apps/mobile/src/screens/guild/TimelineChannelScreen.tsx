@@ -354,6 +354,7 @@ export default function TimelineChannelScreen({ route, navigation }: Props) {
       <TouchableOpacity
         style={styles.fab}
         onPress={() => setShowNewEvent(true)}
+        accessibilityLabel="Create event"
       >
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
@@ -366,7 +367,7 @@ export default function TimelineChannelScreen({ route, navigation }: Props) {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setShowNewEvent(false)}>
+              <TouchableOpacity onPress={() => setShowNewEvent(false)} accessibilityLabel="Close">
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>New Event</Text>

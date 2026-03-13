@@ -426,6 +426,7 @@ export default function QAChannelScreen({ route, navigation }: Props) {
       <TouchableOpacity
         style={styles.fab}
         onPress={() => setShowNewQuestion(true)}
+        accessibilityLabel="New question"
       >
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
@@ -438,7 +439,7 @@ export default function QAChannelScreen({ route, navigation }: Props) {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setShowNewQuestion(false)}>
+              <TouchableOpacity onPress={() => setShowNewQuestion(false)} accessibilityLabel="Close">
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>Ask a Question</Text>
@@ -485,7 +486,7 @@ export default function QAChannelScreen({ route, navigation }: Props) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => { setSelectedPost(null); setReplies([]); }}>
+              <TouchableOpacity onPress={() => { setSelectedPost(null); setReplies([]); }} accessibilityLabel="Close">
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle} numberOfLines={1}>

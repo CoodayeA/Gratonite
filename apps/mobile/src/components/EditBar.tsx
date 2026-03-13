@@ -51,7 +51,7 @@ export default function EditBar({ onClose }: EditBarProps) {
         <Ionicons name="pencil-outline" size={16} color={colors.textSecondary} />
         <Text style={styles.text}>Editing message</Text>
       </View>
-      <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+      <TouchableOpacity style={styles.closeBtn} onPress={onClose} accessibilityLabel="Close">
         <Ionicons name="close" size={18} color={colors.textMuted} />
       </TouchableOpacity>
     </View>

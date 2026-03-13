@@ -83,7 +83,7 @@ const Friends = () => {
             const requestList: typeof requests = [];
             for (const rel of rels) {
                 const user = (rel as any).user || {};
-                const name = user.displayName || user.username || rel.userId?.slice(0, 8) || 'Unknown';
+                const name = user.displayName || user.username || 'Unknown User';
                 if ((rel as any).type === 'FRIEND' || (rel as any).type === 'friend' || (rel as any).type === 1) {
                     friendList.push({
                         id: user.id || (rel as any).userId,

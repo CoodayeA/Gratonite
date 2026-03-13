@@ -431,12 +431,14 @@ function CustomDrawerContent(
               <TouchableOpacity
                 style={s.moveBtn}
                 onPress={() => moveChannel(item.channel.id, 'up')}
+                accessibilityLabel="Move channel up"
               >
                 <Ionicons name="chevron-up" size={18} color={colors.textMuted} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={s.moveBtn}
                 onPress={() => moveChannel(item.channel.id, 'down')}
+                accessibilityLabel="Move channel down"
               >
                 <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
               </TouchableOpacity>
@@ -459,6 +461,7 @@ function CustomDrawerContent(
         <TouchableOpacity
           onPress={() => (props.navigation as any).getParent()?.goBack()}
           style={s.headerBtn}
+          accessibilityLabel="Go back"
         >
           <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
@@ -469,6 +472,7 @@ function CustomDrawerContent(
           <TouchableOpacity
             onPress={() => setIsEditing((e) => !e)}
             style={s.headerBtn}
+            accessibilityLabel={isEditing ? 'Done editing' : 'Edit channels'}
           >
             <Ionicons
               name={isEditing ? 'checkmark' : 'reorder-three-outline'}
@@ -486,6 +490,7 @@ function CustomDrawerContent(
                 })
             }
             style={s.headerBtn}
+            accessibilityLabel="Server settings"
           >
             <Ionicons name="settings-outline" size={20} color={colors.textPrimary} />
           </TouchableOpacity>
@@ -547,6 +552,7 @@ function CustomDrawerContent(
               setShowCreateCategory(false);
               setNewCategoryName('');
             }}
+            accessibilityLabel="Close"
           >
             <Ionicons name="close" size={20} color={colors.textMuted} />
           </TouchableOpacity>
@@ -650,6 +656,7 @@ export default function GuildDrawerNavigator({ route }: any) {
           <TouchableOpacity
             onPress={() => nav.openDrawer()}
             style={{ padding: spacing.sm, marginLeft: 4 }}
+            accessibilityLabel="Open menu"
           >
             <Ionicons name="menu-outline" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
@@ -658,6 +665,7 @@ export default function GuildDrawerNavigator({ route }: any) {
           <TouchableOpacity
             onPress={() => (nav as any).getParent()?.navigate('MainTabs')}
             style={{ padding: spacing.sm }}
+            accessibilityLabel="Go to home"
           >
             <Ionicons name="home-outline" size={22} color={colors.textPrimary} />
           </TouchableOpacity>

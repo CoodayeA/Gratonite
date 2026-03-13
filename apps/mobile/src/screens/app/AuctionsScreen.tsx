@@ -120,7 +120,7 @@ export default function AuctionsScreen({ navigation }: Props) {
         contentContainerStyle={{ paddingBottom: 100 }}
       />
 
-      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('CreateAuction')}>
+      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('CreateAuction')} accessibilityLabel="Create auction">
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
     </PatternBackground>

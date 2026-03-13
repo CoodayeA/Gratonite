@@ -59,7 +59,7 @@ export default function ReplyBar({ username, onClose }: ReplyBarProps) {
           Replying to <Text style={styles.username}>@{username}</Text>
         </Text>
       </View>
-      <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+      <TouchableOpacity style={styles.closeBtn} onPress={onClose} accessibilityLabel="Close">
         <Ionicons name="close" size={18} color={colors.textMuted} />
       </TouchableOpacity>
     </View>

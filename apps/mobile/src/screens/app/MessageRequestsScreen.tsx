@@ -230,12 +230,14 @@ export default function MessageRequestsScreen({ navigation }: Props) {
                 <TouchableOpacity
                   style={styles.acceptBtn}
                   onPress={() => handleAccept(item.relationship.targetId)}
+                  accessibilityLabel="Accept request"
                 >
                   <Ionicons name="checkmark-circle" size={28} color={colors.success} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.declineBtn}
                   onPress={() => handleDecline(item.relationship.targetId)}
+                  accessibilityLabel="Decline request"
                 >
                   <Ionicons name="close-circle" size={28} color={colors.error} />
                 </TouchableOpacity>

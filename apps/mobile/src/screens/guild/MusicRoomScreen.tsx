@@ -121,7 +121,7 @@ export default function MusicRoomScreen({ route }: Props) {
             <Text style={styles.trackTitle} numberOfLines={2}>{currentTrack.title}</Text>
             <Text style={styles.trackArtist}>{formatDuration(currentTrack.duration)}</Text>
             <View style={styles.controls}>
-              <TouchableOpacity style={styles.controlBtn} onPress={handleSkip}>
+              <TouchableOpacity style={styles.controlBtn} onPress={handleSkip} accessibilityLabel="Skip track">
                 <Ionicons name="play-skip-forward" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
@@ -172,7 +172,7 @@ export default function MusicRoomScreen({ route }: Props) {
               <Text style={styles.trackName} numberOfLines={1}>{item.title}</Text>
               <Text style={styles.trackMeta}>{formatDuration(item.duration)} · Added by {item.addedByName || 'Unknown'}</Text>
             </View>
-            <TouchableOpacity style={styles.removeBtn} onPress={() => handleRemoveTrack(item.id)}>
+            <TouchableOpacity style={styles.removeBtn} onPress={() => handleRemoveTrack(item.id)} accessibilityLabel="Remove from queue">
               <Ionicons name="close-circle-outline" size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>

@@ -192,7 +192,7 @@ export default function EmojiManagementScreen({ route }: Props) {
         resizeMode="contain"
       />
       <Text style={styles.emojiName} numberOfLines={1}>:{item.name}:</Text>
-      <TouchableOpacity style={styles.deleteIcon} onPress={() => handleDelete(item)}>
+      <TouchableOpacity style={styles.deleteIcon} onPress={() => handleDelete(item)} accessibilityLabel="Delete emoji">
         <Ionicons name="close-circle" size={20} color={colors.error} />
       </TouchableOpacity>
     </View>

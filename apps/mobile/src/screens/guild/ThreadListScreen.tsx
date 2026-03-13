@@ -325,7 +325,7 @@ export default function ThreadListScreen({ route, navigation }: Props) {
       />
 
       {/* FAB */}
-      <TouchableOpacity style={styles.fab} onPress={() => setShowCreate(true)}>
+      <TouchableOpacity style={styles.fab} onPress={() => setShowCreate(true)} accessibilityLabel="Create thread">
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
 

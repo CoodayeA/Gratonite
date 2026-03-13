@@ -193,6 +193,7 @@ export default function SettingsSessionsScreen({ navigation }: Props) {
         <TouchableOpacity
           style={styles.logoutBtn}
           onPress={() => handleLogoutSession(item.id)}
+          accessibilityLabel="Terminate session"
         >
           <Ionicons name="log-out-outline" size={20} color={colors.error} />
         </TouchableOpacity>

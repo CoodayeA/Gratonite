@@ -71,7 +71,7 @@ export default function SearchBar({ value, onChangeText, placeholder = 'Search..
         accessibilityHint="Type to search"
       />
       {value.length > 0 && (
-        <TouchableOpacity onPress={() => onChangeText('')} style={styles.clearBtn}>
+        <TouchableOpacity onPress={() => onChangeText('')} style={styles.clearBtn} accessibilityLabel="Clear search">
           <Ionicons name="close-circle" size={18} color={colors.textMuted} />
         </TouchableOpacity>
       )}

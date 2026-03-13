@@ -98,7 +98,7 @@ export default function FormCreateScreen({ route, navigation }: Props) {
             <View style={styles.fieldHeader}>
               <Text style={styles.fieldNum}>Field {i + 1}</Text>
               {fields.length > 1 && (
-                <TouchableOpacity onPress={() => removeField(i)}>
+                <TouchableOpacity onPress={() => removeField(i)} accessibilityLabel="Remove field">
                   <Ionicons name="trash-outline" size={18} color={colors.error} />
                 </TouchableOpacity>
               )}
@@ -113,7 +113,7 @@ export default function FormCreateScreen({ route, navigation }: Props) {
             </View>
             <View style={styles.requiredRow}>
               <Text style={styles.requiredText}>Required</Text>
-              <TouchableOpacity onPress={() => updateField(i, { required: !field.required })}>
+              <TouchableOpacity onPress={() => updateField(i, { required: !field.required })} accessibilityLabel="Toggle field required">
                 <Ionicons name={field.required ? 'checkbox' : 'square-outline'} size={22} color={field.required ? colors.accentPrimary : colors.textMuted} />
               </TouchableOpacity>
             </View>

@@ -393,13 +393,13 @@ export default function GuildListScreen({ navigation }: Props) {
           <View style={styles.headerUnderline} />
         </View>
         <View style={styles.headerActions}>
-          <PressableScale onPress={() => navigation.navigate('CommandPalette')} style={styles.headerBtn}>
+          <PressableScale onPress={() => navigation.navigate('CommandPalette')} style={styles.headerBtn} accessibilityLabel="Search">
             <Ionicons name="search-outline" size={20} color={colors.accentPrimary} />
           </PressableScale>
-          <PressableScale onPress={() => navigation.navigate('ServerDiscover')} style={styles.headerBtn}>
+          <PressableScale onPress={() => navigation.navigate('ServerDiscover')} style={styles.headerBtn} accessibilityLabel="Discover servers">
             <Ionicons name="compass-outline" size={20} color={colors.accentPrimary} />
           </PressableScale>
-          <PressableScale onPress={() => navigation.navigate('CreateGuild')} style={styles.headerBtn}>
+          <PressableScale onPress={() => navigation.navigate('CreateGuild')} style={styles.headerBtn} accessibilityLabel="Create server">
             <Ionicons name="add-circle-outline" size={20} color={colors.accentPrimary} />
           </PressableScale>
         </View>
@@ -424,7 +424,7 @@ export default function GuildListScreen({ navigation }: Props) {
             </Text>
           </View>
         </View>
-        <PressableScale onPress={() => navigation.navigate('Settings')}>
+        <PressableScale onPress={() => navigation.navigate('Settings')} accessibilityLabel="Settings">
           <Ionicons name="settings-outline" size={22} color={colors.textMuted} />
         </PressableScale>
       </PressableScale>
