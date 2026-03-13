@@ -84,7 +84,9 @@ function createWindow() {
     minWidth: 940,
     minHeight: 600,
     title: 'Gratonite',
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset'
+      : process.platform === 'win32' ? 'hidden'
+      : 'default',
     ...(process.platform === 'win32' && {
       titleBarOverlay: {
         color: '#1a1a2e',
