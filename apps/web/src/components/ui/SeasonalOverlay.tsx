@@ -39,17 +39,17 @@ export default function SeasonalOverlay() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<Particle[]>([]);
   const animFrameRef = useRef<number>(0);
-  const [enabled, setEnabled] = useState(true);
+  const [enabled, setEnabled] = useState(false);
   const [season, setSeason] = useState<Season>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem('gratonite-seasonal-effects');
-    if (stored === 'false') setEnabled(false);
+    if (stored === 'true') setEnabled(true);
     setSeason(getCurrentSeason());
 
     const onToggle = () => {
       const val = localStorage.getItem('gratonite-seasonal-effects');
-      setEnabled(val !== 'false');
+      setEnabled(val === 'true');
     };
     window.addEventListener('seasonal-effects-toggle', onToggle);
     return () => window.removeEventListener('seasonal-effects-toggle', onToggle);
