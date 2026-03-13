@@ -26,6 +26,10 @@ const patchSettingsSchema = z.object({
   highContrast: z.boolean().optional(),
   compactMode: z.boolean().optional(),
   accentColor: z.string().max(20).nullable().optional(),
+  birthday: z.object({
+    month: z.number().int().min(1).max(12),
+    day: z.number().int().min(1).max(31),
+  }).nullable().optional(),
   emailNotifications: z.object({
     mentions: z.boolean().optional(),
     dms: z.boolean().optional(),
