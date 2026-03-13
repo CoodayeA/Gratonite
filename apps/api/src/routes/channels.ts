@@ -968,3 +968,86 @@ channelsRouter.get(
   },
 );
 
+// ---------------------------------------------------------------------------
+// POST /channels/:channelId/e2e-toggle — Toggle E2E encryption for a DM channel
+// ---------------------------------------------------------------------------
+
+const e2eToggleSchema = z.object({
+  enabled: z.boolean(),
+});
+
+channelsRouter.post(
+  '/channels/:channelId/e2e-toggle',
+  requireAuth,
+  validate(e2eToggleSchema),
+  async (req: Request, res: Response) => {
+    try {
+      const channelId = req.params.channelId as string;
+      const userId = req.userId!;
+      const { enabled } = req.body as z.infer<typeof e2eToggleSchema>;
+
+      // Verify channel exists and is a DM
+      const [channel] = await db
+        .select()
+        .from(channels)
+        .where(eq(channels.id, channelId))
+        .limit(1);
+
+      if (!channel) {
+        res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found' });
+        return;
+      }
+
+      const type = (channel.type ?? '').toUpperCase().replace(/-/g, '_');
+      if (type !== 'DM' && type !== 'GROUP_DM') {
+        res.status(400).json({ code: 'BAD_REQUEST', message: 'E2E toggle is only for DM channels' });
+        return;
+      }
+
+      // Verify user is a member of this DM
+      const [membership] = await db
+        .select({ id: dmChannelMembers.id })
+        .from(dmChannelMembers)
+        .where(and(
+          eq(dmChannelMembers.channelId, channelId),
+          eq(dmChannelMembers.userId, userId),
+        ))
+        .limit(1);
+
+      if (!membership) {
+        res.status(403).json({ code: 'FORBIDDEN', message: 'You are not a member of this channel' });
+        return;
+      }
+
+      // Update channel isEncrypted flag
+      await db
+        .update(channels)
+        .set({ isEncrypted: enabled })
+        .where(eq(channels.id, channelId));
+
+      // Get toggler's info for the notification
+      const [toggler] = await db
+        .select({ username: users.username, displayName: users.displayName })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      const togglerName = toggler?.displayName || toggler?.username || 'Someone';
+
+      // Broadcast to all DM members via the channel room
+      try {
+        getIO().to(`channel:${channelId}`).emit('E2E_STATE_CHANGED', {
+          channelId,
+          enabled,
+          toggledBy: userId,
+          toggledByName: togglerName,
+        });
+      } catch { /* socket may not be initialised in tests */ }
+
+      res.json({ ok: true, enabled });
+    } catch (err) {
+      handleAppError(res, err, 'channels');
+    }
+  },
+);
+
