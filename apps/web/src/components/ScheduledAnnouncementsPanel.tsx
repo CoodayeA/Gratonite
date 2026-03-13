@@ -43,10 +43,10 @@ export default function ScheduledAnnouncementsPanel({ guildId, channels, onClose
         setSubmitting(true);
         try {
             const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}`).toISOString();
-            const msg = await api.scheduledMessages?.create(selectedChannel, {
+            const msg = await api.scheduledMessages?.create(guildId, {
+                channelId: selectedChannel,
                 content: content.trim(),
-                scheduledAt,
-                metadata: { isAnnouncement: true },
+                scheduledFor: scheduledAt,
             });
             if (msg) setScheduled(prev => [...prev, msg as ScheduledMessage]);
             setContent('');
@@ -62,7 +62,7 @@ export default function ScheduledAnnouncementsPanel({ guildId, channels, onClose
 
     const handleDelete = async (id: string) => {
         try {
-            await api.scheduledMessages?.delete(id);
+            await api.scheduledMessages?.delete(guildId, id);
             setScheduled(prev => prev.filter(m => m.id !== id));
             addToast({ title: 'Scheduled message deleted', variant: 'info' });
         } catch {
