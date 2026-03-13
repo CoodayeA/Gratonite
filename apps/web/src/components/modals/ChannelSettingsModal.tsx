@@ -71,6 +71,9 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
     const [permissionSynced, setPermissionSynced] = useState(true);
     const [parentId, setParentId] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+    const [roleSlowmodeOverrides, setRoleSlowmodeOverrides] = useState<Record<string, number>>({});
+    const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+    const [isArchived, setIsArchived] = useState(false);
     const isVoice = channelType === 'GUILD_VOICE' || channelType === 'voice' || channelType === 'GUILD_STAGE_VOICE';
 
     // Permissions state
@@ -89,6 +92,8 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
             if (ch.attachmentsEnabled === false) setAttachmentsEnabled(false);
             if (ch.parentId) setParentId(ch.parentId);
             if (ch.permissionSynced === false) setPermissionSynced(false);
+            if (ch.archived) setIsArchived(true);
+            if (ch.slowmodeOverrides) setRoleSlowmodeOverrides(ch.slowmodeOverrides);
         }).catch(() => {});
     }, [channelId, guildId]);
 
@@ -126,7 +131,7 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
     async function saveOverview() {
         setSaving(true);
         try {
-            await api.channels.update(channelId, { name, topic, rateLimitPerUser: slowmode, nsfw, isAnnouncement, isEncrypted, attachmentsEnabled, permissionSynced, ...(isVoice ? { userLimit } : {}) });
+            await api.channels.update(channelId, { name, topic, rateLimitPerUser: slowmode, nsfw, isAnnouncement, isEncrypted, attachmentsEnabled, permissionSynced, ...(isVoice ? { userLimit } : {}), ...(Object.keys(roleSlowmodeOverrides).length > 0 ? { slowmodeOverrides: roleSlowmodeOverrides } : {}) });
             onUpdate?.({ name, topic, rateLimitPerUser: slowmode, ...(isVoice ? { userLimit } : {}) });
             addToast({ title: 'Channel Updated', variant: 'success' });
             onClose();
@@ -302,7 +307,8 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                                                 {role.name}
                                             </span>
                                             <select
-                                                defaultValue={slowmode}
+                                                value={roleSlowmodeOverrides[role.id] ?? slowmode}
+                                                onChange={e => setRoleSlowmodeOverrides(prev => ({ ...prev, [role.id]: Number(e.target.value) }))}
                                                 style={{
                                                     flex: 1, padding: '4px 8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)',
                                                     borderRadius: '4px', color: 'var(--text-primary)', fontSize: '12px', fontFamily: 'inherit',
@@ -320,35 +326,97 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                             )}
 
                             {/* Channel Archive Toggle (Item 31) */}
-                            <div style={{ marginBottom: '24px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <div>
-                                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Archive Channel</div>
-                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                            Archived channels are read-only. Members can view but not send messages.
-                                        </div>
+                            {isArchived ? (
+                                <div style={{ marginBottom: '24px', padding: '12px', background: 'rgba(59,130,246,0.1)', borderRadius: '8px', border: '1px solid rgba(59,130,246,0.3)' }}>
+                                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#60a5fa', marginBottom: '4px' }}>This channel is archived and read-only.</div>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                                        Members can view messages but cannot send new ones.
                                     </div>
                                     <button
                                         onClick={async () => {
                                             try {
-                                                await api.channels.update(channelId, { archived: true } as any);
-                                                addToast({ title: 'Channel archived', variant: 'success' });
+                                                await api.channels.update(channelId, { archived: false } as any);
+                                                setIsArchived(false);
+                                                addToast({ title: 'Channel unarchived', variant: 'success' });
                                                 onClose();
                                             } catch {
-                                                addToast({ title: 'Failed to archive', variant: 'error' });
+                                                addToast({ title: 'Failed to unarchive', variant: 'error' });
                                             }
                                         }}
                                         style={{
                                             padding: '6px 14px', borderRadius: 'var(--radius-sm)',
-                                            background: 'var(--bg-primary)', border: '1px solid var(--stroke)',
-                                            color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600,
+                                            background: '#3b82f6', border: 'none',
+                                            color: 'white', fontSize: '12px', fontWeight: 600,
                                             cursor: 'pointer', fontFamily: 'inherit',
                                         }}
                                     >
-                                        Archive
+                                        Unarchive Channel
                                     </button>
                                 </div>
-                            </div>
+                            ) : (
+                                <div style={{ marginBottom: '24px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
+                                    {showArchiveConfirm ? (
+                                        <div style={{ padding: '4px', background: 'rgba(234,179,8,0.08)', borderRadius: '6px' }}>
+                                            <div style={{ fontSize: '14px', fontWeight: 600, color: '#facc15', marginBottom: '4px' }}>Are you sure you want to archive this channel?</div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                                                Members will be able to view but not send messages.
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button
+                                                    onClick={async () => {
+                                                        try {
+                                                            await api.channels.update(channelId, { archived: true } as any);
+                                                            addToast({ title: 'Channel archived', variant: 'success' });
+                                                            onClose();
+                                                        } catch {
+                                                            addToast({ title: 'Failed to archive', variant: 'error' });
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        padding: '6px 14px', borderRadius: 'var(--radius-sm)',
+                                                        background: '#eab308', border: 'none',
+                                                        color: '#000', fontSize: '12px', fontWeight: 600,
+                                                        cursor: 'pointer', fontFamily: 'inherit',
+                                                    }}
+                                                >
+                                                    Archive
+                                                </button>
+                                                <button
+                                                    onClick={() => setShowArchiveConfirm(false)}
+                                                    style={{
+                                                        padding: '6px 14px', borderRadius: 'var(--radius-sm)',
+                                                        background: 'var(--bg-primary)', border: '1px solid var(--stroke)',
+                                                        color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600,
+                                                        cursor: 'pointer', fontFamily: 'inherit',
+                                                    }}
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <div>
+                                                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Archive Channel</div>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                    Archived channels are read-only. Members can view but not send messages.
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => setShowArchiveConfirm(true)}
+                                                style={{
+                                                    padding: '6px 14px', borderRadius: 'var(--radius-sm)',
+                                                    background: 'var(--bg-primary)', border: '1px solid var(--stroke)',
+                                                    color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600,
+                                                    cursor: 'pointer', fontFamily: 'inherit',
+                                                }}
+                                            >
+                                                Archive
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {isVoice && (
                                 <>

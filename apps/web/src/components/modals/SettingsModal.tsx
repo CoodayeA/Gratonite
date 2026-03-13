@@ -212,6 +212,7 @@ const PrivacyToggle = ({ label, description, storageKey, defaultValue, onChange 
         const next = !enabled;
         setEnabled(next);
         try { localStorage.setItem(storageKey, String(next)); } catch {}
+        api.users.updateSettings({ [storageKey]: next }).catch(() => {});
         onChange?.(next);
     };
 
@@ -260,6 +261,7 @@ const SettingsModal = ({
     const [feedbackBody, setFeedbackBody] = useState('');
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
     const [customHex, setCustomHex] = useState('');
+    const [hexError, setHexError] = useState(false);
     const [soundMuted, setSoundMutedState] = useState(isSoundMuted());
     const [soundVolume, setSoundVolumeState] = useState(getSoundVolume());
     const [soundPack, setSoundPackState] = useState(getSoundPack());
@@ -359,6 +361,7 @@ const SettingsModal = ({
     const [mfaVerifyCode, setMfaVerifyCode] = useState('');
     const [mfaDisableCode, setMfaDisableCode] = useState('');
     const [showMfaDisableDialog, setShowMfaDisableDialog] = useState(false);
+    const [mfaStep, setMfaStep] = useState(1);
     const [smsEnabled, setSmsEnabled] = useState(false);
     const [showSmsSetup, setShowSmsSetup] = useState(false);
     const [smsCode, setSmsCode] = useState('');
@@ -1010,6 +1013,7 @@ const SettingsModal = ({
                                                             setMfaSecret(setup.secret);
                                                             setMfaVerifyCode('');
                                                             setShowAuthenticatorSetup(true);
+                                                            setMfaStep(1);
                                                         } catch (err: any) {
                                                             addToast({ title: 'MFA Setup Failed', description: err?.message || 'Could not start MFA setup.', variant: 'error' });
                                                         } finally {
@@ -1061,6 +1065,33 @@ const SettingsModal = ({
                                         {/* MFA Enable setup panel */}
                                         {showAuthenticatorSetup && !authenticatorEnabled && (
                                             <div style={{ marginTop: '16px', padding: '20px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)' }}>
+                                                {/* MFA Step Indicator */}
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+                                                    {[
+                                                        { num: 1, label: 'Scan QR Code' },
+                                                        { num: 2, label: 'Enter Code' },
+                                                        { num: 3, label: 'Backup Codes' },
+                                                    ].map((step, i) => (
+                                                        <div key={step.num} style={{ display: 'flex', alignItems: 'center' }}>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                                                <div style={{
+                                                                    width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                    fontSize: '12px', fontWeight: 700,
+                                                                    background: mfaStep > step.num ? 'var(--success)' : mfaStep === step.num ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                                                                    color: mfaStep >= step.num ? '#000' : 'var(--text-muted)',
+                                                                    border: mfaStep === step.num ? 'none' : '1px solid var(--stroke)',
+                                                                    transition: 'all 0.2s ease',
+                                                                }}>
+                                                                    {mfaStep > step.num ? <Check size={14} /> : step.num}
+                                                                </div>
+                                                                <span style={{ fontSize: '10px', color: mfaStep >= step.num ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: mfaStep === step.num ? 600 : 400, whiteSpace: 'nowrap' }}>{step.label}</span>
+                                                            </div>
+                                                            {i < 2 && (
+                                                                <div style={{ width: '40px', height: '2px', background: mfaStep > step.num ? 'var(--success)' : 'var(--stroke)', margin: '0 8px', marginBottom: '18px', transition: 'background 0.2s ease' }} />
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
                                                 <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Scan this QR code with your authenticator app:</div>
                                                 {mfaQrCodeUrl && (
                                                     <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
@@ -1082,6 +1113,7 @@ const SettingsModal = ({
                                                         type="text"
                                                         value={mfaVerifyCode}
                                                         onChange={e => setMfaVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                                        onFocus={() => setMfaStep(2)}
                                                         placeholder="000000"
                                                         maxLength={6}
                                                         style={{ width: '140px', padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '18px', letterSpacing: '4px', textAlign: 'center', outline: 'none', fontFamily: 'monospace' }}
@@ -1100,6 +1132,7 @@ const SettingsModal = ({
                                                                 if (result.backupCodes?.length) {
                                                                     setBackupCodes(result.backupCodes);
                                                                     setShowBackupCodes(true);
+                                                                    setMfaStep(3);
                                                                 }
                                                                 addToast({ title: 'Authenticator Enabled', description: '2FA via authenticator app is now active.', variant: 'success' });
                                                             } catch (err: any) {
@@ -1716,7 +1749,10 @@ const SettingsModal = ({
                                         return (
                                             <div
                                                 key={t.id}
+                                                role="button"
+                                                tabIndex={0}
                                                 onClick={() => setTheme(t.id as any)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTheme(t.id as any); } }}
                                                 style={{
                                                     background: 'var(--bg-elevated)',
                                                     border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--stroke)'}`,
@@ -1863,11 +1899,30 @@ const SettingsModal = ({
                                                 value={customHex || accentColor}
                                                 onChange={(e) => {
                                                     setCustomHex(e.target.value);
+                                                    setHexError(false);
                                                     if (e.target.value.match(/^#[0-9A-Fa-f]{6}$/i)) {
                                                         applyAccentColor(e.target.value);
                                                     }
                                                 }}
-                                                style={{ width: '100px', height: '40px', marginBottom: 0 }}
+                                                onFocus={() => setHexError(false)}
+                                                onBlur={() => {
+                                                    const val = (customHex || '').trim();
+                                                    const short = /^#[0-9A-Fa-f]{3}$/i;
+                                                    const full = /^#[0-9A-Fa-f]{6}$/i;
+                                                    if (full.test(val)) {
+                                                        applyAccentColor(val);
+                                                        setHexError(false);
+                                                    } else if (short.test(val)) {
+                                                        const expanded = '#' + val[1] + val[1] + val[2] + val[2] + val[3] + val[3];
+                                                        setCustomHex(expanded);
+                                                        applyAccentColor(expanded);
+                                                        setHexError(false);
+                                                    } else if (val && val !== accentColor) {
+                                                        setHexError(true);
+                                                        setCustomHex('');
+                                                    }
+                                                }}
+                                                style={{ width: '100px', height: '40px', marginBottom: 0, border: hexError ? '2px solid var(--error)' : undefined }}
                                             />
                                         </div>
                                         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Custom</span>
@@ -2092,7 +2147,7 @@ const SettingsModal = ({
                                                 setSoundMutedState(next);
                                                 setSoundMuted(next);
                                             }}
-                                            style={{ width: '40px', height: '24px', background: soundMuted ? 'var(--error)' : 'var(--success)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}
+                                            style={{ width: '40px', height: '24px', background: soundMuted ? 'var(--bg-elevated)' : 'var(--success)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0, border: soundMuted ? '1px solid var(--stroke)' : 'none' }}
                                         >
                                             <div style={{ position: 'absolute', height: '16px', width: '16px', left: soundMuted ? '20px' : '4px', bottom: '4px', backgroundColor: 'white', transition: '.4s', borderRadius: '50%' }}></div>
                                         </div>
@@ -2545,9 +2600,10 @@ const SettingsModal = ({
                                                 value={feedbackBody}
                                                 onChange={e => setFeedbackBody(e.target.value)}
                                                 placeholder="Describe your feedback, bug, or suggestion in detail..."
+                                                maxLength={2000}
                                                 style={{ width: '100%', height: '140px', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', resize: 'none', fontFamily: 'inherit' }}
                                             />
-                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', textAlign: 'right' }}>{feedbackBody.length}/1000</div>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', textAlign: 'right' }}>{feedbackBody.length}/2000</div>
                                         </div>
 
                                         <button

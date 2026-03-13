@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mic, MicOff, Headphones, HeadphoneOff, PhoneOff, Settings } from 'lucide-react';
+import { Mic, MicOff, Headphones, HeadphoneOff, PhoneOff, Settings, Users } from 'lucide-react';
 import { useVoice } from '../../contexts/VoiceContext';
 import { leaveVoiceSession } from '../../lib/voiceSession';
 
 export default function VoiceBar() {
-  const { connected, channelName, guildName, guildId, channelId, muted, deafened, toggleMute, toggleDeafen, leaveVoice } = useVoice();
+  const { connected, channelName, guildName, guildId, channelId, muted, deafened, toggleMute, toggleDeafen, leaveVoice, participantCount } = useVoice();
   const navigate = useNavigate();
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
+  const [connectionQuality] = useState<'good' | 'fair' | 'poor'>('good');
 
   if (!connected) return null;
 
@@ -43,10 +44,10 @@ export default function VoiceBar() {
       left: 0,
       right: 0,
       height: '52px',
-      background: 'rgba(var(--bg-elevated-rgb, 30, 31, 34), 0.85)',
+      background: 'linear-gradient(180deg, rgba(var(--bg-elevated-rgb, 30, 31, 34), 0.95), rgba(var(--bg-elevated-rgb, 30, 31, 34), 0.85))',
       backdropFilter: 'blur(16px)',
       WebkitBackdropFilter: 'blur(16px)',
-      borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+      borderTop: '1px solid rgba(255, 255, 255, 0.12)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -98,16 +99,36 @@ export default function VoiceBar() {
           }}>
             Voice Connected
           </span>
-          <span style={{
-            fontSize: '11px',
-            color: 'var(--text-muted)',
-            lineHeight: '1.2',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}>
-            {channelName} &middot; {guildName}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+            <span style={{
+              fontSize: '11px',
+              color: 'var(--text-muted)',
+              lineHeight: '1.2',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
+              {channelName} &middot; {guildName}
+            </span>
+            {/* Participant count badge (I6) */}
+            {participantCount > 0 && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: '3px',
+                background: 'rgba(255, 255, 255, 0.08)', borderRadius: '10px',
+                padding: '1px 6px', fontSize: '10px', fontWeight: 600,
+                color: 'var(--text-secondary)', flexShrink: 0,
+              }}>
+                <Users size={10} />
+                {participantCount}
+              </span>
+            )}
+            {/* Connection quality dot (I6) */}
+            <div style={{
+              width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
+              background: connectionQuality === 'good' ? '#43b581' : connectionQuality === 'fair' ? '#faa61a' : '#ed4245',
+              boxShadow: `0 0 4px ${connectionQuality === 'good' ? '#43b581' : connectionQuality === 'fair' ? '#faa61a' : '#ed4245'}`,
+            }} />
+          </div>
         </div>
       </div>
 
