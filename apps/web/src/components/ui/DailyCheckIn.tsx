@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Gift, Clock, Sparkles, Check } from 'lucide-react';
+import { Gift, Clock, Sparkles, Check, RotateCw } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from './ToastManager';
+import SpinWheel from './SpinWheel';
 
 interface DailyCheckInProps {
     onBalanceUpdate?: (newBalance: number) => void;
@@ -14,6 +15,7 @@ const DailyCheckIn = ({ onBalanceUpdate }: DailyCheckInProps) => {
     const [nextClaimAt, setNextClaimAt] = useState<string | null>(null);
     const [countdown, setCountdown] = useState('');
     const [loading, setLoading] = useState(true);
+    const [showSpinWheel, setShowSpinWheel] = useState(false);
 
     // On mount, check wallet status without claiming
     useEffect(() => {
@@ -164,6 +166,39 @@ const DailyCheckIn = ({ onBalanceUpdate }: DailyCheckInProps) => {
                 >
                     <Gift size={14} /> Claim
                 </button>
+            )}
+            <button
+                onClick={() => setShowSpinWheel(true)}
+                title="Daily Spin Wheel"
+                style={{
+                    padding: '10px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--stroke)',
+                    background: 'var(--bg-elevated)',
+                    color: '#f59e0b',
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center',
+                    flexShrink: 0,
+                }}
+            >
+                <RotateCw size={16} />
+            </button>
+
+            {/* Spin Wheel Modal */}
+            {showSpinWheel && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowSpinWheel(false)}>
+                    <div onClick={e => e.stopPropagation()}>
+                        <SpinWheel
+                            onClose={() => setShowSpinWheel(false)}
+                            onReward={(reward) => {
+                                if (reward.amount > 0 && onBalanceUpdate) {
+                                    // Optimistic update
+                                    onBalanceUpdate(reward.amount);
+                                }
+                            }}
+                        />
+                    </div>
+                </div>
             )}
         </div>
     );

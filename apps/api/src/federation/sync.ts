@@ -1,6 +1,7 @@
 /** federation/sync.ts — Guild replication sync between primary and secondary instances. */
 
 import { db } from '../db/index';
+import { logger } from '../lib/logger';
 import { guildReplicas } from '../db/schema/guild-replicas';
 import { federatedInstances } from '../db/schema/federation-instances';
 import { eq, and } from 'drizzle-orm';
@@ -77,7 +78,7 @@ export async function syncReplica(replicaId: string): Promise<void> {
       });
     }
   } catch (err) {
-    console.error(`[federation:sync] Replica sync failed for ${replicaId}:`, err);
+    logger.error(`[federation:sync] Replica sync failed for ${replicaId}:`, err);
     await db.update(guildReplicas)
       .set({ syncState: 'error' })
       .where(eq(guildReplicas.id, replicaId));

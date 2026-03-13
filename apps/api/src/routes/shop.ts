@@ -8,6 +8,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, sql, gte } from 'drizzle-orm';
 
 import { db } from '../db/index';
@@ -15,6 +16,7 @@ import { shopItems, userInventory, userSoundboard, shopPurchaseRequests } from '
 import { userWallets } from '../db/schema/economy';
 import { economyLedger } from '../db/schema/economy';
 import { requireAuth } from '../middleware/auth';
+import { cacheControl } from '../middleware/cache';
 
 export const shopRouter = Router();
 
@@ -38,6 +40,7 @@ async function getInventoryVersion(userId: string): Promise<number> {
 shopRouter.get(
   '/items',
   requireAuth,
+  cacheControl(300),
   async (_req: Request, res: Response): Promise<void> => {
     try {
       const items = await db
@@ -62,7 +65,7 @@ shopRouter.get(
         createdAt: i.createdAt.toISOString(),
       })));
     } catch (err) {
-      console.error('[shop] getItems error:', err);
+      logger.error('[shop] getItems error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -107,7 +110,7 @@ shopRouter.get(
         },
       })));
     } catch (err) {
-      console.error('[shop] getInventory error:', err);
+      logger.error('[shop] getInventory error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -291,12 +294,12 @@ shopRouter.post(
       }));
       res.status(200).json(responseBody);
     } catch (err) {
-      console.error(JSON.stringify({
+      logger.error(JSON.stringify({
         event: 'purchase_fail',
         route: '/shop/purchase',
         message: err instanceof Error ? err.message : 'unknown',
       }));
-      console.error('[shop] purchase error:', err);
+      logger.error('[shop] purchase error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -375,12 +378,12 @@ shopRouter.patch(
         assetConfig: item.assetConfig,
       });
     } catch (err) {
-      console.error(JSON.stringify({
+      logger.error(JSON.stringify({
         event: 'equip_fail',
         route: '/shop/items/:id/equip',
         message: err instanceof Error ? err.message : 'unknown',
       }));
-      console.error('[shop] equip error:', err);
+      logger.error('[shop] equip error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -411,7 +414,7 @@ shopRouter.delete(
       await db.update(userInventory).set({ equipped: false }).where(eq(userInventory.id, owned.id));
       res.status(204).send();
     } catch (err) {
-      console.error('[shop] unequip error:', err);
+      logger.error('[shop] unequip error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },

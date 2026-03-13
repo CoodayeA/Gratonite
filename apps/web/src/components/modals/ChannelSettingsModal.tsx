@@ -282,10 +282,73 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                                 NSFW Channel
                             </label>
 
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '24px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '12px' }}>
                                 <input type="checkbox" checked={isAnnouncement} onChange={e => setIsAnnouncement(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
                                 Announcement Channel
                             </label>
+
+                            {/* Slowmode Role Overrides (Item 27) */}
+                            {slowmode > 0 && roles.length > 0 && (
+                                <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
+                                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                                        Slowmode Role Overrides
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                                        Trusted roles can have shorter cooldowns. Default: {formatSlowmode(slowmode)}.
+                                    </div>
+                                    {roles.slice(0, 5).map(role => (
+                                        <div key={role.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                            <span style={{ fontSize: '12px', color: role.color || 'var(--text-secondary)', fontWeight: 600, width: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {role.name}
+                                            </span>
+                                            <select
+                                                defaultValue={slowmode}
+                                                style={{
+                                                    flex: 1, padding: '4px 8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)',
+                                                    borderRadius: '4px', color: 'var(--text-primary)', fontSize: '12px', fontFamily: 'inherit',
+                                                }}
+                                            >
+                                                <option value={0}>No slowmode</option>
+                                                {SLOWMODE_OPTIONS.filter(s => s > 0 && s <= slowmode).map(s => (
+                                                    <option key={s} value={s}>{formatSlowmode(s)}</option>
+                                                ))}
+                                                <option value={slowmode}>Default ({formatSlowmode(slowmode)})</option>
+                                            </select>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Channel Archive Toggle (Item 31) */}
+                            <div style={{ marginBottom: '24px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div>
+                                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Archive Channel</div>
+                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                            Archived channels are read-only. Members can view but not send messages.
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                await api.channels.update(channelId, { archived: true } as any);
+                                                addToast({ title: 'Channel archived', variant: 'success' });
+                                                onClose();
+                                            } catch {
+                                                addToast({ title: 'Failed to archive', variant: 'error' });
+                                            }
+                                        }}
+                                        style={{
+                                            padding: '6px 14px', borderRadius: 'var(--radius-sm)',
+                                            background: 'var(--bg-primary)', border: '1px solid var(--stroke)',
+                                            color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600,
+                                            cursor: 'pointer', fontFamily: 'inherit',
+                                        }}
+                                    >
+                                        Archive
+                                    </button>
+                                </div>
+                            </div>
 
                             {isVoice && (
                                 <>

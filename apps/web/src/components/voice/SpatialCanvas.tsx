@@ -68,6 +68,31 @@ export default function SpatialCanvas({
         userSelect: 'none',
       }}
     >
+      {/* Room name label */}
+      <div style={{
+        position: 'absolute', top: '12px', left: '50%', transform: 'translateX(-50%)',
+        fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', opacity: 0.7,
+        letterSpacing: '0.06em', textTransform: 'uppercase', pointerEvents: 'none', zIndex: 2,
+      }}>
+        Spatial Audio Room
+      </div>
+
+      {/* Floor grid pattern */}
+      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', opacity: 0.08 }}>
+        <defs>
+          <pattern id="spatialGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#spatialGrid)" />
+      </svg>
+
+      {/* Room furniture decorations */}
+      <div style={{ position: 'absolute', left: '8%', top: '15%', fontSize: '28px', opacity: 0.15, pointerEvents: 'none' }}>&#128715;</div>
+      <div style={{ position: 'absolute', right: '10%', top: '20%', fontSize: '24px', opacity: 0.12, pointerEvents: 'none' }}>&#127793;</div>
+      <div style={{ position: 'absolute', left: '45%', bottom: '18%', fontSize: '22px', opacity: 0.1, pointerEvents: 'none' }}>&#128214;</div>
+      <div style={{ position: 'absolute', right: '15%', bottom: '22%', fontSize: '26px', opacity: 0.12, pointerEvents: 'none' }}>&#127911;</div>
+
       {/* Audible range circle around local user */}
       <div
         style={{

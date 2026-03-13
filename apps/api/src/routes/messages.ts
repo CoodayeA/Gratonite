@@ -26,6 +26,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { z } from 'zod';
 import { eq, and, lt, gt, desc, isNull, or, sql } from 'drizzle-orm';
 
@@ -814,7 +815,7 @@ messagesRouter.post(
               }
             }
           } catch (automodErr) {
-            console.error('[automod] check failed:', automodErr);
+            logger.error('[automod] check failed:', automodErr);
           }
         })();
       }
@@ -834,7 +835,7 @@ messagesRouter.post(
               title: `New message from ${senderName}`,
               body: preview || '(attachment)',
               data: { senderId: req.userId!, senderName, channelId },
-            }).catch(err => console.error('[messages] notification failed:', err));
+            }).catch(err => logger.error('[messages] notification failed:', err));
           }
         }
       }
@@ -865,7 +866,7 @@ messagesRouter.post(
                   title: `${senderName} mentioned you`,
                   body: preview,
                   data: { senderId: req.userId!, senderName, channelId, guildId: chan?.guildId ?? null },
-                }).catch(err => console.error('[messages] mention notification failed:', err));
+                }).catch(err => logger.error('[messages] mention notification failed:', err));
               }
             } catch { /* skip failed lookups */ }
           }
@@ -877,7 +878,7 @@ messagesRouter.post(
       // Clear draft for this user/channel (fire-and-forget)
       db.delete(messageDrafts)
         .where(and(eq(messageDrafts.userId, req.userId!), eq(messageDrafts.channelId, channelId)))
-        .catch(err => console.error('[messages] draft cleanup failed:', err));
+        .catch(err => logger.error('[messages] draft cleanup failed:', err));
 
       // Fire-and-forget URL embed scraping
       (async () => {
@@ -894,7 +895,7 @@ messagesRouter.post(
           messageId: newMessage.id,
           embeds,
         });
-      })().catch(err => console.error('[messages] embed scraping failed:', err));
+      })().catch(err => logger.error('[messages] embed scraping failed:', err));
     } catch (err) {
       handleAppError(res, err, 'messages');
     }

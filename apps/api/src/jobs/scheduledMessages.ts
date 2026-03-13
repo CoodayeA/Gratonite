@@ -1,4 +1,5 @@
 import { db } from '../db/index';
+import { logger } from '../lib/logger';
 import { scheduledMessages } from '../db/schema/scheduled-messages';
 import { messages } from '../db/schema/messages';
 import { lte, isNull, and, eq } from 'drizzle-orm';
@@ -33,11 +34,11 @@ export function startScheduledMessagesJob() {
             getIO().to(`channel:${sm.channelId}`).emit('MESSAGE_CREATE', msg);
           } catch { /* socket not ready */ }
         } catch (err) {
-          console.error('[scheduledMessages] Error sending scheduled message:', err);
+          logger.error('[scheduledMessages] Error sending scheduled message:', err);
         }
       }
     } catch (err) {
-      console.error('[scheduledMessages] Job error:', err);
+      logger.error('[scheduledMessages] Job error:', err);
     }
   }, 30_000);
 }

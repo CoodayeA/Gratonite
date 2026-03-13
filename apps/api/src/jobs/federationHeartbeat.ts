@@ -4,6 +4,7 @@
  */
 
 import { db } from '../db/index';
+import { logger } from '../lib/logger';
 import { federatedInstances } from '../db/schema/federation-instances';
 import { eq } from 'drizzle-orm';
 import { isFederationEnabled, getInstanceDomain } from '../federation/index';
@@ -76,7 +77,7 @@ export function startFederationHeartbeatJob(): void {
         }
       }
     } catch (err) {
-      console.error('[federationHeartbeat] Error:', err);
+      logger.error('[federationHeartbeat] Error:', err);
     }
   }, HEARTBEAT_INTERVAL).unref();
 

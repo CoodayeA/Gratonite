@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { db } from '../db/index';
@@ -130,7 +131,7 @@ settingsRouter.patch('/notif', requireAuth, async (req: Request, res: Response):
     await redis.set(`user-notif:${req.userId!}:${key}`, JSON.stringify(value));
     res.json({ key, value });
   } catch (err) {
-    console.error('[settings] notif save error:', err);
+    logger.error('[settings] notif save error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to save notification preference' });
   }
 });

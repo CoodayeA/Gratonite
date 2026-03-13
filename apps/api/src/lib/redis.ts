@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import { logger } from './logger';
 
 if (!process.env.REDIS_URL) {
   if (process.env.NODE_ENV === 'production') {
@@ -15,5 +16,5 @@ redis.on('connect', () => {
 });
 
 redis.on('error', (err) => {
-  console.error('[redis] error:', err);
+  logger.error('[redis] error:', err);
 });

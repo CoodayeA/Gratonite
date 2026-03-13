@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, sql, inArray } from 'drizzle-orm';
 import { db } from '../db/index';
 import { interestTags, userInterests } from '../db/schema/interest-tags';
@@ -18,7 +19,7 @@ interestTagsRouter.get('/', async (_req: Request, res: Response): Promise<void> 
     }
     res.json(grouped);
   } catch (err) {
-    console.error('[interest-tags] GET tags error:', err);
+    logger.error('[interest-tags] GET tags error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -30,7 +31,7 @@ interestTagsRouter.get('/users/@me/interests', requireAuth, async (req: Request,
     const rows = await db.select({ tag: userInterests.tag }).from(userInterests).where(eq(userInterests.userId, userId));
     res.json(rows.map(r => r.tag));
   } catch (err) {
-    console.error('[interest-tags] GET my interests error:', err);
+    logger.error('[interest-tags] GET my interests error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -57,7 +58,7 @@ interestTagsRouter.put('/users/@me/interests', requireAuth, async (req: Request,
 
     res.json(tags);
   } catch (err) {
-    console.error('[interest-tags] PUT interests error:', err);
+    logger.error('[interest-tags] PUT interests error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -107,7 +108,7 @@ interestTagsRouter.get('/guilds/:guildId/interest-matches', requireAuth, async (
 
     res.json(matches);
   } catch (err) {
-    console.error('[interest-tags] GET interest-matches error:', err);
+    logger.error('[interest-tags] GET interest-matches error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

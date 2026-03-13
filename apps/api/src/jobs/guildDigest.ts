@@ -1,4 +1,5 @@
 import { db } from '../db/index';
+import { logger } from '../lib/logger';
 import { guildDigestConfig, guildDigests } from '../db/schema/guild-digest';
 import { messages } from '../db/schema/messages';
 import { channels } from '../db/schema/channels';
@@ -138,11 +139,11 @@ export function startGuildDigestJob() {
 
           console.log(`[guildDigest] Generated digest for guild ${config.guildId}`);
         } catch (err) {
-          console.error(`[guildDigest] Error generating digest for guild ${config.guildId}:`, err);
+          logger.error(`[guildDigest] Error generating digest for guild ${config.guildId}:`, err);
         }
       }
     } catch (err) {
-      console.error('[guildDigest] Job error:', err);
+      logger.error('[guildDigest] Job error:', err);
     }
   }, 60 * 60 * 1000); // Every hour
 }

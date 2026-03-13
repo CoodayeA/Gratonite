@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { Search, Plus, MessageSquare, ChevronDown, Lock, X, ArrowLeft, Loader2, Clock, User } from 'lucide-react';
+import { Search, Plus, MessageSquare, ChevronDown, Lock, X, ArrowLeft, Loader2, Clock, User, ThumbsUp, Filter } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { api } from '../../lib/api';
 
@@ -10,10 +10,14 @@ interface ForumPost {
     author: string;
     authorAvatarHash: string | null;
     replies: number;
+    reactions: number;
     locked: boolean;
     createdAt: string;
     lastActivity: string | null;
+    tag?: string;
 }
+
+type SortOption = 'newest' | 'most-replies' | 'most-reactions' | 'unanswered';
 
 function timeAgo(dateStr: string): string {
     const now = Date.now();
@@ -37,8 +41,9 @@ const ForumChannel = () => {
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [sortOpen, setSortOpen] = useState(false);
-    const [sortBy, setSortBy] = useState<'latest' | 'top'>('latest');
+    const [sortBy, setSortBy] = useState<SortOption>('newest');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [activeTag, setActiveTag] = useState<string | null>(null);
 
     const [showNewPost, setShowNewPost] = useState(false);
     const [newPostTitle, setNewPostTitle] = useState('');
@@ -53,9 +58,11 @@ const ForumChannel = () => {
     const [isSendingReply, setIsSendingReply] = useState(false);
 
     const postTags = ['Discussion', 'Help', 'Bug', 'Feature Request', 'Showcase', 'Community', 'Question'];
-    const sorts: { label: string; value: 'latest' | 'top' }[] = [
-        { label: 'Latest', value: 'latest' },
-        { label: 'Top', value: 'top' },
+    const sorts: { label: string; value: SortOption; description: string }[] = [
+        { label: 'Newest', value: 'newest', description: 'Most recently active' },
+        { label: 'Most Replies', value: 'most-replies', description: 'Posts with most replies' },
+        { label: 'Most Reactions', value: 'most-reactions', description: 'Posts with most reactions' },
+        { label: 'Unanswered', value: 'unanswered', description: 'Posts with no replies' },
     ];
 
     const fetchPosts = useCallback(async () => {
@@ -63,16 +70,19 @@ const ForumChannel = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const threads = await api.threads.list(channelId, sortBy);
+            const apiSort = sortBy === 'newest' ? 'latest' : 'top';
+            const threads = await api.threads.list(channelId, apiSort);
             const mapped: ForumPost[] = threads.map((t: any) => ({
                 id: t.id,
                 title: t.name ?? 'Untitled',
                 author: t.creatorName ?? 'Unknown',
                 authorAvatarHash: t.creatorAvatarHash ?? null,
                 replies: t.messageCount ?? 0,
+                reactions: t.reactionCount ?? 0,
                 locked: t.locked ?? false,
                 createdAt: t.createdAt,
                 lastActivity: t.lastActivity ?? t.createdAt,
+                tag: t.tag ?? undefined,
             }));
             setPosts(mapped);
         } catch (err: unknown) {
@@ -94,16 +104,17 @@ const ForumChannel = () => {
                 name: newPostTitle.trim(),
                 body: newPostBody.trim() || undefined,
             });
-            // Optimistically add to list
             const newPost: ForumPost = {
                 id: thread.id,
                 title: thread.name ?? newPostTitle.trim(),
                 author: 'You',
                 authorAvatarHash: null,
                 replies: newPostBody.trim() ? 1 : 0,
+                reactions: 0,
                 locked: false,
                 createdAt: new Date().toISOString(),
                 lastActivity: new Date().toISOString(),
+                tag: newPostTag,
             };
             setPosts(prev => [newPost, ...prev]);
             setNewPostTitle('');
@@ -138,14 +149,12 @@ const ForumChannel = () => {
         if (!replyContent.trim() || !selectedPost || !channelId) return;
         setIsSendingReply(true);
         try {
-            // Send a message in the thread - use the parent channelId with threadId parameter
             const msg = await api.messages.send(channelId, {
                 content: replyContent.trim(),
                 threadId: selectedPost.id,
             });
             setThreadMessages(prev => [...prev, msg]);
             setReplyContent('');
-            // Update reply count locally
             setPosts(prev => prev.map(p => p.id === selectedPost.id ? { ...p, replies: p.replies + 1 } : p));
         } catch (err: unknown) {
             const errMsg = err instanceof Error ? err.message : 'Failed to send reply';
@@ -155,12 +164,42 @@ const ForumChannel = () => {
         }
     };
 
-    const filteredPosts = posts.filter(p => {
-        if (searchQuery && !p.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-        return true;
-    });
+    // Client-side sorting and filtering
+    const filteredPosts = useMemo(() => {
+        let result = [...posts];
 
-    // ── Post Detail View ───────────────────────────────────────
+        // Filter by search query
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(p => p.title.toLowerCase().includes(q));
+        }
+
+        // Filter by active tag
+        if (activeTag) {
+            result = result.filter(p => p.tag === activeTag);
+        }
+
+        // Sort
+        switch (sortBy) {
+            case 'newest':
+                result.sort((a, b) => new Date(b.lastActivity || b.createdAt).getTime() - new Date(a.lastActivity || a.createdAt).getTime());
+                break;
+            case 'most-replies':
+                result.sort((a, b) => b.replies - a.replies);
+                break;
+            case 'most-reactions':
+                result.sort((a, b) => b.reactions - a.reactions);
+                break;
+            case 'unanswered':
+                result = result.filter(p => p.replies === 0);
+                result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                break;
+        }
+
+        return result;
+    }, [posts, searchQuery, activeTag, sortBy]);
+
+    // Post Detail View
     if (selectedPost) {
         return (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', overflow: 'hidden' }}>
@@ -175,6 +214,11 @@ const ForumChannel = () => {
                         <MessageSquare size={20} color="var(--text-muted)" />
                         <h2 style={{ fontSize: '15px', fontWeight: 600 }}>{selectedPost.title}</h2>
                     </div>
+                    {selectedPost.tag && (
+                        <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '10px', background: 'rgba(82, 109, 245, 0.12)', color: 'var(--accent-primary)' }}>
+                            {selectedPost.tag}
+                        </span>
+                    )}
                     {selectedPost.locked && (
                         <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--error)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <Lock size={12} /> Locked
@@ -184,7 +228,6 @@ const ForumChannel = () => {
 
                 <div style={{ flex: 1, overflowY: 'auto', padding: '24px 48px' }}>
                     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                        {/* Thread info */}
                         <div style={{ marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid var(--stroke)' }}>
                             <h1 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>{selectedPost.title}</h1>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', color: 'var(--text-muted)' }}>
@@ -198,7 +241,6 @@ const ForumChannel = () => {
                             </div>
                         </div>
 
-                        {/* Messages */}
                         {messagesLoading ? (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px', gap: '12px', flexDirection: 'column' }}>
                                 <Loader2 size={28} style={{ animation: 'spin 1s linear infinite', color: 'var(--accent-primary)' }} />
@@ -246,7 +288,6 @@ const ForumChannel = () => {
                             </div>
                         )}
 
-                        {/* Reply input */}
                         {!selectedPost.locked && (
                             <div style={{ marginTop: '24px', display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
                                 <textarea
@@ -284,7 +325,7 @@ const ForumChannel = () => {
         );
     }
 
-    // ── Post List View ─────────────────────────────────────────
+    // Post List View
     return (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', overflow: 'hidden' }}>
             <header className="channel-header glass-panel">
@@ -315,34 +356,70 @@ const ForumChannel = () => {
                         <p style={{ color: 'var(--text-secondary)' }}>Ask questions, share ideas, or start a discussion with the community.</p>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                        <div style={{ display: 'flex', gap: '12px', flex: 1 }}>
-                            <div style={{ position: 'relative', width: '300px' }}>
-                                <Search size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--text-muted)' }} />
-                                <input
-                                    type="text"
-                                    placeholder="Search posts..."
-                                    value={searchQuery}
-                                    onChange={e => setSearchQuery(e.target.value)}
-                                    style={{ width: '100%', height: '40px', paddingLeft: '36px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'white', outline: 'none' }}
-                                />
-                            </div>
-                            <div style={{ position: 'relative' }}>
-                                <div onClick={() => setSortOpen(!sortOpen)} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '0 16px', height: '40px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 500 }}>
-                                    Sort: {sorts.find(s => s.value === sortBy)?.label ?? 'Latest'} <ChevronDown size={14} style={{ transform: sortOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
+                    {/* Filter/Sort Bar */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', gap: '12px', flex: 1 }}>
+                                <div style={{ position: 'relative', width: '300px' }}>
+                                    <Search size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--text-muted)' }} />
+                                    <input
+                                        type="text"
+                                        placeholder="Search posts..."
+                                        value={searchQuery}
+                                        onChange={e => setSearchQuery(e.target.value)}
+                                        style={{ width: '100%', height: '40px', paddingLeft: '36px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'white', outline: 'none' }}
+                                    />
                                 </div>
-                                {sortOpen && (
-                                    <div style={{ position: 'absolute', top: '44px', left: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '4px', zIndex: 50, minWidth: '140px' }}>
-                                        {sorts.map(s => (
-                                            <div key={s.value} onClick={() => { setSortBy(s.value); setSortOpen(false); }} style={{ padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: sortBy === s.value ? 600 : 400, color: sortBy === s.value ? 'var(--accent-primary)' : 'var(--text-secondary)', background: sortBy === s.value ? 'var(--bg-tertiary)' : 'transparent' }}>{s.label}</div>
-                                        ))}
+                                <div style={{ position: 'relative' }}>
+                                    <div onClick={() => setSortOpen(!sortOpen)} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '0 16px', height: '40px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 500 }}>
+                                        Sort: {sorts.find(s => s.value === sortBy)?.label ?? 'Newest'} <ChevronDown size={14} style={{ transform: sortOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
                                     </div>
-                                )}
+                                    {sortOpen && (
+                                        <div style={{ position: 'absolute', top: '44px', left: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '4px', zIndex: 50, minWidth: '200px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+                                            {sorts.map(s => (
+                                                <div key={s.value} onClick={() => { setSortBy(s.value); setSortOpen(false); }} style={{ padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: sortBy === s.value ? 600 : 400, color: sortBy === s.value ? 'var(--accent-primary)' : 'var(--text-secondary)', background: sortBy === s.value ? 'var(--bg-tertiary)' : 'transparent' }}>
+                                                    <div>{s.label}</div>
+                                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{s.description}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
+                            <button onClick={() => setShowNewPost(true)} className="auth-button" style={{ margin: 0, width: 'auto', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--accent-primary)', height: '40px' }}>
+                                <Plus size={16} /> New Post
+                            </button>
                         </div>
-                        <button onClick={() => setShowNewPost(true)} className="auth-button" style={{ margin: 0, width: 'auto', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--accent-primary)', height: '40px' }}>
-                            <Plus size={16} /> New Post
-                        </button>
+
+                        {/* Tag Filter Chips */}
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <Filter size={14} style={{ color: 'var(--text-muted)' }} />
+                            <button
+                                onClick={() => setActiveTag(null)}
+                                style={{
+                                    padding: '4px 12px', borderRadius: '12px', fontSize: '13px', cursor: 'pointer', fontWeight: activeTag === null ? 600 : 400,
+                                    border: `1px solid ${activeTag === null ? 'var(--accent-primary)' : 'var(--stroke)'}`,
+                                    background: activeTag === null ? 'rgba(82, 109, 245, 0.15)' : 'var(--bg-tertiary)',
+                                    color: activeTag === null ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                }}
+                            >
+                                All
+                            </button>
+                            {postTags.map(tag => (
+                                <button
+                                    key={tag}
+                                    onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+                                    style={{
+                                        padding: '4px 12px', borderRadius: '12px', fontSize: '13px', cursor: 'pointer', fontWeight: activeTag === tag ? 600 : 400,
+                                        border: `1px solid ${activeTag === tag ? 'var(--accent-primary)' : 'var(--stroke)'}`,
+                                        background: activeTag === tag ? 'rgba(82, 109, 245, 0.15)' : 'var(--bg-tertiary)',
+                                        color: activeTag === tag ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                    }}
+                                >
+                                    {tag}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     {showNewPost && (
@@ -404,6 +481,11 @@ const ForumChannel = () => {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                                         {post.locked && <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--error)', display: 'flex', alignItems: 'center', gap: '4px' }}><Lock size={12} /> Locked</span>}
                                         <h3 style={{ fontSize: '17px', fontWeight: 600 }}>{post.title}</h3>
+                                        {post.tag && (
+                                            <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '10px', background: 'rgba(82, 109, 245, 0.10)', color: 'var(--accent-primary)', flexShrink: 0 }}>
+                                                {post.tag}
+                                            </span>
+                                        )}
                                     </div>
 
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '13px' }}>
@@ -422,15 +504,23 @@ const ForumChannel = () => {
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}>
-                                    <MessageSquare size={16} />
-                                    <span style={{ fontWeight: 500, fontSize: '14px' }}>{post.replies}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}>
+                                        <MessageSquare size={16} />
+                                        <span style={{ fontWeight: 500, fontSize: '14px' }}>{post.replies}</span>
+                                    </div>
+                                    {post.reactions > 0 && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}>
+                                            <ThumbsUp size={14} />
+                                            <span style={{ fontWeight: 500, fontSize: '14px' }}>{post.reactions}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
                         {filteredPosts.length === 0 && !showNewPost && (
                             <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
-                                {posts.length === 0 ? 'No posts yet. Create the first one!' : 'No posts match your search.'}
+                                {posts.length === 0 ? 'No posts yet. Create the first one!' : sortBy === 'unanswered' ? 'No unanswered posts.' : 'No posts match your filters.'}
                             </div>
                         )}
                     </div>

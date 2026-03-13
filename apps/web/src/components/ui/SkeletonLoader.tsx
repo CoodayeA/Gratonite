@@ -167,6 +167,66 @@ export const SkeletonFriendList = ({ count = 5 }: { count?: number }) => (
     </div>
 );
 
+/** Profile page skeleton: avatar + name + bio + stats */
+export const SkeletonProfile = () => (
+    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+        <Skeleton variant="circle" width={80} height={80} />
+        <Skeleton variant="text" width={140} height={20} />
+        <Skeleton variant="text" width={200} height={14} />
+        <div style={{ display: 'flex', gap: '24px', marginTop: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                <Skeleton variant="text" width={32} height={18} />
+                <Skeleton variant="text" width={50} height={10} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                <Skeleton variant="text" width={32} height={18} />
+                <Skeleton variant="text" width={50} height={10} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                <Skeleton variant="text" width={32} height={18} />
+                <Skeleton variant="text" width={50} height={10} />
+            </div>
+        </div>
+    </div>
+);
+
+/** Shop card grid skeleton */
+export const SkeletonShopGrid = ({ count = 8 }: { count?: number }) => (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+        {Array.from({ length: count }).map((_, i) => (
+            <div key={i} style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--stroke)' }}>
+                <Skeleton variant="rect" width="100%" height={160} style={{ borderRadius: 0 }} />
+                <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <Skeleton variant="text" width={randomBetween(100, 180)} height={16} />
+                    <Skeleton variant="text" width={randomBetween(60, 120)} height={12} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
+                        <Skeleton variant="text" width={60} height={14} />
+                        <Skeleton variant="rect" width={80} height={32} style={{ borderRadius: '8px' }} />
+                    </div>
+                </div>
+            </div>
+        ))}
+    </div>
+);
+
+/** Settings panel skeleton: sidebar + content area */
+export const SkeletonSettingsPanel = () => (
+    <div style={{ display: 'flex', gap: '24px', padding: '24px' }}>
+        <div style={{ width: '200px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} variant="text" width={randomBetween(100, 180)} height={32} style={{ borderRadius: '6px' }} />
+            ))}
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <Skeleton variant="text" width={200} height={24} />
+            <Skeleton variant="text" width="80%" height={14} />
+            <Skeleton variant="rect" width="100%" height={48} style={{ borderRadius: '8px' }} />
+            <Skeleton variant="rect" width="100%" height={48} style={{ borderRadius: '8px' }} />
+            <Skeleton variant="rect" width="100%" height={48} style={{ borderRadius: '8px' }} />
+        </div>
+    </div>
+);
+
 /* ── helpers ──────────────────────────────── */
 
 /** Return a deterministic-ish random int for widths. Uses a simple seeded approach

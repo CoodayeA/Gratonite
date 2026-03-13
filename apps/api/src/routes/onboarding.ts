@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, asc } from 'drizzle-orm';
 import { db } from '../db/index';
 import { guildOnboardingSteps, guildOnboardingCompletions } from '../db/schema/onboarding-completions';
@@ -19,7 +20,7 @@ onboardingRouter.get('/config', requireAuth, async (req: Request, res: Response)
 
     res.json({ guildId, steps });
   } catch (err) {
-    console.error('[onboarding] GET config error:', err);
+    logger.error('[onboarding] GET config error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -65,7 +66,7 @@ onboardingRouter.put('/config', requireAuth, async (req: Request, res: Response)
 
     res.json({ guildId, steps: saved });
   } catch (err) {
-    console.error('[onboarding] PUT config error:', err);
+    logger.error('[onboarding] PUT config error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -90,7 +91,7 @@ onboardingRouter.post('/complete', requireAuth, async (req: Request, res: Respon
 
     res.status(201).json(completion);
   } catch (err) {
-    console.error('[onboarding] POST complete error:', err);
+    logger.error('[onboarding] POST complete error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -106,7 +107,7 @@ onboardingRouter.get('/status', requireAuth, async (req: Request, res: Response)
 
     res.json({ completed: !!completion, completion: completion || null });
   } catch (err) {
-    console.error('[onboarding] GET status error:', err);
+    logger.error('[onboarding] GET status error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });

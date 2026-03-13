@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, Sparkles, Gem, ArrowRight, X, Check, Type, Star, Layers } from 'lucide-react';
+import { ShoppingBag, Sparkles, Gem, ArrowRight, X, Check, Type, Star, Layers, Gift, Eye, Lock, Package, Search, Timer } from 'lucide-react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import Skeleton from '../../components/ui/Skeleton';
 import { useToast } from '../../components/ui/ToastManager';
 import { TiltCard, RippleWrapper, MagneticButton } from '../../components/ui/Physics';
 import { api } from '../../lib/api';
 import { applyEquippedItem } from '../../lib/cosmetics';
+import Avatar from '../../components/ui/Avatar';
 
 type ViewType = 'frames' | 'decorations' | 'effects' | 'nameplates';
 
@@ -66,6 +67,32 @@ const Shop = () => {
     const [showBundleItems, setShowBundleItems] = useState(false);
     const [equippingPurchased, setEquippingPurchased] = useState(false);
     const bundleItemsRef = useRef<HTMLDivElement>(null);
+
+    // Gift system
+    const [giftItem, setGiftItem] = useState<ShopItem | null>(null);
+    const [giftFriendSearch, setGiftFriendSearch] = useState('');
+    const [giftFriends, setGiftFriends] = useState<Array<{ id: string; userId: string; username: string; displayName: string; avatarHash: string | null }>>([]);
+    const [giftSending, setGiftSending] = useState(false);
+
+    // Try-on / preview
+    const [previewItem, setPreviewItem] = useState<ShopItem | null>(null);
+
+    // Bundle builder
+    const [showBundleBuilder, setShowBundleBuilder] = useState(false);
+    const [bundleBuilderItems, setBundleBuilderItems] = useState<ShopItem[]>([]);
+
+    const loadGiftFriends = async () => {
+        try {
+            const data = await api.get<any[]>('/relationships?type=friend');
+            if (Array.isArray(data)) {
+                setGiftFriends(data.map((f: any) => ({
+                    id: f.id, userId: f.userId ?? f.id,
+                    username: f.username ?? '', displayName: f.displayName ?? f.username ?? 'User',
+                    avatarHash: f.avatarHash ?? null,
+                })));
+            }
+        } catch { /* empty */ }
+    };
 
     const bundleIncludedItems = shopItems.filter(i =>
         ['Aurora Borealis', 'Cherry Blossom', 'Prismatic Arc', 'Liquid Chrome'].includes(i.name)
@@ -211,6 +238,36 @@ const Shop = () => {
         { key: 'effects', label: 'Profile Effects', icon: <Sparkles size={14} /> },
         { key: 'nameplates', label: 'Nameplates', icon: <Type size={14} /> },
     ];
+
+    const handleGift = async (item: ShopItem, recipientId: string) => {
+        setGiftSending(true);
+        try {
+            await api.gifts.send(String(item.id), recipientId);
+            setGratoniteBalance((b: number) => b - item.price);
+            addToast({ title: 'Gift Sent!', description: `${item.name} has been gifted!`, variant: 'achievement' });
+            setGiftItem(null);
+        } catch (err: any) {
+            addToast({ title: 'Gift Failed', description: err?.message ?? 'Could not send gift', variant: 'error' });
+        }
+        setGiftSending(false);
+    };
+
+    const handleBundlePurchase = async () => {
+        if (bundleBuilderItems.length < 2) { addToast({ title: 'Add at least 2 items', variant: 'error' }); return; }
+        try {
+            const result = await api.bundlePurchase.buy(bundleBuilderItems.map(i => String(i.id)));
+            setGratoniteBalance(result.wallet.balance);
+            addToast({ title: 'Bundle Purchased!', description: `Saved ${result.savings} Gratonites (${result.discount}% off)`, variant: 'achievement' });
+            setBundleBuilderItems([]);
+            setShowBundleBuilder(false);
+        } catch (err: any) {
+            addToast({ title: 'Purchase Failed', description: err?.message ?? 'Could not purchase bundle', variant: 'error' });
+        }
+    };
+
+    const bundleDiscount = bundleBuilderItems.length >= 5 ? 25 : bundleBuilderItems.length >= 4 ? 20 : bundleBuilderItems.length >= 3 ? 15 : bundleBuilderItems.length >= 2 ? 10 : 0;
+    const bundleTotal = bundleBuilderItems.reduce((s, i) => s + i.price, 0);
+    const bundleDiscounted = Math.floor(bundleTotal * (1 - bundleDiscount / 100));
 
     return (
         <div style={{ flex: 1, padding: '32px 48px', overflowY: 'auto', background: 'var(--bg-primary)', position: 'relative' }}>
@@ -503,14 +560,36 @@ const Shop = () => {
                                         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px', flex: 1 }}>{item.description}</p>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)', padding: '12px 16px', borderRadius: 'var(--radius-sm)', border: 'var(--border-structural)' }}>
                                             <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'var(--font-display)' }}><Gem size={16} /> {item.price}</span>
-                                            <RippleWrapper>
+                                            <div style={{ display: 'flex', gap: '4px' }}>
                                                 <button
-                                                    onClick={(e) => { e.stopPropagation(); openModal(item); }}
-                                                    disabled={purchasingId === item.id}
-                                                    style={{ background: 'var(--text-primary)', color: 'var(--bg-app)', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', fontWeight: 600, cursor: purchasingId === item.id ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    {purchasingId === item.id ? <div className="spinner" style={{ width: 16, height: 16, border: '2px solid transparent', borderTopColor: 'var(--bg-app)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} /> : 'Buy'}
+                                                    onClick={(e) => { e.stopPropagation(); setPreviewItem(item); }}
+                                                    title="Try On"
+                                                    style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', padding: '6px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}>
+                                                    <Eye size={14} />
                                                 </button>
-                                            </RippleWrapper>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setGiftItem(item); loadGiftFriends(); }}
+                                                    title="Gift"
+                                                    style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', padding: '6px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}>
+                                                    <Gift size={14} />
+                                                </button>
+                                                {showBundleBuilder && !bundleBuilderItems.find(b => b.id === item.id) && bundleBuilderItems.length < 5 && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setBundleBuilderItems(prev => [...prev, item]); }}
+                                                        title="Add to Bundle"
+                                                        style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', padding: '6px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: 'var(--accent-primary)', display: 'flex' }}>
+                                                        <Package size={14} />
+                                                    </button>
+                                                )}
+                                                <RippleWrapper>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); openModal(item); }}
+                                                        disabled={purchasingId === item.id}
+                                                        style={{ background: 'var(--text-primary)', color: 'var(--bg-app)', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', fontWeight: 600, cursor: purchasingId === item.id ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        {purchasingId === item.id ? <div className="spinner" style={{ width: 16, height: 16, border: '2px solid transparent', borderTopColor: 'var(--bg-app)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} /> : 'Buy'}
+                                                    </button>
+                                                </RippleWrapper>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -520,6 +599,103 @@ const Shop = () => {
                     )}
                 </div>
             </div>
+
+            {/* Bundle Builder */}
+            {showBundleBuilder && (
+                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--accent-primary)', borderRadius: '16px', padding: '24px', marginBottom: '32px', maxWidth: '1000px', margin: '0 auto 32px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <h3 style={{ fontSize: '18px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Package size={20} color="var(--accent-primary)" /> Build a Bundle (max 5)
+                        </h3>
+                        <button onClick={() => { setShowBundleBuilder(false); setBundleBuilderItems([]); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={18} /></button>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', minHeight: '60px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '2px dashed var(--stroke)', marginBottom: '12px' }}>
+                        {bundleBuilderItems.length === 0 && <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Click "Add to Bundle" on any item below to start building.</span>}
+                        {bundleBuilderItems.map(item => (
+                            <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 600 }}>{item.name}</span>
+                                <span style={{ fontSize: '11px', color: 'var(--accent-primary)' }}>{item.price}</span>
+                                <button onClick={() => setBundleBuilderItems(prev => prev.filter(i => i.id !== item.id))} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}><X size={12} /></button>
+                            </div>
+                        ))}
+                    </div>
+                    {bundleBuilderItems.length >= 2 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ fontSize: '14px' }}>
+                                <span style={{ color: 'var(--text-muted)', textDecoration: 'line-through' }}>{bundleTotal}</span>
+                                <span style={{ fontWeight: 700, marginLeft: '8px', color: 'var(--accent-primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Gem size={14} /> {bundleDiscounted}</span>
+                                <span style={{ fontSize: '12px', color: '#10b981', marginLeft: '8px' }}>Save {bundleDiscount}%</span>
+                            </div>
+                            <button onClick={handleBundlePurchase} style={{ padding: '8px 24px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 700, cursor: 'pointer' }}>
+                                Purchase Bundle
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Action bar */}
+            <div style={{ maxWidth: '1000px', margin: '0 auto 16px', display: 'flex', gap: '8px' }}>
+                <button
+                    onClick={() => setShowBundleBuilder(prev => !prev)}
+                    style={{ padding: '8px 16px', borderRadius: '8px', background: showBundleBuilder ? 'var(--accent-primary)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: showBundleBuilder ? '#000' : 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+                >
+                    <Package size={14} /> Bundle Builder
+                </button>
+            </div>
+
+            {/* Gift Modal */}
+            {giftItem && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setGiftItem(null)}>
+                    <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-elevated)', borderRadius: '16px', border: '1px solid var(--stroke)', padding: '24px', width: '400px', maxHeight: '500px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <h3 style={{ fontSize: '16px', fontWeight: 700 }}>Gift {giftItem.name}</h3>
+                            <button onClick={() => setGiftItem(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={18} /></button>
+                        </div>
+                        <div style={{ position: 'relative', marginBottom: '12px' }}>
+                            <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                            <input value={giftFriendSearch} onChange={e => setGiftFriendSearch(e.target.value)} placeholder="Search friends..." style={{ width: '100%', padding: '8px 10px 8px 32px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', boxSizing: 'border-box' }} />
+                        </div>
+                        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {giftFriends.filter(f => f.displayName.toLowerCase().includes(giftFriendSearch.toLowerCase())).map(f => (
+                                <button
+                                    key={f.id}
+                                    onClick={() => handleGift(giftItem, f.userId)}
+                                    disabled={giftSending}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: 'var(--text-primary)', width: '100%', textAlign: 'left' }}
+                                >
+                                    <Avatar userId={f.userId} avatarHash={f.avatarHash} displayName={f.displayName} size={28} />
+                                    <span style={{ fontWeight: 600, fontSize: '13px' }}>{f.displayName}</span>
+                                    <Gift size={14} color="var(--accent-primary)" style={{ marginLeft: 'auto' }} />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Cosmetic Preview */}
+            {previewItem && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setPreviewItem(null)}>
+                    <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-elevated)', borderRadius: '16px', border: '1px solid var(--stroke)', padding: '32px', width: '440px', textAlign: 'center' }}>
+                        <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>Preview: {previewItem.name}</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+                            <div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600 }}>CURRENT</div>
+                                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', margin: '0 auto' }} />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600 }}>PREVIEW</div>
+                                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', margin: '0 auto', border: `3px solid ${previewItem.color ?? 'var(--accent-primary)'}`, boxShadow: `0 0 16px ${previewItem.color ?? 'var(--accent-primary)'}60` }} />
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button onClick={() => setPreviewItem(null)} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}>Remove Preview</button>
+                            <button onClick={() => { openModal(previewItem); setPreviewItem(null); }} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 700, cursor: 'pointer' }}>Buy & Apply</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Purchase Modal */}
             {selectedItem && (

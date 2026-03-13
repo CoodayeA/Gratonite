@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import { redis } from '../lib/redis';
@@ -36,7 +37,7 @@ statsRouter.get('/public', async (_req: Request, res: Response) => {
     await redis.setex(CACHE_KEY, CACHE_TTL, JSON.stringify(data));
     res.json(data);
   } catch (err) {
-    console.error('[stats] failed to fetch public stats:', err);
+    logger.error('[stats] failed to fetch public stats:', err);
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });

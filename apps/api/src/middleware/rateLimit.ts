@@ -15,6 +15,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { logger } from '../lib/logger';
 import { redis } from '../lib/redis';
 
 // ---------------------------------------------------------------------------
@@ -144,7 +145,7 @@ function createRateLimiter(config: RateLimitConfig) {
       next();
     } catch (err) {
       // Redis is unreachable — fall back to in-memory rate limiting.
-      console.error(`[rateLimit] Redis error for key "${key}", using in-memory fallback:`, err);
+      logger.error(`[rateLimit] Redis error for key "${key}", using in-memory fallback:`, err);
       if (!checkMemoryRateLimit(key, maxRequests, windowSeconds)) {
         res.set('Retry-After', String(windowSeconds));
         res.status(429).json({

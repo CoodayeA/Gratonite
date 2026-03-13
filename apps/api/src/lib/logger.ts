@@ -1,18 +1,20 @@
 type LogLevel = 'info' | 'error' | 'warn' | 'debug';
 
-const log = (level: LogLevel, obj: unknown, msg?: string) => {
+const log = (level: LogLevel, obj: unknown, ...rest: unknown[]) => {
   const timestamp = new Date().toISOString();
+  const prefix = `[${timestamp}] [${level.toUpperCase()}]`;
+  const fn = level === 'error' ? console.error : console.log;
   if (typeof obj === 'string') {
-    console[level === 'error' ? 'error' : 'log'](`[${timestamp}] [${level.toUpperCase()}] ${obj}`);
+    fn(`${prefix} ${obj}`, ...rest);
   } else {
-    console[level === 'error' ? 'error' : 'log'](`[${timestamp}] [${level.toUpperCase()}] ${msg || ''}`, obj);
+    fn(prefix, obj, ...rest);
   }
 };
 
 export const logger = {
-  info: (obj: unknown, msg?: string) => log('info', obj, msg),
-  error: (obj: unknown, msg?: string) => log('error', obj, msg),
-  warn: (obj: unknown, msg?: string) => log('warn', obj, msg),
-  debug: (obj: unknown, msg?: string) => log('debug', obj, msg),
+  info: (obj: unknown, ...rest: unknown[]) => log('info', obj, ...rest),
+  error: (obj: unknown, ...rest: unknown[]) => log('error', obj, ...rest),
+  warn: (obj: unknown, ...rest: unknown[]) => log('warn', obj, ...rest),
+  debug: (obj: unknown, ...rest: unknown[]) => log('debug', obj, ...rest),
   child: (_bindings: Record<string, unknown>) => logger,
 };

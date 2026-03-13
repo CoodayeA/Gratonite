@@ -20,6 +20,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import crypto from 'node:crypto';
@@ -184,7 +185,7 @@ botApplicationsRouter.post(
         webhookReachable,
       });
     } catch (err) {
-      console.error('[bot-applications] POST / error:', err);
+      logger.error('[bot-applications] POST / error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -218,7 +219,7 @@ botApplicationsRouter.get(
 
       res.status(200).json(rows.map(publicBot));
     } catch (err) {
-      console.error('[bot-applications] GET /mine error:', err);
+      logger.error('[bot-applications] GET /mine error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -264,7 +265,7 @@ botApplicationsRouter.get(
 
       res.status(200).json(publicBot(bot));
     } catch (err) {
-      console.error('[bot-applications] GET /:id error:', err);
+      logger.error('[bot-applications] GET /:id error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -337,7 +338,7 @@ botApplicationsRouter.patch(
 
       res.status(200).json(publicBot(updated));
     } catch (err) {
-      console.error('[bot-applications] PATCH /:id error:', err);
+      logger.error('[bot-applications] PATCH /:id error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -386,7 +387,7 @@ botApplicationsRouter.delete(
 
       res.status(200).json({ code: 'OK', message: 'Bot deleted' });
     } catch (err) {
-      console.error('[bot-applications] DELETE /:id error:', err);
+      logger.error('[bot-applications] DELETE /:id error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -447,7 +448,7 @@ botApplicationsRouter.post(
 
       res.status(200).json({ apiToken: newApiToken });
     } catch (err) {
-      console.error('[bot-applications] POST /:id/rotate error:', err);
+      logger.error('[bot-applications] POST /:id/rotate error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },

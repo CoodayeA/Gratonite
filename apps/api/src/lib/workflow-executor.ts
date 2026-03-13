@@ -9,6 +9,7 @@
  */
 
 import { db } from '../db';
+import { logger } from './logger';
 import { workflows, workflowTriggers, workflowActions } from '../db/schema/workflows';
 import { memberRoles } from '../db/schema/roles';
 import { threads, threadMembers } from '../db/schema/threads';
@@ -76,7 +77,7 @@ export async function executeWorkflows(
       try {
         await executeAction(action, context, io);
       } catch (err) {
-        console.error(`[workflow-executor] action ${action.type} failed (workflow=${workflow.id}):`, err);
+        logger.error(`[workflow-executor] action ${action.type} failed (workflow=${workflow.id}):`, err);
       }
     }
   }

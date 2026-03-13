@@ -160,6 +160,10 @@ const AuditLog = () => {
     const [showFilter, setShowFilter] = useState(false);
     const [actionFilter, setActionFilter] = useState<ActionFilter>('all');
     const [userFilter, setUserFilter] = useState<UserFilterOption>('all');
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
+    const [page, setPage] = useState(0);
+    const PAGE_SIZE = 25;
     const [loading, setLoading] = useState(true);
     const [logs, setLogs] = useState<AuditLogEntry[]>([]);
     const [uniqueUsers, setUniqueUsers] = useState<string[]>([]);

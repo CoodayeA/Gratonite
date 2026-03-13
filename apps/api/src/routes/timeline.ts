@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, desc, lt, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import { guildTimelineEvents } from '../db/schema/guild-timeline';
@@ -28,7 +29,7 @@ timelineRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
     const events = await query;
     res.json(events);
   } catch (err) {
-    console.error('[timeline] GET error:', err);
+    logger.error('[timeline] GET error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -66,7 +67,7 @@ timelineRouter.post('/', requireAuth, async (req: Request, res: Response): Promi
 
     res.status(201).json(event);
   } catch (err) {
-    console.error('[timeline] POST error:', err);
+    logger.error('[timeline] POST error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -96,7 +97,7 @@ timelineRouter.delete('/:id', requireAuth, async (req: Request, res: Response): 
 
     res.json({ success: true });
   } catch (err) {
-    console.error('[timeline] DELETE error:', err);
+    logger.error('[timeline] DELETE error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

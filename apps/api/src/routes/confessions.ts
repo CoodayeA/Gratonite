@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, desc, sql, lt } from 'drizzle-orm';
 import { db } from '../db/index';
 import { requireAuth } from '../middleware/auth';
@@ -30,7 +31,7 @@ confessionsRouter.post('/guilds/:guildId/confession-channels', requireAuth, asyn
     }).returning();
     res.status(201).json(row);
   } catch (err) {
-    console.error('[confessions] POST channel error:', err);
+    logger.error('[confessions] POST channel error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -47,7 +48,7 @@ confessionsRouter.delete('/guilds/:guildId/confession-channels/:channelId', requ
     if (!deleted) { res.status(404).json({ error: 'Confession channel not found' }); return; }
     res.json({ success: true });
   } catch (err) {
-    console.error('[confessions] DELETE channel error:', err);
+    logger.error('[confessions] DELETE channel error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -77,7 +78,7 @@ confessionsRouter.get('/channels/:channelId/confessions', requireAuth, async (re
 
     res.json(rows);
   } catch (err) {
-    console.error('[confessions] GET list error:', err);
+    logger.error('[confessions] GET list error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -114,7 +115,7 @@ confessionsRouter.post('/channels/:channelId/confessions', requireAuth, async (r
       createdAt: confession.createdAt,
     });
   } catch (err) {
-    console.error('[confessions] POST error:', err);
+    logger.error('[confessions] POST error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -150,7 +151,7 @@ confessionsRouter.post('/guilds/:guildId/confessions/:id/reveal', requireAuth, a
 
     res.json({ authorId: confession.authorId });
   } catch (err) {
-    console.error('[confessions] POST reveal error:', err);
+    logger.error('[confessions] POST reveal error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

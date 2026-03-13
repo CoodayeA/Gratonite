@@ -22,6 +22,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
@@ -52,6 +53,7 @@ import { getIO } from '../lib/socket-io';
 import { logAuditEvent, AuditActionTypes } from '../lib/audit';
 import { redis } from '../lib/redis';
 import { toRows } from '../lib/to-rows.js';
+import { cacheControl } from '../middleware/cache';
 
 export const guildsRouter = Router();
 
@@ -190,7 +192,7 @@ function handleAppError(res: Response, err: unknown): void {
   if (err instanceof AppError) {
     res.status(err.statusCode).json({ code: err.code, message: err.message });
   } else {
-    console.error('[guilds] unexpected error:', err);
+    logger.error('[guilds] unexpected error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 }
@@ -664,7 +666,7 @@ guildsRouter.get(
 
 const AVAILABLE_TAGS = ['Gaming', 'Music', 'Art', 'Technology', 'Education', 'Community', 'Entertainment', 'Sports', 'Science', 'Anime'];
 
-guildsRouter.get('/tags', (_req: Request, res: Response) => {
+guildsRouter.get('/tags', cacheControl(300), (_req: Request, res: Response) => {
   res.json(AVAILABLE_TAGS);
 });
 

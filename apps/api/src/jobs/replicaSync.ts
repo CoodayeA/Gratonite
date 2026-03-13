@@ -4,6 +4,7 @@
  */
 
 import { db } from '../db/index';
+import { logger } from '../lib/logger';
 import { guildReplicas } from '../db/schema/guild-replicas';
 import { eq, and } from 'drizzle-orm';
 import { syncReplica } from '../federation/sync';
@@ -34,7 +35,7 @@ export function startReplicaSyncJob(): void {
         replicas.map(r => syncReplica(r.id)),
       );
     } catch (err) {
-      console.error('[replicaSync] Error:', err);
+      logger.error('[replicaSync] Error:', err);
     }
   }, SYNC_INTERVAL).unref();
 

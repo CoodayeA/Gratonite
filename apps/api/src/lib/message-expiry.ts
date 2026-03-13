@@ -8,6 +8,7 @@
  */
 
 import { lt } from 'drizzle-orm';
+import { logger } from './logger';
 import { db } from '../db/index';
 import { messages } from '../db/schema/messages';
 import { getIO } from './socket-io';
@@ -47,7 +48,7 @@ export function startMessageExpiryCron(): void {
 
       console.info(`[message-expiry] Deleted ${deleted.length} expired message(s)`);
     } catch (err) {
-      console.error('[message-expiry] Error during expiry sweep:', err);
+      logger.error('[message-expiry] Error during expiry sweep:', err);
     }
   }, INTERVAL_MS);
 }

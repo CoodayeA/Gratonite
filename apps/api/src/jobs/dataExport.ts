@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import { logger } from '../lib/logger';
 import path from 'node:path';
 import { db } from '../db/index';
 import { dataExports } from '../db/schema/data-exports';
@@ -34,7 +35,7 @@ export async function startDataExport(userId: string, exportId: string): Promise
       expiresAt,
     }).where(eq(dataExports.id, exportId));
   } catch (err) {
-    console.error('[dataExport] Error:', err);
+    logger.error('[dataExport] Error:', err);
     await db.update(dataExports).set({ status: 'pending' }).where(eq(dataExports.id, exportId)).catch(() => {});
   }
 }

@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import { giveaways, giveawayEntries, giveawayWinners } from '../db/schema/giveaways';
@@ -41,7 +42,7 @@ giveawaysRouter.get('/', requireAuth, async (req: Request, res: Response): Promi
 
     res.json(rows);
   } catch (err) {
-    console.error('[giveaways] GET error:', err);
+    logger.error('[giveaways] GET error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -74,7 +75,7 @@ giveawaysRouter.post('/', requireAuth, async (req: Request, res: Response): Prom
 
     res.status(201).json(giveaway);
   } catch (err) {
-    console.error('[giveaways] POST error:', err);
+    logger.error('[giveaways] POST error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -112,7 +113,7 @@ giveawaysRouter.post('/:id/enter', requireAuth, async (req: Request, res: Respon
 
     res.status(201).json(entry || { alreadyEntered: true });
   } catch (err) {
-    console.error('[giveaways] POST enter error:', err);
+    logger.error('[giveaways] POST enter error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -125,7 +126,7 @@ giveawaysRouter.delete('/:id/enter', requireAuth, async (req: Request, res: Resp
       .where(and(eq(giveawayEntries.giveawayId, id), eq(giveawayEntries.userId, req.userId!)));
     res.json({ ok: true });
   } catch (err) {
-    console.error('[giveaways] DELETE enter error:', err);
+    logger.error('[giveaways] DELETE enter error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -183,7 +184,7 @@ giveawaysRouter.post('/:id/end', requireAuth, async (req: Request, res: Response
 
     res.json({ ...ended, winners: winnerUsers });
   } catch (err) {
-    console.error('[giveaways] POST end error:', err);
+    logger.error('[giveaways] POST end error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -219,7 +220,7 @@ giveawaysRouter.post('/:id/reroll', requireAuth, async (req: Request, res: Respo
 
     res.json({ giveawayId: id, winners: winnerUsers });
   } catch (err) {
-    console.error('[giveaways] POST reroll error:', err);
+    logger.error('[giveaways] POST reroll error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -246,7 +247,7 @@ giveawaysRouter.delete('/:id', requireAuth, async (req: Request, res: Response):
     }
     res.json(updated);
   } catch (err) {
-    console.error('[giveaways] DELETE error:', err);
+    logger.error('[giveaways] DELETE error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });

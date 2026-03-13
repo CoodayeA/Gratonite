@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, lt, desc } from 'drizzle-orm';
 import { db } from '../db/index';
 import { messageBookmarks } from '../db/schema/message-bookmarks';
@@ -47,7 +48,7 @@ bookmarksRouter.get('/users/@me/bookmarks', requireAuth, async (req: Request, re
     const bookmarks = await query;
     res.json(bookmarks);
   } catch (err) {
-    console.error('[bookmarks] GET error:', err);
+    logger.error('[bookmarks] GET error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -66,7 +67,7 @@ bookmarksRouter.post('/users/@me/bookmarks', requireAuth, async (req: Request, r
       .returning();
     res.status(201).json(bookmark || { messageId, alreadyBookmarked: true });
   } catch (err) {
-    console.error('[bookmarks] POST error:', err);
+    logger.error('[bookmarks] POST error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -79,7 +80,7 @@ bookmarksRouter.delete('/users/@me/bookmarks/:messageId', requireAuth, async (re
       .where(and(eq(messageBookmarks.userId, req.userId!), eq(messageBookmarks.messageId, messageId)));
     res.json({ ok: true });
   } catch (err) {
-    console.error('[bookmarks] DELETE error:', err);
+    logger.error('[bookmarks] DELETE error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });

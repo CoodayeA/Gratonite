@@ -1,7 +1,49 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import hljs from 'highlight.js';
 import DOMPurify from 'dompurify';
 import 'highlight.js/styles/github-dark.css';
+
+// Code block with copy button — HTML is sanitized via DOMPurify before rendering
+const CodeBlock = ({ code, lang, idx }: { code: string; lang: string; idx: number }) => {
+    const [copied, setCopied] = useState(false);
+    const rawHtml = lang && hljs.getLanguage(lang)
+        ? hljs.highlight(code, { language: lang }).value
+        : hljs.highlightAuto(code).value;
+    // SECURITY: sanitize highlight.js output to prevent XSS
+    const safeHtml = DOMPurify.sanitize(rawHtml);
+
+    const handleCopy = useCallback(() => {
+        navigator.clipboard.writeText(code).catch(() => {});
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    }, [code]);
+
+    return (
+        <pre key={`cb-${idx}`} className="code-block" style={{ position: 'relative' }}>
+            {lang && <div className="code-block-lang">{lang}</div>}
+            <button
+                onClick={handleCopy}
+                style={{
+                    position: 'absolute', top: lang ? '28px' : '6px', right: '6px',
+                    background: copied ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                    border: '1px solid var(--stroke)', borderRadius: '4px',
+                    padding: '2px 8px', fontSize: '11px', fontWeight: 500,
+                    color: copied ? 'white' : 'var(--text-muted)',
+                    cursor: 'pointer', transition: 'all 0.15s',
+                    zIndex: 1,
+                }}
+                onMouseEnter={e => { if (!copied) e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
+                onMouseLeave={e => { if (!copied) e.currentTarget.style.background = 'var(--bg-secondary)'; }}
+            >
+                {copied ? 'Copied!' : 'Copy'}
+            </button>
+            <code
+                // SAFETY: safeHtml is DOMPurify.sanitize'd above — safe for rendering
+                dangerouslySetInnerHTML={{ __html: safeHtml }}
+            />
+        </pre>
+    );
+};
 
 type RichTextRendererProps = {
     content: string;
@@ -271,7 +313,7 @@ function renderLeaf(text: string, ctx: InlineCtx, depth: number): React.ReactNod
                             onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}
                         >{part}</a>
                         <div style={{ maxWidth: 'min(400px, 100%)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', cursor: 'pointer', marginTop: '4px', marginBottom: '4px' }}>
-                            <img src={part} alt="Embedded image" style={{ width: '100%', display: 'block', objectFit: 'cover', maxHeight: '350px' }} onClick={() => window.open(part, '_blank')} />
+                            <img src={part} alt="Embedded image" loading="lazy" style={{ width: '100%', display: 'block', objectFit: 'cover', maxHeight: '350px' }} onClick={() => window.open(part, '_blank')} />
                         </div>
                     </span>
                 );
@@ -334,9 +376,8 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({ content, cus
 
     topParts.forEach((part, idx) => {
         if (idx % 2 !== 0) {
-            // Code block content — render as-is
+            // Code block content — render with syntax highlighting + copy button
             const lines = part.trim();
-            // Detect language hint on first line (e.g. ```js)
             const firstNewline = lines.indexOf('\n');
             let lang = '';
             let code = lines;
@@ -344,17 +385,7 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({ content, cus
                 lang = lines.slice(0, firstNewline).trim();
                 code = lines.slice(firstNewline + 1);
             }
-            const rawHighlightedHtml = lang && hljs.getLanguage(lang)
-                ? hljs.highlight(code, { language: lang }).value
-                : hljs.highlightAuto(code).value;
-            // Sanitize highlight.js output to prevent XSS via crafted code blocks
-            const highlightedHtml = DOMPurify.sanitize(rawHighlightedHtml);
-            rendered.push(
-                <pre key={`cb-${idx}`} className="code-block">
-                    {lang && <div className="code-block-lang">{lang}</div>}
-                    <code dangerouslySetInnerHTML={{ __html: highlightedHtml }} />
-                </pre>
-            );
+            rendered.push(<CodeBlock key={`cb-${idx}`} code={code} lang={lang} idx={idx} />);
             return;
         }
 

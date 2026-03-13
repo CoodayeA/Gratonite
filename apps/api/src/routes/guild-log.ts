@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq } from 'drizzle-orm';
 import { db } from '../db/index';
 import { guildLogConfig } from '../db/schema/guild-log-config';
@@ -29,7 +30,7 @@ guildLogRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
 
     res.json(config || { guildId, channelId: null, events: VALID_EVENTS });
   } catch (err) {
-    console.error('[guild-log] GET error:', err);
+    logger.error('[guild-log] GET error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -62,7 +63,7 @@ guildLogRouter.put('/', requireAuth, async (req: Request, res: Response): Promis
 
     res.json(upserted);
   } catch (err) {
-    console.error('[guild-log] PUT error:', err);
+    logger.error('[guild-log] PUT error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });

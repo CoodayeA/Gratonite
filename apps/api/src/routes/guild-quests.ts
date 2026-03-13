@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { eq, and, desc, sql, isNull, isNotNull } from 'drizzle-orm';
 import { db } from '../db/index';
 import { requireAuth } from '../middleware/auth';
+import { logger } from '../lib/logger';
 import { hasPermission } from './roles';
 import { Permissions } from '../db/schema/roles';
 import { guildQuests, guildQuestContributions } from '../db/schema/guild-quests';
@@ -27,7 +28,7 @@ guildQuestsRouter.get('/', requireAuth, async (req: Request, res: Response): Pro
     const quests = await db.select().from(guildQuests).where(condition).orderBy(desc(guildQuests.createdAt));
     res.json(quests);
   } catch (err) {
-    console.error('[guild-quests] GET error:', err);
+    logger.error('[guild-quests] GET error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -57,7 +58,7 @@ guildQuestsRouter.post('/', requireAuth, async (req: Request, res: Response): Pr
     }).returning();
     res.status(201).json(quest);
   } catch (err) {
-    console.error('[guild-quests] POST error:', err);
+    logger.error('[guild-quests] POST error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -84,7 +85,7 @@ guildQuestsRouter.patch('/:id', requireAuth, async (req: Request, res: Response)
     if (!quest) { res.status(404).json({ error: 'Quest not found' }); return; }
     res.json(quest);
   } catch (err) {
-    console.error('[guild-quests] PATCH error:', err);
+    logger.error('[guild-quests] PATCH error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -101,7 +102,7 @@ guildQuestsRouter.delete('/:id', requireAuth, async (req: Request, res: Response
     if (!deleted) { res.status(404).json({ error: 'Quest not found' }); return; }
     res.json({ success: true });
   } catch (err) {
-    console.error('[guild-quests] DELETE error:', err);
+    logger.error('[guild-quests] DELETE error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -129,7 +130,7 @@ guildQuestsRouter.post('/:id/contribute', requireAuth, async (req: Request, res:
 
     res.json(updated);
   } catch (err) {
-    console.error('[guild-quests] POST contribute error:', err);
+    logger.error('[guild-quests] POST contribute error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -152,7 +153,7 @@ guildQuestsRouter.get('/:id/contributions', requireAuth, async (req: Request, re
 
     res.json(contributions);
   } catch (err) {
-    console.error('[guild-quests] GET contributions error:', err);
+    logger.error('[guild-quests] GET contributions error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

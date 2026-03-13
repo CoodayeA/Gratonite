@@ -4,6 +4,7 @@
  */
 
 import { db } from '../db/index';
+import { logger } from '../lib/logger';
 import { federationActivities } from '../db/schema/federation-activities';
 import { eq, and, lte, or, isNull } from 'drizzle-orm';
 import { deliverActivity } from '../federation/activities';
@@ -37,7 +38,7 @@ export function startFederationDeliveryJob(): void {
         pending.map(a => deliverActivity(a.id)),
       );
     } catch (err) {
-      console.error('[federationDelivery] Error:', err);
+      logger.error('[federationDelivery] Error:', err);
     }
   }, 10_000).unref();
 

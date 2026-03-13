@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import { requireAuth } from '../middleware/auth';
@@ -17,7 +18,7 @@ guildFormsRouter.get('/', requireAuth, async (req: Request, res: Response): Prom
     const forms = await db.select().from(guildForms).where(eq(guildForms.guildId, guildId)).orderBy(desc(guildForms.createdAt));
     res.json(forms);
   } catch (err) {
-    console.error('[guild-forms] GET list error:', err);
+    logger.error('[guild-forms] GET list error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -44,7 +45,7 @@ guildFormsRouter.post('/', requireAuth, async (req: Request, res: Response): Pro
     }).returning();
     res.status(201).json(form);
   } catch (err) {
-    console.error('[guild-forms] POST error:', err);
+    logger.error('[guild-forms] POST error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -57,7 +58,7 @@ guildFormsRouter.get('/:id', requireAuth, async (req: Request, res: Response): P
     if (!form) { res.status(404).json({ error: 'Form not found' }); return; }
     res.json(form);
   } catch (err) {
-    console.error('[guild-forms] GET single error:', err);
+    logger.error('[guild-forms] GET single error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -83,7 +84,7 @@ guildFormsRouter.patch('/:id', requireAuth, async (req: Request, res: Response):
     if (!form) { res.status(404).json({ error: 'Form not found' }); return; }
     res.json(form);
   } catch (err) {
-    console.error('[guild-forms] PATCH error:', err);
+    logger.error('[guild-forms] PATCH error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -100,7 +101,7 @@ guildFormsRouter.delete('/:id', requireAuth, async (req: Request, res: Response)
     if (!deleted) { res.status(404).json({ error: 'Form not found' }); return; }
     res.json({ success: true });
   } catch (err) {
-    console.error('[guild-forms] DELETE error:', err);
+    logger.error('[guild-forms] DELETE error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -123,7 +124,7 @@ guildFormsRouter.post('/:id/responses', requireAuth, async (req: Request, res: R
     }).returning();
     res.status(201).json(response);
   } catch (err) {
-    console.error('[guild-forms] POST response error:', err);
+    logger.error('[guild-forms] POST response error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -160,7 +161,7 @@ guildFormsRouter.get('/:id/responses', requireAuth, async (req: Request, res: Re
     const [countRow] = await db.select({ count: sql<number>`count(*)::int` }).from(guildFormResponses).where(eq(guildFormResponses.formId, id));
     res.json({ responses, total: countRow?.count ?? 0 });
   } catch (err) {
-    console.error('[guild-forms] GET responses error:', err);
+    logger.error('[guild-forms] GET responses error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -200,7 +201,7 @@ guildFormsRouter.patch('/:id/responses/:responseId', requireAuth, async (req: Re
 
     res.json(response);
   } catch (err) {
-    console.error('[guild-forms] PATCH response error:', err);
+    logger.error('[guild-forms] PATCH response error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

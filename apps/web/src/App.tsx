@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense, type Dispatch, type SetStateAction } from 'react';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, Navigate, Outlet, Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar, Compass, User } from 'lucide-react';
+import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar, Compass, User, Columns } from 'lucide-react';
 import './components/chat.css';
 import CommandPalette from './components/ui/CommandPalette';
 import { playSound, setSoundVolume } from './utils/SoundManager';
@@ -35,6 +35,7 @@ const GuildOverview = lazy(() => import('./pages/guilds/GuildOverview'));
 const AuditLog = lazy(() => import('./pages/guilds/AuditLog'));
 const GuildWorkflows = lazy(() => import('./pages/guilds/GuildWorkflows'));
 const EventScheduler = lazy(() => import('./pages/guilds/EventScheduler'));
+const ModerationDashboard = lazy(() => import('./pages/guilds/ModerationDashboard'));
 const MessageRequests = lazy(() => import('./pages/app/MessageRequests'));
 const AdminTeam = lazy(() => import('./pages/admin/AdminTeam'));
 const AdminAuditLog = lazy(() => import('./pages/admin/AdminAuditLog'));
@@ -44,6 +45,16 @@ const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
 const AdminPortals = lazy(() => import('./pages/admin/AdminPortals'));
 const HelpCenter = lazy(() => import('./pages/app/HelpCenter'));
 const MeProfile = lazy(() => import('./pages/app/MeProfile'));
+const ReadLater = lazy(() => import('./pages/app/ReadLater'));
+const BadgesGallery = lazy(() => import('./pages/app/BadgesGallery'));
+const FriendActivity = lazy(() => import('./pages/app/FriendActivity'));
+const Trading = lazy(() => import('./pages/app/Trading'));
+const GuildInsights = lazy(() => import('./pages/guilds/GuildInsights'));
+const WikiChannel = lazy(() => import('./pages/guilds/WikiChannel'));
+const PhotoAlbums = lazy(() => import('./pages/guilds/PhotoAlbums'));
+const FormBuilder = lazy(() => import('./pages/guilds/FormBuilder'));
+const Gacha = lazy(() => import('./pages/app/Gacha'));
+const StoreModal = lazy(() => import('./pages/app/StoreModal'));
 
 import InviteAccept from './pages/InviteAccept';
 import { NotFound } from './pages/ErrorStates';
@@ -84,6 +95,8 @@ import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { SkeletonChannelGroup, SkeletonDmList, SkeletonMemberList } from './components/ui/SkeletonLoader';
 import AmbientPlayer from './components/ui/AmbientPlayer';
 import ConnectionBanner from './components/ui/ConnectionBanner';
+import SeasonalOverlay from './components/ui/SeasonalOverlay';
+import LiveAnnouncer from './components/ui/LiveAnnouncer';
 import { VoiceProvider, useVoice } from './contexts/VoiceContext';
 import { useVoiceSounds } from './hooks/useVoiceSounds';
 import Avatar from './components/ui/Avatar';
@@ -872,6 +885,16 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     setChannelSettingsOpen({ id: channel.id, name: ch.name, topic: ch.topic || '', rateLimitPerUser: ch.rateLimitPerUser || 0, isNsfw: ch.isNsfw || false, channelType: ch.type, userLimit: ch.userLimit || 0 });
                 }).catch(() => setChannelSettingsOpen({ id: channel.id, name: channel.name }));
             }},
+            { id: 'split-view', label: 'Open in Split View', icon: Columns, onClick: () => {
+                if (activeGuildId) {
+                    const key = 'gratonite-split-view';
+                    const state = { enabled: true, rightChannelId: channel.id, rightGuildId: activeGuildId, dividerPosition: 50 };
+                    localStorage.setItem(key, JSON.stringify(state));
+                    addToast({ title: `#${channel.name} opened in split view`, variant: 'info' });
+                    // Force re-render by navigating
+                    window.dispatchEvent(new CustomEvent('split-view-update'));
+                }
+            }},
             { id: 'duplicate', label: 'Duplicate Channel', icon: Copy, onClick: () => handleDuplicateChannel(channel.id, channel.name) },
             { id: 'permissions', label: 'Channel Permissions', icon: ShieldIcon, onClick: () => {
                 api.channels.get(channel.id).then((ch: any) => {
@@ -934,19 +957,65 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const [micMuted, setMicMuted] = useState(false);
     const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
         try {
-            const saved = localStorage.getItem('gratonite-sidebar-collapsed');
+            const key = activeGuildId ? `collapsed-categories-${activeGuildId}` : 'gratonite-sidebar-collapsed';
+            const saved = localStorage.getItem(key);
             return saved ? JSON.parse(saved) : {};
         } catch {
             return {};
         }
     });
 
+    // Reload collapsed state when active guild changes
     useEffect(() => {
-        localStorage.setItem('gratonite-sidebar-collapsed', JSON.stringify(collapsed));
-    }, [collapsed]);
+        try {
+            const key = activeGuildId ? `collapsed-categories-${activeGuildId}` : 'gratonite-sidebar-collapsed';
+            const saved = localStorage.getItem(key);
+            setCollapsed(saved ? JSON.parse(saved) : {});
+        } catch {
+            setCollapsed({});
+        }
+    }, [activeGuildId]);
+
+    useEffect(() => {
+        const key = activeGuildId ? `collapsed-categories-${activeGuildId}` : 'gratonite-sidebar-collapsed';
+        localStorage.setItem(key, JSON.stringify(collapsed));
+    }, [collapsed, activeGuildId]);
 
     const toggleCategory = (cat: string) => {
         setCollapsed(prev => ({ ...prev, [cat]: !prev[cat] }));
+    };
+
+    // ── Sidebar customization ──
+    const SIDEBAR_LAYOUT_KEY = 'gratonite-sidebar-layout';
+    type SidebarSection = 'nav' | 'dm' | 'voice';
+    const [sidebarLayout, setSidebarLayout] = useState<{ order: SidebarSection[]; hidden: SidebarSection[] }>(() => {
+        try {
+            const saved = localStorage.getItem(SIDEBAR_LAYOUT_KEY);
+            return saved ? JSON.parse(saved) : { order: ['nav', 'dm', 'voice'], hidden: [] };
+        } catch { return { order: ['nav', 'dm', 'voice'], hidden: [] }; }
+    });
+    const [showSidebarCustomize, setShowSidebarCustomize] = useState(false);
+    const toggleSidebarSection = (section: SidebarSection) => {
+        setSidebarLayout(prev => {
+            const isHidden = prev.hidden.includes(section);
+            const newHidden = isHidden ? prev.hidden.filter(s => s !== section) : [...prev.hidden, section];
+            const newLayout = { ...prev, hidden: newHidden };
+            localStorage.setItem(SIDEBAR_LAYOUT_KEY, JSON.stringify(newLayout));
+            return newLayout;
+        });
+    };
+    const moveSidebarSection = (section: SidebarSection, direction: 'up' | 'down') => {
+        setSidebarLayout(prev => {
+            const order = [...prev.order];
+            const idx = order.indexOf(section);
+            if (idx < 0) return prev;
+            const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+            if (swapIdx < 0 || swapIdx >= order.length) return prev;
+            [order[idx], order[swapIdx]] = [order[swapIdx], order[idx]];
+            const newLayout = { ...prev, order };
+            localStorage.setItem(SIDEBAR_LAYOUT_KEY, JSON.stringify(newLayout));
+            return newLayout;
+        });
     };
 
     // ── Drag-and-drop channel reorder state ──
@@ -1157,7 +1226,58 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     if (isAppRoot) {
         return (
             <aside className={`channel-sidebar glass-panel ${isOpen ? 'open' : ''}`} role="navigation" aria-label="App navigation">
-                <div className="channel-list" style={{ paddingTop: '16px' }} onClick={(e) => { if ((e.target as HTMLElement).closest('.channel-item')) playSound('click'); }}>
+                {/* Sidebar Customize Button */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 12px 0' }}>
+                    <button
+                        onClick={() => setShowSidebarCustomize(!showSidebarCustomize)}
+                        style={{
+                            background: showSidebarCustomize ? 'var(--bg-tertiary)' : 'transparent',
+                            border: 'none', borderRadius: '6px', padding: '4px 8px',
+                            color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px',
+                            fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px',
+                            transition: 'all 0.15s',
+                        }}
+                        title="Customize sidebar"
+                    >
+                        <Settings size={12} /> Customize
+                    </button>
+                </div>
+                {showSidebarCustomize && (
+                    <div style={{
+                        margin: '8px 12px', padding: '12px', background: 'var(--bg-tertiary)',
+                        borderRadius: '8px', border: '1px solid var(--stroke)',
+                    }}>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Sidebar Sections</div>
+                        {sidebarLayout.order.map((section, idx) => {
+                            const labels: Record<string, string> = { nav: 'Navigation', dm: 'Direct Messages', voice: 'Voice' };
+                            const isHidden = sidebarLayout.hidden.includes(section);
+                            return (
+                                <div key={section} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                        <button onClick={() => moveSidebarSection(section, 'up')} disabled={idx === 0} style={{ background: 'none', border: 'none', color: idx === 0 ? 'var(--stroke)' : 'var(--text-muted)', cursor: idx === 0 ? 'default' : 'pointer', padding: 0, lineHeight: 1, fontSize: '10px' }}>&#9650;</button>
+                                        <button onClick={() => moveSidebarSection(section, 'down')} disabled={idx === sidebarLayout.order.length - 1} style={{ background: 'none', border: 'none', color: idx === sidebarLayout.order.length - 1 ? 'var(--stroke)' : 'var(--text-muted)', cursor: idx === sidebarLayout.order.length - 1 ? 'default' : 'pointer', padding: 0, lineHeight: 1, fontSize: '10px' }}>&#9660;</button>
+                                    </div>
+                                    <span style={{ flex: 1, fontSize: '13px', color: isHidden ? 'var(--text-muted)' : 'var(--text-primary)', fontWeight: 500, opacity: isHidden ? 0.5 : 1 }}>{labels[section]}</span>
+                                    <button
+                                        onClick={() => toggleSidebarSection(section as SidebarSection)}
+                                        style={{
+                                            background: isHidden ? 'var(--bg-elevated)' : 'var(--accent-primary)',
+                                            border: '1px solid var(--stroke)', borderRadius: '4px',
+                                            width: '20px', height: '20px', cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            color: isHidden ? 'var(--text-muted)' : 'white', fontSize: '12px',
+                                        }}
+                                        title={isHidden ? 'Show section' : 'Hide section'}
+                                    >
+                                        {isHidden ? '' : '\u2713'}
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+                <div className="channel-list" style={{ paddingTop: showSidebarCustomize ? '0' : '16px' }} onClick={(e) => { if ((e.target as HTMLElement).closest('.channel-item')) playSound('click'); }}>
+                    {sidebarLayout.hidden.includes('nav') ? null : (<>
                     <Link to="/" style={{ textDecoration: 'none' }}>
                         <div className={`channel-item ${location.pathname === '/' ? 'active' : ''}`}>
                             <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1206,8 +1326,10 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                             <span style={{ fontSize: '15px' }}>Inventory</span>
                         </div>
                     </Link>
+                    </>)}
                 </div>
 
+                {!sidebarLayout.hidden.includes('dm') && (
                 <div className="channel-list" style={{ marginTop: '16px' }}>
                     <div className="channel-category" onClick={() => toggleCategory('dm')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -1329,6 +1451,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         </>
                     )}
                 </div>
+                )}
 
                 <UserPanel />
             </aside>
@@ -1648,10 +1771,53 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
 
             {/* Create Channel Inline Modal */}
             {showCreateChannel && (
-                <div style={{ padding: '12px 16px', background: 'var(--bg-elevated)', borderTop: '1px solid var(--stroke)', borderBottom: '1px solid var(--stroke)' }}>
+                <div style={{ padding: '12px 16px', background: 'var(--bg-elevated)', borderTop: '1px solid var(--stroke)', borderBottom: '1px solid var(--stroke)', maxHeight: '400px', overflowY: 'auto' }}>
                     <div style={{ fontSize: '12px', textTransform: 'uppercase', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
                         Create {showCreateChannel.type === 'voice' ? 'Voice' : 'Text'} Channel
                     </div>
+
+                    {/* Channel Templates */}
+                    {showCreateChannel.type === 'text' && !newChannelName && (
+                        <div style={{ marginBottom: '10px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                                Quick Templates
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                                {[
+                                    { name: 'general', icon: '#', desc: 'General chat' },
+                                    { name: 'announcements', icon: '!', desc: 'News & updates' },
+                                    { name: 'support', icon: '?', desc: 'Help & tickets' },
+                                    { name: 'gallery', icon: '*', desc: 'Art & media' },
+                                    { name: 'resources', icon: '+', desc: 'Links & files' },
+                                    { name: 'off-topic', icon: '~', desc: 'Casual chat' },
+                                ].map(tmpl => (
+                                    <button
+                                        key={tmpl.name}
+                                        onClick={() => setNewChannelName(tmpl.name)}
+                                        style={{
+                                            padding: '6px 8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                            borderRadius: '6px', cursor: 'pointer', textAlign: 'left',
+                                            display: 'flex', alignItems: 'center', gap: '6px',
+                                            color: 'var(--text-secondary)', fontSize: '12px',
+                                        }}
+                                        onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                                        onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--stroke)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                                    >
+                                        <span style={{ width: '18px', height: '18px', borderRadius: '4px', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>
+                                            {tmpl.icon}
+                                        </span>
+                                        <div>
+                                            <div style={{ fontWeight: 600, fontSize: '12px' }}>{tmpl.name}</div>
+                                            <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{tmpl.desc}</div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                            <div style={{ height: '1px', background: 'var(--stroke)', margin: '8px 0' }} />
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Or enter a custom name:</div>
+                        </div>
+                    )}
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                         {showCreateChannel.type === 'voice' ? <Mic size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : <HashIcon size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
                         <input
@@ -3140,6 +3306,10 @@ const appRouter = createBrowserRouter(
                 <Route path="help-center" element={<Suspense fallback={<LazyFallback />}><HelpCenter /></Suspense>} />
                 <Route path="me" element={<Suspense fallback={<LazyFallback />}><MeProfile /></Suspense>} />
                 <Route path="message-requests" element={<Suspense fallback={<LazyFallback />}><MessageRequests /></Suspense>} />
+                <Route path="read-later" element={<Suspense fallback={<LazyFallback />}><ReadLater /></Suspense>} />
+                <Route path="badges" element={<Suspense fallback={<LazyFallback />}><BadgesGallery /></Suspense>} />
+                <Route path="friend-activity" element={<Suspense fallback={<LazyFallback />}><FriendActivity /></Suspense>} />
+                <Route path="trading" element={<Suspense fallback={<LazyFallback />}><Trading /></Suspense>} />
                 <Route path="admin/team" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminTeam /></Suspense></RequireAdmin>} />
                 <Route path="admin/audit" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminAuditLog /></Suspense></RequireAdmin>} />
                 <Route path="admin/bot-moderation" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminBotModeration /></Suspense></RequireAdmin>} />
@@ -3158,6 +3328,7 @@ const appRouter = createBrowserRouter(
                 <Route path="guild/:guildId/audit-log" element={<Suspense fallback={<LazyFallback />}><AuditLog /></Suspense>} />
                 <Route path="guild/:guildId/workflows" element={<Suspense fallback={<LazyFallback />}><GuildWorkflows /></Suspense>} />
                 <Route path="guild/:guildId/events" element={<Suspense fallback={<LazyFallback />}><EventScheduler /></Suspense>} />
+                <Route path="guild/:guildId/moderation" element={<Suspense fallback={<LazyFallback />}><ModerationDashboard /></Suspense>} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
@@ -3175,6 +3346,8 @@ function App() {
             <AchievementToastProvider>
             <AmbientPlayer />
             <ConnectionBanner />
+            <SeasonalOverlay />
+            <LiveAnnouncer />
             <RouterProvider router={appRouter} />
             </AchievementToastProvider>
         </ToastProvider>

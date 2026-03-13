@@ -11,6 +11,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and } from 'drizzle-orm';
 
 import { db } from '../db/index';
@@ -105,7 +106,7 @@ webhooksRouter.post(
 
       res.status(201).json(webhook);
     } catch (err) {
-      console.error('[webhooks] create error:', err);
+      logger.error('[webhooks] create error:', err);
       res.status(500).json({ error: 'Failed to create webhook' });
     }
   },
@@ -135,7 +136,7 @@ webhooksRouter.get(
         .where(eq(webhooks.guildId, guildId));
       res.json(allWebhooks);
     } catch (err) {
-      console.error('[webhooks] list error:', err);
+      logger.error('[webhooks] list error:', err);
       res.status(500).json({ error: 'Failed to fetch webhooks' });
     }
   },
@@ -169,7 +170,7 @@ webhooksRouter.delete(
       await db.delete(webhooks).where(eq(webhooks.id, webhookId));
       res.json({ success: true });
     } catch (err) {
-      console.error('[webhooks] delete error:', err);
+      logger.error('[webhooks] delete error:', err);
       res.status(500).json({ error: 'Failed to delete webhook' });
     }
   },
@@ -246,7 +247,7 @@ webhooksRouter.post(
 
       res.status(201).json(msg);
     } catch (err) {
-      console.error('[webhooks] execute error:', err);
+      logger.error('[webhooks] execute error:', err);
       res.status(500).json({ error: 'Webhook execution failed' });
     }
   },

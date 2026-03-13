@@ -1,4 +1,5 @@
 import { db } from '../db/index';
+import { logger } from '../lib/logger';
 import { guilds } from '../db/schema/guilds';
 import { channels } from '../db/schema/channels';
 import { redis } from '../lib/redis';
@@ -14,7 +15,7 @@ export function startAfkMoverJob() {
     try {
       await runAfkMover();
     } catch (err) {
-      console.error('[afk-mover] Job error:', err);
+      logger.error('[afk-mover] Job error:', err);
     }
   }, 30_000);
 }

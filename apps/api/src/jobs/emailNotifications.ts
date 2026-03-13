@@ -1,4 +1,5 @@
 import { db } from '../db/index';
+import { logger } from '../lib/logger';
 import { notifications } from '../db/schema/notifications';
 import { users } from '../db/schema/users';
 import { userSettings } from '../db/schema/settings';
@@ -11,7 +12,7 @@ export function startEmailNotificationJob(): void {
     try {
       await runEmailNotifications();
     } catch (err) {
-      console.error('[email-notif] error:', err);
+      logger.error('[email-notif] error:', err);
     }
   }, 15 * 60 * 1000);
 }

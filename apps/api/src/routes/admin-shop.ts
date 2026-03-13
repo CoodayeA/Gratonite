@@ -13,6 +13,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -72,7 +73,7 @@ adminShopRouter.get(
       const items = await db.select().from(shopItems);
       res.status(200).json(items);
     } catch (err) {
-      console.error('[admin-shop] list error:', err);
+      logger.error('[admin-shop] list error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -111,7 +112,7 @@ adminShopRouter.post(
 
       res.status(201).json(item);
     } catch (err) {
-      console.error('[admin-shop] create error:', err);
+      logger.error('[admin-shop] create error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -169,7 +170,7 @@ adminShopRouter.patch(
 
       res.status(200).json(updated);
     } catch (err) {
-      console.error('[admin-shop] update error:', err);
+      logger.error('[admin-shop] update error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -205,7 +206,7 @@ adminShopRouter.delete(
 
       res.status(200).json({ code: 'OK', message: 'Item removed from shop' });
     } catch (err) {
-      console.error('[admin-shop] delete error:', err);
+      logger.error('[admin-shop] delete error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -578,7 +579,7 @@ adminShopRouter.post(
         catalogResults,
       });
     } catch (err) {
-      console.error('[admin-shop] seed error:', err);
+      logger.error('[admin-shop] seed error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },

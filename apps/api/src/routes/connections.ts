@@ -11,6 +11,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
 
@@ -47,7 +48,7 @@ connectionsRouter.get(
 
       res.status(200).json(rows);
     } catch (err) {
-      console.error('[connections] GET /@me/connections error:', err);
+      logger.error('[connections] GET /@me/connections error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -84,7 +85,7 @@ connectionsRouter.post(
 
       res.status(200).json(row);
     } catch (err) {
-      console.error('[connections] POST /@me/connections error:', err);
+      logger.error('[connections] POST /@me/connections error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -112,7 +113,7 @@ connectionsRouter.delete(
 
       res.status(204).send();
     } catch (err) {
-      console.error('[connections] DELETE /@me/connections/:provider error:', err);
+      logger.error('[connections] DELETE /@me/connections/:provider error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -142,7 +143,7 @@ connectionsRouter.get(
 
       res.status(200).json(rows);
     } catch (err) {
-      console.error('[connections] GET /:userId/connections error:', err);
+      logger.error('[connections] GET /:userId/connections error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },

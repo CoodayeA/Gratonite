@@ -14,6 +14,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { sql, eq, and, gte, desc } from 'drizzle-orm';
 
 import { db } from '../db/index';
@@ -136,7 +137,7 @@ leaderboardRouter.get(
       await redis.set(cacheKey, JSON.stringify(result), 'EX', 300); // 5 min cache
       res.status(200).json(result);
     } catch (err) {
-      console.error('[leaderboard] global/metric error:', err);
+      logger.error('[leaderboard] global/metric error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -202,7 +203,7 @@ leaderboardRouter.get(
       await redis.set(cacheKey, JSON.stringify(result), 'EX', 300); // 5 min cache
       res.status(200).json(result);
     } catch (err) {
-      console.error('[leaderboard] global error:', err);
+      logger.error('[leaderboard] global error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -322,7 +323,7 @@ leaderboardRouter.get(
 
       res.status(200).json(result);
     } catch (err) {
-      console.error('[leaderboard] guild error:', err);
+      logger.error('[leaderboard] guild error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },

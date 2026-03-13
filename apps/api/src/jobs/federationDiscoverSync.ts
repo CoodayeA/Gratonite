@@ -6,6 +6,7 @@
  */
 
 import { db } from '../db/index';
+import { logger } from '../lib/logger';
 import { guilds } from '../db/schema/guilds';
 import { federatedInstances } from '../db/schema/federation-instances';
 import { eq } from 'drizzle-orm';
@@ -158,13 +159,13 @@ export function startFederationDiscoverSyncJob(): void {
   // Initial sync after 10 seconds to let the server finish starting
   setTimeout(() => {
     syncDiscoverableGuilds().catch((err) =>
-      console.error('[federation-discover] Sync error:', err),
+      logger.error('[federation-discover] Sync error:', err),
     );
   }, 10_000);
 
   syncTimer = setInterval(() => {
     syncDiscoverableGuilds().catch((err) =>
-      console.error('[federation-discover] Sync error:', err),
+      logger.error('[federation-discover] Sync error:', err),
     );
   }, SYNC_INTERVAL_MS);
 }

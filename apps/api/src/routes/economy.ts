@@ -9,6 +9,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, desc, sql, and, gte } from 'drizzle-orm';
 
 import { db } from '../db/index';
@@ -97,7 +98,7 @@ economyRouter.get(
       const wallet = await getOrCreateWallet(req.userId!);
       res.status(200).json(walletJson(wallet));
     } catch (err) {
-      console.error('[economy] getWallet error:', err);
+      logger.error('[economy] getWallet error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -123,7 +124,7 @@ economyRouter.get(
 
       res.status(200).json(entries.map(ledgerJson));
     } catch (err) {
-      console.error('[economy] getLedger error:', err);
+      logger.error('[economy] getLedger error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -220,7 +221,7 @@ economyRouter.post(
         amount: rewardAmount,
       });
     } catch (err) {
-      console.error('[economy] claimReward error:', err);
+      logger.error('[economy] claimReward error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -287,7 +288,7 @@ economyRouter.post(
         ledgerEntry: ledgerJson(ledgerEntry),
       });
     } catch (err) {
-      console.error('[economy] spend error:', err);
+      logger.error('[economy] spend error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },

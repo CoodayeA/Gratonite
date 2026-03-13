@@ -1,4 +1,5 @@
 import { db } from '../db/index';
+import { logger } from '../lib/logger';
 import { autoRoleRules } from '../db/schema/auto-roles';
 import { guildMembers } from '../db/schema/guilds';
 import { memberRoles } from '../db/schema/roles';
@@ -69,16 +70,16 @@ export function startAutoRolesJob() {
                   }
                 }
               } catch (err) {
-                console.error('[autoRoles] Error checking rule for member:', err);
+                logger.error('[autoRoles] Error checking rule for member:', err);
               }
             }
           }
         } catch (err) {
-          console.error('[autoRoles] Error processing guild:', err);
+          logger.error('[autoRoles] Error processing guild:', err);
         }
       }
     } catch (err) {
-      console.error('[autoRoles] Job error:', err);
+      logger.error('[autoRoles] Job error:', err);
     }
   }, 5 * 60_000); // Every 5 minutes
 }

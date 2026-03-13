@@ -9,6 +9,7 @@
  */
 
 import { db } from '../db/index';
+import { logger } from './logger';
 import { auditLog } from '../db/schema/audit';
 
 // ---------------------------------------------------------------------------
@@ -89,6 +90,6 @@ export async function logAuditEvent(
     });
   } catch (err) {
     // Audit logging should never break the primary operation.
-    console.error('[audit] Failed to log event:', err);
+    logger.error('[audit] Failed to log event:', err);
   }
 }

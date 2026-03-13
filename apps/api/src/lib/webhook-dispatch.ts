@@ -13,6 +13,7 @@
  */
 
 import crypto from 'node:crypto';
+import { logger } from './logger';
 import { eq } from 'drizzle-orm';
 
 import { db } from '../db/index';
@@ -102,7 +103,7 @@ async function processActions(actions: BotAction[], guildId: string): Promise<vo
         console.info('[webhook-dispatch] unhandled action type:', action.type, '(guildId:', guildId, ')');
       }
     } catch (actionErr) {
-      console.error('[webhook-dispatch] action processing error:', action.type, actionErr);
+      logger.error('[webhook-dispatch] action processing error:', action.type, actionErr);
     }
   }
 }
@@ -190,7 +191,7 @@ async function _dispatchAsync(event: MessageCreateEvent): Promise<void> {
         .map((bot) => _sendToBot(bot, payload, event.guildId)),
     );
   } catch (err) {
-    console.error('[webhook-dispatch] dispatch error for guild', event.guildId, err);
+    logger.error('[webhook-dispatch] dispatch error for guild', event.guildId, err);
   }
 }
 
@@ -223,6 +224,6 @@ async function _sendToBot(
       await processActions(responseBody.actions, guildId);
     }
   } catch (err) {
-    console.error('[webhook-dispatch] unexpected error for bot', bot.id, err);
+    logger.error('[webhook-dispatch] unexpected error for bot', bot.id, err);
   }
 }

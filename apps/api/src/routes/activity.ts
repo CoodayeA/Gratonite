@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, desc, inArray } from 'drizzle-orm';
 import { db } from '../db/index';
 import { activityEvents } from '../db/schema/activity-feed';
@@ -50,7 +51,7 @@ activityRouter.get('/users/@me/feed', requireAuth, async (req: Request, res: Res
 
     res.json(events);
   } catch (err) {
-    console.error('[activity] GET feed error:', err);
+    logger.error('[activity] GET feed error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

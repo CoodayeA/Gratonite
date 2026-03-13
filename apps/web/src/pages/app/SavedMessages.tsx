@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Bookmark, Trash2, ExternalLink, MessageSquare, Tag, X } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Bookmark, Trash2, ExternalLink, MessageSquare, Tag, X, Plus, Search } from 'lucide-react';
 import { api, API_BASE } from '../../lib/api';
 import { useToast } from '../../components/ui/ToastManager';
 import { useNavigate } from 'react-router-dom';
@@ -20,16 +20,37 @@ type BookmarkItem = {
     authorDisplayName: string | null;
 };
 
+const STORAGE_KEY = 'gratonite:bookmark-tags';
+const CUSTOM_TAGS_KEY = 'gratonite:custom-tags';
+
+function loadTags(): Record<string, string[]> {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+}
+
+function loadCustomTags(): string[] {
+    try {
+        const stored = JSON.parse(localStorage.getItem(CUSTOM_TAGS_KEY) || '[]');
+        return Array.isArray(stored) ? stored : [];
+    } catch { return []; }
+}
+
+const DEFAULT_TAGS = ['Important', 'Read Later', 'Reference'];
+
 export default function SavedMessages() {
     const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedTag, setSelectedTag] = useState<string | null>(null);
-    const [availableTags] = useState<string[]>(['Important', 'Read Later', 'Reference']);
-    const [bookmarkTags, setBookmarkTags] = useState<Record<string, string[]>>(() => {
-        try { return JSON.parse(localStorage.getItem('gratonite:bookmark-tags') || '{}'); } catch { return {}; }
-    });
+    const [customTags, setCustomTags] = useState<string[]>(loadCustomTags);
+    const [bookmarkTags, setBookmarkTags] = useState<Record<string, string[]>>(loadTags);
+    const [newTagInput, setNewTagInput] = useState('');
+    const [showNewTagInput, setShowNewTagInput] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [editingTagOld, setEditingTagOld] = useState<string | null>(null);
+    const [editingTagNew, setEditingTagNew] = useState('');
     const { addToast } = useToast();
     const navigate = useNavigate();
+
+    const allTags = [...DEFAULT_TAGS, ...customTags];
 
     useEffect(() => {
         setLoading(true);
@@ -68,14 +89,68 @@ export default function SavedMessages() {
             const current = prev[bookmarkId] || [];
             const updated = current.includes(tag) ? current.filter(t => t !== tag) : [...current, tag];
             const next = { ...prev, [bookmarkId]: updated };
-            localStorage.setItem('gratonite:bookmark-tags', JSON.stringify(next));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
             return next;
         });
     };
 
-    const filteredBookmarks = selectedTag
-        ? bookmarks.filter(b => (bookmarkTags[b.id] || []).includes(selectedTag))
-        : bookmarks;
+    const addCustomTag = useCallback(() => {
+        const tag = newTagInput.trim();
+        if (!tag || allTags.includes(tag)) return;
+        const updated = [...customTags, tag];
+        setCustomTags(updated);
+        localStorage.setItem(CUSTOM_TAGS_KEY, JSON.stringify(updated));
+        setNewTagInput('');
+        setShowNewTagInput(false);
+    }, [newTagInput, customTags, allTags]);
+
+    const deleteCustomTag = useCallback((tag: string) => {
+        const updated = customTags.filter(t => t !== tag);
+        setCustomTags(updated);
+        localStorage.setItem(CUSTOM_TAGS_KEY, JSON.stringify(updated));
+        // Remove tag from all bookmarks
+        setBookmarkTags(prev => {
+            const next = { ...prev };
+            for (const key of Object.keys(next)) {
+                next[key] = next[key].filter(t => t !== tag);
+            }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+            return next;
+        });
+        if (selectedTag === tag) setSelectedTag(null);
+    }, [customTags, selectedTag]);
+
+    const renameTag = useCallback((oldName: string, newName: string) => {
+        if (!newName.trim() || allTags.includes(newName.trim())) return;
+        const trimmed = newName.trim();
+        // Update custom tags list
+        setCustomTags(prev => {
+            const updated = prev.map(t => t === oldName ? trimmed : t);
+            localStorage.setItem(CUSTOM_TAGS_KEY, JSON.stringify(updated));
+            return updated;
+        });
+        // Update bookmarks
+        setBookmarkTags(prev => {
+            const next = { ...prev };
+            for (const key of Object.keys(next)) {
+                next[key] = next[key].map(t => t === oldName ? trimmed : t);
+            }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+            return next;
+        });
+        if (selectedTag === oldName) setSelectedTag(trimmed);
+        setEditingTagOld(null);
+    }, [allTags, selectedTag]);
+
+    const filteredBookmarks = bookmarks.filter(b => {
+        const matchesTag = selectedTag ? (bookmarkTags[b.id] || []).includes(selectedTag) : true;
+        const matchesSearch = searchQuery
+            ? (b.messageContent || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+              (b.authorDisplayName || b.authorUsername || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+              b.channelName.toLowerCase().includes(searchQuery.toLowerCase())
+            : true;
+        return matchesTag && matchesSearch;
+    });
 
     return (
         <div style={{ padding: 'clamp(12px, 3vw, 32px)', maxWidth: '800px', margin: '0 auto' }}>
@@ -83,6 +158,22 @@ export default function SavedMessages() {
                 <Bookmark size={24} color="var(--accent-primary)" />
                 <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Saved Messages</h1>
                 <span style={{ fontSize: '13px', color: 'var(--text-muted)', marginLeft: 'auto' }}>{bookmarks.length} saved</span>
+            </div>
+
+            {/* Search bar */}
+            <div style={{ position: 'relative', marginBottom: '12px' }}>
+                <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search bookmarks..."
+                    style={{
+                        width: '100%', padding: '8px 12px 8px 32px', background: 'var(--bg-tertiary)',
+                        border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)',
+                        fontSize: '13px', outline: 'none', boxSizing: 'border-box',
+                    }}
+                />
             </div>
 
             {/* Tag filter bar */}
@@ -98,19 +189,76 @@ export default function SavedMessages() {
                 >
                     All
                 </button>
-                {availableTags.map(tag => (
+                {allTags.map(tag => (
+                    <div key={tag} style={{ position: 'relative', display: 'inline-flex' }}>
+                        {editingTagOld === tag ? (
+                            <input
+                                autoFocus
+                                value={editingTagNew}
+                                onChange={e => setEditingTagNew(e.target.value)}
+                                onBlur={() => renameTag(tag, editingTagNew)}
+                                onKeyDown={e => { if (e.key === 'Enter') renameTag(tag, editingTagNew); if (e.key === 'Escape') setEditingTagOld(null); }}
+                                style={{
+                                    padding: '4px 8px', borderRadius: '12px', border: '1px solid var(--accent-primary)',
+                                    fontSize: '12px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
+                                    width: '100px', outline: 'none',
+                                }}
+                            />
+                        ) : (
+                            <button
+                                onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                                onDoubleClick={() => { if (customTags.includes(tag)) { setEditingTagOld(tag); setEditingTagNew(tag); } }}
+                                style={{
+                                    padding: '4px 12px', borderRadius: '12px', border: 'none', fontSize: '12px', fontWeight: 500, cursor: 'pointer',
+                                    background: selectedTag === tag ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                    color: selectedTag === tag ? '#000' : 'var(--text-secondary)',
+                                    display: 'flex', alignItems: 'center', gap: '4px',
+                                }}
+                            >
+                                {tag}
+                                {customTags.includes(tag) && (
+                                    <span
+                                        onClick={(e) => { e.stopPropagation(); deleteCustomTag(tag); }}
+                                        style={{ cursor: 'pointer', opacity: 0.5, display: 'flex', alignItems: 'center' }}
+                                        title="Delete tag"
+                                    >
+                                        <X size={10} />
+                                    </span>
+                                )}
+                            </button>
+                        )}
+                    </div>
+                ))}
+                {showNewTagInput ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <input
+                            autoFocus
+                            value={newTagInput}
+                            onChange={e => setNewTagInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') addCustomTag(); if (e.key === 'Escape') { setShowNewTagInput(false); setNewTagInput(''); } }}
+                            placeholder="New tag..."
+                            style={{
+                                padding: '4px 8px', borderRadius: '12px', border: '1px solid var(--accent-primary)',
+                                fontSize: '12px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
+                                width: '100px', outline: 'none',
+                            }}
+                        />
+                        <button onClick={() => { setShowNewTagInput(false); setNewTagInput(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}>
+                            <X size={12} />
+                        </button>
+                    </div>
+                ) : (
                     <button
-                        key={tag}
-                        onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                        onClick={() => setShowNewTagInput(true)}
                         style={{
-                            padding: '4px 12px', borderRadius: '12px', border: 'none', fontSize: '12px', fontWeight: 500, cursor: 'pointer',
-                            background: selectedTag === tag ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                            color: selectedTag === tag ? '#000' : 'var(--text-secondary)',
+                            padding: '4px 8px', borderRadius: '12px', border: '1px dashed var(--stroke)',
+                            fontSize: '12px', background: 'transparent', color: 'var(--text-muted)',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
                         }}
                     >
-                        {tag}
+                        <Plus size={10} /> Add Tag
                     </button>
-                ))}
+                )}
             </div>
 
             {loading ? (
@@ -118,7 +266,7 @@ export default function SavedMessages() {
             ) : filteredBookmarks.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
                     <Bookmark size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-                    <p style={{ fontSize: '16px', fontWeight: 600 }}>{selectedTag ? `No bookmarks tagged "${selectedTag}"` : 'No saved messages'}</p>
+                    <p style={{ fontSize: '16px', fontWeight: 600 }}>{selectedTag ? `No bookmarks tagged "${selectedTag}"` : searchQuery ? 'No matching bookmarks' : 'No saved messages'}</p>
                     <p style={{ fontSize: '13px' }}>{selectedTag ? 'Try selecting a different tag or clear the filter.' : 'Right-click a message and choose "Bookmark Message" to save it here.'}</p>
                 </div>
             ) : (
@@ -154,7 +302,7 @@ export default function SavedMessages() {
                                     )}
                                     {/* Tag chips */}
                                     <div style={{ display: 'flex', gap: '4px', marginTop: '8px', flexWrap: 'wrap' }}>
-                                        {availableTags.map(tag => {
+                                        {allTags.map(tag => {
                                             const isActive = (bookmarkTags[b.id] || []).includes(tag);
                                             return (
                                                 <button

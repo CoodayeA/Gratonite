@@ -6547,3 +6547,10 @@ body.electron-mac .sidebar-header {
   }
 }
 
+/* Hide keyboard shortcut hints on mobile */
+@media (max-width: 768px) {
+  .shortcut-hint {
+    display: none !important;
+  }
+}
+

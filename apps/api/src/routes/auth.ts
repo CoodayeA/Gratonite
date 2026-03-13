@@ -26,6 +26,7 @@
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
+import { logger } from '../lib/logger';
 import { z } from 'zod';
 import * as argon2 from 'argon2';
 import crypto from 'crypto';
@@ -503,7 +504,7 @@ authRouter.post('/register', asyncHandler(async (req: Request, res: Response): P
   try {
     await sendVerificationEmail(email, rawToken, appUrl);
   } catch (err) {
-    console.error('Failed to send verification email:', err);
+    logger.error('Failed to send verification email:', err);
   }
 
   res.status(201).json({ email: email.toLowerCase() });
@@ -1213,7 +1214,7 @@ authRouter.post('/verify-email/request', emailVerifyRateLimit, asyncHandler(asyn
   try {
     await sendVerificationEmail(email, rawToken, appUrl);
   } catch (err) {
-    console.error('Failed to send verification email:', err);
+    logger.error('Failed to send verification email:', err);
   }
 
   res.status(200).json({ message: 'Verification email sent' });
@@ -1320,7 +1321,7 @@ authRouter.post('/forgot-password', asyncHandler(async (req: Request, res: Respo
   try {
     await sendPasswordResetEmail(user.email, rawToken, appUrl);
   } catch (err) {
-    console.error('Failed to send password reset email:', err);
+    logger.error('Failed to send password reset email:', err);
   }
 
   res.status(200).json({ message: 'If that email is registered, a reset link has been sent.' });

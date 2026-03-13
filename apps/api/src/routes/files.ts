@@ -27,6 +27,7 @@
  */
 
 import path from 'path';
+import { logger } from '../lib/logger';
 import fs from 'fs';
 import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
@@ -279,7 +280,7 @@ filesRouter.post(
         mimeType: fileRecord.mimeType,
       });
     } catch (err) {
-      console.error('[files] upload error:', err);
+      logger.error('[files] upload error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to save file record' });
     }
   },
@@ -374,7 +375,7 @@ filesRouter.get('/:fileId', publicFileRateLimit, (req: Request, res: Response, n
     // sendFile requires an absolute path.
     res.sendFile(filePath);
   } catch (err) {
-    console.error('[files] serve error:', err);
+    logger.error('[files] serve error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to serve file' });
   }
 });

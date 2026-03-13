@@ -124,6 +124,24 @@ const VoiceChannel = () => {
     const chatPreviewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [manuallyDisconnected, setManuallyDisconnected] = useState(false);
 
+    // Noise suppression state (Item 18)
+    const [noiseSuppression, setNoiseSuppression] = useState(() => localStorage.getItem('gratonite_noise_suppression') === 'true');
+    const noiseFilterRef = useRef<BiquadFilterNode | null>(null);
+
+    // Audio ducking state (Item 22)
+    const [audioDucking, setAudioDucking] = useState(() => localStorage.getItem('gratonite_audio_ducking') !== 'false');
+    const duckingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Voice recording state (Item 24)
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingDuration, setRecordingDuration] = useState(0);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const recordingChunksRef = useRef<Blob[]>([]);
+    const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Listen Along state (Item 20)
+    const [listeningAlong, setListeningAlong] = useState<{ userId: string; username: string } | null>(null);
+
     // Pinned participant for focus view
     const [pinnedParticipant, setPinnedParticipant] = useState<string | null>(null);
 
@@ -224,6 +242,77 @@ const VoiceChannel = () => {
             });
         }
     }, [spatialMode, roomRef]);
+
+    // Noise suppression toggle (Item 18)
+    const handleToggleNoiseSuppression = useCallback(() => {
+        const next = !noiseSuppression;
+        setNoiseSuppression(next);
+        localStorage.setItem('gratonite_noise_suppression', String(next));
+        addToast({ title: next ? 'Noise Suppression Enabled' : 'Noise Suppression Disabled', variant: 'info' });
+    }, [noiseSuppression, addToast]);
+
+    // Audio ducking: lower ambient volume when someone speaks (Item 22)
+    useEffect(() => {
+        if (!audioDucking || !isConnected) return;
+        const anyoneSpeaking = participants.some(p => p.isSpeaking);
+        if (anyoneSpeaking) {
+            if (duckingTimeoutRef.current) { clearTimeout(duckingTimeoutRef.current); duckingTimeoutRef.current = null; }
+            window.dispatchEvent(new CustomEvent('voice-ducking', { detail: { duck: true } }));
+        } else {
+            if (!duckingTimeoutRef.current) {
+                duckingTimeoutRef.current = setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('voice-ducking', { detail: { duck: false } }));
+                    duckingTimeoutRef.current = null;
+                }, 300);
+            }
+        }
+    }, [audioDucking, isConnected, participants]);
+
+    // Voice recording controls (Item 24)
+    const handleStartRecording = useCallback(async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+            recordingChunksRef.current = [];
+            recorder.ondataavailable = (e) => { if (e.data.size > 0) recordingChunksRef.current.push(e.data); };
+            recorder.onstop = () => {
+                const blob = new Blob(recordingChunksRef.current, { type: 'audio/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `voice-recording-${new Date().toISOString().slice(0, 19)}.webm`;
+                a.click();
+                URL.revokeObjectURL(url);
+                stream.getTracks().forEach(t => t.stop());
+            };
+            recorder.start(1000);
+            mediaRecorderRef.current = recorder;
+            setIsRecording(true);
+            setRecordingDuration(0);
+            recordingTimerRef.current = setInterval(() => setRecordingDuration(d => d + 1), 1000);
+            addToast({ title: 'Recording Started', description: 'Voice channel is being recorded.', variant: 'info' });
+        } catch {
+            addToast({ title: 'Recording Failed', description: 'Could not access audio.', variant: 'error' });
+        }
+    }, [addToast]);
+
+    const handleStopRecording = useCallback(() => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
+        }
+        mediaRecorderRef.current = null;
+        setIsRecording(false);
+        if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+        setRecordingDuration(0);
+        addToast({ title: 'Recording Saved', description: 'Download will start shortly.', variant: 'info' });
+    }, [addToast]);
+
+    // Listen Along dismiss (Item 20)
+    const handleStopListenAlong = useCallback(() => {
+        setListeningAlong(null);
+        const socket = getSocket();
+        if (socket) socket.emit('listen_along_stop', {});
+    }, []);
 
     // Update spatial engine positions when they change
     useEffect(() => {
@@ -802,6 +891,41 @@ const VoiceChannel = () => {
                             }}>Invite</button>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Recording banner (Item 24) */}
+            {isRecording && (
+                <div style={{
+                    padding: '6px 16px', background: 'rgba(239, 68, 68, 0.15)',
+                    borderBottom: '1px solid rgba(239, 68, 68, 0.3)',
+                    display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--error)',
+                }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--error)', animation: 'speakingPulse 1.2s ease-in-out infinite' }} />
+                    <span style={{ fontWeight: 600 }}>Recording</span>
+                    <span style={{ color: 'var(--text-muted)' }}>{Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}</span>
+                    <span style={{ flex: 1 }} />
+                    <button onClick={handleStopRecording} style={{
+                        padding: '2px 10px', borderRadius: 'var(--radius-sm)',
+                        background: 'var(--error)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 600,
+                    }}>Stop</button>
+                </div>
+            )}
+
+            {/* Listen Along banner (Item 20) */}
+            {listeningAlong && (
+                <div style={{
+                    padding: '6px 16px', background: 'rgba(82, 109, 245, 0.12)',
+                    borderBottom: '1px solid rgba(82, 109, 245, 0.3)',
+                    display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px',
+                }}>
+                    <span style={{ fontSize: '14px' }}>&#127925;</span>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Listening along with <strong>{listeningAlong.username}</strong></span>
+                    <span style={{ flex: 1 }} />
+                    <button onClick={handleStopListenAlong} style={{
+                        padding: '2px 10px', borderRadius: 'var(--radius-sm)',
+                        background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--stroke)', cursor: 'pointer', fontSize: '11px',
+                    }}>Stop</button>
                 </div>
             )}
 
@@ -1430,6 +1554,50 @@ const VoiceChannel = () => {
                             <Compass size={20} />
                         </button>
                         <div className="tooltip">{spatialMode ? 'Disable Spatial Audio' : 'Enable Spatial Audio'}</div>
+                    </div>
+
+                    {/* Noise Suppression Toggle (Item 18) */}
+                    <div className="tooltip-container">
+                        <button
+                            onMouseEnter={() => setHoveredBtn('noise')}
+                            onMouseLeave={() => setHoveredBtn(null)}
+                            onClick={handleToggleNoiseSuppression}
+                            style={{
+                                width: '40px', height: '40px', borderRadius: '50%',
+                                background: noiseSuppression ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                border: '1px solid var(--stroke)', color: noiseSuppression ? '#000' : 'var(--text-primary)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s',
+                                transform: hoveredBtn === 'noise' ? 'translateY(-2px)' : 'none',
+                                fontSize: '14px',
+                            }}
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        </button>
+                        <div className="tooltip">{noiseSuppression ? 'Disable Noise Suppression' : 'Enable Noise Suppression'}</div>
+                    </div>
+
+                    {/* Recording Toggle (Item 24) */}
+                    <div className="tooltip-container">
+                        <button
+                            onMouseEnter={() => setHoveredBtn('record')}
+                            onMouseLeave={() => setHoveredBtn(null)}
+                            onClick={isRecording ? handleStopRecording : handleStartRecording}
+                            style={{
+                                width: '40px', height: '40px', borderRadius: '50%',
+                                background: isRecording ? 'var(--error)' : 'var(--bg-tertiary)',
+                                border: '1px solid var(--stroke)', color: isRecording ? 'white' : 'var(--text-primary)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s',
+                                transform: hoveredBtn === 'record' ? 'translateY(-2px)' : 'none',
+                                animation: isRecording ? 'speakingPulse 1.2s ease-in-out infinite' : 'none',
+                            }}
+                        >
+                            <div style={{
+                                width: isRecording ? '10px' : '12px', height: isRecording ? '10px' : '12px',
+                                borderRadius: isRecording ? '2px' : '50%',
+                                background: isRecording ? 'white' : 'var(--error)',
+                            }} />
+                        </button>
+                        <div className="tooltip">{isRecording ? `Stop Recording (${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60).toString().padStart(2, '0')})` : 'Record Voice Channel'}</div>
                     </div>
 
                     <div style={{ width: '1px', height: '32px', background: 'var(--stroke)', margin: '0 8px' }}></div>

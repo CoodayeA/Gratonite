@@ -45,6 +45,7 @@ import { eq, and, isNull } from 'drizzle-orm';
 import { redis } from '../lib/redis';
 import { executeWorkflows } from '../lib/workflow-executor';
 import { activeWebSocketConnections } from '../lib/metrics';
+import { logger } from '../lib/logger';
 
 // In-memory spatial positions: channelId → Map<userId, {x, y}>
 // Ephemeral — not persisted to Redis (too high frequency: ~15 updates/sec/user)
@@ -164,7 +165,7 @@ export function initSocket(io: SocketIOServer): void {
         await socket.join(`guild:${guildId}`);
       }
     } catch (err) {
-      console.error(`[socket.io] failed to join guild rooms for user ${userId}:`, err);
+      logger.error(`[socket.io] failed to join guild rooms for user ${userId}:`, err);
     }
 
     // -------------------------------------------------------------------------
@@ -180,7 +181,7 @@ export function initSocket(io: SocketIOServer): void {
         await socket.join(`channel:${channelId}`);
       }
     } catch (err) {
-      console.error(`[socket.io] failed to join DM channel rooms for user ${userId}:`, err);
+      logger.error(`[socket.io] failed to join DM channel rooms for user ${userId}:`, err);
     }
 
     // -------------------------------------------------------------------------
@@ -204,7 +205,7 @@ export function initSocket(io: SocketIOServer): void {
         io.to(`guild:${guildId}`).emit('PRESENCE_UPDATE', { userId, status: broadcastStatus });
       }
     } catch (err) {
-      console.error(`[socket.io] failed to set presence for user ${userId}:`, err);
+      logger.error(`[socket.io] failed to set presence for user ${userId}:`, err);
     }
 
     // Emit READY so the client knows the handshake is complete
@@ -221,7 +222,7 @@ export function initSocket(io: SocketIOServer): void {
       // Fire member_join workflows (non-blocking)
       for (const guildId of userGuildIds) {
         executeWorkflows(guildId, 'member_join', { guildId, userId }, io).catch((err) => {
-          console.error(`[socket.io] workflow member_join error guild=${guildId}:`, err);
+          logger.error(`[socket.io] workflow member_join error guild=${guildId}:`, err);
         });
       }
     });
@@ -275,7 +276,7 @@ export function initSocket(io: SocketIOServer): void {
 
         await socket.join(`channel:${data.channelId}`);
       } catch (err) {
-        console.error(`[socket.io] CHANNEL_JOIN error:`, err);
+        logger.error(`[socket.io] CHANNEL_JOIN error:`, err);
       }
     });
 
@@ -296,7 +297,7 @@ export function initSocket(io: SocketIOServer): void {
         // Also add to the tracked list so disconnect cleanup works
         userGuildIds.push(data.guildId);
       } catch (err) {
-        console.error(`[socket.io] JOIN_GUILD_ROOM error:`, err);
+        logger.error(`[socket.io] JOIN_GUILD_ROOM error:`, err);
       }
     });
 
@@ -383,7 +384,7 @@ export function initSocket(io: SocketIOServer): void {
           topic: session.topic ?? null,
         });
       } catch (err) {
-        console.error('[socket.io] STAGE_START error:', err);
+        logger.error('[socket.io] STAGE_START error:', err);
       }
     });
 
@@ -408,7 +409,7 @@ export function initSocket(io: SocketIOServer): void {
           sessionId: data.sessionId,
         });
       } catch (err) {
-        console.error('[socket.io] STAGE_END error:', err);
+        logger.error('[socket.io] STAGE_END error:', err);
       }
     });
 
@@ -434,7 +435,7 @@ export function initSocket(io: SocketIOServer): void {
           invitedBy: userId,
         });
       } catch (err) {
-        console.error('[socket.io] STAGE_SPEAKER_ADD error:', err);
+        logger.error('[socket.io] STAGE_SPEAKER_ADD error:', err);
       }
     });
 
@@ -459,7 +460,7 @@ export function initSocket(io: SocketIOServer): void {
           userId: data.userId,
         });
       } catch (err) {
-        console.error('[socket.io] STAGE_SPEAKER_REMOVE error:', err);
+        logger.error('[socket.io] STAGE_SPEAKER_REMOVE error:', err);
       }
     });
 
@@ -475,7 +476,7 @@ export function initSocket(io: SocketIOServer): void {
           userId,
         });
       } catch (err) {
-        console.error('[socket.io] STAGE_HAND_RAISE error:', err);
+        logger.error('[socket.io] STAGE_HAND_RAISE error:', err);
       }
     });
 

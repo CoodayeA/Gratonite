@@ -345,7 +345,7 @@ const CollectionModal = ({ items, totalCount, onClose }: { items: CollectibleIte
 
                                 <div style={{ width: '56px', height: '56px', borderRadius: '10px', background: item.owned ? 'transparent' : 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
                                     {item.owned ? (
-                                        <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                        <img src={item.image} alt={item.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                                             onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                                     ) : (
                                         <Lock size={20} color="var(--text-muted)" />
@@ -728,7 +728,7 @@ const Gacha = () => {
                                 {allCollectibles.filter(c => c.owned).slice(0, 8).map(item => (
                                     <div key={item.id} title={item.name}
                                         style={{ width: '44px', height: '44px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: `2px solid ${rarityColors[item.rarity]}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                                        <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                        <img src={item.image} alt={item.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                                             onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                                     </div>
                                 ))}

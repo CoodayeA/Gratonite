@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, desc, isNull } from 'drizzle-orm';
 import { db } from '../db/index';
 import { greetingCardTemplates, greetingCards } from '../db/schema/greeting-cards';
@@ -18,7 +19,7 @@ greetingCardsRouter.get('/templates', async (_req: Request, res: Response): Prom
     }
     res.json(grouped);
   } catch (err) {
-    console.error('[greeting-cards] GET templates error:', err);
+    logger.error('[greeting-cards] GET templates error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -62,7 +63,7 @@ greetingCardsRouter.post('/', requireAuth, async (req: Request, res: Response): 
 
     res.status(201).json(card);
   } catch (err) {
-    console.error('[greeting-cards] POST error:', err);
+    logger.error('[greeting-cards] POST error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -90,7 +91,7 @@ greetingCardsRouter.get('/inbox', requireAuth, async (req: Request, res: Respons
 
     res.json(rows.map(r => ({ ...r.card, template: r.template, sender: r.sender })));
   } catch (err) {
-    console.error('[greeting-cards] GET inbox error:', err);
+    logger.error('[greeting-cards] GET inbox error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -117,7 +118,7 @@ greetingCardsRouter.patch('/:id/view', requireAuth, async (req: Request, res: Re
 
     res.json(updated);
   } catch (err) {
-    console.error('[greeting-cards] PATCH view error:', err);
+    logger.error('[greeting-cards] PATCH view error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

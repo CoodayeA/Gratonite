@@ -1,4 +1,5 @@
 import { db } from '../db/index';
+import { logger } from './logger';
 import { adminAuditLog } from '../db/schema/admin';
 
 type LogAdminAuditParams = {
@@ -25,6 +26,6 @@ export async function logAdminAudit(params: LogAdminAuditParams): Promise<void> 
       metadata: params.metadata ?? null,
     });
   } catch (err) {
-    console.error('[admin-audit] Failed to write audit event:', err);
+    logger.error('[admin-audit] Failed to write audit event:', err);
   }
 }

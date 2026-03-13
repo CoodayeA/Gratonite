@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { requireAuth } from '../middleware/auth';
 import { db } from '../db/index';
 import { stripeCustomers, purchases } from '../db/schema/stripe';
@@ -86,7 +87,7 @@ router.post('/create-intent', requireAuth, async (req: Request, res: Response): 
 
     res.json({ clientSecret: (paymentIntent as any).client_secret, purchaseId: purchase.id });
   } catch (err) {
-    console.error('[payments] create-intent error:', err);
+    logger.error('[payments] create-intent error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to create payment intent' });
   }
 });
@@ -114,7 +115,7 @@ router.post('/webhook', async (req: Request, res: Response): Promise<void> => {
   try {
     event = stripeClient.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err) {
-    console.error('[payments] webhook signature verification failed:', err);
+    logger.error('[payments] webhook signature verification failed:', err);
     res.status(400).json({ code: 'INVALID_SIGNATURE', message: 'Invalid signature' });
     return;
   }
@@ -127,7 +128,7 @@ router.post('/webhook', async (req: Request, res: Response): Promise<void> => {
         .set({ status: 'completed' })
         .where(eq(purchases.stripePaymentIntentId, paymentIntent.id));
     } catch (err) {
-      console.error('[payments] failed to update purchase status:', err);
+      logger.error('[payments] failed to update purchase status:', err);
     }
   }
 
@@ -150,7 +151,7 @@ router.get('/history', requireAuth, async (req: Request, res: Response): Promise
 
     res.json(history);
   } catch (err) {
-    console.error('[payments] history error:', err);
+    logger.error('[payments] history error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to fetch purchase history' });
   }
 });
