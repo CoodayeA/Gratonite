@@ -384,9 +384,9 @@
     --bg-elevated: #FFFFFF;
     --bg-tertiary: #FDE047;
 
-    --text-primary: #111827;
-    --text-secondary: #374151;
-    --text-muted: rgba(17, 24, 39, 0.6);
+    --text-primary: #000000;
+    --text-secondary: #292929;
+    --text-muted: #525252;
 
     /* Electric Neon Accents */
     --accent-bluelight: #2DD4BF;
@@ -511,9 +511,9 @@
     --bg-elevated: #F0F9FF;
     --bg-tertiary: #E0F2FE;
 
-    --text-primary: #0C4A6E;
-    --text-secondary: #0369A1;
-    --text-muted: rgba(12, 74, 110, 0.6);
+    --text-primary: #000000;
+    --text-secondary: #292929;
+    --text-muted: #525252;
 
     /* Cyber/Y2K Silver and Chrome and Cyan */
     --accent-bluelight: #38BDF8;
@@ -1249,9 +1249,9 @@
     --bg-elevated: #ffffff;
     --bg-tertiary: #fce4ec;
 
-    --text-primary: #880e4f;
-    --text-secondary: #ad1457;
-    --text-muted: rgba(136, 14, 79, 0.6);
+    --text-primary: #000000;
+    --text-secondary: #292929;
+    --text-muted: #525252;
 
     --accent-bluelight: #80deea;
     --accent-blue: #f06292;
@@ -1390,9 +1390,9 @@
     --bg-elevated: #ffffff;
     --bg-tertiary: #ffe4ec;
 
-    --text-primary: #5c1234;
-    --text-secondary: #8b1a4a;
-    --text-muted: rgba(92, 18, 52, 0.6);
+    --text-primary: #000000;
+    --text-secondary: #292929;
+    --text-muted: #525252;
 
     --accent-bluelight: #f8a4c0;
     --accent-blue: #e91e8c;
@@ -1621,20 +1621,13 @@
     --stroke-light: rgba(0, 0, 0, 0.4) !important;
 }
 
-/* ------------------------
-   CONTRAST FIX: Glass light mode
-   --text-secondary #52525b → #3f3f46 (4.5:1 on #f9f9fb)
-   --text-muted #71717a → #52525b (4.5:1 on #f9f9fb)
-   ------------------------ */
-[data-theme="glass"][data-color-mode="light"] {
-    --text-secondary: #3f3f46;
-    --text-muted: #52525b;
-}
+/* Glass light mode contrast — now handled by global [data-color-mode="light"] override */
 
-/* Contrast fixes for all light themes — ensure muted text meets WCAG AA */
+/* Contrast fixes for all light themes — black font default for readability */
 [data-color-mode="light"] {
-    --text-muted: #52525b;
-    --text-secondary: #3f3f46;
+    --text-primary: #000000;
+    --text-secondary: #292929;
+    --text-muted: #525252;
 }
 
 /* ------------------------
@@ -5098,9 +5091,9 @@ button:active:not(:disabled) {
     --bg-elevated: #ffffff;
     --bg-tertiary: #f0e8ff;
 
-    --text-primary: #3a2d4a;
-    --text-secondary: #6b5b80;
-    --text-muted: rgba(107, 91, 128, 0.5);
+    --text-primary: #000000;
+    --text-secondary: #292929;
+    --text-muted: #525252;
 
     --accent-bluelight: #b8e8f0;
     --accent-blue: #90d4e8;
@@ -5322,9 +5315,9 @@ button:active:not(:disabled) {
     --bg-elevated: #fdfaf6;
     --bg-tertiary: #e8d8c4;
 
-    --text-primary: #3d2810;
-    --text-secondary: #7a5030;
-    --text-muted: rgba(122, 80, 48, 0.5);
+    --text-primary: #000000;
+    --text-secondary: #292929;
+    --text-muted: #525252;
 
     --accent-bluelight: #d4906a;
     --accent-blue: #c07050;
@@ -5378,9 +5371,9 @@ button:active:not(:disabled) {
     --bg-elevated: #fdfbff;
     --bg-tertiary: #e4dcf2;
 
-    --text-primary: #2d1f4a;
-    --text-secondary: #6050a0;
-    --text-muted: rgba(96, 80, 160, 0.5);
+    --text-primary: #000000;
+    --text-secondary: #292929;
+    --text-muted: #525252;
 
     --accent-bluelight: #c0a8f0;
     --accent-blue: #9080e0;
@@ -5546,9 +5539,9 @@ button:active:not(:disabled) {
     --bg-elevated: #ffffff;
     --bg-tertiary: #f4e0e0;
 
-    --text-primary: #3a2020;
-    --text-secondary: #805050;
-    --text-muted: rgba(128, 80, 80, 0.5);
+    --text-primary: #000000;
+    --text-secondary: #292929;
+    --text-muted: #525252;
 
     --accent-bluelight: #f0b0b0;
     --accent-blue: #d09090;
@@ -5994,9 +5987,9 @@ button:active:not(:disabled) {
     --bg-elevated: #ffffff;
     --bg-tertiary: #e0ecf8;
 
-    --text-primary: #1a2a3a;
-    --text-secondary: #4a6a8a;
-    --text-muted: rgba(74, 106, 138, 0.5);
+    --text-primary: #000000;
+    --text-secondary: #292929;
+    --text-muted: #525252;
 
     --accent-bluelight: #80c8f0;
     --accent-blue: #5090d0;
