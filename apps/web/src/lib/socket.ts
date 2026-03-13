@@ -448,6 +448,21 @@ export function onUserKeyChanged(cb: UserKeyChangedCallback): () => void {
   return () => { userKeyChangedListeners.delete(cb); };
 }
 
+export interface E2EStateChangedPayload {
+  channelId: string;
+  enabled: boolean;
+  toggledBy: string;
+  toggledByName: string;
+}
+
+type E2EStateChangedCallback = (payload: E2EStateChangedPayload) => void;
+const e2eStateChangedListeners = new Set<E2EStateChangedCallback>();
+
+export function onE2EStateChanged(cb: E2EStateChangedCallback): () => void {
+  e2eStateChangedListeners.add(cb);
+  return () => { e2eStateChangedListeners.delete(cb); };
+}
+
 /* ── Call signaling events ─────────────────────────────────── */
 
 export interface CallInvitePayload {
@@ -792,6 +807,10 @@ export function connectSocket(): GratoniteSocket {
 
   socket.on('USER_KEY_CHANGED', (data: UserKeyChangedPayload) => {
     userKeyChangedListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('E2E_STATE_CHANGED', (data: E2EStateChangedPayload) => {
+    e2eStateChangedListeners.forEach(cb => cb(data));
   });
 
   socket.on('disconnect', () => {

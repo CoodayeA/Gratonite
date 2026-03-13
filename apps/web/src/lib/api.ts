@@ -2698,6 +2698,12 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+
+    toggleE2E: (channelId: string, enabled: boolean) =>
+      apiFetch<{ ok: boolean; enabled: boolean }>(`/channels/${channelId}/e2e-toggle`, {
+        method: 'POST',
+        body: JSON.stringify({ enabled }),
+      }),
   },
 
   federation: {

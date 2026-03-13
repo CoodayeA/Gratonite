@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
 import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star, Shield, ArrowLeft } from 'lucide-react';
 import { getOrCreateKeyPair, exportPublicKey, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported, generateGroupKey, encryptGroupKey, decryptGroupKey, computeSafetyNumber, encryptFile, decryptFile } from '../../lib/e2e';
-import { onGroupKeyRotationNeeded, onUserKeyChanged } from '../../lib/socket';
-import type { GroupKeyRotationNeededPayload, UserKeyChangedPayload } from '../../lib/socket';
+import { onGroupKeyRotationNeeded, onUserKeyChanged, onE2EStateChanged } from '../../lib/socket';
+import type { GroupKeyRotationNeededPayload, UserKeyChangedPayload, E2EStateChangedPayload } from '../../lib/socket';
 
 import { BackgroundMedia } from '../../components/ui/BackgroundMedia';
 import { useToast } from '../../components/ui/ToastManager';
@@ -427,12 +427,8 @@ const DirectMessage = () => {
     const [e2eSupported, setE2eSupported] = useState(false);
     const [e2eError, setE2eError] = useState<string | null>(null);
     const [partnerKeyChanged, setPartnerKeyChanged] = useState(false);
-    // E2E opt-in: user must explicitly enable encryption for outgoing messages.
-    // The key is still derived to decrypt existing encrypted messages.
-    const [e2eEnabled, setE2eEnabled] = useState(() => {
-        if (!id) return false;
-        return localStorage.getItem(`gratonite:e2e-enabled:${id}`) === 'true';
-    });
+    // E2E opt-in: synced via server — when one user enables, both get notified.
+    const [e2eEnabled, setE2eEnabled] = useState(false);
     const [showE2eGuide, setShowE2eGuide] = useState(() => {
         return !localStorage.getItem('gratonite:e2e-guide-dismissed');
     });
@@ -579,6 +575,8 @@ const DirectMessage = () => {
     useEffect(() => {
         if (!dmChannelId) return;
         api.channels.get(dmChannelId).then(async (ch: any) => {
+            // Sync E2E state from server
+            setE2eEnabled(!!ch.isEncrypted);
             // Check if this is a group DM
             if (ch.isGroup || ch.type === 'GROUP_DM') {
                 setIsGroupDm(true);
@@ -1207,6 +1205,26 @@ const DirectMessage = () => {
         return unsub;
     }, [isGroupDm, recipientId]);
 
+    // Listen for E2E toggle from either user (syncs both sides)
+    useEffect(() => {
+        if (!dmChannelId) return;
+        const unsub = onE2EStateChanged((payload: E2EStateChangedPayload) => {
+            if (payload.channelId !== dmChannelId) return;
+            setE2eEnabled(payload.enabled);
+            const emoji = payload.enabled ? '🔒' : '🔓';
+            const action = payload.enabled ? 'enabled' : 'disabled';
+            setMessages(prev => [...prev, {
+                id: Date.now(),
+                author: 'System',
+                system: true,
+                avatar: '',
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                content: `${emoji} ${payload.toggledByName} ${action} end-to-end encryption for this conversation.`,
+            }]);
+        });
+        return unsub;
+    }, [dmChannelId]);
+
     const handleSetDisappearTimer = async (seconds: number | null) => {
         if (!dmChannelId) return;
         try {
@@ -1756,32 +1774,18 @@ const DirectMessage = () => {
                                                 onClick={() => {
                                                     if (e2eEnabled) {
                                                         handleShowSafetyNumber();
-                                                    } else {
-                                                        setE2eEnabled(true);
-                                                        localStorage.setItem(`gratonite:e2e-enabled:${id}`, 'true');
-                                                        setMessages(prev => [...prev, {
-                                                            id: Date.now(),
-                                                            author: 'System',
-                                                            system: true,
-                                                            avatar: '',
-                                                            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                                                            content: '🔒 End-to-end encryption enabled for new messages in this conversation.',
-                                                        }]);
+                                                    } else if (dmChannelId) {
+                                                        api.encryption.toggleE2E(dmChannelId, true).catch(() => {
+                                                            addToast({ title: 'Failed to enable encryption', variant: 'error' });
+                                                        });
                                                     }
                                                 }}
                                                 onContextMenu={(e) => {
-                                                    if (e2eEnabled) {
+                                                    if (e2eEnabled && dmChannelId) {
                                                         e.preventDefault();
-                                                        setE2eEnabled(false);
-                                                        localStorage.setItem(`gratonite:e2e-enabled:${id}`, 'false');
-                                                        setMessages(prev => [...prev, {
-                                                            id: Date.now(),
-                                                            author: 'System',
-                                                            system: true,
-                                                            avatar: '',
-                                                            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                                                            content: '🔓 End-to-end encryption disabled. New messages will be sent unencrypted.',
-                                                        }]);
+                                                        api.encryption.toggleE2E(dmChannelId, false).catch(() => {
+                                                            addToast({ title: 'Failed to disable encryption', variant: 'error' });
+                                                        });
                                                     }
                                                 }}
                                                 style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', marginLeft: '4px' }}
