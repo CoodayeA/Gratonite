@@ -220,7 +220,8 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
     const isAppRoot = location.pathname === '/' || [
         '/friends', '/discover', '/shop', '/marketplace', '/inventory',
         '/creator-dashboard', '/fame', '/dm',
-        '/admin', '/help-center', '/message-requests'
+        '/admin', '/help-center', '/message-requests',
+        '/me', '/saved-messages', '/login-history', '/settings'
     ].some(path => location.pathname.startsWith(path));
 
     const activeGuildId = (() => {
@@ -938,7 +939,8 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const isAppRoot = location.pathname === '/' || [
         '/friends', '/discover', '/shop', '/marketplace', '/inventory',
         '/creator-dashboard', '/fame', '/dm',
-        '/admin', '/help-center', '/message-requests'
+        '/admin', '/help-center', '/message-requests',
+        '/me', '/saved-messages', '/login-history', '/settings'
     ].some(path => location.pathname.startsWith(path));
 
     const [presenceMenuOpen, setPresenceMenuOpen] = useState(false);
@@ -2862,7 +2864,7 @@ export const AppLayout = () => {
         if (!ctxUser.onboardingCompleted) {
             setActiveModal('onboarding');
         }
-    }, [userLoading, ctxUser.id, ctxUser.onboardingCompleted]);
+    }, [userLoading, ctxUser.id]);
 
     // On first authenticated load, hydrate ThemeProvider from backend settings
     // so that theme persists even after localStorage is cleared.

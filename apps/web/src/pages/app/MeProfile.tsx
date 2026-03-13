@@ -5,7 +5,7 @@ import { api } from '../../lib/api';
 
 type OutletContextType = {
     setActiveModal: (modal: string | null) => void;
-    userProfile: { id: string; username: string; displayName: string; avatarHash?: string | null } | null;
+    userProfile: { id: string; name: string; handle: string; avatarHash?: string | null } | null;
 };
 
 const menuItems = [
@@ -35,15 +35,15 @@ const MeProfile = () => {
                     <Avatar
                         userId={userProfile?.id || ''}
                         avatarHash={userProfile?.avatarHash || null}
-                        displayName={userProfile?.displayName || 'User'}
+                        displayName={userProfile?.name || 'User'}
                         size={80}
                         status="online"
                     />
                     <h1 style={{ fontSize: '22px', fontWeight: 700, margin: '12px 0 2px', fontFamily: 'var(--font-display)' }}>
-                        {userProfile?.displayName || 'User'}
+                        {userProfile?.name || 'User'}
                     </h1>
                     <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-                        @{userProfile?.username || 'user'}
+                        @{userProfile?.handle || 'user'}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success, #22c55e)' }} />

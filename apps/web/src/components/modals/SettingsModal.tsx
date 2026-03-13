@@ -275,7 +275,10 @@ const SettingsModal = ({
         () => parseFloat(localStorage.getItem('gratonite_ambient_volume') ?? '0.5')
     );
     const [notificationVolume, setNotificationVolume] = useState<number>(
-        () => parseFloat(localStorage.getItem('gratonite_notification_volume') ?? '0.7')
+        () => {
+            const raw = parseFloat(localStorage.getItem('gratonite_notification_volume') ?? '0.7');
+            return raw > 1 ? raw / 100 : raw;
+        }
     );
     const [nameplateStyle, setNameplateStyle] = useState<'none' | 'rainbow' | 'fire' | 'ice' | 'gold' | 'glitch'>(userProfile?.nameplateStyle || 'none');
     const [previewAvatarFrame, setPreviewAvatarFrame] = useState<'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse'>(userProfile?.avatarFrame || 'none');
@@ -739,7 +742,7 @@ const SettingsModal = ({
 
     return (
         <>
-            <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-overlay" onClick={onClose} style={{ background: 'rgba(0, 0, 0, 0.6)' }}>
                 <div className="settings-modal flex-row glass-panel" onClick={e => e.stopPropagation()} style={{ width: 'min(960px, 90vw)', height: 'min(680px, 85vh)', padding: 0, overflow: 'hidden' }}>
                     {/* Left Sidebar */}
                     <div className="settings-sidebar" style={{ width: '220px', background: 'var(--bg-elevated)', padding: '32px 16px', borderRight: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -2882,8 +2885,8 @@ const SettingsModal = ({
                                         {/* Stats grid */}
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
                                             {[
-                                                { label: '🔥 Current Streak', value: `${userStats.currentStreak} days` },
-                                                { label: '🏆 Best Streak', value: `${userStats.longestStreak} days` },
+                                                { label: '🔥 Current Streak', value: `${userStats.currentStreak} ${userStats.currentStreak === 1 ? 'day' : 'days'}` },
+                                                { label: '🏆 Best Streak', value: `${userStats.longestStreak} ${userStats.longestStreak === 1 ? 'day' : 'days'}` },
                                                 { label: '🪙 Coins', value: userStats.coins },
                                                 { label: '⭐ Achievements', value: userStats.achievementsEarned },
                                                 { label: '🔖 Bookmarks', value: userStats.bookmarks },

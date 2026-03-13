@@ -45,7 +45,7 @@ export default function LoginHistory() {
   useEffect(() => {
     api.users.getSessions()
       .then((data: any) => setSessions(Array.isArray(data) ? data : []))
-      .catch(() => {})
+      .catch((err) => console.error('Failed to load sessions:', err))
       .finally(() => setLoading(false));
   }, []);
 

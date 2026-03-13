@@ -505,6 +505,10 @@ const Inventory = () => {
                                         cursor: 'pointer',
                                         transition: 'all 0.2s ease',
                                         boxShadow: isActive ? 'var(--shadow-panel)' : 'none',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        minWidth: 0,
                                     }}
                                 >
                                     {tab.icon}
