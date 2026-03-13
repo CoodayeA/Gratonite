@@ -12,6 +12,7 @@ import { digest as digestApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import LoadingScreen from '../../components/LoadingScreen';
+import EmptyState from '../../components/EmptyState';
 import type { DigestConfig } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -25,6 +26,7 @@ export default function DigestConfigScreen({ route }: Props) {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [enabled, setEnabled] = useState(false);
   const [frequency, setFrequency] = useState<'daily' | 'weekly'>('daily');
 
@@ -33,8 +35,9 @@ export default function DigestConfigScreen({ route }: Props) {
       const data = await digestApi.getConfig(guildId);
       setEnabled(data.enabled);
       setFrequency(data.frequency);
+      setLoadError(null);
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      setLoadError(err?.message || 'Failed to load digest config');
     } finally {
       setLoading(false);
     }
@@ -121,6 +124,20 @@ export default function DigestConfigScreen({ route }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError) {
+    return (
+      <PatternBackground>
+        <EmptyState
+          icon="alert-circle-outline"
+          title="Failed to load digest config"
+          subtitle={loadError}
+          actionLabel="Retry"
+          onAction={fetchConfig}
+        />
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>

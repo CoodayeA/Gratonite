@@ -41,7 +41,7 @@ export function useDesktopNotifications() {
     if (desktop.onNotificationMarkRead) {
       cleanups.push(desktop.onNotificationMarkRead((data) => {
         if (data.channelId) {
-          api.channels.markRead(data.channelId).catch(() => {});
+          api.messages.markRead(data.channelId).catch(() => {});
         }
       }));
     }

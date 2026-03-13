@@ -15,8 +15,8 @@ export default function MiniMode() {
   };
 
   // Drag support for frameless window
-  const headerStyle: React.CSSProperties = {
-    WebkitAppRegion: 'drag' as any,
+  const headerStyle = {
+    WebkitAppRegion: 'drag',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -24,7 +24,7 @@ export default function MiniMode() {
     background: '#1a1a2e',
     borderBottom: '1px solid #2a2a4a',
     cursor: 'move',
-  };
+  } as React.CSSProperties;
 
   const containerStyle: React.CSSProperties = {
     display: 'flex',
@@ -63,8 +63,8 @@ export default function MiniMode() {
             width: 24, height: 24, fontSize: 12,
             background: 'transparent',
             color: '#999',
-            WebkitAppRegion: 'no-drag' as any,
-          }}
+            WebkitAppRegion: 'no-drag',
+          } as React.CSSProperties}
           title="Exit Mini Mode"
         >
           X

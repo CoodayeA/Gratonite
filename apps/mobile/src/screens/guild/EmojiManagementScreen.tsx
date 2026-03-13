@@ -29,17 +29,23 @@ export default function EmojiManagementScreen({ route }: Props) {
   const [emojis, setEmojis] = useState<GuildEmoji[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchEmojis = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await guildEmojisApi.list(guildId);
       setEmojis(data);
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      if (err.status !== 401) {
+        const message = err.message || 'Failed to load emojis';
+        setLoadError(message);
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
     }
-  }, [guildId]);
+  }, [guildId, toast]);
 
   useEffect(() => {
     fetchEmojis();
@@ -199,6 +205,28 @@ export default function EmojiManagementScreen({ route }: Props) {
   );
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && emojis.length === 0) {
+    return (
+      <PatternBackground>
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl, gap: spacing.md }]}>
+          <Ionicons name="alert-circle-outline" size={56} color={colors.accentPrimary} />
+          <Text style={[styles.headerCount, { color: colors.textPrimary, fontSize: fontSize.xl, textAlign: 'center' }]}>Failed to load emojis</Text>
+          <Text style={[styles.emojiName, { color: colors.textMuted, marginTop: 0 }]}>{loadError}</Text>
+          <TouchableOpacity
+            style={styles.uploadBtn}
+            onPress={() => {
+              setLoading(true);
+              fetchEmojis();
+            }}
+          >
+            <Ionicons name="refresh-outline" size={18} color={colors.white} />
+            <Text style={styles.uploadBtnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>

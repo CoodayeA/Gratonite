@@ -290,7 +290,7 @@ const SettingsModal = ({
 
     // Auto-navigate to first matching tab when searching
     useEffect(() => {
-        if (matchingTabs && matchingTabs.size > 0 && !matchingTabs.has(activeTab)) {
+        if (matchingTabs && matchingTabs.size > 0 && !(matchingTabs as Set<string>).has(activeTab)) {
             setActiveTab(matchingTabs.values().next().value as any);
         }
     }, [matchingTabs, activeTab]);

@@ -17,6 +17,7 @@ import { useTheme } from '../../lib/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatTime } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
+import EmptyState from '../../components/EmptyState';
 import RichText from '../../components/RichText';
 import type { Message } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -35,20 +36,27 @@ export default function AnnouncementChannelScreen({ route, navigation }: Props) 
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
   const fetchMessages = useCallback(async () => {
     try {
       const data = await messagesApi.list(channelId, { limit: 50 });
       setMessageList(data.reverse());
+      setLoadError(null);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load announcements');
+        const message = err?.message || 'Failed to load announcements';
+        if (messageList.length > 0) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
     }
-  }, [channelId]);
+  }, [channelId, messageList.length, toast]);
 
   useEffect(() => {
     fetchMessages();
@@ -197,6 +205,20 @@ export default function AnnouncementChannelScreen({ route, navigation }: Props) 
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && messageList.length === 0) {
+    return (
+      <PatternBackground>
+        <EmptyState
+          icon="alert-circle-outline"
+          title="Failed to load announcements"
+          subtitle={loadError}
+          actionLabel="Retry"
+          onAction={fetchMessages}
+        />
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>

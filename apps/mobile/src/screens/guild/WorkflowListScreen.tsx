@@ -38,20 +38,27 @@ export default function WorkflowListScreen({ route, navigation }: Props) {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchWorkflows = useCallback(async () => {
     try {
       const data = await workflowsApi.list(guildId);
       setWorkflows(data);
+      setLoadError(null);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load workflows');
+        const message = err?.message || 'Failed to load workflows';
+        if (refreshing || workflows.length > 0) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [guildId]);
+  }, [guildId, refreshing, toast, workflows.length]);
 
   useEffect(() => {
     fetchWorkflows();
@@ -145,6 +152,20 @@ export default function WorkflowListScreen({ route, navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && workflows.length === 0) {
+    return (
+      <PatternBackground>
+        <EmptyState
+          icon="alert-circle-outline"
+          title="Failed to load workflows"
+          subtitle={loadError}
+          actionLabel="Retry"
+          onAction={fetchWorkflows}
+        />
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>

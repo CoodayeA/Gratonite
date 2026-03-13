@@ -28,6 +28,7 @@ export default function ServerTemplatesScreen({ route }: Props) {
   const toast = useToast();
   const [templateList, setTemplateList] = useState<ServerTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Create form
   const [showForm, setShowForm] = useState(false);
@@ -37,14 +38,19 @@ export default function ServerTemplatesScreen({ route }: Props) {
 
   const fetchTemplates = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await templatesApi.list(guildId);
       setTemplateList(data);
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      if (err.status !== 401) {
+        const message = err.message || 'Failed to load templates';
+        setLoadError(message);
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
     }
-  }, [guildId]);
+  }, [guildId, toast]);
 
   useEffect(() => {
     fetchTemplates();
@@ -267,6 +273,25 @@ export default function ServerTemplatesScreen({ route }: Props) {
   );
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && templateList.length === 0) {
+    return (
+      <PatternBackground>
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl, gap: spacing.md }]}>
+          <Ionicons name="alert-circle-outline" size={56} color={colors.accentPrimary} />
+          <Text style={[styles.headerCount, { color: colors.textPrimary, fontSize: fontSize.xl, textAlign: 'center' }]}>Failed to load templates</Text>
+          <Text style={[styles.templateDescription, { textAlign: 'center' }]}>{loadError}</Text>
+          <TouchableOpacity style={styles.addBtn} onPress={() => {
+            setLoading(true);
+            fetchTemplates();
+          }}>
+            <Ionicons name="refresh-outline" size={18} color={colors.white} />
+            <Text style={styles.addBtnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>

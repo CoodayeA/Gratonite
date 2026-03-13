@@ -2905,11 +2905,6 @@ export const api = {
     spin: () => apiFetch<{ reward: { type: string; amount: number; label: string } }>('/economy/daily-spin', { method: 'POST', body: '{}' }),
   },
 
-  gifts: {
-    send: (itemId: string, recipientId: string) =>
-      apiFetch<{ success: boolean; giftedItem: string; price: number }>('/shop/gift', { method: 'POST', body: JSON.stringify({ itemId, recipientId }) }),
-  },
-
   bundlePurchase: {
     buy: (itemIds: string[]) =>
       apiFetch<{ success: boolean; totalPrice: number; discountedPrice: number; savings: number; discount: number; wallet: { balance: number } }>('/shop/bundle-purchase', { method: 'POST', body: JSON.stringify({ itemIds }) }),
@@ -2983,6 +2978,8 @@ export const api = {
   gifts: {
     create: (data: { recipientId: string; giftType: string; guildId?: string; quantity?: number; message?: string }) =>
       apiFetch<any>('/gifts', { method: 'POST', body: JSON.stringify(data) }),
+    send: (itemId: string, recipientId: string) =>
+      apiFetch<{ success: boolean; giftedItem: string; price: number }>('/shop/gift', { method: 'POST', body: JSON.stringify({ itemId, recipientId }) }),
     redeem: (code: string) =>
       apiFetch<any>('/gifts/redeem', { method: 'POST', body: JSON.stringify({ code }) }),
     getSent: () => apiFetch<any[]>('/gifts/sent'),

@@ -32,6 +32,7 @@ export default function WebhookManagementScreen({ route, navigation }: Props) {
   const [webhookList, setWebhookList] = useState<Webhook[]>([]);
   const [channelList, setChannelList] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false);
@@ -42,6 +43,7 @@ export default function WebhookManagementScreen({ route, navigation }: Props) {
 
   const fetchData = useCallback(async () => {
     try {
+      setLoadError(null);
       const [hooks, channels] = await Promise.all([
         webhooksApi.listForGuild(guildId),
         channelsApi.getForGuild(guildId),
@@ -49,11 +51,15 @@ export default function WebhookManagementScreen({ route, navigation }: Props) {
       setWebhookList(hooks);
       setChannelList(channels.filter((c) => c.type === 'text'));
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      if (err.status !== 401) {
+        const message = err.message || 'Failed to load webhooks';
+        setLoadError(message);
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
     }
-  }, [guildId]);
+  }, [guildId, toast]);
 
   useEffect(() => {
     fetchData();
@@ -299,6 +305,25 @@ export default function WebhookManagementScreen({ route, navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && webhookList.length === 0) {
+    return (
+      <PatternBackground>
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl, gap: spacing.md }]}>
+          <Ionicons name="alert-circle-outline" size={56} color={colors.accentPrimary} />
+          <Text style={[styles.createButtonText, { fontSize: fontSize.xl, textAlign: 'center' }]}>Failed to load webhooks</Text>
+          <Text style={[styles.webhookChannel, { textAlign: 'center' }]}>{loadError}</Text>
+          <TouchableOpacity style={styles.createButton} onPress={() => {
+            setLoading(true);
+            fetchData();
+          }}>
+            <Ionicons name="refresh-outline" size={22} color={colors.accentPrimary} />
+            <Text style={styles.createButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>

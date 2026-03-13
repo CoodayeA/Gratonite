@@ -2368,7 +2368,7 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile }: { onOpenProfile: () =
         openMenu(e, [
             { id: 'profile', label: 'View Profile', icon: User, onClick: () => handleMemberClick(member, e) },
             { id: 'dm', label: 'Send DM', icon: MessageSquare, onClick: () => {
-                api.dms.openDm(member.userId).then((dm: any) => navigate(`/dm/${dm.id}`)).catch(() => addToast({ title: 'Failed to open DM', variant: 'error' }));
+                api.relationships.openDm(member.userId).then((dm: any) => navigate(`/dm/${dm.id}`)).catch(() => addToast({ title: 'Failed to open DM', variant: 'error' }));
             }},
             { divider: true, id: 'div-m1', label: '', onClick: () => {} },
             { id: 'copy-id', label: 'Copy User ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(member.userId); addToast({ title: 'Copied to clipboard', variant: 'info' }); }},

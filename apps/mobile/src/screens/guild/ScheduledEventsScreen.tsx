@@ -28,18 +28,25 @@ export default function ScheduledEventsScreen({ route, navigation }: Props) {
   const [eventList, setEventList] = useState<ScheduledEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchEvents = useCallback(async () => {
     try {
       const data = await eventsApi.list(guildId);
       setEventList(data);
+      setLoadError(null);
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      const message = err?.message || 'Failed to load events';
+      if (refreshing || eventList.length > 0) {
+        toast.error(message);
+      } else {
+        setLoadError(message);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [guildId]);
+  }, [eventList.length, guildId, refreshing, toast]);
 
   useEffect(() => {
     fetchEvents();
@@ -229,6 +236,20 @@ export default function ScheduledEventsScreen({ route, navigation }: Props) {
 
   if (loading) {
     return <LoadingScreen />;
+  }
+
+  if (loadError && eventList.length === 0) {
+    return (
+      <PatternBackground>
+        <EmptyState
+          icon="alert-circle-outline"
+          title="Failed to load events"
+          subtitle={loadError}
+          actionLabel="Retry"
+          onAction={fetchEvents}
+        />
+      </PatternBackground>
+    );
   }
 
   return (
