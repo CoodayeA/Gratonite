@@ -54,7 +54,7 @@ function RootNavigator() {
   }
 
   // First launch: pick your style
-  if (!themePickDone && !user) {
+  if (!themePickDone) {
     return (
       <ThemePickerScreen
         onComplete={async () => {
@@ -66,7 +66,7 @@ function RootNavigator() {
   }
 
   // Then: onboarding slides
-  if (!onboardingDone && !user) {
+  if (!onboardingDone) {
     return <OnboardingScreen onComplete={() => setOnboardingDone(true)} />;
   }
 

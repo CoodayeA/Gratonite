@@ -115,7 +115,7 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
       padding: spacing.sm,
     },
     skipText: {
-      color: '#6a6a8e',
+      color: colors.textMuted,
       fontSize: fontSize.md,
       fontWeight: '500',
     },
@@ -137,18 +137,18 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
     title: {
       fontSize: 30,
       fontWeight: '900',
-      color: '#fff',
+      color: colors.textPrimary,
       textAlign: 'center',
       textTransform: 'uppercase',
       letterSpacing: 1.2,
       lineHeight: 36,
     },
     titleAccent: {
-      color: '#6c63ff',
+      color: colors.accentPrimary,
     },
     subtitle: {
       fontSize: fontSize.md,
-      color: '#9898b8',
+      color: colors.textSecondary,
       textAlign: 'center',
       marginTop: spacing.sm,
       lineHeight: 22,
@@ -164,6 +164,7 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
       paddingVertical: spacing.xs,
       borderRadius: 9999,
       borderWidth: 1.5,
+      backgroundColor: colors.bgElevated,
     },
     pillText: {
       fontSize: fontSize.xs,
@@ -185,10 +186,10 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
       width: 8,
       height: 8,
       borderRadius: 4,
-      backgroundColor: '#2a2a4e',
+      backgroundColor: colors.borderLight,
     },
     dotActive: {
-      backgroundColor: '#6c63ff',
+      backgroundColor: colors.accentPrimary,
       width: 24,
     },
     stripWrap: {
@@ -196,24 +197,34 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
       marginBottom: spacing.sm,
     },
     nextBtn: {
-      backgroundColor: '#6c63ff',
+      backgroundColor: colors.accentPrimary,
       paddingHorizontal: spacing.xxxl * 2,
       paddingVertical: spacing.lg,
-      borderRadius: 14,
-      shadowColor: '#6c63ff',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 12,
-      elevation: 8,
+      borderRadius: neo ? 0 : 14,
+      ...(neo ? {
+        borderWidth: neo.borderWidth,
+        borderColor: neo.shadowColor,
+        shadowColor: neo.shadowColor,
+        shadowOffset: neo.shadowOffset,
+        shadowOpacity: neo.shadowOpacity,
+        shadowRadius: neo.shadowRadius,
+        elevation: 8,
+      } : {
+        shadowColor: colors.accentPrimary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 8,
+      }),
     },
     nextText: {
-      color: '#fff',
+      color: neo ? colors.textPrimary : colors.white,
       fontSize: fontSize.md,
       fontWeight: '800',
       textTransform: 'uppercase',
       letterSpacing: 1,
     },
-  }), [spacing, fontSize]);
+  }), [colors, spacing, fontSize, neo]);
 
   const renderSlide = ({ item }: { item: Slide }) => (
     <View style={styles.slide}>

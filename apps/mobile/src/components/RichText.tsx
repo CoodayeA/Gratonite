@@ -11,7 +11,7 @@ interface CustomEmoji {
 }
 
 interface RichTextProps {
-  content: string;
+  content: string | null | undefined;
   color?: string;
   customEmojis?: CustomEmoji[];
 }
@@ -20,7 +20,8 @@ interface RichTextProps {
 export default function RichText({ content, color, customEmojis }: RichTextProps) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const resolvedColor = color ?? colors.textPrimary;
-  const parts = parseContent(content, customEmojis);
+  const safeContent = content ?? '';
+  const parts = parseContent(safeContent, customEmojis);
 
   // Extract URLs for link previews
   const urls = parts.filter(p => p.type === 'link' && p.url).map(p => p.url!);

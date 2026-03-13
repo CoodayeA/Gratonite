@@ -66,14 +66,16 @@ export default function AppLockScreen({ onUnlock }: AppLockScreenProps) {
 
   return (
     <PatternBackground>
-      <View style={styles.icon}>
-        <Ionicons name="lock-closed" size={36} color={colors.accentPrimary} />
+      <View style={styles.container}>
+        <View style={styles.icon}>
+          <Ionicons name="lock-closed" size={36} color={colors.accentPrimary} />
+        </View>
+        <Text style={styles.title}>Unlock Gratonite</Text>
+        <Text style={styles.subtitle}>Use biometric authentication to access the app</Text>
+        <TouchableOpacity style={styles.button} onPress={tryUnlock}>
+          <Text style={styles.buttonText}>Try Again</Text>
+        </TouchableOpacity>
       </View>
-      <Text style={styles.title}>Unlock Gratonite</Text>
-      <Text style={styles.subtitle}>Use biometric authentication to access the app</Text>
-      <TouchableOpacity style={styles.button} onPress={tryUnlock}>
-        <Text style={styles.buttonText}>Try Again</Text>
-      </TouchableOpacity>
     </PatternBackground>
   );
 }

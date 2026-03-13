@@ -25,7 +25,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   const { login } = useAuth();
-  const { colors, spacing, fontSize, borderRadius } = useTheme();
+  const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const [loginInput, setLoginInput] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -90,7 +90,7 @@ export default function LoginScreen({ navigation }: Props) {
     heading: {
       fontSize: 32,
       fontWeight: '900',
-      color: colors.white,
+      color: colors.textPrimary,
       textAlign: 'center',
       textTransform: 'uppercase',
       letterSpacing: 1,
@@ -119,6 +119,7 @@ export default function LoginScreen({ navigation }: Props) {
       borderRadius: borderRadius.full,
       borderWidth: 1.5,
       borderColor: colors.accentPrimary,
+      backgroundColor: colors.bgElevated,
     },
     pillText: {
       fontSize: fontSize.xs,
@@ -158,17 +159,27 @@ export default function LoginScreen({ navigation }: Props) {
       paddingVertical: spacing.lg,
       alignItems: 'center',
       marginTop: spacing.md,
-      shadowColor: colors.accentPrimary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 12,
-      elevation: 8,
+      ...(neo ? {
+        borderWidth: neo.borderWidth,
+        borderColor: neo.shadowColor,
+        shadowColor: neo.shadowColor,
+        shadowOffset: neo.shadowOffset,
+        shadowOpacity: neo.shadowOpacity,
+        shadowRadius: neo.shadowRadius,
+        elevation: 8,
+      } : {
+        shadowColor: colors.accentPrimary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 8,
+      }),
     },
     buttonDisabled: {
       opacity: 0.6,
     },
     buttonText: {
-      color: colors.white,
+      color: neo ? colors.textPrimary : colors.white,
       fontSize: fontSize.md,
       fontWeight: '800',
       textTransform: 'uppercase',
@@ -203,7 +214,7 @@ export default function LoginScreen({ navigation }: Props) {
     statValue: {
       fontSize: fontSize.sm,
       fontWeight: '800',
-      color: colors.white,
+      color: colors.textPrimary,
       textTransform: 'uppercase',
     },
     statLabel: {
@@ -244,7 +255,7 @@ export default function LoginScreen({ navigation }: Props) {
       letterSpacing: 8,
       fontWeight: '700',
     },
-  }), [colors, spacing, fontSize, borderRadius]);
+  }), [colors, spacing, fontSize, borderRadius, neo]);
 
   return (
     <PatternBackground>

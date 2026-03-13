@@ -25,7 +25,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 export default function RegisterScreen({ navigation }: Props) {
   const { register } = useAuth();
-  const { colors, spacing, fontSize, borderRadius } = useTheme();
+  const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,7 +49,8 @@ export default function RegisterScreen({ navigation }: Props) {
 
     setLoading(true);
     try {
-      await register(username.trim(), email.trim(), password);
+      const verifiedEmail = await register(username.trim(), email.trim(), password);
+      navigation.replace('VerifyEmail', { email: verifiedEmail });
     } catch (err: any) {
       Alert.alert('Registration Failed', err.message || 'Something went wrong');
     } finally {
@@ -90,7 +91,7 @@ export default function RegisterScreen({ navigation }: Props) {
     heading: {
       fontSize: 28,
       fontWeight: '900',
-      color: colors.white,
+      color: colors.textPrimary,
       textAlign: 'center',
       textTransform: 'uppercase',
       letterSpacing: 1,
@@ -118,6 +119,7 @@ export default function RegisterScreen({ navigation }: Props) {
       borderRadius: borderRadius.full,
       borderWidth: 1.5,
       borderColor: colors.accentPrimary,
+      backgroundColor: colors.bgElevated,
     },
     pillText: {
       fontSize: fontSize.xs,
@@ -157,17 +159,27 @@ export default function RegisterScreen({ navigation }: Props) {
       paddingVertical: spacing.lg,
       alignItems: 'center',
       marginTop: spacing.md,
-      shadowColor: colors.accentPrimary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 12,
-      elevation: 8,
+      ...(neo ? {
+        borderWidth: neo.borderWidth,
+        borderColor: neo.shadowColor,
+        shadowColor: neo.shadowColor,
+        shadowOffset: neo.shadowOffset,
+        shadowOpacity: neo.shadowOpacity,
+        shadowRadius: neo.shadowRadius,
+        elevation: 8,
+      } : {
+        shadowColor: colors.accentPrimary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 8,
+      }),
     },
     buttonDisabled: {
       opacity: 0.6,
     },
     buttonText: {
-      color: colors.white,
+      color: neo ? colors.textPrimary : colors.white,
       fontSize: fontSize.md,
       fontWeight: '800',
       textTransform: 'uppercase',
@@ -190,7 +202,7 @@ export default function RegisterScreen({ navigation }: Props) {
       color: colors.accentPrimary,
       fontWeight: '700',
     },
-  }), [colors, spacing, fontSize, borderRadius]);
+  }), [colors, spacing, fontSize, borderRadius, neo]);
 
   return (
     <PatternBackground>

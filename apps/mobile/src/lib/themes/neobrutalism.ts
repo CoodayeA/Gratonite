@@ -27,7 +27,9 @@ export const neoColors: ThemeColors = {
   inputBg: '#ffffff',
   inputBorder: '#000000',
   inputFocus: '#f97316',
-  white: '#ffffff',
+  // In light themes, many shared UI elements use `white` as a high-contrast foreground token.
+  // Keep it dark here so legacy usages stay readable on pale surfaces.
+  white: '#000000',
   black: '#000000',
   transparent: 'transparent',
 };

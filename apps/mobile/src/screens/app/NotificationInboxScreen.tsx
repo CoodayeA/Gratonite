@@ -45,6 +45,10 @@ export default function NotificationInboxScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const activeSwipeableRef = useRef<Swipeable | null>(null);
+  const readNotifications = useMemo(
+    () => notifications.filter((n) => n.read),
+    [notifications],
+  );
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -127,6 +131,26 @@ export default function NotificationInboxScreen({ navigation }: any) {
             toast.success('Notifications cleared');
           } catch (err: any) {
             toast.error(err.message || 'Failed to clear notifications');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleClearRead = () => {
+    if (readNotifications.length === 0) return;
+    Alert.alert('Clear Read Alerts', 'Dismiss all read alerts and keep unread ones?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear Read',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await Promise.all(readNotifications.map((n) => notifApi.dismiss(n.id)));
+            setNotifications((prev) => prev.filter((n) => !n.read));
+            toast.success('Read alerts cleared');
+          } catch (err: any) {
+            toast.error(err.message || 'Failed to clear read alerts');
           }
         },
       },
@@ -269,6 +293,37 @@ export default function NotificationInboxScreen({ navigation }: any) {
       fontWeight: '600',
       marginTop: 4,
     },
+    bulkActions: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.xs,
+    },
+    bulkButton: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: borderRadius.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: glassExtras ? glassExtras.glassBackground : colors.bgSecondary,
+      ...(glassExtras ? {
+        borderWidth: 1,
+        borderColor: glassExtras.glassBorder,
+      } : neo ? {
+        borderWidth: neo.borderWidth,
+        borderColor: neo.shadowColor,
+      } : {}),
+    },
+    bulkButtonDisabled: {
+      opacity: 0.45,
+    },
+    bulkButtonText: {
+      color: colors.textPrimary,
+      fontSize: fontSize.sm,
+      fontWeight: '600',
+    },
   }), [colors, spacing, fontSize, borderRadius, neo, glassExtras, deleteActionBg, readActionBg, actionBorderRadius]);
 
   const renderRightActions = (notificationId: string) => () => (
@@ -372,6 +427,22 @@ export default function NotificationInboxScreen({ navigation }: any) {
   return (
     <PatternBackground>
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.bulkActions}>
+        <TouchableOpacity
+          style={[styles.bulkButton, readNotifications.length === 0 && styles.bulkButtonDisabled]}
+          onPress={handleClearRead}
+          disabled={readNotifications.length === 0}
+        >
+          <Text style={styles.bulkButtonText}>Clear Read</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.bulkButton, notifications.length === 0 && styles.bulkButtonDisabled]}
+          onPress={handleClearAll}
+          disabled={notifications.length === 0}
+        >
+          <Text style={styles.bulkButtonText}>Clear All</Text>
+        </TouchableOpacity>
+      </View>
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id}
