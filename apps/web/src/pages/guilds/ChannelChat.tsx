@@ -1796,6 +1796,8 @@ const ChannelChat = () => {
         emojiSearch !== null && e.name.toLowerCase().includes(emojiSearch.toLowerCase())
     );
 
+    const [messages, setMessages] = useState<Message[]>([]);
+
     const filteredUsers = React.useMemo(() => {
         if (mentionSearch === null) return [];
         const search = mentionSearch.toLowerCase();
@@ -1820,8 +1822,6 @@ const ChannelChat = () => {
         channelSearch !== null &&
         c.name.toLowerCase().includes(channelSearch.toLowerCase())
     );
-
-    const [messages, setMessages] = useState<Message[]>([]);
 
     // Batch-decrypt encrypted messages when E2E key becomes available (for history messages)
     useEffect(() => {
@@ -3199,7 +3199,7 @@ const ChannelChat = () => {
                                         ...(msg.apiId && selectedMessages.has(msg.apiId) ? { background: 'rgba(88, 101, 242, 0.15)', borderLeft: '3px solid var(--accent-primary, #5865f2)' } : {}),
                                     }}
                                 >
-                                    <SwipeableMessage onSwipeRight={() => !msg.system && msg.apiId && setReplyingTo({ id: msg.apiId, author: msg.author, content: msg.content })} disabled={msg.system}>
+                                    <SwipeableMessage onSwipeRight={() => !msg.system && msg.apiId && setReplyingTo({ id: Number(msg.apiId), author: msg.author, content: msg.content })} disabled={msg.system}>
                                     <MemoizedMessageItem
                                         msg={msg}
                                         prevMsg={prevMsg}

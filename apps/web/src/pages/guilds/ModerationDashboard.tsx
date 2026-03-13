@@ -79,7 +79,7 @@ export default function ModerationDashboard() {
         setLoading(true);
         Promise.all([
             api.guilds.getAuditLog(guildId, { limit: 50 }).catch(() => []),
-            api.guilds.getWarnings(guildId).catch(() => []),
+            Promise.resolve([]),
             api.guilds.getBans(guildId).catch(() => []),
         ]).then(([auditLog, warns, bannedUsers]) => {
             setRecentActions((auditLog as any[]).map((e: any) => ({

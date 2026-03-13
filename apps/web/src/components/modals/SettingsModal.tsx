@@ -1350,7 +1350,7 @@ const SettingsModal = ({
                                                 }}
                                             >
                                                 {(() => {
-                                                    try { return Intl.supportedValuesOf('timeZone'); } catch { return ['UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Asia/Tokyo', 'Asia/Shanghai', 'Australia/Sydney']; }
+                                                    try { return (Intl as any).supportedValuesOf('timeZone') as string[]; } catch { return ['UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Asia/Tokyo', 'Asia/Shanghai', 'Australia/Sydney']; }
                                                 })().map((tz: string) => <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>)}
                                             </select>
                                             <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Shown on your profile so friends know your local time.</p>
@@ -2437,7 +2437,7 @@ const SettingsModal = ({
                                 {/* Privacy Score */}
                                 <div style={{ marginBottom: '32px' }}>
                                     <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Privacy Score</h3>
-                                    <PrivacyScoreWidget userSettings={{}} userProfile={user} onNavigate={(tab: string) => setActiveTab(tab as any)} />
+                                    <PrivacyScoreWidget userSettings={{}} userProfile={userProfile} onNavigate={(tab: string) => setActiveTab(tab as any)} />
                                 </div>
 
                                 {/* Data Export (GDPR) */}
@@ -2448,7 +2448,7 @@ const SettingsModal = ({
                                 {/* Account Recovery Kit */}
                                 <div style={{ marginBottom: '32px' }}>
                                     <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Account Recovery</h3>
-                                    <AccountRecoveryKitWidget userId={user?.id || ''} username={user?.username || ''} email={user?.email || ''} />
+                                    <AccountRecoveryKitWidget userId={userProfile?.id || ''} username={userProfile?.username || ''} email={userProfile?.email || ''} />
                                 </div>
                             </>
                         )}
