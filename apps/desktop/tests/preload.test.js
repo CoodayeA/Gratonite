@@ -9,6 +9,9 @@ let mockIpcRenderer;
 function loadPreload() {
   delete require.cache[PRELOAD_PATH];
 
+  // Mock window.addEventListener for DOMContentLoaded handler
+  global.window = { addEventListener: vi.fn() };
+
   capturedApi = undefined;
   mockIpcRenderer = {
     invoke: vi.fn().mockResolvedValue(undefined),
@@ -100,5 +103,47 @@ describe('preload.js', () => {
     const cleanup = capturedApi.api.onMuteToggled(vi.fn());
     cleanup();
     expect(mockIpcRenderer.removeListener).toHaveBeenCalledWith('mute-toggled', registeredHandler);
+  });
+
+  // Fullscreen API
+  test('getFullscreen() → ipcRenderer.invoke("get-fullscreen")', async () => {
+    await capturedApi.api.getFullscreen();
+    expect(mockIpcRenderer.invoke).toHaveBeenCalledWith('get-fullscreen');
+  });
+
+  test('setFullscreen(true) → ipcRenderer.send("set-fullscreen", true)', () => {
+    capturedApi.api.setFullscreen(true);
+    expect(mockIpcRenderer.send).toHaveBeenCalledWith('set-fullscreen', true);
+  });
+
+  test('toggleFullscreen() → ipcRenderer.send("toggle-fullscreen")', () => {
+    capturedApi.api.toggleFullscreen();
+    expect(mockIpcRenderer.send).toHaveBeenCalledWith('toggle-fullscreen');
+  });
+
+  test('onFullscreenChanged(cb) registers listener; firing it calls cb(true)', () => {
+    const cb = vi.fn();
+    let registeredHandler;
+    mockIpcRenderer.on.mockImplementation((event, handler) => {
+      if (event === 'fullscreen-changed') registeredHandler = handler;
+    });
+    capturedApi.api.onFullscreenChanged(cb);
+    registeredHandler(null, true);
+    expect(cb).toHaveBeenCalledWith(true);
+  });
+
+  test('onFullscreenChanged returns a cleanup function', () => {
+    const cleanup = capturedApi.api.onFullscreenChanged(vi.fn());
+    expect(typeof cleanup).toBe('function');
+  });
+
+  test('calling fullscreen cleanup → ipcRenderer.removeListener("fullscreen-changed", handler)', () => {
+    let registeredHandler;
+    mockIpcRenderer.on.mockImplementation((event, handler) => {
+      if (event === 'fullscreen-changed') registeredHandler = handler;
+    });
+    const cleanup = capturedApi.api.onFullscreenChanged(vi.fn());
+    cleanup();
+    expect(mockIpcRenderer.removeListener).toHaveBeenCalledWith('fullscreen-changed', registeredHandler);
   });
 });

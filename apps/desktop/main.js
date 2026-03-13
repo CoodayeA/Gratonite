@@ -84,8 +84,16 @@ function createWindow() {
     minWidth: 940,
     minHeight: 600,
     title: 'Gratonite',
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    ...(process.platform === 'win32' && {
+      titleBarOverlay: {
+        color: '#1a1a2e',
+        symbolColor: '#ffffff',
+        height: 36,
+      },
+    }),
     trafficLightPosition: { x: 12, y: 12 },
+    fullscreenable: true,
     backgroundColor: '#1a1a2e',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -94,6 +102,7 @@ function createWindow() {
       spellcheck: true,
       backgroundThrottling: false,
       enableBlinkFeatures: 'OverlayScrollbars',
+      v8CacheOptions: 'bypassHeatCheck',
     },
     show: false, // Show after ready-to-show to prevent flash
   });
@@ -110,11 +119,26 @@ function createWindow() {
   // Fix chat bar button clicks on Windows (overlay/compositing hint)
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow.webContents.insertCSS(`
-      .emoji-picker-container, .sticker-picker-container, .soundboard-container, .poll-modal-container {
+      .emoji-picker-container, .sticker-picker-container,
+      .soundboard-container, .poll-modal-container,
+      .app-sidebar, .channel-list, .member-list,
+      .message-list, .chat-input-container,
+      .modal-overlay, .context-menu {
         will-change: transform;
         -webkit-transform: translateZ(0);
       }
+      .message-list, .channel-list, .member-list {
+        scroll-behavior: smooth;
+      }
     `);
+  });
+
+  // F11 fullscreen toggle
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F11' && input.type === 'keyDown' && !input.alt && !input.control && !input.meta && !input.shift) {
+      mainWindow.setFullScreen(!mainWindow.isFullScreen());
+      event.preventDefault();
+    }
   });
 
   // Open external links in default browser
@@ -129,6 +153,18 @@ function createWindow() {
   if (isDev) {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
+
+  // Fullscreen state events — notify renderer
+  mainWindow.on('enter-full-screen', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('fullscreen-changed', true);
+    }
+  });
+  mainWindow.on('leave-full-screen', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('fullscreen-changed', false);
+    }
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -291,14 +327,17 @@ if (!gotTheLock) {
   });
 }
 
-// Windows GPU performance flags — backdrop-filter and compositing are
-// extremely slow on many Intel/AMD integrated GPUs without these.
-if (process.platform === 'win32') {
-  app.commandLine.appendSwitch('enable-gpu-rasterization');
-  app.commandLine.appendSwitch('enable-zero-copy');
-  app.commandLine.appendSwitch('ignore-gpu-blocklist');
-  app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization');
-}
+// GPU & rendering performance flags (cross-platform)
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+app.commandLine.appendSwitch('enable-features',
+  'CanvasOopRasterization,EnableDrDc,VaapiVideoDecoder,VaapiVideoEncoder'
+);
+app.commandLine.appendSwitch('enable-smooth-scrolling');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+app.commandLine.appendSwitch('force-gpu-mem-available-mb', '512');
 
 app.whenReady().then(() => {
   createWindow();
@@ -346,6 +385,19 @@ ipcMain.handle('get-mute-state', () => isMuted);
 ipcMain.on('set-mute-state', (_event, muted) => {
   isMuted = muted;
   updateTrayMenu();
+});
+
+// Fullscreen IPC
+ipcMain.handle('get-fullscreen', () => mainWindow ? mainWindow.isFullScreen() : false);
+ipcMain.on('set-fullscreen', (_event, value) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setFullScreen(value);
+  }
+});
+ipcMain.on('toggle-fullscreen', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setFullScreen(!mainWindow.isFullScreen());
+  }
 });
 
 // Auto-update (production only)

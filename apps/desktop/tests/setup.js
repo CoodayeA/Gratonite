@@ -10,6 +10,8 @@ function createElectronMock() {
     send: vi.fn(),
     openDevTools: vi.fn(),
     setWindowOpenHandler: vi.fn(),
+    on: vi.fn(),
+    insertCSS: vi.fn(),
   };
 
   const mockWindow = {
@@ -21,6 +23,8 @@ function createElectronMock() {
     isMinimized: vi.fn().mockReturnValue(false),
     isVisible: vi.fn().mockReturnValue(true),
     isDestroyed: vi.fn().mockReturnValue(false),
+    isFullScreen: vi.fn().mockReturnValue(false),
+    setFullScreen: vi.fn(),
     once: vi.fn(),
     on: vi.fn(),
     setOverlayIcon: vi.fn(),
@@ -52,6 +56,7 @@ function createElectronMock() {
     setBadgeCount: vi.fn(),
     quit: vi.fn(),
     requestSingleInstanceLock: vi.fn().mockReturnValue(true),
+    commandLine: { appendSwitch: vi.fn() },
     isQuitting: false,
     on: vi.fn((event, handler) => {
       if (!appListeners[event]) appListeners[event] = [];

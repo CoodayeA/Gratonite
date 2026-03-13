@@ -122,13 +122,16 @@ describe('IPC handlers', () => {
     expect(mocks.mockTray.setContextMenu.mock.calls.length).toBeGreaterThan(callsBefore);
   });
 
-  test('all 5 IPC channels are registered', async () => {
+  test('all 8 IPC channels are registered', async () => {
     const mocks = await loadMain();
     expect(mocks.ipcHandlers).toHaveProperty('app:version');
     expect(mocks.ipcHandlers).toHaveProperty('app:platform');
     expect(mocks.ipcHandlers).toHaveProperty('get-mute-state');
+    expect(mocks.ipcHandlers).toHaveProperty('get-fullscreen');
     expect(mocks.ipcListeners).toHaveProperty('set-badge-count');
     expect(mocks.ipcListeners).toHaveProperty('set-mute-state');
+    expect(mocks.ipcListeners).toHaveProperty('set-fullscreen');
+    expect(mocks.ipcListeners).toHaveProperty('toggle-fullscreen');
   });
 });
 
@@ -356,5 +359,78 @@ describe('app lifecycle', () => {
     const mocks = await loadMain();
     mocks.appListeners['will-quit'][0]();
     expect(mocks.globalShortcut.unregisterAll).toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group G: Fullscreen
+// ---------------------------------------------------------------------------
+describe('fullscreen', () => {
+  test('F11 keyDown toggles fullscreen via before-input-event', async () => {
+    const mocks = await loadMain();
+    // Find the before-input-event handler registered on webContents
+    const onCall = mocks.mockWebContents.on.mock.calls.find(
+      (c) => c[0] === 'before-input-event'
+    );
+    expect(onCall).toBeDefined();
+    const handler = onCall[1];
+
+    // Simulate F11 keyDown
+    const event = { preventDefault: vi.fn() };
+    mocks.mockWindow.isFullScreen.mockReturnValue(false);
+    handler(event, { key: 'F11', type: 'keyDown', alt: false, control: false, meta: false, shift: false });
+    expect(mocks.mockWindow.setFullScreen).toHaveBeenCalledWith(true);
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+
+  test('F11 with modifiers does NOT toggle fullscreen', async () => {
+    const mocks = await loadMain();
+    const onCall = mocks.mockWebContents.on.mock.calls.find(
+      (c) => c[0] === 'before-input-event'
+    );
+    const handler = onCall[1];
+    const event = { preventDefault: vi.fn() };
+    handler(event, { key: 'F11', type: 'keyDown', alt: false, control: true, meta: false, shift: false });
+    expect(mocks.mockWindow.setFullScreen).not.toHaveBeenCalled();
+  });
+
+  test('get-fullscreen IPC returns mainWindow.isFullScreen()', async () => {
+    const mocks = await loadMain();
+    mocks.mockWindow.isFullScreen.mockReturnValue(true);
+    const result = await mocks.ipcHandlers['get-fullscreen']();
+    expect(result).toBe(true);
+  });
+
+  test('set-fullscreen IPC calls mainWindow.setFullScreen(value)', async () => {
+    const mocks = await loadMain();
+    mocks.ipcListeners['set-fullscreen'](null, true);
+    expect(mocks.mockWindow.setFullScreen).toHaveBeenCalledWith(true);
+  });
+
+  test('toggle-fullscreen IPC toggles fullscreen state', async () => {
+    const mocks = await loadMain();
+    mocks.mockWindow.isFullScreen.mockReturnValue(false);
+    mocks.ipcListeners['toggle-fullscreen']();
+    expect(mocks.mockWindow.setFullScreen).toHaveBeenCalledWith(true);
+  });
+
+  test('enter-full-screen event sends fullscreen-changed true', async () => {
+    const mocks = await loadMain();
+    const onCall = mocks.mockWindow.on.mock.calls.find(
+      (c) => c[0] === 'enter-full-screen'
+    );
+    expect(onCall).toBeDefined();
+    onCall[1]();
+    expect(mocks.mockWebContents.send).toHaveBeenCalledWith('fullscreen-changed', true);
+  });
+
+  test('leave-full-screen event sends fullscreen-changed false', async () => {
+    const mocks = await loadMain();
+    const onCall = mocks.mockWindow.on.mock.calls.find(
+      (c) => c[0] === 'leave-full-screen'
+    );
+    expect(onCall).toBeDefined();
+    onCall[1]();
+    expect(mocks.mockWebContents.send).toHaveBeenCalledWith('fullscreen-changed', false);
   });
 });
