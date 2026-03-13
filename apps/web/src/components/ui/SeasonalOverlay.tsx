@@ -46,6 +46,13 @@ export default function SeasonalOverlay() {
     const stored = localStorage.getItem('gratonite-seasonal-effects');
     if (stored === 'false') setEnabled(false);
     setSeason(getCurrentSeason());
+
+    const onToggle = () => {
+      const val = localStorage.getItem('gratonite-seasonal-effects');
+      setEnabled(val !== 'false');
+    };
+    window.addEventListener('seasonal-effects-toggle', onToggle);
+    return () => window.removeEventListener('seasonal-effects-toggle', onToggle);
   }, []);
 
   const initParticles = useCallback((s: Season, w: number, h: number) => {
