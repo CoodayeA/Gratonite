@@ -875,9 +875,12 @@ function VoicePlayer({ url, duration }: { url: string; duration?: string }) {
     );
 }
 
-const ChannelChat = () => {
-    const { bgMedia, hasCustomBg, setBgMedia, toggleGuildRail, toggleSidebar, userProfile } = useOutletContext<OutletContextType>();
-    const { channelId, guildId } = useParams<{ channelId: string; guildId: string }>();
+const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; guildIdProp?: string } = {}) => {
+    const outletCtx = useOutletContext<OutletContextType>() ?? {} as OutletContextType;
+    const { bgMedia, hasCustomBg, setBgMedia, toggleGuildRail, toggleSidebar, userProfile } = outletCtx;
+    const params = useParams<{ channelId: string; guildId: string }>();
+    const channelId = channelIdProp || params.channelId;
+    const guildId = guildIdProp || params.guildId;
     const navigate = useNavigate();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [showScrollButton, setShowScrollButton] = useState(false);

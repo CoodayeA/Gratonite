@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback, useEffect, Suspense, lazy } from 'react';
-import { MemoryRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { X, Columns } from 'lucide-react';
 
 const LazyChannelChat = lazy(() => import('../pages/guilds/ChannelChat'));
@@ -155,34 +154,19 @@ export const SplitViewButton = ({ onClick }: { onClick: () => void }) => (
     </button>
 );
 
-/** Provides outlet context for the split view right pane */
-const ContextLayout = ({ ctx }: { ctx: Record<string, unknown> }) => <Outlet context={ctx} />;
-
 /**
- * Renders a ChannelChat instance in an isolated MemoryRouter so that
- * useParams returns the split pane's channelId/guildId instead of the URL's.
+ * Renders a ChannelChat instance directly with props for channelId/guildId
+ * instead of relying on useParams from a nested router.
  */
 export const SplitViewRightPane = ({
     channelId,
     guildId,
-    outletContext,
 }: {
     channelId: string;
     guildId: string;
-    outletContext: Record<string, unknown>;
+    outletContext?: Record<string, unknown>;
 }) => (
-    <MemoryRouter initialEntries={[`/guild/${guildId}/channel/${channelId}`]}>
-        <Routes>
-            <Route element={<ContextLayout ctx={outletContext} />}>
-                <Route
-                    path="guild/:guildId/channel/:channelId"
-                    element={
-                        <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>Loading...</div>}>
-                            <LazyChannelChat />
-                        </Suspense>
-                    }
-                />
-            </Route>
-        </Routes>
-    </MemoryRouter>
+    <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>Loading...</div>}>
+        <LazyChannelChat channelIdProp={channelId} guildIdProp={guildId} />
+    </Suspense>
 );
