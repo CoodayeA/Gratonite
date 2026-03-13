@@ -508,7 +508,7 @@ const SettingsModal = ({
     };
 
     const [showServerOverrideInfo, setShowServerOverrideInfo] = useState(false);
-    const [seasonalEnabled, setSeasonalEnabled] = useState(() => localStorage.getItem('gratonite-seasonal-effects') !== 'false');
+    const [seasonalEnabled, setSeasonalEnabled] = useState(() => localStorage.getItem('gratonite-seasonal-effects') === 'true');
 
     useEffect(() => {
         setNameplateStyle(userProfile?.nameplateStyle || 'none');
