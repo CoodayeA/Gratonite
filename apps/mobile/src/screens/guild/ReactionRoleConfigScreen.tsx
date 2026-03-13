@@ -28,20 +28,27 @@ export default function ReactionRoleConfigScreen({ route, navigation }: Props) {
   const [roles, setRoles] = useState<ReactionRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchRoles = useCallback(async () => {
     try {
       const data = await reactionRolesApi.list(guildId);
       setRoles(data);
+      setLoadError(null);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load reaction roles');
+        const message = err?.message || 'Failed to load reaction roles';
+        if (refreshing || roles.length > 0) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [guildId]);
+  }, [guildId, refreshing, roles.length, toast]);
 
   useEffect(() => {
     fetchRoles();
@@ -131,6 +138,20 @@ export default function ReactionRoleConfigScreen({ route, navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && roles.length === 0) {
+    return (
+      <PatternBackground>
+        <EmptyState
+          icon="alert-circle-outline"
+          title="Failed to load reaction roles"
+          subtitle={loadError}
+          actionLabel="Retry"
+          onAction={fetchRoles}
+        />
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>

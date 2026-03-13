@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Switch,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { onboarding as onboardingApi } from '../../lib/api';
@@ -36,13 +35,15 @@ export default function OnboardingConfigScreen({ route }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchSteps = useCallback(async () => {
     try {
       const data = await onboardingApi.getSteps(guildId);
       setSteps(data);
+      setLoadError(null);
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      setLoadError(err?.message || 'Failed to load onboarding steps');
     } finally {
       setLoading(false);
     }
@@ -154,6 +155,20 @@ export default function OnboardingConfigScreen({ route }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && steps.length === 0) {
+    return (
+      <PatternBackground>
+        <EmptyState
+          icon="alert-circle-outline"
+          title="Failed to load onboarding"
+          subtitle={loadError}
+          actionLabel="Retry"
+          onAction={fetchSteps}
+        />
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>

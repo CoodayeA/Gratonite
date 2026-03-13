@@ -70,6 +70,22 @@ tags:
 - `WordFilterScreen` no longer treats a failed filter fetch as “no filtered words”; it now shows the error and offers a retry path. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/WordFilterScreen.tsx:257`
 - `RaidProtectionScreen` now shows a retryable error state when portal protection settings fail to load instead of rendering a dead-end fallback message. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/RaidProtectionScreen.tsx:260`
 - `AuditLogScreen` no longer treats a failed audit-log fetch as “no audit log entries”; it now shows the error and offers a retry path. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/AuditLogScreen.tsx:235`
+- `ActivityLogScreen` no longer treats a failed activity-log fetch as “no activity yet”; it now shows the error and offers a retry path, and paginated load-more failures surface as toasts instead of disappearing silently. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/ActivityLogScreen.tsx:145`
+- `WebhookManagementScreen` no longer treats a failed webhook fetch as “no webhooks configured”; it now shows the error and offers a retry path. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/WebhookManagementScreen.tsx:314`
+- `EmojiManagementScreen` no longer treats a failed emoji fetch as “no emojis yet”; it now shows the error and offers a retry path. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/EmojiManagementScreen.tsx:214`
+- `ServerTemplatesScreen` no longer treats a failed templates fetch as “no templates”; it now shows the error and offers a retry path. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/ServerTemplatesScreen.tsx:282`
+- `AutoRoleConfigScreen` no longer treats a failed auto-role fetch as “no auto roles”; it now shows the error and offers a retry path. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/AutoRoleConfigScreen.tsx`
+- `ReactionRoleConfigScreen` no longer relies on a toast-only failure path for first load; it now shows a retryable full-screen error when the initial reaction-role fetch fails. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/ReactionRoleConfigScreen.tsx`
+- `StarboardConfigScreen` no longer swallows an initial starboard config failure; it now shows a retryable full-screen error instead of dropping users into a misleading default form. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/StarboardConfigScreen.tsx`
+- `DigestConfigScreen` no longer swallows an initial digest config failure; it now shows a retryable full-screen error instead of dropping users into a misleading default form. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/DigestConfigScreen.tsx`
+- `OnboardingConfigScreen` no longer treats a failed onboarding-step fetch as “no onboarding steps”; it now shows the error and offers a retry path. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/OnboardingConfigScreen.tsx`
+- `GiveawayListScreen` no longer relies on a toast-only failure path for first load; it now shows a retryable full-screen error when the initial giveaway fetch fails. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/GiveawayListScreen.tsx`
+- `AnnouncementChannelScreen` no longer relies on a toast-only failure path for first load; it now shows a retryable full-screen error when the initial announcement fetch fails. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/AnnouncementChannelScreen.tsx`
+- `ScheduledEventsScreen` no longer treats a failed event fetch as “no events”; it now shows a retryable full-screen error when the initial scheduled-events load fails. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/ScheduledEventsScreen.tsx`
+- `WorkflowListScreen` no longer relies on a toast-only failure path for first load; it now shows a retryable full-screen error when the initial workflow fetch fails. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/WorkflowListScreen.tsx`
+- `ThreadListScreen` no longer relies on a toast-only failure path for first load; it now shows a retryable full-screen error when the initial thread fetch fails. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/ThreadListScreen.tsx`
+- `StarboardScreen` no longer relies on a toast-only failure path for first load; it now shows a retryable full-screen error when the initial starboard feed fetch fails. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/StarboardScreen.tsx`
+- `GuildInsightsScreen` no longer swallows a failed guild/channel insights fetch and fall through to a dead-end message; it now shows a retryable full-screen error with a real reload path. File: `/Volumes/Project BUS/GratoniteFinalForm/apps/mobile/src/screens/guild/GuildInsightsScreen.tsx`
 
 ### Issues Requiring API Changes Or Deeper Investigation
 
@@ -89,6 +105,6 @@ tags:
 
 ### Summary Statistics
 
-- Screens audited in this incremental Phase 03 pass: 20
-- Bugs fixed in this incremental Phase 03 pass: 21
+- Screens audited in this incremental Phase 03 pass: 36
+- Bugs fixed in this incremental Phase 03 pass: 37
 - Issues deferred with `MOBILE-POLISH`: 6

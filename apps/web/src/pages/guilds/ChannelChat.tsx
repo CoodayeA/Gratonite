@@ -892,6 +892,8 @@ const ChannelChat = () => {
 
     // Image Lightbox State
     const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+    const [lightboxZoom, setLightboxZoom] = useState(1);
+    const [lightboxPan, setLightboxPan] = useState({ x: 0, y: 0 });
 
     // Feature 5: Markdown Preview State
     const [showPreview, setShowPreview] = useState(false);
@@ -1511,7 +1513,7 @@ const ChannelChat = () => {
         openMenu(e, [
             { id: 'profile', label: 'View Profile', icon: UserIcon, onClick: () => setProfilePopover({ user: username, userId, x: e.clientX, y: e.clientY }) },
             ...(!isOwnUser ? [{ id: 'dm', label: 'Send DM', icon: MessageSquare, onClick: () => {
-                api.dms.openDm(userId).then((dm: any) => navigate(`/dm/${dm.id}`)).catch(() => addToast({ title: 'Failed to open DM', variant: 'error' }));
+                api.relationships.openDm(userId).then((dm: any) => navigate(`/dm/${dm.id}`)).catch(() => addToast({ title: 'Failed to open DM', variant: 'error' }));
             }}] : []),
             { divider: true, id: 'div-user-1', label: '', onClick: () => {} },
             { id: 'copy-id', label: 'Copy User ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(userId).catch(() => {}); addToast({ title: 'User ID copied', variant: 'info' }); }},
@@ -3926,7 +3928,7 @@ const ChannelChat = () => {
                     <EmbedBuilder
                         onSend={(embed: CustomEmbed) => {
                             if (!channelId) return;
-                            api.messages.send(channelId, { content: ' ', embeds: [embed as Record<string, unknown>] } as any).then(() => {
+                            api.messages.send(channelId, { content: ' ', embeds: [embed as unknown as Record<string, unknown>] } as any).then(() => {
                                 setShowEmbedBuilder(false);
                                 playSound('messageSend');
                             }).catch(() => {

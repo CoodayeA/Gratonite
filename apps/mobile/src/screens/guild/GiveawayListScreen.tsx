@@ -41,20 +41,27 @@ export default function GiveawayListScreen({ route }: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'active' | 'ended'>('active');
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchGiveaways = useCallback(async () => {
     try {
       const data = await giveawaysApi.list(guildId);
       setGiveawayList(data);
+      setLoadError(null);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load giveaways');
+        const message = err?.message || 'Failed to load giveaways';
+        if (refreshing || giveawayList.length > 0) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [guildId]);
+  }, [giveawayList.length, guildId, refreshing, toast]);
 
   useEffect(() => {
     fetchGiveaways();
@@ -227,6 +234,20 @@ export default function GiveawayListScreen({ route }: Props) {
   };
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && giveawayList.length === 0) {
+    return (
+      <PatternBackground>
+        <EmptyState
+          icon="alert-circle-outline"
+          title="Failed to load giveaways"
+          subtitle={loadError}
+          actionLabel="Retry"
+          onAction={fetchGiveaways}
+        />
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>

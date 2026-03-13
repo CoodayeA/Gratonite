@@ -13,6 +13,7 @@ import { starboard as starboardApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import LoadingScreen from '../../components/LoadingScreen';
+import EmptyState from '../../components/EmptyState';
 import type { StarboardConfig } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -27,6 +28,7 @@ export default function StarboardConfigScreen({ route }: Props) {
   const [config, setConfig] = useState<StarboardConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [enabled, setEnabled] = useState(false);
   const [threshold, setThreshold] = useState('3');
   const [emoji, setEmoji] = useState('⭐');
@@ -40,8 +42,9 @@ export default function StarboardConfigScreen({ route }: Props) {
       setThreshold(String(data.threshold));
       setEmoji(data.emoji);
       setChannelId(data.channelId || '');
+      setLoadError(null);
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      setLoadError(err?.message || 'Failed to load starboard config');
     } finally {
       setLoading(false);
     }
@@ -131,6 +134,20 @@ export default function StarboardConfigScreen({ route }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && !config) {
+    return (
+      <PatternBackground>
+        <EmptyState
+          icon="alert-circle-outline"
+          title="Failed to load starboard"
+          subtitle={loadError}
+          actionLabel="Retry"
+          onAction={fetchConfig}
+        />
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>

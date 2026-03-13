@@ -4,6 +4,7 @@ import {
   Text,
   FlatList,
   StyleSheet,
+  TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { activityLog as activityLogApi } from '../../lib/api';
@@ -40,9 +41,14 @@ export default function ActivityLogScreen({ route }: Props) {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchEvents = useCallback(async (before?: string) => {
     try {
+      if (!before) {
+        setLoadError(null);
+        setHasMore(true);
+      }
       const data = await activityLogApi.list(guildId, 50, before);
       if (before) {
         setEvents((prev) => [...prev, ...data]);
@@ -51,12 +57,20 @@ export default function ActivityLogScreen({ route }: Props) {
       }
       if (data.length < 50) setHasMore(false);
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      if (err.status !== 401) {
+        const message = err.message || 'Failed to load activity log';
+        if (before) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+          toast.error(message);
+        }
+      }
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [guildId]);
+  }, [guildId, toast]);
 
   useEffect(() => {
     fetchEvents();
@@ -122,6 +136,27 @@ export default function ActivityLogScreen({ route }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && events.length === 0) {
+    return (
+      <PatternBackground>
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl, gap: spacing.md }]}>
+          <Ionicons name="alert-circle-outline" size={56} color={colors.accentPrimary} />
+          <Text style={[styles.eventActor, { fontSize: fontSize.xl, textAlign: 'center' }]}>Failed to load activity</Text>
+          <Text style={[styles.eventDescription, { textAlign: 'center' }]}>{loadError}</Text>
+          <TouchableOpacity
+            style={[styles.eventIcon, { width: 'auto', height: 'auto', borderRadius: borderRadius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md }]}
+            onPress={() => {
+              setLoading(true);
+              fetchEvents();
+            }}
+          >
+            <Text style={[styles.eventActor, { color: colors.accentPrimary }]}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>

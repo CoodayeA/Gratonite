@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import { formatMemberCount } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
+import EmptyState from '../../components/EmptyState';
 import type { Guild, Channel } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -25,23 +26,27 @@ export default function GuildInsightsScreen({ route }: Props) {
   const [guild, setGuild] = useState<Guild | null>(null);
   const [channelList, setChannelList] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const fetchInsights = useCallback(async () => {
+    try {
+      const [g, chs] = await Promise.all([
+        guildsApi.get(guildId),
+        channelsApi.getForGuild(guildId),
+      ]);
+      setGuild(g);
+      setChannelList(chs);
+      setLoadError(null);
+    } catch (err: any) {
+      setLoadError(err?.message || 'Failed to load portal info');
+    } finally {
+      setLoading(false);
+    }
+  }, [guildId]);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const [g, chs] = await Promise.all([
-          guildsApi.get(guildId),
-          channelsApi.getForGuild(guildId),
-        ]);
-        setGuild(g);
-        setChannelList(chs);
-      } catch (err: any) {
-        // silently ignore — empty state handles no data
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [guildId]);
+    fetchInsights();
+  }, [fetchInsights]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -169,10 +174,16 @@ export default function GuildInsightsScreen({ route }: Props) {
     return <LoadingScreen />;
   }
 
-  if (!guild) {
+  if (loadError && !guild) {
     return (
       <PatternBackground>
-        <Text style={styles.error}>Failed to load portal info</Text>
+        <EmptyState
+          icon="alert-circle-outline"
+          title="Failed to load portal info"
+          subtitle={loadError}
+          actionLabel="Retry"
+          onAction={fetchInsights}
+        />
       </PatternBackground>
     );
   }

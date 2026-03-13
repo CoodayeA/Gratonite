@@ -27,20 +27,27 @@ export default function StarboardScreen({ route }: Props) {
   const [entries, setEntries] = useState<StarboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchEntries = useCallback(async () => {
     try {
       const data = await starboardApi.getEntries(guildId);
       setEntries(data);
+      setLoadError(null);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load starboard');
+        const message = err?.message || 'Failed to load starboard';
+        if (refreshing || entries.length > 0) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [guildId]);
+  }, [entries.length, guildId, refreshing, toast]);
 
   useEffect(() => {
     fetchEntries();
@@ -115,6 +122,20 @@ export default function StarboardScreen({ route }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && entries.length === 0) {
+    return (
+      <PatternBackground>
+        <EmptyState
+          icon="alert-circle-outline"
+          title="Failed to load starboard"
+          subtitle={loadError}
+          actionLabel="Retry"
+          onAction={fetchEntries}
+        />
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>

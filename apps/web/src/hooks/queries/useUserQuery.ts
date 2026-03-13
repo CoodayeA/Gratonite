@@ -8,7 +8,7 @@ export const userQueryKey = (userId?: string) =>
 export function useUserQuery(userId?: string) {
   return useQuery({
     queryKey: userQueryKey(userId),
-    queryFn: () => (userId ? api.users.get(userId) : api.users.getMe()),
+    queryFn: (() => (userId ? api.users.get(userId) : api.users.getMe())) as any,
     enabled: !!getAccessToken(),
   });
 }

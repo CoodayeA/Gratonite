@@ -34,6 +34,7 @@ export default function ThreadListScreen({ route, navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>('latest');
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Create thread modal state
   const [showCreate, setShowCreate] = useState(false);
@@ -44,15 +45,21 @@ export default function ThreadListScreen({ route, navigation }: Props) {
     try {
       const data = await threadsApi.listForChannel(channelId, sortMode);
       setThreadList(data);
+      setLoadError(null);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load threads');
+        const message = err?.message || 'Failed to load threads';
+        if (refreshing || threadList.length > 0) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [channelId, sortMode]);
+  }, [channelId, refreshing, sortMode, threadList.length, toast]);
 
   useEffect(() => {
     fetchThreads();
@@ -292,6 +299,20 @@ export default function ThreadListScreen({ route, navigation }: Props) {
 
   if (loading) {
     return <LoadingScreen />;
+  }
+
+  if (loadError && threadList.length === 0) {
+    return (
+      <PatternBackground>
+        <EmptyState
+          icon="alert-circle-outline"
+          title="Failed to load threads"
+          subtitle={loadError}
+          actionLabel="Retry"
+          onAction={fetchThreads}
+        />
+      </PatternBackground>
+    );
   }
 
   return (

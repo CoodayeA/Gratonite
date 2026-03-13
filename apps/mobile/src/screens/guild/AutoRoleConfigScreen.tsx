@@ -8,7 +8,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { autoRoles as autoRolesApi } from '../../lib/api';
-import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
@@ -22,16 +21,17 @@ type Props = NativeStackScreenProps<AppStackParamList, 'AutoRoleConfig'>;
 export default function AutoRoleConfigScreen({ route }: Props) {
   const { guildId } = route.params;
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
-  const toast = useToast();
   const [roles, setRoles] = useState<AutoRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchRoles = useCallback(async () => {
     try {
       const data = await autoRolesApi.list(guildId);
       setRoles(data);
+      setLoadError(null);
     } catch (err: any) {
-      // silently ignore — empty state handles no data
+      setLoadError(err?.message || 'Failed to load auto roles');
     } finally {
       setLoading(false);
     }
@@ -98,6 +98,20 @@ export default function AutoRoleConfigScreen({ route }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && roles.length === 0) {
+    return (
+      <PatternBackground>
+        <EmptyState
+          icon="alert-circle-outline"
+          title="Failed to load auto roles"
+          subtitle={loadError}
+          actionLabel="Retry"
+          onAction={fetchRoles}
+        />
+      </PatternBackground>
+    );
+  }
 
   return (
     <PatternBackground>
