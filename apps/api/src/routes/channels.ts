@@ -41,6 +41,14 @@ import { hasPermission, hasChannelPermission } from './roles';
 import { logAuditEvent, AuditActionTypes } from '../lib/audit';
 import { getIO } from '../lib/socket-io';
 import { AppError, handleAppError } from '../lib/errors.js';
+import { ServiceError } from '../services/guild.service';
+import {
+  getChannels as getChannelsService,
+  createChannel as createChannelService,
+  updateChannel as updateChannelService,
+  deleteChannel as deleteChannelService,
+  reorderChannels as reorderChannelsService,
+} from '../services/channel.service';
 
 export const channelsRouter = Router();
 
@@ -150,37 +158,14 @@ channelsRouter.get(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { guildId } = req.params as Record<string, string>;
-      await requireMember(guildId, req.userId!);
-
-      const rows = await db
-        .select()
-        .from(channels)
-        .where(eq(channels.guildId, guildId))
-        .orderBy(asc(channels.position));
-
-      // Filter channels by VIEW_CHANNEL permission (categories are always visible
-      // if they contain at least one visible child, or if the user can manage channels)
-      const visibleChannelIds = new Set<string>();
-      const categoryIds = new Set<string>();
-      const canManage = await hasPermission(req.userId!, guildId, Permissions.MANAGE_CHANNELS);
-      for (const ch of rows) {
-        if (ch.type === 'GUILD_CATEGORY') {
-          categoryIds.add(ch.id);
-          // Users with MANAGE_CHANNELS can always see categories (even empty ones)
-          if (canManage) visibleChannelIds.add(ch.id);
-          continue;
-        }
-        const canView = await hasChannelPermission(req.userId!, guildId, ch.id, Permissions.VIEW_CHANNEL);
-        if (canView) {
-          visibleChannelIds.add(ch.id);
-          if (ch.parentId) visibleChannelIds.add(ch.parentId); // include parent category
-        }
-      }
-
-      const filtered = rows.filter(ch => visibleChannelIds.has(ch.id));
-
+      const filtered = await getChannelsService(guildId, req.userId!);
       res.status(200).json(filtered);
     } catch (err) {
+      if (err instanceof ServiceError) {
+        const status = err.code === 'NOT_FOUND' ? 404 : err.code === 'FORBIDDEN' ? 403 : 400;
+        res.status(status).json({ code: err.code, message: err.message });
+        return;
+      }
       handleAppError(res, err, 'channels');
     }
   },
@@ -216,70 +201,15 @@ channelsRouter.post(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { guildId } = req.params as Record<string, string>;
-      await requireMember(guildId, req.userId!);
-
-      if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_CHANNELS))) {
-        throw new AppError(403, 'Missing MANAGE_CHANNELS permission', 'FORBIDDEN');
-      }
-
-      const { name, type, parentId, createLinkedText } = req.body as z.infer<typeof createChannelSchema>;
-
-      // Determine next position (append after existing channels in guild).
-      const [{ value: existingCount }] = await db
-        .select({ value: count() })
-        .from(channels)
-        .where(eq(channels.guildId, guildId));
-
-      const [channel] = await db
-        .insert(channels)
-        .values({
-          guildId,
-          name,
-          type,
-          parentId: parentId ?? null,
-          position: Number(existingCount),
-        })
-        .returning();
-
-      // Audit log
-      logAuditEvent(guildId, req.userId!, AuditActionTypes.CHANNEL_CREATE, channel.id, 'CHANNEL', { name, type });
-
-      // If requested, create a companion text channel for voice/stage channels
-      if (createLinkedText && (type === 'GUILD_VOICE' || type === 'GUILD_STAGE')) {
-        const [{ value: countAfter }] = await db
-          .select({ value: count() })
-          .from(channels)
-          .where(eq(channels.guildId, guildId));
-
-        const linkedName = `${name}-chat`;
-        const [textChannel] = await db
-          .insert(channels)
-          .values({
-            guildId,
-            name: linkedName.slice(0, 100),
-            type: 'GUILD_TEXT',
-            parentId: parentId ?? null,
-            position: Number(countAfter),
-          })
-          .returning();
-
-        // Link the voice/stage channel to its text companion
-        const [updated] = await db
-          .update(channels)
-          .set({ linkedTextChannelId: textChannel.id })
-          .where(eq(channels.id, channel.id))
-          .returning();
-
-        logAuditEvent(guildId, req.userId!, AuditActionTypes.CHANNEL_CREATE, textChannel.id, 'CHANNEL', { name: linkedName, type: 'GUILD_TEXT' });
-
-        getIO().to(`guild:${guildId}`).emit('CHANNEL_CREATE', { ...updated, linkedTextChannel: textChannel });
-        res.status(201).json({ ...updated, linkedTextChannel: textChannel });
+      const data = req.body as z.infer<typeof createChannelSchema>;
+      const result = await createChannelService(guildId, req.userId!, data);
+      res.status(201).json(result);
+    } catch (err) {
+      if (err instanceof ServiceError) {
+        const status = err.code === 'NOT_FOUND' ? 404 : err.code === 'FORBIDDEN' ? 403 : 400;
+        res.status(status).json({ code: err.code, message: err.message });
         return;
       }
-
-      getIO().to(`guild:${guildId}`).emit('CHANNEL_CREATE', channel);
-      res.status(201).json(channel);
-    } catch (err) {
       handleAppError(res, err, 'channels');
     }
   },
@@ -318,11 +248,6 @@ channelsRouter.patch(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { guildId } = req.params as Record<string, string>;
-      await requireMember(guildId, req.userId!);
-
-      if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_CHANNELS))) {
-        throw new AppError(403, 'Missing MANAGE_CHANNELS permission', 'FORBIDDEN');
-      }
 
       const parsed = batchPositionsSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -330,52 +255,14 @@ channelsRouter.patch(
         return;
       }
 
-      const updates = parsed.data;
-      if (updates.length === 0) {
-        res.status(200).json({ code: 'OK', message: 'Positions updated' });
-        return;
-      }
-
-      // Verify all channel IDs belong to this guild
-      const channelIds = updates.map((u) => u.id);
-      const existingChannels = await db
-        .select({ id: channels.id })
-        .from(channels)
-        .where(and(eq(channels.guildId, guildId), inArray(channels.id, channelIds)));
-
-      const existingIds = new Set(existingChannels.map((c) => c.id));
-      for (const u of updates) {
-        if (!existingIds.has(u.id)) {
-          res.status(400).json({
-            code: 'VALIDATION_ERROR',
-            message: `Channel ${u.id} does not belong to this guild`,
-          });
-          return;
-        }
-      }
-
-      // Apply updates
-      for (const u of updates) {
-        const updateData: Partial<typeof channels.$inferInsert> = {
-          position: u.position,
-          updatedAt: new Date(),
-        };
-        if (u.parentId !== undefined) {
-          updateData.parentId = u.parentId;
-        }
-        await db
-          .update(channels)
-          .set(updateData)
-          .where(eq(channels.id, u.id));
-      }
-
-      // Broadcast position update so other clients reorder in real time
-      try {
-        getIO().to(`guild:${guildId}`).emit('CHANNEL_POSITIONS_UPDATE', { guildId, updates });
-      } catch { /* socket may not be initialised in tests */ }
-
+      await reorderChannelsService(guildId, req.userId!, parsed.data);
       res.status(200).json({ code: 'OK', message: 'Positions updated' });
     } catch (err) {
+      if (err instanceof ServiceError) {
+        const status = err.code === 'NOT_FOUND' ? 404 : err.code === 'FORBIDDEN' ? 403 : 400;
+        res.status(status).json({ code: err.code, message: err.message });
+        return;
+      }
       handleAppError(res, err, 'channels');
     }
   },
@@ -472,85 +359,15 @@ channelsRouter.patch(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { channelId } = req.params as Record<string, string>;
-
-      const [channel] = await db
-        .select()
-        .from(channels)
-        .where(eq(channels.id, channelId))
-        .limit(1);
-
-      if (!channel) {
-        res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found' });
-        return;
-      }
-
-      if (!channel.guildId) {
-        res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Cannot modify a DM channel' });
-        return;
-      }
-
-      await requireMember(channel.guildId, req.userId!);
-
-      if (!(await hasPermission(req.userId!, channel.guildId, Permissions.MANAGE_CHANNELS))) {
-        throw new AppError(403, 'Missing MANAGE_CHANNELS permission', 'FORBIDDEN');
-      }
-
-      const { name, topic, isNsfw, rateLimitPerUser, position, backgroundUrl, backgroundType, linkedTextChannelId, isAnnouncement, forumTags, isEncrypted, attachmentsEnabled, permissionSynced, parentId, archived, autoArchiveDays } = req.body as z.infer<
-        typeof updateChannelSchema
-      >;
-
-      const updateData: Partial<typeof channels.$inferInsert> = { updatedAt: new Date() };
-      if (name !== undefined) updateData.name = name;
-      if (topic !== undefined) updateData.topic = topic;
-      if (isNsfw !== undefined) updateData.isNsfw = isNsfw;
-      if (rateLimitPerUser !== undefined) updateData.rateLimitPerUser = rateLimitPerUser;
-      if (position !== undefined) updateData.position = position;
-      if (backgroundUrl !== undefined) updateData.backgroundUrl = backgroundUrl;
-      if (backgroundType !== undefined) updateData.backgroundType = backgroundType;
-      if (linkedTextChannelId !== undefined) updateData.linkedTextChannelId = linkedTextChannelId;
-      if (isAnnouncement !== undefined) updateData.isAnnouncement = isAnnouncement;
-      if (forumTags !== undefined) updateData.forumTags = forumTags;
-      if (isEncrypted !== undefined) updateData.isEncrypted = isEncrypted;
-      if (attachmentsEnabled !== undefined) updateData.attachmentsEnabled = attachmentsEnabled;
-      if (permissionSynced !== undefined) updateData.permissionSynced = permissionSynced;
-      if (parentId !== undefined) updateData.parentId = parentId;
-      if (archived !== undefined) updateData.archived = archived;
-      if (autoArchiveDays !== undefined) updateData.autoArchiveDays = autoArchiveDays;
-
-      const [updated] = await db
-        .update(channels)
-        .set(updateData)
-        .where(eq(channels.id, channelId))
-        .returning();
-
-      // Audit log
-      const changes: Record<string, unknown> = {};
-      if (name !== undefined) changes.name = name;
-      if (topic !== undefined) changes.topic = topic;
-      if (isNsfw !== undefined) changes.isNsfw = isNsfw;
-      logAuditEvent(channel.guildId, req.userId!, AuditActionTypes.CHANNEL_UPDATE, channelId, 'CHANNEL', changes);
-
-      // Broadcast background update to all members in the channel
-      if (backgroundUrl !== undefined || backgroundType !== undefined) {
-        try {
-          const room = channel.guildId ? `guild:${channel.guildId}` : `channel:${channelId}`;
-          getIO().to(room).emit('CHANNEL_BACKGROUND_UPDATED', {
-            channelId,
-            backgroundUrl: updated.backgroundUrl ?? null,
-            backgroundType: updated.backgroundType ?? null,
-          });
-        } catch { /* socket may not be initialised in tests */ }
-      }
-
+      const data = req.body as z.infer<typeof updateChannelSchema>;
+      const updated = await updateChannelService(channelId, req.userId!, data);
       res.status(200).json(updated);
-
-      // Emit real-time channel update to guild members
-      if (channel.guildId) {
-        try {
-          getIO().to(`guild:${channel.guildId}`).emit('CHANNEL_UPDATE', { ...updated, channelId, guildId: channel.guildId });
-        } catch { /* socket may not be initialised in tests */ }
-      }
     } catch (err) {
+      if (err instanceof ServiceError) {
+        const status = err.code === 'NOT_FOUND' ? 404 : err.code === 'FORBIDDEN' ? 403 : 400;
+        res.status(status).json({ code: err.code, message: err.message });
+        return;
+      }
       handleAppError(res, err, 'channels');
     }
   },
@@ -583,57 +400,14 @@ channelsRouter.delete(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { channelId } = req.params as Record<string, string>;
-
-      const [channel] = await db
-        .select()
-        .from(channels)
-        .where(eq(channels.id, channelId))
-        .limit(1);
-
-      if (!channel) {
-        res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found' });
-        return;
-      }
-
-      if (!channel.guildId) {
-        res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Cannot delete a DM channel' });
-        return;
-      }
-
-      await requireMember(channel.guildId, req.userId!);
-
-      if (!(await hasPermission(req.userId!, channel.guildId, Permissions.MANAGE_CHANNELS))) {
-        throw new AppError(403, 'Missing MANAGE_CHANNELS permission', 'FORBIDDEN');
-      }
-
-      // Guard: do not delete the last text channel in the guild.
-      if (channel.type === 'GUILD_TEXT') {
-        const [{ value: textChannelCount }] = await db
-          .select({ value: count() })
-          .from(channels)
-          .where(and(eq(channels.guildId, channel.guildId), eq(channels.type, 'GUILD_TEXT')));
-
-        if (Number(textChannelCount) <= 1) {
-          res.status(400).json({
-            code: 'VALIDATION_ERROR',
-            message: 'Cannot delete the last text channel in a guild',
-          });
-          return;
-        }
-      }
-
-      // Audit log (before delete so we still have the channel data)
-      logAuditEvent(channel.guildId, req.userId!, AuditActionTypes.CHANNEL_DELETE, channelId, 'CHANNEL', { name: channel.name, type: channel.type });
-
-      await db.delete(channels).where(eq(channels.id, channelId));
-
-      // Emit real-time channel delete to guild members
-      try {
-        getIO().to(`guild:${channel.guildId}`).emit('CHANNEL_DELETE', { channelId, guildId: channel.guildId });
-      } catch { /* socket may not be initialised in tests */ }
-
+      await deleteChannelService(channelId, req.userId!);
       res.status(200).json({ code: 'OK', message: 'Channel deleted' });
     } catch (err) {
+      if (err instanceof ServiceError) {
+        const status = err.code === 'NOT_FOUND' ? 404 : err.code === 'FORBIDDEN' ? 403 : 400;
+        res.status(status).json({ code: err.code, message: err.message });
+        return;
+      }
       handleAppError(res, err, 'channels');
     }
   },
