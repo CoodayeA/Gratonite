@@ -17,6 +17,7 @@ import { useTheme } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { Ticket } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -40,6 +41,7 @@ export default function TicketListScreen({ route }: Props) {
   const [ticketList, setTicketList] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [createVisible, setCreateVisible] = useState(false);
   const [newSubject, setNewSubject] = useState('');
   const [newPriority, setNewPriority] = useState<'low' | 'medium' | 'high'>('medium');
@@ -47,11 +49,17 @@ export default function TicketListScreen({ route }: Props) {
 
   const fetchTickets = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await ticketsApi.list(guildId, tab);
       setTicketList(data);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load tickets');
+        const message = err?.message || 'Failed to load tickets';
+        if (refreshing || ticketList.length > 0) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
@@ -269,6 +277,8 @@ export default function TicketListScreen({ route }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && ticketList.length === 0) return <LoadErrorCard title="Failed to load tickets" message={loadError} onRetry={() => { setLoading(true); fetchTickets(); }} />;
 
   return (
     <PatternBackground>

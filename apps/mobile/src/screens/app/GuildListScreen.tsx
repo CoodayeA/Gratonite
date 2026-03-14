@@ -106,6 +106,14 @@ export default function GuildListScreen({ navigation }: Props) {
     fetchOnlineCounts(guilds);
   }, [guilds, fetchOnlineCounts]);
 
+  // Reset hasFetchedCounts when screen regains focus so online counts refresh
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      hasFetchedCounts.current = false;
+    });
+    return unsubscribe;
+  }, [navigation]);
+
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
@@ -366,7 +374,7 @@ export default function GuildListScreen({ navigation }: Props) {
             <Text style={styles.guildName} numberOfLines={1}>{item.name}</Text>
             <View style={styles.guildMetaRow}>
               <Text style={styles.guildMetaText}>
-                {item.memberCount} member{item.memberCount !== 1 ? 's' : ''}
+                {item.memberCount ?? 0} member{(item.memberCount ?? 0) !== 1 ? 's' : ''}
               </Text>
               {onlineCounts[item.id] != null && (
                 <>

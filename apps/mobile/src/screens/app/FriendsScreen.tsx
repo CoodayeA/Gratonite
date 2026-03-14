@@ -23,6 +23,7 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppTabParamList, AppStackParamList } from '../../navigation/types';
 import PatternBackground from '../../components/PatternBackground';
+import LoadErrorCard from '../../components/LoadErrorCard';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<AppTabParamList, 'Friends'>,
@@ -39,12 +40,15 @@ export default function FriendsScreen({ navigation }: Props) {
   const glass = useGlass();
   const toast = useToast();
   const [rels, setRels] = useState<Relationship[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('all');
   const [refreshing, setRefreshing] = useState(false);
   const [streaks, setStreaks] = useState<Map<string, number>>(new Map());
 
   const fetchRelationships = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await relApi.getAll();
       setRels(data);
 
@@ -78,12 +82,14 @@ export default function FriendsScreen({ navigation }: Props) {
       }
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load friends');
+        const message = err?.message || 'Failed to load friends';
+        if (refreshing || rels.length > 0) { toast.error(message); } else { setLoadError(message); }
       }
     } finally {
+      setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [refreshing, rels.length]);
 
   useEffect(() => {
     fetchRelationships();
@@ -383,6 +389,8 @@ export default function FriendsScreen({ navigation }: Props) {
       </AnimatedListItem>
     );
   };
+
+  if (loadError && rels.length === 0) return <LoadErrorCard title="Failed to load friends" message={loadError} onRetry={() => { setLoading(true); fetchRelationships(); }} />;
 
   return (
     <PatternBackground>

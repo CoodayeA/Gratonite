@@ -1,0 +1,57 @@
+appId: chat.gratonite.mobile
+---
+# Navigate all settings sub-screens to verify no crashes
+- assertVisible: "Portals"
+- tapOn: "Settings"
+- assertVisible: "Settings"
+
+# Account
+- tapOn: "Account"
+- assertVisible: "Profile"
+- back
+
+# Appearance
+- tapOn: "Appearance"
+- assertVisible: "Theme"
+- back
+
+# Notifications
+- tapOn: "Notifications"
+- assertVisible: "Push Notifications"
+- back
+
+# Privacy
+- tapOn: "Privacy"
+- assertVisible: "Direct Messages"
+- back
+
+# Security
+- tapOn: "Security"
+- assertVisible:
+    text: "ENCRYPTION"
+    optional: true
+- back
+
+# Sound (if present)
+- tapOn:
+    text: "Sound"
+    optional: true
+- back
+
+# Sessions (if present)
+- tapOn:
+    text: "Sessions"
+    optional: true
+- assertVisible:
+    text: "Active Sessions"
+    optional: true
+- back
+
+# Muted Users (if present)
+- tapOn:
+    text: "Muted Users"
+    optional: true
+- back
+
+# Navigate back to home
+- tapOn: "Portals"

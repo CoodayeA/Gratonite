@@ -18,6 +18,7 @@ import { useTheme } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import RichText from '../../components/RichText';
 import type { ForumPost, Message } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -32,6 +33,7 @@ export default function ForumChannelScreen({ route, navigation }: Props) {
   const { channelId, channelName } = route.params;
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // New post modal
   const [showNewPost, setShowNewPost] = useState(false);
@@ -46,11 +48,17 @@ export default function ForumChannelScreen({ route, navigation }: Props) {
 
   const fetchPosts = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await forumApi.listPosts(channelId);
       setPosts(data);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load forum posts');
+        const message = err?.message || 'Failed to load forum posts';
+        if (posts.length > 0) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
@@ -369,6 +377,8 @@ export default function ForumChannelScreen({ route, navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && posts.length === 0) return <LoadErrorCard title="Failed to load forum" message={loadError} onRetry={() => { setLoading(true); fetchPosts(); }} />;
 
   return (
     <PatternBackground>

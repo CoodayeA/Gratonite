@@ -13,6 +13,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme, useGlass } from '../../lib/theme';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import Avatar from '../../components/Avatar';
 import type { LeaderboardEntry } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -41,15 +42,22 @@ export default function LeaderboardScreen({ route }: Props) {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [period, setPeriod] = useState<'week' | 'month' | 'all'>('week');
 
   const fetchLeaderboard = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await leaderboardApi.get(guildId, period);
       setEntries(data);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load leaderboard');
+        const message = err?.message || 'Failed to load leaderboard';
+        if (refreshing || entries.length > 0) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
@@ -221,6 +229,8 @@ export default function LeaderboardScreen({ route }: Props) {
   };
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && entries.length === 0) return <LoadErrorCard title="Failed to load leaderboard" message={loadError} onRetry={() => { setLoading(true); fetchLeaderboard(); }} />;
 
   return (
     <PatternBackground>

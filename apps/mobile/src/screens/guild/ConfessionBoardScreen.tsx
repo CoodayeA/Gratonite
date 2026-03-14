@@ -18,6 +18,7 @@ import { useTheme } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { Confession } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -32,17 +33,24 @@ export default function ConfessionBoardScreen({ route }: Props) {
   const [confessionList, setConfessionList] = useState<Confession[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [composeVisible, setComposeVisible] = useState(false);
   const [composeText, setComposeText] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const fetchConfessions = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await confessionsApi.list(guildId);
       setConfessionList(data);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load confessions');
+        const message = err?.message || 'Failed to load confessions';
+        if (refreshing || confessionList.length > 0) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
@@ -199,6 +207,8 @@ export default function ConfessionBoardScreen({ route }: Props) {
   );
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && confessionList.length === 0) return <LoadErrorCard title="Failed to load confessions" message={loadError} onRetry={() => { setLoading(true); fetchConfessions(); }} />;
 
   return (
     <PatternBackground>

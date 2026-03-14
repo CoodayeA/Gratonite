@@ -13,6 +13,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import SectionHeader from '../../components/SectionHeader';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { UserSettings } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -43,14 +44,18 @@ export default function SettingsPrivacyScreen({ navigation }: Props) {
   const toast = useToast();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const fetchSettings = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await settingsApi.get();
       setSettings(data);
+      setLoaded(true);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to load settings');
+      setLoadError(err?.message || 'Failed to load settings');
     } finally {
       setLoading(false);
     }
@@ -143,6 +148,10 @@ export default function SettingsPrivacyScreen({ navigation }: Props) {
 
   if (loading) {
     return <LoadingScreen />;
+  }
+
+  if (loadError && !loaded) {
+    return <LoadErrorCard title="Failed to load settings" message={loadError} onRetry={fetchSettings} />;
   }
 
   const renderPicker = (

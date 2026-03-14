@@ -1,0 +1,24 @@
+appId: chat.gratonite.mobile
+---
+# Navigate to role management from guild settings
+- assertVisible: "Portals"
+- tapOn:
+    id: "guild-item"
+    index: 0
+- tapOn:
+    text: "Server settings"
+- assertVisible:
+    text: "ACTIONS"
+    timeout: 5000
+# Tap on Roles
+- tapOn: "Roles"
+# Role list screen should appear
+- assertVisible:
+    text: "Roles"
+    timeout: 5000
+# Verify at least the @everyone role exists (optional)
+- assertVisible:
+    text: "everyone"
+    optional: true
+- back
+- back

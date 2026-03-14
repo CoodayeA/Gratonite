@@ -47,7 +47,7 @@ export default function LoginScreen({ navigation }: Props) {
     try {
       await login(loginInput.trim(), password, mfaRequired ? mfaCode.trim() : undefined);
     } catch (err: any) {
-      if (err.mfaRequired) {
+      if (err.code === 'MFA_REQUIRED') {
         setMfaRequired(true);
       } else {
         Alert.alert('Login Failed', err.message || 'Invalid credentials');

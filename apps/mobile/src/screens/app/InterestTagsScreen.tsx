@@ -6,6 +6,7 @@ import { useTheme } from '../../lib/theme';
 import { useToast } from '../../contexts/ToastContext';
 import { selectionFeedback, mediumImpact } from '../../lib/haptics';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { InterestTag } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -19,10 +20,12 @@ export default function InterestTagsScreen({ navigation }: Props) {
   const [allTags, setAllTags] = useState<InterestTag[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
+      setLoadError(null);
       const [tags, myInterests] = await Promise.all([
         interestTags.listAll(),
         interestTags.getMyInterests(),
@@ -33,8 +36,11 @@ export default function InterestTagsScreen({ navigation }: Props) {
         .filter(t => myInterests.includes(t.name))
         .map(t => t.id);
       setSelectedIds(new Set(myTagIds));
-    } catch {
-      toast.error('Failed to load interests');
+    } catch (err: any) {
+      if (err.status !== 401) {
+        const message = err?.message || 'Failed to load interests';
+        if (allTags.length > 0) { toast.error(message); } else { setLoadError(message); }
+      }
     } finally {
       setLoading(false);
     }
@@ -98,6 +104,7 @@ export default function InterestTagsScreen({ navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+  if (loadError && allTags.length === 0) return <LoadErrorCard title="Failed to load interests" message={loadError} onRetry={() => { setLoading(true); fetchData(); }} />;
 
   return (
     <PatternBackground>

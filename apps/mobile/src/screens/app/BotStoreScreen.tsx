@@ -18,6 +18,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import EmptyState from '../../components/EmptyState';
 import type { BotListing, BotReview } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -40,6 +41,7 @@ export default function BotStoreScreen({ navigation }: Props) {
   const [searchText, setSearchText] = useState('');
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Detail view
   const [selectedBot, setSelectedBot] = useState<BotListing | null>(null);
@@ -65,13 +67,15 @@ export default function BotStoreScreen({ navigation }: Props) {
 
   const fetchBots = useCallback(async () => {
     try {
+      setLoadError(null);
       const category = activeCategory === 'All' ? undefined : activeCategory.toLowerCase();
       const search = debouncedSearch.trim() || undefined;
       const data = await botStore.list(category, search);
       setBots(data);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load bots');
+        const message = err?.message || 'Failed to load bots';
+        if (refreshing || bots.length > 0) { toast.error(message); } else { setLoadError(message); }
       }
     } finally {
       setLoading(false);
@@ -610,6 +614,7 @@ export default function BotStoreScreen({ navigation }: Props) {
   ), [styles, colors]);
 
   if (loading) return <LoadingScreen />;
+  if (loadError && bots.length === 0) return <LoadErrorCard title="Failed to load bots" message={loadError} onRetry={() => { setLoading(true); fetchBots(); }} />;
 
   return (
     <PatternBackground>

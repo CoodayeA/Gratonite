@@ -6,6 +6,7 @@ import { useTheme } from '../../lib/theme';
 import { useToast } from '../../contexts/ToastContext';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import Avatar from '../../components/Avatar';
 import type { InterestMatch } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -21,13 +22,20 @@ export default function InterestMatchesScreen({ route, navigation }: Props) {
   const [matches, setMatches] = useState<InterestMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchMatches = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await interestTags.getMatches(guildId);
       setMatches(data);
-    } catch {
-      toast.error('Failed to load matches');
+    } catch (err: any) {
+      const message = err?.message || 'Failed to load matches';
+      if (refreshing || matches.length > 0) {
+        toast.error(message);
+      } else {
+        setLoadError(message);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -47,6 +55,8 @@ export default function InterestMatchesScreen({ route, navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && matches.length === 0) return <LoadErrorCard title="Failed to load matches" message={loadError} onRetry={() => { setLoading(true); fetchMatches(); }} />;
 
   return (
     <PatternBackground>

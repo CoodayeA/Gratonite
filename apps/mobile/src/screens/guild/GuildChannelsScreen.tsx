@@ -120,11 +120,19 @@ export default function GuildChannelsScreen({ route, navigation }: Props) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [guildId]);
+  }, [guildId, toast]);
 
   useEffect(() => {
     fetchChannels();
   }, [fetchChannels]);
+
+  // Refresh channel list when returning from sub-screens
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchChannels();
+    });
+    return unsubscribe;
+  }, [navigation, fetchChannels]);
 
   // Group channels by category
   const sections: Section[] = React.useMemo(() => {

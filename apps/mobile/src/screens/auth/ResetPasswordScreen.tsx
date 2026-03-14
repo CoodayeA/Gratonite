@@ -14,16 +14,30 @@ import {
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { CommonActions } from '@react-navigation/native';
 import { auth } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import { StarField, RainbowStrip } from '../../components/decorative';
-import type { AuthStackParamList } from '../../navigation/types';
+import type { AuthStackParamList, AppStackParamList } from '../../navigation/types';
 import PatternBackground from '../../components/PatternBackground';
 
-type Props = NativeStackScreenProps<AuthStackParamList, 'ResetPassword'>;
+type Props = NativeStackScreenProps<AuthStackParamList, 'ResetPassword'>
+  | NativeStackScreenProps<AppStackParamList, 'ResetPassword'>;
 
 export default function ResetPasswordScreen({ route, navigation }: Props) {
+  // Determine if Login screen exists in this navigator (auth stack vs app stack)
+  const canNavigateToLogin = navigation.getState().routeNames.includes('Login');
+
+  const handleNavigateAway = () => {
+    if (canNavigateToLogin) {
+      (navigation as any).navigate('Login');
+    } else if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'MainTabs' }] }));
+    }
+  };
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const toast = useToast();
   const routeToken = route.params?.token;
@@ -278,7 +292,7 @@ export default function ResetPasswordScreen({ route, navigation }: Props) {
 
               <TouchableOpacity
                 style={styles.button}
-                onPress={() => navigation.navigate('Login')}
+                onPress={handleNavigateAway}
                 accessibilityRole="button"
                 accessibilityLabel="Sign in"
               >
@@ -401,7 +415,7 @@ export default function ResetPasswordScreen({ route, navigation }: Props) {
               <Animated.View entering={FadeInUp.duration(600).delay(500)}>
                 <TouchableOpacity
                   style={styles.linkButton}
-                  onPress={() => navigation.navigate('Login')}
+                  onPress={handleNavigateAway}
                   accessibilityRole="button"
                   accessibilityLabel="Back to login"
                 >

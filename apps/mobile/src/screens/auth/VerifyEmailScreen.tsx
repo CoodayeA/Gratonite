@@ -130,6 +130,8 @@ export default function VerifyEmailScreen({ route, navigation }: Props) {
             style={[styles.resendButton, resending && styles.resendButtonDisabled]}
             onPress={handleResend}
             disabled={resending}
+            accessibilityRole="button"
+            accessibilityLabel="Resend Verification Email"
           >
             {resending ? (
               <ActivityIndicator color={colors.white} />
@@ -141,6 +143,8 @@ export default function VerifyEmailScreen({ route, navigation }: Props) {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.navigate('Login')}
+            accessibilityRole="button"
+            accessibilityLabel="Already verified? Sign in"
           >
             <Text style={styles.backText}>
               Already verified? <Text style={styles.backBold}>Sign in</Text>

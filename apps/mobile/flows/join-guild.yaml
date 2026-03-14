@@ -1,0 +1,15 @@
+appId: chat.gratonite.mobile
+---
+# Navigate to Server Discover and verify the join flow renders
+- assertVisible: "Portals"
+- tapOn:
+    text: "Discover servers"
+# Discover screen should load
+- assertVisible:
+    text: "Discover Portals"
+    timeout: 5000
+# Verify at least one server card appears (optional — empty list is valid)
+- assertVisible:
+    text: "Join"
+    optional: true
+- back

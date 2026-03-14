@@ -5,6 +5,7 @@ import { auctions as auctionsApi } from '../../lib/api';
 import { useTheme } from '../../lib/theme';
 import { useToast } from '../../contexts/ToastContext';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import EmptyState from '../../components/EmptyState';
 import type { Auction } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -33,14 +34,19 @@ export default function AuctionsScreen({ navigation }: Props) {
   const [items, setItems] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [sort, setSort] = useState('ending');
 
   const fetchAuctions = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await auctionsApi.list({ status: 'active', sort });
       setItems(data);
-    } catch {
-      toast.error('Failed to load auctions');
+    } catch (err: any) {
+      if (err.status !== 401) {
+        const message = err?.message || 'Failed to load auctions';
+        if (refreshing || items.length > 0) { toast.error(message); } else { setLoadError(message); }
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -81,6 +87,7 @@ export default function AuctionsScreen({ navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+  if (loadError && items.length === 0) return <LoadErrorCard title="Failed to load auctions" message={loadError} onRetry={() => { setLoading(true); fetchAuctions(); }} />;
 
   return (
     <PatternBackground>

@@ -13,6 +13,7 @@ import { shop as shopApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import EmptyState from '../../components/EmptyState';
 import type { ShopItem } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -59,21 +60,24 @@ export default function ShopScreen({ navigation }: Props) {
   const toast = useToast();
   const [items, setItems] = useState<ShopItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<ItemType>('all');
   const [purchasing, setPurchasing] = useState<string | null>(null);
 
   const fetchItems = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await shopApi.list();
       setItems(data);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load shop items');
+        const message = err?.message || 'Failed to load shop';
+        if (items.length > 0) { toast.error(message); } else { setLoadError(message); }
       }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [items.length]);
 
   useEffect(() => {
     fetchItems();
@@ -247,6 +251,8 @@ export default function ShopScreen({ navigation }: Props) {
   };
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && items.length === 0) return <LoadErrorCard title="Failed to load shop" message={loadError} onRetry={() => { setLoading(true); fetchItems(); }} />;
 
   return (
     <PatternBackground>

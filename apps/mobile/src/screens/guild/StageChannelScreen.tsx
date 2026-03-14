@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { stage } from '../../lib/api';
@@ -7,6 +7,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { mediumImpact } from '../../lib/haptics';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import Avatar from '../../components/Avatar';
 import type { StageSession, StageSpeaker } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -22,20 +23,31 @@ export default function StageChannelScreen({ route, navigation }: Props) {
   const { user } = useAuth();
   const [session, setSession] = useState<StageSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showStartModal, setShowStartModal] = useState(false);
   const [topic, setTopic] = useState('');
   const [showManage, setShowManage] = useState(false);
+  const hasDataRef = useRef(false);
 
   const fetchSession = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await stage.getSession(channelId);
       setSession(data);
-    } catch {
-      toast.error('Failed to load stage');
+      hasDataRef.current = true;
+    } catch (err: any) {
+      if (err.status !== 401) {
+        const message = err?.message || 'Failed to load stage';
+        if (hasDataRef.current) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
+      }
     } finally {
       setLoading(false);
     }
-  }, [channelId]);
+  }, [channelId, toast]);
 
   useEffect(() => { fetchSession(); }, [fetchSession]);
 
@@ -133,7 +145,11 @@ export default function StageChannelScreen({ route, navigation }: Props) {
 
   if (loading) return <LoadingScreen />;
 
-  if (!session) {
+  if (loadError && !session) {
+    return <LoadErrorCard title="Failed to load stage" message={loadError} onRetry={() => { setLoading(true); fetchSession(); }} />;
+  }
+
+  if (!loadError && !session) {
     return (
       <View style={[styles.container, styles.noSession]}>
         <Ionicons name="mic-outline" size={64} color={colors.textMuted} />

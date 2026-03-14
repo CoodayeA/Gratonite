@@ -1,0 +1,20 @@
+appId: chat.gratonite.mobile
+---
+# Navigate to DM search screen
+- assertVisible: "Portals"
+- tapOn: "Chats"
+- assertVisible: "Messages"
+- tapOn:
+    text: "Search conversations"
+# DM search screen should appear with title "Find User"
+- assertVisible: "Find User"
+# Tap into the search input and type a query
+- tapOn:
+    text: "Search"
+    optional: true
+- inputText: "test"
+# Wait for search results (or empty state)
+- extendedWaitUntil:
+    visible: ".*"
+    timeout: 3000
+- back

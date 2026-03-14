@@ -17,6 +17,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import EmptyState from '../../components/EmptyState';
 import type { GreetingCard, GreetingCardTemplate } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -35,6 +36,7 @@ export default function GreetingCardsScreen({ navigation }: Props) {
   const [sent, setSent] = useState<GreetingCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [composeVisible, setComposeVisible] = useState(false);
   const [templates, setTemplates] = useState<GreetingCardTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
@@ -44,12 +46,14 @@ export default function GreetingCardsScreen({ navigation }: Props) {
 
   const fetchCards = useCallback(async () => {
     try {
+      setLoadError(null);
       const [r, s] = await Promise.all([cardsApi.getReceived(), cardsApi.getSent()]);
       setReceived(r);
       setSent(s);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load greeting cards');
+        const message = err?.message || 'Failed to load greeting cards';
+        if (refreshing || received.length > 0 || sent.length > 0) { toast.error(message); } else { setLoadError(message); }
       }
     } finally {
       setLoading(false);
@@ -245,6 +249,7 @@ export default function GreetingCardsScreen({ navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+  if (loadError && received.length === 0 && sent.length === 0) return <LoadErrorCard title="Failed to load greeting cards" message={loadError} onRetry={() => { setLoading(true); fetchCards(); }} />;
 
   return (
     <PatternBackground>

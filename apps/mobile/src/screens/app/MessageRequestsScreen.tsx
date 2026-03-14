@@ -14,6 +14,7 @@ import { relationships as relApi, users as usersApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import Avatar from '../../components/Avatar';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import EmptyState from '../../components/EmptyState';
 import type { Relationship, User } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -32,10 +33,12 @@ export default function MessageRequestsScreen({ navigation }: Props) {
   const toast = useToast();
   const [requests, setRequests] = useState<RequestEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchRequests = useCallback(async () => {
     try {
+      setLoadError(null);
       const rels = await relApi.getAll();
       const pending = rels.filter((r) => r.type === 'pending_incoming');
       const targetIds = pending.map((r) => r.targetId).filter(Boolean);
@@ -60,13 +63,14 @@ export default function MessageRequestsScreen({ navigation }: Props) {
       );
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load requests');
+        const message = err?.message || 'Failed to load requests';
+        if (refreshing || requests.length > 0) { toast.error(message); } else { setLoadError(message); }
       }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [refreshing, requests.length]);
 
   useEffect(() => {
     fetchRequests();
@@ -182,6 +186,8 @@ export default function MessageRequestsScreen({ navigation }: Props) {
       </View>
     );
   }
+
+  if (loadError && requests.length === 0) return <LoadErrorCard title="Failed to load requests" message={loadError} onRetry={() => { setLoading(true); fetchRequests(); }} />;
 
   return (
     <PatternBackground>

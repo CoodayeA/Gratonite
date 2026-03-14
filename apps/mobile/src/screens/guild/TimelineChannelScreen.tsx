@@ -19,6 +19,7 @@ import { useTheme } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { TimelineEvent } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -66,6 +67,7 @@ export default function TimelineChannelScreen({ route, navigation }: Props) {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // New event modal
   const [showNewEvent, setShowNewEvent] = useState(false);
@@ -77,11 +79,17 @@ export default function TimelineChannelScreen({ route, navigation }: Props) {
 
   const fetchEvents = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await timelineApi.list(channelId);
       setEvents(data);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load timeline');
+        const message = err?.message || 'Failed to load timeline';
+        if (refreshing || events.length > 0) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
@@ -326,6 +334,8 @@ export default function TimelineChannelScreen({ route, navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && events.length === 0) return <LoadErrorCard title="Failed to load timeline" message={loadError} onRetry={() => { setLoading(true); fetchEvents(); }} />;
 
   return (
     <PatternBackground>

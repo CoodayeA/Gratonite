@@ -6,6 +6,7 @@ import { useTheme } from '../../lib/theme';
 import { useToast } from '../../contexts/ToastContext';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { FormTemplate } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -20,13 +21,20 @@ export default function GuildFormsScreen({ route, navigation }: Props) {
   const [forms, setForms] = useState<FormTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchForms = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await guildForms.list(guildId);
       setForms(data);
-    } catch {
-      toast.error('Failed to load forms');
+    } catch (err: any) {
+      const message = err?.message || 'Failed to load forms';
+      if (refreshing || forms.length > 0) {
+        toast.error(message);
+      } else {
+        setLoadError(message);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -48,6 +56,8 @@ export default function GuildFormsScreen({ route, navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && forms.length === 0) return <LoadErrorCard title="Failed to load forms" message={loadError} onRetry={() => { setLoading(true); fetchForms(); }} />;
 
   return (
     <PatternBackground>

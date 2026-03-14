@@ -16,6 +16,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import { StarField, RainbowStrip } from '../../components/decorative';
 import type { AuthStackParamList } from '../../navigation/types';
@@ -25,6 +26,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 export default function RegisterScreen({ navigation }: Props) {
   const { register } = useAuth();
+  const toast = useToast();
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -38,12 +40,22 @@ export default function RegisterScreen({ navigation }: Props) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
     if (password.length < 8) {
       Alert.alert('Error', 'Password must be at least 8 characters');
+      return;
+    }
+    const usernameRegex = /^[a-zA-Z0-9_]{3,32}$/;
+    if (!usernameRegex.test(username.trim())) {
+      toast.error('Username must be 3-32 characters, alphanumeric and underscores only');
       return;
     }
 

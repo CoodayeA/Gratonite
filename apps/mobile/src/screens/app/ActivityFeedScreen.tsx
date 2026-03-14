@@ -15,6 +15,7 @@ import type { ActivityFeedItem } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 import PatternBackground from '../../components/PatternBackground';
+import LoadErrorCard from '../../components/LoadErrorCard';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ActivityFeed'>;
 
@@ -46,11 +47,13 @@ export default function ActivityFeedScreen({ navigation }: Props) {
   const [items, setItems] = useState<ActivityFeedItem[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
   const fetchItems = useCallback(async (reset = false) => {
     try {
+      setLoadError(null);
       const res = await activityFeed.list(reset ? undefined : cursor || undefined);
       if (reset) {
         setItems(res.items);
@@ -59,7 +62,10 @@ export default function ActivityFeedScreen({ navigation }: Props) {
       }
       setCursor(res.nextCursor);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to load activity');
+      if (err.status !== 401) {
+        const message = err?.message || 'Failed to load activity';
+        if (refreshing || items.length > 0) { toast.error(message); } else { setLoadError(message); }
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -157,6 +163,8 @@ export default function ActivityFeedScreen({ navigation }: Props) {
       </View>
     );
   }
+
+  if (loadError && items.length === 0) return <LoadErrorCard title="Failed to load activity" message={loadError} onRetry={() => { setLoading(true); fetchItems(true); }} />;
 
   return (
     <PatternBackground>

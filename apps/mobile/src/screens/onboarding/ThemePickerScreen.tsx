@@ -4,8 +4,8 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,20 +15,18 @@ import { themes, type ThemeName } from '../../lib/themes';
 import { StarField, RainbowStrip } from '../../components/decorative';
 import PatternBackground from '../../components/PatternBackground';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-const CARD_W = (SCREEN_W - 56) / 2;
-
 type StyleFamily = 'neobrutalism' | 'glassmorphism';
 
 interface PreviewCardProps {
   family: StyleFamily;
   selected: boolean;
   isDark: boolean;
+  cardWidth: number;
   onSelect: () => void;
   onToggleDark: () => void;
 }
 
-function PreviewCard({ family, selected, isDark, onSelect, onToggleDark }: PreviewCardProps) {
+function PreviewCard({ family, selected, isDark, cardWidth, onSelect, onToggleDark }: PreviewCardProps) {
   const themeName: ThemeName = isDark ? `${family}-dark` : family;
   const t = themes[themeName];
   const isNeo = family === 'neobrutalism';
@@ -37,10 +35,12 @@ function PreviewCard({ family, selected, isDark, onSelect, onToggleDark }: Previ
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={onSelect}
+      accessibilityLabel={`${isNeo ? 'Neobrutalism' : 'Glassmorphism'} theme${isDark ? ' dark' : ' light'}${selected ? ', selected' : ''}`}
+      accessibilityRole="button"
       style={[
         previewStyles.card,
         {
-          width: CARD_W,
+          width: cardWidth,
           backgroundColor: t.colors.bgSecondary,
           borderColor: selected ? t.colors.accentPrimary : t.colors.border,
           borderWidth: selected ? 3 : 1.5,
@@ -211,6 +211,8 @@ interface ThemePickerScreenProps {
 }
 
 export default function ThemePickerScreen({ onComplete }: ThemePickerScreenProps) {
+  const { width: SCREEN_W } = useWindowDimensions();
+  const CARD_W = (SCREEN_W - 56) / 2;
   const [selectedFamily, setSelectedFamily] = useState<StyleFamily>('neobrutalism');
   const [neoDark, setNeoDark] = useState(false);
   const [glassDark, setGlassDark] = useState(true);
@@ -345,6 +347,7 @@ export default function ThemePickerScreen({ onComplete }: ThemePickerScreenProps
             family="neobrutalism"
             selected={selectedFamily === 'neobrutalism'}
             isDark={neoDark}
+            cardWidth={CARD_W}
             onSelect={() => {
               setSelectedFamily('neobrutalism');
               previewTheme('neobrutalism', neoDark);
@@ -359,6 +362,7 @@ export default function ThemePickerScreen({ onComplete }: ThemePickerScreenProps
             family="glassmorphism"
             selected={selectedFamily === 'glassmorphism'}
             isDark={glassDark}
+            cardWidth={CARD_W}
             onSelect={() => {
               setSelectedFamily('glassmorphism');
               previewTheme('glassmorphism', glassDark);
@@ -382,6 +386,8 @@ export default function ThemePickerScreen({ onComplete }: ThemePickerScreenProps
             style={styles.continueBtn}
             onPress={handleContinue}
             activeOpacity={0.85}
+            accessibilityLabel="Continue with selected theme"
+            accessibilityRole="button"
           >
             <Text style={styles.continueBtnText}>Continue</Text>
           </TouchableOpacity>

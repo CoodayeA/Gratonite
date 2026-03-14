@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, RefreshControl, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { musicRooms } from '../../lib/api';
@@ -6,6 +6,7 @@ import { useTheme } from '../../lib/theme';
 import { useToast } from '../../contexts/ToastContext';
 import { mediumImpact } from '../../lib/haptics';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import EmptyState from '../../components/EmptyState';
 import type { MusicQueue } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -20,22 +21,33 @@ export default function MusicRoomScreen({ route }: Props) {
   const toast = useToast();
   const [queue, setQueue] = useState<MusicQueue | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [addUrl, setAddUrl] = useState('');
   const [addTitle, setAddTitle] = useState('');
   const [adding, setAdding] = useState(false);
+  const hasDataRef = useRef(false);
 
   const fetchQueue = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await musicRooms.getState(channelId);
       setQueue(data);
-    } catch {
-      toast.error('Failed to load music queue');
+      hasDataRef.current = true;
+    } catch (err: any) {
+      if (err.status !== 401) {
+        const message = err?.message || 'Failed to load music room';
+        if (hasDataRef.current) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [channelId]);
+  }, [channelId, toast]);
 
   useEffect(() => { fetchQueue(); }, [fetchQueue]);
 
@@ -107,6 +119,10 @@ export default function MusicRoomScreen({ route }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && !queue) {
+    return <LoadErrorCard title="Failed to load music room" message={loadError} onRetry={() => { setLoading(true); fetchQueue(); }} />;
+  }
 
   const currentTrack = queue?.queue?.[0] ?? null;
   const upcomingQueue = queue?.queue?.slice(1) ?? [];

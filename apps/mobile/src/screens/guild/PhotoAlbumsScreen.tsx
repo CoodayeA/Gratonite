@@ -16,6 +16,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { PhotoAlbum, PhotoAlbumItem } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -30,6 +31,7 @@ export default function PhotoAlbumsScreen({ route }: Props) {
   const [albums, setAlbums] = useState<PhotoAlbum[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [detailAlbum, setDetailAlbum] = useState<PhotoAlbum | null>(null);
   const [detailItems, setDetailItems] = useState<PhotoAlbumItem[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -40,11 +42,17 @@ export default function PhotoAlbumsScreen({ route }: Props) {
 
   const fetchAlbums = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await albumsApi.list(guildId);
       setAlbums(data);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load albums');
+        const message = err?.message || 'Failed to load albums';
+        if (refreshing || albums.length > 0) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
@@ -220,6 +228,8 @@ export default function PhotoAlbumsScreen({ route }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && albums.length === 0) return <LoadErrorCard title="Failed to load albums" message={loadError} onRetry={() => { setLoading(true); fetchAlbums(); }} />;
 
   return (
     <PatternBackground>

@@ -7,9 +7,17 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { threads as threadsApi, messages as messagesApi } from '../../lib/api';
+import {
+  onMessageCreate,
+  onMessageUpdate,
+  onMessageDelete,
+  getSocket,
+} from '../../lib/socket';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
@@ -17,6 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MessageBubble from '../../components/MessageBubble';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { Message } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -33,16 +42,26 @@ export default function ThreadViewScreen({ route }: Props) {
   const [messageList, setMessageList] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const isNearBottomRef = useRef(true);
+  const hasDataRef = useRef(false);
 
   const fetchMessages = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await threadsApi.getMessages(threadId);
       setMessageList(data.reverse());
+      hasDataRef.current = true;
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load thread messages');
+        const message = err?.message || 'Failed to load thread messages';
+        if (hasDataRef.current) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
@@ -53,20 +72,105 @@ export default function ThreadViewScreen({ route }: Props) {
     fetchMessages();
   }, [fetchMessages]);
 
+  // Socket: join/leave thread channel room
+  useEffect(() => {
+    const socket = getSocket();
+    if (socket) {
+      socket.emit('CHANNEL_JOIN', { channelId: threadId });
+      return () => {
+        socket.emit('CHANNEL_LEAVE', { channelId: threadId });
+      };
+    }
+  }, [threadId]);
+
+  // Socket: new messages
+  useEffect(() => {
+    const unsub = onMessageCreate((data: any) => {
+      if (data.channelId === threadId) {
+        // Skip if this is our own message (optimistic send already added it)
+        if (data.authorId === user?.id) return;
+        const msg: Message = {
+          id: data.id,
+          channelId: data.channelId,
+          authorId: data.authorId,
+          content: data.content,
+          type: data.type ?? 0,
+          createdAt: data.createdAt,
+          editedAt: null,
+          author: data.author,
+          attachments: Array.isArray(data.attachments) ? data.attachments : undefined,
+          replyToId: data.replyToId,
+          replyTo: data.replyTo,
+        };
+        setMessageList((prev) => {
+          if (prev.some((m) => m.id === msg.id)) return prev;
+          return [...prev, msg];
+        });
+      }
+    });
+    return unsub;
+  }, [threadId, user?.id]);
+
+  // Socket: message edits
+  useEffect(() => {
+    const unsub = onMessageUpdate((data: any) => {
+      if (data.channelId === threadId) {
+        setMessageList((prev) =>
+          prev.map((m) =>
+            m.id === data.id
+              ? { ...m, content: data.content, editedAt: data.editedAt || new Date().toISOString() }
+              : m,
+          ),
+        );
+      }
+    });
+    return unsub;
+  }, [threadId]);
+
+  // Socket: message deletes
+  useEffect(() => {
+    const unsub = onMessageDelete((data) => {
+      if (data.channelId === threadId) {
+        setMessageList((prev) => prev.filter((m) => m.id !== data.id));
+      }
+    });
+    return unsub;
+  }, [threadId]);
+
   const handleSend = async () => {
     const text = inputText.trim();
     if (!text || sending) return;
 
     setSending(true);
     setInputText('');
+    const optimisticId = `temp-${Date.now()}`;
+    const optimisticMessage: Message = {
+      id: optimisticId,
+      channelId: threadId,
+      authorId: user?.id || 'me',
+      content: text,
+      type: 0,
+      createdAt: new Date().toISOString(),
+      editedAt: null,
+      author: user ? {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatarHash: user.avatarHash,
+      } : undefined,
+    };
+    setMessageList((prev) => [...prev, optimisticMessage]);
     try {
       const msg = await messagesApi.send(threadId, text);
       setMessageList((prev) => {
-        if (prev.some((m) => m.id === msg.id)) return prev;
-        return [...prev, msg];
+        if (prev.some((m) => m.id === msg.id)) {
+          return prev.filter((m) => m.id !== optimisticId);
+        }
+        return prev.map((m) => m.id === optimisticId ? msg : m);
       });
     } catch {
       toast.error('Failed to send reply');
+      setMessageList((prev) => prev.filter((m) => m.id !== optimisticId));
       setInputText(text);
     } finally {
       setSending(false);
@@ -131,6 +235,8 @@ export default function ThreadViewScreen({ route }: Props) {
     return <LoadingScreen />;
   }
 
+  if (loadError && messageList.length === 0) return <LoadErrorCard title="Failed to load thread" message={loadError} onRetry={() => { setLoading(true); fetchMessages(); }} />;
+
   return (
     <PatternBackground>
     <KeyboardAvoidingView
@@ -145,8 +251,16 @@ export default function ThreadViewScreen({ route }: Props) {
         renderItem={renderMessage}
         contentContainerStyle={styles.messageList}
         onContentSizeChange={() => {
-          flatListRef.current?.scrollToEnd({ animated: false });
+          if (isNearBottomRef.current) {
+            flatListRef.current?.scrollToEnd({ animated: false });
+          }
         }}
+        onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+          const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+          const distanceFromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y;
+          isNearBottomRef.current = distanceFromBottom < 150;
+        }}
+        scrollEventThrottle={16}
         ListEmptyComponent={
           <EmptyState
             icon="chatbubble-outline"

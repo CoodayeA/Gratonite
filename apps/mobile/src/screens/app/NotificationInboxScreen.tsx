@@ -22,6 +22,15 @@ import { onNotificationCreate } from '../../lib/socket';
 import { useAppState } from '../../contexts/AppStateContext';
 import type { Notification } from '../../types';
 import PatternBackground from '../../components/PatternBackground';
+import type { CompositeScreenProps } from '@react-navigation/native';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { AppTabParamList, AppStackParamList } from '../../navigation/types';
+
+type Props = CompositeScreenProps<
+  BottomTabScreenProps<AppTabParamList, 'Notifications'>,
+  NativeStackScreenProps<AppStackParamList>
+>;
 
 const NOTIFICATION_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   message: 'chatbubble',
@@ -38,7 +47,7 @@ const getNotificationIcon = (type: string): keyof typeof Ionicons.glyphMap => {
   return NOTIFICATION_ICONS[type] || 'notifications';
 };
 
-export default function NotificationInboxScreen({ navigation }: any) {
+export default function NotificationInboxScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const glassExtras = useGlass();
@@ -63,7 +72,7 @@ export default function NotificationInboxScreen({ navigation }: any) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchNotifications();
@@ -76,21 +85,6 @@ export default function NotificationInboxScreen({ navigation }: any) {
     });
     return unsub;
   }, [fetchNotifications, refreshNotificationCount]);
-
-  useEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <View style={{ flexDirection: 'row', gap: spacing.xs }}>
-          <TouchableOpacity onPress={handleMarkAllRead} style={{ padding: spacing.sm }} accessibilityLabel="Mark all as read">
-            <Ionicons name="checkmark-done" size={22} color={colors.accentPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleClearAll} style={{ padding: spacing.sm, marginRight: spacing.xs }} accessibilityLabel="Clear all notifications">
-            <Ionicons name="trash-outline" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
-        </View>
-      ),
-    });
-  }, [navigation, colors, spacing]);
 
   const handleMarkRead = async (notificationId: string) => {
     try {
@@ -121,7 +115,7 @@ export default function NotificationInboxScreen({ navigation }: any) {
     activeSwipeableRef.current?.close();
   };
 
-  const handleMarkAllRead = async () => {
+  const handleMarkAllRead = useCallback(async () => {
     try {
       await notifApi.markAllRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
@@ -129,9 +123,9 @@ export default function NotificationInboxScreen({ navigation }: any) {
     } catch (err: any) {
       toast.error(err.message || 'Failed to mark all as read');
     }
-  };
+  }, [toast, refreshNotificationCount]);
 
-  const handleClearAll = () => {
+  const handleClearAll = useCallback(() => {
     if (notifications.length === 0) return;
     Alert.alert('Clear Notifications', 'Dismiss all notifications?', [
       { text: 'Cancel', style: 'cancel' },
@@ -140,7 +134,10 @@ export default function NotificationInboxScreen({ navigation }: any) {
         style: 'destructive',
         onPress: async () => {
           try {
-            await Promise.all(notifications.map((n) => notifApi.dismiss(n.id)));
+            const batchSize = 10;
+            for (let i = 0; i < notifications.length; i += batchSize) {
+              await Promise.all(notifications.slice(i, i + batchSize).map((n) => notifApi.dismiss(n.id)));
+            }
             setNotifications([]);
             refreshNotificationCount().catch(() => {});
             toast.success('Notifications cleared');
@@ -150,7 +147,22 @@ export default function NotificationInboxScreen({ navigation }: any) {
         },
       },
     ]);
-  };
+  }, [notifications, toast, refreshNotificationCount]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+          <TouchableOpacity onPress={handleMarkAllRead} style={{ padding: spacing.sm }} accessibilityLabel="Mark all as read">
+            <Ionicons name="checkmark-done" size={22} color={colors.accentPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleClearAll} style={{ padding: spacing.sm, marginRight: spacing.xs }} accessibilityLabel="Clear all notifications">
+            <Ionicons name="trash-outline" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+      ),
+    });
+  }, [navigation, colors, spacing, handleMarkAllRead, handleClearAll]);
 
   const handleClearRead = () => {
     if (readNotifications.length === 0) return;
@@ -161,7 +173,10 @@ export default function NotificationInboxScreen({ navigation }: any) {
         style: 'destructive',
         onPress: async () => {
           try {
-            await Promise.all(readNotifications.map((n) => notifApi.dismiss(n.id)));
+            const batchSize = 10;
+            for (let i = 0; i < readNotifications.length; i += batchSize) {
+              await Promise.all(readNotifications.slice(i, i + batchSize).map((n) => notifApi.dismiss(n.id)));
+            }
             setNotifications((prev) => prev.filter((n) => !n.read));
             refreshNotificationCount().catch(() => {});
             toast.success('Read alerts cleared');

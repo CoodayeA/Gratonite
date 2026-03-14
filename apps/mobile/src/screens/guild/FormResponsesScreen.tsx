@@ -7,6 +7,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { mediumImpact } from '../../lib/haptics';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { FormResponse } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -21,13 +22,20 @@ export default function FormResponsesScreen({ route }: Props) {
   const [responses, setResponses] = useState<FormResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchResponses = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await guildForms.getResponses(guildId, formId);
       setResponses(data);
-    } catch {
-      toast.error('Failed to load responses');
+    } catch (err: any) {
+      const message = err?.message || 'Failed to load responses';
+      if (refreshing || responses.length > 0) {
+        toast.error(message);
+      } else {
+        setLoadError(message);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -64,6 +72,8 @@ export default function FormResponsesScreen({ route }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && responses.length === 0) return <LoadErrorCard title="Failed to load responses" message={loadError} onRetry={() => { setLoading(true); fetchResponses(); }} />;
 
   return (
     <PatternBackground>

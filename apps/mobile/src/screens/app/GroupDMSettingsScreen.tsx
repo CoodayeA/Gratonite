@@ -15,6 +15,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import Avatar from '../../components/Avatar';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import EmptyState from '../../components/EmptyState';
 import type { GroupDMChannel } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -38,12 +39,14 @@ export default function GroupDMSettingsScreen({ route, navigation }: Props) {
   const [channel, setChannel] = useState<GroupDMChannel | null>(null);
   const [groupName, setGroupName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showAddPicker, setShowAddPicker] = useState(false);
   const [friends, setFriends] = useState<FriendEntry[]>([]);
 
   const fetchChannel = useCallback(async () => {
     try {
+      setLoadError(null);
       const dmChannels = await relApi.getDMChannels();
       const allRels = await relApi.getAll();
       const friendRels = allRels.filter((r) => r.type === 'friend');
@@ -60,13 +63,18 @@ export default function GroupDMSettingsScreen({ route, navigation }: Props) {
         );
       }
     } catch (err: any) {
+      const message = err?.message || 'Failed to load group info';
       if (err.status !== 401) {
-        toast.error('Failed to load group info');
+        if (channel) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
     }
-  }, [channelId]);
+  }, [channelId, channel, toast]);
 
   useEffect(() => {
     fetchChannel();
@@ -290,6 +298,10 @@ export default function GroupDMSettingsScreen({ route, navigation }: Props) {
         <ActivityIndicator size="large" color={colors.accentPrimary} />
       </View>
     );
+  }
+
+  if (loadError && !channel) {
+    return <LoadErrorCard title="Failed to load group settings" message={loadError} onRetry={fetchChannel} />;
   }
 
   const recipients = channel?.recipients ?? [];

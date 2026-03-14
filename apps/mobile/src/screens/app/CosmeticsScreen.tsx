@@ -13,6 +13,7 @@ import { useTheme } from '../../lib/theme';
 import type { Cosmetic } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Cosmetics'>;
@@ -38,10 +39,12 @@ export default function CosmeticsScreen({ navigation }: Props) {
   const [tab, setTab] = useState<Cosmetic['type']>('avatar_frame');
   const [catalog, setCatalog] = useState<Cosmetic[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
+      setLoadError(null);
       const [catalogData, ownedData] = await Promise.all([
         cosmetics.catalog(),
         cosmetics.owned(),
@@ -55,7 +58,10 @@ export default function CosmeticsScreen({ navigation }: Props) {
       }));
       setCatalog(merged);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to load cosmetics');
+      if (err.status !== 401) {
+        const message = err?.message || 'Failed to load cosmetics';
+        if (catalog.length > 0) { toast.error(message); } else { setLoadError(message); }
+      }
     } finally {
       setLoading(false);
     }
@@ -228,6 +234,7 @@ export default function CosmeticsScreen({ navigation }: Props) {
       </View>
     );
   }
+  if (loadError && catalog.length === 0) return <LoadErrorCard title="Failed to load cosmetics" message={loadError} onRetry={() => { setLoading(true); fetchData(); }} />;
 
   return (
     <PatternBackground>

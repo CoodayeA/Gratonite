@@ -6,6 +6,7 @@ import { useTheme } from '../../lib/theme';
 import { useToast } from '../../contexts/ToastContext';
 import { mediumImpact } from '../../lib/haptics';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import EmptyState from '../../components/EmptyState';
 import type { SeasonalEvent, SeasonalEventProgress } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -19,10 +20,12 @@ export default function SeasonalEventsScreen({ navigation }: Props) {
   const toast = useToast();
   const [events, setEvents] = useState<Array<SeasonalEvent & { progress?: SeasonalEventProgress }>>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
+      setLoadError(null);
       const activeEvents = await seasonalEvents.getActive();
       const withProgress = await Promise.all(
         activeEvents.map(async (event) => {
@@ -35,13 +38,16 @@ export default function SeasonalEventsScreen({ navigation }: Props) {
         })
       );
       setEvents(withProgress);
-    } catch {
-      toast.error('Failed to load events');
+    } catch (err: any) {
+      if (err.status !== 401) {
+        const message = err?.message || 'Failed to load events';
+        if (refreshing || events.length > 0) { toast.error(message); } else { setLoadError(message); }
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [refreshing, events.length]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -86,6 +92,8 @@ export default function SeasonalEventsScreen({ navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && events.length === 0) return <LoadErrorCard title="Failed to load events" message={loadError} onRetry={() => { setLoading(true); fetchData(); }} />;
 
   return (
     <PatternBackground>

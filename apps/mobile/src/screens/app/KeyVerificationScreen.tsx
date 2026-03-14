@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '../../lib/theme';
 import { useToast } from '../../contexts/ToastContext';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import { loadKeyPairFromSecureStore, exportPublicKey } from '../../lib/crypto';
 import { encryption as encryptionApi } from '../../lib/api';
 import {
@@ -31,36 +32,40 @@ export default function KeyVerificationScreen({ route, navigation }: Props) {
   const { colors, spacing, fontSize, borderRadius } = useTheme();
   const toast = useToast();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [myFingerprint, setMyFingerprint] = useState<string | null>(null);
   const [myEmoji, setMyEmoji] = useState<string | null>(null);
   const [theirFingerprint, setTheirFingerprint] = useState<string | null>(null);
   const [theirEmoji, setTheirEmoji] = useState<string | null>(null);
   const [verified, setVerified] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const kp = await loadKeyPairFromSecureStore();
-        if (kp) {
-          const myJwk = await exportPublicKey(kp.publicKey);
-          setMyFingerprint(await getFingerprint(myJwk));
-          setMyEmoji(await getFingerprintEmoji(myJwk));
-        }
-
-        const res = await encryptionApi.getPublicKey(userId);
-        if (res?.publicKey) {
-          setTheirFingerprint(await getFingerprint(res.publicKey));
-          setTheirEmoji(await getFingerprintEmoji(res.publicKey));
-        }
-
-        setVerified(await checkIsTrusted(userId));
-      } catch {
-        toast.error('Failed to load keys');
-      } finally {
-        setLoading(false);
+  const fetchKeys = useCallback(async () => {
+    try {
+      setLoadError(null);
+      const kp = await loadKeyPairFromSecureStore();
+      if (kp) {
+        const myJwk = await exportPublicKey(kp.publicKey);
+        setMyFingerprint(await getFingerprint(myJwk));
+        setMyEmoji(await getFingerprintEmoji(myJwk));
       }
-    })();
+
+      const res = await encryptionApi.getPublicKey(userId);
+      if (res?.publicKey) {
+        setTheirFingerprint(await getFingerprint(res.publicKey));
+        setTheirEmoji(await getFingerprintEmoji(res.publicKey));
+      }
+
+      setVerified(await checkIsTrusted(userId));
+    } catch {
+      setLoadError('Failed to load keys');
+    } finally {
+      setLoading(false);
+    }
   }, [userId]);
+
+  useEffect(() => {
+    fetchKeys();
+  }, [fetchKeys]);
 
   const handleVerify = async () => {
     if (theirFingerprint) {
@@ -163,6 +168,10 @@ export default function KeyVerificationScreen({ route, navigation }: Props) {
         <ActivityIndicator size="large" color={colors.accentPrimary} />
       </View>
     );
+  }
+
+  if (loadError && !myFingerprint && !theirFingerprint) {
+    return <LoadErrorCard title="Failed to load keys" message={loadError} onRetry={fetchKeys} />;
   }
 
   return (

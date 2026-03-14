@@ -133,4 +133,6 @@ export type AppStackParamList = {
   HelpArticle: { articleId: string };
   FameDashboard: undefined;
   CommandPalette: undefined;
+  // Deep-link: password reset (works for logged-in users too)
+  ResetPassword: { token?: string } | undefined;
 };

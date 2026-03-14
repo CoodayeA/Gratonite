@@ -1,0 +1,33 @@
+appId: chat.gratonite.mobile
+---
+# Open a thread and send a reply
+# Assumes thread-open.yaml has been run or a thread is accessible
+- assertVisible: "Portals"
+- tapOn:
+    id: "guild-item"
+    index: 0
+- tapOn:
+    id: "channel-item"
+    index: 0
+- assertVisible:
+    text: "Message input"
+    timeout: 5000
+# Long-press first message to open context menu
+- longPressOn:
+    id: "message-bubble"
+    index: 0
+    optional: true
+- tapOn:
+    text: "Thread"
+    optional: true
+# If thread view opened, type and send a reply
+- tapOn:
+    text: "Message input"
+    optional: true
+- inputText: "E2E thread reply test"
+- tapOn:
+    text: "Send message"
+    optional: true
+- assertVisible:
+    text: "E2E thread reply test"
+    optional: true

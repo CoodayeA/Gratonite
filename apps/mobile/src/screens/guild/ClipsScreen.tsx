@@ -7,6 +7,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { mediumImpact } from '../../lib/haptics';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { Clip } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -21,14 +22,21 @@ export default function ClipsScreen({ route }: Props) {
   const [items, setItems] = useState<Clip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
 
   const fetchClips = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await clips.list(guildId);
       setItems(data);
-    } catch {
-      toast.error('Failed to load clips');
+    } catch (err: any) {
+      const message = err?.message || 'Failed to load clips';
+      if (refreshing || items.length > 0) {
+        toast.error(message);
+      } else {
+        setLoadError(message);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -67,6 +75,8 @@ export default function ClipsScreen({ route }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && items.length === 0) return <LoadErrorCard title="Failed to load clips" message={loadError} onRetry={() => { setLoading(true); fetchClips(); }} />;
 
   return (
     <PatternBackground>
