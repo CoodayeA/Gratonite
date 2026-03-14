@@ -128,11 +128,11 @@ export default function AdminTeam() {
   // Fetch team members from API
   const loadMembers = useCallback(() => {
     api.adminTeam.list().then(res => {
-      const items: Record<string, unknown>[] = Array.isArray(res) ? res : ((res as Record<string, unknown>).items ?? []) as Record<string, unknown>[];
+      const items: any[] = Array.isArray(res) ? res : ((res as any).items ?? []) as any[];
       const roleMap: Record<string, Role> = { admin: 'admin', moderator: 'moderator', support: 'support' };
       setMembers(
         items
-          .map((m) => ({
+          .map((m: any) => ({
             id: m.id ?? m.userId ?? m.email,
             name: m.name ?? m.username ?? m.displayName ?? 'Unknown',
             email: m.email ?? '',

@@ -3658,7 +3658,7 @@ export const AppLayout = () => {
             {/* Modals */}
             <Suspense fallback={null}>
             <ModalWrapper isOpen={activeModal === 'settings'}>
-                <SettingsModal onClose={() => setActiveModal(null)} userProfile={userProfile} setUserProfile={setUserProfile} userTheme={userTheme} setUserTheme={setUserTheme} />
+                <SettingsModal onClose={() => setActiveModal(null)} userProfile={userProfile} setUserProfile={setUserProfile as any} userTheme={userTheme} setUserTheme={setUserTheme as any} />
             </ModalWrapper>
             <ModalWrapper isOpen={activeModal === 'userProfile'}>
                 <UserProfileModal onClose={() => setActiveModal(null)} userProfile={userProfile} />

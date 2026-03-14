@@ -129,7 +129,7 @@ export default function ThemeStoreModal({ onClose, preSelectedThemeId }: ThemeSt
       }
     } catch (err) {
       console.error('Failed to fetch themes:', err);
-      toast.addToast('Failed to load theme store', 'error');
+      toast.addToast({ title: 'Failed to load theme store', variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -214,7 +214,7 @@ export default function ThemeStoreModal({ onClose, preSelectedThemeId }: ThemeSt
     }
 
     setTheme(localId);
-    toast.addToast(`Installed "${storeTheme.name}"!`, 'success');
+    toast.addToast({ title: `Installed "${storeTheme.name}"!`, variant: 'success' });
   }, [setTheme, toast]);
 
   // Rate theme (Item 35)
@@ -222,11 +222,11 @@ export default function ThemeStoreModal({ onClose, preSelectedThemeId }: ThemeSt
     try {
       await api.themes.rate(themeId, rating);
       setRatingMap(prev => ({ ...prev, [themeId]: rating }));
-      toast.addToast(`Rated ${rating} stars!`, 'success');
+      toast.addToast({ title: `Rated ${rating} stars!`, variant: 'success' });
       // Refresh to get updated average
       fetchThemes();
     } catch {
-      toast.addToast('Failed to submit rating', 'error');
+      toast.addToast({ title: 'Failed to submit rating', variant: 'error' });
     }
   }, [toast, fetchThemes]);
 
@@ -234,9 +234,9 @@ export default function ThemeStoreModal({ onClose, preSelectedThemeId }: ThemeSt
   const shareTheme = useCallback((themeId: string) => {
     const url = `${window.location.origin}${window.location.pathname}?theme=${themeId}`;
     navigator.clipboard.writeText(url).then(() => {
-      toast.addToast('Theme link copied to clipboard!', 'success');
+      toast.addToast({ title: 'Theme link copied to clipboard!', variant: 'success' });
     }).catch(() => {
-      toast.addToast('Failed to copy link', 'error');
+      toast.addToast({ title: 'Failed to copy link', variant: 'error' });
     });
   }, [toast]);
 

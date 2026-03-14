@@ -88,10 +88,10 @@ export const guildsApi = {
     ),
 
   createMemberGroup: (guildId: string, data: { name: string; color?: string; position?: number }) =>
-    apiFetch<Record<string, unknown>>(`/guilds/${guildId}/member-groups`, { method: 'POST', body: JSON.stringify(data) }),
+    apiFetch<any>(`/guilds/${guildId}/member-groups`, { method: 'POST', body: JSON.stringify(data) }),
 
   updateMemberGroup: (guildId: string, groupId: string, data: { name?: string; color?: string; position?: number }) =>
-    apiFetch<Record<string, unknown>>(`/guilds/${guildId}/member-groups/${groupId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    apiFetch<any>(`/guilds/${guildId}/member-groups/${groupId}`, { method: 'PATCH', body: JSON.stringify(data) }),
 
   deleteMemberGroup: (guildId: string, groupId: string) =>
     apiFetch<void>(`/guilds/${guildId}/member-groups/${groupId}`, { method: 'DELETE' }),
@@ -145,16 +145,16 @@ export const guildsApi = {
     apiFetch<void>(`/guilds/${guildId}/banner`, { method: 'DELETE' }),
 
   getRoles: (guildId: string) =>
-    apiFetch<Array<Record<string, unknown>>>(`/guilds/${guildId}/roles`),
+    apiFetch<any[]>(`/guilds/${guildId}/roles`),
 
   createRole: (guildId: string, data: { name: string; color?: string; mentionable?: boolean; permissions?: string }) =>
-    apiFetch<Record<string, unknown>>(`/guilds/${guildId}/roles`, {
+    apiFetch<any>(`/guilds/${guildId}/roles`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
   updateRole: (guildId: string, roleId: string, data: { name?: string; color?: string; mentionable?: boolean; permissions?: string; unicodeEmoji?: string | null }) =>
-    apiFetch<Record<string, unknown>>(`/guilds/${guildId}/roles/${roleId}`, {
+    apiFetch<any>(`/guilds/${guildId}/roles/${roleId}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
@@ -163,7 +163,7 @@ export const guildsApi = {
     apiFetch<void>(`/guilds/${guildId}/roles/${roleId}`, { method: 'DELETE' }),
 
   getMemberRoles: (guildId: string, userId: string) =>
-    apiFetch<Array<Record<string, unknown>>>(`/guilds/${guildId}/members/${userId}/roles`),
+    apiFetch<any[]>(`/guilds/${guildId}/members/${userId}/roles`),
 
   assignMemberRole: (guildId: string, userId: string, roleId: string) =>
     apiFetch<void>(`/guilds/${guildId}/members/${userId}/roles/${roleId}`, { method: 'PUT' }),
@@ -172,7 +172,7 @@ export const guildsApi = {
     apiFetch<void>(`/guilds/${guildId}/members/${userId}/roles/${roleId}`, { method: 'DELETE' }),
 
   getBans: (guildId: string) =>
-    apiFetch<Array<Record<string, unknown>>>(`/guilds/${guildId}/bans`),
+    apiFetch<any[]>(`/guilds/${guildId}/bans`),
 
   ban: (guildId: string, userId: string, reason?: string, duration?: number) =>
     apiFetch<void>(`/guilds/${guildId}/bans/${userId}`, {
@@ -193,13 +193,13 @@ export const guildsApi = {
     }),
 
   warnMember: (guildId: string, userId: string, reason: string) =>
-    apiFetch<Record<string, unknown>>(`/guilds/${guildId}/members/${userId}/warnings`, {
+    apiFetch<any>(`/guilds/${guildId}/members/${userId}/warnings`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
     }),
 
   getMemberWarnings: (guildId: string, userId: string) =>
-    apiFetch<Array<Record<string, unknown>>>(`/guilds/${guildId}/members/${userId}/warnings`),
+    apiFetch<any[]>(`/guilds/${guildId}/members/${userId}/warnings`),
 
   getVanityUrl: (guildId: string) =>
     apiFetch<{ code: string | null }>(`/guilds/${guildId}/vanity-url`),
@@ -211,31 +211,31 @@ export const guildsApi = {
     }),
 
   getTemplates: (guildId: string) =>
-    apiFetch<Array<Record<string, unknown>>>(`/guilds/${guildId}/templates`),
+    apiFetch<any[]>(`/guilds/${guildId}/templates`),
 
   createTemplate: (guildId: string, data: { name: string; description?: string }) =>
-    apiFetch<Record<string, unknown>>(`/guilds/${guildId}/templates`, {
+    apiFetch<any>(`/guilds/${guildId}/templates`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
   syncTemplate: (guildId: string, templateId: string) =>
-    apiFetch<Record<string, unknown>>(`/guilds/${guildId}/templates/${templateId}`, { method: 'PATCH' }),
+    apiFetch<any>(`/guilds/${guildId}/templates/${templateId}`, { method: 'PATCH' }),
 
   deleteTemplate: (guildId: string, templateId: string) =>
     apiFetch<void>(`/guilds/${guildId}/templates/${templateId}`, { method: 'DELETE' }),
 
   createFromTemplate: (code: string) =>
-    apiFetch<Record<string, unknown>>(`/guilds/templates/${code}`, { method: 'POST' }),
+    apiFetch<any>(`/guilds/templates/${code}`, { method: 'POST' }),
 
   boost: (guildId: string) =>
-    apiFetch<Record<string, unknown>>(`/guilds/${guildId}/boost`, { method: 'POST' }),
+    apiFetch<any>(`/guilds/${guildId}/boost`, { method: 'POST' }),
 
   removeBoost: (guildId: string) =>
     apiFetch<void>(`/guilds/${guildId}/boost`, { method: 'DELETE' }),
 
   getCommands: (guildId: string) =>
-    apiFetch<Array<Record<string, unknown>>>(`/guilds/${guildId}/commands`),
+    apiFetch<any[]>(`/guilds/${guildId}/commands`),
 
   getAuditLog: (guildId: string, params?: { limit?: number; offset?: number; action?: string; userId?: string }) => {
     const q = new URLSearchParams();

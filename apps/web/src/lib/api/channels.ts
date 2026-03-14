@@ -56,16 +56,16 @@ export const channelsApi = {
     }),
 
   follow: (channelId: string, targetChannelId?: string) =>
-    apiFetch<Record<string, unknown>>(`/channels/${channelId}/followers`, {
+    apiFetch<any>(`/channels/${channelId}/followers`, {
       method: 'POST',
       body: JSON.stringify({ targetChannelId }),
     }),
 
   crosspost: (channelId: string, messageId: string) =>
-    apiFetch<Record<string, unknown>>(`/channels/${channelId}/messages/${messageId}/crosspost`, { method: 'POST' }),
+    apiFetch<any>(`/channels/${channelId}/messages/${messageId}/crosspost`, { method: 'POST' }),
 
   getCallHistory: (channelId: string) =>
-    apiFetch<Array<Record<string, unknown>>>(`/channels/${channelId}/call-history`),
+    apiFetch<any[]>(`/channels/${channelId}/call-history`),
 
   delete: (channelId: string) =>
     apiFetch<void>(`/channels/${channelId}`, { method: 'DELETE' }),
@@ -108,7 +108,7 @@ export const channelsApi = {
     apiFetch<{ id: string; channelId: string; version: number; keyData: Record<string, string> }>(`/guilds/${guildId}/channels/${channelId}/encryption-keys`),
 
   uploadEncryptionKeys: (guildId: string, channelId: string, data: { version: number; keyData: Record<string, string> }) =>
-    apiFetch<Record<string, unknown>>(`/guilds/${guildId}/channels/${channelId}/encryption-keys`, {
+    apiFetch<any>(`/guilds/${guildId}/channels/${channelId}/encryption-keys`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -117,7 +117,7 @@ export const channelsApi = {
     apiFetch<{ level: string; mutedUntil: string | null }>(`/channels/${channelId}/notification-prefs`),
 
   setNotificationPrefs: (channelId: string, data: { level: 'all' | 'mentions' | 'none' | 'default'; mutedUntil?: string | null }) =>
-    apiFetch<Record<string, unknown>>(`/channels/${channelId}/notification-prefs`, {
+    apiFetch<any>(`/channels/${channelId}/notification-prefs`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),

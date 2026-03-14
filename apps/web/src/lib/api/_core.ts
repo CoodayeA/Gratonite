@@ -501,7 +501,7 @@ export async function refreshAccessToken(): Promise<string | null> {
 // Core fetch wrapper
 // ---------------------------------------------------------------------------
 
-export async function apiFetch<T>(
+export async function apiFetch<T = any>(
   path: string,
   options: RequestInit = {},
   retried = false,

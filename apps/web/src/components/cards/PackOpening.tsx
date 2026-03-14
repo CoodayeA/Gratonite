@@ -57,7 +57,7 @@ export default function PackOpening({ packs, userCoins, onPackOpened }: Props) {
     setRevealIndex(-1);
     try {
       const result = await api.collectibleCards.openPack(selectedPack.id);
-      setPulledCards(result.cards);
+      setPulledCards(result.cards as any);
       setCoinsSpent(result.coinsSpent);
       // Start reveal sequence
       setRevealIndex(0);
