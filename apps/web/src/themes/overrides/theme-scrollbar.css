@@ -1,0 +1,55 @@
+/**
+ * Theme-aware scrollbar styling (Item 89).
+ * Uses CSS custom properties from the theme system for consistent scrollbar colors.
+ * Uses the standard `scrollbar-color` property for Firefox and
+ * WebKit pseudo-elements for Chrome/Safari.
+ */
+
+/* Standard scrollbar-color (Firefox, future Chrome) */
+* {
+  scrollbar-color: var(--bg-tertiary) var(--bg-sidebar);
+  scrollbar-width: thin;
+}
+
+/* WebKit scrollbar styling (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-sidebar);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  border: 2px solid var(--bg-sidebar);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--bg-sidebar);
+}
+
+/* Light mode adjustments */
+[data-color-mode="light"] * {
+  scrollbar-color: var(--stroke) var(--bg-primary);
+}
+
+[data-color-mode="light"] ::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+[data-color-mode="light"] ::-webkit-scrollbar-thumb {
+  background: var(--stroke);
+  border-color: var(--bg-primary);
+}
+
+[data-color-mode="light"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}

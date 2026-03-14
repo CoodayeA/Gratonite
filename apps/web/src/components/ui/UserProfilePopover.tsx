@@ -160,9 +160,9 @@ const UserProfilePopover = ({
                 // Fetch guild-specific roles if guildId provided
                 if (user.guildId) {
                     try {
-                        const memberRoles = await api.guilds.getMemberRoles(user.guildId, user.id) as any[];
+                        const memberRoles = await api.guilds.getMemberRoles(user.guildId, user.id) as Array<{ name: string; color?: number }>;
                         if (!cancelled && memberRoles && memberRoles.length > 0) {
-                            setRoles(memberRoles.map((r: any) => {
+                            setRoles(memberRoles.map((r) => {
                                 const colorInt = r.color ?? 0;
                                 const colorStr = colorInt ? `#${colorInt.toString(16).padStart(6, '0')}` : '#99aab5';
                                 return { name: r.name, color: colorStr };

@@ -110,7 +110,7 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
             for (const guild of guilds) {
                 try {
                     const channels = await api.channels.getGuildChannels(guild.id);
-                    results.push({ guildId: guild.id, channels: channels as any[] });
+                    results.push({ guildId: guild.id, channels: channels as ChannelCacheEntry['channels'] });
                 } catch {
                     // skip guilds where channel fetch fails
                 }

@@ -67,6 +67,7 @@ import { getDeterministicGradient } from './utils/colors';
 import { api, API_BASE, getAccessToken, setAccessToken, ApiRequestError } from './lib/api';
 import { connectSocket, disconnectSocket, getSocket, onPresenceUpdate, onVoiceStateUpdate, onSocketReconnect, onCallInvite, onCallCancel, setPresence as setSocketPresence, onGuildJoined, onGuildLeft, onGuildUpdate, onGuildDelete, onChannelUpdate, onChannelDelete, onGuildMemberAdd, onGuildMemberRemove, onDmChannelCreate, joinGuildRoom, onTypingStart, onNotificationCreate, type CallInvitePayload } from './lib/socket';
 import { useMobileSwipe } from './hooks/useMobileSwipe';
+import { haptic } from './utils/haptics';
 import { useIsMobile } from './hooks/useIsMobile';
 import { useQuerySocketSync, useGuildsQuery, useDmChannelsQuery, invalidateGuilds } from './hooks/queries';
 import { queryClient } from './lib/queryClient';
@@ -102,6 +103,7 @@ import { Tooltip } from './components/ui/Tooltip';
 import { ModalWrapper } from './components/ui/ModalWrapper';
 import { useTheme, type AppTheme } from './components/ui/ThemeProvider';
 import { getGuildTheme, setGuildTheme, removeGuildTheme, hasGuildTheme } from './utils/guildTheme';
+import { getAllThemes } from './themes/registry';
 import { ContextMenuProvider, useContextMenu } from './components/ui/ContextMenu';
 import { ToastProvider, useToast } from './components/ui/ToastManager';
 import { Shield as ShieldIcon } from 'lucide-react';
@@ -112,6 +114,7 @@ import AnimatedGuildIcon from './components/ui/AnimatedGuildIcon';
 import { SkeletonChannelGroup, SkeletonDmList, SkeletonMemberList } from './components/ui/SkeletonLoader';
 import AmbientPlayer from './components/ui/AmbientPlayer';
 import ConnectionBanner from './components/ui/ConnectionBanner';
+import ThemePreviewBanner from './components/ui/ThemePreviewBanner';
 import SeasonalOverlay from './components/ui/SeasonalOverlay';
 import LiveAnnouncer, { announce } from './components/ui/LiveAnnouncer';
 import { VoiceProvider, useVoice } from './contexts/VoiceContext';
@@ -497,28 +500,12 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                 </div>
             )}
             {themePickerGuild && (() => {
-                const THEME_OPTIONS: { value: string; label: string }[] = [
-                    { value: '', label: 'Default (No Override)' },
-                    { value: 'default', label: 'Dark' }, { value: 'glass', label: 'Glass' },
-                    { value: 'synthwave', label: 'Synthwave' }, { value: 'nord', label: 'Nord' },
-                    { value: 'solarized', label: 'Solarized' }, { value: 'dracula', label: 'Dracula' },
-                    { value: 'monokai', label: 'Monokai' }, { value: 'catppuccin', label: 'Catppuccin' },
-                    { value: 'gruvbox', label: 'Gruvbox' }, { value: 'tokyo_night', label: 'Tokyo Night' },
-                    { value: 'everforest', label: 'Everforest' }, { value: 'cyberpunk', label: 'Cyberpunk' },
-                    { value: 'sakura', label: 'Sakura' }, { value: 'ocean', label: 'Ocean' },
-                    { value: 'forest', label: 'Forest' }, { value: 'midnight', label: 'Midnight' },
-                    { value: 'aurora', label: 'Aurora' }, { value: 'vaporwave', label: 'Vaporwave' },
-                    { value: 'terminal', label: 'Terminal' }, { value: 'matrix', label: 'Matrix' },
-                    { value: 'neon', label: 'Neon' }, { value: 'coffee', label: 'Coffee' },
-                    { value: 'lavender', label: 'Lavender' }, { value: 'rose_gold', label: 'Rose Gold' },
-                    { value: 'arctic', label: 'Arctic' }, { value: 'obsidian', label: 'Obsidian' },
-                    { value: 'fire', label: 'Fire' }, { value: 'desert', label: 'Desert' },
-                    { value: 'pastel', label: 'Pastel' }, { value: 'monochrome', label: 'Monochrome' },
-                ];
+                const registryThemes = getAllThemes();
                 const currentGuildTheme = getGuildTheme(themePickerGuild.id) || '';
+                const isSelected = (id: string) => currentGuildTheme === id || (!currentGuildTheme && id === '');
                 return (
                     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }} onClick={() => setThemePickerGuild(null)}>
-                        <div style={{ width: '400px', maxHeight: '80vh', background: 'var(--bg-elevated)', borderRadius: '16px', padding: '24px', border: '1px solid var(--stroke)', boxShadow: '0 24px 48px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+                        <div style={{ width: '440px', maxHeight: '80vh', background: 'var(--bg-elevated)', borderRadius: '16px', padding: '24px', border: '1px solid var(--stroke)', boxShadow: '0 24px 48px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                                 <div>
                                     <h3 style={{ fontSize: '18px', fontWeight: 700 }}>Portal Theme</h3>
@@ -528,28 +515,54 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                             </div>
                             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>Choose a theme that will be applied whenever you visit this portal.</p>
                             <div style={{ overflowY: 'auto', flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                                {THEME_OPTIONS.map(opt => (
+                                {/* Default option to clear override */}
+                                <button
+                                    onClick={() => {
+                                        removeGuildTheme(themePickerGuild.id);
+                                        addToast({ title: 'Portal theme removed', variant: 'success' });
+                                        setThemePickerGuild(null);
+                                    }}
+                                    style={{
+                                        padding: '10px 12px', borderRadius: '8px', cursor: 'pointer',
+                                        background: isSelected('') ? 'rgba(88, 101, 242, 0.15)' : 'var(--bg-tertiary)',
+                                        border: isSelected('') ? '1px solid var(--accent-primary)' : '1px solid var(--stroke)',
+                                        color: isSelected('') ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                        fontSize: '13px', fontWeight: 600, textAlign: 'left',
+                                        transition: 'all 0.15s', gridColumn: '1 / -1',
+                                        display: 'flex', alignItems: 'center', gap: '8px',
+                                    }}
+                                >
+                                    <span style={{ width: '20px', height: '20px', borderRadius: '50%', border: '2px dashed var(--text-muted)', flexShrink: 0 }} />
+                                    Default (no override)
+                                </button>
+                                {/* Registry themes */}
+                                {registryThemes.map(theme => (
                                     <button
-                                        key={opt.value}
+                                        key={theme.id}
                                         onClick={() => {
-                                            if (opt.value === '') {
-                                                removeGuildTheme(themePickerGuild.id);
-                                            } else {
-                                                setGuildTheme(themePickerGuild.id, opt.value);
-                                            }
-                                            addToast({ title: opt.value ? `Theme set to ${opt.label}` : 'Portal theme removed', variant: 'success' });
+                                            setGuildTheme(themePickerGuild.id, theme.id);
+                                            addToast({ title: `Theme set to ${theme.name}`, variant: 'success' });
                                             setThemePickerGuild(null);
                                         }}
                                         style={{
                                             padding: '10px 12px', borderRadius: '8px', cursor: 'pointer',
-                                            background: currentGuildTheme === opt.value || (!currentGuildTheme && opt.value === '') ? 'rgba(88, 101, 242, 0.15)' : 'var(--bg-tertiary)',
-                                            border: currentGuildTheme === opt.value || (!currentGuildTheme && opt.value === '') ? '1px solid var(--accent-primary)' : '1px solid var(--stroke)',
-                                            color: currentGuildTheme === opt.value || (!currentGuildTheme && opt.value === '') ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                            background: isSelected(theme.id) ? 'rgba(88, 101, 242, 0.15)' : 'var(--bg-tertiary)',
+                                            border: isSelected(theme.id) ? '1px solid var(--accent-primary)' : '1px solid var(--stroke)',
+                                            color: isSelected(theme.id) ? 'var(--accent-primary)' : 'var(--text-secondary)',
                                             fontSize: '13px', fontWeight: 600, textAlign: 'left',
                                             transition: 'all 0.15s',
+                                            display: 'flex', alignItems: 'center', gap: '8px',
                                         }}
                                     >
-                                        {opt.label}
+                                        {/* Color preview swatches */}
+                                        <span style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                                            <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: theme.preview.bg }} />
+                                            <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: theme.preview.sidebar }} />
+                                            <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: theme.preview.accent }} />
+                                            <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: theme.preview.text }} />
+                                        </span>
+                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{theme.name}</span>
+                                        <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginLeft: 'auto', flexShrink: 0 }}>{theme.isDark ? 'dark' : 'light'}</span>
                                     </button>
                                 ))}
                             </div>
@@ -2166,7 +2179,7 @@ type MemberWithPresence = {
     presence?: 'online' | 'idle' | 'dnd' | 'invisible' | 'offline';
 };
 
-const MembersSidebar = ({ onOpenProfile: _onOpenProfile }: { onOpenProfile: () => void }) => {
+const MembersSidebar = ({ onOpenProfile: _onOpenProfile, isMobileOpen, onCloseMobile }: { onOpenProfile: () => void; isMobileOpen?: boolean; onCloseMobile?: () => void }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const { addToast } = useToast();
@@ -2434,7 +2447,9 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile }: { onOpenProfile: () =
     };
 
     return (
-        <aside className="members-sidebar glass-panel" aria-label="Members">
+        <>
+        {isMobileOpen && <div className={`members-sidebar-backdrop ${isMobileOpen ? 'visible' : ''}`} onClick={onCloseMobile} />}
+        <aside className={`members-sidebar glass-panel ${isMobileOpen ? 'open' : ''}`} aria-label="Members">
             <div style={{ padding: '10px 12px 8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <input
                     value={searchQuery}
@@ -2631,6 +2646,7 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile }: { onOpenProfile: () =
                 </div>
             )}
         </aside>
+        </>
     );
 };
 
@@ -2696,6 +2712,7 @@ export const AppLayout = () => {
     const [incomingCall, setIncomingCall] = useState<CallInvitePayload | null>(null);
     const [isGuildRailOpen, setIsGuildRailOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isMemberDrawerOpen, setIsMemberDrawerOpen] = useState(false);
     const mainContentRef = useRef<HTMLDivElement>(null);
     const { user: ctxUser, loading: userLoading, gratoniteBalance, setGratoniteBalance } = useUser();
     const { setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects, reducedEffects, screenReaderMode } = useTheme();
@@ -3380,6 +3397,7 @@ export const AppLayout = () => {
     useEffect(() => {
         setIsGuildRailOpen(false);
         setIsSidebarOpen(false);
+        setIsMemberDrawerOpen(false);
     }, [location.pathname]);
 
     // Browser back button: push history state when modal opens, pop to close
@@ -3396,6 +3414,7 @@ export const AppLayout = () => {
             }
             setIsGuildRailOpen(false);
             setIsSidebarOpen(false);
+            setIsMemberDrawerOpen(false);
         };
         window.addEventListener('popstate', onPopState);
         return () => window.removeEventListener('popstate', onPopState);
@@ -3442,6 +3461,7 @@ export const AppLayout = () => {
     // Mobile swipe gestures
     useMobileSwipe(mainContentRef, {
         onSwipeRight: () => {
+            haptic.swipe();
             if (isMobile) {
                 const guildMatch = location.pathname.match(/\/guild\/([^/]+)\/(?:channel|voice)\//);
                 if (guildMatch) navigate(`/guild/${guildMatch[1]}`);
@@ -3452,6 +3472,7 @@ export const AppLayout = () => {
             setIsGuildRailOpen(true);
         },
         onSwipeLeft: () => {
+            haptic.swipe();
             if (isMobile) return;
             if (isGuildRailOpen) { setIsGuildRailOpen(false); return; }
             if (isChatRoute) setIsSidebarOpen(true);
@@ -3554,6 +3575,7 @@ export const AppLayout = () => {
                                 if (isMobile) return;
                                 setIsSidebarOpen(!isSidebarOpen);
                             },
+                            toggleMemberDrawer: () => setIsMemberDrawerOpen(prev => !prev),
                             gratoniteBalance,
                             setGratoniteBalance,
                             userProfile,
@@ -3611,7 +3633,7 @@ export const AppLayout = () => {
                             </AnimatePresence>
                         );
                     })()}
-                    {isChatRoute && isSidebarOpen && <MembersSidebar onOpenProfile={() => setActiveModal('userProfile')} />}
+                    {isChatRoute && (isSidebarOpen || (isMobile && isMemberDrawerOpen)) && <MembersSidebar onOpenProfile={() => setActiveModal('userProfile')} isMobileOpen={isMemberDrawerOpen} onCloseMobile={() => setIsMemberDrawerOpen(false)} />}
                 </main>
 
                 {/* Mobile Bottom Navigation (< 768px) — 3 tabs, hidden in chat */}
@@ -3806,6 +3828,7 @@ function App() {
         <ToastProvider>
             <AchievementToastProvider>
             <AmbientPlayer />
+            <ThemePreviewBanner />
             <ConnectionBanner />
             {(window as any).gratoniteDesktop?.isDesktop && <UpdateBanner />}
             <SeasonalOverlay />

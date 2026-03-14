@@ -22,6 +22,8 @@ export const DEFAULT_KEYBINDINGS: KeyBinding[] = [
     { id: 'editLast', label: 'Edit Last Message', category: 'Messaging', defaultCombo: 'ArrowUp' },
     { id: 'emojiPicker', label: 'Open Emoji Picker', category: 'Messaging', defaultCombo: 'Ctrl+E' },
     { id: 'markdownPreview', label: 'Toggle Preview', category: 'Messaging', defaultCombo: 'Ctrl+Shift+P' },
+    // Appearance
+    { id: 'openThemePicker', label: 'Open Theme Picker', category: 'Appearance', defaultCombo: 'Ctrl+Shift+T' },
     // Voice & Call
     { id: 'toggleMute', label: 'Toggle Mute', category: 'Voice & Call', defaultCombo: 'Meta+Shift+M' },
     { id: 'toggleDeafen', label: 'Toggle Deafen', category: 'Voice & Call', defaultCombo: 'Meta+Shift+D' },

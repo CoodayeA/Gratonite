@@ -13,6 +13,20 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2.1',
+    date: 'March 2026',
+    entries: [
+      { type: 'feature', text: 'Complete theme system rebuild with live preview, preset themes, and custom theme builder' },
+      { type: 'feature', text: 'Per-server theme overrides — set a unique look for each guild' },
+      { type: 'feature', text: 'Theme marketplace — publish, browse, and install community themes' },
+      { type: 'improvement', text: 'CSS variable-driven theming — all UI elements now respect your theme' },
+      { type: 'improvement', text: 'Smooth theme transitions with View Transitions API support' },
+      { type: 'improvement', text: 'Theme-aware embeds, toasts, and notification styling' },
+      { type: 'improvement', text: 'Keyboard shortcut Ctrl+Shift+T to quickly open the theme picker' },
+      { type: 'fix', text: 'Fixed theme persistence across sessions and page refreshes' },
+    ],
+  },
+  {
     version: '2.0',
     date: 'March 2026',
     entries: [

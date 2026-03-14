@@ -1,0 +1,527 @@
+/* Neobrutalism theme gets stronger offset shadows */
+[data-theme="neobrutalism"] .neo-shadow,
+[data-theme="neobrutalism"] .action-card {
+    box-shadow: 6px 6px 0 var(--shadow-color, rgba(0, 0, 0, 0.25));
+}
+[data-theme="neobrutalism"] .neo-shadow-hover:hover,
+[data-theme="neobrutalism"] .action-card:hover {
+    box-shadow: 8px 8px 0 var(--shadow-color, rgba(0, 0, 0, 0.25));
+    transform: translate(-2px, -2px);
+}
+/* ==========================================
+   NEOBRUTALISM SPECIFIC OVERRIDES
+   Premium, tactile, physically responsive.
+   Every surface gets the treatment.
+   ========================================== */
+
+/* --- GLOBAL RESET FOR NEOBRUTALISM --- */
+[data-theme="neobrutalism"] * {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- BODY / ROOT BACKGROUND: No dark orbs — solid warm beige --- */
+[data-theme="neobrutalism"] body {
+    background: var(--bg-app) !important;
+}
+
+[data-theme="neobrutalism"] .bg-orbs {
+    background: var(--bg-app) !important;
+}
+
+[data-theme="neobrutalism"] .orb {
+    display: none !important;
+}
+
+[data-theme="neobrutalism"] .app-container {
+    background: var(--bg-app) !important;
+}
+
+/* --- MAIN CONTENT: Opaque by default, transparent when custom bg is set --- */
+[data-theme="neobrutalism"] .main-content-wrapper {
+    background: var(--bg-channel) !important;
+}
+
+[data-theme="neobrutalism"] .main-content-wrapper.has-custom-bg {
+    background: transparent !important;
+}
+
+[data-theme="neobrutalism"] .top-bar {
+    background: var(--bg-elevated) !important;
+    backdrop-filter: none !important;
+    border-bottom: 3px solid #000000 !important;
+}
+
+[data-theme="neobrutalism"] .message-area {
+    background: var(--bg-channel) !important;
+}
+
+/* When custom bg is set, make message area transparent so bg shows through */
+[data-theme="neobrutalism"] .has-custom-bg .message-area {
+    background: transparent !important;
+}
+
+[data-theme="neobrutalism"] .chat-media-attachment {
+    border: 3px solid #000 !important;
+    box-shadow: 4px 4px 0 #000 !important;
+    transform: translate(-2px, -2px);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+[data-theme="neobrutalism"] .chat-media-attachment:hover {
+    transform: translate(0, 0);
+    box-shadow: 0 0 0 #000 !important;
+}
+
+[data-theme="neobrutalism"][data-color-mode="dark"] .chat-media-attachment {
+    border: 3px solid var(--text-primary) !important;
+    box-shadow: 4px 4px 0 var(--accent-primary) !important;
+}
+
+[data-theme="neobrutalism"][data-color-mode="dark"] .chat-media-attachment:hover {
+    box-shadow: 0 0 0 var(--accent-primary) !important;
+}
+
+[data-theme="neobrutalism"] .input-area {
+    background: var(--bg-elevated) !important;
+    border-top: 3px solid #000000 !important;
+    padding: 12px 24px !important;
+}
+
+/* --- THREAD PANEL --- */
+[data-theme="neobrutalism"] .thread-panel {
+    background: var(--bg-elevated) !important;
+    border-left: 3px solid #000000 !important;
+    backdrop-filter: none !important;
+}
+
+/* Only hide the DEFAULT gradient — custom backgrounds should still show */
+[data-theme="neobrutalism"] .app-bg-gradient {
+    display: none !important;
+}
+
+[data-theme="neobrutalism"] .app-layout {
+    background: var(--bg-app) !important;
+}
+
+/* --- GUILD RAIL: Bold chunky sidebar --- */
+[data-theme="neobrutalism"] .guild-rail {
+    background: var(--bg-rail) !important;
+    backdrop-filter: none !important;
+    border-right: 3px solid #000000 !important;
+}
+
+[data-theme="neobrutalism"] .guild-icon {
+    border-radius: var(--radius-md) !important;
+    border: 3px solid #000000 !important;
+    background: var(--bg-elevated) !important;
+    box-shadow: 3px 3px 0 #000000;
+    transition: all 0.1s ease !important;
+}
+
+[data-theme="neobrutalism"] .guild-icon:hover {
+    border-radius: var(--radius-md) !important;
+    background: var(--accent-primary) !important;
+    color: #000000 !important;
+    transform: translate(-2px, -2px) !important;
+    box-shadow: 5px 5px 0 #000000 !important;
+}
+
+[data-theme="neobrutalism"] .guild-icon:active {
+    transform: translate(3px, 3px) !important;
+    box-shadow: 0 0 0 #000000 !important;
+}
+
+[data-theme="neobrutalism"] .guild-icon.active {
+    background: var(--accent-primary) !important;
+    border-color: #000000 !important;
+    color: #000000 !important;
+    box-shadow: 4px 4px 0 #000000 !important;
+}
+
+[data-theme="neobrutalism"] .guild-icon::before {
+    background: #000000 !important;
+    border-radius: 0 4px 4px 0 !important;
+}
+
+/* --- CHANNEL SIDEBAR: Clean, bold borders --- */
+[data-theme="neobrutalism"] .channel-sidebar {
+    background: var(--bg-sidebar) !important;
+    backdrop-filter: none !important;
+    border-right: 3px solid #000000 !important;
+}
+
+[data-theme="neobrutalism"] .sidebar-header {
+    background: none !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    border-bottom: 3px solid #000000 !important;
+}
+
+[data-theme="neobrutalism"] .sidebar-header::after {
+    display: none !important;
+}
+
+/* --- CHANNEL ITEMS: Stacked cards --- */
+[data-theme="neobrutalism"] .channel-item {
+    border: 2px solid transparent;
+    border-radius: var(--radius-md) !important;
+    font-weight: 600 !important;
+    transition: all 0.1s ease !important;
+}
+
+[data-theme="neobrutalism"] .channel-item:hover {
+    background: var(--accent-primary) !important;
+    color: #000000 !important;
+    border-color: #000000;
+    box-shadow: 3px 3px 0 #000000;
+    transform: translate(-1px, -1px);
+}
+
+[data-theme="neobrutalism"] .channel-item.active {
+    background: var(--accent-primary) !important;
+    color: #000000 !important;
+    border: 2px solid #000000 !important;
+    box-shadow: 3px 3px 0 #000000 !important;
+    font-weight: 800 !important;
+}
+
+[data-theme="neobrutalism"] .channel-item.active::before {
+    background: #000000 !important;
+}
+
+/* --- USER PANEL: Solid, bordered --- */
+[data-theme="neobrutalism"] .user-panel {
+    background: var(--bg-elevated) !important;
+    backdrop-filter: none !important;
+    border-top: 3px solid #000000 !important;
+}
+
+[data-theme="neobrutalism"] .user-panel::before {
+    display: none !important;
+}
+
+[data-theme="neobrutalism"] .user-avatar {
+    border: 3px solid #000000 !important;
+    border-radius: 50% !important;
+    box-shadow: 3px 3px 0 #000000 !important;
+}
+
+/* --- SEARCH BAR --- */
+[data-theme="neobrutalism"] .search-input,
+[data-theme="neobrutalism"] input[type="text"] {
+    border: 3px solid #000000 !important;
+    border-radius: var(--radius-md) !important;
+    background: var(--bg-elevated) !important;
+    box-shadow: 3px 3px 0 #000000 !important;
+}
+
+[data-theme="neobrutalism"] .search-input:focus,
+[data-theme="neobrutalism"] input[type="text"]:focus {
+    box-shadow: 5px 5px 0 #000000 !important;
+    transform: translate(-1px, -1px);
+}
+
+/* --- MEMBER SIDEBAR: Mint green for color-blocking contrast --- */
+[data-theme="neobrutalism"] .member-sidebar {
+    background: #a8e6cf !important;
+    /* Direct mint — no var fallback */
+    backdrop-filter: none !important;
+    border-left: 3px solid #000000 !important;
+}
+
+/* --- GLASS PANEL OVERRIDE --- */
+[data-theme="neobrutalism"] .glass-panel {
+    backdrop-filter: none !important;
+    background: var(--bg-elevated) !important;
+    border: 3px solid #000000 !important;
+    box-shadow: var(--shadow-panel) !important;
+}
+
+/* --- BUTTONS: Physical press effect --- */
+[data-theme="neobrutalism"] .auth-button {
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: 3px solid #000000 !important;
+    box-shadow: 4px 4px 0 #000000;
+    transition: all 0.1s ease !important;
+}
+
+[data-theme="neobrutalism"] .auth-button:hover {
+    transform: translate(-2px, -2px) !important;
+    box-shadow: 6px 6px 0 #000000 !important;
+}
+
+[data-theme="neobrutalism"] .auth-button:active {
+    transform: translate(4px, 4px) !important;
+    box-shadow: 0 0 0 #000000 !important;
+}
+
+/* --- HOVER LIFT: Hard shadow offset instead of soft glow --- */
+[data-theme="neobrutalism"] .hover-lift:hover {
+    transform: translate(-3px, -3px) !important;
+    box-shadow: 6px 6px 0 #000000 !important;
+    border: 3px solid #000000;
+}
+
+[data-theme="neobrutalism"] .hover-lift:active {
+    transform: translate(3px, 3px) !important;
+    box-shadow: 0 0 0 #000000 !important;
+}
+
+/* --- MODALS: Stamp-like hard shadows --- */
+[data-theme="neobrutalism"] .modal-overlay {
+    background: rgba(0, 0, 0, 0.25) !important;
+    backdrop-filter: none !important;
+}
+
+[data-theme="neobrutalism"] .modal-animation-controller>div>div,
+[data-theme="neobrutalism"] .modal-overlay>div {
+    border: 3px solid #000000 !important;
+    box-shadow: 12px 12px 0 #000000 !important;
+    border-radius: var(--radius-lg) !important;
+}
+
+/* --- CONTEXT MENU --- */
+[data-theme="neobrutalism"] [role="menu"] {
+    border: 3px solid #000000 !important;
+    box-shadow: 6px 6px 0 #000000 !important;
+    backdrop-filter: none !important;
+    background: var(--bg-elevated) !important;
+}
+
+/* --- CHAT INPUT AREA --- */
+[data-theme="neobrutalism"] .chat-input-wrapper {
+    border: 3px solid #000000 !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: 4px 4px 0 #000000 !important;
+    background: var(--bg-elevated) !important;
+}
+
+/* --- MESSAGE ACTION BAR --- */
+[data-theme="neobrutalism"] .message-action-btn {
+    border: 2px solid #000000 !important;
+    border-radius: var(--radius-sm) !important;
+    background: var(--bg-elevated) !important;
+}
+
+[data-theme="neobrutalism"] .message-action-btn:hover {
+    background: var(--accent-primary) !important;
+    color: #000000 !important;
+    box-shadow: 2px 2px 0 #000000 !important;
+    transform: translate(-1px, -1px);
+}
+
+/* --- SCROLLBAR --- */
+[data-theme="neobrutalism"] ::-webkit-scrollbar-thumb {
+    background: #000000 !important;
+    border-radius: 0 !important;
+    border: none !important;
+}
+
+[data-theme="neobrutalism"] ::-webkit-scrollbar-track {
+    background: var(--bg-sidebar) !important;
+}
+
+[data-theme="neobrutalism"] * {
+    scrollbar-color: #000000 var(--bg-sidebar) !important;
+}
+
+/* --- SKELETON LOADERS --- */
+[data-theme="neobrutalism"] .skeleton-box {
+    background: var(--bg-tertiary) !important;
+    border: 2px solid #000000 !important;
+    animation: none !important;
+}
+
+/* --- CATEGORY HEADERS --- */
+[data-theme="neobrutalism"] .channel-category,
+[data-theme="neobrutalism"] .member-category {
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.5px !important;
+    color: #000000 !important;
+}
+
+/* --- TOOLTIP: Bold, no-frills --- */
+[data-theme="neobrutalism"] [role="tooltip"],
+[data-theme="neobrutalism"] .tooltip-content {
+    border: 3px solid #000000 !important;
+    box-shadow: 4px 4px 0 #000000 !important;
+    background: var(--accent-primary) !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
+}
+
+/* --- VOICE CONNECTED BANNER --- */
+[data-theme="neobrutalism"] .voice-connected-banner {
+    border: 3px solid #000000 !important;
+    box-shadow: 4px 4px 0 #000000 !important;
+    background: var(--success) !important;
+    color: #000000 !important;
+}
+
+/* --- STATUS DOTS --- */
+[data-theme="neobrutalism"] .status-dot {
+    border: 2px solid #000000 !important;
+}
+
+/* --- UNREAD BADGES --- */
+[data-theme="neobrutalism"] .unread-badge,
+[data-theme="neobrutalism"] .mobile-nav-badge {
+    border: 2px solid #000000 !important;
+    font-weight: 800 !important;
+}
+
+/* --- TOAST NOTIFICATIONS --- */
+[data-theme="neobrutalism"] .toast-item {
+    border: 3px solid #000000 !important;
+    box-shadow: 4px 4px 0 #000000 !important;
+    background: var(--bg-elevated) !important;
+}
+
+/* --- INVITE BUTTON (Top bar) --- */
+[data-theme="neobrutalism"] .invite-btn,
+[data-theme="neobrutalism"] button[style*="background: var(--accent-primary)"] {
+    border: 3px solid #000000 !important;
+    box-shadow: 3px 3px 0 #000000 !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+}
+
+/* --- AUTH CARD --- */
+[data-theme="neobrutalism"] .auth-card {
+    box-shadow: 12px 12px 0 #000000 !important;
+    border: 3px solid #000000 !important;
+}
+
+/* --- AUTH INPUT --- */
+[data-theme="neobrutalism"] .auth-input {
+    border: 3px solid #000000 !important;
+    box-shadow: 3px 3px 0 #000000 !important;
+}
+
+[data-theme="neobrutalism"] .auth-input:focus {
+    box-shadow: 5px 5px 0 #000000 !important;
+    transform: translate(-1px, -1px);
+}
+
+/* --- DECORATIVE TYPOGRAPHY: Magazine / Poster feel --- */
+
+/* Sidebar/server name: Big, bold, poster-style */
+[data-theme="neobrutalism"] .sidebar-header h2,
+[data-theme="neobrutalism"] .sidebar-header {
+    font-size: 1.15rem !important;
+    font-weight: 900 !important;
+    letter-spacing: 2px !important;
+    text-transform: uppercase !important;
+}
+
+/* Category labels as design elements */
+[data-theme="neobrutalism"] .channel-category,
+[data-theme="neobrutalism"] .member-category {
+    font-size: 0.7rem !important;
+    font-weight: 900 !important;
+    letter-spacing: 3px !important;
+    text-transform: uppercase !important;
+    color: #000000 !important;
+    padding: 12px 8px 6px !important;
+}
+
+/* Channel names: slightly bolder */
+[data-theme="neobrutalism"] .channel-item {
+    font-weight: 700 !important;
+    font-size: 0.9rem !important;
+}
+
+/* Top bar channel name */
+[data-theme="neobrutalism"] .top-bar h2 {
+    font-weight: 800 !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* Message author names */
+[data-theme="neobrutalism"] .msg-author {
+    font-weight: 800 !important;
+    letter-spacing: 0.3px !important;
+}
+
+/* Messages with bordered cards — COMPACT spacing */
+[data-theme="neobrutalism"] .message {
+    border: 2px solid transparent;
+    border-radius: 0 !important;
+    transition: border-color 0.1s ease;
+    padding: 4px 12px !important;
+    margin: 0 !important;
+    gap: 12px !important;
+}
+
+[data-theme="neobrutalism"] .message:hover {
+    border-color: rgba(0, 0, 0, 0.15);
+    background: rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Tighter avatar size for compact messages */
+[data-theme="neobrutalism"] .msg-avatar {
+    width: 38px !important;
+    height: 38px !important;
+    font-size: 0.95rem !important;
+    border-radius: 50% !important;
+    box-shadow: 2px 2px 0 #000000 !important;
+}
+
+[data-theme="neobrutalism"] .msg-header {
+    margin-bottom: 0px !important;
+}
+
+[data-theme="neobrutalism"] .msg-body {
+    margin-top: 0px !important;
+    line-height: 1.4 !important;
+}
+
+/* Home action cards: alternating color blocks */
+[data-theme="neobrutalism"] .hover-lift:nth-child(1) {
+    background: var(--neo-butter) !important;
+}
+
+[data-theme="neobrutalism"] .hover-lift:nth-child(2) {
+    background: var(--neo-mint) !important;
+}
+
+[data-theme="neobrutalism"] .hover-lift:nth-child(3) {
+    background: var(--neo-lavender) !important;
+}
+
+[data-theme="neobrutalism"] .hover-lift:nth-child(4) {
+    background: var(--neo-peach) !important;
+}
+
+[data-theme="neobrutalism"] .hover-lift:nth-child(5) {
+    background: var(--neo-sky) !important;
+}
+
+[data-theme="neobrutalism"] .hover-lift:nth-child(6) {
+    background: var(--neo-coral) !important;
+}
+
+/* Ensure all hover-lift cards have borders */
+[data-theme="neobrutalism"] .hover-lift {
+    border: 3px solid #000000 !important;
+    box-shadow: 4px 4px 0 #000000 !important;
+}
+
+/* Guild icons with alternating colors */
+[data-theme="neobrutalism"] .guild-icon:nth-child(3) {
+    background: var(--neo-peach) !important;
+}
+
+[data-theme="neobrutalism"] .guild-icon:nth-child(4) {
+    background: var(--neo-sky) !important;
+}
+
+[data-theme="neobrutalism"] .guild-icon:nth-child(5) {
+    background: var(--neo-mint) !important;
+}
+

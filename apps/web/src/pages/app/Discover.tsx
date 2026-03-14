@@ -392,8 +392,9 @@ const Discover = () => {
             addToast({ title: 'Failed to load bots', description: 'Could not fetch bot listings.', variant: 'error' });
         }),
 
-        api.themes.browse().then(items => {
-            setDiscoverThemes(Array.isArray(items) ? items : []);
+        api.themes.browse().then((raw: any) => {
+            const items = Array.isArray(raw) ? raw : raw?.items || [];
+            setDiscoverThemes(items);
         }).catch(() => {
             addToast({ title: 'Failed to load themes', description: 'Could not fetch available themes.', variant: 'error' });
         }),

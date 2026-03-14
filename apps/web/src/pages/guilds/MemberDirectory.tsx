@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Search, Users, ChevronDown, Download, Shield, X } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
-import { api } from '../../lib/api';
+import { api, type PresenceStatus } from '../../lib/api';
 import Avatar from '../../components/ui/Avatar';
 import UserProfilePopover, { type PopoverUserInput } from '../../components/ui/UserProfilePopover';
 
@@ -14,7 +14,7 @@ interface Member {
     avatarHash?: string | null;
     roleIds?: string[];
     roles?: string[];
-    status?: string;
+    status?: PresenceStatus;
     joinedAt: string;
 }
 
@@ -197,7 +197,7 @@ const MemberDirectory = () => {
             name,
             handle: member.username || member.userId,
             avatarHash: member.avatarHash,
-            status: (member.status as any) || 'offline',
+            status: member.status || 'offline',
             guildId,
         });
         setProfilePos({ x: e.clientX, y: e.clientY });
@@ -225,7 +225,7 @@ const MemberDirectory = () => {
         outline: 'none',
         fontSize: '12px',
         cursor: 'pointer',
-        appearance: 'auto' as any,
+        appearance: 'auto',
     };
 
     return (
@@ -373,7 +373,7 @@ const MemberDirectory = () => {
                                                 avatarHash={member.avatarHash}
                                                 displayName={name}
                                                 size={36}
-                                                status={member.status as any}
+                                                status={member.status}
                                             />
                                             <div style={{ minWidth: 0 }}>
                                                 <div style={{ fontSize: '14px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

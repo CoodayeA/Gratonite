@@ -1221,7 +1221,7 @@ const VoiceChannel = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '1200px' }}>
                             {renderTile(pinned, true)}
                             {unpinned.length > 0 && (
-                                <div style={{
+                                <div className="voice-participant-grid" style={{
                                     display: 'grid',
                                     gridTemplateColumns: `repeat(${Math.min(unpinned.length, 4)}, 1fr)`,
                                     gap: '12px',
@@ -1231,7 +1231,7 @@ const VoiceChannel = () => {
                             )}
                         </div>
                     ) : (
-                        <div style={{
+                        <div className="voice-participant-grid" style={{
                             display: 'grid',
                             gridTemplateColumns: getGridTemplate(allParticipants.length),
                             gap: '16px',
@@ -1436,7 +1436,7 @@ const VoiceChannel = () => {
 
             {/* Voice Controls with Tooltips */}
             {(isConnected || isConnecting) && (
-                <div style={{ position: 'absolute', bottom: '32px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '16px', alignItems: 'center', background: 'var(--bg-elevated)', padding: '12px 24px', borderRadius: 'var(--radius-xl)', border: '1px solid var(--stroke)', boxShadow: 'var(--shadow-panel)', zIndex: 10 }}>
+                <div className="voice-controls" style={{ position: 'absolute', bottom: '32px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '16px', alignItems: 'center', background: 'var(--bg-elevated)', padding: '12px 24px', borderRadius: 'var(--radius-xl)', border: '1px solid var(--stroke)', boxShadow: 'var(--shadow-panel)', zIndex: 10 }}>
                     <div className="tooltip-container">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <button

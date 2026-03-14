@@ -46,6 +46,9 @@ coverage/
 # Archive (old deploys)
 archive/
 
+# Backup files
+*.bak
+
 # TypeScript cache
 *.tsbuildinfo
 .worktrees/

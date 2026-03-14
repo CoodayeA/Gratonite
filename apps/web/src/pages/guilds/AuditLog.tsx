@@ -176,8 +176,8 @@ const AuditLog = () => {
         if (!guildId) return;
         setLoading(true);
         api.guilds.getAuditLog(guildId, { limit: 100 }).then(res => {
-            const items: any[] = Array.isArray(res) ? res : (res as any).items ?? [];
-            const mapped: AuditLogEntry[] = items.map((log: any) => ({
+            const items: Record<string, unknown>[] = Array.isArray(res) ? res : ((res as Record<string, unknown>).items ?? []) as Record<string, unknown>[];
+            const mapped: AuditLogEntry[] = items.map((log) => ({
                 id: log.id,
                 action: log.action ?? 'UNKNOWN',
                 description: '',
