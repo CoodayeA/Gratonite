@@ -66,6 +66,12 @@ interface SendMailOptions {
  * @param options - Recipient, subject, and HTML body.
  */
 export async function sendMail({ to, subject, html }: SendMailOptions): Promise<void> {
+  // Never send real emails to internal bot domains
+  const domain = to.split('@')[1]?.toLowerCase();
+  if (domain === 'gratonite.internal') {
+    return; // silently skip — bot accounts don't have real email
+  }
+
   await transporter.sendMail({
     from: process.env.SMTP_FROM || 'noreply@gratonite.chat',
     to,
