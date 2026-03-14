@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import { guildWordFilters } from '../db/schema/guild-word-filters';
 import { Permissions } from '../db/schema/roles';
@@ -40,10 +40,11 @@ wordFilterRouter.put('/', requireAuth, async (req: Request, res: Response): Prom
     return;
   }
 
-  const { words, action, exemptRoles } = req.body as {
+  const { words, action, exemptRoles, regexPatterns } = req.body as {
     words: string[];
     action: 'block' | 'delete' | 'warn';
     exemptRoles: string[];
+    regexPatterns?: string[];
   };
 
   if (!Array.isArray(words) || !['block', 'delete', 'warn'].includes(action)) {
@@ -53,6 +54,19 @@ wordFilterRouter.put('/', requireAuth, async (req: Request, res: Response): Prom
 
   const sanitizedWords = words.map(w => String(w).trim()).filter(Boolean);
   const sanitizedExemptRoles = Array.isArray(exemptRoles) ? exemptRoles.filter(r => typeof r === 'string') : [];
+
+  // Validate regex patterns (item 92)
+  const sanitizedRegex: string[] = [];
+  if (Array.isArray(regexPatterns)) {
+    for (const pat of regexPatterns) {
+      try {
+        new RegExp(pat); // validate
+        sanitizedRegex.push(pat);
+      } catch {
+        // skip invalid patterns
+      }
+    }
+  }
 
   const [upserted] = await db
     .insert(guildWordFilters)
@@ -73,5 +87,56 @@ wordFilterRouter.put('/', requireAuth, async (req: Request, res: Response): Prom
     })
     .returning();
 
-  res.json(upserted);
+  // Store regex patterns in the column (added by migration)
+  if (sanitizedRegex.length > 0) {
+    await db.execute(sql`UPDATE guild_word_filters SET regex_patterns = ${sanitizedRegex} WHERE guild_id = ${guildId}`);
+  }
+
+  res.json({ ...upserted, regexPatterns: sanitizedRegex });
+});
+
+/** POST /api/v1/guilds/:guildId/word-filter/test — Test a regex pattern against sample text (item 92) */
+wordFilterRouter.post('/test', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId } = req.params as Record<string, string>;
+
+  if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_GUILD))) {
+    res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_GUILD permission' });
+    return;
+  }
+
+  const { pattern, testText } = req.body as { pattern: string; testText: string };
+  if (!pattern || !testText) {
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'pattern and testText required' });
+    return;
+  }
+
+  // Guard against ReDoS: limit pattern and text length
+  if (pattern.length > 200) {
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'Pattern too long (max 200 chars)' });
+    return;
+  }
+  if (testText.length > 500) {
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'Test text too long (max 500 chars)' });
+    return;
+  }
+
+  try {
+    const re = new RegExp(pattern, 'gi');
+    // Run with a time guard to prevent catastrophic backtracking
+    const startTime = Date.now();
+    const matches: { match: string; index: number | undefined }[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(testText)) !== null) {
+      matches.push({ match: m[0], index: m.index });
+      if (Date.now() - startTime > 100) {
+        res.json({ valid: false, error: 'Pattern too complex (timed out)', matches: [], matchCount: 0 });
+        return;
+      }
+      // Prevent infinite loops on zero-length matches
+      if (m[0].length === 0) re.lastIndex++;
+    }
+    res.json({ valid: true, matches, matchCount: matches.length });
+  } catch (err: any) {
+    res.json({ valid: false, error: err?.message || 'Invalid regex', matches: [], matchCount: 0 });
+  }
 });

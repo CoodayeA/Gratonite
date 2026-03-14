@@ -139,26 +139,31 @@ export { hasChannelPermission, computeChannelPermissions };
 
 /** GET /api/v1/guilds/:guildId/roles */
 rolesRouter.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
-  const { guildId } = req.params as Record<string, string>;
+  try {
+    const { guildId } = req.params as Record<string, string>;
 
-  // Verify membership
-  const [membership] = await db
-    .select({ id: guildMembers.id })
-    .from(guildMembers)
-    .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, req.userId!)))
-    .limit(1);
-  if (!membership) { res.status(403).json({ code: 'FORBIDDEN', message: 'Not a guild member' }); return; }
+    // Verify membership
+    const [membership] = await db
+      .select({ id: guildMembers.id })
+      .from(guildMembers)
+      .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, req.userId!)))
+      .limit(1);
+    if (!membership) { res.status(403).json({ code: 'FORBIDDEN', message: 'Not a guild member' }); return; }
 
-  const guildRoles = await db
-    .select()
-    .from(roles)
-    .where(eq(roles.guildId, guildId))
-    .orderBy(asc(roles.position));
+    const guildRoles = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.guildId, guildId))
+      .orderBy(asc(roles.position));
 
-  res.json(guildRoles.map(r => ({
-    ...r,
-    permissions: r.permissions.toString(),
-  })));
+    res.json(guildRoles.map(r => ({
+      ...r,
+      permissions: r.permissions.toString(),
+    })));
+  } catch (err) {
+    console.error('[roles] GET / error:', err);
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });
 
 const createRoleSchema = z.object({

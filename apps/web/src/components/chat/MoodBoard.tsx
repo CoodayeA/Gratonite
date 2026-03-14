@@ -148,7 +148,7 @@ export default function MoodBoard({ channelId }: MoodBoardProps) {
   const renderItem = (item: MoodItem) => {
     switch (item.itemType) {
       case 'image':
-        return <img src={item.content} alt="" className="w-full h-full object-cover rounded" />;
+        return <img src={item.content} alt="" loading="lazy" className="w-full h-full object-cover rounded" />;
       case 'color':
         return <div className="w-full h-full rounded" style={{ backgroundColor: item.content }} />;
       case 'text':

@@ -2,10 +2,12 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
   base: '/app/',
   build: {
+    // Enable source maps in analyze mode for bundle visualizer
+    sourcemap: mode === 'analyze',
     rollupOptions: {
       output: {
         manualChunks: {
@@ -34,4 +36,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

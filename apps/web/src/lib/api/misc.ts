@@ -185,6 +185,9 @@ export const relationshipsApi = {
   unblock: (userId: string) =>
     apiFetch<void>(`/relationships/blocks/${userId}`, { method: 'DELETE' }),
 
+  listFriends: () =>
+    apiFetch<any[]>('/relationships').then((rels: any[]) => (rels || []).filter((r: any) => r.type === 'FRIEND' || r.type === 'friend')),
+
   getDmChannels: () =>
     apiFetch<any[]>('/relationships/channels'),
 
@@ -571,6 +574,8 @@ export const webhooksApi = {
   create: (data: { channelId: string; name: string; avatarUrl?: string }) =>
     apiFetch<any>(`/channels/${data.channelId}/webhooks`, { method: 'POST', body: JSON.stringify({ name: data.name, avatarUrl: data.avatarUrl }) }),
   delete: (webhookId: string) => apiFetch<void>(`/webhooks/${webhookId}`, { method: 'DELETE' }),
+  getDeliveries: (webhookId: string) =>
+    apiFetch<Array<{ id: string; webhookId: string; eventType: string; responseStatus: number | null; success: boolean; durationMs: number | null; attemptedAt: string }>>(`/webhooks/${webhookId}/deliveries`),
 };
 
 export const adminTeamApi = {
@@ -747,6 +752,57 @@ export const pushApi = {
   getVapidPublicKey: () => apiFetch<{ key: string }>('/push/vapid-public-key'),
   subscribe: (sub: Record<string, unknown>) => apiFetch<any>('/push/subscribe', { method: 'POST', body: JSON.stringify(sub) }),
   unsubscribe: (endpoint: string) => apiFetch<any>('/push/subscribe', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
+};
+
+export const draftsApi = {
+  listAll: () => apiFetch<Array<{ channelId: string; content: string }>>('/users/@me/drafts'),
+  get: (channelId: string) => apiFetch<any>(`/channels/${channelId}/draft`),
+  save: (channelId: string, content: string) =>
+    apiFetch<any>(`/channels/${channelId}/draft`, { method: 'PUT', body: JSON.stringify({ content }) }),
+  remove: (channelId: string) =>
+    apiFetch<void>(`/channels/${channelId}/draft`, { method: 'DELETE' }),
+};
+
+export const mutesApi = {
+  list: () => apiFetch<Array<{ mutedUserId: string; createdAt: string; username: string; displayName: string; avatarHash: string | null }>>('/users/@me/mutes'),
+  mute: (userId: string) => apiFetch<void>(`/users/@me/mutes/${userId}`, { method: 'PUT' }),
+  unmute: (userId: string) => apiFetch<void>(`/users/@me/mutes/${userId}`, { method: 'DELETE' }),
+};
+
+export const channelNotifPrefsApi = {
+  get: (channelId: string) =>
+    apiFetch<{ level: string; mutedUntil: string | null }>(`/channels/${channelId}/notification-prefs`),
+  set: (channelId: string, level: string, mutedUntil?: string | null) =>
+    apiFetch<any>(`/channels/${channelId}/notification-prefs`, { method: 'PUT', body: JSON.stringify({ level, mutedUntil }) }),
+};
+
+export const wordFilterApi = {
+  get: (guildId: string) =>
+    apiFetch<{ words: string[]; action: 'block' | 'delete' | 'warn'; exemptRoles: string[] }>(`/guilds/${guildId}/word-filter`),
+  set: (guildId: string, data: { words: string[]; action: 'block' | 'delete' | 'warn'; exemptRoles: string[] }) =>
+    apiFetch<any>(`/guilds/${guildId}/word-filter`, { method: 'PUT', body: JSON.stringify(data) }),
+};
+
+export const oauthAppsApi = {
+  list: () => apiFetch<any[]>('/oauth/applications'),
+  create: (data: { name: string; description?: string; redirectUris?: string[]; scopes?: string[] }) =>
+    apiFetch<any>('/oauth/applications', { method: 'POST', body: JSON.stringify(data) }),
+  get: (appId: string) => apiFetch<any>(`/oauth/applications/${appId}`),
+  update: (appId: string, data: { name?: string; description?: string; redirectUris?: string[]; scopes?: string[] }) =>
+    apiFetch<any>(`/oauth/applications/${appId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  remove: (appId: string) => apiFetch<void>(`/oauth/applications/${appId}`, { method: 'DELETE' }),
+};
+
+export const referralsApi = {
+  get: () => apiFetch<{ code: string; referralLink: string; count: number }>('/referrals/@me'),
+};
+
+export const banAppealsApi = {
+  list: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/bans/appeals`),
+  submit: (guildId: string, userId: string, text: string) =>
+    apiFetch<any>(`/guilds/${guildId}/bans/${userId}/appeal`, { method: 'POST', body: JSON.stringify({ text }) }),
+  review: (guildId: string, userId: string, status: 'approved' | 'denied') =>
+    apiFetch<any>(`/guilds/${guildId}/bans/${userId}/appeal`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 };
 
 export const reactionRolesApi = {
@@ -1150,8 +1206,280 @@ export const collectibleCardsApi = {
     apiFetch<{ status: string }>(`/cards/trade/${tradeId}/decline`, { method: 'POST', body: '{}' }),
 };
 
+export const storiesApi = {
+  create: (data: { content: string; type?: 'text' | 'image'; imageUrl?: string; backgroundColor?: string }) =>
+    apiFetch<any>('/stories', { method: 'POST', body: JSON.stringify(data) }),
+  feed: () => apiFetch<any[]>('/stories/feed'),
+  get: (storyId: string) => apiFetch<any>(`/stories/${storyId}`),
+  delete: (storyId: string) => apiFetch<void>(`/stories/${storyId}`, { method: 'DELETE' }),
+  view: (storyId: string) => apiFetch<any>(`/stories/${storyId}/view`, { method: 'POST', body: '{}' }),
+};
+
+export const emojisApi = {
+  list: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/emojis`),
+};
+
 export const capabilitiesApi = () =>
   apiFetch<{ routes: Record<string, boolean>; source: 'server' }>('/capabilities');
+
+// Phase 4 & 5 API modules (items 81-110)
+
+export const spamConfigApi = {
+  get: (guildId: string) => apiFetch<any>(`/guilds/${guildId}/spam-config`),
+  update: (guildId: string, data: any) => apiFetch<any>(`/guilds/${guildId}/spam-config`, { method: 'PUT', body: JSON.stringify(data) }),
+};
+
+export const soundboardApi = {
+  list: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/soundboard`),
+  upload: (guildId: string, data: { name: string; fileHash: string; emoji?: string; volume?: number }) =>
+    apiFetch<any>(`/guilds/${guildId}/soundboard`, { method: 'POST', body: JSON.stringify(data) }),
+  play: (guildId: string, clipId: string) =>
+    apiFetch<any>(`/guilds/${guildId}/soundboard/${clipId}/play`, { method: 'POST', body: '{}' }),
+  delete: (guildId: string, clipId: string) =>
+    apiFetch<any>(`/guilds/${guildId}/soundboard/${clipId}`, { method: 'DELETE' }),
+};
+
+export const guildBackupApi = {
+  list: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/backups`),
+  create: (guildId: string, name?: string) =>
+    apiFetch<any>(`/guilds/${guildId}/backups`, { method: 'POST', body: JSON.stringify({ name }) }),
+  get: (guildId: string, backupId: string) => apiFetch<any>(`/guilds/${guildId}/backups/${backupId}`),
+  delete: (guildId: string, backupId: string) =>
+    apiFetch<any>(`/guilds/${guildId}/backups/${backupId}`, { method: 'DELETE' }),
+};
+
+export const modQueueApi = {
+  list: (guildId: string, status?: string) =>
+    apiFetch<any>(`/guilds/${guildId}/mod-queue${status ? `?status=${status}` : ''}`),
+  create: (guildId: string, data: { type: string; targetId?: string; content?: string }) =>
+    apiFetch<any>(`/guilds/${guildId}/mod-queue`, { method: 'POST', body: JSON.stringify(data) }),
+  resolve: (guildId: string, itemId: string, status: 'approved' | 'rejected') =>
+    apiFetch<any>(`/guilds/${guildId}/mod-queue/${itemId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+};
+
+export const guildHighlightsApi = {
+  list: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/highlights`),
+  generate: (guildId: string) =>
+    apiFetch<any>(`/guilds/${guildId}/highlights/generate`, { method: 'POST', body: '{}' }),
+};
+
+export const vanityProfileApi = {
+  lookup: (vanityUrl: string) => apiFetch<any>(`/users/vanity/${vanityUrl}`),
+  set: (vanityUrl: string) =>
+    apiFetch<any>(`/users/@me/vanity`, { method: 'PUT', body: JSON.stringify({ vanityUrl }) }),
+  remove: () => apiFetch<any>(`/users/@me/vanity`, { method: 'DELETE' }),
+};
+
+export const auditLogEntriesApi = {
+  list: (guildId: string, params?: { action?: string; userId?: string; before?: string; after?: string; limit?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.action) q.set('action', params.action);
+    if (params?.userId) q.set('userId', params.userId);
+    if (params?.before) q.set('before', params.before);
+    if (params?.after) q.set('after', params.after);
+    if (params?.limit) q.set('limit', String(params.limit));
+    const suffix = q.toString() ? `?${q.toString()}` : '';
+    return apiFetch<any>(`/guilds/${guildId}/log-config/entries${suffix}`);
+  },
+};
+
+export const wordFilterTestApi = {
+  test: (guildId: string, pattern: string, testText: string) =>
+    apiFetch<any>(`/guilds/${guildId}/word-filter/test`, { method: 'POST', body: JSON.stringify({ pattern, testText }) }),
+};
+
+// ── Phase 6: Productivity & Collaboration ────────────────────────────────────
+
+export const calendarsApi = {
+  list: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/calendar`),
+  create: (guildId: string, data: { title: string; startAt: string; endAt?: string; allDay?: boolean; color?: string; recurring?: string; description?: string }) =>
+    apiFetch<any>(`/guilds/${guildId}/calendar`, { method: 'POST', body: JSON.stringify(data) }),
+  update: (guildId: string, eventId: string, data: Record<string, unknown>) =>
+    apiFetch<any>(`/guilds/${guildId}/calendar/${eventId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  delete: (guildId: string, eventId: string) =>
+    apiFetch<void>(`/guilds/${guildId}/calendar/${eventId}`, { method: 'DELETE' }),
+  rsvp: (guildId: string, eventId: string, status: string) =>
+    apiFetch<any[]>(`/guilds/${guildId}/calendar/${eventId}/rsvp`, { method: 'POST', body: JSON.stringify({ status }) }),
+  getRsvps: (guildId: string, eventId: string) =>
+    apiFetch<any[]>(`/guilds/${guildId}/calendar/${eventId}/rsvps`),
+};
+
+export const codePlaygroundApi = {
+  // Code playground is purely frontend (sandboxed iframe), no API needed
+};
+
+export const fileManagerApi = {
+  list: (guildId: string, search?: string, page?: number) => {
+    const q = new URLSearchParams();
+    if (search) q.set('search', search);
+    if (page) q.set('page', String(page));
+    const suffix = q.toString() ? `?${q.toString()}` : '';
+    return apiFetch<any[]>(`/guilds/${guildId}/file-manager${suffix}`);
+  },
+};
+
+export const meetingSchedulerApi = {
+  list: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/meetings`),
+  create: (guildId: string, data: { title: string; timeSlots: Array<{ date: string; startTime: string; endTime: string }>; description?: string }) =>
+    apiFetch<any>(`/guilds/${guildId}/meetings`, { method: 'POST', body: JSON.stringify(data) }),
+  get: (guildId: string, pollId: string) => apiFetch<any>(`/guilds/${guildId}/meetings/${pollId}`),
+  vote: (guildId: string, pollId: string, selectedSlots: number[], timezone?: string) =>
+    apiFetch<any>(`/guilds/${guildId}/meetings/${pollId}/vote`, { method: 'POST', body: JSON.stringify({ selectedSlots, timezone }) }),
+  delete: (guildId: string, pollId: string) =>
+    apiFetch<void>(`/guilds/${guildId}/meetings/${pollId}`, { method: 'DELETE' }),
+};
+
+export const todoListsApi = {
+  list: (channelId: string) => apiFetch<any[]>(`/channels/${channelId}/todos`),
+  create: (channelId: string, title: string) =>
+    apiFetch<any>(`/channels/${channelId}/todos`, { method: 'POST', body: JSON.stringify({ title }) }),
+  getItems: (channelId: string, listId: string) =>
+    apiFetch<any[]>(`/channels/${channelId}/todos/${listId}/items`),
+  addItem: (channelId: string, listId: string, data: { text: string; assigneeId?: string }) =>
+    apiFetch<any>(`/channels/${channelId}/todos/${listId}/items`, { method: 'POST', body: JSON.stringify(data) }),
+  updateItem: (channelId: string, listId: string, itemId: string, data: Record<string, unknown>) =>
+    apiFetch<any>(`/channels/${channelId}/todos/${listId}/items/${itemId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteItem: (channelId: string, listId: string, itemId: string) =>
+    apiFetch<void>(`/channels/${channelId}/todos/${listId}/items/${itemId}`, { method: 'DELETE' }),
+  deleteList: (channelId: string, listId: string) =>
+    apiFetch<void>(`/channels/${channelId}/todos/${listId}`, { method: 'DELETE' }),
+};
+
+export const integrationsApi = {
+  catalog: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/integrations/catalog`),
+  list: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/integrations`),
+  install: (guildId: string, data: { type: string; channelId: string; name?: string; config?: Record<string, unknown> }) =>
+    apiFetch<any>(`/guilds/${guildId}/integrations`, { method: 'POST', body: JSON.stringify(data) }),
+  update: (guildId: string, id: string, data: Record<string, unknown>) =>
+    apiFetch<any>(`/guilds/${guildId}/integrations/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  delete: (guildId: string, id: string) =>
+    apiFetch<void>(`/guilds/${guildId}/integrations/${id}`, { method: 'DELETE' }),
+  logs: (guildId: string, id: string) =>
+    apiFetch<any[]>(`/guilds/${guildId}/integrations/${id}/logs`),
+};
+
+export const botFrameworkApi = {
+  docs: () => apiFetch<any>('/bots/framework/docs'),
+  templates: () => apiFetch<any[]>('/bots/framework/templates'),
+};
+
+export const standupApi = {
+  getConfig: (guildId: string) => apiFetch<any>(`/guilds/${guildId}/standup/config`),
+  setConfig: (guildId: string, data: Record<string, unknown>) =>
+    apiFetch<any>(`/guilds/${guildId}/standup/config`, { method: 'POST', body: JSON.stringify(data) }),
+  respond: (guildId: string, answers: string[]) =>
+    apiFetch<any>(`/guilds/${guildId}/standup/respond`, { method: 'POST', body: JSON.stringify({ answers }) }),
+  getSummary: (guildId: string, date?: string) => {
+    const suffix = date ? `?date=${date}` : '';
+    return apiFetch<any>(`/guilds/${guildId}/standup/summary${suffix}`);
+  },
+};
+
+export const timezoneApi = {
+  get: () => apiFetch<{ timezone: string | null }>('/users/@me/timezone'),
+  set: (timezone: string) =>
+    apiFetch<{ timezone: string }>('/users/@me/timezone', { method: 'PATCH', body: JSON.stringify({ timezone }) }),
+  getUser: (userId: string) =>
+    apiFetch<{ timezone: string | null; localTime: string | null }>(`/users/${userId}/timezone`),
+};
+
+export const afkApi = {
+  get: () => apiFetch<{ message: string; since: string } | null>('/users/@me/afk'),
+  set: (message: string) =>
+    apiFetch<any>('/users/@me/afk', { method: 'POST', body: JSON.stringify({ message }) }),
+  clear: () => apiFetch<any>('/users/@me/afk', { method: 'DELETE' }),
+  getUser: (userId: string) =>
+    apiFetch<{ message: string; since: string } | null>(`/users/${userId}/afk`),
+};
+
+export const playlistsApi = {
+  list: (channelId: string) => apiFetch<any[]>(`/channels/${channelId}/playlists`),
+  create: (channelId: string, name: string) =>
+    apiFetch<any>(`/channels/${channelId}/playlists`, { method: 'POST', body: JSON.stringify({ name }) }),
+  getTracks: (channelId: string, playlistId: string) =>
+    apiFetch<any>(`/channels/${channelId}/playlists/${playlistId}/tracks`),
+  addTrack: (channelId: string, playlistId: string, data: { url: string; title: string; artist?: string; duration?: number }) =>
+    apiFetch<any>(`/channels/${channelId}/playlists/${playlistId}/tracks`, { method: 'POST', body: JSON.stringify(data) }),
+  removeTrack: (channelId: string, playlistId: string, trackId: string) =>
+    apiFetch<void>(`/channels/${channelId}/playlists/${playlistId}/tracks/${trackId}`, { method: 'DELETE' }),
+  vote: (channelId: string, playlistId: string, trackId: string, vote: 'skip' | 'keep') =>
+    apiFetch<any>(`/channels/${channelId}/playlists/${playlistId}/tracks/${trackId}/vote`, { method: 'POST', body: JSON.stringify({ vote }) }),
+  next: (channelId: string, playlistId: string) =>
+    apiFetch<any>(`/channels/${channelId}/playlists/${playlistId}/next`, { method: 'POST', body: '{}' }),
+};
+
+// ── Phase 7: Gamification & Engagement ───────────────────────────────────────
+
+export const xpApi = {
+  getMyXp: () => apiFetch<{ xp: number; level: number; progress: number; xpForNextLevel: number }>('/users/@me/xp'),
+  getGuildXp: (guildId: string) =>
+    apiFetch<{ xp: number; level: number; progress: number }>(`/guilds/${guildId}/xp/@me`),
+  getGuildLeaderboard: (guildId: string) =>
+    apiFetch<any[]>(`/guilds/${guildId}/xp/leaderboard`),
+};
+
+export const loginRewardsApi = {
+  get: () => apiFetch<any>('/login-reward'),
+  claim: () => apiFetch<any>('/login-reward/claim', { method: 'POST', body: '{}' }),
+};
+
+export const userTitlesApi = {
+  listAll: () => apiFetch<any[]>('/titles'),
+  listOwned: () => apiFetch<any[]>('/users/@me/titles'),
+  equip: (titleId: string) =>
+    apiFetch<any>(`/users/@me/titles/${titleId}/equip`, { method: 'POST', body: '{}' }),
+  unequip: () =>
+    apiFetch<any>('/users/@me/titles/unequip', { method: 'POST', body: '{}' }),
+  getUserTitle: (userId: string) =>
+    apiFetch<{ name: string; color: string; rarity: string } | null>(`/users/${userId}/title`),
+};
+
+export const quizzesApi = {
+  list: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/quizzes`),
+  create: (guildId: string, data: { title: string; description?: string; questions: Array<{ question: string; options: string[]; correctIndex: number }>; timeLimit?: number }) =>
+    apiFetch<any>(`/guilds/${guildId}/quizzes`, { method: 'POST', body: JSON.stringify(data) }),
+  get: (guildId: string, quizId: string) => apiFetch<any>(`/guilds/${guildId}/quizzes/${quizId}`),
+  attempt: (guildId: string, quizId: string, answers: number[]) =>
+    apiFetch<any>(`/guilds/${guildId}/quizzes/${quizId}/attempt`, { method: 'POST', body: JSON.stringify({ answers }) }),
+  leaderboard: (guildId: string, quizId: string) =>
+    apiFetch<any[]>(`/guilds/${guildId}/quizzes/${quizId}/leaderboard`),
+  delete: (guildId: string, quizId: string) =>
+    apiFetch<void>(`/guilds/${guildId}/quizzes/${quizId}`, { method: 'DELETE' }),
+};
+
+export const reputationApi = {
+  upvote: (channelId: string, messageId: string, value?: number) =>
+    apiFetch<{ messageId: string; upvotes: number; downvotes: number; score: number }>(
+      `/channels/${channelId}/messages/${messageId}/upvote`,
+      { method: 'POST', body: JSON.stringify({ value: value ?? 1 }) },
+    ),
+  getUserReputation: (userId: string) =>
+    apiFetch<{ userId: string; upvotes: number; downvotes: number; reputation: number }>(`/users/${userId}/reputation`),
+};
+
+export const seasonalEventsApi = {
+  getActive: () => apiFetch<any[]>('/events/active'),
+  getProgress: (eventId: string) => apiFetch<any>(`/events/${eventId}/progress`),
+  claim: (eventId: string, rewardIndex: number) =>
+    apiFetch<any>(`/events/${eventId}/claim`, { method: 'POST', body: JSON.stringify({ rewardIndex }) }),
+};
+
+export const guildQuestsApi = {
+  list: (guildId: string, status?: string) =>
+    apiFetch<any[]>(`/guilds/${guildId}/quests${status ? `?status=${status}` : ''}`),
+  create: (guildId: string, data: { title: string; description?: string; questType?: string; targetValue: number; reward?: number; endDate: string }) =>
+    apiFetch<any>(`/guilds/${guildId}/quests`, { method: 'POST', body: JSON.stringify(data) }),
+  contribute: (guildId: string, questId: string, amount?: number) =>
+    apiFetch<any>(`/guilds/${guildId}/quests/${questId}/contribute`, { method: 'POST', body: JSON.stringify({ amount: amount ?? 1 }) }),
+  getContributions: (guildId: string, questId: string) =>
+    apiFetch<any[]>(`/guilds/${guildId}/quests/${questId}/contributions`),
+};
+
+export const profileBackgroundApi = {
+  get: () => apiFetch<{ background: string | null }>('/users/@me/settings').then(s => ({ background: (s as any)?.themePreferences?.profileBackground ?? null })),
+  set: (background: string) =>
+    apiFetch<any>('/users/@me/settings', { method: 'PATCH', body: JSON.stringify({ themePreferences: { profileBackground: background } }) }),
+};
 
 export const genericApi = {
   get: <T = unknown>(path: string) => apiFetch<T>(path),

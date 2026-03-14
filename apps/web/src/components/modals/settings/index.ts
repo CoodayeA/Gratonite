@@ -4,4 +4,7 @@ export { default as SettingsAchievementsTab } from './SettingsAchievementsTab';
 export { default as SettingsStatsTab } from './SettingsStatsTab';
 export { default as SettingsConnectionsTab } from './SettingsConnectionsTab';
 export { default as SettingsPrivacyTab } from './SettingsPrivacyTab';
+export { default as SettingsThemeTab } from './SettingsThemeTab';
+export { default as SettingsAccessibilityTab } from './SettingsAccessibilityTab';
+export { default as SettingsSoundTab } from './SettingsSoundTab';
 export type { SettingsTabProps, UserProfileLike, UserThemeLike, NameplateStyle, AvatarFrameStyle } from './types';

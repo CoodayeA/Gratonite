@@ -13,6 +13,7 @@ export const searchRouter = Router();
 
 /** GET /api/v1/search/messages */
 searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request, res: Response): Promise<void> => {
+  try {
   const q = (typeof req.query.query === 'string' ? req.query.query.trim() : '') || (typeof req.query.q === 'string' ? req.query.q.trim() : '');
   if (q.length < 2) {
     res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Query must be at least 2 characters' }); return;
@@ -28,8 +29,20 @@ searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request,
   const escaped = q.replace(/[%_\\]/g, '\\$&');
   const pattern = `%${escaped}%`;
 
-  // Build conditions
-  const conditions = [sql`${messages.content} ILIKE ${pattern}`];
+  // Full-text search: use tsvector if available, fallback to ILIKE
+  const tsQuery = q.replace(/[&|!:*()'"]/g, ' ').trim().split(/\s+/).filter(Boolean).join(' & ');
+  const useFts = tsQuery.length > 0;
+
+  // Build conditions — prefer ts_rank for relevance if FTS is viable
+  const conditions = useFts
+    ? [sql`${messages.content} IS NOT NULL AND (search_vector @@ to_tsquery('english', ${tsQuery}) OR ${messages.content} ILIKE ${pattern})`]
+    : [sql`${messages.content} ILIKE ${pattern}`];
+
+  // mentionsMe filter: messages that contain @userId or @everyone/@here
+  const mentionsMe = typeof req.query.mentionsMe === 'string' && req.query.mentionsMe === 'true';
+  if (mentionsMe) {
+    conditions.push(sql`(${messages.content} ILIKE ${'%<@' + req.userId + '>%'} OR ${messages.content} ILIKE '%@everyone%' OR ${messages.content} ILIKE '%@here%')`);
+  }
   if (channelId) conditions.push(eq(messages.channelId, channelId));
   if (authorId) conditions.push(eq(messages.authorId, authorId));
   if (before) {
@@ -130,4 +143,8 @@ searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request,
     } : null,
   }));
   res.json({ results: mapped, total: mapped.length, limit, offset: 0 });
+  } catch (err) {
+    console.error('[search] GET /messages error:', err);
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense, type
 import { UserProvider, useUser } from './contexts/UserContext';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, Navigate, Outlet, Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar, Compass, User, Columns, Paintbrush } from 'lucide-react';
+import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar, Compass, User, Columns, Paintbrush, PenLine } from 'lucide-react';
 import './components/chat.css';
 import CommandPalette from './components/ui/CommandPalette';
 import { playSound, setSoundVolume } from './utils/SoundManager';
@@ -60,6 +60,7 @@ const Gacha = lazy(() => import('./pages/app/Gacha'));
 const StoreModal = lazy(() => import('./pages/app/StoreModal'));
 const DailyChallenges = lazy(() => import('./pages/app/DailyChallenges'));
 const MiniMode = lazy(() => import('./components/desktop/MiniMode'));
+const VanityProfile = lazy(() => import('./pages/app/VanityProfile'));
 
 import InviteAccept from './pages/InviteAccept';
 import { NotFound } from './pages/ErrorStates';
@@ -104,6 +105,7 @@ import { Tooltip } from './components/ui/Tooltip';
 import { ModalWrapper } from './components/ui/ModalWrapper';
 import { useTheme, type AppTheme } from './components/ui/ThemeProvider';
 import { getGuildTheme, setGuildTheme, removeGuildTheme, hasGuildTheme } from './utils/guildTheme';
+import { RecentChannels, addRecentChannel } from './components/guild/RecentChannels';
 import { getAllThemes } from './themes/registry';
 import { ContextMenuProvider, useContextMenu } from './components/ui/ContextMenu';
 import { ToastProvider, useToast } from './components/ui/ToastManager';
@@ -243,7 +245,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
         '/friends', '/discover', '/shop', '/marketplace', '/inventory',
         '/creator-dashboard', '/fame', '/dm',
         '/admin', '/help-center', '/message-requests',
-        '/me', '/saved-messages'
+        '/me', '/saved-messages', '/read-later'
     ].some(path => location.pathname.startsWith(path));
 
     const activeGuildId = (() => {
@@ -589,7 +591,36 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const [selectedTemplate, setSelectedTemplate] = useState<{ name: string; topic?: string; rateLimitPerUser?: number; isAnnouncement?: boolean; channelType?: string } | null>(null);
     const [favoriteChannelIds, setFavoriteChannelIds] = useState<Set<string>>(new Set());
     const [channelTyping, setChannelTyping] = useState<Map<string, string[]>>(new Map());
+    const [dmPresenceMap, setDmPresenceMap] = useState<Record<string, string>>({});
     const prefetchTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+    // Sidebar resize handle
+    const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+        try { return parseInt(localStorage.getItem('gratonite-sidebar-width') || '280') || 280; } catch { return 280; }
+    });
+    const resizingRef = useRef(false);
+    const sidebarRef = useRef<HTMLElement>(null);
+    const sidebarWidthRef = useRef(sidebarWidth);
+    sidebarWidthRef.current = sidebarWidth;
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!resizingRef.current) return;
+            e.preventDefault();
+            const newWidth = Math.min(480, Math.max(200, e.clientX - (sidebarRef.current?.getBoundingClientRect().left ?? 72)));
+            setSidebarWidth(newWidth);
+        };
+        const handleMouseUp = () => {
+            if (resizingRef.current) {
+                resizingRef.current = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                try { localStorage.setItem('gratonite-sidebar-width', String(sidebarWidthRef.current)); } catch {}
+            }
+        };
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
+    }, []);
 
     // Listen for typing events across channels for sidebar indicators
     useEffect(() => {
@@ -614,6 +645,16 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         });
     }, []);
 
+    // Track presence for DM contacts
+    useEffect(() => {
+        return onPresenceUpdate((payload) => {
+            setDmPresenceMap(prev => {
+                if (prev[payload.userId] === payload.status) return prev;
+                return { ...prev, [payload.userId]: payload.status };
+            });
+        });
+    }, []);
+
     // Load favorites
     useEffect(() => {
         api.users.getFavorites().then((favs: any[]) => {
@@ -632,6 +673,9 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const [legacyChannelsLoading, setLegacyChannelsLoading] = useState(false);
     const [canManageChannels, setCanManageChannels] = useState(false);
     const [mutedChannelIds, setMutedChannelIds] = useState<Set<string>>(new Set());
+    const [draftChannelIds, setDraftChannelIds] = useState<Set<string>>(new Set());
+    const [rulesAgreedGuilds, setRulesAgreedGuilds] = useState<Set<string>>(new Set());
+    const [showRulesGate, setShowRulesGate] = useState(false);
     const guildInfo = guildSession.enabled ? guildSession.guildInfo : legacyGuildInfo;
     const guildChannels = guildSession.enabled ? guildSession.channels : legacyGuildChannels;
     const setGuildChannels = guildSession.enabled ? guildSession.setChannels : setLegacyGuildChannels;
@@ -759,6 +803,26 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         };
         fetchMuted();
     }, [activeGuildId, guildChannels.length]);
+
+    // Fetch draft channel IDs for sidebar indicators
+    useEffect(() => {
+        if (!activeGuildId) { setDraftChannelIds(new Set()); return; }
+        api.drafts.listAll().then((drafts) => {
+            const guildChIds = new Set(guildChannels.map(c => c.id));
+            const ids = new Set(drafts.filter(d => guildChIds.has(d.channelId)).map(d => d.channelId));
+            setDraftChannelIds(ids);
+        }).catch(() => {});
+    }, [activeGuildId, guildChannels.length]);
+
+    // Show rules gate if guild requires rules agreement
+    useEffect(() => {
+        if (!activeGuildId || !guildInfo) { setShowRulesGate(false); return; }
+        if ((guildInfo as any).requireRulesAgreement && (guildInfo as any).rulesText && !rulesAgreedGuilds.has(activeGuildId)) {
+            setShowRulesGate(true);
+        } else {
+            setShowRulesGate(false);
+        }
+    }, [activeGuildId, guildInfo, rulesAgreedGuilds]);
 
     useEffect(() => {
         if (!enableVoiceSidebarSync) return;
@@ -1054,6 +1118,11 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 }).catch(() => setChannelSettingsOpen({ id: channel.id, name: channel.name }));
             }},
             { divider: true, id: 'div2', label: '', onClick: () => {} },
+            { id: 'copy-link', label: 'Copy Channel Link', icon: Link2, onClick: () => {
+                const link = `${window.location.origin}/app/guild/${activeGuildId}/channel/${channel.id}`;
+                navigator.clipboard.writeText(link).catch(() => {});
+                addToast({ title: 'Channel link copied', variant: 'info' });
+            }},
             { id: 'copy-id', label: 'Copy Channel ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(channel.id).catch(() => {}); addToast({ title: 'Channel ID copied', variant: 'info' }); } },
             { id: 'invite', label: 'Create Invite Link', icon: Link2, onClick: () => {
                 if (!activeGuildId) return;
@@ -1091,7 +1160,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         '/friends', '/discover', '/shop', '/marketplace', '/inventory',
         '/creator-dashboard', '/fame', '/dm',
         '/admin', '/help-center', '/message-requests',
-        '/me', '/saved-messages'
+        '/me', '/saved-messages', '/read-later'
     ].some(path => location.pathname.startsWith(path));
 
     const [presenceMenuOpen, setPresenceMenuOpen] = useState(false);
@@ -1463,6 +1532,14 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                             <span style={{ fontSize: '15px' }}>Challenges</span>
                         </div>
                     </Link>
+                    <Link to="/read-later" style={{ textDecoration: 'none' }}>
+                        <div className={`channel-item ${location.pathname === '/read-later' ? 'active' : ''}`}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Star size={18} />
+                            </div>
+                            <span style={{ fontSize: '15px' }}>Saved Messages</span>
+                        </div>
+                    </Link>
                     <Link to="/discover" style={{ textDecoration: 'none' }}>
                         <div className={`channel-item ${location.pathname === '/discover' ? 'active' : ''}`}>
                             <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1499,7 +1576,16 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 </div>
 
                 {!sidebarLayout.hidden.includes('dm') && (
-                <div className="channel-list" style={{ marginTop: '16px' }}>
+                <div className="channel-list" style={{ marginTop: '16px' }} role="listbox" aria-label="Direct Messages" onKeyDown={(e) => {
+                    const container = e.currentTarget;
+                    const items = Array.from(container.querySelectorAll<HTMLElement>('.channel-item[tabindex], .channel-item a'));
+                    const focused = document.activeElement as HTMLElement;
+                    const idx = items.indexOf(focused);
+                    if (e.key === 'ArrowDown') { e.preventDefault(); items[(idx + 1) % items.length]?.focus(); }
+                    else if (e.key === 'ArrowUp') { e.preventDefault(); items[(idx - 1 + items.length) % items.length]?.focus(); }
+                    else if (e.key === 'Enter' && idx >= 0) { e.preventDefault(); items[idx].click(); }
+                    else if (e.key === 'Escape') { focused?.blur(); }
+                }}>
                     <div className="channel-category" onClick={() => toggleCategory('dm')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <span style={{ transition: 'transform 0.15s ease', transform: collapsed['dm'] ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}><ChevronDown size={14} /></span> <span>Direct Messages</span>
@@ -1658,12 +1744,27 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                                 return (
                                             <div className={`channel-item ${dmActive ? 'active' : ''}`} style={{ justifyContent: 'space-between' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
-                                                    <Avatar
-                                                        userId={recipient?.id || dm.id}
-                                                        avatarHash={recipient?.avatarHash}
-                                                        displayName={displayName}
-                                                        size={32}
-                                                    />
+                                                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                                                        <Avatar
+                                                            userId={recipient?.id || dm.id}
+                                                            avatarHash={recipient?.avatarHash}
+                                                            displayName={displayName}
+                                                            size={32}
+                                                        />
+                                                        {(() => {
+                                                            const status = dmPresenceMap[recipient?.id];
+                                                            if (!status || status === 'offline' || status === 'invisible') return null;
+                                                            const color = status === 'online' ? '#23a55a' : status === 'idle' ? '#f0b232' : status === 'dnd' ? '#f23f43' : '#23a55a';
+                                                            return (
+                                                                <div style={{
+                                                                    position: 'absolute', bottom: '-1px', right: '-1px',
+                                                                    width: '12px', height: '12px', borderRadius: '50%',
+                                                                    background: color,
+                                                                    border: '2.5px solid var(--bg-secondary)',
+                                                                }} title={status} />
+                                                            );
+                                                        })()}
+                                                    </div>
                                                     <span style={{ fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: dmUnreadFlag ? 600 : undefined, color: dmUnreadFlag ? 'var(--text-primary)' : undefined }}>{displayName}</span>
                                                 </div>
                                                 {dmMentionCount > 0 && !dmActive && (
@@ -1690,7 +1791,18 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     }
 
     return (
-        <nav className={`channel-sidebar glass-panel ${isOpen ? 'open' : ''}`} aria-label="Channel navigation">
+        <nav ref={sidebarRef} className={`channel-sidebar glass-panel ${isOpen ? 'open' : ''}`} aria-label="Channel navigation" style={{ width: `${sidebarWidth}px` }}>
+            {/* Resize handle */}
+            <div
+                onMouseDown={(e) => { e.preventDefault(); resizingRef.current = true; document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none'; }}
+                style={{
+                    position: 'absolute', top: 0, right: -2, bottom: 0, width: 5, cursor: 'col-resize', zIndex: 20,
+                    background: 'transparent', transition: 'background 0.15s',
+                }}
+                onMouseEnter={(e) => { (e.target as HTMLElement).style.background = 'var(--accent-primary)'; }}
+                onMouseLeave={(e) => { if (!resizingRef.current) (e.target as HTMLElement).style.background = 'transparent'; }}
+                title="Drag to resize sidebar"
+            />
             <header className="sidebar-header" style={{ cursor: 'pointer' }}>
                 <Link to={activeGuildId ? `/guild/${activeGuildId}` : '/guild'} style={{ color: 'inherit', textDecoration: 'none' }}>{guildInfo?.name || 'Loading...'}</Link>
             </header>
@@ -1893,7 +2005,14 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                     <div className={`channel-item ${isActive ? 'active' : ''}`} tabIndex={0} role="option" aria-selected={isActive} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: isMuted ? 0.5 : undefined, cursor: canManageChannels ? 'grab' : undefined }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                                             {isPrivate ? <Lock size={18} style={{ flexShrink: 0, opacity: 0.7 }} /> : <HashIcon size={18} style={{ flexShrink: 0, opacity: 0.7 }} />}
-                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: hasUnread ? 600 : undefined, color: hasUnread ? 'var(--text-primary)' : undefined }}>{ch.name}</span>
+                                            {ch.topic ? (
+                                                <Tooltip content={ch.topic} position="right" delay={400}>
+                                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: hasUnread ? 600 : undefined, color: hasUnread ? 'var(--text-primary)' : undefined }}>{ch.name}</span>
+                                                </Tooltip>
+                                            ) : (
+                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: hasUnread ? 600 : undefined, color: hasUnread ? 'var(--text-primary)' : undefined }}>{ch.name}</span>
+                                            )}
+                                            {draftChannelIds.has(ch.id) && <PenLine size={12} style={{ flexShrink: 0, opacity: 0.7, color: 'var(--accent-primary)' }} title="Draft" />}
                                             {isMuted && <BellOff size={12} style={{ flexShrink: 0, opacity: 0.5, color: 'var(--text-muted)' }} />}
                                         </div>
                                         {mentions > 0 && !isActive && (
@@ -2003,6 +2122,16 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                     {!collapsed['__favorites__'] && favoriteChannels.map(renderChannel)}
                                 </>
                             )}
+
+                            {/* ── RECENT CHANNELS (Item 89) ── */}
+                            <RecentChannels guildId={activeGuildId!} onChannelClick={(chId, gId) => {
+                                const ch = guildChannels.find(c => c.id === chId);
+                                if (ch && isVoiceChannelType(ch.type)) {
+                                    navigate(`/guild/${gId}/voice/${chId}`);
+                                } else {
+                                    navigate(`/guild/${gId}/channel/${chId}`);
+                                }
+                            }} />
 
                             {/* ── TEXT CHANNELS ── */}
                             <div
@@ -2399,6 +2528,16 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile, isMobileOpen, onCloseMo
                 api.relationships.openDm(member.userId).then((dm: any) => navigate(`/dm/${dm.id}`)).catch(() => addToast({ title: 'Failed to open DM', variant: 'error' }));
             }},
             { divider: true, id: 'div-m1', label: '', onClick: () => {} },
+            { id: 'mute', label: 'Mute User', icon: BellOff, onClick: () => {
+                fetch(`${API_BASE}/users/@me/mutes`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ targetUserId: member.userId }),
+                }).then(r => {
+                    if (r.ok) addToast({ title: `${name} muted`, description: 'You won\'t receive notifications from this user.', variant: 'success' });
+                    else addToast({ title: 'Already muted', variant: 'info' });
+                }).catch(() => addToast({ title: 'Failed to mute user', variant: 'error' }));
+            }},
             { id: 'copy-id', label: 'Copy User ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(member.userId); addToast({ title: 'Copied to clipboard', variant: 'info' }); }},
             ...(guildId ? [
                 { divider: true, id: 'div-m2', label: '', onClick: () => {} },
@@ -3562,6 +3701,7 @@ export const AppLayout = () => {
                     onClick={() => { setIsGuildRailOpen(false); setIsSidebarOpen(false); }}
                 />
 
+                <ErrorBoundary fallback={<div style={{ width: 72, background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 11, textAlign: 'center', padding: 8 }}>Server list unavailable.<br/><button onClick={() => window.location.reload()} style={{ marginTop: 8, background: 'var(--accent-primary)', border: 'none', borderRadius: 6, padding: '4px 12px', color: '#000', fontWeight: 600, fontSize: 11, cursor: 'pointer' }}>Reload</button></div>}>
                 <GuildRail
                     isOpen={isGuildRailOpen}
                     onOpenCreateGuild={() => setActiveModal('createGuild')}
@@ -3576,6 +3716,8 @@ export const AppLayout = () => {
                     guilds={guilds}
                     userProfile={userProfile}
                 />
+                </ErrorBoundary>
+                <ErrorBoundary fallback={<div style={{ width: 240, background: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: 24, gap: 12 }}>Sidebar crashed.<br/><button onClick={() => window.location.reload()} style={{ background: 'var(--accent-primary)', border: 'none', borderRadius: 6, padding: '6px 16px', color: '#000', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Reload</button></div>}>
                 <ChannelSidebar
                     isOpen={isSidebarOpen}
                     onOpenSettings={() => setActiveModal('settings')}
@@ -3586,6 +3728,7 @@ export const AppLayout = () => {
                     userProfile={userProfile}
                     guildSession={guildSession}
                 />
+                </ErrorBoundary>
                 <main id="main-content" ref={mainContentRef} className={`main-content-wrapper ${bgMedia !== null ? 'has-custom-bg' : ''} ${!hideBottomNav ? 'has-bottom-nav' : ''}`} tabIndex={-1} style={(!isChatRoute && !isVoiceRoute) ? { flex: 1, display: 'flex', flexDirection: 'column' } : {}}>
                     {(() => {
                         const outletCtx = {
@@ -3659,24 +3802,36 @@ export const AppLayout = () => {
                             </AnimatePresence>
                         );
                     })()}
-                    {isChatRoute && (isSidebarOpen || (isMobile && isMemberDrawerOpen)) && <MembersSidebar onOpenProfile={() => setActiveModal('userProfile')} isMobileOpen={isMemberDrawerOpen} onCloseMobile={() => setIsMemberDrawerOpen(false)} />}
+                    {isChatRoute && (isSidebarOpen || (isMobile && isMemberDrawerOpen)) && (
+                        <ErrorBoundary fallback={<div style={{ width: 240, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13, padding: 24 }}>Members list unavailable.</div>}>
+                            <MembersSidebar onOpenProfile={() => setActiveModal('userProfile')} isMobileOpen={isMemberDrawerOpen} onCloseMobile={() => setIsMemberDrawerOpen(false)} />
+                        </ErrorBoundary>
+                    )}
                 </main>
 
-                {/* Mobile Bottom Navigation (< 768px) — 3 tabs, hidden in chat */}
+                {/* Mobile Bottom Navigation (< 768px) — 5 tabs: Home, DMs, Search, Notifications, Settings */}
                 {!hideBottomNav && (
                 <nav className="mobile-bottom-nav" aria-label="Main navigation">
                     <Link to="/" className={`mobile-nav-item ${location.pathname === '/' ? 'active' : ''}`} aria-current={location.pathname === '/' ? 'page' : undefined}>
-                        <Compass size={20} aria-hidden="true" />
-                        <span>Servers</span>
+                        <Home size={20} aria-hidden="true" />
+                        <span>Home</span>
                     </Link>
                     <Link to="/friends" className={`mobile-nav-item ${location.pathname.startsWith('/dm') || location.pathname === '/friends' ? 'active' : ''}`} aria-current={location.pathname.startsWith('/dm') || location.pathname === '/friends' ? 'page' : undefined}>
                         <MessageSquare size={20} aria-hidden="true" />
-                        <span>Messages</span>
+                        <span>DMs</span>
                     </Link>
-                    <Link to="/me" className={`mobile-nav-item ${location.pathname === '/me' ? 'active' : ''}`} aria-current={location.pathname === '/me' ? 'page' : undefined}>
-                        <User size={20} aria-hidden="true" />
-                        <span>You</span>
-                    </Link>
+                    <button className={`mobile-nav-item ${activeModal === 'globalSearch' ? 'active' : ''}`} onClick={() => setActiveModal('globalSearch')} type="button">
+                        <Search size={20} aria-hidden="true" />
+                        <span>Search</span>
+                    </button>
+                    <button className={`mobile-nav-item ${activeModal === 'notifications' ? 'active' : ''}`} onClick={() => setActiveModal('notifications')} type="button" style={{ position: 'relative' }}>
+                        <Bell size={20} aria-hidden="true" />
+                        <span>Alerts</span>
+                    </button>
+                    <button className={`mobile-nav-item ${activeModal === 'settings' ? 'active' : ''}`} onClick={() => setActiveModal('settings')} type="button">
+                        <Settings size={20} aria-hidden="true" />
+                        <span>Settings</span>
+                    </button>
                 </nav>
                 )}
             </div>
@@ -3729,6 +3884,38 @@ export const AppLayout = () => {
             {activeModal === 'createGroupDm' && (
                 <GroupDmCreateModal onClose={() => { setActiveModal(null); api.relationships.getDmChannels().then(setDmChannels).catch(() => {}); }} />
             )}
+
+            {/* Server Rules Gate */}
+            {showRulesGate && activeGuildId && guildInfo && (
+                <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+                    <div style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', maxWidth: '520px', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        <div style={{ padding: '24px 24px 0', textAlign: 'center' }}>
+                            <ShieldAlert size={36} style={{ color: 'var(--accent-primary)', marginBottom: '12px' }} />
+                            <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px', fontFamily: 'var(--font-display)' }}>Server Rules</h2>
+                            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 16px' }}>Please read and accept the rules for <strong>{guildInfo.name}</strong> before participating.</p>
+                        </div>
+                        <div style={{ padding: '0 24px', flex: 1, overflow: 'auto' }}>
+                            <div style={{ background: 'var(--bg-secondary)', borderRadius: '8px', padding: '16px', fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                                {(guildInfo as any).rulesText}
+                            </div>
+                        </div>
+                        <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'center' }}>
+                            <button
+                                onClick={() => {
+                                    api.post(`/guilds/${activeGuildId}/agree-rules`, {}).then(() => {
+                                        setRulesAgreedGuilds(prev => new Set([...prev, activeGuildId!]));
+                                        setShowRulesGate(false);
+                                    }).catch(() => {});
+                                }}
+                                style={{ padding: '10px 32px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
+                            >
+                                I Have Read and Agree to the Rules
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <CommandPalette isOpen={activeModal === 'globalSearch'} onClose={() => setActiveModal(null)} guilds={guilds} dmChannels={dmChannels} onOpenSettings={() => setActiveModal('settings')} />
             <ModalWrapper isOpen={activeModal === 'notifications'}>
                 <NotificationModal onClose={() => setActiveModal(null)} />
@@ -3790,6 +3977,9 @@ const appRouter = createBrowserRouter(
             {/* Public Invite Route */}
             <Route path="invite/:code" element={<InviteAccept />} />
 
+            {/* Public Vanity Profile */}
+            <Route path="u/:vanityUrl" element={<Suspense fallback={<LazyFallback />}><VanityProfile /></Suspense>} />
+
             {/* Task #89: Desktop Mini Mode */}
             <Route path="mini-mode" element={<Suspense fallback={<LazyFallback />}><MiniMode /></Suspense>} />
 
@@ -3823,10 +4013,10 @@ const appRouter = createBrowserRouter(
                 <Route path="admin/feedback" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminFeedback /></Suspense></RequireAdmin>} />
                 <Route path="admin/reports" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminReports /></Suspense></RequireAdmin>} />
                 <Route path="admin/portals" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminPortals /></Suspense></RequireAdmin>} />
-                <Route path="dm/:id" element={<Suspense fallback={<LazyFallback />}><DirectMessage /></Suspense>} />
+                <Route path="dm/:id" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><DirectMessage /></Suspense></ErrorBoundary>} />
                 {/* Parameterized guild routes */}
                 <Route path="guild/:guildId" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><GuildOverview /></Suspense></ErrorBoundary>} />
-                <Route path="guild/:guildId/channel/:channelId" element={<Suspense fallback={<LazyFallback />}><ChannelChat /></Suspense>} />
+                <Route path="guild/:guildId/channel/:channelId" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><ChannelChat /></Suspense></ErrorBoundary>} />
                 <Route path="guild/:guildId/voice/:channelId" element={<Suspense fallback={<LazyFallback />}><VoiceChannel /></Suspense>} />
                 <Route path="guilds/:guildId/:channelId" element={<LegacyGuildChannelRedirect />} />
                 <Route path="guilds/:guildId/voice/:channelId" element={<LegacyGuildVoiceRedirect />} />

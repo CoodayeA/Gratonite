@@ -1503,13 +1503,53 @@ messagesRouter.post('/read', requireAuth, validate(readSchema), async (req: Requ
     const { channelId } = req.params as Record<string, string>;
     const channel = await resolveChannel(channelId, req.userId!);
 
-    // Only track read state for DM channels.
+    const { lastReadMessageId } = req.body as z.infer<typeof readSchema>;
+
+    // Guild channel read receipts — track via channelReadState
     if (channel.guildId) {
+      let resolvedId = lastReadMessageId;
+      if (!resolvedId) {
+        const [latest] = await db
+          .select({ id: messages.id })
+          .from(messages)
+          .where(
+            and(
+              eq(messages.channelId, channelId),
+              or(isNull(messages.expiresAt), gt(messages.expiresAt, new Date())),
+            ),
+          )
+          .orderBy(desc(messages.createdAt))
+          .limit(1);
+        resolvedId = latest?.id;
+      }
+
+      const now = new Date();
+      await db
+        .insert(channelReadState)
+        .values({
+          channelId,
+          userId: req.userId!,
+          lastReadAt: now,
+          lastReadMessageId: resolvedId ?? null,
+          mentionCount: 0,
+        })
+        .onConflictDoUpdate({
+          target: [channelReadState.channelId, channelReadState.userId],
+          set: { lastReadAt: now, lastReadMessageId: resolvedId ?? null },
+        });
+
+      try {
+        getIO().to(`channel:${channelId}`).emit('MESSAGE_READ', {
+          channelId,
+          userId: req.userId!,
+          lastReadAt: now.toISOString(),
+          lastReadMessageId: resolvedId ?? null,
+        });
+      } catch { /* non-fatal */ }
+
       res.status(200).json({ ok: true });
       return;
     }
-
-    const { lastReadMessageId } = req.body as z.infer<typeof readSchema>;
 
     // Resolve the latest visible (non-expired) message ID if not provided.
     let resolvedMessageId = lastReadMessageId;
@@ -1594,7 +1634,17 @@ messagesRouter.get('/read-state', requireAuth, async (req: Request, res: Respons
     const channel = await resolveChannel(channelId, req.userId!);
 
     if (channel.guildId) {
-      // Return guild channel read state for the current user
+      // Verify user is a guild member before exposing read receipts
+      const [membership] = await db
+        .select({ id: guildMembers.id })
+        .from(guildMembers)
+        .where(and(eq(guildMembers.guildId, channel.guildId), eq(guildMembers.userId, req.userId!)))
+        .limit(1);
+      if (!membership) {
+        res.status(403).json({ code: 'FORBIDDEN', message: 'Not a guild member' });
+        return;
+      }
+      // Return recent read receipts (limit to 50 most recent to avoid large payloads)
       const guildRows = await db
         .select({
           userId: channelReadState.userId,
@@ -1602,7 +1652,8 @@ messagesRouter.get('/read-state', requireAuth, async (req: Request, res: Respons
           lastReadMessageId: channelReadState.lastReadMessageId,
         })
         .from(channelReadState)
-        .where(and(eq(channelReadState.channelId, channelId), eq(channelReadState.userId, req.userId!)));
+        .where(eq(channelReadState.channelId, channelId))
+        .limit(50);
       res.status(200).json(guildRows);
       return;
     }

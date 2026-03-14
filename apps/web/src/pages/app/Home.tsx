@@ -6,6 +6,8 @@ import { useToast } from '../../components/ui/ToastManager';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { getDeterministicGradient } from '../../utils/colors';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { StoriesBar } from '../../components/StoriesBar';
+import { ActivityFeed } from '../../components/ActivityFeed';
 
 const DailyCheckIn = lazy(() => import('../../components/ui/DailyCheckIn'));
 
@@ -255,6 +257,11 @@ const Home = () => {
                 <h1 style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: '8px', letterSpacing: '-0.02em' }}>Gratonite</h1>
                 <p style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '32px' }}>{getGreeting()}, {displayName}. What would you like to do?</p>
 
+                {/* Stories Bar */}
+                <div style={{ width: '100%', marginBottom: '16px' }}>
+                    <StoriesBar />
+                </div>
+
                 <Suspense fallback={null}>
                     <DailyCheckIn onBalanceUpdate={setGratoniteBalance} />
                 </Suspense>
@@ -340,6 +347,11 @@ const Home = () => {
                             <div className="action-subtext">Give FAME, view leaderboards, and rate servers · You have 5 FAME tokens to give today</div>
                         </div>
                     </div>
+                </div>
+
+                {/* Activity Feed */}
+                <div style={{ width: '100%', marginTop: '24px' }}>
+                    <ActivityFeed />
                 </div>
             </div>
         </div>

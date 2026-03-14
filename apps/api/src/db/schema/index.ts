@@ -134,3 +134,14 @@ export * from './collectible-cards';
 
 // Guild welcome screens
 export * from './guild-welcome-screens';
+
+// Phase 6+7: Productivity & Gamification
+export * from './calendars';
+export * from './todo-lists';
+export * from './meeting-scheduler';
+export * from './integrations';
+export * from './standup';
+export * from './xp-system';
+export * from './user-titles';
+export * from './quizzes';
+export * from './reputation';

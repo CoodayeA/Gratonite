@@ -1,0 +1,43 @@
+{
+  "name": "Gratonite",
+  "short_name": "Gratonite",
+  "description": "The next generation communication platform",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#030305",
+  "theme_color": "#030305",
+  "categories": ["social", "communication"],
+  "icons": [
+    {
+      "src": "/app/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Direct Messages",
+      "short_name": "DMs",
+      "url": "/app/dm",
+      "description": "Open your direct messages"
+    },
+    {
+      "name": "Friends",
+      "short_name": "Friends",
+      "url": "/app/friends",
+      "description": "View your friends list"
+    },
+    {
+      "name": "Discover",
+      "short_name": "Discover",
+      "url": "/app/discover",
+      "description": "Discover new portals"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

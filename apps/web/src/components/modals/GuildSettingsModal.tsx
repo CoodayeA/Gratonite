@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Shield, Plus, Check, Search, ChevronDown, Trash2, Edit2, Ban, UserPlus, Hash, Mic, Settings, AlertTriangle, Clock, Save, Link2, Copy, RefreshCw, Bot, Power, Sliders, GripVertical, Upload, UserX, Lock, Eye, Type, ExternalLink, ArrowUp, ArrowDown, BookOpen } from 'lucide-react';
+import { X, Shield, Plus, Check, Search, ChevronDown, Trash2, Edit2, Ban, UserPlus, Hash, Mic, Settings, AlertTriangle, Clock, Save, Link2, Copy, RefreshCw, Bot, Power, Sliders, GripVertical, Upload, UserX, Lock, Eye, Type, ExternalLink, ArrowUp, ArrowDown, BookOpen, Activity } from 'lucide-react';
 import { useToast } from '../ui/ToastManager';
 import { useUser } from '../../contexts/UserContext';
 import { api, API_BASE } from '../../lib/api';
 import Avatar from '../ui/Avatar';
+import { OnboardingFlowEditor } from '../guild/OnboardingFlowEditor';
+import { NoCodeBotBuilder } from '../guild/NoCodeBotBuilder';
 
 interface Role {
     id: string;
@@ -112,7 +114,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const { user: currentUser } = useUser();
     const navigate = useNavigate();
     const actorName = currentUser.name || currentUser.handle || 'Unknown';
-    const [activeTab, setActiveTab] = useState<'overview' | 'channels' | 'roles' | 'members' | 'bans' | 'invites' | 'emojis' | 'automod' | 'audit' | 'branding' | 'webhooks' | 'bots' | 'templates' | 'insights' | 'onboarding' | 'wordfilter' | 'security' | 'import' | 'boosts' | 'welcome' | 'currency'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'channels' | 'roles' | 'members' | 'bans' | 'invites' | 'emojis' | 'automod' | 'audit' | 'branding' | 'webhooks' | 'bots' | 'templates' | 'insights' | 'onboarding' | 'wordfilter' | 'security' | 'import' | 'boosts' | 'welcome' | 'currency' | 'stickers' | 'rules' | 'discovery' | 'soundboard' | 'spam' | 'backups' | 'modqueue' | 'highlights'>('overview');
     const [roles, setRoles] = useState<Role[]>([]);
     const [activeRole, setActiveRole] = useState<Role | null>(null);
     const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
@@ -583,6 +585,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                 setWordFilterWords(Array.isArray(data.words) ? data.words : []);
                 setWordFilterAction(data.action || 'block');
                 setWordFilterExemptRoles(Array.isArray(data.exemptRoles) ? data.exemptRoles : []);
+                setWordFilterRegexPatterns(Array.isArray(data.regexPatterns) ? data.regexPatterns : []);
             }).catch(() => {});
         }
         if (activeTab === 'security' && guildId) {
@@ -810,6 +813,10 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [wordFilterExemptRoles, setWordFilterExemptRoles] = useState<string[]>([]);
     const [wordFilterInput, setWordFilterInput] = useState('');
     const [wordFilterSaving, setWordFilterSaving] = useState(false);
+    const [wordFilterRegexPatterns, setWordFilterRegexPatterns] = useState<string[]>([]);
+    const [wordFilterRegexInput, setWordFilterRegexInput] = useState('');
+    const [wordFilterTestInput, setWordFilterTestInput] = useState('');
+    const [wordFilterTestResult, setWordFilterTestResult] = useState<any>(null);
 
     // Raid protection state
     const [raidProtectionEnabled, setRaidProtectionEnabled] = useState(false);
@@ -900,6 +907,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [showCreateWebhook, setShowCreateWebhook] = useState(false);
     const [copiedWebhookId, setCopiedWebhookId] = useState<string | null>(null);
     const [webhookCreating, setWebhookCreating] = useState(false);
+    const [viewDeliveriesId, setViewDeliveriesId] = useState<string | null>(null);
+    const [deliveryLogs, setDeliveryLogs] = useState<Array<{ id: string; eventType: string; responseStatus: number | null; success: boolean; durationMs: number | null; attemptedAt: string }>>([]);
 
     const [installedBots, setInstalledBots] = useState<{ id: string; name: string; prefix: string; status: string; avatar: string; installedAt: string; commands: number }[]>([]);
 
@@ -1224,11 +1233,11 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                     </div>
                     <div>
                         <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>CUSTOMIZATION</div>
-                        {(['emojis', 'branding'] as const).map(tab => (
+                        {(['emojis', 'stickers', 'branding'] as const).map(tab => (
                             <div key={tab} onClick={() => setActiveTab(tab)}
                                 onMouseEnter={() => setHoveredBtn(`tab-${tab}`)} onMouseLeave={() => setHoveredBtn(null)}
                                 style={tabStyle(tab)}
-                            >{tab === 'emojis' ? 'Emojis' : 'Brand Identity'}</div>
+                            >{tab === 'emojis' ? 'Emojis' : tab === 'stickers' ? 'Stickers' : 'Brand Identity'}</div>
                         ))}
                     </div>
                     <div>
@@ -1253,11 +1262,11 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                     </div>
                     <div>
                         <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>MODERATION</div>
-                        {(['automod', 'wordfilter', 'bans', 'audit', 'security'] as const).map(tab => (
+                        {(['automod', 'wordfilter', 'spam', 'bans', 'audit', 'modqueue', 'security'] as const).map(tab => (
                             <div key={tab} onClick={() => setActiveTab(tab)}
                                 onMouseEnter={() => setHoveredBtn(`tab-${tab}`)} onMouseLeave={() => setHoveredBtn(null)}
                                 style={tabStyle(tab)}
-                            >{tab === 'automod' ? 'AutoMod' : tab === 'wordfilter' ? 'Word Filter' : tab === 'bans' ? 'Bans' : tab === 'security' ? 'Security' : 'Audit Log'}</div>
+                            >{tab === 'automod' ? 'AutoMod' : tab === 'wordfilter' ? 'Word Filter' : tab === 'spam' ? 'Spam Detection' : tab === 'bans' ? 'Bans' : tab === 'modqueue' ? 'Mod Queue' : tab === 'security' ? 'Security' : 'Audit Log'}</div>
                         ))}
                     </div>
                     <div>
@@ -1270,10 +1279,30 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             onMouseEnter={() => setHoveredBtn('tab-onboarding')} onMouseLeave={() => setHoveredBtn(null)}
                             style={tabStyle('onboarding')}
                         >Onboarding</div>
+                        <div onClick={() => setActiveTab('rules')}
+                            onMouseEnter={() => setHoveredBtn('tab-rules')} onMouseLeave={() => setHoveredBtn(null)}
+                            style={tabStyle('rules')}
+                        >Server Rules</div>
+                        <div onClick={() => setActiveTab('discovery')}
+                            onMouseEnter={() => setHoveredBtn('tab-discovery')} onMouseLeave={() => setHoveredBtn(null)}
+                            style={tabStyle('discovery')}
+                        >Discovery Tags</div>
                         <div onClick={() => setActiveTab('welcome')}
                             onMouseEnter={() => setHoveredBtn('tab-welcome')} onMouseLeave={() => setHoveredBtn(null)}
                             style={tabStyle('welcome')}
                         >Welcome Screen</div>
+                        <div onClick={() => setActiveTab('highlights')}
+                            onMouseEnter={() => setHoveredBtn('tab-highlights')} onMouseLeave={() => setHoveredBtn(null)}
+                            style={tabStyle('highlights')}
+                        >Highlights</div>
+                        <div onClick={() => setActiveTab('soundboard')}
+                            onMouseEnter={() => setHoveredBtn('tab-soundboard')} onMouseLeave={() => setHoveredBtn(null)}
+                            style={tabStyle('soundboard')}
+                        >Soundboard</div>
+                        <div onClick={() => setActiveTab('backups')}
+                            onMouseEnter={() => setHoveredBtn('tab-backups')} onMouseLeave={() => setHoveredBtn(null)}
+                            style={tabStyle('backups')}
+                        >Backups</div>
                     </div>
                 </div>
 
@@ -1282,7 +1311,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                     <button onClick={onClose} style={{ marginRight: 'auto', padding: '6px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '16px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600 }}>
                         <X size={14} /> Close
                     </button>
-                    {(['overview', 'channels', 'roles', 'members', 'invites', 'templates', 'import', 'emojis', 'branding', 'webhooks', 'bots', 'automod', 'wordfilter', 'bans', 'audit', 'security', 'insights', 'onboarding', 'welcome'] as const).map(tab => (
+                    {(['overview', 'channels', 'roles', 'members', 'invites', 'templates', 'import', 'emojis', 'branding', 'webhooks', 'bots', 'automod', 'wordfilter', 'spam', 'bans', 'audit', 'modqueue', 'security', 'insights', 'onboarding', 'welcome', 'soundboard', 'backups', 'highlights'] as const).map(tab => (
                         <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>
                             {tab === 'emojis' ? 'Emojis' : tab === 'branding' ? 'Brand' : tab === 'webhooks' ? 'Webhooks' : tab === 'bots' ? 'Bots' : tab === 'automod' ? 'AutoMod' : tab === 'wordfilter' ? 'Word Filter' : tab === 'audit' ? 'Audit Log' : tab === 'welcome' ? 'Welcome' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                         </button>
@@ -2396,13 +2425,92 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 </div>
                             </div>
 
+                            {/* Regex Patterns */}
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>REGEX PATTERNS</label>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Advanced: use regular expressions for complex matching.</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
+                                    {(wordFilterRegexPatterns || []).map((pat: string, i: number) => (
+                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <code style={{ flex: 1, padding: '6px 10px', background: 'var(--bg-primary)', borderRadius: '6px', border: '1px solid var(--stroke)', fontSize: '12px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{pat}</code>
+                                            <button onClick={() => setWordFilterRegexPatterns((prev: string[]) => prev.filter((_: string, idx: number) => idx !== i))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px' }}>x</button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <input
+                                        type="text"
+                                        value={wordFilterRegexInput || ''}
+                                        onChange={e => setWordFilterRegexInput(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter' && wordFilterRegexInput?.trim()) {
+                                                e.preventDefault();
+                                                try {
+                                                    new RegExp(wordFilterRegexInput.trim());
+                                                    setWordFilterRegexPatterns((prev: string[]) => [...(prev || []), wordFilterRegexInput.trim()]);
+                                                    setWordFilterRegexInput('');
+                                                } catch {
+                                                    addToast({ title: 'Invalid regex pattern', variant: 'error' });
+                                                }
+                                            }
+                                        }}
+                                        placeholder="/pattern/ — press Enter to add"
+                                        style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box' as const }}
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            if (!wordFilterRegexInput?.trim()) return;
+                                            try {
+                                                new RegExp(wordFilterRegexInput.trim());
+                                                setWordFilterRegexPatterns((prev: string[]) => [...(prev || []), wordFilterRegexInput.trim()]);
+                                                setWordFilterRegexInput('');
+                                            } catch {
+                                                addToast({ title: 'Invalid regex pattern', variant: 'error' });
+                                            }
+                                        }}
+                                        style={{ padding: '8px 16px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
+                                    >Add</button>
+                                </div>
+
+                                {/* Test regex */}
+                                <div style={{ marginTop: '12px', padding: '12px', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
+                                    <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>TEST YOUR PATTERNS</label>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <input
+                                            type="text"
+                                            value={wordFilterTestInput || ''}
+                                            onChange={e => setWordFilterTestInput(e.target.value)}
+                                            placeholder="Enter sample text to test..."
+                                            style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', boxSizing: 'border-box' as const }}
+                                        />
+                                        <button
+                                            onClick={async () => {
+                                                if (!guildId || !wordFilterTestInput?.trim()) return;
+                                                try {
+                                                    const result = await api.wordFilterTest.test(guildId, wordFilterTestInput.trim());
+                                                    setWordFilterTestResult(result);
+                                                } catch {
+                                                    addToast({ title: 'Test failed', variant: 'error' });
+                                                }
+                                            }}
+                                            style={{ padding: '6px 14px', borderRadius: '6px', background: 'var(--accent-primary)', border: 'none', color: '#000', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                                        >Test</button>
+                                    </div>
+                                    {wordFilterTestResult && (
+                                        <div style={{ marginTop: '8px', padding: '8px 10px', borderRadius: '6px', background: wordFilterTestResult.blocked ? 'rgba(237,66,69,0.1)' : 'rgba(87,242,135,0.1)', fontSize: '12px', color: wordFilterTestResult.blocked ? 'var(--error)' : '#57f287' }}>
+                                            {wordFilterTestResult.blocked ? `Blocked — matched: ${wordFilterTestResult.matchedWords?.join(', ') || wordFilterTestResult.matchedPattern || 'unknown'}` : 'Passed — no matches found'}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
                             <button
                                 disabled={wordFilterSaving}
                                 onClick={async () => {
                                     if (!guildId) return;
                                     setWordFilterSaving(true);
                                     try {
-                                        await api.put(`/guilds/${guildId}/word-filter`, { words: wordFilterWords, action: wordFilterAction, exemptRoles: wordFilterExemptRoles });
+                                        await api.put(`/guilds/${guildId}/word-filter`, { words: wordFilterWords, action: wordFilterAction, exemptRoles: wordFilterExemptRoles, regexPatterns: wordFilterRegexPatterns || [] });
                                         addToast({ title: 'Word filter saved', variant: 'success' });
                                     } catch {
                                         addToast({ title: 'Failed to save word filter', variant: 'error' });
@@ -3058,7 +3166,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {webhooksList.map(wh => (
-                                    <div key={wh.id} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                    <div key={wh.id}>
+                                    <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
                                         <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: wh.avatar, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                             <Link2 size={20} color="white" />
                                         </div>
@@ -3077,12 +3186,45 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                 style={{ padding: '8px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
                                                 <RefreshCw size={16} />
                                             </button>
+                                            <button onClick={async () => {
+                                                if (viewDeliveriesId === wh.id) { setViewDeliveriesId(null); return; }
+                                                try {
+                                                    const logs = await api.webhooks.getDeliveries(wh.id);
+                                                    setDeliveryLogs(logs);
+                                                    setViewDeliveriesId(wh.id);
+                                                } catch { setDeliveryLogs([]); setViewDeliveriesId(wh.id); }
+                                            }}
+                                                title="View Delivery Logs"
+                                                style={{ padding: '8px', borderRadius: '6px', background: viewDeliveriesId === wh.id ? 'color-mix(in srgb, var(--accent-primary) 15%, transparent)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: viewDeliveriesId === wh.id ? 'var(--accent-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
+                                                <Activity size={16} />
+                                            </button>
                                             <button onClick={async () => { try { await api.webhooks.delete(wh.id); } catch {} setWebhooksList(prev => prev.filter(w => w.id !== wh.id)); addAuditEntry('Webhook Deleted', actorName, wh.name, 'settings'); }}
                                                 title="Delete Webhook"
                                                 style={{ padding: '8px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: 'var(--error)', display: 'flex', alignItems: 'center' }}>
                                                 <Trash2 size={16} />
                                             </button>
                                         </div>
+                                    </div>
+                                    {viewDeliveriesId === wh.id && (
+                                        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--stroke)', borderRadius: '0 0 12px 12px', marginTop: '-12px', padding: '16px 20px' }}>
+                                            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Recent Deliveries</div>
+                                            {deliveryLogs.length === 0 ? (
+                                                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No delivery logs yet.</p>
+                                            ) : (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflow: 'auto' }}>
+                                                    {deliveryLogs.map(log => (
+                                                        <div key={log.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', background: 'var(--bg-tertiary)', borderRadius: '6px', fontSize: '12px' }}>
+                                                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: log.success ? 'var(--success, #22c55e)' : 'var(--error, #ed4245)', flexShrink: 0 }} />
+                                                            <span style={{ fontWeight: 600, color: 'var(--text-primary)', minWidth: '100px' }}>{log.eventType}</span>
+                                                            <span style={{ color: 'var(--text-muted)' }}>{log.responseStatus ?? '---'}</span>
+                                                            <span style={{ color: 'var(--text-muted)' }}>{log.durationMs != null ? `${log.durationMs}ms` : ''}</span>
+                                                            <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '11px' }}>{new Date(log.attemptedAt).toLocaleString()}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                     </div>
                                 ))}
 
@@ -3162,6 +3304,20 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                         <p style={{ fontSize: '13px', marginTop: '4px' }}>Use /invite to add bots to this server.</p>
                                     </div>
                                 )}
+                            </div>
+
+                            {/* No-Code Bot Builder (Item 100) */}
+                            <div style={{ marginTop: '32px', borderTop: '1px solid var(--stroke)', paddingTop: '24px' }}>
+                                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>No-Code Automations</h3>
+                                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>Create auto-responses and welcome messages without writing code.</p>
+                                {guildId && <NoCodeBotBuilder guildId={guildId} channels={channelsList} roles={roles} onSave={async (config) => {
+                                    try {
+                                        await api.put(`/guilds/${guildId}/bot-config`, config);
+                                        addToast({ title: 'Bot configuration saved', variant: 'success' });
+                                    } catch {
+                                        addToast({ title: 'Failed to save configuration', variant: 'error' });
+                                    }
+                                }} />}
                             </div>
                         </>
                     )}
@@ -3409,13 +3565,62 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                         <GuildInsightsPanel guildId={guildId} />
                     )}
 
+                    {/* Sticker Management — Item 21 */}
+                    {activeTab === 'stickers' && guildId && (
+                        <GuildStickersPanel guildId={guildId} addToast={addToast} />
+                    )}
+
+                    {/* Server Rules Gate — Item 19 */}
+                    {activeTab === 'rules' && guildId && (
+                        <>
+                            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Rules</h2>
+                            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
+                                Define server rules that new members must agree to before participating.
+                            </p>
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>RULES TEXT</label>
+                                <textarea
+                                    value={rulesText}
+                                    onChange={e => setRulesText(e.target.value)}
+                                    placeholder="Enter your server rules here. One rule per line recommended."
+                                    rows={10}
+                                    style={{ width: '100%', padding: '12px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box' as const, lineHeight: '1.6' }}
+                                />
+                            </div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '24px' }}>
+                                <input type="checkbox" checked={requireRulesAgreement} onChange={e => setRequireRulesAgreement(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
+                                Require new members to accept rules before chatting
+                            </label>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await api.patch(`/guilds/${guildId}`, { rulesText: rulesText || null, requireRulesAgreement });
+                                        addToast({ title: 'Server rules saved', variant: 'success' });
+                                    } catch {
+                                        addToast({ title: 'Failed to save rules', variant: 'error' });
+                                    }
+                                }}
+                                style={{ padding: '10px 24px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}
+                            >
+                                Save Rules
+                            </button>
+                        </>
+                    )}
+
+                    {/* Discovery Tags — Item 25 */}
+                    {activeTab === 'discovery' && guildId && (
+                        <GuildDiscoveryTagsPanel guildId={guildId} addToast={addToast} guildTags={guildTags} setGuildTags={setGuildTags} guildCategory={guildCategory} setGuildCategory={setGuildCategory} />
+                    )}
+
                     {activeTab === 'onboarding' && (
                         <>
                             <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Onboarding</h2>
                             <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
                                 Configure how new members are welcomed to your server.
                             </p>
-                            <div style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '12px', border: '1px solid var(--stroke)' }}>
+
+                            {/* Member Screening Toggle */}
+                            <div style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '12px', border: '1px solid var(--stroke)', marginBottom: '24px' }}>
                                 <div style={{ fontWeight: 600, marginBottom: '4px' }}>Member Screening</div>
                                 <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
                                     New members must complete onboarding before sending messages.
@@ -3433,6 +3638,11 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                     }} style={{ accentColor: 'var(--accent-primary)' }} />
                                     Enable member screening
                                 </label>
+                            </div>
+
+                            {/* Onboarding Flow Editor (Item 105) */}
+                            <div style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '12px', border: '1px solid var(--stroke)' }}>
+                                {guildId && <OnboardingFlowEditor guildId={guildId} roles={roles} channels={channelsList} addToast={addToast} />}
                             </div>
                         </>
                     )}
@@ -3897,6 +4107,31 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                     {activeTab === 'import' && (
                         <ImportWizard guildId={guildId!} addToast={addToast} />
                     )}
+
+                    {/* ===================== SPAM DETECTION (Item 93) ===================== */}
+                    {activeTab === 'spam' && guildId && (
+                        <SpamConfigPanel guildId={guildId} addToast={addToast} />
+                    )}
+
+                    {/* ===================== MOD QUEUE (Item 109) ===================== */}
+                    {activeTab === 'modqueue' && guildId && (
+                        <ModQueuePanel guildId={guildId} addToast={addToast} />
+                    )}
+
+                    {/* ===================== SOUNDBOARD (Item 97) ===================== */}
+                    {activeTab === 'soundboard' && guildId && (
+                        <SoundboardPanel guildId={guildId} addToast={addToast} />
+                    )}
+
+                    {/* ===================== BACKUPS (Item 108) ===================== */}
+                    {activeTab === 'backups' && guildId && (
+                        <BackupsPanel guildId={guildId} addToast={addToast} />
+                    )}
+
+                    {/* ===================== HIGHLIGHTS (Item 103) ===================== */}
+                    {activeTab === 'highlights' && guildId && (
+                        <HighlightsPanel guildId={guildId} addToast={addToast} />
+                    )}
                 </div>
             </div>
         </div>
@@ -4177,6 +4412,499 @@ function ImportWizard({ guildId, addToast }: { guildId: string; addToast: (t: an
                     </ol>
                 )}
             </div>
+        </>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Sticker Management Panel — Item 21
+// ---------------------------------------------------------------------------
+function GuildStickersPanel({ guildId, addToast }: { guildId: string; addToast: (t: any) => void }) {
+    const [stickers, setStickers] = useState<Array<{ id: string; name: string; assetUrl: string; description: string | null; tags: string[] }>>([]);
+    const [loading, setLoading] = useState(true);
+    const [newName, setNewName] = useState('');
+    const [newUrl, setNewUrl] = useState('');
+    const [newDesc, setNewDesc] = useState('');
+
+    useEffect(() => {
+        api.stickers.getGuildStickers(guildId).then(data => setStickers(Array.isArray(data) ? data : [])).catch(() => {}).finally(() => setLoading(false));
+    }, [guildId]);
+
+    const handleCreate = async () => {
+        if (!newName.trim() || !newUrl.trim()) {
+            addToast({ title: 'Name and URL are required', variant: 'error' });
+            return;
+        }
+        try {
+            const sticker = await api.post(`/guilds/${guildId}/stickers`, { name: newName.trim(), assetUrl: newUrl.trim(), description: newDesc.trim() || null, tags: [] });
+            setStickers(prev => [...prev, sticker as any]);
+            setNewName('');
+            setNewUrl('');
+            setNewDesc('');
+            addToast({ title: 'Sticker created', variant: 'success' });
+        } catch {
+            addToast({ title: 'Failed to create sticker', variant: 'error' });
+        }
+    };
+
+    const handleDelete = async (stickerId: string) => {
+        try {
+            await api.delete(`/guilds/${guildId}/stickers/${stickerId}`);
+            setStickers(prev => prev.filter(s => s.id !== stickerId));
+            addToast({ title: 'Sticker deleted', variant: 'success' });
+        } catch {
+            addToast({ title: 'Failed to delete sticker', variant: 'error' });
+        }
+    };
+
+    return (
+        <>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Stickers</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
+                Manage custom stickers for your server. Members can use them in the sticker picker.
+            </p>
+
+            <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '10px', padding: '20px', marginBottom: '24px' }}>
+                <div style={{ fontSize: '12px', textTransform: 'uppercase', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '12px' }}>ADD STICKER</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                    <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Sticker name" style={{ padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }} />
+                    <input value={newUrl} onChange={e => setNewUrl(e.target.value)} placeholder="Image URL (PNG, GIF, WebP)" style={{ padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }} />
+                    <input value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Description (optional)" style={{ padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }} />
+                </div>
+                <button onClick={handleCreate} style={{ padding: '8px 18px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
+                    Add Sticker
+                </button>
+            </div>
+
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>Loading stickers...</div>
+            ) : stickers.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
+                    <p style={{ fontSize: '16px', fontWeight: 600, margin: '0 0 4px' }}>No stickers yet</p>
+                    <p style={{ fontSize: '13px', margin: 0 }}>Add stickers above for your server members to use.</p>
+                </div>
+            ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+                    {stickers.map(sticker => (
+                        <div key={sticker.id} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '10px', padding: '12px', textAlign: 'center', position: 'relative' }}>
+                            <img src={sticker.assetUrl} alt={sticker.name} style={{ width: '80px', height: '80px', objectFit: 'contain', borderRadius: '8px', marginBottom: '8px' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{sticker.name}</div>
+                            {sticker.description && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{sticker.description}</div>}
+                            <button onClick={() => handleDelete(sticker.id)} style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(239, 68, 68, 0.15)', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ef4444' }}>
+                                <Trash2 size={12} />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Discovery Tags Panel — Item 25
+// ---------------------------------------------------------------------------
+function GuildDiscoveryTagsPanel({ guildId, addToast, guildTags, setGuildTags, guildCategory, setGuildCategory }: { guildId: string; addToast: (t: any) => void; guildTags: string[]; setGuildTags: (t: string[]) => void; guildCategory: string; setGuildCategory: (c: string) => void }) {
+    const [tagInput, setTagInput] = useState('');
+    const SUGGESTED_TAGS = ['gaming', 'music', 'art', 'technology', 'education', 'community', 'anime', 'memes', 'programming', 'social', 'roleplay', 'science'];
+    const CATEGORIES = ['gaming', 'music', 'art', 'tech', 'community', 'anime', 'education', 'other'];
+
+    const addTag = (tag: string) => {
+        const normalized = tag.toLowerCase().trim();
+        if (normalized && !guildTags.includes(normalized) && guildTags.length < 10) {
+            setGuildTags([...guildTags, normalized]);
+        }
+        setTagInput('');
+    };
+
+    const removeTag = (tag: string) => {
+        setGuildTags(guildTags.filter(t => t !== tag));
+    };
+
+    const save = async () => {
+        try {
+            await api.patch(`/guilds/${guildId}`, { tags: guildTags, category: guildCategory || null });
+            addToast({ title: 'Discovery settings saved', variant: 'success' });
+        } catch {
+            addToast({ title: 'Failed to save', variant: 'error' });
+        }
+    };
+
+    return (
+        <>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Discovery Tags</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
+                Help people find your server by adding tags and a category. Servers with tags appear in the Discover page.
+            </p>
+
+            <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>CATEGORY</label>
+                <select value={guildCategory} onChange={e => setGuildCategory(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}>
+                    <option value="">Select a category...</option>
+                    {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>)}
+                </select>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>TAGS ({guildTags.length}/10)</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                    {guildTags.map(tag => (
+                        <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'var(--accent-primary)', borderRadius: '999px', fontSize: '12px', color: 'white' }}>
+                            {tag}
+                            <button onClick={() => removeTag(tag)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'white', display: 'flex', alignItems: 'center', opacity: 0.7 }}>x</button>
+                        </span>
+                    ))}
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                        value={tagInput}
+                        onChange={e => setTagInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter' && tagInput.trim()) { e.preventDefault(); addTag(tagInput); } }}
+                        placeholder="Type a tag and press Enter"
+                        style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
+                    />
+                </div>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>SUGGESTED TAGS</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {SUGGESTED_TAGS.filter(t => !guildTags.includes(t)).map(tag => (
+                        <button
+                            key={tag}
+                            onClick={() => addTag(tag)}
+                            disabled={guildTags.length >= 10}
+                            style={{ padding: '4px 10px', borderRadius: '999px', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', cursor: guildTags.length >= 10 ? 'not-allowed' : 'pointer', fontSize: '12px', opacity: guildTags.length >= 10 ? 0.5 : 1 }}
+                        >
+                            + {tag}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <button onClick={save} style={{ padding: '10px 24px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>
+                Save Discovery Settings
+            </button>
+        </>
+    );
+}
+
+// ─── Spam Config Panel (Item 93) ─────────────────────────────────────────────
+function SpamConfigPanel({ guildId, addToast }: { guildId: string; addToast: (t: any) => void }) {
+    const [config, setConfig] = useState<any>(null);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        api.spamConfig.get(guildId).then(setConfig).catch(() => {});
+    }, [guildId]);
+
+    if (!config) return <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>;
+
+    const save = async () => {
+        setSaving(true);
+        try {
+            const updated = await api.spamConfig.update(guildId, config);
+            setConfig(updated);
+            addToast({ title: 'Spam config saved', variant: 'success' });
+        } catch { addToast({ title: 'Failed to save', variant: 'error' }); }
+        finally { setSaving(false); }
+    };
+
+    const inputStyle = { width: '80px', padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', textAlign: 'center' as const };
+    const rowStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' };
+
+    return (
+        <>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Spam Detection</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>Rule-based spam detection. No AI -- pure heuristics.</p>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={config.enabled} onChange={e => setConfig({ ...config, enabled: e.target.checked })} style={{ accentColor: 'var(--accent-primary)' }} />
+                <span style={{ fontWeight: 600 }}>Enable Spam Detection</span>
+            </label>
+
+            <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', marginBottom: '16px', opacity: config.enabled ? 1 : 0.5 }}>
+                <div style={rowStyle}><span style={{ fontSize: '13px' }}>Max duplicate messages</span><input type="number" value={config.maxDuplicateMessages} onChange={e => setConfig({ ...config, maxDuplicateMessages: +e.target.value })} style={inputStyle} /></div>
+                <div style={rowStyle}><span style={{ fontSize: '13px' }}>Duplicate window (sec)</span><input type="number" value={config.duplicateWindowSeconds} onChange={e => setConfig({ ...config, duplicateWindowSeconds: +e.target.value })} style={inputStyle} /></div>
+                <div style={rowStyle}><span style={{ fontSize: '13px' }}>Max mentions per message</span><input type="number" value={config.maxMentionsPerMessage} onChange={e => setConfig({ ...config, maxMentionsPerMessage: +e.target.value })} style={inputStyle} /></div>
+                <div style={rowStyle}><span style={{ fontSize: '13px' }}>Max links per message</span><input type="number" value={config.maxLinksPerMessage} onChange={e => setConfig({ ...config, maxLinksPerMessage: +e.target.value })} style={inputStyle} /></div>
+                <div style={rowStyle}>
+                    <span style={{ fontSize: '13px' }}>Action on detection</span>
+                    <select value={config.action} onChange={e => setConfig({ ...config, action: e.target.value })} style={{ ...inputStyle, width: '120px' }}>
+                        <option value="flag">Flag only</option>
+                        <option value="mute">Auto-mute</option>
+                        <option value="kick">Auto-kick</option>
+                    </select>
+                </div>
+            </div>
+
+            <button onClick={save} disabled={saving} style={{ padding: '10px 24px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>
+                {saving ? 'Saving...' : 'Save Config'}
+            </button>
+        </>
+    );
+}
+
+// ─── Mod Queue Panel (Item 109) ──────────────────────────────────────────────
+function ModQueuePanel({ guildId, addToast }: { guildId: string; addToast: (t: any) => void }) {
+    const [items, setItems] = useState<any[]>([]);
+    const [counts, setCounts] = useState<Record<string, number>>({});
+    const [statusFilter, setStatusFilter] = useState('pending');
+    const [loading, setLoading] = useState(true);
+
+    const load = async () => {
+        setLoading(true);
+        try {
+            const data = await api.modQueue.list(guildId, statusFilter);
+            setItems(data.items || []);
+            setCounts(data.counts || {});
+        } catch {} finally { setLoading(false); }
+    };
+
+    useEffect(() => { load(); }, [guildId, statusFilter]);
+
+    const resolve = async (itemId: string, status: 'approved' | 'rejected') => {
+        try {
+            await api.modQueue.resolve(guildId, itemId, status);
+            setItems(prev => prev.filter(i => i.id !== itemId));
+            addToast({ title: `Item ${status}`, variant: 'success' });
+        } catch { addToast({ title: 'Failed to resolve', variant: 'error' }); }
+    };
+
+    return (
+        <>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Moderation Queue</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
+                Review flagged content and take action. {counts.pending || 0} pending items.
+            </p>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                {['pending', 'approved', 'rejected'].map(s => (
+                    <button key={s} onClick={() => setStatusFilter(s)} style={{
+                        padding: '6px 14px', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: 600,
+                        background: statusFilter === s ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                        color: statusFilter === s ? '#000' : 'var(--text-secondary)', cursor: 'pointer', textTransform: 'capitalize',
+                    }}>{s} ({counts[s] || 0})</button>
+                ))}
+            </div>
+
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
+            ) : items.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>No items in this queue.</div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {items.map(item => (
+                        <div key={item.id} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '10px', padding: '16px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', background: 'var(--bg-tertiary)', padding: '2px 8px', borderRadius: '4px' }}>{item.type}</span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{new Date(item.createdAt).toLocaleString()}</span>
+                            </div>
+                            <p style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '12px', wordBreak: 'break-word' }}>{item.content || 'No details'}</p>
+                            {item.reporterUsername && <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Reported by: {item.reporterUsername}</p>}
+                            {statusFilter === 'pending' && (
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button onClick={() => resolve(item.id, 'approved')} style={{ padding: '6px 16px', borderRadius: '6px', background: '#10b981', border: 'none', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>Approve</button>
+                                    <button onClick={() => resolve(item.id, 'rejected')} style={{ padding: '6px 16px', borderRadius: '6px', background: '#ef4444', border: 'none', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>Reject</button>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </>
+    );
+}
+
+// ─── Soundboard Panel (Item 97) ──────────────────────────────────────────────
+function SoundboardPanel({ guildId, addToast }: { guildId: string; addToast: (t: any) => void }) {
+    const [clips, setClips] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [newName, setNewName] = useState('');
+    const [newEmoji, setNewEmoji] = useState('');
+
+    useEffect(() => {
+        api.soundboard.list(guildId).then(setClips).catch(() => {}).finally(() => setLoading(false));
+    }, [guildId]);
+
+    return (
+        <>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Custom Soundboard</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>Upload sound clips for voice channels. Max 50 clips per server.</p>
+
+            <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
+                <div style={{ fontSize: '12px', textTransform: 'uppercase', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '12px' }}>Upload Sound Clip</div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                    <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="Sound name" style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px' }} />
+                    <input type="text" value={newEmoji} onChange={e => setNewEmoji(e.target.value.slice(0, 4))} placeholder="Emoji" style={{ width: '60px', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '16px', textAlign: 'center' }} />
+                    <button onClick={async () => {
+                        if (!newName.trim()) return;
+                        try {
+                            const clip = await api.soundboard.upload(guildId, { name: newName.trim(), fileHash: 'placeholder', emoji: newEmoji || undefined });
+                            setClips(prev => [...prev, clip]);
+                            setNewName(''); setNewEmoji('');
+                            addToast({ title: 'Sound clip added', variant: 'success' });
+                        } catch { addToast({ title: 'Failed to add clip', variant: 'error' }); }
+                    }} style={{ padding: '8px 20px', borderRadius: '6px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>Add</button>
+                </div>
+            </div>
+
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
+            ) : clips.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>No sound clips yet. Upload one above.</div>
+            ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
+                    {clips.map(clip => (
+                        <div key={clip.id} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '10px', padding: '16px', textAlign: 'center', cursor: 'pointer' }}
+                            onClick={async () => { try { await api.soundboard.play(guildId, clip.id); } catch {} }}>
+                            <div style={{ fontSize: '28px', marginBottom: '8px' }}>{clip.emoji || '\uD83D\uDD0A'}</div>
+                            <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>{clip.name}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{clip.uses} plays</div>
+                            <button onClick={async (e) => {
+                                e.stopPropagation();
+                                try { await api.soundboard.delete(guildId, clip.id); setClips(prev => prev.filter(c => c.id !== clip.id)); addToast({ title: 'Deleted', variant: 'info' }); } catch {}
+                            }} style={{ marginTop: '8px', background: 'none', border: '1px solid var(--stroke)', borderRadius: '4px', padding: '2px 8px', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px' }}>Delete</button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </>
+    );
+}
+
+// ─── Backups Panel (Item 108) ────────────────────────────────────────────────
+function BackupsPanel({ guildId, addToast }: { guildId: string; addToast: (t: any) => void }) {
+    const [backups, setBackups] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [creating, setCreating] = useState(false);
+    const [backupName, setBackupName] = useState('');
+
+    useEffect(() => {
+        api.guildBackup.list(guildId).then(setBackups).catch(() => {}).finally(() => setLoading(false));
+    }, [guildId]);
+
+    const createBackup = async () => {
+        setCreating(true);
+        try {
+            const backup = await api.guildBackup.create(guildId, backupName || undefined);
+            setBackups(prev => [backup, ...prev]);
+            setBackupName('');
+            addToast({ title: 'Backup created', variant: 'success' });
+        } catch { addToast({ title: 'Failed to create backup', variant: 'error' }); }
+        finally { setCreating(false); }
+    };
+
+    const downloadBackup = async (backupId: string) => {
+        try {
+            const data = await api.guildBackup.get(guildId, backupId);
+            const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `backup-${data.name}.json`; a.click();
+            URL.revokeObjectURL(url);
+        } catch { addToast({ title: 'Failed to download', variant: 'error' }); }
+    };
+
+    return (
+        <>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Backups</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>Export your server structure (channels, roles, settings) as JSON backups.</p>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+                <input type="text" value={backupName} onChange={e => setBackupName(e.target.value)} placeholder="Backup name (optional)" style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px' }} />
+                <button onClick={createBackup} disabled={creating} style={{ padding: '10px 24px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>
+                    {creating ? 'Creating...' : 'Create Backup'}
+                </button>
+            </div>
+
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
+            ) : backups.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>No backups yet.</div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {backups.map(b => (
+                        <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '10px' }}>
+                            <div>
+                                <div style={{ fontWeight: 600, fontSize: '14px' }}>{b.name}</div>
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{new Date(b.createdAt).toLocaleString()} - {Math.round((b.sizeBytes || 0) / 1024)} KB</div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={() => downloadBackup(b.id)} style={{ padding: '6px 14px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>Download</button>
+                                <button onClick={async () => {
+                                    try { await api.guildBackup.delete(guildId, b.id); setBackups(prev => prev.filter(x => x.id !== b.id)); addToast({ title: 'Backup deleted', variant: 'info' }); } catch {}
+                                }} style={{ padding: '6px 14px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--error)', color: 'var(--error)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>Delete</button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </>
+    );
+}
+
+// ─── Highlights Panel (Item 103) ─────────────────────────────────────────────
+function HighlightsPanel({ guildId, addToast }: { guildId: string; addToast: (t: any) => void }) {
+    const [highlights, setHighlights] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [generating, setGenerating] = useState(false);
+
+    useEffect(() => {
+        api.guildHighlights.list(guildId).then(setHighlights).catch(() => {}).finally(() => setLoading(false));
+    }, [guildId]);
+
+    const generate = async () => {
+        setGenerating(true);
+        try {
+            const h = await api.guildHighlights.generate(guildId);
+            setHighlights(prev => [h, ...prev.filter(x => x.weekStart !== h.weekStart)]);
+            addToast({ title: 'Highlights generated', variant: 'success' });
+        } catch { addToast({ title: 'Failed to generate', variant: 'error' }); }
+        finally { setGenerating(false); }
+    };
+
+    return (
+        <>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Community Highlights</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>Weekly digest of top activity in your server.</p>
+
+            <button onClick={generate} disabled={generating} style={{ padding: '10px 24px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 600, cursor: 'pointer', fontSize: '13px', marginBottom: '24px' }}>
+                {generating ? 'Generating...' : 'Generate This Week'}
+            </button>
+
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
+            ) : highlights.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>No highlights yet. Generate one above.</div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {highlights.map(h => (
+                        <div key={h.id || h.weekStart} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+                                <h3 style={{ fontWeight: 600, fontSize: '15px' }}>Week of {h.weekStart}</h3>
+                                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{h.messageCount} messages</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                                <div style={{ flex: 1, minWidth: '200px' }}>
+                                    <div style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Most Active Members</div>
+                                    {(h.activeMembers || []).map((m: any, i: number) => (
+                                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '13px' }}>
+                                            <span style={{ color: 'var(--text-primary)' }}>{m.displayName || m.username}</span>
+                                            <span style={{ color: 'var(--text-muted)' }}>{m.messageCount} msgs</span>
+                                        </div>
+                                    ))}
+                                    {(h.activeMembers || []).length === 0 && <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No data</p>}
+                                </div>
+                                <div style={{ background: 'var(--bg-tertiary)', borderRadius: '8px', padding: '16px', minWidth: '120px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '28px', fontWeight: 700, color: 'var(--accent-primary)' }}>{h.memberCount}</div>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Members</div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
         </>
     );
 }

@@ -14,6 +14,30 @@ import { init as initErrorReporter } from './lib/errorReporter'
 // Initialize global error reporting (window.onerror + unhandledrejection)
 initErrorReporter();
 
+// Register service worker for PWA support (Phase 9, Item 145)
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/app/sw.js', { scope: '/app/' }).then(reg => {
+      // Check for updates every 30 minutes
+      setInterval(() => reg.update(), 30 * 60 * 1000);
+
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+              // New version available — the UpdateBanner component will pick this up
+              window.dispatchEvent(new CustomEvent('sw-update-available'));
+            }
+          });
+        }
+      });
+    }).catch(err => {
+      console.warn('[SW] Registration failed:', err);
+    });
+  });
+}
+
 // Restore streamer mode on load
 if (localStorage.getItem('gratonite:streamer-mode') === 'true') {
     document.body.classList.add('streamer-mode');

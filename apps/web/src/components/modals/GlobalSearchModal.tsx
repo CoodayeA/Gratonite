@@ -57,6 +57,7 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
     const [filterAfter, setFilterAfter] = useState('');
     const [filterHas, setFilterHas] = useState('');
     const [filterInChannel, setFilterInChannel] = useState('');
+    const [filterMentionsMe, setFilterMentionsMe] = useState(false);
     const [filtersExpanded, setFiltersExpanded] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const navigate = useNavigate();
@@ -96,14 +97,15 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
         let cancelled = false;
         (async () => {
             try {
-                const searchParams: { query: string; limit: number; authorId?: string; channelId?: string; before?: string; after?: string; has?: string } = { query: effectiveText || debouncedQuery, limit: 15 };
+                const searchParams: { query: string; limit: number; authorId?: string; channelId?: string; before?: string; after?: string; has?: string; mentionsMe?: boolean } = { query: effectiveText || debouncedQuery, limit: 15 };
                 if (effectiveFrom.trim()) searchParams.authorId = effectiveFrom.trim();
                 if (effectiveInChannel.trim()) searchParams.channelId = effectiveInChannel.trim();
                 if (effectiveBefore) searchParams.before = effectiveBefore;
                 if (effectiveAfter) searchParams.after = effectiveAfter;
                 if (effectiveHas) searchParams.has = effectiveHas;
+                if (filterMentionsMe) searchParams.mentionsMe = true;
 
-                const hasMessageFilters = !!(effectiveFrom || effectiveInChannel || effectiveBefore || effectiveAfter || effectiveHas);
+                const hasMessageFilters = !!(effectiveFrom || effectiveInChannel || effectiveBefore || effectiveAfter || effectiveHas || filterMentionsMe);
                 const [users, messages] = await Promise.all([
                     hasMessageFilters ? [] : api.users.searchUsers(effectiveText || debouncedQuery).catch(() => []),
                     api.search.messages(searchParams).catch(() => ({ results: [] })),
@@ -140,7 +142,7 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
             }
         })();
         return () => { cancelled = true; };
-    }, [debouncedQuery, effectiveText, effectiveFrom, effectiveInChannel, effectiveBefore, effectiveAfter, effectiveHas]);
+    }, [debouncedQuery, effectiveText, effectiveFrom, effectiveInChannel, effectiveBefore, effectiveAfter, effectiveHas, filterMentionsMe]);
 
     const handleResultClick = async (result: SearchResult) => {
         try {
@@ -255,6 +257,10 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                             <option value="embed">embed</option>
                             <option value="link">link</option>
                         </select>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: filterMentionsMe ? 'rgba(88,101,242,0.15)' : 'var(--bg-primary)', cursor: 'pointer', fontSize: 12, color: filterMentionsMe ? 'var(--accent-primary)' : 'var(--text-primary)', fontWeight: filterMentionsMe ? 600 : 400, whiteSpace: 'nowrap' }}>
+                            <input type="checkbox" checked={filterMentionsMe} onChange={e => setFilterMentionsMe(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
+                            @mentions me
+                        </label>
                     </div>
                 )}
 

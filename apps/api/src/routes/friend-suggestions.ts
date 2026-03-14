@@ -26,29 +26,29 @@ friendSuggestionsRouter.get('/', requireAuth, async (req: Request, res: Response
         INNER JOIN my_guilds mg ON mg.guild_id = gm.guild_id
         WHERE gm.user_id != ${userId}
           AND gm.user_id NOT IN (
-            SELECT CASE WHEN user_id = ${userId} THEN target_id ELSE user_id END
+            SELECT CASE WHEN requester_id = ${userId} THEN addressee_id ELSE requester_id END
             FROM relationships
-            WHERE user_id = ${userId} OR target_id = ${userId}
+            WHERE requester_id = ${userId} OR addressee_id = ${userId}
           )
         GROUP BY gm.user_id
       ),
       mutual_counts AS (
         SELECT c.user_id,
                c.shared_servers,
-               COUNT(DISTINCT mf.target_id) AS mutual_friends
+               COUNT(DISTINCT mf.addressee_id) AS mutual_friends
         FROM candidates c
         LEFT JOIN relationships mf
-          ON mf.user_id = c.user_id
+          ON mf.requester_id = c.user_id
           AND mf.type = 'FRIEND'
-          AND mf.target_id IN (
-            SELECT target_id FROM relationships WHERE user_id = ${userId} AND type = 'FRIEND'
+          AND mf.addressee_id IN (
+            SELECT addressee_id FROM relationships WHERE requester_id = ${userId} AND type = 'FRIEND'
           )
         GROUP BY c.user_id, c.shared_servers
       )
       SELECT mc.user_id AS id,
              u.username,
              u.display_name,
-             u.avatar,
+             u.avatar_hash,
              mc.shared_servers::int AS "sharedServers",
              mc.mutual_friends::int AS "mutualFriends"
       FROM mutual_counts mc

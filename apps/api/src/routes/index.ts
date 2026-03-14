@@ -107,6 +107,15 @@ import { giftsRouter } from './gifts';
 import { welcomeScreenRouter } from './welcome-screen';
 import { cardsRouter } from './cards';
 import { botPermissionsRouter } from './bot-permissions';
+import { storiesRouter } from './stories';
+
+// Phase 4 & 5 imports (items 81-110)
+import { spamDetectionRouter } from './spam-detection';
+import { soundboardRouter } from './soundboard';
+import { guildBackupRouter } from './guild-backup';
+import { modQueueRouter } from './mod-queue';
+import { guildHighlightsRouter } from './guild-highlights';
+import { vanityProfileRouter } from './vanity-profile';
 
 export const router = Router();
 
@@ -362,3 +371,48 @@ router.use('/cards', cardsRouter);
 
 // Bot permissions (per-guild)
 router.use('/guilds/:guildId/bots', botPermissionsRouter);
+
+// Stories / moments (ephemeral 24h posts)
+router.use('/stories', storiesRouter);
+
+// Phase 4 & 5 routes (items 81-110)
+router.use('/guilds/:guildId/spam-config', spamDetectionRouter);
+router.use('/guilds/:guildId/soundboard', soundboardRouter);
+router.use('/guilds/:guildId/backups', guildBackupRouter);
+router.use('/guilds/:guildId/mod-queue', modQueueRouter);
+router.use('/guilds/:guildId/highlights', guildHighlightsRouter);
+router.use('/users', vanityProfileRouter);
+
+// Phase 6: Productivity & Collaboration (items 106-120)
+import { calendarsRouter } from './calendars';
+import { fileManagerRouter } from './file-manager';
+import { meetingSchedulerRouter } from './meeting-scheduler';
+import { todoListsRouter } from './todo-lists';
+import { integrationsRouter } from './integrations';
+import { botFrameworkRouter } from './bot-framework';
+import { standupRouter } from './standup';
+import { timezoneRouter } from './timezone';
+import { afkRouter } from './afk';
+
+router.use('/guilds/:guildId/calendar', calendarsRouter);
+router.use('/guilds/:guildId/file-manager', fileManagerRouter);
+router.use('/guilds/:guildId/meetings', meetingSchedulerRouter);
+router.use('/channels/:channelId/todos', todoListsRouter);
+router.use('/guilds/:guildId/integrations', integrationsRouter);
+router.use('/bots/framework', botFrameworkRouter);
+router.use('/guilds/:guildId/standup', standupRouter);
+router.use('/users', timezoneRouter);
+router.use('/users', afkRouter);
+
+// Phase 7: Gamification & Engagement (items 121-135)
+import { xpRouter } from './xp';
+import { loginRewardsRouter } from './login-rewards';
+import { userTitlesRouter } from './user-titles';
+import { quizzesRouter } from './quizzes';
+import { reputationRouter } from './reputation';
+
+router.use('/', xpRouter);
+router.use('/', loginRewardsRouter);
+router.use('/', userTitlesRouter);
+router.use('/guilds/:guildId/quizzes', quizzesRouter);
+router.use('/', reputationRouter);

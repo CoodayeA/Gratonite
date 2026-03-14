@@ -13,6 +13,8 @@ export type GuildSessionInfo = {
   description: string | null;
   memberCount: number;
   createdAt: string;
+  rulesText?: string | null;
+  requireRulesAgreement?: boolean;
 };
 
 export type GuildSessionChannel = {
@@ -123,6 +125,8 @@ export function useGuildSession(args: UseGuildSessionArgs) {
         description: guild.description ?? null,
         memberCount: typeof guild.memberCount === 'number' ? guild.memberCount : 0,
         createdAt: (guild as { createdAt?: string }).createdAt ?? new Date().toISOString(),
+        rulesText: (guild as any).rulesText ?? null,
+        requireRulesAgreement: !!(guild as any).requireRulesAgreement,
       });
       setChannels((guildChannels as GuildSessionChannel[]) ?? []);
       setErrorCode(null);

@@ -670,7 +670,12 @@ guildsRouter.get(
 const AVAILABLE_TAGS = ['Gaming', 'Music', 'Art', 'Technology', 'Education', 'Community', 'Entertainment', 'Sports', 'Science', 'Anime'];
 
 guildsRouter.get('/tags', cacheControl(300), (_req: Request, res: Response) => {
-  res.json(AVAILABLE_TAGS);
+  try {
+    res.json(AVAILABLE_TAGS);
+  } catch (err) {
+    console.error('[guilds] GET /tags error:', err);
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -2561,20 +2566,25 @@ guildsRouter.delete('/:guildId/lock', requireAuth, async (req: Request, res: Res
 
 // Discovery Tags — PATCH /:guildId/tags is safe here since it's a PATCH, not GET
 guildsRouter.patch('/:guildId/tags', requireAuth, async (req: Request, res: Response): Promise<void> => {
-  const { guildId } = req.params as Record<string, string>;
-  if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_GUILD))) {
-    res.status(403).json({ code: 'FORBIDDEN' }); return;
+  try {
+    const { guildId } = req.params as Record<string, string>;
+    if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_GUILD))) {
+      res.status(403).json({ code: 'FORBIDDEN' }); return;
+    }
+    const { tags } = req.body as { tags?: unknown };
+    if (!Array.isArray(tags) || tags.length > 5) {
+      res.status(400).json({ error: 'tags must be an array of max 5' }); return;
+    }
+    const validatedTags = (tags as unknown[]).map(t => String(t).trim()).filter(t => t.length > 0 && t.length <= 32);
+    await db.delete(guildTags).where(eq(guildTags.guildId, guildId));
+    if (validatedTags.length > 0) {
+      await db.insert(guildTags).values(validatedTags.map(tag => ({ guildId, tag })));
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[guilds] PATCH /:guildId/tags error:', err);
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
-  const { tags } = req.body as { tags?: unknown };
-  if (!Array.isArray(tags) || tags.length > 5) {
-    res.status(400).json({ error: 'tags must be an array of max 5' }); return;
-  }
-  const validatedTags = (tags as unknown[]).map(t => String(t).trim()).filter(t => t.length > 0 && t.length <= 32);
-  await db.delete(guildTags).where(eq(guildTags.guildId, guildId));
-  if (validatedTags.length > 0) {
-    await db.insert(guildTags).values(validatedTags.map(tag => ({ guildId, tag })));
-  }
-  res.json({ ok: true });
 });
 
 // ---------------------------------------------------------------------------

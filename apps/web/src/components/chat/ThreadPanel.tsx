@@ -4,6 +4,7 @@ import { useUser } from '../../contexts/UserContext';
 import { api } from '../../lib/api';
 import { onThreadCreate } from '../../lib/socket';
 import Avatar from '../ui/Avatar';
+import { useToast } from '../ui/ToastManager';
 
 type Message = {
     id: number;
@@ -45,6 +46,7 @@ type ThreadFilterTab = 'active' | 'archived' | 'mine';
 type ThreadSortOption = 'recent' | 'created' | 'replies';
 
 const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) => {
+    const { addToast } = useToast();
     const [replies, setReplies] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -228,7 +230,7 @@ const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) 
             console.error('Failed to send thread reply:', err);
             // Surface the error to the user
             const detail = err?.message || err?.code || 'Unknown error';
-            alert(`Failed to send thread reply: ${detail}`);
+            addToast({ title: 'Failed to send thread reply', description: detail, variant: 'error' });
         } finally {
             setIsSending(false);
         }

@@ -1,4 +1,6 @@
-import { Award, MessageSquare, Mic, Clock, Star, Users, Zap, Heart } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Award, MessageSquare, Mic, Clock, Star, Users, Zap, Heart, Lock } from 'lucide-react';
+import { api } from '../../lib/api';
 
 interface Achievement {
   id: string;
@@ -23,8 +25,19 @@ const ACHIEVEMENTS: Achievement[] = [
   { id: 'first-fame', name: 'Famous', description: 'Receive your first fame', icon: Award, color: '#a855f7', earned: false },
 ];
 
+/** Fetch achievements from API and merge with local definitions */
+export function useAchievements() {
+  const [serverAchievements, setServerAchievements] = useState<Array<{ id: string; name: string; description: string; earned: boolean; earnedAt: string | null }>>([]);
+  useEffect(() => {
+    api.get<any[]>('/users/@me/achievements').then(setServerAchievements).catch(() => {});
+  }, []);
+  return serverAchievements;
+}
+
 export default function AchievementBadges({ earnedIds }: { earnedIds: string[] }) {
-  const badges = ACHIEVEMENTS.map(a => ({ ...a, earned: earnedIds.includes(a.id) }));
+  const serverData = useAchievements();
+  const serverEarnedIds = new Set([...earnedIds, ...serverData.filter(a => a.earned).map(a => a.id)]);
+  const badges = ACHIEVEMENTS.map(a => ({ ...a, earned: serverEarnedIds.has(a.id) }));
   const earnedCount = badges.filter(b => b.earned).length;
 
   return (

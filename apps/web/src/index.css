@@ -528,7 +528,8 @@ body {
     display: flex;
     flex-direction: column;
     z-index: 9;
-    contain: layout style paint;
+    contain: style paint;
+    position: relative;
 }
 
 .sidebar-header {
@@ -3814,5 +3815,172 @@ html.low-data-mode .bg-orbs .orb {
 .message-failed::after {
   content: 'Failed — tap to retry';
   color: #ef4444;
+}
+
+/* ============================================================
+   PHASE 8 & 9 ENHANCEMENTS
+   Items 136-160: Mobile & Responsiveness + Performance
+   ============================================================ */
+
+/* ── Item 136: Enhanced mobile bottom nav with 5 tabs ── */
+@media (max-width: 768px) {
+  .mobile-bottom-nav button.mobile-nav-item {
+    background: none;
+    border: none;
+    font-family: inherit;
+    padding: 0;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-bottom-nav {
+    gap: 0;
+    padding: 4px 4px;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ── Item 137: Swipe edge indicator for sidebar ── */
+.swipe-edge-indicator {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--accent-primary);
+  opacity: 0;
+  transition: opacity 0.15s ease, width 0.15s ease;
+  z-index: 600;
+  pointer-events: none;
+  border-radius: 0 4px 4px 0;
+}
+.swipe-edge-indicator.active {
+  opacity: 0.7;
+  width: 6px;
+}
+
+/* ── Item 138: Modal bottom sheet transition (enhanced) ── */
+@media (max-width: 768px) {
+  .modal-wrapper {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .modal-wrapper > div:first-child {
+    border-radius: 16px 16px 0 0 !important;
+    max-height: 90vh !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    animation: bottomSheetSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+}
+
+/* ── Item 140: Extended safe area support ── */
+@supports (padding: env(safe-area-inset-top)) {
+  /* Status bar background color area */
+  .app-container::before {
+    content: '';
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top, 0px);
+    background: var(--bg-primary);
+    z-index: 10001;
+    pointer-events: none;
+  }
+
+  /* Voice controls safe area */
+  .voice-controls {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Floating action buttons */
+  .fab-container {
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ── Item 142: Enhanced responsive attachment constraints ── */
+@media (max-width: 768px) {
+  .message-content img,
+  .rich-text-image {
+    max-width: calc(100vw - 64px) !important;
+    height: auto !important;
+  }
+  /* Video player controls: larger on mobile */
+  .message-attachment video::-webkit-media-controls-play-button,
+  .message-attachment video::-webkit-media-controls-fullscreen-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* ── Item 143: Mobile voice UI enhancements ── */
+@media (max-width: 768px) {
+  .voice-channel-container {
+    flex-direction: column !important;
+  }
+  .voice-participant-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .voice-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .voice-controls button {
+    min-width: 48px !important;
+    min-height: 48px !important;
+    border-radius: 50%;
+  }
+}
+
+/* ── Item 150: Image loading placeholder ── */
+img[loading="lazy"] {
+  background: linear-gradient(110deg, var(--bg-tertiary) 8%, var(--bg-secondary) 18%, var(--bg-tertiary) 33%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+img[loading="lazy"][src] {
+  animation: none;
+  background: none;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Performance: content-visibility for off-screen elements ── */
+.message-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 60px;
+}
+
+/* ── Performance: GPU compositing for animated elements ── */
+.channel-sidebar,
+.guild-rail,
+.members-sidebar,
+.bottom-sheet,
+.mobile-bottom-nav {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* ── Performance: Reduced motion preferences ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .route-transition-wrapper {
+    animation: none !important;
+  }
+  .confetti-piece {
+    display: none !important;
+  }
 }
 
