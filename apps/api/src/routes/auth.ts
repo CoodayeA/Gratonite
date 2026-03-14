@@ -42,6 +42,8 @@ import { redis } from '../lib/redis';
 import { usernameCheckRateLimit, emailVerifyRateLimit, mfaSetupRateLimit } from '../middleware/rateLimit';
 import { referrals as referralsTable } from '../db/schema/referrals';
 import { userDevices } from '../db/schema/user-devices';
+import { ServiceError } from '../services/guild.service';
+import * as authService from '../services/auth.service';
 
 export const authRouter = Router();
 
@@ -419,7 +421,6 @@ const mfaEnableSchema = z.object({
  *   - Sends a verification email via the mailer.
  */
 authRouter.post('/register', asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  // 1. Validate request body
   const parseResult = registerSchema.safeParse(req.body);
   if (!parseResult.success) {
     res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Validation failed', details: parseResult.error.issues });
@@ -427,95 +428,24 @@ authRouter.post('/register', asyncHandler(async (req: Request, res: Response): P
   }
 
   const { username, email, password, displayName } = parseResult.data;
+  const referralCode = (req.query.ref || req.body.referralCode) as string | undefined;
 
-  // Block internal email domains used for bot accounts.
-  const emailDomain = email.split('@')[1]?.toLowerCase();
-  if (emailDomain === 'gratonite.internal') {
-    res.status(400).json({ code: 'INVALID_EMAIL_DOMAIN', message: 'This email domain is not allowed for registration' });
-    return;
-  }
-
-  // 2. Check username availability (case-insensitive)
-  //    We compare against the lowercased username stored via sql`` to avoid
-  //    a full table scan if a case-insensitive index is added later.
-  const existingByUsername = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(sql`lower(${users.username}) = lower(${username})`)
-    .limit(1);
-
-  if (existingByUsername.length > 0) {
-    res.status(409).json({ code: 'USERNAME_TAKEN', message: 'Username is already taken' });
-    return;
-  }
-
-  // 3. Check email availability (case-insensitive)
-  const existingByEmail = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(sql`lower(${users.email}) = lower(${email})`)
-    .limit(1);
-
-  if (existingByEmail.length > 0) {
-    res.status(409).json({ code: 'EMAIL_TAKEN', message: 'Email is already registered' });
-    return;
-  }
-
-  // 4. Hash password with argon2id
-  //    argon2.hash() uses argon2id variant by default, which is the OWASP
-  //    recommendation as it resists both side-channel and GPU attacks.
-  const passwordHash = await argon2.hash(password);
-
-  // 5. Insert user
-  const [newUser] = await db
-    .insert(users)
-    .values({
-      username,
-      email: email.toLowerCase(),
-      passwordHash,
-      displayName: displayName ?? username, // default display name to username
-      emailVerified: false, // Email verification enabled — user must confirm via email link
-    })
-    .returning();
-
-  // 5b. Handle referral code if provided
-  const refCode = req.query.ref || req.body.referralCode;
-  if (refCode) {
-    try {
-      const [referral] = await db.select().from(referralsTable).where(eq(referralsTable.code, String(refCode))).limit(1);
-      if (referral && !referral.referredId) {
-        await db.update(referralsTable).set({ referredId: newUser.id, redeemedAt: new Date() }).where(eq(referralsTable.id, referral.id));
-      }
-    } catch { /* non-fatal */ }
-  }
-
-  // 6. Generate and store email verification token
-  //    The raw token goes into the email; the hash is stored in the DB.
-  const rawToken = generateRawToken();
-  const tokenHash = hashToken(rawToken);
-  const expiresAt = new Date(Date.now() + EMAIL_VERIFY_TTL_MS);
-
-  await db.insert(emailVerificationTokens).values({
-    userId: newUser.id,
-    token: tokenHash,
-    email: email.toLowerCase(),
-    expiresAt,
-  });
-
-  // 7. Send verification email
-  //    APP_URL is the public frontend URL (e.g. https://gratonite.chat).
-  //    Email failures are non-fatal: the user can re-request verification later.
-  if (!process.env.APP_URL) {
-    console.warn('[auth] WARNING: APP_URL is not set, falling back to http://localhost:5173. Set APP_URL in production.');
-  }
-  const appUrl = process.env.APP_URL || 'http://localhost:5173';
   try {
-    await sendVerificationEmail(email, rawToken, appUrl);
+    const result = await authService.register({ username, email, password, displayName, referralCode });
+    res.status(201).json({ email: result.email });
   } catch (err) {
-    logger.error('Failed to send verification email:', err);
+    if (err instanceof ServiceError) {
+      const status = err.code === 'CONFLICT' ? 409 : 400;
+      // Preserve original error codes for conflict types
+      const code = err.message === 'Username is already taken' ? 'USERNAME_TAKEN'
+        : err.message === 'Email is already registered' ? 'EMAIL_TAKEN'
+        : err.code === 'VALIDATION_ERROR' ? 'INVALID_EMAIL_DOMAIN'
+        : err.code;
+      res.status(status).json({ code, message: err.message });
+      return;
+    }
+    throw err;
   }
-
-  res.status(201).json({ email: email.toLowerCase() });
 }));
 
 // ---------------------------------------------------------------------------
@@ -569,7 +499,6 @@ authRouter.get('/username-available', usernameCheckRateLimit, asyncHandler(async
  *   - Sets `gratonite_refresh` httpOnly cookie.
  */
 authRouter.post('/login', asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  // 1. Validate request body
   const parseResult = loginSchema.safeParse(req.body);
   if (!parseResult.success) {
     res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Validation failed', details: parseResult.error.issues });
@@ -578,219 +507,43 @@ authRouter.post('/login', asyncHandler(async (req: Request, res: Response): Prom
 
   const { login, password, mfaCode } = parseResult.data;
 
-  // 2. Look up user by username OR email (case-insensitive).
-  //    We detect whether `login` is an email by checking for "@". This is
-  //    simple and covers all valid email formats without a full RFC 5322 parse.
-  const isEmail = login.includes('@');
+  try {
+    const result = await authService.login({
+      login,
+      password,
+      mfaCode,
+      userAgent: req.headers['user-agent'],
+      clientIp: getClientIp(req),
+    });
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(
-      isEmail
-        ? sql`lower(${users.email}) = lower(${login})`
-        : sql`lower(${users.username}) = lower(${login})`
-    )
-    .limit(1);
+    // Set the refresh token as an httpOnly cookie
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.cookie(REFRESH_COOKIE, result.rawRefreshToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: isProduction,
+      maxAge: REFRESH_TTL_MS,
+      path: '/',
+    });
 
-  // 3. Verify password.
-  //    We use a deliberate constant-time-ish fallback hash when the user isn't
-  //    found: argon2.verify against a dummy hash. This prevents timing attacks
-  //    that could distinguish "user not found" from "wrong password".
-  const DUMMY_HASH =
-    '$argon2id$v=19$m=65536,t=3,p=4$dGVzdHNhbHQ$LJVWzabEFHFa1lJwE0XFtGrn9H3wBlJEY6rElBm7Lhk';
-
-  const passwordValid = user
-    ? await argon2.verify(user.passwordHash, password)
-    : await argon2.verify(DUMMY_HASH, password).then(() => false).catch(() => false);
-
-  if (!user || !passwordValid) {
-    // Intentionally vague: don't reveal whether the username/email exists.
-    res.status(401).json({ code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' });
-    return;
-  }
-
-  // Block bot accounts from using the login endpoint.
-  // Bots authenticate via their API token, not user credentials.
-  if (user.isBot) {
-    res.status(403).json({ code: 'BOT_LOGIN_DENIED', message: 'Bot accounts cannot log in via this endpoint' });
-    return;
-  }
-
-  // 4. Email verification check disabled for now
-  // if (!user.emailVerified) {
-  //   res.status(403).json({
-  //     code: 'EMAIL_NOT_VERIFIED',
-  //     message: 'Email address has not been verified',
-  //   });
-  //   return;
-  // }
-
-  // 5. Enforce MFA if enabled.
-  if (user.mfaEnabled) {
-    if (!mfaCode) {
-      res.status(401).json({ code: 'MFA_REQUIRED', message: 'Two-factor authentication code required' });
+    res.status(200).json({
+      accessToken: result.accessToken,
+      user: result.user,
+    });
+  } catch (err) {
+    if (err instanceof ServiceError) {
+      const codeMap: Record<string, { status: number; code: string }> = {
+        'Invalid credentials': { status: 401, code: 'INVALID_CREDENTIALS' },
+        'Bot accounts cannot log in via this endpoint': { status: 403, code: 'BOT_LOGIN_DENIED' },
+        'Two-factor authentication code required': { status: 401, code: 'MFA_REQUIRED' },
+        'Invalid authentication code': { status: 401, code: 'INVALID_MFA_CODE' },
+      };
+      const mapped = codeMap[err.message] || { status: 401, code: err.code };
+      res.status(mapped.status).json({ code: mapped.code, message: err.message });
       return;
     }
-
-    let mfaVerified = false;
-    try {
-      if (user.mfaSecret) {
-        const decryptedSecret = decryptMfaSecret(user.mfaSecret);
-        mfaVerified = verifyTotpCode(decryptedSecret, mfaCode);
-      }
-    } catch {
-      mfaVerified = false;
-    }
-
-    // Allow one-time backup codes as fallback.
-    if (!mfaVerified) {
-      const backupHashes = await getMfaBackupHashes(user.id);
-      const codeHash = hashBackupCode(mfaCode, user.id);
-      let idx = backupHashes.indexOf(codeHash);
-      // Fallback: check legacy unsalted hash for pre-migration backup codes
-      if (idx < 0) {
-        const legacyHash = hashToken(normalizeBackupCode(mfaCode));
-        idx = backupHashes.indexOf(legacyHash);
-      }
-      if (idx >= 0) {
-        backupHashes.splice(idx, 1);
-        await setMfaBackupHashes(user.id, backupHashes);
-        mfaVerified = true;
-      }
-    }
-
-    if (!mfaVerified) {
-      res.status(401).json({ code: 'INVALID_MFA_CODE', message: 'Invalid authentication code' });
-      return;
-    }
+    throw err;
   }
-
-  // 6. Sign access and refresh JWTs.
-  const accessToken = signAccessToken(user.id);
-  const rawRefreshToken = signRefreshToken(user.id);
-
-  // 7. Store refresh token hash in the DB.
-  const tokenHash = hashToken(rawRefreshToken);
-  const expiresAt = new Date(Date.now() + REFRESH_TTL_MS);
-
-  await db.insert(refreshTokens).values({
-    userId: user.id,
-    tokenHash,
-    expiresAt,
-    device: parseDevice(req.headers['user-agent']),
-    ip: getClientIp(req),
-    lastActiveAt: new Date(),
-  });
-
-  // 8. New-device login alert (non-blocking)
-  try {
-    const loginIp = getClientIp(req);
-    const loginDevice = parseDevice(req.headers['user-agent']);
-    const uaHash = crypto
-      .createHash('sha256')
-      .update(req.headers['user-agent'] || '')
-      .digest('hex');
-
-    // Try to insert the device. If the unique constraint fires, this is a known device.
-    const [inserted] = await db
-      .insert(userDevices)
-      .values({
-        userId: user.id,
-        ip: loginIp,
-        userAgentHash: uaHash,
-        deviceLabel: loginDevice,
-      })
-      .onConflictDoUpdate({
-        target: [userDevices.userId, userDevices.ip, userDevices.userAgentHash],
-        set: { lastSeenAt: new Date() },
-      })
-      .returning({ firstSeenAt: userDevices.firstSeenAt });
-
-    // If the device was just created (firstSeenAt ~= now), send an alert email.
-    // Allow a 5-second tolerance for clock drift.
-    const isNewDevice = inserted && (Date.now() - new Date(inserted.firstSeenAt).getTime()) < 5000;
-
-    if (isNewDevice && user.email) {
-      const appUrl = process.env.APP_URL || 'https://gratonite.chat';
-      sendNewDeviceLoginAlert({
-        to: user.email,
-        ip: loginIp,
-        device: loginDevice,
-        timestamp: new Date(),
-        appUrl,
-      }).catch(() => { /* email delivery failure is non-critical */ });
-    }
-  } catch {
-    // Device tracking is non-critical — don't block login
-  }
-
-  // 9. Set the refresh token as an httpOnly cookie.
-  //    httpOnly: the cookie cannot be read by JavaScript — prevents XSS theft.
-  //    sameSite: 'lax' allows top-level navigations but blocks CSRF from third
-  //    party sites — a good balance for a SPA.
-  //    secure: only send over HTTPS in production.
-  const isProduction = process.env.NODE_ENV === 'production';
-  res.cookie(REFRESH_COOKIE, rawRefreshToken, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: isProduction,
-    maxAge: REFRESH_TTL_MS,
-    path: '/',
-  });
-
-  // 10. Streak logic (non-critical)
-  try {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const lastStreak = user.lastStreakAt;
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-
-    let streakUpdate: Record<string, unknown> = {};
-    let coinsGrant = 0;
-
-    if (!lastStreak) {
-      // First login
-      streakUpdate = { currentStreak: 1, longestStreak: 1, lastStreakAt: today };
-      coinsGrant = 10;
-    } else if (lastStreak === yesterday) {
-      // Consecutive day
-      const newStreak = (user.currentStreak ?? 0) + 1;
-      const longestStreak = Math.max(newStreak, user.longestStreak ?? 0);
-      coinsGrant = Math.min(newStreak * 10, 200);
-      streakUpdate = { currentStreak: newStreak, longestStreak, lastStreakAt: today };
-
-      // Check streak achievements
-      if (newStreak >= 7) {
-        const { checkAchievements } = await import('./achievements');
-        await checkAchievements(user.id, 'streak_7');
-      }
-      if (newStreak >= 30) {
-        const { checkAchievements } = await import('./achievements');
-        await checkAchievements(user.id, 'streak_30');
-      }
-    } else if (lastStreak === today) {
-      // Already logged in today — no-op
-      streakUpdate = {};
-      coinsGrant = 0;
-    } else {
-      // Streak broken
-      streakUpdate = { currentStreak: 1, lastStreakAt: today };
-      coinsGrant = 10;
-    }
-
-    if (Object.keys(streakUpdate).length > 0) {
-      if (coinsGrant > 0) streakUpdate.coins = sql`coins + ${coinsGrant}`;
-      await db.update(users).set(streakUpdate as any).where(eq(users.id, user.id));
-    }
-  } catch {
-    // Non-critical
-  }
-
-  // 11. Return access token and safe user object.
-  res.status(200).json({
-    accessToken,
-    user: safeUserResponse(user),
-  });
 }));
 
 // ---------------------------------------------------------------------------
@@ -820,45 +573,17 @@ authRouter.post('/refresh', asyncHandler(async (req: Request, res: Response): Pr
     return;
   }
 
-  // 1. Verify JWT signature and extract userId.
-  let userId: string;
   try {
-    ({ userId } = verifyRefreshToken(rawToken));
-  } catch {
-    res.status(401).json({ code: 'UNAUTHORIZED', message: 'Invalid or expired refresh token' });
-    return;
+    const result = await authService.refreshToken(rawToken);
+    res.status(200).json({ accessToken: result.accessToken });
+  } catch (err) {
+    if (err instanceof ServiceError) {
+      res.clearCookie(REFRESH_COOKIE, { path: '/' });
+      res.status(401).json({ code: 'UNAUTHORIZED', message: err.message });
+      return;
+    }
+    throw err;
   }
-
-  // 2. Verify the token hash exists in the DB and hasn't expired.
-  const tokenHash = hashToken(rawToken);
-  const [storedToken] = await db
-    .select()
-    .from(refreshTokens)
-    .where(eq(refreshTokens.tokenHash, tokenHash))
-    .limit(1);
-
-  if (!storedToken || storedToken.expiresAt < new Date()) {
-    // Token has been revoked (logout) or expired; clear the stale cookie.
-    res.clearCookie(REFRESH_COOKIE, { path: '/' });
-    res.status(401).json({ code: 'UNAUTHORIZED', message: 'Refresh token is invalid or has expired' });
-    return;
-  }
-
-  // 3. Confirm the token belongs to the right user (defence in depth).
-  if (storedToken.userId !== userId) {
-    res.status(401).json({ code: 'UNAUTHORIZED', message: 'Refresh token mismatch' });
-    return;
-  }
-
-  // 4. Update last-active timestamp for session tracking.
-  await db.update(refreshTokens)
-    .set({ lastActiveAt: new Date() })
-    .where(eq(refreshTokens.tokenHash, tokenHash));
-
-  // 5. Issue a new access token.
-  const accessToken = signAccessToken(userId);
-
-  res.status(200).json({ accessToken });
 }));
 
 // ---------------------------------------------------------------------------
@@ -879,12 +604,7 @@ authRouter.post('/refresh', asyncHandler(async (req: Request, res: Response): Pr
 authRouter.post('/logout', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const rawToken: string | undefined = req.cookies[REFRESH_COOKIE];
 
-  if (rawToken) {
-    // Delete the token hash from the DB — this immediately invalidates the
-    // session even if the JWT hasn't technically expired yet.
-    const tokenHash = hashToken(rawToken);
-    await db.delete(refreshTokens).where(eq(refreshTokens.tokenHash, tokenHash));
-  }
+  await authService.logout(rawToken);
 
   // Always clear the cookie, regardless of whether a token was found.
   res.clearCookie(REFRESH_COOKIE, { path: '/' });
@@ -1216,7 +936,6 @@ authRouter.post('/mfa/backup-codes/regenerate', requireAuth, asyncHandler(async 
  * "this email is registered but unverified" from "this email isn't registered".
  */
 authRouter.post('/verify-email/request', emailVerifyRateLimit, asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  // 1. Validate request body
   const parseResult = verifyEmailRequestSchema.safeParse(req.body);
   if (!parseResult.success) {
     res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Validation failed', details: parseResult.error.issues });
@@ -1224,57 +943,8 @@ authRouter.post('/verify-email/request', emailVerifyRateLimit, asyncHandler(asyn
   }
 
   const { email } = parseResult.data;
-  const emailLower = email.toLowerCase();
-
-  // 2. Look up user.
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, emailLower))
-    .limit(1);
-
-  // Return 200 whether the email is registered or not (prevent enumeration).
-  if (!user) {
-    res.status(200).json({ message: 'Verification email sent' });
-    return;
-  }
-
-  // 3. Already verified — nothing to do.
-  if (user.emailVerified) {
-    res.status(200).json({ message: 'Email is already verified' });
-    return;
-  }
-
-  // 4. Delete any existing verification tokens for this user.
-  //    This ensures only one valid token exists at a time, which prevents
-  //    confusion if the user requests the email multiple times.
-  await db
-    .delete(emailVerificationTokens)
-    .where(eq(emailVerificationTokens.userId, user.id));
-
-  // 5. Create a new token and send the email.
-  const rawToken = generateRawToken();
-  const tokenHash = hashToken(rawToken);
-  const expiresAt = new Date(Date.now() + EMAIL_VERIFY_TTL_MS);
-
-  await db.insert(emailVerificationTokens).values({
-    userId: user.id,
-    token: tokenHash,
-    email: emailLower,
-    expiresAt,
-  });
-
-  if (!process.env.APP_URL) {
-    console.warn('[auth] WARNING: APP_URL is not set, falling back to http://localhost:5173. Set APP_URL in production.');
-  }
-  const appUrl = process.env.APP_URL || 'http://localhost:5173';
-  try {
-    await sendVerificationEmail(email, rawToken, appUrl);
-  } catch (err) {
-    logger.error('Failed to send verification email:', err);
-  }
-
-  res.status(200).json({ message: 'Verification email sent' });
+  const message = await authService.requestEmailVerification(email);
+  res.status(200).json({ message });
 }));
 
 // ---------------------------------------------------------------------------
@@ -1296,7 +966,6 @@ authRouter.post('/verify-email/request', emailVerifyRateLimit, asyncHandler(asyn
  *   - Deletes the used token record (one-time use).
  */
 authRouter.post('/verify-email/confirm', emailVerifyRateLimit, asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  // 1. Validate request body
   const parseResult = verifyEmailConfirmSchema.safeParse(req.body);
   if (!parseResult.success) {
     res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Validation failed', details: parseResult.error.issues });
@@ -1305,40 +974,17 @@ authRouter.post('/verify-email/confirm', emailVerifyRateLimit, asyncHandler(asyn
 
   const { token } = parseResult.data;
 
-  // 2. Hash the provided token and look up the record by hash.
-  const providedHash = hashToken(token);
-  const [tokenRecord] = await db
-    .select()
-    .from(emailVerificationTokens)
-    .where(eq(emailVerificationTokens.token, providedHash))
-    .limit(1);
-
-  if (!tokenRecord) {
-    res.status(400).json({ code: 'INVALID_TOKEN', message: 'Invalid or expired verification token' });
-    return;
+  try {
+    const result = await authService.confirmEmailVerification(token);
+    res.status(200).json({ ok: true, message: 'Email verified', accessToken: result.accessToken });
+  } catch (err) {
+    if (err instanceof ServiceError) {
+      const code = err.message.includes('expired') ? 'TOKEN_EXPIRED' : 'INVALID_TOKEN';
+      res.status(400).json({ code, message: err.message });
+      return;
+    }
+    throw err;
   }
-
-  // 3. Check expiry.
-  if (tokenRecord.expiresAt < new Date()) {
-    // Clean up expired token.
-    await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.id, tokenRecord.id));
-    res.status(400).json({ code: 'TOKEN_EXPIRED', message: 'Verification token has expired. Please request a new one.' });
-    return;
-  }
-
-  // 4. Mark user as verified and update updatedAt.
-  await db
-    .update(users)
-    .set({ emailVerified: true, updatedAt: new Date() })
-    .where(eq(users.id, tokenRecord.userId));
-
-  // 5. Delete the used token (one-time use).
-  await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.id, tokenRecord.id));
-
-  // 6. Issue an access token so the user is auto-logged-in after verification.
-  const accessToken = signAccessToken(tokenRecord.userId);
-
-  res.status(200).json({ ok: true, message: 'Email verified', accessToken });
 }));
 
 // ---------------------------------------------------------------------------
