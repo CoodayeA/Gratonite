@@ -15,9 +15,9 @@ const patchSettingsSchema = z.object({
   theme: z.string().max(50).optional(),
   colorMode: z.enum(['dark', 'light']).optional(),
   fontFamily: z.string().max(50).optional(),
-  fontSize: z.number().int().min(10).max(24).optional(),
+  fontSize: z.union([z.number().int().min(10).max(24), z.enum(['small', 'medium', 'large', 'extra-large'])]).optional(),
   glassMode: z.enum(['off', 'subtle', 'full']).optional(),
-  buttonShape: z.enum(['rounded', 'pill', 'square']).optional(),
+  buttonShape: z.enum(['rounded', 'pill', 'sharp', 'square']).optional(),
   soundMuted: z.boolean().optional(),
   soundVolume: z.number().int().min(0).max(100).optional(),
   soundPack: z.string().max(50).optional(),
@@ -26,6 +26,10 @@ const patchSettingsSchema = z.object({
   highContrast: z.boolean().optional(),
   compactMode: z.boolean().optional(),
   accentColor: z.string().max(20).nullable().optional(),
+  screenReaderMode: z.boolean().optional(),
+  linkUnderlines: z.boolean().optional(),
+  focusIndicatorSize: z.enum(['normal', 'large']).optional(),
+  colorBlindMode: z.enum(['none', 'deuteranopia', 'protanopia', 'tritanopia']).optional(),
   customThemeId: z.string().uuid().nullable().optional(),
   themePreferences: z.object({
     colorMode: z.enum(['dark', 'light']).optional(),
@@ -42,7 +46,7 @@ const patchSettingsSchema = z.object({
     dms: z.boolean().optional(),
     frequency: z.enum(['instant', 'daily', 'never']).optional(),
   }).optional(),
-});
+}).passthrough();
 
 /** GET /api/v1/users/@me/settings */
 settingsRouter.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
