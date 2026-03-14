@@ -77,6 +77,7 @@ import { useDesktopDeepLinks } from './hooks/useDesktopDeepLinks';
 import { useDesktopIdleDetection } from './hooks/useDesktopIdleDetection';
 import { useDesktopMenuNavigation } from './hooks/useDesktopMenuNavigation';
 import { useDesktopNotifications } from './hooks/useDesktopNotifications';
+import { useGameActivity } from './hooks/useGameActivity';
 import UpdateBanner from './components/ui/UpdateBanner';
 
 // Lazy-loaded modal components for code splitting
@@ -2697,6 +2698,7 @@ export const AppLayout = () => {
     useDesktopIdleDetection();
     useDesktopMenuNavigation();
     useDesktopNotifications();
+    useGameActivity();
 
     // Voice context for keyboard shortcuts (mute/deafen)
     const voiceCtx = useVoice();
