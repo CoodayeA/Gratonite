@@ -3675,9 +3675,6 @@ body.electron-mac .sidebar-header {
   .members-sidebar-backdrop {
     display: none !important;
   }
-  .member-count-toggle {
-    display: none !important;
-  }
 }
 
 /* ── Item 51: Safe area inset handling ── */
