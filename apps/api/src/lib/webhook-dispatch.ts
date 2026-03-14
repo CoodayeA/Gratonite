@@ -82,15 +82,15 @@ export async function processActions(actions: BotAction[], guildId: string, botA
         case 'send_message': {
           if (!action.channelId || (!action.content && (!action.embeds || action.embeds.length === 0))) continue;
 
-          // Validate channel exists
+          // Validate channel exists AND belongs to the guild (prevent cross-guild injection)
           const [channel] = await db
             .select({ id: channels.id, guildId: channels.guildId })
             .from(channels)
-            .where(eq(channels.id, action.channelId))
+            .where(and(eq(channels.id, action.channelId), eq(channels.guildId, guildId)))
             .limit(1);
 
           if (!channel) {
-            logger.warn('[webhook-dispatch] send_message: unknown channel', action.channelId);
+            logger.warn('[webhook-dispatch] send_message: channel not found or not in guild', action.channelId, guildId);
             continue;
           }
 
@@ -199,6 +199,14 @@ export async function processActions(actions: BotAction[], guildId: string, botA
         case 'kick_member': {
           if (!action.userId) continue;
 
+          // Prevent kicking the guild owner
+          const [guild] = await db.select({ ownerId: guilds.ownerId }).from(guilds)
+            .where(eq(guilds.id, guildId)).limit(1);
+          if (guild && guild.ownerId === action.userId) {
+            logger.warn('[webhook-dispatch] kick_member: cannot kick guild owner', action.userId);
+            continue;
+          }
+
           // Delete guild membership
           const deleted = await db.delete(guildMembers).where(
             and(
@@ -241,6 +249,7 @@ interface BotRow {
   webhookUrl: string;
   webhookSecretKey: string;
   subscribedEvents: string[] | null;
+  botUserId: string | null;
 }
 
 async function getInstalledBots(guildId: string): Promise<BotRow[]> {
@@ -251,6 +260,7 @@ async function getInstalledBots(guildId: string): Promise<BotRow[]> {
       webhookSecretKey: botApplications.webhookSecretKey,
       isActive: botApplications.isActive,
       subscribedEvents: botApplications.subscribedEvents,
+      botUserId: botApplications.botUserId,
     })
     .from(botApplications)
     .innerJoin(botInstalls, eq(botInstalls.botId, botApplications.listingId!))
@@ -287,7 +297,7 @@ async function _sendToBot(
     }
 
     if (Array.isArray(responseBody.actions) && responseBody.actions.length > 0) {
-      await processActions(responseBody.actions, guildId);
+      await processActions(responseBody.actions, guildId, bot.botUserId);
     }
 
     return responseBody;
@@ -361,10 +371,10 @@ export function dispatchMessageCreate(event: MessageCreateEvent): void {
  * awaits the response to render the bot's reply.
  */
 export async function dispatchInteraction(
-  bot: { id: string; webhookUrl: string; webhookSecretKey: string },
+  bot: { id: string; webhookUrl: string; webhookSecretKey: string; botUserId?: string | null },
   interactionPayload: Record<string, unknown>,
   guildId: string,
 ): Promise<BotActionResponse | null> {
   const payload = JSON.stringify({ type: 'interaction', ...interactionPayload });
-  return _sendToBot(bot as BotRow, payload, guildId);
+  return _sendToBot({ ...bot, subscribedEvents: null, botUserId: bot.botUserId ?? null } as BotRow, payload, guildId);
 }
