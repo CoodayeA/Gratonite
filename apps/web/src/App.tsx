@@ -2197,6 +2197,20 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile, isMobileOpen, onCloseMo
     const [banReason, setBanReason] = useState('');
     const [banDuration, setBanDuration] = useState(0);
     const [banSubmitting, setBanSubmitting] = useState(false);
+    const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+        if (!guildId) return {};
+        try {
+            const saved = localStorage.getItem(`gratonite:member-collapsed:${guildId}`);
+            return saved ? JSON.parse(saved) : {};
+        } catch { return {}; }
+    });
+    const toggleCategory = (key: string) => {
+        setCollapsed(prev => {
+            const next = { ...prev, [key]: !prev[key] };
+            if (guildId) localStorage.setItem(`gratonite:member-collapsed:${guildId}`, JSON.stringify(next));
+            return next;
+        });
+    };
 
     useEffect(() => {
         if (!guildId) return;
