@@ -15,6 +15,11 @@ interface Props {
   embed: RichEmbed;
 }
 
+function isSafeUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  try { const u = new URL(url); return u.protocol === 'https:' || u.protocol === 'http:'; } catch { return false; }
+}
+
 export function RichEmbedCard({ embed }: Props) {
   const accentColor = embed.color || 'var(--accent-primary)';
 
@@ -33,7 +38,7 @@ export function RichEmbedCard({ embed }: Props) {
       <div style={{ flex: 1, minWidth: 0 }}>
         {/* Title */}
         {embed.title && (
-          embed.url ? (
+          embed.url && isSafeUrl(embed.url) ? (
             <a
               href={embed.url}
               target="_blank"
@@ -114,7 +119,7 @@ export function RichEmbedCard({ embed }: Props) {
       </div>
 
       {/* Thumbnail */}
-      {embed.thumbnail && (
+      {embed.thumbnail && isSafeUrl(embed.thumbnail) && (
         <div style={{ flexShrink: 0 }}>
           <img
             src={embed.thumbnail}

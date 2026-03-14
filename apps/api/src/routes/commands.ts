@@ -216,9 +216,7 @@ commandsRouter.post('/channels/:channelId/messages/:messageId/components/:custom
       values: values ?? [],
     };
 
-    // Also dispatch as event
-    dispatchEvent(channel.guildId, 'component_interaction', interactionPayload);
-
+    // Dispatch directly to the owning bot only (not all bots via dispatchEvent)
     const response = await dispatchInteraction(bot, { ...interactionPayload, interactionType: 'component' }, channel.guildId);
 
     res.json({

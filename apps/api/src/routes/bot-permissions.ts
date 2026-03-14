@@ -82,7 +82,10 @@ botPermissionsRouter.patch(
         res.status(403).json({ code: 'FORBIDDEN', message: 'Only the guild owner can manage bot permissions' }); return;
       }
 
-      const permBigint = BigInt(permissions);
+      let permBigint: bigint;
+      try { permBigint = BigInt(permissions); } catch {
+        res.status(400).json({ code: 'VALIDATION_ERROR', message: 'permissions must be a valid integer' }); return;
+      }
 
       // Upsert
       const existing = await db.select({ id: botGuildPermissions.id })
