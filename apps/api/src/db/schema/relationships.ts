@@ -54,6 +54,7 @@ import {
   uuid,
   varchar,
   timestamp,
+  integer,
   unique,
 } from 'drizzle-orm/pg-core';
 import { users } from './users';
@@ -144,3 +145,37 @@ export type Relationship = typeof relationships.$inferSelect;
  * TypeScript type for inserting a new relationship row.
  */
 export type NewRelationship = typeof relationships.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// friend_groups — User-created friend categories
+// ---------------------------------------------------------------------------
+
+export const friendGroups = pgTable('friend_groups', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 100 }).notNull(),
+  color: varchar('color', { length: 20 }).notNull().default('#526df5'),
+  position: integer('position').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type FriendGroup = typeof friendGroups.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// friend_group_members — Which friends belong to which group
+// ---------------------------------------------------------------------------
+
+export const friendGroupMembers = pgTable(
+  'friend_group_members',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    groupId: uuid('group_id').notNull().references(() => friendGroups.id, { onDelete: 'cascade' }),
+    friendUserId: uuid('friend_user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('friend_group_members_group_friend_key').on(table.groupId, table.friendUserId),
+  ],
+);
+
+export type FriendGroupMember = typeof friendGroupMembers.$inferSelect;

@@ -28,10 +28,10 @@
 
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { eq, and, or, desc } from 'drizzle-orm';
+import { eq, and, or, desc, asc } from 'drizzle-orm';
 
 import { db } from '../db/index';
-import { relationships } from '../db/schema/relationships';
+import { relationships, friendGroups, friendGroupMembers } from '../db/schema/relationships';
 import { users } from '../db/schema/users';
 import { channels } from '../db/schema/channels';
 import { dmChannelMembers } from '../db/schema/channels';
@@ -966,6 +966,178 @@ relationshipsRouter.delete(
       res.status(200).json({ code: 'OK', message: 'User unblocked' });
     } catch (err) {
       handleAppError(res, err, 'relationships');
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Friend Groups CRUD
+// ---------------------------------------------------------------------------
+
+const createGroupSchema = z.object({
+  name: z.string().min(1).max(100),
+  color: z.string().max(20).optional(),
+});
+
+const updateGroupSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  color: z.string().max(20).optional(),
+});
+
+/** GET /relationships/groups — list all friend groups with member IDs */
+relationshipsRouter.get(
+  '/groups',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const groups = await db
+        .select()
+        .from(friendGroups)
+        .where(eq(friendGroups.userId, req.userId!))
+        .orderBy(asc(friendGroups.position));
+
+      const members = groups.length > 0
+        ? await db
+            .select({ groupId: friendGroupMembers.groupId, friendUserId: friendGroupMembers.friendUserId })
+            .from(friendGroupMembers)
+            .where(or(...groups.map(g => eq(friendGroupMembers.groupId, g.id))))
+        : [];
+
+      const membersByGroup = new Map<string, string[]>();
+      for (const m of members) {
+        const arr = membersByGroup.get(m.groupId) ?? [];
+        arr.push(m.friendUserId);
+        membersByGroup.set(m.groupId, arr);
+      }
+
+      res.json(groups.map(g => ({
+        id: g.id,
+        name: g.name,
+        color: g.color,
+        position: g.position,
+        friendIds: membersByGroup.get(g.id) ?? [],
+      })));
+    } catch (err) {
+      handleAppError(res, err, 'friend-groups');
+    }
+  },
+);
+
+/** POST /relationships/groups — create a friend group */
+relationshipsRouter.post(
+  '/groups',
+  requireAuth,
+  validate(createGroupSchema),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { name, color } = req.body as z.infer<typeof createGroupSchema>;
+
+      const existing = await db
+        .select({ position: friendGroups.position })
+        .from(friendGroups)
+        .where(eq(friendGroups.userId, req.userId!))
+        .orderBy(desc(friendGroups.position))
+        .limit(1);
+      const nextPos = existing.length > 0 ? existing[0].position + 1 : 0;
+
+      const [group] = await db
+        .insert(friendGroups)
+        .values({ userId: req.userId!, name, color: color ?? '#526df5', position: nextPos })
+        .returning();
+
+      res.status(201).json({ id: group.id, name: group.name, color: group.color, position: group.position, friendIds: [] });
+    } catch (err) {
+      handleAppError(res, err, 'friend-groups');
+    }
+  },
+);
+
+/** PATCH /relationships/groups/:groupId — rename/recolor a group */
+relationshipsRouter.patch(
+  '/groups/:groupId',
+  requireAuth,
+  validate(updateGroupSchema),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const groupId = req.params.groupId as string;
+      const updates = req.body as z.infer<typeof updateGroupSchema>;
+
+      const [updated] = await db
+        .update(friendGroups)
+        .set(updates)
+        .where(and(eq(friendGroups.id, groupId), eq(friendGroups.userId, req.userId!)))
+        .returning();
+
+      if (!updated) { res.status(404).json({ code: 'NOT_FOUND', message: 'Group not found' }); return; }
+      res.json({ id: updated.id, name: updated.name, color: updated.color, position: updated.position });
+    } catch (err) {
+      handleAppError(res, err, 'friend-groups');
+    }
+  },
+);
+
+/** DELETE /relationships/groups/:groupId — delete a group */
+relationshipsRouter.delete(
+  '/groups/:groupId',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const groupId = req.params.groupId as string;
+      await db
+        .delete(friendGroups)
+        .where(and(eq(friendGroups.id, groupId), eq(friendGroups.userId, req.userId!)));
+      res.json({ code: 'OK' });
+    } catch (err) {
+      handleAppError(res, err, 'friend-groups');
+    }
+  },
+);
+
+/** PUT /relationships/groups/:groupId/members/:userId — add friend to group */
+relationshipsRouter.put(
+  '/groups/:groupId/members/:userId',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const groupId = req.params.groupId as string;
+      const friendUserId = req.params.userId as string;
+
+      // Verify group belongs to user
+      const [group] = await db.select({ id: friendGroups.id }).from(friendGroups)
+        .where(and(eq(friendGroups.id, groupId), eq(friendGroups.userId, req.userId!)));
+      if (!group) { res.status(404).json({ code: 'NOT_FOUND', message: 'Group not found' }); return; }
+
+      // Verify friendship exists
+      const [friendship] = await db.select({ id: relationships.id }).from(relationships)
+        .where(and(eq(relationships.requesterId, req.userId!), eq(relationships.addresseeId, friendUserId), eq(relationships.type, 'FRIEND')));
+      if (!friendship) { res.status(400).json({ code: 'BAD_REQUEST', message: 'User is not your friend' }); return; }
+
+      await db.insert(friendGroupMembers).values({ groupId, friendUserId }).onConflictDoNothing();
+      res.json({ code: 'OK' });
+    } catch (err) {
+      handleAppError(res, err, 'friend-groups');
+    }
+  },
+);
+
+/** DELETE /relationships/groups/:groupId/members/:userId — remove friend from group */
+relationshipsRouter.delete(
+  '/groups/:groupId/members/:userId',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const groupId = req.params.groupId as string;
+      const friendUserId = req.params.userId as string;
+
+      const [group] = await db.select({ id: friendGroups.id }).from(friendGroups)
+        .where(and(eq(friendGroups.id, groupId), eq(friendGroups.userId, req.userId!)));
+      if (!group) { res.status(404).json({ code: 'NOT_FOUND', message: 'Group not found' }); return; }
+
+      await db.delete(friendGroupMembers)
+        .where(and(eq(friendGroupMembers.groupId, groupId), eq(friendGroupMembers.friendUserId, friendUserId)));
+      res.json({ code: 'OK' });
+    } catch (err) {
+      handleAppError(res, err, 'friend-groups');
     }
   },
 );
