@@ -119,8 +119,8 @@ const FormBuilder = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean 
     setSelectedForm(form);
     setView('responses');
     try {
-      const res = await api.forms.listResponses(guildId, form.id) as Record<string, unknown> | unknown[];
-      setResponses(Array.isArray(res) ? res : ((res as Record<string, unknown>).responses ?? []) as unknown[]);
+      const res = await api.forms.listResponses(guildId, form.id) as any;
+      setResponses(Array.isArray(res) ? res : ((res as any).responses ?? []) as any[]);
       setResponsesTotal(Array.isArray(res) ? res.length : ((res as Record<string, unknown>).total ?? 0) as number);
     } catch { addToast({ title: 'Failed to load responses', variant: 'error' }); }
   };

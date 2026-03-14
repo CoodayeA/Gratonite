@@ -44,7 +44,7 @@ export const messagesApi = {
     }),
 
   getReactions: (channelId: string, messageId: string) =>
-    apiFetch<Array<Record<string, unknown>>>(`/channels/${channelId}/messages/${messageId}/reactions`),
+    apiFetch<any[]>(`/channels/${channelId}/messages/${messageId}/reactions`),
 
   getPins: (channelId: string) =>
     apiFetch<Message[]>(`/channels/${channelId}/pins`),

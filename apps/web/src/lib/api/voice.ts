@@ -12,9 +12,9 @@ export const voiceApi = {
   leave: () =>
     apiFetch<void>('/voice/leave', { method: 'POST' }),
   getChannelStates: (channelId: string) =>
-    apiFetch<Array<Record<string, unknown>>>(`/channels/${channelId}/voice-states`),
+    apiFetch<any[]>(`/channels/${channelId}/voice-states`),
   getGuildVoiceStates: (guildId: string) =>
-    apiFetch<Array<Record<string, unknown>>>(`/guilds/${guildId}/voice-states`),
+    apiFetch<any[]>(`/guilds/${guildId}/voice-states`),
   getSoundboard: (guildId: string) =>
     apiFetch<Array<{
       id: string;
@@ -35,7 +35,7 @@ export const voiceApi = {
     guildId: string,
     data: { name: string; soundHash: string; volume?: number; emojiName?: string },
   ) =>
-    apiFetch<Record<string, unknown>>(`/guilds/${guildId}/soundboard`, {
+    apiFetch<any>(`/guilds/${guildId}/soundboard`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -44,14 +44,14 @@ export const voiceApi = {
     soundId: string,
     data: { name?: string; volume?: number; available?: boolean; emojiName?: string | null },
   ) =>
-    apiFetch<Record<string, unknown>>(`/guilds/${guildId}/soundboard/${soundId}`, {
+    apiFetch<any>(`/guilds/${guildId}/soundboard/${soundId}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
   deleteSoundboard: (guildId: string, soundId: string) =>
     apiFetch<void>(`/guilds/${guildId}/soundboard/${soundId}`, { method: 'DELETE' }),
   getStageInstances: (guildId: string) =>
-    apiFetch<Array<Record<string, unknown>>>(`/guilds/${guildId}/stage-instances`),
+    apiFetch<any[]>(`/guilds/${guildId}/stage-instances`),
   requestToSpeak: (channelId: string) =>
     apiFetch<void>(`/channels/${channelId}/voice/request-speak`, { method: 'PUT' }),
   addSpeaker: (channelId: string, userId: string) =>
@@ -59,7 +59,7 @@ export const voiceApi = {
   removeSpeaker: (channelId: string, userId: string) =>
     apiFetch<void>(`/channels/${channelId}/voice/speakers/${userId}`, { method: 'DELETE' }),
   createStageInstance: (channelId: string, data: { topic: string }) =>
-    apiFetch<Record<string, unknown>>('/stage-instances', {
+    apiFetch<any>('/stage-instances', {
       method: 'POST',
       body: JSON.stringify({ channelId, ...data }),
     }),

@@ -40,7 +40,7 @@ export const usersApi = {
   },
 
   updateProfile: (data: { displayName?: string; bio?: string; pronouns?: string; accentColor?: string; primaryColor?: string; onboardingCompleted?: boolean; interests?: string[] | null; nameplateStyle?: string }) =>
-    apiFetch<Record<string, unknown>>('/users/@me', {
+    apiFetch<any>('/users/@me', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
@@ -87,7 +87,7 @@ export const usersApi = {
     apiFetch<void>('/users/@me/banner', { method: 'DELETE' }),
 
   updateSettings: (data: Record<string, unknown>) =>
-    apiFetch<Record<string, unknown>>('/users/@me/settings', {
+    apiFetch<any>('/users/@me/settings', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
@@ -103,7 +103,7 @@ export const usersApi = {
     }>('/users/@me/dnd-schedule'),
 
   updateDndSchedule: (data: Record<string, unknown>) =>
-    apiFetch<Record<string, unknown>>('/users/@me/dnd-schedule', {
+    apiFetch<any>('/users/@me/dnd-schedule', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
@@ -152,7 +152,7 @@ export const usersApi = {
     apiFetch<Array<{ id: string; provider: string; providerUsername: string; profileUrl: string | null }>>('/users/@me/connections'),
 
   addConnection: (data: { provider: string; providerUsername: string; profileUrl?: string }) =>
-    apiFetch<Record<string, unknown>>('/users/@me/connections', { method: 'POST', body: JSON.stringify(data) }),
+    apiFetch<any>('/users/@me/connections', { method: 'POST', body: JSON.stringify(data) }),
 
   removeConnection: (provider: string) =>
     apiFetch<void>(`/users/@me/connections/${provider}`, { method: 'DELETE' }),
@@ -197,19 +197,19 @@ export const usersApi = {
     }),
 
   getSettings: () =>
-    apiFetch<Record<string, unknown>>('/users/@me/settings'),
+    apiFetch<any>('/users/@me/settings'),
 
   getGuildFolders: () =>
-    apiFetch<Array<Record<string, unknown>>>('/users/@me/guild-folders'),
+    apiFetch<any[]>('/users/@me/guild-folders'),
 
   createGuildFolder: (data: { name: string; color: string; guildIds: string[] }) =>
-    apiFetch<Record<string, unknown>>('/users/@me/guild-folders', {
+    apiFetch<any>('/users/@me/guild-folders', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
   updateGuildFolder: (folderId: string, data: { name?: string; color?: string; guildIds?: string[] }) =>
-    apiFetch<Record<string, unknown>>(`/users/@me/guild-folders/${folderId}`, {
+    apiFetch<any>(`/users/@me/guild-folders/${folderId}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
@@ -218,10 +218,10 @@ export const usersApi = {
     apiFetch<void>(`/users/@me/guild-folders/${folderId}`, { method: 'DELETE' }),
 
   getFavorites: () =>
-    apiFetch<Array<Record<string, unknown>>>('/users/@me/favorites'),
+    apiFetch<any[]>('/users/@me/favorites'),
 
   addFavorite: (channelId: string) =>
-    apiFetch<Record<string, unknown>>(`/users/@me/favorites/${channelId}`, {
+    apiFetch<any>(`/users/@me/favorites/${channelId}`, {
       method: 'PUT',
     }),
 
@@ -229,24 +229,24 @@ export const usersApi = {
     apiFetch<void>(`/users/@me/favorites/${channelId}`, { method: 'DELETE' }),
 
   getSessions: () =>
-    apiFetch<Array<Record<string, unknown>>>('/users/@me/sessions'),
+    apiFetch<any[]>('/users/@me/sessions'),
   revokeSession: (sessionId: string) =>
     apiFetch<void>(`/users/@me/sessions/${sessionId}`, { method: 'DELETE' }),
   revokeAllOtherSessions: () =>
     apiFetch<void>('/users/@me/sessions', { method: 'DELETE' }),
 
   getDataExports: () =>
-    apiFetch<Array<Record<string, unknown>>>('/users/@me/data-exports'),
+    apiFetch<any[]>('/users/@me/data-exports'),
   requestDataExport: () =>
-    apiFetch<Record<string, unknown>>('/users/@me/data-exports', { method: 'POST', body: '{}' }),
+    apiFetch<any>('/users/@me/data-exports', { method: 'POST', body: '{}' }),
 };
 
 export const profilesApi = {
   getMemberProfile: (guildId: string, userId: string) =>
-    apiFetch<Record<string, unknown>>(`/guilds/${guildId}/members/${userId}/profile`),
+    apiFetch<any>(`/guilds/${guildId}/members/${userId}/profile`),
 
   updateMemberProfile: (guildId: string, data: { nickname?: string | null; bio?: string | null }) =>
-    apiFetch<Record<string, unknown>>(`/guilds/${guildId}/members/@me/profile`, {
+    apiFetch<any>(`/guilds/${guildId}/members/@me/profile`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
@@ -254,26 +254,26 @@ export const profilesApi = {
   uploadMemberAvatar: (guildId: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return apiFetch<Record<string, unknown>>(`/guilds/${guildId}/members/@me/profile/avatar`, {
+    return apiFetch<any>(`/guilds/${guildId}/members/@me/profile/avatar`, {
       method: 'POST',
       body: formData,
     });
   },
 
   deleteMemberAvatar: (guildId: string) =>
-    apiFetch<Record<string, unknown>>(`/guilds/${guildId}/members/@me/profile/avatar`, { method: 'DELETE' }),
+    apiFetch<any>(`/guilds/${guildId}/members/@me/profile/avatar`, { method: 'DELETE' }),
 
   uploadMemberBanner: (guildId: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return apiFetch<Record<string, unknown>>(`/guilds/${guildId}/members/@me/profile/banner`, {
+    return apiFetch<any>(`/guilds/${guildId}/members/@me/profile/banner`, {
       method: 'POST',
       body: formData,
     });
   },
 
   deleteMemberBanner: (guildId: string) =>
-    apiFetch<Record<string, unknown>>(`/guilds/${guildId}/members/@me/profile/banner`, { method: 'DELETE' }),
+    apiFetch<any>(`/guilds/${guildId}/members/@me/profile/banner`, { method: 'DELETE' }),
 
   getAvatarDecorations: () =>
     apiFetch<AvatarDecoration[]>('/avatar-decorations'),
@@ -285,7 +285,7 @@ export const profilesApi = {
     apiFetch<Nameplate[]>('/nameplates'),
 
   updateCustomization: (data: { avatarDecorationId?: string | null; profileEffectId?: string | null; nameplateId?: string | null }) =>
-    apiFetch<Record<string, unknown>>('/users/@me/customization', {
+    apiFetch<any>('/users/@me/customization', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),

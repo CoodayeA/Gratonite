@@ -218,6 +218,9 @@ const SettingsModal = ({
     userTheme?: UserThemeLike;
     setUserTheme?: (theme: UserThemeLike) => void;
 }) => {
+    const { theme, setTheme, colorMode, setColorMode, fontFamily, setFontFamily, fontSize, setFontSize, showChannelBackgrounds, setShowChannelBackgrounds, playMovingBackgrounds, setPlayMovingBackgrounds, glassMode, setGlassMode, reducedEffects, setReducedEffects, lowPower, setLowPower, accentColor, setAccentColor, highContrast, setHighContrast, compactMode, setCompactMode, buttonShape, setButtonShape, screenReaderMode, setScreenReaderMode, linkUnderlines, setLinkUnderlines, focusIndicatorSize, setFocusIndicatorSize, colorBlindMode, setColorBlindMode, lowDataMode, setLowDataMode, previewTheme } = useTheme();
+    const { addToast } = useToast();
+
     const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections' | 'achievements' | 'stats' | 'wardrobe'>('account');
     const [settingsSearch, setSettingsSearch] = useState('');
     const settingsSearchRef = useRef<HTMLInputElement>(null);
@@ -326,8 +329,8 @@ const SettingsModal = ({
             return raw > 1 ? raw / 100 : raw;
         }
     );
-    const [nameplateStyle, setNameplateStyle] = useState<'none' | 'rainbow' | 'fire' | 'ice' | 'gold' | 'glitch'>(userProfile?.nameplateStyle || 'none');
-    const [previewAvatarFrame, setPreviewAvatarFrame] = useState<'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse'>(userProfile?.avatarFrame || 'none');
+    const [nameplateStyle, setNameplateStyle] = useState<'none' | 'rainbow' | 'fire' | 'ice' | 'gold' | 'glitch'>((userProfile?.nameplateStyle || 'none') as any);
+    const [previewAvatarFrame, setPreviewAvatarFrame] = useState<'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse'>((userProfile?.avatarFrame || 'none') as any);
     const [bioValue, setBioValue] = useState(userProfile?.bio || '');
     const [bioSaving, setBioSaving] = useState(false);
     const [cropTarget, setCropTarget] = useState<'avatar' | 'banner' | null>(null);
@@ -441,8 +444,8 @@ const SettingsModal = ({
     const [seasonalEnabled, setSeasonalEnabled] = useState(() => localStorage.getItem('gratonite-seasonal-effects') === 'true');
 
     useEffect(() => {
-        setNameplateStyle(userProfile?.nameplateStyle || 'none');
-        setPreviewAvatarFrame(userProfile?.avatarFrame || 'none');
+        setNameplateStyle((userProfile?.nameplateStyle || 'none') as any);
+        setPreviewAvatarFrame((userProfile?.avatarFrame || 'none') as any);
         setBioValue(userProfile?.bio || '');
     }, [userProfile?.avatarFrame, userProfile?.nameplateStyle, userProfile?.bio]);
 
@@ -456,9 +459,6 @@ const SettingsModal = ({
             setAuthenticatorEnabled(status.enabled);
         }).catch(() => { /* MFA status may not be available */ });
     }, [activeTab]);
-
-    const { theme, setTheme, colorMode, setColorMode, fontFamily, setFontFamily, fontSize, setFontSize, showChannelBackgrounds, setShowChannelBackgrounds, playMovingBackgrounds, setPlayMovingBackgrounds, glassMode, setGlassMode, reducedEffects, setReducedEffects, lowPower, setLowPower, accentColor, setAccentColor, highContrast, setHighContrast, compactMode, setCompactMode, buttonShape, setButtonShape, screenReaderMode, setScreenReaderMode, linkUnderlines, setLinkUnderlines, focusIndicatorSize, setFocusIndicatorSize, colorBlindMode, setColorBlindMode, lowDataMode, setLowDataMode, previewTheme } = useTheme();
-    const { addToast } = useToast();
 
     useEffect(() => {
         if (activeTab !== 'profile') return;
@@ -1536,7 +1536,7 @@ const SettingsModal = ({
                                                 a.download = `${currentTheme.name.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
                                                 a.click();
                                                 URL.revokeObjectURL(url);
-                                                toast.addToast('Theme exported!', 'success');
+                                                addToast({ title: 'Theme exported!', variant: 'success' });
                                             }
                                         }}
                                         style={{
@@ -1562,16 +1562,16 @@ const SettingsModal = ({
                                                 try {
                                                     const parsed = JSON.parse(reader.result as string);
                                                     if (!parsed.id || !parsed.name || !parsed.dark || !parsed.light) {
-                                                        toast.addToast('Invalid theme file: missing required fields (id, name, dark, light)', 'error');
+                                                        addToast({ title: 'Invalid theme file: missing required fields (id, name, dark, light)', variant: 'error' });
                                                         return;
                                                     }
                                                     parsed.id = `imported-${Date.now()}`;
                                                     saveCustomTheme(parsed);
                                                     setCustomThemesList(getCustomThemes());
                                                     setTheme(parsed.id);
-                                                    toast.addToast(`Imported theme "${parsed.name}"!`, 'success');
+                                                    addToast({ title: `Imported theme "${parsed.name}"!`, variant: 'success' });
                                                 } catch {
-                                                    toast.addToast('Failed to parse theme file', 'error');
+                                                    addToast({ title: 'Failed to parse theme file', variant: 'error' });
                                                 }
                                             };
                                             reader.readAsText(file);
@@ -1653,9 +1653,9 @@ const SettingsModal = ({
                                                                             }).then((created: any) => {
                                                                                 return api.themes.publish(created.id);
                                                                             }).then(() => {
-                                                                                toast.addToast(`"${t.name}" published to the Theme Store!`, 'success');
+                                                                                addToast({ title: `"${t.name}" published to the Theme Store!`, variant: 'success' });
                                                                             }).catch(() => {
-                                                                                toast.addToast('Failed to publish theme', 'error');
+                                                                                addToast({ title: 'Failed to publish theme', variant: 'error' });
                                                                             });
                                                                         }
                                                                     }}
@@ -1671,7 +1671,7 @@ const SettingsModal = ({
                                                                             deleteCustomTheme(t.id);
                                                                             setCustomThemesList(getCustomThemes());
                                                                             if (theme === t.id) setTheme('default');
-                                                                            toast.addToast('Theme deleted', 'success');
+                                                                            addToast({ title: 'Theme deleted', variant: 'success' });
                                                                         }
                                                                     }}
                                                                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }}
@@ -2800,15 +2800,15 @@ const SettingsModal = ({
                                                     {categoryItems.map((item: WardrobeItem) => {
                                                         const isSelected = wardrobeSelectedIds[item.type] === item.itemId;
                                                         const rarityColors: Record<string, string> = { common: '#9ca3af', uncommon: '#22c55e', rare: '#3b82f6', epic: '#a855f7', legendary: '#f59e0b' };
-                                                        const rColor = rarityColors[item.rarity] ?? '#9ca3af';
+                                                        const rColor = rarityColors[item.rarity ?? 'common'] ?? '#9ca3af';
                                                         return (
-                                                            <div key={item.id} onClick={() => handleWardrobeSelect(item)} style={{
+                                                            <div key={item.itemId} onClick={() => handleWardrobeSelect(item)} style={{
                                                                 padding: '10px 8px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center',
                                                                 background: isSelected ? 'rgba(82, 109, 245, 0.12)' : 'var(--bg-tertiary)',
                                                                 border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--stroke)'}`,
                                                                 transition: 'all 0.15s ease',
                                                             }}>
-                                                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: item.imageUrl ?? 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', margin: '0 auto 6px', border: `2px solid ${rColor}` }} />
+                                                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: (item as any).imageUrl ?? 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', margin: '0 auto 6px', border: `2px solid ${rColor}` }} />
                                                                 <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
                                                                 <div style={{ fontSize: '9px', color: rColor, textTransform: 'uppercase', fontWeight: 700, marginTop: '2px' }}>{item.rarity}</div>
                                                             </div>

@@ -206,7 +206,7 @@ export default function ThemeEditorModal({ onClose, editingThemeId }: ThemeEdito
 
   const handleSave = useCallback(async () => {
     if (!themeName.trim()) {
-      toast.addToast('Please enter a theme name', 'error');
+      toast.addToast({ title: 'Please enter a theme name', variant: 'error' });
       return;
     }
 
@@ -252,7 +252,7 @@ export default function ThemeEditorModal({ onClose, editingThemeId }: ThemeEdito
 
     // Apply the theme
     setTheme(themeId);
-    toast.addToast(`Theme "${themeName}" saved!`, 'success');
+    toast.addToast({ title: `Theme "${themeName}" saved!`, variant: 'success' });
     onClose();
   }, [themeName, themeDescription, themeCategory, themeIsDark, darkVars, lightVars, setTheme, toast, onClose]);
 

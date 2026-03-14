@@ -9,17 +9,17 @@ export const themesApi = {
     if (params?.q) qs.set('q', params.q);
     if (params?.tag) qs.set('tag', params.tag);
     const query = qs.toString();
-    return apiFetch<Array<Record<string, unknown>>>(`/themes${query ? `?${query}` : ''}`);
+    return apiFetch<any[]>(`/themes${query ? `?${query}` : ''}`);
   },
   get: (themeId: string) =>
-    apiFetch<Record<string, unknown>>(`/themes/${themeId}`),
+    apiFetch<any>(`/themes/${themeId}`),
   create: (data: { name: string; description?: string; tags?: string[]; vars: Record<string, string> }) =>
-    apiFetch<Record<string, unknown>>('/themes', {
+    apiFetch<any>('/themes', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   update: (themeId: string, data: { name?: string; description?: string; tags?: string[]; vars?: Record<string, string> }) =>
-    apiFetch<Record<string, unknown>>(`/themes/${themeId}`, {
+    apiFetch<any>(`/themes/${themeId}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
@@ -28,12 +28,12 @@ export const themesApi = {
   delete: (themeId: string) =>
     apiFetch<void>(`/themes/${themeId}`, { method: 'DELETE' }),
   myThemes: () =>
-    apiFetch<Array<Record<string, unknown>>>('/users/@me/themes'),
+    apiFetch<any[]>('/users/@me/themes'),
   rate: (themeId: string, rating: number) =>
-    apiFetch<Record<string, unknown>>(`/themes/${themeId}/rate`, {
+    apiFetch<any>(`/themes/${themeId}/rate`, {
       method: 'POST',
       body: JSON.stringify({ rating }),
     }),
   download: (themeId: string) =>
-    apiFetch<Record<string, unknown>>(`/themes/${themeId}/download`, { method: 'POST' }),
+    apiFetch<any>(`/themes/${themeId}/download`, { method: 'POST' }),
 };

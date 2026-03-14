@@ -44,7 +44,7 @@ export default function WelcomeScreenBuilder({ guildId, channels = [] }: Props) 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.welcomeScreen.update(guildId, { enabled, description, blocks });
+      await api.welcomeScreen.update(guildId, { enabled, description, blocks } as any);
     } catch { /* ignore */ }
     setSaving(false);
   };

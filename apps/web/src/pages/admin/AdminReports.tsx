@@ -146,9 +146,9 @@ export default function AdminReports() {
     setIsLoading(true);
     setError(null);
     api.reports.list({ limit: 200 }).then(res => {
-      const raw: Record<string, unknown>[] = Array.isArray(res) ? res : ((res as Record<string, unknown>).items ?? []) as Record<string, unknown>[];
+      const raw: any[] = Array.isArray(res) ? res : ((res as any).items ?? []) as any[];
       const priorityMap: Record<string, Priority> = { high: 'high', medium: 'medium', low: 'low' };
-      setReports(raw.flatMap((r) => {
+      setReports(raw.flatMap((r: any) => {
         const id = typeof r.id === 'string' && r.id.trim().length > 0 ? r.id : null;
         if (!id) return [];
         return [{
