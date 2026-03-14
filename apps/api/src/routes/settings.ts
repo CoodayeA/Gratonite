@@ -15,7 +15,7 @@ const patchSettingsSchema = z.object({
   theme: z.string().max(50).optional(),
   colorMode: z.enum(['dark', 'light']).optional(),
   fontFamily: z.string().max(50).optional(),
-  fontSize: z.union([z.number().int().min(10).max(24), z.enum(['small', 'medium', 'large', 'extra-large'])]).optional(),
+  fontSize: z.union([z.number().int().min(10).max(24).transform(String), z.enum(['small', 'medium', 'large', 'extra-large'])]).optional(),
   glassMode: z.enum(['off', 'subtle', 'full']).optional(),
   buttonShape: z.enum(['rounded', 'pill', 'sharp', 'square']).optional(),
   soundMuted: z.boolean().optional(),
