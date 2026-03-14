@@ -420,12 +420,20 @@ function emitClientTelemetry(payload: ClientTelemetryEvent): void {
   if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
   }
+  // Sanitize: strip undefined/null-ish guildId that isn't a valid UUID, ensure timestamp
+  const clean: Record<string, unknown> = { ...payload };
+  if (clean.guildId && typeof clean.guildId === 'string' && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean.guildId)) {
+    delete clean.guildId;
+  }
+  if (!clean.timestamp) {
+    clean.timestamp = new Date().toISOString();
+  }
   void fetch(`${API_BASE}/telemetry/client-events`, {
     method: 'POST',
     headers,
     credentials: 'include',
     keepalive: true,
-    body: JSON.stringify(payload),
+    body: JSON.stringify(clean),
   }).catch(() => {});
 }
 

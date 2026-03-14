@@ -4,9 +4,17 @@
 import { apiFetch } from './_core';
 import type { Channel } from './_core';
 
+function assertGuildId(guildId: string): asserts guildId is string {
+  if (!guildId || guildId === 'null' || guildId === 'undefined') {
+    throw new Error(`Invalid guildId: ${guildId}`);
+  }
+}
+
 export const channelsApi = {
-  getGuildChannels: (guildId: string, options?: RequestInit) =>
-    apiFetch<Channel[]>(`/guilds/${guildId}/channels`, options),
+  getGuildChannels: (guildId: string, options?: RequestInit) => {
+    assertGuildId(guildId);
+    return apiFetch<Channel[]>(`/guilds/${guildId}/channels`, options);
+  },
 
   get: (channelId: string) =>
     apiFetch<Channel>(`/channels/${channelId}`),
@@ -22,6 +30,7 @@ export const channelsApi = {
       rateLimitPerUser?: number;
     },
   ) => {
+    assertGuildId(guildId);
     const normalizedType = (() => {
       const raw = String(data.type ?? 'GUILD_TEXT').trim().toUpperCase().replace(/-/g, '_');
       if (raw === 'TEXT' || raw === 'GUILD_TEXT') return 'GUILD_TEXT';
@@ -70,11 +79,13 @@ export const channelsApi = {
   delete: (channelId: string) =>
     apiFetch<void>(`/channels/${channelId}`, { method: 'DELETE' }),
 
-  updatePositions: (guildId: string, positions: Array<{ id: string; position: number; parentId?: string | null }>) =>
-    apiFetch<void>(`/guilds/${guildId}/channels/positions`, {
+  updatePositions: (guildId: string, positions: Array<{ id: string; position: number; parentId?: string | null }>) => {
+    assertGuildId(guildId);
+    return apiFetch<void>(`/guilds/${guildId}/channels/positions`, {
       method: 'PATCH',
       body: JSON.stringify(positions),
-    }),
+    });
+  },
 
   getPermissionOverrides: (channelId: string) =>
     apiFetch<Array<{ id: string; channelId: string; targetId: string; targetType: 'role' | 'member'; allow: string; deny: string }>>(
@@ -104,14 +115,18 @@ export const channelsApi = {
   duplicate: (channelId: string) =>
     apiFetch<Channel>(`/channels/${channelId}/duplicate`, { method: 'POST' }),
 
-  getEncryptionKeys: (guildId: string, channelId: string) =>
-    apiFetch<{ id: string; channelId: string; version: number; keyData: Record<string, string> }>(`/guilds/${guildId}/channels/${channelId}/encryption-keys`),
+  getEncryptionKeys: (guildId: string, channelId: string) => {
+    assertGuildId(guildId);
+    return apiFetch<{ id: string; channelId: string; version: number; keyData: Record<string, string> }>(`/guilds/${guildId}/channels/${channelId}/encryption-keys`);
+  },
 
-  uploadEncryptionKeys: (guildId: string, channelId: string, data: { version: number; keyData: Record<string, string> }) =>
-    apiFetch<any>(`/guilds/${guildId}/channels/${channelId}/encryption-keys`, {
+  uploadEncryptionKeys: (guildId: string, channelId: string, data: { version: number; keyData: Record<string, string> }) => {
+    assertGuildId(guildId);
+    return apiFetch<any>(`/guilds/${guildId}/channels/${channelId}/encryption-keys`, {
       method: 'POST',
       body: JSON.stringify(data),
-    }),
+    });
+  },
 
   getNotificationPrefs: (channelId: string) =>
     apiFetch<{ level: string; mutedUntil: string | null }>(`/channels/${channelId}/notification-prefs`),
