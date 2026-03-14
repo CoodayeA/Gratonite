@@ -74,16 +74,9 @@ export default function SettingsAccountScreen({ navigation }: Props) {
       toast.error('New password must be at least 8 characters');
       return;
     }
-    setChangingPassword(true);
-    try {
-      // MOBILE-POLISH: backend/mobile API does not yet expose an authenticated
-      // password-change endpoint, so this screen cannot complete the flow yet.
-      toast.error('Password changes are not available in mobile yet. Please use password reset for now.');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to change password');
-    } finally {
-      setChangingPassword(false);
-    }
+    // MOBILE-POLISH: backend/mobile API does not yet expose an authenticated
+    // password-change endpoint, so this screen cannot complete the flow yet.
+    toast.error('Password changes are not available on mobile yet. Please use the forgot password flow to reset your password.');
   };
 
   const handleDeleteAccount = () => {

@@ -501,6 +501,10 @@ export const guilds = {
   join(guildId: string) {
     return apiFetch<Guild>(`/guilds/${guildId}/join`, { method: 'POST' });
   },
+
+  getMemberRoles(guildId: string, userId: string) {
+    return apiFetch<Role[]>(`/guilds/${guildId}/members/${userId}/roles`);
+  },
 };
 
 // ---------------------------------------------------------------------------

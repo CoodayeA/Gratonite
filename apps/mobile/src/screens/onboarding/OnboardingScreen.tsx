@@ -5,8 +5,8 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,8 +14,6 @@ import * as SecureStore from 'expo-secure-store';
 import { useTheme } from '../../lib/theme';
 import { StarField, RainbowStrip } from '../../components/decorative';
 import PatternBackground from '../../components/PatternBackground';
-
-const { width: SCREEN_W } = Dimensions.get('window');
 
 const ONBOARDING_KEY = 'gratonite_onboarding_complete';
 
@@ -81,12 +79,17 @@ const SLIDES: Slide[] = [
 ];
 
 export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
+  const { width: SCREEN_W } = useWindowDimensions();
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const flatListRef = useRef<FlatList>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
   const handleComplete = async () => {
-    await SecureStore.setItemAsync(ONBOARDING_KEY, 'true');
+    try {
+      await SecureStore.setItemAsync(ONBOARDING_KEY, 'true');
+    } catch {
+      // Non-critical — proceed even if storage fails
+    }
     onComplete();
   };
 
@@ -224,7 +227,7 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
       textTransform: 'uppercase',
       letterSpacing: 1,
     },
-  }), [colors, spacing, fontSize, neo]);
+  }), [colors, spacing, fontSize, neo, SCREEN_W]);
 
   const renderSlide = ({ item }: { item: Slide }) => (
     <View style={styles.slide}>
@@ -260,7 +263,7 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
     <PatternBackground>
       <StarField />
 
-      <TouchableOpacity style={styles.skipBtn} onPress={handleComplete}>
+      <TouchableOpacity style={styles.skipBtn} onPress={handleComplete} accessibilityLabel="Skip onboarding" accessibilityRole="button">
         <Text style={styles.skipText}>Skip</Text>
       </TouchableOpacity>
 
@@ -287,7 +290,7 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
             <View key={i} style={[styles.dot, i === activeIndex && styles.dotActive]} />
           ))}
         </View>
-        <TouchableOpacity style={styles.nextBtn} onPress={handleNext}>
+        <TouchableOpacity style={styles.nextBtn} onPress={handleNext} accessibilityLabel={activeIndex === SLIDES.length - 1 ? 'Get Started' : 'Next slide'} accessibilityRole="button">
           <Text style={styles.nextText}>
             {activeIndex === SLIDES.length - 1 ? 'Get Started' : 'Next'}
           </Text>

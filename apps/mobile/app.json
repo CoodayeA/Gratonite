@@ -15,16 +15,20 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "chat.gratonite.mobile",
-      "buildNumber": "10",
+      "buildNumber": "13",
       "config": {
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
         "NSCameraUsageDescription": "Allow Gratonite to access your camera for video calls.",
         "NSMicrophoneUsageDescription": "Allow Gratonite to access your microphone for voice channels.",
+        "NSPhotoLibraryUsageDescription": "Allow Gratonite to access your photos so you can share images in chat.",
+        "NSPhotoLibraryAddUsageDescription": "Allow Gratonite to save photos and media to your library.",
+        "NSFaceIDUsageDescription": "Allow Gratonite to use Face ID for app lock.",
         "UIBackgroundModes": [
           "audio",
-          "voip"
+          "voip",
+          "remote-notification"
         ]
       }
     },
@@ -63,6 +67,13 @@
         }
       ],
       "expo-image",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Gratonite to access your photos so you can share images in chat.",
+          "savePhotosPermission": "Allow Gratonite to save photos and media to your library."
+        }
+      ],
       "expo-notifications",
       "expo-sharing",
       "expo-sqlite",

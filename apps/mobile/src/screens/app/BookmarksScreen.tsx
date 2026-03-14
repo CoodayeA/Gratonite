@@ -14,6 +14,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme, useGlass } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import EmptyState from '../../components/EmptyState';
 import type { Bookmark } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -28,21 +29,24 @@ export default function BookmarksScreen({ navigation }: Props) {
   const toast = useToast();
   const [bookmarkList, setBookmarkList] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchBookmarks = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await bookmarksApi.list();
       setBookmarkList(data);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load bookmarks');
+        const message = err?.message || 'Failed to load bookmarks';
+        if (refreshing || bookmarkList.length > 0) { toast.error(message); } else { setLoadError(message); }
       }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [refreshing, bookmarkList.length]);
 
   useEffect(() => {
     fetchBookmarks();
@@ -205,6 +209,8 @@ export default function BookmarksScreen({ navigation }: Props) {
   if (loading) {
     return <LoadingScreen />;
   }
+
+  if (loadError && bookmarkList.length === 0) return <LoadErrorCard title="Failed to load bookmarks" message={loadError} onRetry={() => { setLoading(true); fetchBookmarks(); }} />;
 
   return (
     <PatternBackground>

@@ -1,0 +1,17 @@
+appId: chat.gratonite.mobile
+---
+# Open a guild channel and send a message
+- assertVisible: "Portals"
+- tapOn:
+    id: "guild-item"
+    index: 0
+- tapOn:
+    id: "channel-item"
+    index: 0
+- assertVisible:
+    text: "Message input"
+    timeout: 5000
+- tapOn: "Message input"
+- inputText: "E2E channel chat test"
+- tapOn: "Send message"
+- assertVisible: "E2E channel chat test"

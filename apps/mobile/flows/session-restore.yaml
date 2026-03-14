@@ -1,0 +1,12 @@
+appId: chat.gratonite.mobile
+---
+# Verify the app restores a previously authenticated session
+# Assumes user has logged in before and session token is persisted
+- launchApp
+- assertVisible:
+    text: "Portals"
+    timeout: 8000
+# Confirm we did NOT land on the login screen
+- assertNotVisible:
+    text: "Sign In"
+    optional: true

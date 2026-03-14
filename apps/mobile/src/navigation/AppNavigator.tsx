@@ -148,6 +148,7 @@ import HelpCenterScreen from '../screens/app/HelpCenterScreen';
 import HelpArticleScreen from '../screens/app/HelpArticleScreen';
 import FameDashboardScreen from '../screens/app/FameDashboardScreen';
 import CommandPaletteScreen from '../screens/app/CommandPaletteScreen';
+import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 
 const Tab = createBottomTabNavigator<AppTabParamList>();
 const Stack = createNativeStackNavigator<AppStackParamList>();
@@ -446,6 +447,9 @@ export default function AppNavigator() {
       <Stack.Screen name="HelpArticle" component={HelpArticleScreen} options={{ title: 'Help' }} />
       <Stack.Screen name="FameDashboard" component={FameDashboardScreen} options={{ title: 'Fame' }} />
       <Stack.Screen name="CommandPalette" component={CommandPaletteScreen} options={{ title: 'Quick Jump', presentation: 'modal' }} />
+
+      {/* Deep-link: password reset (accessible even when logged in) */}
+      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

@@ -1,0 +1,15 @@
+appId: chat.gratonite.mobile
+---
+# Navigate to the Alerts tab and verify notification inbox renders
+- assertVisible: "Portals"
+- tapOn: "Alerts"
+# The notification inbox screen should render (may show empty state)
+- assertVisible:
+    text: "Mark all as read"
+    optional: true
+- assertVisible:
+    text: "Clear all notifications"
+    optional: true
+# Navigate back to portals
+- tapOn: "Portals"
+- assertVisible: "Portals"

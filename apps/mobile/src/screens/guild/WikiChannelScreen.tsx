@@ -18,6 +18,7 @@ import { useTheme } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import RichText from '../../components/RichText';
 import type { WikiPage, WikiRevision } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -32,6 +33,7 @@ export default function WikiChannelScreen({ route, navigation }: Props) {
   const { channelId, channelName } = route.params;
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // View page
   const [viewingPage, setViewingPage] = useState<WikiPage | null>(null);
@@ -54,16 +56,22 @@ export default function WikiChannelScreen({ route, navigation }: Props) {
 
   const fetchPages = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await wikiApi.listPages(channelId);
       setPages(data);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load wiki pages');
+        const message = err?.message || 'Failed to load wiki pages';
+        if (pages.length > 0) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
     }
-  }, [channelId]);
+  }, [channelId, pages.length, toast]);
 
   useEffect(() => {
     fetchPages();
@@ -357,6 +365,8 @@ export default function WikiChannelScreen({ route, navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && pages.length === 0) return <LoadErrorCard title="Failed to load wiki" message={loadError} onRetry={() => { setLoading(true); fetchPages(); }} />;
 
   return (
     <PatternBackground>

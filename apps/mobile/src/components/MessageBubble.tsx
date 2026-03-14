@@ -254,7 +254,7 @@ function MessageBubbleInner({
       onLongPress={() => { heavyImpact(); onLongPress?.(); }}
       style={[styles.messageRow, isGrouped && styles.messageGrouped]}
       accessibilityRole="text"
-      accessibilityLabel={`${authorName}: ${message.content}, ${formatTime(message.createdAt)}`}
+      accessibilityLabel={`${authorName}: ${message.content ?? ''}, ${formatTime(message.createdAt)}`}
     >
       {/* Reply preview */}
       {replyPreview && (

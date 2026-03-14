@@ -13,6 +13,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import Avatar from '../../components/Avatar';
 import SearchBar from '../../components/SearchBar';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import EmptyState from '../../components/EmptyState';
 import type { Relationship, User } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -35,10 +36,12 @@ export default function GroupDMCreateScreen({ navigation }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
   const fetchFriends = useCallback(async () => {
     try {
+      setLoadError(null);
       const rels = await relApi.getAll();
       const friendRels = rels.filter((r) => r.type === 'friend');
       const targetIds = friendRels.map((r) => r.targetId);
@@ -56,12 +59,13 @@ export default function GroupDMCreateScreen({ navigation }: Props) {
       }
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load friends');
+        const message = err?.message || 'Failed to load friends';
+        if (friends.length > 0) { toast.error(message); } else { setLoadError(message); }
       }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [friends.length]);
 
   useEffect(() => {
     fetchFriends();
@@ -218,6 +222,8 @@ export default function GroupDMCreateScreen({ navigation }: Props) {
       </View>
     );
   }
+
+  if (loadError && friends.length === 0) return <LoadErrorCard title="Failed to load friends" message={loadError} onRetry={() => { setLoading(true); fetchFriends(); }} />;
 
   return (
     <PatternBackground>

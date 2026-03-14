@@ -13,6 +13,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { Quest } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -27,15 +28,22 @@ export default function QuestBoardScreen({ route }: Props) {
   const [questList, setQuestList] = useState<Quest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<'active' | 'completed'>('active');
 
   const fetchQuests = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await questsApi.list(guildId);
       setQuestList(data);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load quests');
+        const message = err?.message || 'Failed to load quests';
+        if (refreshing || questList.length > 0) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
@@ -223,6 +231,8 @@ export default function QuestBoardScreen({ route }: Props) {
   };
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && questList.length === 0) return <LoadErrorCard title="Failed to load quests" message={loadError} onRetry={() => { setLoading(true); fetchQuests(); }} />;
 
   return (
     <PatternBackground>

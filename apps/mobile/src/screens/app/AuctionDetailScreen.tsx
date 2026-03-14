@@ -6,6 +6,7 @@ import { useTheme } from '../../lib/theme';
 import { useToast } from '../../contexts/ToastContext';
 import { mediumImpact } from '../../lib/haptics';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { Auction, AuctionBid } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -31,19 +32,26 @@ export default function AuctionDetailScreen({ route }: Props) {
   const [bidding, setBidding] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState('');
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchAuction = useCallback(async () => {
     try {
       const data = await auctionsApi.get(auctionId);
       setAuction(data);
       setBidAmount(String(data.currentBid + 10));
-    } catch {
-      toast.error('Failed to load auction');
+      setLoadError(null);
+    } catch (err: any) {
+      const message = err?.message || 'Failed to load auction';
+      if (refreshing || auction) {
+        toast.error(message);
+      } else {
+        setLoadError(message);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [auctionId]);
+  }, [auctionId, refreshing, auction, toast]);
 
   useEffect(() => { fetchAuction(); }, [fetchAuction]);
 
@@ -105,7 +113,13 @@ export default function AuctionDetailScreen({ route }: Props) {
     sellerInfo: { fontSize: fontSize.sm, color: colors.textSecondary },
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
-  if (loading || !auction) return <LoadingScreen />;
+  if (loading) return <LoadingScreen />;
+
+  if (loadError && !auction) {
+    return <LoadErrorCard title="Failed to load auction" message={loadError} onRetry={fetchAuction} />;
+  }
+
+  if (!auction) return <LoadingScreen />;
 
   const isEnded = auction.status !== 'active' || new Date(auction.endsAt).getTime() <= Date.now();
 

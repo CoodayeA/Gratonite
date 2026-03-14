@@ -54,9 +54,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // non-critical
           }
         }
-      } catch {
-        // Token invalid or expired
-        await setTokens(null, null);
+      } catch (err: any) {
+        // Only clear tokens on auth errors, not network failures
+        if (err.status === 401 || err.status === 403) {
+          await setTokens(null, null);
+        }
       } finally {
         setLoading(false);
       }
@@ -117,14 +119,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Skip if user is DND or invisible — those are intentional states.
   const statusBeforeBackground = useRef<PresenceStatus | null>(null);
 
+  const userRef = useRef(user);
+  useEffect(() => { userRef.current = user; }, [user]);
+
   useEffect(() => {
     if (!user) return;
     const sub = RNAppState.addEventListener('change', (nextState) => {
-      const currentStatus = user.status;
+      const current = userRef.current;
+      if (!current) return;
       if (nextState === 'background' || nextState === 'inactive') {
         // Only auto-idle from "online" — don't override DND/invisible
-        if (currentStatus === 'online') {
-          statusBeforeBackground.current = currentStatus;
+        if (current.status === 'online') {
+          statusBeforeBackground.current = current.status;
           users.updatePresence('idle').catch(() => {});
         }
       } else if (nextState === 'active') {
@@ -134,12 +140,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           statusBeforeBackground.current = null;
           users.updatePresence(restore).catch(() => {});
           setUser(prev => prev ? { ...prev, status: restore } : prev);
-          if (user) presenceStore.set(user.id, restore);
+          presenceStore.set(current.id, restore);
         }
       }
     });
     return () => sub.remove();
-  }, [user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout, refetchUser, updateProfile, updateStatus }}>

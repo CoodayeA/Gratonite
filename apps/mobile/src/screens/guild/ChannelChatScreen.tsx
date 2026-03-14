@@ -499,6 +499,14 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     return unsub;
   }, [channelId, user?.id]);
 
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
+      typingUsers.forEach((entry) => clearTimeout(entry.timeout));
+    };
+  }, []);
+
   // Socket: reactions
   useEffect(() => {
     const unsubAdd = onMessageReactionAdd((data) => {
@@ -749,7 +757,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     }, 500);
   };
 
-  const handleReactionToggle = async (messageId: string, emoji: string) => {
+  const handleReactionToggle = useCallback(async (messageId: string, emoji: string) => {
     lightImpact();
     const existing = messageReactions.get(messageId) ?? [];
     const reaction = existing.find((r) => r.emoji === emoji);
@@ -763,14 +771,14 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       // ignore
     }
     setReactionPickerMessageId(null);
-  };
+  }, [channelId, messageReactions]);
 
   // --- Context menu handlers ---
 
-  const handleReply = (msg: Message) => {
+  const handleReply = useCallback((msg: Message) => {
     setReplyingTo(msg);
     setEditingMessage(null);
-  };
+  }, []);
 
   const handleEdit = (msg: Message) => {
     setEditingMessage(msg);
@@ -816,9 +824,9 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     }
   };
 
-  const handleReact = (msg: Message) => {
-    setReactionPickerMessageId(reactionPickerMessageId === msg.id ? null : msg.id);
-  };
+  const handleReact = useCallback((msg: Message) => {
+    setReactionPickerMessageId((prev) => prev === msg.id ? null : msg.id);
+  }, []);
 
   const handleBookmark = async (msg: Message) => {
     try {
@@ -850,7 +858,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     }
   };
 
-  const handleReactionLongPress = (messageId: string, emoji: string) => {
+  const handleReactionLongPress = useCallback((messageId: string, emoji: string) => {
     const rxns = messageReactions.get(messageId) ?? [];
     const reaction = rxns.find((r) => r.emoji === emoji);
     if (reaction) {
@@ -859,7 +867,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
         emoji,
       });
     }
-  };
+  }, [messageReactions]);
 
   const handleTextReact = (msg: Message) => {
     setTextReactMessage(msg);
@@ -888,7 +896,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     }
   };
 
-  const handleTextReactionToggle = async (messageId: string, text: string) => {
+  const handleTextReactionToggle = useCallback(async (messageId: string, text: string) => {
     const existing = textReactionsMap.get(messageId) ?? [];
     const tr = existing.find((t) => t.text === text);
     try {
@@ -918,23 +926,23 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     } catch {
       // ignore
     }
-  };
+  }, [channelId, textReactionsMap]);
 
-  const handlePollVote = async (pollId: string, optionId: string) => {
+  const handlePollVote = useCallback(async (pollId: string, optionId: string) => {
     try {
       await pollsApi.vote(pollId, optionId);
     } catch {
       toast.error('Failed to vote');
     }
-  };
+  }, [toast]);
 
-  const handlePollRemoveVote = async (pollId: string) => {
+  const handlePollRemoveVote = useCallback(async (pollId: string) => {
     try {
       await pollsApi.removeVote(pollId);
     } catch {
       toast.error('Failed to remove vote');
     }
-  };
+  }, [toast]);
 
   const handleStickerSelect = async (sticker: Sticker) => {
     try {
@@ -1221,12 +1229,14 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
         channelId={channelId}
       />
 
-      <ReminderSheet
-        visible={!!reminderMessage}
-        onClose={() => setReminderMessage(null)}
-        message={reminderMessage!}
-        channelId={channelId}
-      />
+      {reminderMessage && (
+        <ReminderSheet
+          visible
+          onClose={() => setReminderMessage(null)}
+          message={reminderMessage}
+          channelId={channelId}
+        />
+      )}
 
       <ScheduleMessageSheet
         visible={showScheduleSheet}

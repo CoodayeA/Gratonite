@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme, useGlass } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { WalletInfo, LedgerEntry } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -27,26 +28,35 @@ export default function WalletScreen({ navigation }: Props) {
   const [wallet, setWallet] = useState<WalletInfo | null>(null);
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [claiming, setClaiming] = useState(false);
+  const hasDataRef = useRef(false);
 
   const fetchData = useCallback(async () => {
     try {
+      setLoadError(null);
       const [walletData, ledgerData] = await Promise.all([
         economyApi.getWallet(),
         economyApi.getLedger(50),
       ]);
       setWallet(walletData);
       setLedger(ledgerData);
+      hasDataRef.current = true;
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load wallet data');
+        const message = err?.message || 'Failed to load wallet data';
+        if (hasDataRef.current) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchData();
@@ -281,6 +291,10 @@ export default function WalletScreen({ navigation }: Props) {
   };
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && !wallet) {
+    return <LoadErrorCard title="Failed to load wallet" message={loadError} onRetry={fetchData} />;
+  }
 
   return (
     <PatternBackground>

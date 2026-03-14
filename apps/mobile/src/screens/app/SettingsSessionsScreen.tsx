@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import EmptyState from '../../components/EmptyState';
 import type { Session } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -27,19 +28,28 @@ export default function SettingsSessionsScreen({ navigation }: Props) {
   const toast = useToast();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const hasDataRef = useRef(false);
 
   const fetchSessions = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await settingsApi.getSessions();
       setSessions(data);
+      hasDataRef.current = true;
     } catch (err: any) {
-      toast.error(err.message || 'Failed to load sessions');
+      const message = err?.message || 'Failed to load sessions';
+      if (hasDataRef.current) {
+        toast.error(message);
+      } else {
+        setLoadError(message);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchSessions();
@@ -203,6 +213,10 @@ export default function SettingsSessionsScreen({ navigation }: Props) {
 
   if (loading) {
     return <LoadingScreen />;
+  }
+
+  if (loadError && sessions.length === 0) {
+    return <LoadErrorCard title="Failed to load sessions" message={loadError} onRetry={fetchSessions} />;
   }
 
   const otherSessionCount = sessions.filter((s) => !s.current).length;

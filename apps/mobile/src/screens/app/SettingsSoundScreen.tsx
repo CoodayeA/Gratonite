@@ -16,6 +16,7 @@ import { useTheme } from '../../lib/theme';
 import { switchSoundPack } from '../../lib/soundEngine';
 import SectionHeader from '../../components/SectionHeader';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { UserSettings } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -31,6 +32,8 @@ export default function SettingsSoundScreen({ navigation }: Props) {
 
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [volume, setVolume] = useState(100);
@@ -39,13 +42,15 @@ export default function SettingsSoundScreen({ navigation }: Props) {
 
   const fetchSettings = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await settingsApi.get();
       setSettings(data);
       setVolume((data as any).soundVolume ?? 100);
       setSoundPack((data as any).soundPack ?? 'default');
       setMuted((data as any).soundMuted ?? false);
+      setLoaded(true);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to load settings');
+      setLoadError(err?.message || 'Failed to load settings');
     } finally {
       setLoading(false);
     }
@@ -171,6 +176,10 @@ export default function SettingsSoundScreen({ navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && !loaded) {
+    return <LoadErrorCard title="Failed to load settings" message={loadError} onRetry={fetchSettings} />;
+  }
 
   return (
     <PatternBackground>

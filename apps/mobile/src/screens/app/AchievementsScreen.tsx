@@ -14,6 +14,7 @@ import type { Achievement } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 import PatternBackground from '../../components/PatternBackground';
+import LoadErrorCard from '../../components/LoadErrorCard';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Achievements'>;
 
@@ -23,17 +24,24 @@ export default function AchievementsScreen({ navigation }: Props) {
 
   const [items, setItems] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchAchievements = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await achievements.list();
       setItems(data);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to load achievements');
+      const message = err?.message || 'Failed to load achievements';
+      if (items.length > 0) {
+        toast.error(message);
+      } else {
+        setLoadError(message);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [items.length]);
 
   useEffect(() => {
     fetchAchievements();
@@ -138,6 +146,10 @@ export default function AchievementsScreen({ navigation }: Props) {
         <ActivityIndicator size="large" color={colors.accentPrimary} />
       </View>
     );
+  }
+
+  if (loadError && items.length === 0) {
+    return <LoadErrorCard title="Failed to load achievements" message={loadError} onRetry={() => { setLoading(true); fetchAchievements(); }} />;
   }
 
   return (

@@ -1,0 +1,11 @@
+appId: chat.gratonite.mobile
+---
+# Verify DM list renders and conversations are visible
+- assertVisible: "Portals"
+- tapOn: "Chats"
+- assertVisible: "Messages"
+# Verify at least one DM item renders (optional — empty state is also valid)
+- assertVisible:
+    id: "dm-item"
+    index: 0
+    optional: true

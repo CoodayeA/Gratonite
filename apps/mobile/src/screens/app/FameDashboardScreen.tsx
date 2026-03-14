@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme, useGlass } from '../../lib/theme';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import Avatar from '../../components/Avatar';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -37,10 +38,13 @@ export default function FameDashboardScreen({ navigation }: Props) {
   const [stats, setStats] = useState<FameStats | null>(null);
   const [leaders, setLeaders] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const hasDataRef = useRef(false);
 
   const fetchData = useCallback(async () => {
     try {
+      setLoadError(null);
       const [fameData, remainingData, leaderData] = await Promise.all([
         user ? users.getFame(user.id) : Promise.resolve({ fameReceived: 0, fameGiven: 0 }),
         users.getFameRemaining(),
@@ -53,13 +57,19 @@ export default function FameDashboardScreen({ navigation }: Props) {
         used: remainingData.used,
       });
       setLeaders(leaderData);
+      hasDataRef.current = true;
     } catch (err: any) {
-      toast.error(err.message || 'Failed to load fame data');
+      const message = err?.message || 'Failed to load fame data';
+      if (hasDataRef.current) {
+        toast.error(message);
+      } else {
+        setLoadError(message);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user]);
+  }, [user, toast]);
 
   useEffect(() => {
     fetchData();
@@ -192,6 +202,10 @@ export default function FameDashboardScreen({ navigation }: Props) {
 
   if (loading) {
     return <LoadingScreen />;
+  }
+
+  if (loadError && !stats) {
+    return <LoadErrorCard title="Failed to load fame data" message={loadError} onRetry={fetchData} />;
   }
 
   const STAT_ITEMS = [

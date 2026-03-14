@@ -19,6 +19,7 @@ import { useTheme } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import RichText from '../../components/RichText';
 import type { ForumPost, Message } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -34,6 +35,7 @@ export default function QAChannelScreen({ route, navigation }: Props) {
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // New question modal
   const [showNewQuestion, setShowNewQuestion] = useState(false);
@@ -48,11 +50,17 @@ export default function QAChannelScreen({ route, navigation }: Props) {
 
   const fetchPosts = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await forumApi.listPosts(channelId);
       setPosts(data);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load questions');
+        const message = err?.message || 'Failed to load questions';
+        if (refreshing || posts.length > 0) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
@@ -398,6 +406,8 @@ export default function QAChannelScreen({ route, navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && posts.length === 0) return <LoadErrorCard title="Failed to load Q&A" message={loadError} onRetry={() => { setLoading(true); fetchPosts(); }} />;
 
   return (
     <PatternBackground>

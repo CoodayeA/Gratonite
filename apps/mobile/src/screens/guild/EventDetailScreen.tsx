@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import { formatTime } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { ScheduledEvent } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -25,19 +26,28 @@ export default function EventDetailScreen({ route }: Props) {
   const { guildId, eventId } = route.params;
   const [event, setEvent] = useState<ScheduledEvent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const hasDataRef = useRef(false);
 
   const fetchEvent = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await eventsApi.get(guildId, eventId);
       setEvent(data);
+      hasDataRef.current = true;
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load event');
+        const message = err?.message || 'Failed to load event';
+        if (hasDataRef.current) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
       }
     } finally {
       setLoading(false);
     }
-  }, [guildId, eventId]);
+  }, [guildId, eventId, toast]);
 
   useEffect(() => {
     fetchEvent();
@@ -194,7 +204,13 @@ export default function EventDetailScreen({ route }: Props) {
     },
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
-  if (loading || !event) {
+  if (loading) return <LoadingScreen />;
+
+  if (loadError && !event) {
+    return <LoadErrorCard title="Failed to load event" message={loadError} onRetry={() => { setLoading(true); fetchEvent(); }} />;
+  }
+
+  if (!event) {
     return <LoadingScreen />;
   }
 

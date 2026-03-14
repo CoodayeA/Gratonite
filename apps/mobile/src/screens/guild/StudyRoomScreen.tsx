@@ -6,6 +6,7 @@ import { useTheme } from '../../lib/theme';
 import { useToast } from '../../contexts/ToastContext';
 import { mediumImpact, notificationSuccess } from '../../lib/haptics';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { StudySession, StudyRoomSettings } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -35,27 +36,38 @@ export default function StudyRoomScreen({ route, navigation }: Props) {
   const [session, setSession] = useState<StudySession | null>(null);
   const [roomSettings, setRoomSettings] = useState<StudyRoomSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedAmbient, setSelectedAmbient] = useState<string | null>(null);
   const [timerDisplay, setTimerDisplay] = useState('25:00');
   const [selectedPreset, setSelectedPreset] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastPhaseRef = useRef<string | null>(null);
+  const hasDataRef = useRef(false);
 
   const fetchData = useCallback(async () => {
     try {
+      setLoadError(null);
       const settings = await studyRooms.getSettings(channelId);
       setRoomSettings(settings);
+      hasDataRef.current = true;
       if (settings.pomodoroWork) {
         const presetIdx = WORK_PRESETS.findIndex(p => p.work === Math.round(settings.pomodoroWork / 60));
         if (presetIdx >= 0) setSelectedPreset(presetIdx);
       }
       if (settings.ambientSound) setSelectedAmbient(settings.ambientSound);
-    } catch {
-      toast.error('Failed to load study room');
+    } catch (err: any) {
+      if (err.status !== 401) {
+        const message = err?.message || 'Failed to load study room';
+        if (hasDataRef.current) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
+      }
     } finally {
       setLoading(false);
     }
-  }, [channelId]);
+  }, [channelId, toast]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -137,6 +149,10 @@ export default function StudyRoomScreen({ route, navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo, session]);
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError && !roomSettings) {
+    return <LoadErrorCard title="Failed to load study room" message={loadError} onRetry={() => { setLoading(true); fetchData(); }} />;
+  }
 
   return (
     <PatternBackground>

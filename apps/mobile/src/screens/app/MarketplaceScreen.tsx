@@ -20,6 +20,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import EmptyState from '../../components/EmptyState';
 import type { MarketplaceListing } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -43,6 +44,7 @@ export default function MarketplaceScreen({ navigation }: Props) {
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<Category>('All');
 
   // New listing modal
@@ -58,12 +60,14 @@ export default function MarketplaceScreen({ navigation }: Props) {
 
   const fetchListings = useCallback(async () => {
     try {
+      setLoadError(null);
       const category = activeCategory === 'All' ? undefined : activeCategory.toLowerCase();
       const data = await marketplaceApi.list(category);
       setListings(data);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load listings');
+        const message = err?.message || 'Failed to load marketplace';
+        if (refreshing || listings.length > 0) { toast.error(message); } else { setLoadError(message); }
       }
     } finally {
       setLoading(false);
@@ -446,6 +450,7 @@ export default function MarketplaceScreen({ navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+  if (loadError && listings.length === 0) return <LoadErrorCard title="Failed to load marketplace" message={loadError} onRetry={() => { setLoading(true); fetchListings(); }} />;
 
   return (
     <PatternBackground>

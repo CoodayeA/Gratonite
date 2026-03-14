@@ -15,12 +15,14 @@ import type { AutoRole } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 import PatternBackground from '../../components/PatternBackground';
+import { useToast } from '../../contexts/ToastContext';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'AutoRoleConfig'>;
 
 export default function AutoRoleConfigScreen({ route }: Props) {
   const { guildId } = route.params;
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const toast = useToast();
   const [roles, setRoles] = useState<AutoRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);

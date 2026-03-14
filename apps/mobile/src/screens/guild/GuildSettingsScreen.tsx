@@ -14,7 +14,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme, useGlass } from '../../lib/theme';
 import LoadingScreen from '../../components/LoadingScreen';
-import type { Guild } from '../../types';
+import type { Guild, Role } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 import PatternBackground from '../../components/PatternBackground';
@@ -28,6 +28,7 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
   const { guildId, guildName } = route.params;
   const { user } = useAuth();
   const [guild, setGuild] = useState<Guild | null>(null);
+  const [memberRoles, setMemberRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingInvite, setCreatingInvite] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -35,8 +36,12 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
   const fetchGuild = useCallback(async () => {
     try {
       setLoadError(null);
-      const data = await guildsApi.get(guildId);
+      const [data, roles] = await Promise.all([
+        guildsApi.get(guildId),
+        user?.id ? guildsApi.getMemberRoles(guildId, user.id).catch(() => [] as Role[]) : Promise.resolve([] as Role[]),
+      ]);
       setGuild(data);
+      setMemberRoles(roles);
     } catch (err: any) {
       if (err.status !== 401) {
         const message = err.message || 'Failed to load portal settings';
@@ -46,7 +51,7 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [guildId]);
+  }, [guildId, user?.id, toast]);
 
   useEffect(() => {
     fetchGuild();
@@ -261,7 +266,16 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
   }
 
   const isOwner = guild?.ownerId === user?.id;
-  const canManageGuild = isOwner;
+  const canManageGuild = useMemo(() => {
+    if (isOwner) return true;
+    // Check if any of the user's roles grant ADMINISTRATOR (bit 0) or MANAGE_GUILD (bit 3)
+    const ADMINISTRATOR = 1n << 0n;
+    const MANAGE_GUILD = 1n << 3n;
+    return memberRoles.some((r) => {
+      const perms = BigInt(r.permissions || '0');
+      return (perms & ADMINISTRATOR) !== 0n || (perms & MANAGE_GUILD) !== 0n;
+    });
+  }, [isOwner, memberRoles]);
 
   return (
     <PatternBackground>
@@ -438,7 +452,7 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
         ) : (
           <View style={styles.actionRow}>
             <Ionicons name="lock-closed-outline" size={22} color={colors.textMuted} />
-            <Text style={styles.actionText}>Only the portal owner can manage server settings on mobile right now.</Text>
+            <Text style={styles.actionText}>You need Administrator or Manage Server permission to access these settings.</Text>
           </View>
         )}
       </View>

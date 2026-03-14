@@ -402,6 +402,14 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
     };
   }, [channelId, user?.id]);
 
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
+      typingUsers.forEach((entry) => clearTimeout(entry.timeout));
+    };
+  }, []);
+
   // Header: disappearing messages timer button
   useEffect(() => {
     navigation.setOptions({

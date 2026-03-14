@@ -1,0 +1,27 @@
+appId: chat.gratonite.mobile
+---
+# Open a guild, enter a channel, and navigate to threads
+- assertVisible: "Portals"
+- tapOn:
+    id: "guild-item"
+    index: 0
+- tapOn:
+    id: "channel-item"
+    index: 0
+- assertVisible:
+    text: "Message input"
+    timeout: 5000
+# Long-press on a message to open context menu (thread option)
+# If no messages exist, this will be skipped
+- longPressOn:
+    id: "message-bubble"
+    index: 0
+    optional: true
+# Look for a thread/reply option in the context menu
+- tapOn:
+    text: "Thread"
+    optional: true
+# If thread opened, verify send UI is present
+- assertVisible:
+    text: "Send message"
+    optional: true

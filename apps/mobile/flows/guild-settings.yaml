@@ -1,0 +1,24 @@
+appId: chat.gratonite.mobile
+---
+# Open guild settings and verify key sections render
+- assertVisible: "Portals"
+- tapOn:
+    id: "guild-item"
+    index: 0
+# Tap the server settings gear icon
+- tapOn:
+    text: "Server settings"
+# Guild settings screen should show guild info and action items
+- assertVisible:
+    text: "ACTIONS"
+    timeout: 5000
+- assertVisible: "Member List"
+- assertVisible: "Roles"
+# Scroll down to see more actions
+- scrollUntilVisible:
+    element:
+      text: "Bans"
+    direction: "DOWN"
+    timeout: 5000
+- assertVisible: "Bans"
+- back

@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Switch } from 'react-native';
 import { guildForms } from '../../lib/api';
 import { useTheme } from '../../lib/theme';
 import { useToast } from '../../contexts/ToastContext';
 import { mediumImpact } from '../../lib/haptics';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { FormTemplate } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -18,19 +19,30 @@ export default function FormFillScreen({ route, navigation }: Props) {
   const toast = useToast();
   const [form, setForm] = useState<FormTemplate | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [submitting, setSubmitting] = useState(false);
+  const hasDataRef = useRef(false);
 
   const fetchForm = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await guildForms.get(guildId, formId);
       setForm(data);
-    } catch {
-      toast.error('Failed to load form');
+      hasDataRef.current = true;
+    } catch (err: any) {
+      if (err.status !== 401) {
+        const message = err?.message || 'Failed to load form';
+        if (hasDataRef.current) {
+          toast.error(message);
+        } else {
+          setLoadError(message);
+        }
+      }
     } finally {
       setLoading(false);
     }
-  }, [guildId, formId]);
+  }, [guildId, formId, toast]);
 
   useEffect(() => { fetchForm(); }, [fetchForm]);
 
@@ -69,7 +81,13 @@ export default function FormFillScreen({ route, navigation }: Props) {
     submitText: { color: colors.white, fontWeight: '700', fontSize: fontSize.md },
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
-  if (loading || !form) return <LoadingScreen />;
+  if (loading) return <LoadingScreen />;
+
+  if (loadError && !form) {
+    return <LoadErrorCard title="Failed to load form" message={loadError} onRetry={() => { setLoading(true); fetchForm(); }} />;
+  }
+
+  if (!form) return <LoadingScreen />;
 
   return (
     <PatternBackground>

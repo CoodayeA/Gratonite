@@ -14,6 +14,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import EmptyState from '../../components/EmptyState';
 import type { Reminder } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -38,21 +39,24 @@ export default function RemindersScreen({ navigation }: Props) {
   const toast = useToast();
   const [reminderList, setReminderList] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchReminders = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await remindersApi.list();
       setReminderList(data.filter((r) => !r.fired));
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load reminders');
+        const message = err?.message || 'Failed to load reminders';
+        if (refreshing || reminderList.length > 0) { toast.error(message); } else { setLoadError(message); }
       }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [refreshing, reminderList.length]);
 
   useEffect(() => {
     fetchReminders();
@@ -160,6 +164,8 @@ export default function RemindersScreen({ navigation }: Props) {
   if (loading) {
     return <LoadingScreen />;
   }
+
+  if (loadError && reminderList.length === 0) return <LoadErrorCard title="Failed to load reminders" message={loadError} onRetry={() => { setLoading(true); fetchReminders(); }} />;
 
   return (
     <PatternBackground>

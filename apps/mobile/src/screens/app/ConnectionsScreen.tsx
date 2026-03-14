@@ -6,6 +6,7 @@ import { useTheme } from '../../lib/theme';
 import { useToast } from '../../contexts/ToastContext';
 import { mediumImpact } from '../../lib/haptics';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { SocialConnection } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -40,13 +41,18 @@ export default function ConnectionsScreen({ navigation }: Props) {
 
   const [linked, setLinked] = useState<SocialConnection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchConnections = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await connections.list();
       setLinked(data);
-    } catch {
-      toast.error('Failed to load connections');
+    } catch (err: any) {
+      if (err.status !== 401) {
+        const message = err?.message || 'Failed to load connections';
+        if (linked.length > 0) { toast.error(message); } else { setLoadError(message); }
+      }
     } finally {
       setLoading(false);
     }
@@ -112,6 +118,7 @@ export default function ConnectionsScreen({ navigation }: Props) {
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
+  if (loadError && linked.length === 0) return <LoadErrorCard title="Failed to load connections" message={loadError} onRetry={() => { setLoading(true); fetchConnections(); }} />;
 
   const linkedProviders = new Set(linked.map(c => c.provider));
 

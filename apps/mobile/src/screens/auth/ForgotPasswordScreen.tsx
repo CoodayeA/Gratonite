@@ -35,6 +35,11 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
       toast.error('Please enter your email address');
       return;
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
     setLoading(true);
     try {
       await auth.forgotPassword(email.trim());

@@ -15,6 +15,7 @@ import { serverFolders as foldersApi, guilds as guildsApi } from '../../lib/api'
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import EmptyState from '../../components/EmptyState';
 import type { ServerFolder, Guild } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -30,6 +31,7 @@ export default function ServerFoldersScreen({ navigation }: Props) {
   const [myGuilds, setMyGuilds] = useState<Guild[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Create / edit modal
   const [showModal, setShowModal] = useState(false);
@@ -40,6 +42,7 @@ export default function ServerFoldersScreen({ navigation }: Props) {
 
   const fetchData = useCallback(async () => {
     try {
+      setLoadError(null);
       const [foldersData, guildsData] = await Promise.all([
         foldersApi.list(),
         guildsApi.getMine(),
@@ -48,7 +51,8 @@ export default function ServerFoldersScreen({ navigation }: Props) {
       setMyGuilds(guildsData);
     } catch (err: any) {
       if (err.status !== 401) {
-        toast.error('Failed to load folders');
+        const message = err?.message || 'Failed to load folders';
+        if (refreshing || folders.length > 0) { toast.error(message); } else { setLoadError(message); }
       }
     } finally {
       setLoading(false);
@@ -322,6 +326,7 @@ export default function ServerFoldersScreen({ navigation }: Props) {
   if (loading) {
     return <LoadingScreen />;
   }
+  if (loadError && folders.length === 0) return <LoadErrorCard title="Failed to load folders" message={loadError} onRetry={() => { setLoading(true); fetchData(); }} />;
 
   return (
     <PatternBackground>

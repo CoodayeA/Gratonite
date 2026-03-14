@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { stats } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 import PatternBackground from '../../components/PatternBackground';
@@ -45,18 +46,25 @@ export default function UserStatsScreen({ navigation }: Props) {
 
   const [data, setData] = useState<StatData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const fetchStats = useCallback(async () => {
     try {
+      setLoadError(null);
       const res = await stats.public();
       setData(res);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to load stats');
+      const message = err?.message || 'Failed to load stats';
+      if (data) {
+        toast.error(message);
+      } else {
+        setLoadError(message);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [data, toast]);
 
   useEffect(() => {
     fetchStats();
@@ -126,6 +134,10 @@ export default function UserStatsScreen({ navigation }: Props) {
         <ActivityIndicator size="large" color={colors.accentPrimary} />
       </View>
     );
+  }
+
+  if (loadError && !data) {
+    return <LoadErrorCard title="Failed to load stats" message={loadError} onRetry={fetchStats} />;
   }
 
   return (

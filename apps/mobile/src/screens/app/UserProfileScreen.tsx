@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { users as usersApi, relationships as relApi, showcase as showcaseApi } f
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme, useGlass } from '../../lib/theme';
 import LoadingScreen from '../../components/LoadingScreen';
+import LoadErrorCard from '../../components/LoadErrorCard';
 import Avatar from '../../components/Avatar';
 import { useUserPresence, presenceStore } from '../../lib/presenceStore';
 import type { User, PresenceStatus, ShowcaseItem } from '../../types';
@@ -37,11 +38,13 @@ export default function UserProfileScreen({ route, navigation }: Props) {
   const toast = useToast();
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showcaseItems, setShowcaseItems] = useState<ShowcaseItem[]>([]);
   const [mutualFriends, setMutualFriends] = useState<Array<{ id: string; username: string; displayName: string | null; avatarHash: string | null }>>([]);
   const [mutualGuilds, setMutualGuilds] = useState<Array<{ id: string; name: string; iconHash: string | null }>>([]);
   const livePresence = useUserPresence(userId);
+  const hasDataRef = useRef(false);
 
   const STATUS_COLORS: Record<PresenceStatus, string> = useMemo(() => ({
     online: colors.online,
@@ -53,6 +56,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
 
   const fetchProfile = useCallback(async () => {
     try {
+      setLoadError(null);
       const [data, sc, friends, guilds] = await Promise.all([
         usersApi.getProfile(userId),
         showcaseApi.get(userId).catch(() => [] as ShowcaseItem[]),
@@ -63,6 +67,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
       setShowcaseItems(sc);
       setMutualFriends(friends);
       setMutualGuilds(guilds);
+      hasDataRef.current = true;
 
       // Fetch live presence for this user
       try {
@@ -77,11 +82,16 @@ export default function UserProfileScreen({ route, navigation }: Props) {
         }
       }
     } catch (err: any) {
-      toast.error(err.message || 'Failed to load profile');
+      const message = err?.message || 'Failed to load profile';
+      if (hasDataRef.current) {
+        toast.error(message);
+      } else {
+        setLoadError(message);
+      }
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, toast]);
 
   useEffect(() => {
     fetchProfile();
@@ -485,13 +495,12 @@ export default function UserProfileScreen({ route, navigation }: Props) {
     return <LoadingScreen />;
   }
 
+  if (loadError && !profile) {
+    return <LoadErrorCard title="Failed to load profile" message={loadError} onRetry={fetchProfile} />;
+  }
+
   if (!profile) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Ionicons name="person-outline" size={48} color={colors.textMuted} />
-        <Text style={styles.errorText}>User not found</Text>
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   const displayName = profile.displayName || profile.username;
