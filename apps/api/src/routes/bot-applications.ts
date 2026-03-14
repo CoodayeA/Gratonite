@@ -47,12 +47,15 @@ const createBotSchema = z.object({
   avatarHash: z.string().max(255).optional(),
 });
 
+const VALID_EVENTS = ['message_create', 'message_update', 'message_delete', 'member_join', 'member_leave', 'reaction_add', 'reaction_remove', 'component_interaction'] as const;
+
 const updateBotSchema = z.object({
   name: z.string().min(1).max(64).optional(),
   description: z.string().optional(),
   webhookUrl: z.string().url().max(512).optional(),
   avatarHash: z.string().max(255).optional(),
   isActive: z.boolean().optional(),
+  subscribedEvents: z.array(z.enum(VALID_EVENTS)).optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -73,6 +76,8 @@ function publicBot(bot: typeof botApplications.$inferSelect) {
     webhookUrl: bot.webhookUrl,
     isActive: bot.isActive,
     listingId: bot.listingId,
+    subscribedEvents: bot.subscribedEvents,
+    botUserId: bot.botUserId,
     createdAt: bot.createdAt,
     updatedAt: bot.updatedAt,
   };
@@ -157,6 +162,21 @@ botApplicationsRouter.post(
       // 5. Start the ping concurrently — do not block the insert.
       const pingPromise = pingWebhook(webhookUrl);
 
+      // 5b. Create a virtual user for the bot (so it appears in member lists)
+      const botUsername = `bot_${name.toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 24)}_${crypto.randomBytes(2).toString('hex')}`;
+      const [botUser] = await db
+        .insert(users)
+        .values({
+          username: botUsername,
+          email: `bot+${botId}@gratonite.internal`,
+          passwordHash: 'BOT_ACCOUNT_NO_LOGIN',
+          displayName: name,
+          avatarHash: avatarHash ?? null,
+          isBot: true,
+          status: 'online',
+        })
+        .returning();
+
       // 6. Insert.
       const [newBot] = await db
         .insert(botApplications)
@@ -171,6 +191,7 @@ botApplicationsRouter.post(
           webhookSecretKey,
           apiToken,
           isActive: true,
+          botUserId: botUser.id,
         })
         .returning();
 
@@ -317,11 +338,12 @@ botApplicationsRouter.patch(
 
       // Build a sparse update — only fields present in the request body.
       const updates: Partial<typeof botApplications.$inferInsert> = {};
-      if (body.name !== undefined)        updates.name = body.name;
-      if (body.description !== undefined) updates.description = body.description;
-      if (body.webhookUrl !== undefined)  updates.webhookUrl = body.webhookUrl;
-      if (body.avatarHash !== undefined)  updates.avatarHash = body.avatarHash;
-      if (body.isActive !== undefined)    updates.isActive = body.isActive;
+      if (body.name !== undefined)              updates.name = body.name;
+      if (body.description !== undefined)       updates.description = body.description;
+      if (body.webhookUrl !== undefined)        updates.webhookUrl = body.webhookUrl;
+      if (body.avatarHash !== undefined)        updates.avatarHash = body.avatarHash;
+      if (body.isActive !== undefined)          updates.isActive = body.isActive;
+      if (body.subscribedEvents !== undefined)  updates.subscribedEvents = body.subscribedEvents;
 
       if (Object.keys(updates).length === 0) {
         res.status(400).json({ code: 'VALIDATION_ERROR', message: 'No fields to update' });

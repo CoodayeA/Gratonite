@@ -52,7 +52,7 @@ import { messageRateLimit } from '../middleware/rateLimit';
 import { getIO } from '../lib/socket-io';
 import { hasPermission, hasChannelPermission } from './roles';
 import { createNotification } from '../lib/notifications';
-import { dispatchMessageCreate } from '../lib/webhook-dispatch';
+import { dispatchMessageCreate, dispatchEvent } from '../lib/webhook-dispatch';
 import { scrapeUrl, extractUrls } from '../lib/og-scraper';
 import { redis } from '../lib/redis';
 import { workflows, workflowTriggers, workflowActions } from '../db/schema/workflows';
@@ -136,7 +136,7 @@ async function resolveChannel(
  */
 function formatMessage(
   msg: typeof messages.$inferSelect,
-  author: Pick<typeof users.$inferSelect, 'id' | 'username' | 'displayName' | 'avatarHash' | 'nameplateStyle'> | null,
+  author: Pick<typeof users.$inferSelect, 'id' | 'username' | 'displayName' | 'avatarHash' | 'nameplateStyle'> & { isBot?: boolean } | null,
 ) {
   return {
     id: msg.id,
@@ -148,6 +148,7 @@ function formatMessage(
     editedAt: msg.editedAt,
     createdAt: msg.createdAt,
     embeds: msg.embeds ?? [],
+    components: msg.components ?? [],
     expiresAt: msg.expiresAt ?? null,
     replyToId: msg.replyToId ?? null,
     isEncrypted: msg.isEncrypted ?? false,
@@ -160,6 +161,7 @@ function formatMessage(
           displayName: author.displayName,
           avatarHash: author.avatarHash,
           nameplateStyle: author.nameplateStyle ?? 'none',
+          isBot: author.isBot ?? false,
         }
       : null,
   };
@@ -283,6 +285,7 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
         authorDisplayName: users.displayName,
         authorAvatarHash: users.avatarHash,
         authorNameplateStyle: users.nameplateStyle,
+        authorIsBot: users.isBot,
       })
       .from(messages)
       .leftJoin(users, eq(users.id, messages.authorId))
@@ -383,6 +386,7 @@ messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
               displayName: row.authorDisplayName,
               avatarHash: row.authorAvatarHash,
               nameplateStyle: row.authorNameplateStyle ?? 'none',
+              isBot: row.authorIsBot ?? false,
             }
           : null,
       };
@@ -459,7 +463,7 @@ messagesRouter.get('/jump-to-date', requireAuth, async (req: Request, res: Respo
           embeds: messages.embeds, isEncrypted: messages.isEncrypted, encryptedContent: messages.encryptedContent,
           keyVersion: messages.keyVersion, authorId: messages.authorId,
           authorUsername: users.username, authorDisplayName: users.displayName,
-          authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle,
+          authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle, authorIsBot: users.isBot,
         })
         .from(messages)
         .leftJoin(users, eq(users.id, messages.authorId))
@@ -481,7 +485,7 @@ messagesRouter.get('/jump-to-date', requireAuth, async (req: Request, res: Respo
           embeds: messages.embeds, isEncrypted: messages.isEncrypted, encryptedContent: messages.encryptedContent,
           keyVersion: messages.keyVersion, authorId: messages.authorId,
           authorUsername: users.username, authorDisplayName: users.displayName,
-          authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle,
+          authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle, authorIsBot: users.isBot,
         })
         .from(messages)
         .leftJoin(users, eq(users.id, messages.authorId))
@@ -506,7 +510,7 @@ messagesRouter.get('/jump-to-date', requireAuth, async (req: Request, res: Respo
         embeds: messages.embeds, isEncrypted: messages.isEncrypted, encryptedContent: messages.encryptedContent,
         keyVersion: messages.keyVersion, authorId: messages.authorId,
         authorUsername: users.username, authorDisplayName: users.displayName,
-        authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle,
+        authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle, authorIsBot: users.isBot,
       })
       .from(messages)
       .leftJoin(users, eq(users.id, messages.authorId))
@@ -568,6 +572,7 @@ messagesRouter.get('/jump-to-date', requireAuth, async (req: Request, res: Respo
               displayName: row.authorDisplayName,
               avatarHash: row.authorAvatarHash,
               nameplateStyle: row.authorNameplateStyle ?? 'none',
+              isBot: row.authorIsBot ?? false,
             }
           : null,
       };
@@ -849,6 +854,7 @@ messagesRouter.post(
           displayName: users.displayName,
           avatarHash: users.avatarHash,
           nameplateStyle: users.nameplateStyle,
+          isBot: users.isBot,
         })
         .from(users)
         .where(eq(users.id, req.userId!))
@@ -1198,6 +1204,7 @@ messagesRouter.patch(
           displayName: users.displayName,
           avatarHash: users.avatarHash,
           nameplateStyle: users.nameplateStyle,
+          isBot: users.isBot,
         })
         .from(users)
         .where(eq(users.id, req.userId!))
@@ -1209,6 +1216,16 @@ messagesRouter.patch(
         getIO().to(`channel:${channelId}`).emit('MESSAGE_UPDATE', payload);
       } catch {
         // Non-fatal if Socket.io not initialised.
+      }
+
+      // Dispatch message_update to installed bots
+      const [editChan] = await db.select({ guildId: channels.guildId }).from(channels)
+        .where(eq(channels.id, channelId)).limit(1);
+      if (editChan?.guildId) {
+        dispatchEvent(editChan.guildId, 'message_update', {
+          channelId, messageId, content: updated.content ?? '',
+          authorId: updated.authorId,
+        });
       }
 
       res.status(200).json(payload);
@@ -1357,6 +1374,11 @@ messagesRouter.delete(
           .emit('MESSAGE_DELETE', { id: messageId, channelId });
       } catch {
         // Non-fatal.
+      }
+
+      // Dispatch message_delete to installed bots
+      if (channel.guildId) {
+        dispatchEvent(channel.guildId, 'message_delete', { channelId, messageId });
       }
 
       res.status(200).json({ code: 'OK', message: 'Message deleted' });

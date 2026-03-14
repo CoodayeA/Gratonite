@@ -108,7 +108,9 @@ type Message = {
     authorRoleColor?: string;
     authorAvatarHash?: string | null;
     authorNameplateStyle?: string | null;
-    embeds?: Array<{ url: string; title?: string; description?: string; image?: string; siteName?: string }>;
+    embeds?: Array<{ url: string; title?: string; description?: string; image?: string; siteName?: string; type?: string; color?: string; fields?: any[]; thumbnail?: string; footer?: string }>;
+    components?: any[];
+    isBot?: boolean;
     isEncrypted?: boolean;
     encryptedContent?: string | null;
     expiresAt?: string | null;
@@ -119,6 +121,8 @@ type Message = {
 };
 
 import { LazyEmbed, OgEmbed } from '../../components/chat/EmbedCard';
+import { RichEmbedCard, RichEmbed } from '../../components/chat/RichEmbedCard';
+import { MessageComponents } from '../../components/chat/MessageComponents';
 import ThreadPanel from '../../components/chat/ThreadPanel';
 import ThreadsPanel from '../../components/chat/ThreadsPanel';
 import ChannelNotesPanel from '../../components/chat/ChannelNotesPanel';
@@ -420,7 +424,7 @@ const MemoizedMessageItem = memo(({
                                     onMouseLeave={cancelUserPrefetch}
                                     style={{ cursor: msg.system ? 'default' : 'pointer', color: msg.authorRoleColor || undefined, fontSize: '13px' }}
                                 >
-                                    {msg.author}:
+                                    {msg.author}{msg.isBot && <span style={{ display: 'inline-block', marginLeft: '4px', background: 'var(--accent-primary)', color: '#000', fontSize: '9px', fontWeight: 700, padding: '1px 4px', borderRadius: '3px', verticalAlign: 'middle', letterSpacing: '0.5px', lineHeight: '14px' }}>BOT</span>}:
                                 </span>
                             </div>
                         )
@@ -635,11 +639,19 @@ const MemoizedMessageItem = memo(({
                                 <RichTextRenderer content={translatedText} customEmojis={customEmojis} members={members} channels={channels} />
                             </div>
                         )}
-                        {/* URL Embeds */}
+                        {/* URL Embeds + Rich Bot Embeds */}
                         {msg.embeds && msg.embeds.length > 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
-                                {msg.embeds.map((embed: OgEmbed, i: number) => <LazyEmbed key={i} embed={embed} />)}
+                                {msg.embeds.map((embed: any, i: number) =>
+                                    embed.type === 'rich'
+                                        ? <RichEmbedCard key={i} embed={embed as RichEmbed} />
+                                        : <LazyEmbed key={i} embed={embed as OgEmbed} />
+                                )}
                             </div>
+                        )}
+                        {/* Message Components (buttons, select menus) */}
+                        {msg.components && Array.isArray(msg.components) && msg.components.length > 0 && (
+                            <MessageComponents components={msg.components} channelId={channelId!} messageId={msg.id} />
                         )}
                         {msg.widgetData && (
                             <EmbeddedWidget type={msg.widgetData.type} data={msg.widgetData.data} />
@@ -1635,6 +1647,8 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             authorRoleColor: m.authorId ? roleColorCacheRef.current.get(m.authorId) : undefined,
             authorAvatarHash: m.author?.avatarHash ?? null,
             authorNameplateStyle: (m.author as any)?.nameplateStyle ?? null,
+            isBot: (m.author as any)?.isBot ?? false,
+            components: Array.isArray((m as any).components) && (m as any).components.length > 0 ? (m as any).components : undefined,
             expiresAt: m.expiresAt ?? null,
             createdAt: m.createdAt ?? null,
         };
@@ -2184,6 +2198,8 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 authorRoleColor: data.authorId ? roleColorCacheRef.current.get(data.authorId) : undefined,
                 authorAvatarHash: (data as any).author?.avatarHash ?? null,
                 authorNameplateStyle: (data as any).author?.nameplateStyle ?? null,
+                isBot: (data as any).author?.isBot ?? false,
+                components: Array.isArray((data as any).components) && (data as any).components.length > 0 ? (data as any).components : undefined,
                 expiresAt: data.expiresAt ?? null,
                 createdAt: data.createdAt ?? null,
                 ...(incomingPollData ? {
@@ -2877,9 +2893,10 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         // Replace /search with /commandName, then send as interaction
         setInputValue(`/${cmd.name} `);
         setSlashSearch(null);
-        // If command has no options, send it immediately
+        // If command has no options, send interaction immediately
         if (!cmd.options || cmd.options.length === 0) {
-            api.messages.send(channelId!, { content: `/${cmd.name}` }).catch((err) => { console.error('Failed to send slash command:', err); addToast({ title: 'Failed to send command', variant: 'error' }); });
+            api.post(`/channels/${channelId}/interactions`, { commandId: cmd.id, options: {} })
+              .catch((err: any) => { console.error('Failed to execute command:', err); addToast({ title: 'Failed to execute command', variant: 'error' }); });
             setInputValue('');
         }
     };

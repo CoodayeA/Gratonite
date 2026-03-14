@@ -10,6 +10,7 @@ import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
 import { getIO } from '../lib/socket-io';
 import { incrementChallengeProgress } from './daily-challenges';
+import { dispatchEvent } from '../lib/webhook-dispatch';
 
 export const reactionsRouter = Router({ mergeParams: true });
 
@@ -38,6 +39,15 @@ reactionsRouter.put(
         messageId, channelId, userId: req.userId!, emoji: decodedEmoji,
       });
     } catch {}
+
+    // Dispatch reaction_add to installed bots
+    const [reactChan] = await db.select({ guildId: channels.guildId }).from(channels)
+      .where(eq(channels.id, channelId)).limit(1);
+    if (reactChan?.guildId) {
+      dispatchEvent(reactChan.guildId, 'reaction_add', {
+        channelId, messageId, userId: req.userId!, emoji: decodedEmoji,
+      });
+    }
 
     // Daily challenge progress (fire-and-forget)
     incrementChallengeProgress(req.userId!, 'react_to_messages');
@@ -68,6 +78,15 @@ reactionsRouter.delete(
         messageId, channelId, userId: req.userId!, emoji: decodedEmoji,
       });
     } catch {}
+
+    // Dispatch reaction_remove to installed bots
+    const [rmChan] = await db.select({ guildId: channels.guildId }).from(channels)
+      .where(eq(channels.id, channelId)).limit(1);
+    if (rmChan?.guildId) {
+      dispatchEvent(rmChan.guildId, 'reaction_remove', {
+        channelId, messageId, userId: req.userId!, emoji: decodedEmoji,
+      });
+    }
 
     res.json({ code: 'OK' });
   },

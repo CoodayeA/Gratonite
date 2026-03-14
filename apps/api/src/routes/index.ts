@@ -106,6 +106,7 @@ import { guildCurrencyRouter } from './guild-currency';
 import { giftsRouter } from './gifts';
 import { welcomeScreenRouter } from './welcome-screen';
 import { cardsRouter } from './cards';
+import { botPermissionsRouter } from './bot-permissions';
 
 export const router = Router();
 
@@ -263,9 +264,9 @@ router.use('/guilds', templatesRouter); // for /guilds/templates/:code
 // AutoMod
 router.use('/guilds/:guildId/auto-moderation', automodRouter);
 
-// Slash commands
+// Slash commands + component interactions
 router.use('/guilds/:guildId/commands', commandsRouter);
-router.use('/', commandsRouter); // for /applications/:appId/... and /channels/:channelId/interactions
+router.use('/', commandsRouter); // for /applications/:appId/..., /channels/:channelId/interactions, /channels/:channelId/messages/:messageId/components/...
 
 // Message drafts (per-channel)
 router.use('/', draftsRouter);
@@ -358,3 +359,6 @@ router.use('/guilds/:guildId/welcome-screen', welcomeScreenRouter);
 
 // Collectible cards (gacha system)
 router.use('/cards', cardsRouter);
+
+// Bot permissions (per-guild)
+router.use('/guilds/:guildId/bots', botPermissionsRouter);
