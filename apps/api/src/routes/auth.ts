@@ -428,6 +428,13 @@ authRouter.post('/register', asyncHandler(async (req: Request, res: Response): P
 
   const { username, email, password, displayName } = parseResult.data;
 
+  // Block internal email domains used for bot accounts.
+  const emailDomain = email.split('@')[1]?.toLowerCase();
+  if (emailDomain === 'gratonite.internal') {
+    res.status(400).json({ code: 'INVALID_EMAIL_DOMAIN', message: 'This email domain is not allowed for registration' });
+    return;
+  }
+
   // 2. Check username availability (case-insensitive)
   //    We compare against the lowercased username stored via sql`` to avoid
   //    a full table scan if a case-insensitive index is added later.
@@ -600,6 +607,13 @@ authRouter.post('/login', asyncHandler(async (req: Request, res: Response): Prom
   if (!user || !passwordValid) {
     // Intentionally vague: don't reveal whether the username/email exists.
     res.status(401).json({ code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' });
+    return;
+  }
+
+  // Block bot accounts from using the login endpoint.
+  // Bots authenticate via their API token, not user credentials.
+  if (user.isBot) {
+    res.status(403).json({ code: 'BOT_LOGIN_DENIED', message: 'Bot accounts cannot log in via this endpoint' });
     return;
   }
 

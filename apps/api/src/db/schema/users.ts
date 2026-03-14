@@ -23,6 +23,7 @@
  */
 
 import { pgTable, uuid, varchar, text, boolean, integer, jsonb, timestamp } from 'drizzle-orm/pg-core';
+import { eq } from 'drizzle-orm';
 
 /**
  * The `users` table.
@@ -213,3 +214,11 @@ export type User = typeof users.$inferSelect;
  * passwordHash, and displayName are required.
  */
 export type NewUser = typeof users.$inferInsert;
+
+/**
+ * Drizzle WHERE clause filter that excludes bot accounts.
+ * Usage: db.select().from(users).where(whereHuman())
+ */
+export function whereHuman() {
+  return eq(users.isBot, false);
+}
