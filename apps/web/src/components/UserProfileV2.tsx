@@ -79,8 +79,8 @@ export function UserProfileV2({ userId, onClose, editable }: UserProfileV2Props)
   const handleSaveProfile = async () => {
     try {
       await api.users.updateProfile({
-        bio: editBio || null,
-        customStatus: editStatus || null,
+        bio: editBio || undefined,
+        customStatus: editStatus || undefined,
       });
       setProfile(prev => prev ? {
         ...prev,

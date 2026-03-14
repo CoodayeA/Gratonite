@@ -552,7 +552,7 @@ const UserProfilePopover = ({
                         </button>
                         <button
                             onClick={() => {
-                                api.mutes.mute(userId).then(() => {
+                                api.mutes.mute(user.id).then(() => {
                                     // visual feedback — brief color flash
                                     setHovered(null);
                                 }).catch(() => {});

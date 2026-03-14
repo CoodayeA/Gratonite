@@ -2487,7 +2487,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                             onClick={async () => {
                                                 if (!guildId || !wordFilterTestInput?.trim()) return;
                                                 try {
-                                                    const result = await api.wordFilterTest.test(guildId, wordFilterTestInput.trim());
+                                                    const result = await api.wordFilterTest.test(guildId, wordFilterTestInput.trim(), wordFilterTestInput.trim());
                                                     setWordFilterTestResult(result);
                                                 } catch {
                                                     addToast({ title: 'Test failed', variant: 'error' });

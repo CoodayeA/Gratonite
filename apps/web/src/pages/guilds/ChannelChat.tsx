@@ -118,6 +118,7 @@ type Message = {
     widgetData?: { type: 'countdown' | 'progress' | 'server-stats' | 'weather'; data: any };
     sendStatus?: 'sending' | 'failed';
     _retryPayload?: { channelId: string; payload: any };
+    _isAnnouncementChannel?: boolean;
 };
 
 import { LazyEmbed, OgEmbed } from '../../components/chat/EmbedCard';
@@ -3654,7 +3655,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                             className="action-icon-btn hidden-on-mobile"
                             onClick={async () => {
                                 try {
-                                    await api.channels.follow(channelId);
+                                    await api.channels.follow(channelId!);
                                     addToast({ title: 'Following this channel!', variant: 'success' });
                                 } catch { addToast({ title: 'Failed to follow channel', variant: 'error' }); }
                             }}
@@ -3961,7 +3962,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             {/* Forum View — renders instead of message list for GUILD_FORUM channels */}
             {channelTypeStr === 'GUILD_FORUM' && channelForumTags.length > 0 ? (
                 <ForumView
-                    channelId={channelId}
+                    channelId={channelId!}
                     channelName={channelName}
                     forumTags={channelForumTags}
                     onOpenThread={(threadId) => setActiveThreadMessage?.({ id: 0, apiId: threadId } as any)}
@@ -4081,7 +4082,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                         const nextMsg = messages[virtualRow.index + 1];
                                         const readers = otherReadStates.filter(s => s.lastReadMessageId === msg.apiId);
                                         if (readers.length === 0) return null;
-                                        const readerMembers = readers.map(r => guildMembers.find(m => m.id === r.userId)).filter(Boolean);
+                                        const readerMembers = readers.map(r => guildMembers.find(m => m.id === r.userId)).filter((m): m is NonNullable<typeof m> => Boolean(m));
                                         if (readerMembers.length === 0) return null;
                                         return (
                                             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '2px 8px 0', gap: '4px' }}>
@@ -4833,7 +4834,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                         <div style={{ position: 'absolute', bottom: 'calc(100% + 12px)', right: '100px', zIndex: 15 }}>
                             <GifReactionPicker
                                 onSelect={(gifUrl) => {
-                                    handleSendGif(gifUrl);
+                                    handleSendGif(gifUrl, gifUrl);
                                     setShowGifPicker(false);
                                 }}
                                 onClose={() => setShowGifPicker(false)}

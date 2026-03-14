@@ -26,7 +26,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
     componentDidCatch(error: Error, info: React.ErrorInfo) {
         const section = this.props.name || 'unknown';
         console.error(`[ErrorBoundary:${section}]`, error, info.componentStack);
-        reportError(error, { componentStack: info.componentStack ?? undefined, section });
+        reportError(error, { componentStack: info.componentStack ?? undefined });
     }
 
     render() {
