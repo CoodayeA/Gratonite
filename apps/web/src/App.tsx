@@ -2503,24 +2503,34 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile, isMobileOpen, onCloseMo
                 )
             ) : (
                 <>
-                    {visibleCustomGroups.map(group => (
-                        <div key={group.id}>
-                            <div className="member-category" style={{ color: group.color || 'var(--text-muted)' }}>
-                                {group.name} — {group.members.length}
+                    {visibleCustomGroups.map(group => {
+                        const groupKey = `__members_group_${group.id}__`;
+                        return (
+                            <div key={group.id}>
+                                <div className="member-category" style={{ color: group.color || 'var(--text-muted)', cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={() => toggleCategory(groupKey)}>
+                                    <span style={{ transition: 'transform 0.15s ease', transform: collapsed[groupKey] ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}><ChevronDown size={10} /></span>
+                                    {group.name} — {group.members.length}
+                                </div>
+                                {!collapsed[groupKey] && group.members.map(m => renderMemberRow(m, false))}
                             </div>
-                            {group.members.map(m => renderMemberRow(m, false))}
-                        </div>
-                    ))}
+                        );
+                    })}
                     {(activeFilter === 'all' || activeFilter === 'online') && onlineMembers.length > 0 && (
                         <div>
-                            <div className="member-category">Online — {onlineMembers.length}</div>
-                            {onlineMembers.map((m) => renderMemberRow(m, false))}
+                            <div className="member-category" style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={() => toggleCategory('__members_online__')}>
+                                <span style={{ transition: 'transform 0.15s ease', transform: collapsed['__members_online__'] ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}><ChevronDown size={10} /></span>
+                                Online — {onlineMembers.length}
+                            </div>
+                            {!collapsed['__members_online__'] && onlineMembers.map((m) => renderMemberRow(m, false))}
                         </div>
                     )}
                     {(activeFilter === 'all' || activeFilter === 'offline') && offlineMembers.length > 0 && (
                         <div>
-                            <div className="member-category">Offline — {offlineMembers.length}</div>
-                            {offlineMembers.map((m) => renderMemberRow(m, true))}
+                            <div className="member-category" style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={() => toggleCategory('__members_offline__')}>
+                                <span style={{ transition: 'transform 0.15s ease', transform: collapsed['__members_offline__'] ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}><ChevronDown size={10} /></span>
+                                Offline — {offlineMembers.length}
+                            </div>
+                            {!collapsed['__members_offline__'] && offlineMembers.map((m) => renderMemberRow(m, true))}
                         </div>
                     )}
                     {visibleCustomGroups.length === 0
