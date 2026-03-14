@@ -15,6 +15,7 @@
     "seed:discover-starter": "tsx src/scripts/seed-discover-starter.ts",
     "gate:data": "tsx src/scripts/gate-data.ts",
     "test:guild-get-contract": "JWT_SECRET=0123456789abcdef0123456789abcdef JWT_REFRESH_SECRET=fedcba9876543210fedcba9876543210 tsx src/scripts/test-guild-get-contract.ts",
+    "test": "vitest run",
     "db:studio": "drizzle-kit studio",
     "guard:placeholders": "node ../../tools/placeholder-guard.mjs",
     "verify:prod": "pnpm run build && pnpm run lint && pnpm run guard:placeholders",
@@ -60,6 +61,7 @@
     "nodemon": "^3.1.14",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.2"
+    "typescript-eslint": "^8.46.2",
+    "vitest": "^2.1.9"
   }
 }
