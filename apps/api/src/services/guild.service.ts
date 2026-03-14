@@ -40,7 +40,9 @@ export class ServiceError extends Error {
       | 'FORBIDDEN'
       | 'DUPLICATE_NAME'
       | 'VALIDATION_ERROR'
-      | 'CONFLICT',
+      | 'CONFLICT'
+      | 'UNAUTHORIZED'
+      | 'MFA_REQUIRED',
     message: string,
   ) {
     super(message);
