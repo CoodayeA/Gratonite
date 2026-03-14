@@ -27,6 +27,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { z } from 'zod';
+import { guildService, ServiceError } from '../services/guild.service';
 import { eq, desc, sql, and, inArray, asc, ilike, gt, gte, SQL } from 'drizzle-orm';
 import multer from 'multer';
 
@@ -193,6 +194,15 @@ export async function requireOwner(
 function handleAppError(res: Response, err: unknown): void {
   if (err instanceof AppError) {
     res.status(err.statusCode).json({ code: err.code, message: err.message });
+  } else if (err instanceof ServiceError) {
+    const statusMap: Record<string, number> = {
+      NOT_FOUND: 404,
+      FORBIDDEN: 403,
+      DUPLICATE_NAME: 409,
+      VALIDATION_ERROR: 400,
+      CONFLICT: 409,
+    };
+    res.status(statusMap[err.code] ?? 500).json({ code: err.code, message: err.message });
   } else {
     logger.error('[guilds] unexpected error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
@@ -313,23 +323,7 @@ function normalizePresenceStatus(value: string): MemberWithPresenceStatus {
  */
 guildsRouter.get('/@me', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const rows = await db
-      .select({
-        id: guilds.id,
-        name: guilds.name,
-        description: guilds.description,
-        iconHash: guilds.iconHash,
-        bannerHash: guilds.bannerHash,
-        ownerId: guilds.ownerId,
-        isDiscoverable: guilds.isDiscoverable,
-        memberCount: guilds.memberCount,
-        createdAt: guilds.createdAt,
-        updatedAt: guilds.updatedAt,
-      })
-      .from(guilds)
-      .innerJoin(guildMembers, eq(guildMembers.guildId, guilds.id))
-      .where(eq(guildMembers.userId, req.userId!));
-
+    const rows = await guildService.getUserGuilds(req.userId!);
     res.status(200).json(rows);
   } catch (err) {
     handleAppError(res, err);
@@ -364,43 +358,7 @@ guildsRouter.post(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { name, description, isDiscoverable } = req.body as z.infer<typeof createGuildSchema>;
-
-      // Check for duplicate guild name.
-      const existing = await db.select({ id: guilds.id }).from(guilds)
-        .where(sql`LOWER(${guilds.name}) = LOWER(${name})`)
-        .limit(1);
-      if (existing.length > 0) {
-        res.status(409).json({ code: 'DUPLICATE_NAME', message: 'A server with this name already exists' });
-        return;
-      }
-
-      // Insert guild.
-      const [guild] = await db
-        .insert(guilds)
-        .values({
-          name,
-          description: description ?? null,
-          isDiscoverable: isDiscoverable ?? false,
-          ownerId: req.userId!,
-          memberCount: 1,
-        })
-        .returning();
-
-      // Add creator as first member.
-      await db.insert(guildMembers).values({
-        guildId: guild.id,
-        userId: req.userId!,
-      });
-
-      // Create @everyone role with default permissions.
-      await db.insert(roles).values({
-        guildId: guild.id,
-        name: '@everyone',
-        position: 0,
-        permissions: DEFAULT_PERMISSIONS,
-      });
-
-      // Default channels are created by the client after guild creation.
+      const guild = await guildService.createGuild(req.userId!, { name, description, isDiscoverable });
       res.status(201).json(guild);
     } catch (err) {
       handleAppError(res, err);
@@ -701,107 +659,14 @@ guildsRouter.post(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { guildId } = req.params as Record<string, string>;
-
-      const [guild] = await db
-        .select({
-          id: guilds.id,
-          name: guilds.name,
-          memberCount: guilds.memberCount,
-          isDiscoverable: guilds.isDiscoverable,
-        })
-        .from(guilds)
-        .where(eq(guilds.id, guildId))
-        .limit(1);
-
-      if (!guild) {
-        res.status(404).json({ code: 'NOT_FOUND', message: 'Guild not found' });
-        return;
-      }
-
-      if (!guild.isDiscoverable) {
-        res.status(403).json({
-          code: 'INVITE_REQUIRED',
-          message: 'This guild is private and requires an invite.',
-        });
-        return;
-      }
-
-      const inserted = await db
-        .insert(guildMembers)
-        .values({ guildId, userId: req.userId! })
-        .onConflictDoNothing()
-        .returning({ id: guildMembers.id });
-
-      const joined = inserted.length > 0;
-      if (joined) {
-        await db
-          .update(guilds)
-          .set({
-            memberCount: sql`${guilds.memberCount} + 1`,
-            updatedAt: new Date(),
-          })
-          .where(eq(guilds.id, guildId));
-
-        // Insert onboarding row (completedAt = null) so the welcome modal can be shown
-        await db
-          .insert(guildMemberOnboarding)
-          .values({ guildId, userId: req.userId!, completedAt: null })
-          .onConflictDoNothing();
-
-        // Trigger E2E key rotation for any encrypted channels in this guild
-        await emitKeyRotationForEncryptedChannels(guildId, 'member_added');
-
-        // Notify existing guild members about the new member
-        const [joiningUser] = await db
-          .select({ id: users.id, username: users.username, displayName: users.displayName, avatarHash: users.avatarHash })
-          .from(users)
-          .where(eq(users.id, req.userId!))
-          .limit(1);
-
-        const io = getIO();
-        io.to(`guild:${guildId}`).emit('GUILD_MEMBER_ADD', {
-          guildId,
-          user: joiningUser ? { id: joiningUser.id, username: joiningUser.username, displayName: joiningUser.displayName, avatarHash: joiningUser.avatarHash } : { id: req.userId! },
-        });
-
-        // Record activity event
-        recordActivity(req.userId!, 'joined_server', { guildId, guildName: guild.name });
-
-        // Dispatch member_join to installed bots
-        dispatchEvent(guildId, 'member_join', {
-          userId: req.userId!,
-          user: joiningUser ? { id: joiningUser.id, username: joiningUser.username, displayName: joiningUser.displayName } : { id: req.userId! },
-        });
-      }
-
-      const [fresh] = await db
-        .select({
-          id: guilds.id,
-          name: guilds.name,
-          memberCount: guilds.memberCount,
-        })
-        .from(guilds)
-        .where(eq(guilds.id, guildId))
-        .limit(1);
-
-      res.status(200).json({
-        id: fresh?.id ?? guild.id,
-        name: fresh?.name ?? guild.name,
-        memberCount: fresh?.memberCount ?? guild.memberCount,
-        joined,
-        alreadyMember: !joined,
-      });
-
-      // Notify the joining user to add guild to sidebar
-      if (joined) {
-        try {
-          getIO().to(`user:${req.userId!}`).emit('GUILD_JOINED', {
-            guildId,
-            guild: fresh ?? { id: guildId, name: guild.name, iconHash: null, memberCount: guild.memberCount + 1 },
-          });
-        } catch { /* socket may not be initialised in tests */ }
-      }
+      const result = await guildService.joinGuild(req.userId!, guildId);
+      res.status(200).json(result);
     } catch (err) {
+      // Map FORBIDDEN with invite message to INVITE_REQUIRED for backwards compat
+      if (err instanceof ServiceError && err.code === 'FORBIDDEN' && err.message.includes('invite')) {
+        res.status(403).json({ code: 'INVITE_REQUIRED', message: err.message });
+        return;
+      }
       handleAppError(res, err);
     }
   },
@@ -955,51 +820,7 @@ guildsRouter.get(
     try {
       const { guildId } = req.params as Record<string, string>;
       const userId = req.userId!;
-      const requestId = String(req.headers['x-request-id'] ?? req.headers['x-correlation-id'] ?? '');
-      const route = '/api/v1/guilds/:guildId';
-
-      const [guild] = await db.select().from(guilds).where(eq(guilds.id, guildId)).limit(1);
-
-      if (!guild) {
-        console.info(JSON.stringify({
-          event: 'guild_get.not_found',
-          guildId,
-          userId,
-          route,
-          requestId: requestId || null,
-          status: 404,
-        }));
-        res.status(404).json({ code: 'NOT_FOUND', message: 'Guild not found' });
-        return;
-      }
-
-      const [membership] = await db
-        .select({ id: guildMembers.id })
-        .from(guildMembers)
-        .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, userId)))
-        .limit(1);
-
-      if (!membership) {
-        console.info(JSON.stringify({
-          event: 'guild_get.forbidden',
-          guildId,
-          userId,
-          route,
-          requestId: requestId || null,
-          status: 403,
-        }));
-        res.status(403).json({ code: 'FORBIDDEN', message: 'You are not a member of this guild' });
-        return;
-      }
-
-      console.info(JSON.stringify({
-        event: 'guild_get.success',
-        guildId,
-        userId,
-        route,
-        requestId: requestId || null,
-        status: 200,
-      }));
+      const guild = await guildService.getGuildById(guildId, userId);
       res.status(200).json(guild);
     } catch (err) {
       handleAppError(res, err);
@@ -1035,65 +856,9 @@ guildsRouter.patch(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { guildId } = req.params as Record<string, string>;
-      await requireMember(guildId, req.userId!);
-
-      if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_GUILD))) {
-        throw new AppError(403, 'Missing MANAGE_GUILD permission', 'FORBIDDEN');
-      }
-
-      const { name, description, isDiscoverable, accentColor, welcomeMessage, rulesChannelId, category, tags, rulesText, requireRulesAgreement, raidProtectionEnabled, publicStatsEnabled, spotlightChannelId, spotlightMessage } = req.body as z.infer<typeof updateGuildSchema>;
-
-      const updateData: Partial<typeof guilds.$inferInsert> = { updatedAt: new Date() };
-      if (name !== undefined) updateData.name = name;
-      if (description !== undefined) updateData.description = description;
-      if (isDiscoverable !== undefined) updateData.isDiscoverable = isDiscoverable;
-      if (accentColor !== undefined) updateData.accentColor = accentColor === null ? null : normalizeHexColor(accentColor);
-      if (welcomeMessage !== undefined) updateData.welcomeMessage = welcomeMessage;
-      if (rulesChannelId !== undefined) updateData.rulesChannelId = rulesChannelId;
-      if (category !== undefined) updateData.category = category === null ? null : category.toLowerCase().slice(0, 30);
-      if (rulesText !== undefined) updateData.rulesText = rulesText;
-      if (requireRulesAgreement !== undefined) updateData.requireRulesAgreement = requireRulesAgreement;
-      if (spotlightChannelId !== undefined) updateData.spotlightChannelId = spotlightChannelId;
-      if (spotlightMessage !== undefined) updateData.spotlightMessage = spotlightMessage;
-      if (publicStatsEnabled !== undefined) updateData.publicStatsEnabled = publicStatsEnabled;
-
-      const [updated] = await db
-        .update(guilds)
-        .set(updateData)
-        .where(eq(guilds.id, guildId))
-        .returning();
-
-      // Handle raid protection (column not in schema yet, use raw SQL)
-      if (raidProtectionEnabled !== undefined) {
-        await db.execute(sql`UPDATE guilds SET raid_protection_enabled = ${raidProtectionEnabled} WHERE id = ${guildId}`);
-      }
-
-      // Update tags if provided
-      if (tags !== undefined) {
-        await db.delete(guildTags).where(eq(guildTags.guildId, guildId));
-        if (tags.length > 0) {
-          await db.insert(guildTags).values(
-            tags.map((tag) => ({ guildId, tag: tag.toLowerCase().trim() })),
-          );
-        }
-      }
-
-      // Audit log
-      const changes: Record<string, unknown> = {};
-      if (name !== undefined) changes.name = name;
-      if (description !== undefined) changes.description = description;
-      if (isDiscoverable !== undefined) changes.isDiscoverable = isDiscoverable;
-      if (accentColor !== undefined) changes.accentColor = accentColor;
-      if (category !== undefined) changes.category = category;
-      if (tags !== undefined) changes.tags = tags;
-      logAuditEvent(guildId, req.userId!, AuditActionTypes.GUILD_UPDATE, guildId, 'GUILD', changes);
-
+      const body = req.body as z.infer<typeof updateGuildSchema>;
+      const updated = await guildService.updateGuild(guildId, req.userId!, body);
       res.status(200).json(updated);
-
-      // Emit real-time guild update to all members
-      try {
-        getIO().to(`guild:${guildId}`).emit('GUILD_UPDATE', { guildId, ...updated });
-      } catch { /* socket may not be initialised in tests */ }
     } catch (err) {
       handleAppError(res, err);
     }
@@ -1283,17 +1048,7 @@ guildsRouter.delete(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { guildId } = req.params as Record<string, string>;
-      await requireOwner(guildId, req.userId!);
-
-      // Emit guild delete to all members BEFORE deleting (so we still have the data)
-      try {
-        getIO().to(`guild:${guildId}`).emit('GUILD_DELETE', { guildId });
-      } catch { /* socket may not be initialised in tests */ }
-
-      await db.transaction(async (tx) => {
-        await tx.delete(guilds).where(eq(guilds.id, guildId));
-      });
-
+      await guildService.deleteGuild(guildId, req.userId!);
       res.status(200).json({ code: 'OK', message: 'Guild deleted' });
     } catch (err) {
       handleAppError(res, err);
@@ -1566,135 +1321,14 @@ guildsRouter.get(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { guildId } = req.params as Record<string, string>;
-      await requireMember(guildId, req.userId!);
-
-      const requestedLimit = Number(req.query.limit) || 50;
-      const requestedOffset = Number(req.query.offset) || 0;
-      const limit = Math.min(Math.max(requestedLimit, 1), 100);
-      const offset = Math.max(requestedOffset, 0);
-      const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
-      const status = typeof req.query.status === 'string' ? req.query.status.trim().toLowerCase() : '';
-      const groupId = typeof req.query.groupId === 'string' ? req.query.groupId.trim() : '';
-      const escapedSearch = search.replace(/[%_\\]/g, '\\$&');
-
-      const rows = await db
-        .select({
-          id: guildMembers.id,
-          userId: guildMembers.userId,
-          username: users.username,
-          displayName: users.displayName,
-          avatarHash: users.avatarHash,
-          nickname: guildMembers.nickname,
-          joinedAt: guildMembers.joinedAt,
-        })
-        .from(guildMembers)
-        .innerJoin(users, eq(users.id, guildMembers.userId))
-        .where(
-          search.length > 0
-            ? and(
-              eq(guildMembers.guildId, guildId),
-              sql`(
-                ${users.username} ILIKE ${`%${escapedSearch}%`}
-                OR ${users.displayName} ILIKE ${`%${escapedSearch}%`}
-                OR ${guildMembers.nickname} ILIKE ${`%${escapedSearch}%`}
-              )`,
-            )
-            : eq(guildMembers.guildId, guildId),
-        )
-        .orderBy(asc(users.username));
-
-      // Fetch all role assignments for this guild in one query
-      const allMemberRoles = await db
-        .select({
-          userId: memberRoles.userId,
-          roleId: memberRoles.roleId,
-        })
-        .from(memberRoles)
-        .where(eq(memberRoles.guildId, guildId));
-
-      // Group role IDs by user
-      const rolesByUser = new Map<string, string[]>();
-      for (const mr of allMemberRoles) {
-        const arr = rolesByUser.get(mr.userId) ?? [];
-        arr.push(mr.roleId);
-        rolesByUser.set(mr.userId, arr);
-      }
-
-      const groupAssignments = await db
-        .select({
-          groupId: guildMemberGroupMembers.groupId,
-          userId: guildMemberGroupMembers.userId,
-        })
-        .from(guildMemberGroupMembers)
-        .where(eq(guildMemberGroupMembers.guildId, guildId));
-
-      const groupIdsByUser = new Map<string, string[]>();
-      for (const assignment of groupAssignments) {
-        const arr = groupIdsByUser.get(assignment.userId) ?? [];
-        arr.push(assignment.groupId);
-        groupIdsByUser.set(assignment.userId, arr);
-      }
-
-      const userIds = rows.map((row) => row.userId);
-      const statusByUser = new Map<string, MemberWithPresenceStatus>();
-      const activityByUser = new Map<string, { name: string; type: string } | null>();
-      if (userIds.length > 0) {
-        // Use Redis presence keys as source of truth for online status.
-        // Heartbeats keep keys alive (600s TTL) for connected users,
-        // and disconnect sets a 30s grace period before expiry.
-        try {
-          const pipeline = redis.pipeline();
-          for (const uid of userIds) {
-            pipeline.get(`presence:${uid}`);
-            pipeline.get(`presence:${uid}:activity`);
-          }
-          const pipelineResult = await pipeline.exec();
-          userIds.forEach((uid, index) => {
-            const redisStatus = (pipelineResult?.[index * 2]?.[1] as string | null);
-
-            let status: MemberWithPresenceStatus;
-            if (redisStatus) {
-              // Redis key exists — user is online (heartbeat keeping it alive)
-              status = normalizePresenceStatus(redisStatus);
-            } else {
-              // No Redis key — user is offline
-              status = 'offline';
-            }
-            statusByUser.set(uid, status);
-
-            const activityValue = pipelineResult?.[index * 2 + 1]?.[1] as string | null;
-            if (activityValue) {
-              try { activityByUser.set(uid, JSON.parse(activityValue)); } catch { /* ignore */ }
-            }
-          });
-        } catch {
-          // Redis unavailable — default everyone to offline
-          userIds.forEach((uid) => {
-            statusByUser.set(uid, 'offline');
-          });
-        }
-      }
-
-      const membersWithRoles = rows.map((row) => ({
-        ...row,
-        status: statusByUser.get(row.userId) ?? 'offline',
-        activity: activityByUser.get(row.userId) ?? null,
-        roles: rolesByUser.get(row.userId) ?? [],
-        roleIds: rolesByUser.get(row.userId) ?? [],
-        groupIds: groupIdsByUser.get(row.userId) ?? [],
-      }));
-
-      let filtered = membersWithRoles;
-      if (status === 'online') {
-        filtered = filtered.filter((member) => member.status !== 'offline' && member.status !== 'invisible');
-      } else if (status === 'offline') {
-        filtered = filtered.filter((member) => member.status === 'offline' || member.status === 'invisible');
-      }
-      if (groupId) {
-        filtered = filtered.filter((member) => member.groupIds.includes(groupId));
-      }
-
-      res.status(200).json(filtered.slice(offset, offset + limit));
+      const members = await guildService.getMembers(guildId, req.userId!, {
+        search: typeof req.query.search === 'string' ? req.query.search : undefined,
+        status: typeof req.query.status === 'string' ? req.query.status : undefined,
+        groupId: typeof req.query.groupId === 'string' ? req.query.groupId : undefined,
+        limit: Number(req.query.limit) || 50,
+        offset: Number(req.query.offset) || 0,
+      });
+      res.status(200).json(members);
     } catch (err) {
       handleAppError(res, err);
     }
@@ -1857,46 +1491,7 @@ guildsRouter.delete(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const guildId = req.params.guildId as string;
-      const userId = req.userId!;
-
-      // Block owner from leaving (must transfer ownership first)
-      const [guild] = await db
-        .select({ ownerId: guilds.ownerId })
-        .from(guilds)
-        .where(eq(guilds.id, guildId))
-        .limit(1);
-
-      if (!guild) {
-        res.status(404).json({ code: 'NOT_FOUND', message: 'Guild not found' });
-        return;
-      }
-
-      if (guild.ownerId === userId) {
-        res.status(403).json({ code: 'FORBIDDEN', message: 'Transfer ownership before leaving' });
-        return;
-      }
-
-      await db
-        .delete(guildMembers)
-        .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, userId)));
-
-      // Decrement member count
-      await db
-        .update(guilds)
-        .set({ memberCount: sql`GREATEST(${guilds.memberCount} - 1, 0)`, updatedAt: new Date() })
-        .where(eq(guilds.id, guildId));
-
-      getIO().to(`guild:${guildId}`).emit('GUILD_MEMBER_REMOVE', { guildId, userId });
-
-      // Notify the leaving user to remove guild from sidebar (they already left the guild room)
-      getIO().to(`user:${userId}`).emit('GUILD_LEFT', { guildId });
-
-      // Dispatch member_leave to installed bots
-      dispatchEvent(guildId, 'member_leave', { userId });
-
-      // Trigger E2E key rotation for any encrypted channels in this guild
-      await emitKeyRotationForEncryptedChannels(guildId, 'member_removed');
-
+      await guildService.leaveGuild(req.userId!, guildId);
       res.status(200).json({ code: 'OK' });
     } catch (err) {
       handleAppError(res, err);
@@ -1911,48 +1506,32 @@ guildsRouter.delete(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { guildId, userId: targetUserId } = req.params as Record<string, string>;
-      await requireMember(guildId, req.userId!);
-
-      if (!(await hasPermission(req.userId!, guildId, Permissions.KICK_MEMBERS))) {
-        throw new AppError(403, 'Missing KICK_MEMBERS permission', 'FORBIDDEN');
-      }
-
-      // Prevent self-kick.
-      if (targetUserId === req.userId) {
-        res.status(400).json({ code: 'VALIDATION_ERROR', message: 'You cannot kick yourself from the guild' });
-        return;
-      }
-
-      // Verify target is actually a member.
-      const [membership] = await db
-        .select({ id: guildMembers.id })
-        .from(guildMembers)
-        .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, targetUserId)))
-        .limit(1);
-
-      if (!membership) {
-        res.status(404).json({ code: 'NOT_FOUND', message: 'User is not a member of this guild' });
-        return;
-      }
-
-      // Delete the membership row.
-      await db
-        .delete(guildMembers)
-        .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, targetUserId)));
-
-      // Decrement member count (floor at 0 for safety).
-      await db
-        .update(guilds)
-        .set({ memberCount: sql`GREATEST(${guilds.memberCount} - 1, 0)`, updatedAt: new Date() })
-        .where(eq(guilds.id, guildId));
-
-      // Audit log
-      logAuditEvent(guildId, req.userId!, AuditActionTypes.MEMBER_KICK, targetUserId, 'USER');
-
-      // Trigger E2E key rotation for any encrypted channels in this guild
-      await emitKeyRotationForEncryptedChannels(guildId, 'member_removed');
-
+      await guildService.kickMember(guildId, req.userId!, targetUserId);
       res.status(200).json({ code: 'OK', message: 'Member removed' });
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// POST /:guildId/transfer-ownership
+// ---------------------------------------------------------------------------
+
+const transferOwnershipSchema = z.object({
+  newOwnerId: z.string().uuid(),
+});
+
+guildsRouter.post(
+  '/:guildId/transfer-ownership',
+  requireAuth,
+  validate(transferOwnershipSchema),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { guildId } = req.params as Record<string, string>;
+      const { newOwnerId } = req.body as z.infer<typeof transferOwnershipSchema>;
+      const updated = await guildService.transferOwnership(guildId, req.userId!, newOwnerId);
+      res.status(200).json(updated);
     } catch (err) {
       handleAppError(res, err);
     }
