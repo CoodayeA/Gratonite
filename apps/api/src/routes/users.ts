@@ -1045,6 +1045,9 @@ usersRouter.patch('/@me/activity', requireAuth, validate(activitySchema), asyncH
   const activity = req.body;
   await db.update(users).set({ activity, updatedAt: new Date() }).where(eq(users.id, req.userId!));
 
+  // Cache in Redis so the members endpoint can read it without a DB join
+  try { await redis.set(`presence:${req.userId!}:activity`, JSON.stringify(activity), 'EX', 600); } catch { /* non-fatal */ }
+
   try {
     const memberships = await db.select({ guildId: guildMembers.guildId }).from(guildMembers).where(eq(guildMembers.userId, req.userId!));
     const io = getIO();
@@ -1059,6 +1062,9 @@ usersRouter.patch('/@me/activity', requireAuth, validate(activitySchema), asyncH
 /** DELETE /users/@me/activity */
 usersRouter.delete('/@me/activity', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   await db.update(users).set({ activity: null, updatedAt: new Date() }).where(eq(users.id, req.userId!));
+
+  // Remove from Redis cache
+  try { await redis.del(`presence:${req.userId!}:activity`); } catch { /* non-fatal */ }
 
   try {
     const memberships = await db.select({ guildId: guildMembers.guildId }).from(guildMembers).where(eq(guildMembers.userId, req.userId!));
