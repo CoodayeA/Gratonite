@@ -414,9 +414,14 @@ export const wikiApi = {
     apiFetch<any>(`/wiki/${pageId}/revert/${revisionId}`, { method: 'POST' }),
 };
 
+function assertGuildId(guildId: string): asserts guildId is string {
+  if (!guildId || guildId === 'null' || guildId === 'undefined') {
+    throw new Error(`Invalid guildId: ${guildId}`);
+  }
+}
+
 export const eventsApi = {
-  list: (guildId: string) =>
-    apiFetch<any[]>(`/guilds/${guildId}/scheduled-events`),
+  list: (guildId: string) => { assertGuildId(guildId); return apiFetch<any[]>(`/guilds/${guildId}/scheduled-events`); },
   get: (guildId: string, eventId: string) =>
     apiFetch<any>(`/guilds/${guildId}/scheduled-events/${eventId}`),
   create: (guildId: string, data: { name: string; description?: string; startTime: string; endTime?: string; entityType: 'STAGE' | 'VOICE' | 'EXTERNAL'; location?: string; channelId?: string }) =>
@@ -663,12 +668,22 @@ export const adminPortalsApi = {
     apiFetch<any>(`/admin/portals/${guildId}`, { method: 'PATCH', body: JSON.stringify(data) }),
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const telemetryApi = {
-  captureClientEvent: (payload: ClientTelemetryEvent) =>
-    apiFetch<{ ok: true }>('/telemetry/client-events', {
+  captureClientEvent: (payload: ClientTelemetryEvent) => {
+    const clean: Record<string, unknown> = { ...payload };
+    if (clean.guildId && typeof clean.guildId === 'string' && !UUID_RE.test(clean.guildId)) {
+      delete clean.guildId;
+    }
+    if (!clean.timestamp) {
+      clean.timestamp = new Date().toISOString();
+    }
+    return apiFetch<{ ok: true }>('/telemetry/client-events', {
       method: 'POST',
-      body: JSON.stringify(payload),
-    }),
+      body: JSON.stringify(clean),
+    });
+  },
 };
 
 export const notificationsApi = {

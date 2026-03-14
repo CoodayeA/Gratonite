@@ -4,6 +4,12 @@
 import { apiFetch } from './_core';
 import type { Guild, GuildMember, GuildEmoji } from './_core';
 
+function assertGuildId(guildId: string): asserts guildId is string {
+  if (!guildId || guildId === 'null' || guildId === 'undefined') {
+    throw new Error(`Invalid guildId: ${guildId}`);
+  }
+}
+
 export const guildsApi = {
   getMine: () => apiFetch<Guild[]>('/guilds/@me'),
 
@@ -50,7 +56,7 @@ export const guildsApi = {
       { method: 'POST' },
     ),
 
-  get: (guildId: string, options?: RequestInit) => apiFetch<Guild>(`/guilds/${guildId}`, options),
+  get: (guildId: string, options?: RequestInit) => { assertGuildId(guildId); return apiFetch<Guild>(`/guilds/${guildId}`, options); },
 
   getPublicStats: (guildId: string) =>
     apiFetch<{
@@ -65,13 +71,16 @@ export const guildsApi = {
       activity: Array<{ date: string; messages: number }>;
     }>(`/stats/guilds/${guildId}`),
 
-  getChannelsUnread: (guildId: string) =>
-    apiFetch<Array<{ channelId: string; mentionCount: number; lastReadAt: string }>>(`/guilds/${guildId}/channels/unread`),
+  getChannelsUnread: (guildId: string) => {
+    assertGuildId(guildId);
+    return apiFetch<Array<{ channelId: string; mentionCount: number; lastReadAt: string }>>(`/guilds/${guildId}/channels/unread`);
+  },
 
   getMembers: (
     guildId: string,
     params: { limit?: number; offset?: number; search?: string; status?: 'online' | 'offline'; groupId?: string } = {},
   ) => {
+    assertGuildId(guildId);
     const query = new URLSearchParams();
     if (params.limit !== undefined) query.set('limit', String(params.limit));
     if (params.offset !== undefined) query.set('offset', String(params.offset));
@@ -144,8 +153,7 @@ export const guildsApi = {
   deleteBanner: (guildId: string) =>
     apiFetch<void>(`/guilds/${guildId}/banner`, { method: 'DELETE' }),
 
-  getRoles: (guildId: string) =>
-    apiFetch<any[]>(`/guilds/${guildId}/roles`),
+  getRoles: (guildId: string) => { assertGuildId(guildId); return apiFetch<any[]>(`/guilds/${guildId}/roles`); },
 
   createRole: (guildId: string, data: { name: string; color?: string; mentionable?: boolean; permissions?: string }) =>
     apiFetch<any>(`/guilds/${guildId}/roles`, {
@@ -162,8 +170,7 @@ export const guildsApi = {
   deleteRole: (guildId: string, roleId: string) =>
     apiFetch<void>(`/guilds/${guildId}/roles/${roleId}`, { method: 'DELETE' }),
 
-  getMemberRoles: (guildId: string, userId: string) =>
-    apiFetch<any[]>(`/guilds/${guildId}/members/${userId}/roles`),
+  getMemberRoles: (guildId: string, userId: string) => { assertGuildId(guildId); return apiFetch<any[]>(`/guilds/${guildId}/members/${userId}/roles`); },
 
   assignMemberRole: (guildId: string, userId: string, roleId: string) =>
     apiFetch<void>(`/guilds/${guildId}/members/${userId}/roles/${roleId}`, { method: 'PUT' }),
@@ -234,8 +241,7 @@ export const guildsApi = {
   removeBoost: (guildId: string) =>
     apiFetch<void>(`/guilds/${guildId}/boost`, { method: 'DELETE' }),
 
-  getCommands: (guildId: string) =>
-    apiFetch<any[]>(`/guilds/${guildId}/commands`),
+  getCommands: (guildId: string) => { assertGuildId(guildId); return apiFetch<any[]>(`/guilds/${guildId}/commands`); },
 
   getAuditLog: (guildId: string, params?: { limit?: number; offset?: number; action?: string; userId?: string }) => {
     const q = new URLSearchParams();
@@ -246,8 +252,7 @@ export const guildsApi = {
     return apiFetch<{ items: Array<Record<string, unknown>> }>(`/guilds/${guildId}/audit-log?${q}`);
   },
 
-  getEmojis: (guildId: string) =>
-    apiFetch<GuildEmoji[]>(`/guilds/${guildId}/emojis`),
+  getEmojis: (guildId: string) => { assertGuildId(guildId); return apiFetch<GuildEmoji[]>(`/guilds/${guildId}/emojis`); },
 
   createEmoji: (guildId: string, data: { name: string; file: File; categoryId?: string }) => {
     const formData = new FormData();
