@@ -71,7 +71,7 @@ export const OnboardingFlowEditor = ({ guildId, roles, channels, addToast }: Pro
   const save = async () => {
     setSaving(true);
     try {
-      await api.onboarding.updateConfig(guildId, { steps });
+      await api.onboarding.setConfig(guildId, { steps });
       addToast({ title: 'Onboarding flow saved', variant: 'success' });
     } catch { addToast({ title: 'Failed to save', variant: 'error' }); }
     finally { setSaving(false); }

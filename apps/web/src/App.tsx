@@ -2012,7 +2012,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                             ) : (
                                                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: hasUnread ? 600 : undefined, color: hasUnread ? 'var(--text-primary)' : undefined }}>{ch.name}</span>
                                             )}
-                                            {draftChannelIds.has(ch.id) && <PenLine size={12} style={{ flexShrink: 0, opacity: 0.7, color: 'var(--accent-primary)' }} title="Draft" />}
+                                            {draftChannelIds.has(ch.id) && <PenLine size={12} style={{ flexShrink: 0, opacity: 0.7, color: 'var(--accent-primary)' }} />}
                                             {isMuted && <BellOff size={12} style={{ flexShrink: 0, opacity: 0.5, color: 'var(--text-muted)' }} />}
                                         </div>
                                         {mentions > 0 && !isActive && (
@@ -2889,6 +2889,10 @@ export const AppLayout = () => {
         return match ? match[1] : null;
     }, [location.pathname]);
 
+    // Rules gate state (used by the Server Rules Gate overlay below)
+    const [rulesAgreedGuilds, setRulesAgreedGuilds] = useState<Set<string>>(new Set());
+    const [showRulesGate, setShowRulesGate] = useState(false);
+
     // Per-guild theme override
     const defaultThemeRef = useRef<string | null>(null);
     useEffect(() => {
@@ -2943,6 +2947,19 @@ export const AppLayout = () => {
         enabled: guildFetchV2Enabled,
         onNetworkError: handleGuildSessionNetworkError,
     });
+
+    // Derive guildInfo for rules gate overlay
+    const guildInfo = guildSession.enabled ? guildSession.guildInfo : null;
+
+    // Show rules gate when entering a guild that requires rules agreement
+    useEffect(() => {
+        if (!activeGuildId || !guildInfo) { setShowRulesGate(false); return; }
+        if ((guildInfo as any).requireRulesAgreement && (guildInfo as any).rulesText && !rulesAgreedGuilds.has(activeGuildId)) {
+            setShowRulesGate(true);
+        } else {
+            setShowRulesGate(false);
+        }
+    }, [activeGuildId, guildInfo, rulesAgreedGuilds]);
 
     // Connect the WebSocket once the user is authenticated so real-time
     // events (messages, typing, presence, etc.) are delivered.
@@ -3903,7 +3920,7 @@ export const AppLayout = () => {
                             <button
                                 onClick={() => {
                                     api.post(`/guilds/${activeGuildId}/agree-rules`, {}).then(() => {
-                                        setRulesAgreedGuilds(prev => new Set([...prev, activeGuildId!]));
+                                        setRulesAgreedGuilds((prev: Set<string>) => new Set([...prev, activeGuildId!]));
                                         setShowRulesGate(false);
                                     }).catch(() => {});
                                 }}

@@ -1470,8 +1470,8 @@ const SettingsModal = ({
                                 {/* Profile Card Theme (Item 102) */}
                                 <div style={{ marginTop: '32px', borderTop: '1px solid var(--stroke)', paddingTop: '24px' }}>
                                     <ProfileThemeEditor
-                                        username={ctxUser.username || 'user'}
-                                        displayName={ctxUser.name || ctxUser.username || 'User'}
+                                        username={ctxUser.handle || 'user'}
+                                        displayName={ctxUser.name || ctxUser.handle || 'User'}
                                         avatarUrl={ctxUser.avatarHash ? `${API_BASE}/files/${ctxUser.avatarHash}` : undefined}
                                     />
                                 </div>

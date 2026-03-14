@@ -39,7 +39,7 @@ export const usersApi = {
     return p;
   },
 
-  updateProfile: (data: { displayName?: string; bio?: string; pronouns?: string; accentColor?: string; primaryColor?: string; onboardingCompleted?: boolean; interests?: string[] | null; nameplateStyle?: string }) =>
+  updateProfile: (data: { displayName?: string; bio?: string; pronouns?: string; accentColor?: string; primaryColor?: string; onboardingCompleted?: boolean; interests?: string[] | null; nameplateStyle?: string; customStatus?: string }) =>
     apiFetch<any>('/users/@me', {
       method: 'PATCH',
       body: JSON.stringify(data),

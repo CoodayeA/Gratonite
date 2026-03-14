@@ -398,7 +398,7 @@ const SettingsThemeTab = ({ addToast }: Props) => {
       {fullPreviewId && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)' }}>
           <div style={{ width: '90vw', maxWidth: '900px', maxHeight: '80vh' }}>
-            <ThemePreview themeId={fullPreviewId} />
+            {(() => { const t = resolveTheme(fullPreviewId); return t ? <ThemePreview theme={t} colorMode={colorMode} /> : null; })()}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '16px' }}>
               <button onClick={() => { setTheme(fullPreviewId as any); (window as any).__gratoniteFullPreview = undefined; setFullPreviewId(undefined); window.dispatchEvent(new Event('gratonite:full-preview-changed')); playSound('click'); }} style={{ padding: '10px 20px', borderRadius: '8px', background: 'var(--accent-primary)', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}>Apply Theme</button>
               <button onClick={() => { (window as any).__gratoniteFullPreview = undefined; setFullPreviewId(undefined); window.dispatchEvent(new Event('gratonite:full-preview-changed')); }} style={{ padding: '10px 20px', borderRadius: '8px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--stroke)', fontWeight: 600, cursor: 'pointer' }}>Close Preview</button>

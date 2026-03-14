@@ -50,7 +50,7 @@ export default function CollectibleCards() {
   const openPack = async (packId: string) => {
     try {
       const result = await api.collectibleCards.openPack(packId);
-      setOpenedCards(result.cards as Card[]);
+      setOpenedCards(result.cards as unknown as Card[]);
       fetchData();
     } catch {}
   };
