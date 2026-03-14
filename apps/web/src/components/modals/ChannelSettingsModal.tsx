@@ -65,6 +65,7 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
     const [slowmode, setSlowmode] = useState(rateLimitPerUser || 0);
     const [nsfw, setNsfw] = useState(isNsfw || false);
     const [isAnnouncement, setIsAnnouncement] = useState(false);
+    const [disappearTimer, setDisappearTimer] = useState<number | null>(null);
     const [userLimit, setUserLimit] = useState(initialUserLimit || 0);
     const [isEncrypted, setIsEncrypted] = useState(false);
     const [attachmentsEnabled, setAttachmentsEnabled] = useState(true);
@@ -96,6 +97,7 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
             if (ch.archived) setIsArchived(true);
             if (ch.autoArchiveDays != null) setAutoArchiveDays(ch.autoArchiveDays);
             if (ch.slowmodeOverrides) setRoleSlowmodeOverrides(ch.slowmodeOverrides);
+            if (ch.disappearTimer != null) setDisappearTimer(ch.disappearTimer);
         }).catch(() => {});
     }, [channelId, guildId]);
 
@@ -293,6 +295,38 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                                 <input type="checkbox" checked={isAnnouncement} onChange={e => setIsAnnouncement(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
                                 Announcement Channel
                             </label>
+
+                            {/* Disappearing Messages */}
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                                    Disappearing Messages
+                                </label>
+                                <select
+                                    value={disappearTimer ?? 0}
+                                    onChange={e => {
+                                        const val = Number(e.target.value);
+                                        const timer = val === 0 ? null : val;
+                                        setDisappearTimer(timer);
+                                        api.messages.setDisappearTimer(channelId, timer).catch(() => {});
+                                    }}
+                                    style={{
+                                        padding: '8px 12px', background: 'var(--bg-primary)',
+                                        border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)',
+                                        color: 'var(--text-primary)', fontSize: '14px', fontFamily: 'inherit',
+                                        width: '100%', boxSizing: 'border-box',
+                                    }}
+                                >
+                                    <option value={0}>Off</option>
+                                    <option value={300}>5 minutes</option>
+                                    <option value={3600}>1 hour</option>
+                                    <option value={86400}>24 hours</option>
+                                    <option value={604800}>7 days</option>
+                                    <option value={2592000}>30 days</option>
+                                </select>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                    {disappearTimer ? 'New messages will auto-delete after this time.' : 'Messages will not auto-delete.'}
+                                </div>
+                            </div>
 
                             {/* Slowmode Role Overrides (Item 27) */}
                             {slowmode > 0 && roles.length > 0 && (

@@ -649,10 +649,14 @@ export function onSpatialPositionsSync(cb: SpatialPositionsSyncCallback): () => 
 let socket: GratoniteSocket | null = null;
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 let idleTimeout: ReturnType<typeof setTimeout> | null = null;
+let livenessInterval: ReturnType<typeof setInterval> | null = null;
+let lastEventReceivedAt: number = Date.now();
 let isIdle = false;
 let userChosenStatus: string = 'online'; // tracks the user's explicit status choice
 
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+const LIVENESS_CHECK_MS = 15_000; // check every 15s
+const LIVENESS_STALE_MS = 60_000; // force reconnect if no event in 60s
 
 /* ── Connection state tracking ─────────────────────────────── */
 
@@ -760,6 +764,32 @@ function stopIdleDetection() {
   isIdle = false;
 }
 
+function startLivenessCheck() {
+  stopLivenessCheck();
+  lastEventReceivedAt = Date.now();
+  livenessInterval = setInterval(() => {
+    if (!socket?.connected) return;
+    const elapsed = Date.now() - lastEventReceivedAt;
+    if (elapsed >= LIVENESS_STALE_MS) {
+      console.warn(`[socket] No events received in ${Math.round(elapsed / 1000)}s — forcing reconnect`);
+      socket!.disconnect();
+      socket!.connect();
+    }
+  }, LIVENESS_CHECK_MS);
+}
+
+function stopLivenessCheck() {
+  if (livenessInterval) {
+    clearInterval(livenessInterval);
+    livenessInterval = null;
+  }
+}
+
+/** Called by every incoming event handler to track liveness */
+function touchLiveness() {
+  lastEventReceivedAt = Date.now();
+}
+
 export function connectSocket(): GratoniteSocket {
   if (socket && (socket.connected || socket.active)) return socket;
 
@@ -832,10 +862,14 @@ export function connectSocket(): GratoniteSocket {
   socket.on('READY', (data: { userId?: string; sessionId?: string; status?: string }) => {
     startHeartbeat();
     startIdleDetection();
+    startLivenessCheck();
     if (data?.status && ['online', 'idle', 'dnd', 'invisible'].includes(data.status)) {
       userChosenStatus = data.status;
     }
   });
+
+  /* ── Track liveness on every incoming event ──── */
+  socket.onAny(() => { touchLiveness(); });
 
   /* ── Dispatch gateway events to registered listeners ──── */
 
@@ -1023,6 +1057,7 @@ export function connectSocket(): GratoniteSocket {
     setConnectionState('disconnected');
     stopHeartbeat();
     stopIdleDetection();
+    stopLivenessCheck();
     socketDisconnectListeners.forEach(cb => cb());
   });
 
@@ -1038,6 +1073,7 @@ export function disconnectSocket(): void {
   setConnectionState('disconnected');
   stopHeartbeat();
   stopIdleDetection();
+  stopLivenessCheck();
   joinedGuildRooms.clear();
   joinedChannels.clear();
   eventQueue.length = 0;

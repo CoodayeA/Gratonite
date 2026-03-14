@@ -4,6 +4,8 @@ import { reportError } from '../../lib/errorReporter';
 interface Props {
     children: React.ReactNode;
     fallback?: React.ReactNode;
+    /** Human-readable name for the section (e.g. "Chat", "Sidebar") — shown in the default fallback */
+    name?: string;
 }
 
 interface State {
@@ -22,8 +24,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
     }
 
     componentDidCatch(error: Error, info: React.ErrorInfo) {
-        console.error('[ErrorBoundary]', error, info.componentStack);
-        reportError(error, { componentStack: info.componentStack ?? undefined });
+        const section = this.props.name || 'unknown';
+        console.error(`[ErrorBoundary:${section}]`, error, info.componentStack);
+        reportError(error, { componentStack: info.componentStack ?? undefined, section });
     }
 
     render() {
@@ -37,10 +40,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 }}>
                     <div style={{ fontSize: '48px' }}>!</div>
                     <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                        Something went wrong
+                        {this.props.name ? `${this.props.name} crashed` : 'Something went wrong'}
                     </h2>
                     <p style={{ fontSize: '14px', maxWidth: '400px', textAlign: 'center', lineHeight: 1.6 }}>
-                        {this.state.error?.message || 'An unexpected error occurred in this section.'}
+                        {this.state.error?.message || `An unexpected error occurred${this.props.name ? ` in ${this.props.name}` : ''}.`}
                     </p>
                     <div style={{ display: 'flex', gap: '12px' }}>
                         <button

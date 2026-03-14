@@ -8,6 +8,8 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { Server as SocketIOServer } from 'socket.io';
 
+import { db, pool as dbPool } from './db/index';
+import { sql } from 'drizzle-orm';
 import { router } from './routes/index';
 import { setIO } from './lib/socket-io';
 import { initSocket } from './socket/index';
@@ -146,7 +148,7 @@ const server = http.createServer(app);
  * production domain without being blocked by the browser's same-origin policy.
  */
 if (!process.env.CORS_ORIGIN) {
-  console.warn('[cors] WARNING: CORS_ORIGIN is not set, falling back to http://localhost:5173. Set CORS_ORIGIN in production.');
+  logger.warn('[cors] CORS_ORIGIN is not set, falling back to http://localhost:5173. Set CORS_ORIGIN in production.');
 }
 
 const io = new SocketIOServer(server, {
@@ -217,7 +219,14 @@ app.use((req: express.Request, res: express.Response, next: express.NextFunction
   res.on('finish', () => {
     const duration = Date.now() - start;
     if (req.path !== '/health' && !req.path.startsWith('/socket.io')) {
-      console.log(`${req.method} ${req.path} ${res.statusCode} ${duration}ms`);
+      logger.info({
+        msg: `${req.method} ${req.path} ${res.statusCode} ${duration}ms`,
+        method: req.method,
+        path: req.path,
+        status: res.statusCode,
+        duration,
+        ip: req.ip,
+      });
     }
   });
   next();
@@ -239,12 +248,53 @@ app.use((req: express.Request, res: express.Response, next: express.NextFunction
 // Health check (extended with federation status)
 // ---------------------------------------------------------------------------
 
-app.get('/health', (_req, res) => {
-  const health: Record<string, unknown> = { status: 'ok', ts: Date.now() };
+const SERVER_START_TIME = Date.now();
+
+app.get('/health', async (_req, res) => {
+  const health: Record<string, unknown> = {
+    status: 'ok',
+    ts: Date.now(),
+    uptime: Math.floor((Date.now() - SERVER_START_TIME) / 1000),
+    version: process.env.npm_package_version || '1.0.0',
+    node: process.version,
+  };
+
+  // Check DB connectivity
+  try {
+    await db.execute(sql`SELECT 1 as ok`);
+    health.db = { connected: true };
+  } catch (err) {
+    health.db = { connected: false, error: (err as Error).message };
+    health.status = 'degraded';
+  }
+
+  // Check Redis connectivity
+  try {
+    const { redis } = await import('./lib/redis');
+    await redis.ping();
+    health.redis = { connected: true };
+  } catch (err) {
+    health.redis = { connected: false, error: (err as Error).message };
+    health.status = 'degraded';
+  }
+
+  // Memory usage
+  const mem = process.memoryUsage();
+  health.memory = {
+    rss: Math.round(mem.rss / 1024 / 1024),
+    heapUsed: Math.round(mem.heapUsed / 1024 / 1024),
+    heapTotal: Math.round(mem.heapTotal / 1024 / 1024),
+  };
+
+  // Active WebSocket connections
+  health.websockets = io.engine?.clientsCount ?? 0;
+
   if (isFederationEnabled()) {
     health.federation = { enabled: true };
   }
-  res.json(health);
+
+  const statusCode = health.status === 'ok' ? 200 : 503;
+  res.status(statusCode).json(health);
 });
 
 // ---------------------------------------------------------------------------
@@ -275,7 +325,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 const PORT = Number(process.env.PORT) || 4000;
 
 server.listen(PORT, async () => {
-  console.info(`API running on port ${PORT}`);
+  logger.info(`API running on port ${PORT}`);
 
   // Start background jobs after server is listening
   startAuctionCron();
@@ -311,5 +361,60 @@ server.listen(PORT, async () => {
   // Update check runs regardless of federation status
   startUpdateCheckJob();
 });
+
+// ---------------------------------------------------------------------------
+// Graceful shutdown (Phase 9, Item 159)
+// ---------------------------------------------------------------------------
+
+let isShuttingDown = false;
+
+async function gracefulShutdown(signal: string) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  logger.info(`[shutdown] Received ${signal}, starting graceful shutdown...`);
+
+  // Stop accepting new connections
+  server.close(() => {
+    logger.info('[shutdown] HTTP server closed (no new connections)');
+  });
+
+  // Disconnect all WebSocket clients
+  try {
+    io.disconnectSockets(true);
+    logger.info('[shutdown] WebSocket connections closed');
+  } catch (err) {
+    logger.error('[shutdown] Error closing WebSocket connections:', (err as Error).message);
+  }
+
+  // Close database pool
+  try {
+    await dbPool.end();
+    logger.info('[shutdown] Database pool closed');
+  } catch (err) {
+    logger.error('[shutdown] Error closing DB pool:', (err as Error).message);
+  }
+
+  // Close Redis connection
+  try {
+    const { redis } = await import('./lib/redis');
+    await redis.quit();
+    logger.info('[shutdown] Redis connection closed');
+  } catch (err) {
+    logger.error('[shutdown] Error closing Redis:', (err as Error).message);
+  }
+
+  logger.info('[shutdown] Graceful shutdown complete');
+
+  // Force exit after 10s if something hangs
+  setTimeout(() => {
+    logger.error('[shutdown] Forced exit after timeout');
+    process.exit(1);
+  }, 10_000).unref();
+
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export { io };

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, UserPlus, MoreHorizontal, Gamepad2, Headphones, Eye, Star, Clock, Music, Cake, Link2, Shield, Code, Tv, Play } from 'lucide-react';
+import { MessageSquare, UserPlus, MoreHorizontal, Gamepad2, Headphones, Eye, Star, Clock, Music, Cake, Link2, Shield, Code, Tv, Play, VolumeX } from 'lucide-react';
 import { api, API_BASE } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
 import { useUser } from '../../contexts/UserContext';
@@ -443,9 +443,28 @@ const UserProfilePopover = ({
 
                     {/* Mutual Friends */}
                     {mutuals && mutuals.mutualFriends.length > 0 && (
-                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px' }}>
-                            {mutuals.mutualFriends.length} mutual friend{mutuals.mutualFriends.length !== 1 ? 's' : ''}
-                        </p>
+                        <div style={{ marginBottom: '8px' }}>
+                            <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '6px', letterSpacing: '0.05em' }}>
+                                Mutual Friends -- {mutuals.mutualFriends.length}
+                            </div>
+                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                {mutuals.mutualFriends.slice(0, 8).map(f => (
+                                    <div
+                                        key={f.id}
+                                        title={f.displayName || f.username}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 6px', borderRadius: '8px', background: 'var(--bg-tertiary)' }}
+                                    >
+                                        <Avatar userId={f.id} displayName={f.displayName || f.username} avatarHash={f.avatarHash} size={18} />
+                                        <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 500, maxWidth: '60px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {f.displayName || f.username}
+                                        </span>
+                                    </div>
+                                ))}
+                                {mutuals.mutualFriends.length > 8 && (
+                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', padding: '2px 6px', alignSelf: 'center' }}>+{mutuals.mutualFriends.length - 8}</span>
+                                )}
+                            </div>
+                        </div>
                     )}
 
                     {/* Connected Accounts */}
@@ -530,6 +549,25 @@ const UserProfilePopover = ({
                             }}
                         >
                             <UserPlus size={14} />
+                        </button>
+                        <button
+                            onClick={() => {
+                                api.mutes.mute(userId).then(() => {
+                                    // visual feedback — brief color flash
+                                    setHovered(null);
+                                }).catch(() => {});
+                            }}
+                            onMouseEnter={() => setHovered('mute')}
+                            onMouseLeave={() => setHovered(null)}
+                            title="Mute user"
+                            style={{
+                                width: '32px', height: '32px', borderRadius: '6px', border: '1px solid var(--stroke)',
+                                background: hovered === 'mute' ? 'var(--hover-overlay)' : 'transparent',
+                                color: 'var(--text-primary)', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}
+                        >
+                            <VolumeX size={14} />
                         </button>
                         <button
                             onMouseEnter={() => setHovered('more')}

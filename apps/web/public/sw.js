@@ -1,6 +1,7 @@
-const CACHE_NAME = 'gratonite-v3';
-const API_CACHE_NAME = 'gratonite-api-v1';
-const STATIC_ASSETS = ['/app/', '/app/index.html'];
+const CACHE_NAME = 'gratonite-v4';
+const API_CACHE_NAME = 'gratonite-api-v2';
+const FONT_CACHE_NAME = 'gratonite-fonts-v1';
+const STATIC_ASSETS = ['/app/', '/app/index.html', '/app/manifest.json'];
 
 // API paths that should be cached for offline access
 const CACHEABLE_API_PATHS = [
@@ -24,9 +25,10 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
+  const KEEP_CACHES = [CACHE_NAME, API_CACHE_NAME, FONT_CACHE_NAME];
   event.waitUntil(
     caches.keys().then(keys => Promise.all(
-      keys.filter(k => k !== CACHE_NAME && k !== API_CACHE_NAME).map(k => caches.delete(k))
+      keys.filter(k => !KEEP_CACHES.includes(k)).map(k => caches.delete(k))
     ))
   );
   self.clients.claim();
@@ -46,6 +48,18 @@ self.addEventListener('fetch', (event) => {
 
   // Only intercept GET requests for caching
   if (event.request.method !== 'GET') return;
+
+  // Cache-first for Google Fonts (long-lived)
+  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    event.respondWith(
+      caches.match(event.request).then(cached => cached || fetch(event.request).then(res => {
+        const clone = res.clone();
+        caches.open(FONT_CACHE_NAME).then(cache => cache.put(event.request, clone));
+        return res;
+      }))
+    );
+    return;
+  }
 
   // Cache-first for static assets (hashed filenames)
   if (url.pathname.startsWith('/app/assets/')) {

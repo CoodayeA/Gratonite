@@ -46,41 +46,67 @@ const patchSettingsSchema = z.object({
     dms: z.boolean().optional(),
     frequency: z.enum(['instant', 'daily', 'never']).optional(),
   }).optional(),
+  // Item 86: DND scheduling
+  dndSchedule: z.object({
+    enabled: z.boolean(),
+    startHour: z.number().int().min(0).max(23),
+    startMinute: z.number().int().min(0).max(59),
+    endHour: z.number().int().min(0).max(23),
+    endMinute: z.number().int().min(0).max(59),
+    timezone: z.string().max(50).optional(),
+  }).nullable().optional(),
+  // Item 91: Auto-collapse long messages
+  autoCollapseLongMessages: z.boolean().optional(),
+  autoCollapseThreshold: z.number().int().min(5).max(100).optional(),
+  // Item 102: Custom profile theme
+  profileTheme: z.object({
+    primaryColor: z.string().max(20).optional(),
+    secondaryColor: z.string().max(20).optional(),
+    backgroundImage: z.string().max(500).optional(),
+    cardStyle: z.enum(['default', 'glass', 'solid', 'gradient']).optional(),
+  }).nullable().optional(),
+  // Item 85: Notification grouping
+  notificationGrouping: z.boolean().optional(),
 }).passthrough();
 
 /** GET /api/v1/users/@me/settings */
 settingsRouter.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
-  const [settings] = await db
-    .select()
-    .from(userSettings)
-    .where(eq(userSettings.userId, req.userId!))
-    .limit(1);
+  try {
+    const [settings] = await db
+      .select()
+      .from(userSettings)
+      .where(eq(userSettings.userId, req.userId!))
+      .limit(1);
 
-  if (!settings) {
-    // Return defaults
-    res.json({
-      theme: 'midnight',
-      colorMode: 'dark',
-      fontFamily: 'Inter',
-      fontSize: 14,
-      glassMode: 'full',
-      buttonShape: 'rounded',
-      soundMuted: false,
-      soundVolume: 50,
-      soundPack: 'default',
-      reducedMotion: false,
-      lowPower: false,
-      highContrast: false,
-      compactMode: false,
-      accentColor: null,
-      customThemeId: null,
-      themePreferences: null,
-    });
-    return;
+    if (!settings) {
+      // Return defaults
+      res.json({
+        theme: 'midnight',
+        colorMode: 'dark',
+        fontFamily: 'Inter',
+        fontSize: 14,
+        glassMode: 'full',
+        buttonShape: 'rounded',
+        soundMuted: false,
+        soundVolume: 50,
+        soundPack: 'default',
+        reducedMotion: false,
+        lowPower: false,
+        highContrast: false,
+        compactMode: false,
+        accentColor: null,
+        customThemeId: null,
+        themePreferences: null,
+      });
+      return;
+    }
+
+    const { id, userId, createdAt, updatedAt, ...rest } = settings;
+    res.json(rest);
+  } catch (err) {
+    console.error('[settings] GET / error:', err);
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
-
-  const { id, userId, createdAt, updatedAt, ...rest } = settings;
-  res.json(rest);
 });
 
 /** PATCH /api/v1/users/@me/settings */
@@ -89,30 +115,35 @@ settingsRouter.patch(
   requireAuth,
   validate(patchSettingsSchema),
   async (req: Request, res: Response): Promise<void> => {
-    const data = req.body as z.infer<typeof patchSettingsSchema>;
+    try {
+      const data = req.body as z.infer<typeof patchSettingsSchema>;
 
-    // Upsert
-    const [existing] = await db
-      .select({ id: userSettings.id })
-      .from(userSettings)
-      .where(eq(userSettings.userId, req.userId!))
-      .limit(1);
-
-    if (existing) {
-      const [updated] = await db
-        .update(userSettings)
-        .set({ ...data, updatedAt: new Date() })
+      // Upsert
+      const [existing] = await db
+        .select({ id: userSettings.id })
+        .from(userSettings)
         .where(eq(userSettings.userId, req.userId!))
-        .returning();
-      const { id, userId, createdAt, updatedAt, ...rest } = updated;
-      res.json(rest);
-    } else {
-      const [created] = await db
-        .insert(userSettings)
-        .values({ userId: req.userId!, ...data })
-        .returning();
-      const { id, userId, createdAt, updatedAt, ...rest } = created;
-      res.json(rest);
+        .limit(1);
+
+      if (existing) {
+        const [updated] = await db
+          .update(userSettings)
+          .set({ ...data, updatedAt: new Date() })
+          .where(eq(userSettings.userId, req.userId!))
+          .returning();
+        const { id, userId, createdAt, updatedAt, ...rest } = updated;
+        res.json(rest);
+      } else {
+        const [created] = await db
+          .insert(userSettings)
+          .values({ userId: req.userId!, ...data })
+          .returning();
+        const { id, userId, createdAt, updatedAt, ...rest } = created;
+        res.json(rest);
+      }
+    } catch (err) {
+      console.error('[settings] PATCH / error:', err);
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
 );
@@ -131,12 +162,17 @@ const notifKeySchema = z.object({
 
 /** GET /api/v1/users/@me/settings/notif?key=notif:guild:xxx */
 settingsRouter.get('/notif', requireAuth, async (req: Request, res: Response): Promise<void> => {
-  const key = req.query.key as string | undefined;
-  if (!key) { res.status(400).json({ code: 'BAD_REQUEST', message: 'key query parameter required' }); return; }
-  const raw = await redis.get(`user-notif:${req.userId!}:${key}`);
-  if (!raw) { res.json({ key, value: null }); return; }
-  const parsed = safeJsonParse(raw, null);
-  res.json({ key, value: parsed });
+  try {
+    const key = req.query.key as string | undefined;
+    if (!key) { res.status(400).json({ code: 'BAD_REQUEST', message: 'key query parameter required' }); return; }
+    const raw = await redis.get(`user-notif:${req.userId!}:${key}`);
+    if (!raw) { res.json({ key, value: null }); return; }
+    const parsed = safeJsonParse(raw, null);
+    res.json({ key, value: parsed });
+  } catch (err) {
+    console.error('[settings] GET /notif error:', err);
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });
 
 /** PATCH /api/v1/users/@me/settings/notif */

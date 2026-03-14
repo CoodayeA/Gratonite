@@ -7,7 +7,9 @@ import { useUser } from '../../contexts/UserContext';
 import { isSoundMuted, setSoundMuted, getSoundVolume, setSoundVolume, getSoundPack, setSoundPack, playSound } from '../../utils/SoundManager';
 import { api, API_BASE } from '../../lib/api';
 import LoginHistoryPage from '../../pages/app/LoginHistory';
-import { SettingsAccountTab, SettingsFeedbackTab, SettingsAchievementsTab, SettingsStatsTab, SettingsConnectionsTab, SettingsPrivacyTab } from './settings';
+import { ProfileThemeEditor } from '../guild/ProfileThemeEditor';
+import Avatar from '../ui/Avatar';
+import { SettingsAccountTab, SettingsFeedbackTab, SettingsAchievementsTab, SettingsStatsTab, SettingsConnectionsTab, SettingsPrivacyTab, SettingsThemeTab, SettingsAccessibilityTab, SettingsSoundTab } from './settings';
 import type { UserProfileLike, UserThemeLike } from './settings/types';
 import { AVAILABLE_LOCALES, getLocale, setLocale } from '../../i18n';
 import { CODE_THEMES as codeThemeOptions, getCodeTheme as codeThemeGet, setCodeTheme as codeThemeSet, type CodeThemeId } from '../../utils/codeTheme';
@@ -221,7 +223,7 @@ const SettingsModal = ({
     const { theme, setTheme, colorMode, setColorMode, fontFamily, setFontFamily, fontSize, setFontSize, showChannelBackgrounds, setShowChannelBackgrounds, playMovingBackgrounds, setPlayMovingBackgrounds, glassMode, setGlassMode, reducedEffects, setReducedEffects, lowPower, setLowPower, accentColor, setAccentColor, highContrast, setHighContrast, compactMode, setCompactMode, buttonShape, setButtonShape, screenReaderMode, setScreenReaderMode, linkUnderlines, setLinkUnderlines, focusIndicatorSize, setFocusIndicatorSize, colorBlindMode, setColorBlindMode, lowDataMode, setLowDataMode, previewTheme } = useTheme();
     const { addToast } = useToast();
 
-    const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections' | 'achievements' | 'stats' | 'wardrobe'>('account');
+    const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections' | 'achievements' | 'stats' | 'wardrobe' | 'notifications' | 'muted-users' | 'referrals' | 'developer'>('account');
     const [settingsSearch, setSettingsSearch] = useState('');
     const settingsSearchRef = useRef<HTMLInputElement>(null);
 
@@ -237,6 +239,10 @@ const SettingsModal = ({
         { tab: 'wardrobe', label: 'Wardrobe', keywords: ['wardrobe', 'cosmetics', 'avatar frame', 'decoration', 'nameplate style'] },
         { tab: 'theme', label: 'Theme', keywords: ['theme', 'dark mode', 'light mode', 'color', 'accent', 'font', 'glass', 'compact', 'button shape', 'neobrutalism', 'import', 'export'] },
         { tab: 'sound', label: 'Sound', keywords: ['sound', 'volume', 'notification', 'mute', 'audio', 'ambient'] },
+        { tab: 'notifications', label: 'Notifications', keywords: ['notifications', 'push', 'email', 'digest', 'alerts'] },
+        { tab: 'muted-users', label: 'Muted Users', keywords: ['muted', 'mute', 'blocked users', 'silence'] },
+        { tab: 'referrals', label: 'Referrals', keywords: ['referral', 'invite', 'referral link', 'share'] },
+        { tab: 'developer', label: 'Developer', keywords: ['developer', 'oauth', 'application', 'api', 'bot', 'token'] },
         { tab: 'accessibility', label: 'Accessibility', keywords: ['accessibility', 'screen reader', 'reduced motion', 'color blind', 'focus', 'underline', 'high contrast', 'link underlines'] },
         { tab: 'feedback', label: 'Send Feedback', keywords: ['feedback', 'bug', 'report', 'suggestion', 'feature request'] },
     ] as const, []);
@@ -719,6 +725,20 @@ const SettingsModal = ({
                             {(!matchingTabs || matchingTabs.has('accessibility')) && <div className={`sidebar-nav-item ${activeTab === 'accessibility' ? 'active' : ''}`} onClick={() => { setActiveTab('accessibility'); setSettingsSearch(''); }}>Accessibility</div>}
                         </div>
                         )}
+                        {(!matchingTabs || matchingTabs.has('notifications') || matchingTabs.has('muted-users') || matchingTabs.has('referrals')) && (
+                        <div>
+                            <div className="sidebar-section-label">NOTIFICATIONS & SOCIAL</div>
+                            {(!matchingTabs || matchingTabs.has('notifications')) && <div className={`sidebar-nav-item ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => { setActiveTab('notifications'); setSettingsSearch(''); }}>Notifications</div>}
+                            {(!matchingTabs || matchingTabs.has('muted-users')) && <div className={`sidebar-nav-item ${activeTab === 'muted-users' ? 'active' : ''}`} onClick={() => { setActiveTab('muted-users'); setSettingsSearch(''); }}>Muted Users</div>}
+                            {(!matchingTabs || matchingTabs.has('referrals')) && <div className={`sidebar-nav-item ${activeTab === 'referrals' ? 'active' : ''}`} onClick={() => { setActiveTab('referrals'); setSettingsSearch(''); }}>Referrals</div>}
+                        </div>
+                        )}
+                        {(!matchingTabs || matchingTabs.has('developer')) && (
+                        <div>
+                            <div className="sidebar-section-label">DEVELOPER</div>
+                            {(!matchingTabs || matchingTabs.has('developer')) && <div className={`sidebar-nav-item ${activeTab === 'developer' ? 'active' : ''}`} onClick={() => { setActiveTab('developer'); setSettingsSearch(''); }}>Applications</div>}
+                        </div>
+                        )}
                         {(!matchingTabs || matchingTabs.has('feedback')) && (
                         <div>
                             <div className="sidebar-section-label">SUPPORT</div>
@@ -732,9 +752,9 @@ const SettingsModal = ({
                         <button onClick={onClose} style={{ marginRight: 'auto', padding: '6px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '16px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600 }}>
                             <X size={14} /> Close
                         </button>
-                        {(['account', 'profile', 'sessions', 'privacy', 'connections', 'achievements', 'stats', 'wardrobe', 'theme', 'sound', 'accessibility', 'feedback'] as const).map(tab => (
+                        {(['account', 'profile', 'sessions', 'privacy', 'connections', 'achievements', 'stats', 'wardrobe', 'theme', 'sound', 'accessibility', 'notifications', 'muted-users', 'referrals', 'developer', 'feedback'] as const).map(tab => (
                             <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>
-                                {tab === 'privacy' ? 'Privacy' : tab === 'connections' ? 'Connections' : tab === 'achievements' ? 'Achievements' : tab === 'wardrobe' ? 'Wardrobe' : tab === 'accessibility' ? 'A11y' : tab === 'feedback' ? 'Feedback' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                {tab === 'privacy' ? 'Privacy' : tab === 'connections' ? 'Connections' : tab === 'achievements' ? 'Achievements' : tab === 'wardrobe' ? 'Wardrobe' : tab === 'accessibility' ? 'A11y' : tab === 'feedback' ? 'Feedback' : tab === 'muted-users' ? 'Muted' : tab === 'notifications' ? 'Notifs' : tab === 'developer' ? 'Developer' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                             </button>
                         ))}
                     </div>
@@ -1446,6 +1466,15 @@ const SettingsModal = ({
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Profile Card Theme (Item 102) */}
+                                <div style={{ marginTop: '32px', borderTop: '1px solid var(--stroke)', paddingTop: '24px' }}>
+                                    <ProfileThemeEditor
+                                        username={ctxUser.username || 'user'}
+                                        displayName={ctxUser.name || ctxUser.username || 'User'}
+                                        avatarUrl={ctxUser.avatarHash ? `${API_BASE}/files/${ctxUser.avatarHash}` : undefined}
+                                    />
+                                </div>
                             </>
                         )}
 
@@ -1456,1254 +1485,11 @@ const SettingsModal = ({
                         {/* Connections tab hidden — OAuth integration not yet available */}
                         {/* Activity Privacy tab hidden — game activity detection not yet available */}
 
-                        {activeTab === 'theme' && (
-                            <>
-                                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Theme & Appearance</h2>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Customize the global look and feel of your Gratonite experience.</p>
+                        {activeTab === 'theme' && <SettingsThemeTab addToast={addToast} />}
 
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Color Mode</h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '32px' }}>
-                                    <div onClick={() => setColorMode('dark')} style={{ background: colorMode === 'dark' ? 'var(--bg-tertiary)' : 'var(--bg-elevated)', padding: '16px', borderRadius: '12px', border: `1px solid ${colorMode === 'dark' ? 'var(--accent-primary)' : 'var(--stroke)'}`, cursor: 'pointer', position: 'relative' }}>
-                                        {colorMode === 'dark' && <div style={{ position: 'absolute', top: 12, right: 12 }}><Check size={18} color="var(--accent-primary)" /></div>}
-                                        <div style={{ width: '100%', height: '80px', background: '#0f172a', borderRadius: '8px', marginBottom: '12px', border: '1px solid #1e293b', padding: '8px', display: 'flex', gap: '8px' }}>
-                                            <div style={{ width: '20%', height: '100%', background: '#1e293b', borderRadius: '4px' }}></div>
-                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                <div style={{ height: '8px', width: '40%', background: '#3b82f6', borderRadius: '4px' }}></div>
-                                                <div style={{ height: '8px', width: '80%', background: '#334155', borderRadius: '4px' }}></div>
-                                            </div>
-                                        </div>
-                                        <h4 style={{ fontSize: '15px', fontWeight: 600 }}>Dark Mode</h4>
-                                    </div>
+                        {activeTab === 'accessibility' && <SettingsAccessibilityTab addToast={addToast} />}
 
-                                    <div onClick={() => setColorMode('light')} style={{ background: colorMode === 'light' ? 'var(--bg-tertiary)' : 'var(--bg-elevated)', padding: '16px', borderRadius: '12px', border: `1px solid ${colorMode === 'light' ? 'var(--accent-primary)' : 'var(--stroke)'}`, cursor: 'pointer' }}>
-                                        {colorMode === 'light' && <div style={{ position: 'absolute', top: 12, right: 12 }}><Check size={18} color="var(--accent-primary)" /></div>}
-                                        <div style={{ width: '100%', height: '80px', background: '#f8fafc', borderRadius: '8px', marginBottom: '12px', border: '1px solid #e2e8f0', padding: '8px', display: 'flex', gap: '8px' }}>
-                                            <div style={{ width: '20%', height: '100%', background: '#e2e8f0', borderRadius: '4px' }}></div>
-                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                <div style={{ height: '8px', width: '40%', background: '#3b82f6', borderRadius: '4px' }}></div>
-                                                <div style={{ height: '8px', width: '80%', background: '#cbd5e1', borderRadius: '4px' }}></div>
-                                            </div>
-                                        </div>
-                                        <h4 style={{ fontSize: '15px', fontWeight: 600 }}>Light Mode</h4>
-                                    </div>
-                                </div>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Theme</h3>
-
-                                {/* Action buttons: Create, Store, Import, Export */}
-                                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                                    <button
-                                        onClick={() => { setEditingCustomThemeId(undefined); setShowThemeEditor(true); }}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: '6px',
-                                            padding: '8px 14px', borderRadius: '8px',
-                                            background: 'var(--accent-primary)', color: '#fff',
-                                            border: 'none', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-                                        }}
-                                    >
-                                        <Palette size={14} /> Create Theme
-                                    </button>
-                                    <button
-                                        onClick={() => setShowThemeStore(true)}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: '6px',
-                                            padding: '8px 14px', borderRadius: '8px',
-                                            background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
-                                            border: '1px solid var(--stroke)', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-                                        }}
-                                    >
-                                        <ShoppingBag size={14} /> Theme Store
-                                    </button>
-                                    <button
-                                        onClick={() => themeImportRef.current?.click()}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: '6px',
-                                            padding: '8px 14px', borderRadius: '8px',
-                                            background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
-                                            border: '1px solid var(--stroke)', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-                                        }}
-                                    >
-                                        <Upload size={14} /> Import
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            const currentTheme = resolveTheme(theme);
-                                            if (currentTheme) {
-                                                const blob = new Blob([JSON.stringify(currentTheme, null, 2)], { type: 'application/json' });
-                                                const url = URL.createObjectURL(blob);
-                                                const a = document.createElement('a');
-                                                a.href = url;
-                                                a.download = `${currentTheme.name.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
-                                                a.click();
-                                                URL.revokeObjectURL(url);
-                                                addToast({ title: 'Theme exported!', variant: 'success' });
-                                            }
-                                        }}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: '6px',
-                                            padding: '8px 14px', borderRadius: '8px',
-                                            background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
-                                            border: '1px solid var(--stroke)', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-                                        }}
-                                    >
-                                        <Download size={14} /> Export Current
-                                    </button>
-                                    {/* Hidden file input for import (Item 32) */}
-                                    <input
-                                        ref={themeImportRef}
-                                        type="file"
-                                        accept=".json"
-                                        style={{ display: 'none' }}
-                                        onChange={(e) => {
-                                            const file = e.target.files?.[0];
-                                            if (!file) return;
-                                            const reader = new FileReader();
-                                            reader.onload = () => {
-                                                try {
-                                                    const parsed = JSON.parse(reader.result as string);
-                                                    if (!parsed.id || !parsed.name || !parsed.dark || !parsed.light) {
-                                                        addToast({ title: 'Invalid theme file: missing required fields (id, name, dark, light)', variant: 'error' });
-                                                        return;
-                                                    }
-                                                    parsed.id = `imported-${Date.now()}`;
-                                                    saveCustomTheme(parsed);
-                                                    setCustomThemesList(getCustomThemes());
-                                                    setTheme(parsed.id);
-                                                    addToast({ title: `Imported theme "${parsed.name}"!`, variant: 'success' });
-                                                } catch {
-                                                    addToast({ title: 'Failed to parse theme file', variant: 'error' });
-                                                }
-                                            };
-                                            reader.readAsText(file);
-                                            e.target.value = '';
-                                        }}
-                                    />
-                                </div>
-
-                                {/* My Themes section (Item 31) */}
-                                {customThemesList.length > 0 && (
-                                    <div style={{ marginBottom: '20px' }}>
-                                        <h4 style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '10px', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <Palette size={12} color="var(--accent-primary)" /> My Themes ({customThemesList.length})
-                                        </h4>
-                                        <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                                            {customThemesList.map(t => {
-                                                const isSelected = theme === t.id;
-                                                const p = t.preview;
-                                                return (
-                                                    <div
-                                                        key={`custom-${t.id}`}
-                                                        role="button"
-                                                        tabIndex={0}
-                                                        onClick={() => setTheme(t.id as any)}
-                                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTheme(t.id as any); } }}
-                                                        onMouseEnter={() => previewTheme(t.id)}
-                                                        onMouseLeave={() => previewTheme(null)}
-                                                        style={{
-                                                            background: 'var(--bg-elevated)',
-                                                            border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--stroke)'}`,
-                                                            borderRadius: '12px',
-                                                            overflow: 'hidden',
-                                                            cursor: 'pointer',
-                                                            transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.15s',
-                                                            boxShadow: isSelected ? '0 0 0 1px var(--accent-primary)' : 'none',
-                                                            position: 'relative',
-                                                        }}
-                                                    >
-                                                        <div style={{ height: '72px', background: p.bg, display: 'flex', gap: '4px', padding: '6px' }}>
-                                                            <div style={{ width: '22px', background: p.sidebar, borderRadius: '4px', flexShrink: 0 }}></div>
-                                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                                                <div style={{ height: '8px', width: '50%', background: p.accent, borderRadius: '3px' }}></div>
-                                                                <div style={{ height: '6px', width: '80%', background: p.text, borderRadius: '3px', opacity: 0.5 }}></div>
-                                                                <div style={{ height: '6px', width: '60%', background: p.text, borderRadius: '3px', opacity: 0.3 }}></div>
-                                                                <div style={{ height: '4px', width: '30%', background: p.accent, borderRadius: '3px', opacity: 0.6 }}></div>
-                                                            </div>
-                                                        </div>
-                                                        <div style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                            <div style={{ minWidth: 0 }}>
-                                                                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                    {t.name}
-                                                                </div>
-                                                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>Custom</div>
-                                                            </div>
-                                                            <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); setEditingCustomThemeId(t.id); setShowThemeEditor(true); }}
-                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }}
-                                                                    title="Edit theme"
-                                                                >
-                                                                    <Edit3 size={12} color="var(--text-muted)" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        if (confirm(`Publish "${t.name}" to the Theme Store? This will make it visible to all users.`)) {
-                                                                            const varsForApi: Record<string, string> = {};
-                                                                            for (const [k, v] of Object.entries(t.dark)) {
-                                                                                varsForApi[`dark.${k}`] = String(v);
-                                                                            }
-                                                                            for (const [k, v] of Object.entries(t.light)) {
-                                                                                varsForApi[`light.${k}`] = String(v);
-                                                                            }
-                                                                            api.themes.create({
-                                                                                name: t.name,
-                                                                                description: t.description,
-                                                                                tags: [t.category],
-                                                                                vars: varsForApi,
-                                                                            }).then((created: any) => {
-                                                                                return api.themes.publish(created.id);
-                                                                            }).then(() => {
-                                                                                addToast({ title: `"${t.name}" published to the Theme Store!`, variant: 'success' });
-                                                                            }).catch(() => {
-                                                                                addToast({ title: 'Failed to publish theme', variant: 'error' });
-                                                                            });
-                                                                        }
-                                                                    }}
-                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }}
-                                                                    title="Publish to Theme Store"
-                                                                >
-                                                                    <Share2 size={12} color="var(--text-muted)" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        if (confirm(`Delete "${t.name}"?`)) {
-                                                                            deleteCustomTheme(t.id);
-                                                                            setCustomThemesList(getCustomThemes());
-                                                                            if (theme === t.id) setTheme('default');
-                                                                            addToast({ title: 'Theme deleted', variant: 'success' });
-                                                                        }
-                                                                    }}
-                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }}
-                                                                    title="Delete theme"
-                                                                >
-                                                                    <Trash2 size={12} color="var(--error)" />
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                        {isSelected && (
-                                                            <div style={{ position: 'absolute', top: 6, right: 6, background: 'var(--accent-primary)', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                <Check size={11} color="#000" />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Search input */}
-                                <div style={{ position: 'relative', marginBottom: '12px' }}>
-                                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                                    <input
-                                        type="text"
-                                        placeholder="Search themes..."
-                                        value={themeSearchQuery}
-                                        onChange={(e) => setThemeSearchQuery(e.target.value)}
-                                        className="auth-input"
-                                        style={{ width: '100%', padding: '10px 12px 10px 36px', margin: 0, fontSize: '13px' }}
-                                    />
-                                </div>
-
-                                {/* Category filter pills */}
-                                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', marginBottom: '16px', scrollbarWidth: 'none' }}>
-                                    {(['all', 'dark', 'light', 'colorful', 'minimal', 'retro', 'nature', 'developer', 'accessibility'] as const).map(cat => (
-                                        <button
-                                            key={cat}
-                                            onClick={() => setThemeCategory(cat)}
-                                            style={{
-                                                padding: '5px 12px',
-                                                borderRadius: '16px',
-                                                border: 'none',
-                                                background: themeCategory === cat ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                                                color: themeCategory === cat ? '#fff' : 'var(--text-secondary)',
-                                                fontSize: '12px',
-                                                fontWeight: 600,
-                                                cursor: 'pointer',
-                                                whiteSpace: 'nowrap',
-                                                transition: 'background 0.15s, color 0.15s',
-                                                textTransform: 'capitalize',
-                                            }}
-                                        >
-                                            {cat === 'all' ? 'All' : cat}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                {/* Item 25: Seasonal suggestion */}
-                                {(() => { const s = getSeasonalSuggestion(); if (!s || theme === s.themeId) return null; return (<div onClick={() => { setTheme(s.themeId as any); playSound('click'); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', marginBottom: '16px', borderRadius: '10px', background: 'var(--bg-tertiary)', border: '1px solid var(--accent-primary)', cursor: 'pointer' }}><Sparkles size={16} color="var(--accent-primary)" /><span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>{s.emoji} {s.message}</span><span style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 700 }}>Try it</span></div>); })()}
-                                {/* Item 22: Random Theme */}
-                                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}><button onClick={() => { const all = getAllThemes(); const pick = all[Math.floor(Math.random() * all.length)]; if (pick) { previewTheme(pick.id); (window as any).__gratoniteFullPreview = pick.id; setFullPreviewId(pick.id); window.dispatchEvent(new CustomEvent('gratonite:full-preview-changed')); } playSound('click'); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}><Dices size={14} /> Random Theme</button></div>
-                                {/* Item 23: Code theme suggestion */}
-                                {codeSuggestion && (<div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', marginBottom: '16px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px dashed var(--stroke)' }}><Info size={14} color="var(--accent-primary)" /><span style={{ fontSize: '11px', color: 'var(--text-secondary)', flex: 1 }}>Suggested code theme for {codeSuggestion.themeName}: <strong>{codeThemeList.find(c => c.id === codeSuggestion.codeTheme)?.label || codeSuggestion.codeTheme}</strong></span><button onClick={() => { setCodeThemeId(codeSuggestion.codeTheme); codeThemeSet(codeSuggestion.codeTheme as any); setCodeSuggestion(null); }} style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: 'var(--accent-primary)', color: '#000', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Apply</button><button onClick={() => setCodeSuggestion(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }}><X size={12} color="var(--text-muted)" /></button></div>)}
-                                {/* Favorites section */}
-                                {themeCategory === 'all' && !themeSearchQuery && (() => {
-                                    const favThemes = favIds.map(id => resolveTheme(id)).filter((t): t is ThemeDefinition => !!t);
-                                    if (favThemes.length === 0) return null;
-                                    return (
-                                        <div style={{ marginBottom: '20px' }}>
-                                            <h4 style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '10px', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <Star size={12} fill="var(--warning)" color="var(--warning)" /> Favorites
-                                            </h4>
-                                            <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                                                {favThemes.map(t => {
-                                                    const isSelected = theme === t.id;
-                                                    const p = t.preview;
-                                                    return (
-                                                        <div
-                                                            key={`fav-${t.id}`}
-                                                            role="button"
-                                                            tabIndex={0}
-                                                            onClick={() => { haptic.themeSwitch(); setTheme(t.id as any); }}
-                                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTheme(t.id as any); } }}
-                                                            onMouseEnter={() => previewTheme(t.id)}
-                                                            onMouseLeave={() => previewTheme(null)}
-                                                            style={{
-                                                                background: 'var(--bg-elevated)',
-                                                                border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--stroke)'}`,
-                                                                borderRadius: '12px',
-                                                                overflow: 'hidden',
-                                                                cursor: 'pointer',
-                                                                transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.15s',
-                                                                boxShadow: isSelected ? '0 0 0 1px var(--accent-primary)' : 'none',
-                                                                position: 'relative',
-                                                            }}
-                                                        >
-                                                            <div style={{ height: '72px', background: p.bg, display: 'flex', gap: '4px', padding: '6px' }}>
-                                                                <div style={{ width: '22px', background: p.sidebar, borderRadius: '4px', flexShrink: 0 }}></div>
-                                                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                                                    <div style={{ height: '8px', width: '50%', background: p.accent, borderRadius: '3px' }}></div>
-                                                                    <div style={{ height: '6px', width: '80%', background: p.text, borderRadius: '3px', opacity: 0.5 }}></div>
-                                                                    <div style={{ height: '6px', width: '60%', background: p.text, borderRadius: '3px', opacity: 0.3 }}></div>
-                                                                    <div style={{ height: '4px', width: '30%', background: p.accent, borderRadius: '3px', opacity: 0.6 }}></div>
-                                                                </div>
-                                                            </div>
-                                                            <div style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                                <div>
-                                                                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                                        {t.name}
-                                                                        {t.isDark ? <Moon size={10} color="var(--text-muted)" /> : <Sun size={10} color="var(--warning)" />}
-                                                                    </div>
-                                                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                                                                        <span style={{ background: 'var(--bg-tertiary)', padding: '1px 5px', borderRadius: '4px', fontSize: '9px', textTransform: 'capitalize' }}>{t.category}</span>
-                                                                    </div>
-                                                                </div>
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); toggleFavoriteTheme(t.id); setFavIds(getFavoriteThemeIds()); }}
-                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }}
-                                                                    title="Remove from favorites"
-                                                                >
-                                                                    <Star size={14} fill="var(--warning)" color="var(--warning)" />
-                                                                </button>
-                                                            </div>
-                                                            {isSelected && (
-                                                                <div style={{ position: 'absolute', top: 6, right: 6, background: 'var(--accent-primary)', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                    <Check size={11} color="#000" />
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
-
-                                {/* Recently used section */}
-                                {themeCategory === 'all' && !themeSearchQuery && (() => {
-                                    const recentIds = getRecentThemeIds();
-                                    const recentThemes = recentIds.map(id => resolveTheme(id)).filter((t): t is ThemeDefinition => !!t);
-                                    if (recentThemes.length === 0) return null;
-                                    return (
-                                        <div style={{ marginBottom: '20px' }}>
-                                            <h4 style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '10px', letterSpacing: '0.05em' }}>
-                                                Recently Used
-                                            </h4>
-                                            <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                                                {recentThemes.map(t => {
-                                                    const isSelected = theme === t.id;
-                                                    const p = t.preview;
-                                                    const isFav = favIds.includes(t.id);
-                                                    return (
-                                                        <div
-                                                            key={`recent-${t.id}`}
-                                                            role="button"
-                                                            tabIndex={0}
-                                                            onClick={() => { haptic.themeSwitch(); setTheme(t.id as any); }}
-                                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTheme(t.id as any); } }}
-                                                            onMouseEnter={() => previewTheme(t.id)}
-                                                            onMouseLeave={() => previewTheme(null)}
-                                                            style={{
-                                                                background: 'var(--bg-elevated)',
-                                                                border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--stroke)'}`,
-                                                                borderRadius: '12px',
-                                                                overflow: 'hidden',
-                                                                cursor: 'pointer',
-                                                                transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.15s',
-                                                                boxShadow: isSelected ? '0 0 0 1px var(--accent-primary)' : 'none',
-                                                                position: 'relative',
-                                                            }}
-                                                        >
-                                                            <div style={{ height: '72px', background: p.bg, display: 'flex', gap: '4px', padding: '6px' }}>
-                                                                <div style={{ width: '22px', background: p.sidebar, borderRadius: '4px', flexShrink: 0 }}></div>
-                                                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                                                    <div style={{ height: '8px', width: '50%', background: p.accent, borderRadius: '3px' }}></div>
-                                                                    <div style={{ height: '6px', width: '80%', background: p.text, borderRadius: '3px', opacity: 0.5 }}></div>
-                                                                    <div style={{ height: '6px', width: '60%', background: p.text, borderRadius: '3px', opacity: 0.3 }}></div>
-                                                                    <div style={{ height: '4px', width: '30%', background: p.accent, borderRadius: '3px', opacity: 0.6 }}></div>
-                                                                </div>
-                                                            </div>
-                                                            <div style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                                <div>
-                                                                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                                        {t.name}
-                                                                        {t.isDark ? <Moon size={10} color="var(--text-muted)" /> : <Sun size={10} color="var(--warning)" />}
-                                                                    </div>
-                                                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                                                                        <span style={{ background: 'var(--bg-tertiary)', padding: '1px 5px', borderRadius: '4px', fontSize: '9px', textTransform: 'capitalize' }}>{t.category}</span>
-                                                                    </div>
-                                                                </div>
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); toggleFavoriteTheme(t.id); setFavIds(getFavoriteThemeIds()); }}
-                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }}
-                                                                    title={isFav ? 'Remove from favorites' : 'Add to favorites'}
-                                                                >
-                                                                    <Star size={14} fill={isFav ? 'var(--warning)' : 'none'} color={isFav ? 'var(--warning)' : 'var(--text-muted)'} />
-                                                                </button>
-                                                            </div>
-                                                            {isSelected && (
-                                                                <div style={{ position: 'absolute', top: 6, right: 6, background: 'var(--accent-primary)', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                    <Check size={11} color="#000" />
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
-
-                                {/* All themes grid */}
-                                {(() => {
-                                    let filteredThemes: ThemeDefinition[];
-                                    if (themeSearchQuery.trim()) {
-                                        filteredThemes = searchThemes(themeSearchQuery);
-                                        if (themeCategory !== 'all') {
-                                            filteredThemes = filteredThemes.filter(t => t.category === themeCategory);
-                                        }
-                                    } else if (themeCategory !== 'all') {
-                                        filteredThemes = getThemesByCategory(themeCategory);
-                                    } else {
-                                        filteredThemes = getAllThemesIncludingCustom();
-                                    }
-
-                                    if (filteredThemes.length === 0) {
-                                        return (
-                                            <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-muted)', fontSize: '13px' }}>
-                                                No themes found{themeSearchQuery ? ` for "${themeSearchQuery}"` : ''}.
-                                            </div>
-                                        );
-                                    }
-
-                                    return (
-                                        <div style={{ marginBottom: '20px' }}>
-                                            {(themeCategory === 'all' && !themeSearchQuery) && (
-                                                <h4 style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '10px', letterSpacing: '0.05em' }}>
-                                                    All Themes ({filteredThemes.length})
-                                                </h4>
-                                            )}
-                                            <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                                                {filteredThemes.map(t => {
-                                                    const isSelected = theme === t.id;
-                                                    const p = t.preview;
-                                                    const isFav = favIds.includes(t.id);
-                                                    return (
-                                                        <div
-                                                            key={t.id}
-                                                            role="button"
-                                                            tabIndex={0}
-                                                            onClick={() => { haptic.themeSwitch(); setTheme(t.id as any); }}
-                                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTheme(t.id as any); } }}
-                                                            onMouseEnter={() => previewTheme(t.id)}
-                                                            onMouseLeave={() => previewTheme(null)}
-                                                            style={{
-                                                                background: 'var(--bg-elevated)',
-                                                                border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--stroke)'}`,
-                                                                borderRadius: '12px',
-                                                                overflow: 'hidden',
-                                                                cursor: 'pointer',
-                                                                transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.15s',
-                                                                boxShadow: isSelected ? '0 0 0 1px var(--accent-primary)' : 'none',
-                                                                position: 'relative',
-                                                            }}
-                                                        >
-                                                            {/* Item 16: Realistic ThemePreview */}
-                                                            <div style={{ height: '72px', position: 'relative' }}>
-                                                                <ThemePreview theme={t} colorMode={colorMode} style={{ height: '100%' }} />
-                                                                {/* Item 18: Try it button */}
-                                                                <button onClick={(e) => { e.stopPropagation(); previewTheme(t.id); (window as any).__gratoniteFullPreview = t.id; setFullPreviewId(t.id); window.dispatchEvent(new CustomEvent('gratonite:full-preview-changed')); }} style={{ position: 'absolute', bottom: 4, right: 4, padding: '2px 8px', borderRadius: '4px', border: 'none', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '9px', fontWeight: 700, cursor: 'pointer', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '3px' }}><Eye size={9} /> Try</button>
-                                                            </div>
-                                                            {/* Theme info — Item 19: metadata */}
-                                                            <div style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                                <div style={{ minWidth: 0 }}>
-                                                                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</span>
-                                                                        {t.isDark ? <Moon size={10} color="var(--text-muted)" /> : <Sun size={10} color="var(--warning)" />}
-                                                                    </div>
-                                                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                                                                        <span style={{ background: 'var(--bg-tertiary)', padding: '1px 5px', borderRadius: '4px', fontSize: '9px', textTransform: 'capitalize' }}>{t.category}</span>
-                                                                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: p.accent, flexShrink: 0, border: '1px solid var(--stroke)' }} title={'Accent: ' + p.accent}></span>
-                                                                    </div>
-                                                                    {t.description && <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.description}</div>}
-                                                                </div>
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); toggleFavoriteTheme(t.id); setFavIds(getFavoriteThemeIds()); }}
-                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', flexShrink: 0 }}
-                                                                    title={isFav ? 'Remove from favorites' : 'Add to favorites'}
-                                                                >
-                                                                    <Star size={14} fill={isFav ? 'var(--warning)' : 'none'} color={isFav ? 'var(--warning)' : 'var(--text-muted)'} />
-                                                                </button>
-                                                            </div>
-                                                            {isSelected && (
-                                                                <div style={{ position: 'absolute', top: 6, right: 6, background: 'var(--accent-primary)', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                    <Check size={11} color="#000" />
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
-
-                                <div style={{ marginBottom: '32px' }}></div>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Typography</h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '40px' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        <label style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>FONT FAMILY</label>
-                                        <select value={fontFamily} onChange={(e) => setFontFamily(e.target.value as any)} className="auth-input" style={{ width: '100%', padding: '12px', margin: 0 }}>
-                                            <option value="inter">Inter (Clean & Modern)</option>
-                                            <option value="outfit">Outfit (Geometric & Bold)</option>
-                                            <option value="space-grotesk">Space Grotesk (Quirky)</option>
-                                            <option value="fira-code">Fira Code (Developer)</option>
-                                        </select>
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        <label style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>SIZE SCALE</label>
-                                        <select value={fontSize} onChange={(e) => setFontSize(e.target.value as any)} className="auth-input" style={{ width: '100%', padding: '12px', margin: 0 }}>
-                                            <option value="small">Small</option>
-                                            <option value="medium">Medium</option>
-                                            <option value="large">Large</option>
-                                            <option value="extra-large">Extra Large</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Code Block Theme</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '40px' }}>
-                                    <label style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>SYNTAX HIGHLIGHTING</label>
-                                    <select value={codeThemeId} onChange={(e) => { const id = e.target.value; setCodeThemeId(id); codeThemeSet(id as any); }} className="auth-input" style={{ width: '100%', maxWidth: '300px', padding: '12px', margin: 0 }}>
-                                        {codeThemeOptions.map(t => (
-                                            <option key={t.id} value={t.id}>{t.label}</option>
-                                        ))}
-                                    </select>
-                                    <div style={{ marginTop: '8px', background: 'var(--bg-secondary)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--stroke)', maxWidth: '400px' }}>
-                                        <pre className="code-block" style={{ margin: 0, padding: '12px', fontSize: '13px' }}>
-                                            <code><span className="hljs-keyword">function</span> <span className="hljs-title function_">greet</span>(<span className="hljs-params">name</span>) {'{\n  '}<span className="hljs-keyword">return</span> <span className="hljs-string">{"`Hello, ${name}!`"}</span>{';\n}'}</code>
-                                        </pre>
-                                    </div>
-                                </div>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Ambient Features</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '40px' }}>
-                                    {[
-                                        { label: 'Custom Channel Backgrounds', desc: 'Show unique backgrounds set by server admins.', val: showChannelBackgrounds, set: setShowChannelBackgrounds },
-                                        { label: 'Play Moving Backgrounds', desc: 'Auto-play background videos and gifs. Disable to save battery or reduce motion.', val: playMovingBackgrounds, set: setPlayMovingBackgrounds },
-                                    ].map(item => (
-                                        <label key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                <span style={{ fontSize: '15px', fontWeight: 500, color: 'var(--text-primary)' }}>{item.label}</span>
-                                                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{item.desc}</span>
-                                            </div>
-                                            <div onClick={() => { item.set(!item.val); playSound('click'); }} style={{ width: '40px', height: '24px', background: item.val ? 'var(--success)' : 'var(--bg-tertiary)', borderRadius: '12px', position: 'relative', transition: '0.2s', flexShrink: 0, cursor: 'pointer' }}>
-                                                <div style={{ width: '18px', height: '18px', background: 'white', borderRadius: '50%', position: 'absolute', top: '3px', left: item.val ? '19px' : '3px', transition: '0.2s' }}></div>
-                                            </div>
-                                        </label>
-                                    ))}
-                                </div>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Message Display</h3>
-                                <div style={{ display: 'flex', gap: '12px', marginBottom: '40px' }}>
-                                    {([
-                                        { value: false, label: 'Cozy', desc: 'Spacious layout with avatars' },
-                                        { value: true, label: 'Compact', desc: 'Condensed, more messages visible' },
-                                    ] as const).map(opt => {
-                                        const isSelected = compactMode === opt.value;
-                                        return (
-                                            <label
-                                                key={opt.label}
-                                                onClick={() => setCompactMode(opt.value)}
-                                                style={{
-                                                    flex: 1,
-                                                    background: isSelected ? 'var(--bg-tertiary)' : 'var(--bg-elevated)',
-                                                    padding: '16px',
-                                                    borderRadius: '12px',
-                                                    border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--stroke)'}`,
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '10px',
-                                                    transition: 'border-color 0.2s, background 0.2s',
-                                                }}
-                                            >
-                                                <input
-                                                    type="radio"
-                                                    name="messageDisplay"
-                                                    checked={isSelected}
-                                                    onChange={() => setCompactMode(opt.value)}
-                                                    style={{ accentColor: 'var(--accent-primary)' }}
-                                                />
-                                                <div>
-                                                    <div style={{ fontWeight: 600, fontSize: '14px' }}>{opt.label}</div>
-                                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{opt.desc}</div>
-                                                </div>
-                                            </label>
-                                        );
-                                    })}
-                                </div>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Accent Color</h3>
-                                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '32px' }}>
-                                    {[
-                                        { color: '#3b82f6', name: 'Blue' },
-                                        { color: '#8b5cf6', name: 'Purple' },
-                                        { color: '#ec4899', name: 'Pink' },
-                                        { color: '#10b981', name: 'Green' },
-                                        { color: '#f59e0b', name: 'Yellow' },
-                                        { color: '#ef4444', name: 'Red' },
-                                    ].map(accent => (
-                                        <div key={accent.name} onClick={() => applyAccentColor(accent.color)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: accent.color, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: accentColor === accent.color ? `0 0 0 3px var(--bg-primary), 0 0 0 5px ${accent.color}` : 'none', transition: 'box-shadow 0.2s' }}>
-                                                {accentColor === accent.color && <Check size={16} color="white" />}
-                                            </div>
-                                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{accent.name}</span>
-                                        </div>
-                                    ))}
-
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: customHex || 'var(--bg-tertiary)', border: '1px dashed var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>HEX</span>
-                                            </div>
-                                            <input
-                                                type="text"
-                                                className="auth-input"
-                                                placeholder="#FFFFFF"
-                                                value={customHex || accentColor}
-                                                onChange={(e) => {
-                                                    setCustomHex(e.target.value);
-                                                    setHexError(false);
-                                                    if (e.target.value.match(/^#[0-9A-Fa-f]{6}$/i)) {
-                                                        applyAccentColor(e.target.value);
-                                                    }
-                                                }}
-                                                onFocus={() => setHexError(false)}
-                                                onBlur={() => {
-                                                    const val = (customHex || '').trim();
-                                                    const short = /^#[0-9A-Fa-f]{3}$/i;
-                                                    const full = /^#[0-9A-Fa-f]{6}$/i;
-                                                    if (full.test(val)) {
-                                                        applyAccentColor(val);
-                                                        setHexError(false);
-                                                    } else if (short.test(val)) {
-                                                        const expanded = '#' + val[1] + val[1] + val[2] + val[2] + val[3] + val[3];
-                                                        setCustomHex(expanded);
-                                                        applyAccentColor(expanded);
-                                                        setHexError(false);
-                                                    } else if (val && val !== accentColor) {
-                                                        setHexError(true);
-                                                        setCustomHex('');
-                                                    }
-                                                }}
-                                                style={{ width: '100px', height: '40px', marginBottom: 0, border: hexError ? '2px solid var(--error)' : undefined }}
-                                            />
-                                        </div>
-                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Custom</span>
-                                    </div>
-                                </div>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Button Shape</h3>
-                                <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '40px' }}>
-                                    {([
-                                        { value: 'rounded' as ButtonShape, label: 'Rounded', radius: '8px' },
-                                        { value: 'sharp' as ButtonShape, label: 'Sharp / Square', radius: '0px' },
-                                        { value: 'pill' as ButtonShape, label: 'Pill', radius: '9999px' },
-                                    ]).map(opt => {
-                                        const isSelected = buttonShape === opt.value;
-                                        return (
-                                            <div
-                                                key={opt.value}
-                                                onClick={() => setButtonShape(opt.value)}
-                                                style={{
-                                                    background: isSelected ? 'var(--bg-tertiary)' : 'var(--bg-elevated)',
-                                                    padding: '16px',
-                                                    borderRadius: '12px',
-                                                    border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--stroke)'}`,
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    alignItems: 'center',
-                                                    gap: '12px',
-                                                    transition: 'border-color 0.2s, background 0.2s',
-                                                }}
-                                            >
-                                                {/* Preview illustration */}
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
-                                                    <div style={{ width: '100%', height: '28px', background: 'var(--accent-primary)', borderRadius: opt.radius, opacity: 0.85 }} />
-                                                    <div style={{ width: '70%', height: '20px', background: 'var(--stroke)', borderRadius: opt.radius, opacity: 0.6 }} />
-                                                </div>
-                                                <span style={{ fontSize: '13px', fontWeight: 600, color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{opt.label}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Language</h3>
-                                <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '40px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <Globe size={18} style={{ color: 'var(--text-muted)' }} />
-                                        <div>
-                                            <div style={{ fontWeight: 600, marginBottom: '4px' }}>Display Language</div>
-                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Choose the language for Gratonite's interface.</div>
-                                        </div>
-                                    </div>
-                                    <select
-                                        value={getLocale()}
-                                        onChange={(e) => { setLocale(e.target.value as any); playSound('click'); }}
-                                        className="auth-input"
-                                        style={{ width: '160px', padding: '8px 12px', margin: 0 }}
-                                    >
-                                        {AVAILABLE_LOCALES.map(loc => (
-                                            <option key={loc.code} value={loc.code}>{loc.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Performance & Effects</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div>
-                                            <div style={{ fontWeight: 600, marginBottom: '4px' }}>Glass Mode</div>
-                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Adjust the intensity of background blur and transparency effects.</div>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '8px', background: 'var(--bg-elevated)', padding: '4px', borderRadius: '8px' }}>
-                                            {['off', 'subtle', 'full'].map(mode => (
-                                                <button key={mode} onClick={() => { setGlassMode(mode as any); if (setUserTheme) setUserTheme({ ...userTheme, glassMode: mode }); }}
-                                                    style={{ background: glassMode === mode ? 'var(--accent-primary)' : 'transparent', color: glassMode === mode ? '#000' : 'var(--text-secondary)', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize' }}>
-                                                    {mode}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {[
-                                        { label: 'Reduced UI Effects', desc: 'Disable hover animations, typing indicators, and particle effects.', val: reducedEffects, set: (v: boolean) => { setReducedEffects(v); if (setUserTheme) setUserTheme({ ...userTheme, reducedEffects: v }); } },
-                                        { label: 'Low Power Mode', desc: 'Pause animated avatars, video backgrounds, and aggressive syncing.', val: lowPower, set: (v: boolean) => { setLowPower(v); if (setUserTheme) setUserTheme({ ...userTheme, lowPower: v }); } },
-                                    ].map(item => (
-                                        <div key={item.label} style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                            <div>
-                                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>{item.label}</div>
-                                                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{item.desc}</div>
-                                            </div>
-                                            <div onClick={() => { item.set(!item.val); playSound('click'); }} style={{ width: '40px', height: '24px', background: item.val ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
-                                                <div style={{ position: 'absolute', height: '16px', width: '16px', left: item.val ? '20px' : '4px', bottom: '4px', backgroundColor: item.val ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </>
-                        )}
-
-                        {activeTab === 'accessibility' && (
-                            <>
-                                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Accessibility</h2>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Customize Gratonite to work best for you.</p>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Visuals & Contrast</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
-                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div style={{ fontWeight: 600 }}>High Contrast Mode</div>
-                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Increases text contrast for better readability.</div>
-                                        </div>
-                                        <div role="switch" aria-checked={highContrast} aria-label="High Contrast Mode" tabIndex={0} onClick={() => { setHighContrast(!highContrast); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setHighContrast(!highContrast); playSound('click'); } }} style={{ width: '40px', height: '24px', background: highContrast ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
-                                            <div style={{ position: 'absolute', height: '16px', width: '16px', left: highContrast ? '20px' : '4px', bottom: '4px', backgroundColor: highContrast ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
-                                        </div>
-                                    </div>
-                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div style={{ fontWeight: 600 }}>Reduce Motion</div>
-                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Minimizes animations and movement across the UI.</div>
-                                        </div>
-                                        <div role="switch" aria-checked={reducedEffects} aria-label="Reduce Motion" tabIndex={0} onClick={() => { setReducedEffects(!reducedEffects); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setReducedEffects(!reducedEffects); playSound('click'); } }} style={{ width: '40px', height: '24px', background: reducedEffects ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
-                                            <div style={{ position: 'absolute', height: '16px', width: '16px', left: reducedEffects ? '20px' : '4px', bottom: '4px', backgroundColor: reducedEffects ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
-                                        </div>
-                                    </div>
-                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                                            <div style={{ fontWeight: 600 }}>Color-Blind Mode</div>
-                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Applies color filters and shape-based status indicators for color vision deficiencies.</div>
-                                        </div>
-                                        <select
-                                            value={colorBlindMode}
-                                            onChange={(e) => { setColorBlindMode(e.target.value as any); playSound('click'); }}
-                                            aria-label="Color-Blind Mode"
-                                            style={{ padding: '8px 12px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--stroke)', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', flexShrink: 0 }}
-                                        >
-                                            <option value="none">Off</option>
-                                            <option value="deuteranopia">Deuteranopia (green-weak)</option>
-                                            <option value="protanopia">Protanopia (red-weak)</option>
-                                            <option value="tritanopia">Tritanopia (blue-weak)</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Data & Performance</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
-                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div style={{ fontWeight: 600 }}>Low Data Mode</div>
-                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Reduces bandwidth usage: lower-res images, disables GIF/video auto-play, defers embed loading.</div>
-                                        </div>
-                                        <div role="switch" aria-checked={lowDataMode} aria-label="Low Data Mode" tabIndex={0} onClick={() => { setLowDataMode(!lowDataMode); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setLowDataMode(!lowDataMode); playSound('click'); } }} style={{ width: '40px', height: '24px', background: lowDataMode ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
-                                            <div style={{ position: 'absolute', height: '16px', width: '16px', left: lowDataMode ? '20px' : '4px', bottom: '4px', backgroundColor: lowDataMode ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Navigation & Focus</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
-                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div style={{ fontWeight: 600 }}>Link Underlines</div>
-                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Underlines all interactive text links for easier identification.</div>
-                                        </div>
-                                        <div role="switch" aria-checked={linkUnderlines} aria-label="Link Underlines" tabIndex={0} onClick={() => { setLinkUnderlines(!linkUnderlines); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setLinkUnderlines(!linkUnderlines); playSound('click'); } }} style={{ width: '40px', height: '24px', background: linkUnderlines ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
-                                            <div style={{ position: 'absolute', height: '16px', width: '16px', left: linkUnderlines ? '20px' : '4px', bottom: '4px', backgroundColor: linkUnderlines ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
-                                        </div>
-                                    </div>
-                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div style={{ fontWeight: 600 }}>Focus Indicator Size</div>
-                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Controls the thickness of the keyboard focus outline.</div>
-                                        </div>
-                                        <select value={focusIndicatorSize} onChange={(e) => { setFocusIndicatorSize(e.target.value as any); playSound('click'); }} aria-label="Focus indicator size" className="auth-input" style={{ width: 'auto', padding: '8px 12px', margin: 0, height: '36px' }}>
-                                            <option value="normal">Normal (2px)</option>
-                                            <option value="large">Large (4px)</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Screen Reader</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
-                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div style={{ fontWeight: 600 }}>Screen Reader Mode</div>
-                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Adds verbose labels, live regions, and route change announcements for assistive technology.</div>
-                                        </div>
-                                        <div role="switch" aria-checked={screenReaderMode} aria-label="Screen Reader Mode" tabIndex={0} onClick={() => { setScreenReaderMode(!screenReaderMode); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setScreenReaderMode(!screenReaderMode); playSound('click'); } }} style={{ width: '40px', height: '24px', background: screenReaderMode ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
-                                            <div style={{ position: 'absolute', height: '16px', width: '16px', left: screenReaderMode ? '20px' : '4px', bottom: '4px', backgroundColor: screenReaderMode ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Text & Chat</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div style={{ fontWeight: 600 }}>Chat Font Size</div>
-                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Changes the font size inside messages.</div>
-                                        </div>
-                                        <select value={fontSize} onChange={(e) => setFontSize(e.target.value as any)} aria-label="Chat font size" className="auth-input" style={{ width: 'auto', padding: '8px 12px', margin: 0, height: '36px' }}>
-                                            <option value="small">Small</option>
-                                            <option value="medium">Medium</option>
-                                            <option value="large">Large</option>
-                                            <option value="extra-large">Extra Large</option>
-                                        </select>
-                                    </div>
-                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div style={{ fontWeight: 600 }}>Compact Message Mode</div>
-                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Show messages in a denser, more compact layout.</div>
-                                        </div>
-                                        <div role="switch" aria-checked={compactMode} aria-label="Compact Message Mode" tabIndex={0} onClick={() => { setCompactMode(!compactMode); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCompactMode(!compactMode); playSound('click'); } }} style={{ width: '40px', height: '24px', background: compactMode ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
-                                            <div style={{ position: 'absolute', height: '16px', width: '16px', left: compactMode ? '20px' : '4px', bottom: '4px', backgroundColor: compactMode ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
-                                        </div>
-                                    </div>
-                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div style={{ fontWeight: 600 }}>Seasonal Effects</div>
-                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Show seasonal particle effects (snowflakes, cherry blossoms, etc.).</div>
-                                        </div>
-                                        <div role="switch" aria-checked={seasonalEnabled} aria-label="Seasonal Effects" tabIndex={0} onClick={() => { const next = !seasonalEnabled; setSeasonalEnabled(next); localStorage.setItem('gratonite-seasonal-effects', next ? 'true' : 'false'); window.dispatchEvent(new Event('seasonal-effects-toggle')); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const next = !seasonalEnabled; setSeasonalEnabled(next); localStorage.setItem('gratonite-seasonal-effects', next ? 'true' : 'false'); window.dispatchEvent(new Event('seasonal-effects-toggle')); playSound('click'); } }} style={{ width: '40px', height: '24px', background: seasonalEnabled ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
-                                            <div style={{ position: 'absolute', height: '16px', width: '16px', left: seasonalEnabled ? '20px' : '4px', bottom: '4px', backgroundColor: seasonalEnabled ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Theme Import / Export */}
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px', marginTop: '32px' }}>Import / Export</h3>
-                                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                                    <button
-                                        onClick={() => {
-                                            const themeData = {
-                                                _format: 'gratonite-theme',
-                                                _version: 1,
-                                                theme,
-                                                colorMode,
-                                                fontFamily,
-                                                fontSize,
-                                                glassMode,
-                                                buttonShape,
-                                                accentColor,
-                                                highContrast,
-                                                compactMode,
-                                                reducedEffects,
-                                                lowPower,
-                                                showChannelBackgrounds,
-                                                playMovingBackgrounds,
-                                                screenReaderMode,
-                                                linkUnderlines,
-                                                focusIndicatorSize,
-                                                colorBlindMode,
-                                            };
-                                            const blob = new Blob([JSON.stringify(themeData, null, 2)], { type: 'application/json' });
-                                            const url = URL.createObjectURL(blob);
-                                            const a = document.createElement('a');
-                                            a.href = url;
-                                            a.download = `gratonite-theme-${theme}.json`;
-                                            a.click();
-                                            URL.revokeObjectURL(url);
-                                            addToast({ title: 'Theme exported', variant: 'success' });
-                                            playSound('click');
-                                        }}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: '8px',
-                                            background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
-                                            borderRadius: '8px', padding: '10px 16px', color: 'var(--text-primary)',
-                                            cursor: 'pointer', fontSize: '14px', fontWeight: 500,
-                                        }}
-                                        onMouseOver={(e) => { e.currentTarget.style.background = 'var(--bg-elevated)'; }}
-                                        onMouseOut={(e) => { e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
-                                    >
-                                        <Download size={16} /> Export Theme
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            const input = document.createElement('input');
-                                            input.type = 'file';
-                                            input.accept = '.json,.gratonite-theme';
-                                            input.onchange = (ev) => {
-                                                const file = (ev.target as HTMLInputElement).files?.[0];
-                                                if (!file) return;
-                                                const reader = new FileReader();
-                                                reader.onload = () => {
-                                                    try {
-                                                        const data = JSON.parse(reader.result as string);
-                                                        if (!data || typeof data !== 'object') throw new Error('Invalid file');
-                                                        if (data.theme) setTheme(data.theme as AppTheme);
-                                                        if (data.colorMode) setColorMode(data.colorMode as ColorMode);
-                                                        if (data.fontFamily) setFontFamily(data.fontFamily as FontFamily);
-                                                        if (data.fontSize) setFontSize(data.fontSize as FontSize);
-                                                        if (data.glassMode) setGlassMode(data.glassMode as GlassMode);
-                                                        if (data.buttonShape) setButtonShape(data.buttonShape as ButtonShape);
-                                                        if (data.accentColor) setAccentColor(data.accentColor);
-                                                        if (typeof data.highContrast === 'boolean') setHighContrast(data.highContrast);
-                                                        if (typeof data.compactMode === 'boolean') setCompactMode(data.compactMode);
-                                                        if (typeof data.reducedEffects === 'boolean') setReducedEffects(data.reducedEffects);
-                                                        if (typeof data.lowPower === 'boolean') setLowPower(data.lowPower);
-                                                        if (typeof data.showChannelBackgrounds === 'boolean') setShowChannelBackgrounds(data.showChannelBackgrounds);
-                                                        if (typeof data.playMovingBackgrounds === 'boolean') setPlayMovingBackgrounds(data.playMovingBackgrounds);
-                                                        if (typeof data.screenReaderMode === 'boolean') setScreenReaderMode(data.screenReaderMode);
-                                                        if (typeof data.linkUnderlines === 'boolean') setLinkUnderlines(data.linkUnderlines);
-                                                        if (data.focusIndicatorSize) setFocusIndicatorSize(data.focusIndicatorSize as FocusIndicatorSize);
-                                                        if (data.colorBlindMode) setColorBlindMode(data.colorBlindMode as ColorBlindMode);
-                                                        addToast({ title: 'Theme imported successfully', variant: 'success' });
-                                                        playSound('click');
-                                                    } catch {
-                                                        addToast({ title: 'Invalid theme file', variant: 'error' });
-                                                    }
-                                                };
-                                                reader.readAsText(file);
-                                            };
-                                            input.click();
-                                        }}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: '8px',
-                                            background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
-                                            borderRadius: '8px', padding: '10px 16px', color: 'var(--text-primary)',
-                                            cursor: 'pointer', fontSize: '14px', fontWeight: 500,
-                                        }}
-                                        onMouseOver={(e) => { e.currentTarget.style.background = 'var(--bg-elevated)'; }}
-                                        onMouseOut={(e) => { e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
-                                    >
-                                        <Upload size={16} /> Import Theme
-                                    </button>
-                                </div>
-                            </>
-                        )}
-
-                        {activeTab === 'sound' && (
-                            <>
-                                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Sound</h2>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Configure UI sounds, notifications, and ambient audio.</p>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Volume Controls</h3>
-                                <div style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '12px', border: '1px solid var(--stroke)', marginBottom: '32px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                                        <div>
-                                            <div style={{ fontWeight: 600, marginBottom: '4px' }}>Mute All Sounds</div>
-                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Silence all UI sounds and notifications.</div>
-                                        </div>
-                                        <div
-                                            onClick={() => {
-                                                const next = !soundMuted;
-                                                setSoundMutedState(next);
-                                                setSoundMuted(next);
-                                            }}
-                                            style={{ width: '40px', height: '24px', background: soundMuted ? 'var(--bg-elevated)' : 'var(--success)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0, border: soundMuted ? '1px solid var(--stroke)' : 'none' }}
-                                        >
-                                            <div style={{ position: 'absolute', height: '16px', width: '16px', left: soundMuted ? '20px' : '4px', bottom: '4px', backgroundColor: 'white', transition: '.4s', borderRadius: '50%' }}></div>
-                                        </div>
-                                    </div>
-
-                                    {/* Ambient Volume */}
-                                    <div style={{ marginBottom: '20px' }}>
-                                        <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>Ambient Volume</div>
-                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>Controls background ambient sounds (lo-fi, nature, space).</div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                            <VolumeX size={16} color="var(--text-muted)" />
-                                            <input
-                                                type="range" min="0" max="1" step="0.05"
-                                                value={ambientVolume}
-                                                onChange={(e) => {
-                                                    const v = parseFloat(e.target.value);
-                                                    setAmbientVolume(v);
-                                                    localStorage.setItem('gratonite_ambient_volume', String(v));
-                                                    window.dispatchEvent(new StorageEvent('storage', { key: 'gratonite_ambient_volume', newValue: String(v) }));
-                                                }}
-                                                style={{ flex: 1, accentColor: '#8b5cf6', height: '4px', cursor: 'pointer' }}
-                                                disabled={soundMuted}
-                                            />
-                                            <Volume2 size={16} color="var(--text-muted)" />
-                                            <span style={{ fontSize: '13px', color: 'var(--text-muted)', minWidth: '32px', textAlign: 'right' }}>{Math.round(ambientVolume * 100)}%</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Notification Volume */}
-                                    <div>
-                                        <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>Notification Volume</div>
-                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>Controls message, mention, and join/leave sounds.</div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                            <VolumeX size={16} color="var(--text-muted)" />
-                                            <input
-                                                type="range" min="0" max="1" step="0.05"
-                                                value={notificationVolume}
-                                                onChange={(e) => {
-                                                    const v = parseFloat(e.target.value);
-                                                    setNotificationVolume(v);
-                                                    localStorage.setItem('gratonite_notification_volume', String(v));
-                                                    window.dispatchEvent(new StorageEvent('storage', { key: 'gratonite_notification_volume', newValue: String(v) }));
-                                                    // Also sync to the global sound volume for backward compatibility
-                                                    setSoundVolumeState(v);
-                                                    setSoundVolume(v);
-                                                    saveSettingsToApi({ soundVolume: Math.round(v * 100) });
-                                                }}
-                                                style={{ flex: 1, accentColor: 'var(--accent-primary)', height: '4px', cursor: 'pointer' }}
-                                                disabled={soundMuted}
-                                            />
-                                            <Volume2 size={16} color="var(--text-muted)" />
-                                            <span style={{ fontSize: '13px', color: 'var(--text-muted)', minWidth: '32px', textAlign: 'right' }}>{Math.round(notificationVolume * 100)}%</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Sound Pack</h3>
-                                <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '32px' }}>
-                                    {[
-                                        { id: 'default', label: 'Default', desc: 'Clean modern tones', icon: '🎵' },
-                                        { id: 'soft', label: 'Soft', desc: 'Gentle, quiet sounds', icon: '🌿' },
-                                        { id: 'retro', label: 'Retro', desc: '8-bit chiptune vibes', icon: '👾' },
-                                    ].map(pack => {
-                                        const isSelected = soundPack === pack.id;
-                                        return (
-                                            <div
-                                                key={pack.id}
-                                                onClick={() => {
-                                                    setSoundPackState(pack.id);
-                                                    setSoundPack(pack.id);
-                                                    if (!soundMuted) playSound('notification');
-                                                }}
-                                                style={{
-                                                    background: isSelected ? 'rgba(82, 109, 245, 0.1)' : 'var(--bg-tertiary)',
-                                                    border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--stroke)'}`,
-                                                    borderRadius: '12px',
-                                                    padding: '20px 16px',
-                                                    cursor: 'pointer',
-                                                    textAlign: 'center',
-                                                    transition: 'all 0.2s',
-                                                    position: 'relative',
-                                                }}
-                                            >
-                                                <div style={{ fontSize: '28px', marginBottom: '8px' }}>{pack.icon}</div>
-                                                <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '4px', color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{pack.label}</div>
-                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{pack.desc}</div>
-                                                {isSelected && (
-                                                    <div style={{ position: 'absolute', top: 8, right: 8, background: 'var(--accent-primary)', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                        <Check size={11} color="#000" />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Ambient Sound</h3>
-                                <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '32px' }}>
-                                    {[
-                                        { id: 'off', label: 'Off', desc: 'No ambient audio', color: 'var(--text-muted)' },
-                                        { id: 'lofi', label: 'Lo-fi', desc: 'Warm chord pad', color: '#8b5cf6' },
-                                        { id: 'nature', label: 'Nature', desc: 'Wind & birdsong', color: '#10b981' },
-                                        { id: 'space', label: 'Space', desc: 'Deep space drone', color: '#526df5' },
-                                    ].map(amb => {
-                                        const isSelected = ambientMode === amb.id;
-                                        return (
-                                            <div
-                                                key={amb.id}
-                                                onClick={() => {
-                                                    setAmbientMode(amb.id);
-                                                    localStorage.setItem('gratonite_ambient_mode', amb.id);
-                                                    window.dispatchEvent(new CustomEvent('ambient-mode-change', { detail: amb.id }));
-                                                }}
-                                                style={{
-                                                    background: isSelected ? `${amb.color}15` : 'var(--bg-tertiary)',
-                                                    border: `2px solid ${isSelected ? amb.color : 'var(--stroke)'}`,
-                                                    borderRadius: '12px',
-                                                    padding: '16px 10px',
-                                                    cursor: 'pointer',
-                                                    textAlign: 'center',
-                                                    transition: 'all 0.2s',
-                                                    position: 'relative',
-                                                }}
-                                            >
-                                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: isSelected ? `${amb.color}25` : 'var(--bg-elevated)', border: `1.5px solid ${isSelected ? amb.color : 'var(--stroke)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', color: amb.color, fontSize: '14px' }}>
-                                                    {amb.id === 'off' ? '✕' : amb.id === 'lofi' ? '♪' : amb.id === 'nature' ? '🍃' : '✦'}
-                                                </div>
-                                                <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: '2px', color: isSelected ? amb.color : 'var(--text-primary)' }}>{amb.label}</div>
-                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{amb.desc}</div>
-                                                {isSelected && amb.id !== 'off' && (
-                                                    <div style={{ position: 'absolute', top: 6, right: 6, background: amb.color, borderRadius: '50%', width: '8px', height: '8px', boxShadow: `0 0 8px ${amb.color}80` }}></div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Sound Events</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                    {[
-                                        { label: 'Message Sent', desc: 'Play a sound when you send a message', key: 'messageSend' },
-                                        { label: 'Notification', desc: 'Play a sound when you receive a notification', key: 'notification' },
-                                        { label: 'Mention', desc: 'Alert sound when someone mentions you', key: 'mention' },
-                                        { label: 'User Join/Leave', desc: 'Sounds for users entering or leaving voice channels', key: 'join' },
-                                    ].map(ev => (
-                                        <div key={ev.key} style={{ background: 'var(--bg-tertiary)', padding: '14px 16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                            <div>
-                                                <div style={{ fontWeight: 600, fontSize: '14px' }}>{ev.label}</div>
-                                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{ev.desc}</div>
-                                            </div>
-                                            <button
-                                                onClick={() => { if (!soundMuted) playSound(ev.key as any); }}
-                                                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', padding: '6px 12px', borderRadius: '6px', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
-                                            >
-                                                Preview ▶
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div style={{ height: '1px', background: 'var(--stroke)', margin: '32px 0' }} />
-
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Voice Processing</h3>
-                                <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px' }}>
-                                        <div>
-                                            <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>Noise Suppression</div>
-                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.4' }}>Filters background noise from your microphone using Web Audio processing.</div>
-                                        </div>
-                                        <div
-                                            onClick={() => {
-                                                const next = !noiseSuppressionEnabled;
-                                                setNoiseSuppressionEnabledState(next);
-                                                try { localStorage.setItem('noiseSuppression', String(next)); } catch {}
-                                            }}
-                                            style={{
-                                                width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', flexShrink: 0,
-                                                background: noiseSuppressionEnabled ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                                                border: `1px solid ${noiseSuppressionEnabled ? 'transparent' : 'var(--stroke)'}`,
-                                                position: 'relative', transition: 'background 0.2s ease',
-                                            }}
-                                        >
-                                            <div style={{
-                                                width: '18px', height: '18px', borderRadius: '50%', background: 'white',
-                                                position: 'absolute', top: '2px', left: noiseSuppressionEnabled ? '22px' : '2px',
-                                                transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                                            }} />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Email Notifications */}
-                                <div style={{ height: '1px', background: 'var(--stroke)', margin: '24px 0' }} />
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Email Notifications</h3>
-                                <div style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '12px', border: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                                        <input type="checkbox" checked={emailMentions} onChange={e => {
-                                            setEmailMentions(e.target.checked);
-                                            api.users.updateSettings({ emailNotifications: { mentions: e.target.checked, dms: emailDms, frequency: emailFrequency } }).catch(() => {});
-                                        }} style={{ accentColor: 'var(--accent-primary)' }} />
-                                        Email when mentioned while offline
-                                    </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                                        <input type="checkbox" checked={emailDms} onChange={e => {
-                                            setEmailDms(e.target.checked);
-                                            api.users.updateSettings({ emailNotifications: { mentions: emailMentions, dms: e.target.checked, frequency: emailFrequency } }).catch(() => {});
-                                        }} style={{ accentColor: 'var(--accent-primary)' }} />
-                                        Email for DMs while offline
-                                    </label>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>
-                                        <span>Frequency:</span>
-                                        <select
-                                            value={emailFrequency}
-                                            onChange={e => {
-                                                const val = e.target.value as 'instant' | 'daily' | 'never';
-                                                setEmailFrequency(val);
-                                                api.users.updateSettings({ emailNotifications: { mentions: emailMentions, dms: emailDms, frequency: val } }).catch(() => {});
-                                            }}
-                                            style={{ padding: '6px 10px', borderRadius: '6px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer' }}
-                                        >
-                                            <option value="instant">Instant</option>
-                                            <option value="daily">Daily Digest</option>
-                                            <option value="never">Never</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </>
-                        )}
+                        {activeTab === 'sound' && <SettingsSoundTab addToast={addToast} />}
                         {activeTab === 'privacy' && <SettingsPrivacyTab addToast={addToast} userProfile={userProfile} onNavigateTab={(tab) => setActiveTab(tab as typeof activeTab)} />}
                         {activeTab === 'connections' && <SettingsConnectionsTab addToast={addToast} />}
                         {activeTab === 'feedback' && <SettingsFeedbackTab addToast={addToast} />}
@@ -2896,6 +1682,18 @@ const SettingsModal = ({
                         })()}
 
                         {activeTab === 'stats' && <SettingsStatsTab />}
+
+                        {/* Notifications (push + email) */}
+                        {activeTab === 'notifications' && <SettingsNotificationsPanel />}
+
+                        {/* Muted Users */}
+                        {activeTab === 'muted-users' && <SettingsMutedUsersPanel addToast={addToast} />}
+
+                        {/* Referrals */}
+                        {activeTab === 'referrals' && <SettingsReferralsPanel addToast={addToast} />}
+
+                        {/* Developer / OAuth Apps */}
+                        {activeTab === 'developer' && <SettingsDeveloperPanel addToast={addToast} />}
                     </div>
                 </div>
             </div>
@@ -2927,5 +1725,421 @@ const SettingsModal = ({
         </>
     );
 };
+
+// ---------------------------------------------------------------------------
+// Notifications Panel (push + email prefs) — Items 22 & 23
+// ---------------------------------------------------------------------------
+function SettingsNotificationsPanel() {
+    const [pushEnabled, setPushEnabled] = useState(false);
+    const [pushSupported] = useState(() => 'serviceWorker' in navigator && 'PushManager' in window);
+    const [emailPrefs, setEmailPrefs] = useState<{ mentions: boolean; dms: boolean; frequency: 'instant' | 'daily' | 'never' }>({ mentions: true, dms: true, frequency: 'daily' });
+
+    useEffect(() => {
+        // Check push subscription status
+        if (pushSupported && navigator.serviceWorker.ready) {
+            navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription()).then(sub => {
+                setPushEnabled(!!sub);
+            }).catch(() => {});
+        }
+        // Load email prefs from settings
+        api.users.getSettings().then((s: any) => {
+            if (s?.emailNotifications) setEmailPrefs(prev => ({ ...prev, ...s.emailNotifications }));
+        }).catch(() => {});
+    }, []);
+
+    const togglePush = async () => {
+        try {
+            if (pushEnabled) {
+                const reg = await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.getSubscription();
+                if (sub) {
+                    await api.push.unsubscribe(sub.endpoint);
+                    await sub.unsubscribe();
+                }
+                setPushEnabled(false);
+            } else {
+                const { key } = await api.push.getVapidPublicKey();
+                if (!key) return;
+                const reg = await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: Uint8Array.from(atob(key.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)),
+                });
+                const json = sub.toJSON();
+                await api.push.subscribe({ endpoint: json.endpoint, p256dh: json.keys?.p256dh, auth: json.keys?.auth });
+                setPushEnabled(true);
+            }
+        } catch { /* ignore */ }
+    };
+
+    const updateEmailPref = (key: keyof typeof emailPrefs, value: any) => {
+        const next = { ...emailPrefs, [key]: value };
+        setEmailPrefs(next);
+        api.users.updateSettings({ emailNotifications: next }).catch(() => {});
+    };
+
+    return (
+        <>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Notifications</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Control how and when you receive notifications.</p>
+
+            <div style={{ marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Push Notifications</h3>
+                <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '4px' }}>Enable Push Notifications</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                            {pushSupported ? 'Receive notifications even when Gratonite is closed.' : 'Push notifications are not supported by your browser.'}
+                        </div>
+                    </div>
+                    <div
+                        onClick={pushSupported ? togglePush : undefined}
+                        style={{
+                            width: '44px', height: '24px', borderRadius: '12px', cursor: pushSupported ? 'pointer' : 'not-allowed',
+                            background: pushEnabled ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                            border: `1px solid ${pushEnabled ? 'transparent' : 'var(--stroke)'}`,
+                            position: 'relative', transition: 'background 0.2s ease', flexShrink: 0,
+                            opacity: pushSupported ? 1 : 0.5,
+                        }}
+                    >
+                        <div style={{
+                            width: '18px', height: '18px', borderRadius: '50%', background: 'white',
+                            position: 'absolute', top: '2px', left: pushEnabled ? '22px' : '2px',
+                            transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                        }} />
+                    </div>
+                </div>
+            </div>
+
+            <div style={{ marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Email Notifications</h3>
+                <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
+                    <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '4px' }}>Mentions</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Receive email when someone mentions you.</div>
+                        </div>
+                        <div onClick={() => updateEmailPref('mentions', !emailPrefs.mentions)} style={{ width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', background: emailPrefs.mentions ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: `1px solid ${emailPrefs.mentions ? 'transparent' : 'var(--stroke)'}`, position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                            <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: emailPrefs.mentions ? '22px' : '2px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+                        </div>
+                    </div>
+                    <div style={{ height: '1px', background: 'var(--stroke)' }} />
+                    <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '4px' }}>Direct Messages</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Receive email for unread direct messages.</div>
+                        </div>
+                        <div onClick={() => updateEmailPref('dms', !emailPrefs.dms)} style={{ width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', background: emailPrefs.dms ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: `1px solid ${emailPrefs.dms ? 'transparent' : 'var(--stroke)'}`, position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                            <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: emailPrefs.dms ? '22px' : '2px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+                        </div>
+                    </div>
+                    <div style={{ height: '1px', background: 'var(--stroke)' }} />
+                    <div style={{ padding: '16px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '8px' }}>Email Frequency</div>
+                        <select value={emailPrefs.frequency} onChange={e => updateEmailPref('frequency', e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}>
+                            <option value="instant">Instant</option>
+                            <option value="daily">Daily Digest</option>
+                            <option value="never">Never</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            {/* Item 86: DND Schedule */}
+            <div style={{ marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Do Not Disturb Schedule</h3>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>Automatically enter DND mode during set hours.</p>
+                <DndSchedulePanel />
+            </div>
+        </>
+    );
+}
+
+// Item 86: DND Schedule Panel
+function DndSchedulePanel() {
+    const [enabled, setEnabled] = useState(false);
+    const [startHour, setStartHour] = useState(22);
+    const [startMinute, setStartMinute] = useState(0);
+    const [endHour, setEndHour] = useState(7);
+    const [endMinute, setEndMinute] = useState(0);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        api.get<any>('/users/@me/settings').then((s: any) => {
+            if (s?.dndSchedule) {
+                setEnabled(s.dndSchedule.enabled ?? false);
+                setStartHour(s.dndSchedule.startHour ?? 22);
+                setStartMinute(s.dndSchedule.startMinute ?? 0);
+                setEndHour(s.dndSchedule.endHour ?? 7);
+                setEndMinute(s.dndSchedule.endMinute ?? 0);
+            }
+        }).catch(() => {});
+    }, []);
+
+    const save = async () => {
+        setSaving(true);
+        try {
+            await api.patch('/users/@me/settings', {
+                dndSchedule: { enabled, startHour, startMinute, endHour, endMinute, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+            });
+        } catch {} finally { setSaving(false); }
+    };
+
+    const timeInput = { padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', width: '60px', textAlign: 'center' as const };
+
+    return (
+        <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', padding: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
+                <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 500 }}>Enable DND Schedule</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Automatically suppress notifications during these hours.</div>
+                </div>
+                <div onClick={() => { setEnabled(!enabled); setTimeout(save, 100); }} style={{ width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', background: enabled ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: `1px solid ${enabled ? 'transparent' : 'var(--stroke)'}`, position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: enabled ? '22px' : '2px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+                </div>
+            </div>
+            {enabled && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>From</span>
+                    <input type="number" min={0} max={23} value={startHour} onChange={e => setStartHour(+e.target.value)} style={timeInput} />
+                    <span>:</span>
+                    <input type="number" min={0} max={59} value={startMinute} onChange={e => setStartMinute(+e.target.value)} style={timeInput} />
+                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)', marginLeft: '8px' }}>To</span>
+                    <input type="number" min={0} max={23} value={endHour} onChange={e => setEndHour(+e.target.value)} style={timeInput} />
+                    <span>:</span>
+                    <input type="number" min={0} max={59} value={endMinute} onChange={e => setEndMinute(+e.target.value)} style={timeInput} />
+                    <button onClick={save} disabled={saving} style={{ marginLeft: 'auto', padding: '6px 16px', borderRadius: '6px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 600, cursor: 'pointer', fontSize: '12px' }}>
+                        {saving ? '...' : 'Save'}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Muted Users Panel — Item 12
+// ---------------------------------------------------------------------------
+function SettingsMutedUsersPanel({ addToast }: { addToast: (t: any) => void }) {
+    const [mutedUsers, setMutedUsers] = useState<Array<{ mutedUserId: string; username: string; displayName: string; avatarHash: string | null; createdAt: string }>>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        api.mutes.list().then(data => setMutedUsers(Array.isArray(data) ? data : [])).catch(() => {}).finally(() => setLoading(false));
+    }, []);
+
+    const handleUnmute = async (userId: string) => {
+        try {
+            await api.mutes.unmute(userId);
+            setMutedUsers(prev => prev.filter(u => u.mutedUserId !== userId));
+            addToast({ title: 'User unmuted', variant: 'success' });
+        } catch {
+            addToast({ title: 'Failed to unmute user', variant: 'error' });
+        }
+    };
+
+    return (
+        <>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Muted Users</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Muted users will not be able to send you notifications. Their messages will still appear, but grayed out.</p>
+
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
+            ) : mutedUsers.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
+                    <VolumeX size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
+                    <p style={{ fontSize: '16px', fontWeight: 600, margin: 0 }}>No muted users</p>
+                    <p style={{ fontSize: '13px', marginTop: '4px' }}>Right-click a user and select "Mute" to add them here.</p>
+                </div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {mutedUsers.map(u => (
+                        <div key={u.mutedUserId} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'var(--bg-tertiary)', borderRadius: '10px', border: '1px solid var(--stroke)' }}>
+                            <Avatar userId={u.mutedUserId} avatarHash={u.avatarHash} displayName={u.displayName} size={36} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{u.displayName}</div>
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>@{u.username} — muted {new Date(u.createdAt).toLocaleDateString()}</div>
+                            </div>
+                            <button onClick={() => handleUnmute(u.mutedUserId)} style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>
+                                Unmute
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Referrals Panel — Item 20
+// ---------------------------------------------------------------------------
+function SettingsReferralsPanel({ addToast }: { addToast: (t: any) => void }) {
+    const [data, setData] = useState<{ code: string; referralLink: string; count: number } | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        api.referrals.get().then(setData).catch(() => {}).finally(() => setLoading(false));
+    }, []);
+
+    const copyLink = () => {
+        if (data?.referralLink) {
+            navigator.clipboard.writeText(data.referralLink).catch(() => {});
+            addToast({ title: 'Referral link copied!', variant: 'success' });
+        }
+    };
+
+    return (
+        <>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Referrals</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Invite friends to Gratonite and track your referrals.</p>
+
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
+            ) : data ? (
+                <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--stroke)', padding: '24px' }}>
+                    <div style={{ fontSize: '48px', fontWeight: 800, color: 'var(--accent-primary)', marginBottom: '8px' }}>{data.count}</div>
+                    <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px' }}>people joined using your link</div>
+
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>YOUR REFERRAL LINK</label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <input type="text" readOnly value={data.referralLink} style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }} />
+                            <button onClick={copyLink} style={{ padding: '10px 16px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Copy size={14} /> Copy
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style={{ padding: '12px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '8px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                        Share your referral link with friends. When they sign up and join their first server, you'll both get credit.
+                    </div>
+                </div>
+            ) : (
+                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Failed to load referral data.</div>
+            )}
+        </>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Developer / OAuth Apps Panel — Item 15
+// ---------------------------------------------------------------------------
+function SettingsDeveloperPanel({ addToast }: { addToast: (t: any) => void }) {
+    const [apps, setApps] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [showCreate, setShowCreate] = useState(false);
+    const [newName, setNewName] = useState('');
+    const [newDesc, setNewDesc] = useState('');
+    const [newRedirectUris, setNewRedirectUris] = useState('');
+    const [createdSecret, setCreatedSecret] = useState<string | null>(null);
+
+    useEffect(() => {
+        api.oauthApps.list().then(data => setApps(Array.isArray(data) ? data : [])).catch(() => {}).finally(() => setLoading(false));
+    }, []);
+
+    const handleCreate = async () => {
+        if (!newName.trim()) return;
+        try {
+            const app = await api.oauthApps.create({
+                name: newName.trim(),
+                description: newDesc.trim() || undefined,
+                redirectUris: newRedirectUris.split('\n').map(s => s.trim()).filter(Boolean),
+                scopes: ['identify', 'guilds'],
+            });
+            setApps(prev => [...prev, app]);
+            setCreatedSecret(app.clientSecret || null);
+            setNewName('');
+            setNewDesc('');
+            setNewRedirectUris('');
+            setShowCreate(false);
+            addToast({ title: 'Application created', variant: 'success' });
+        } catch {
+            addToast({ title: 'Failed to create application', variant: 'error' });
+        }
+    };
+
+    const handleDelete = async (appId: string) => {
+        try {
+            await api.oauthApps.remove(appId);
+            setApps(prev => prev.filter(a => a.id !== appId));
+            addToast({ title: 'Application deleted', variant: 'success' });
+        } catch {
+            addToast({ title: 'Failed to delete application', variant: 'error' });
+        }
+    };
+
+    return (
+        <>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Applications</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>Create and manage OAuth2 applications for integrations and bots.</p>
+
+            {createdSecret && (
+                <div style={{ padding: '16px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '10px', border: '1px solid rgba(34, 197, 94, 0.3)', marginBottom: '24px' }}>
+                    <div style={{ fontWeight: 600, fontSize: '14px', color: '#22c55e', marginBottom: '8px' }}>Client Secret (copy now — won't be shown again)</div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <code style={{ flex: 1, padding: '8px', background: 'var(--bg-primary)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-primary)', wordBreak: 'break-all' }}>{createdSecret}</code>
+                        <button onClick={() => { navigator.clipboard.writeText(createdSecret).catch(() => {}); addToast({ title: 'Secret copied', variant: 'success' }); }} style={{ padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px' }}>Copy</button>
+                    </div>
+                    <button onClick={() => setCreatedSecret(null)} style={{ marginTop: '8px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '12px' }}>Dismiss</button>
+                </div>
+            )}
+
+            <button onClick={() => setShowCreate(!showCreate)} style={{ padding: '10px 18px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: 600, marginBottom: '24px' }}>
+                + New Application
+            </button>
+
+            {showCreate && (
+                <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--stroke)', padding: '20px', marginBottom: '24px' }}>
+                    <div style={{ marginBottom: '12px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>NAME</label>
+                        <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="My Application" style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <div style={{ marginBottom: '12px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>DESCRIPTION</label>
+                        <textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="What does your app do?" rows={2} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>REDIRECT URIS (one per line)</label>
+                        <textarea value={newRedirectUris} onChange={e => setNewRedirectUris(e.target.value)} placeholder="https://example.com/callback" rows={2} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={handleCreate} style={{ padding: '8px 18px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>Create</button>
+                        <button onClick={() => setShowCreate(false)} style={{ padding: '8px 18px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+                    </div>
+                </div>
+            )}
+
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
+            ) : apps.length === 0 && !showCreate ? (
+                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
+                    <p style={{ fontSize: '16px', fontWeight: 600, margin: '0 0 4px' }}>No applications yet</p>
+                    <p style={{ fontSize: '13px', margin: 0 }}>Create an OAuth2 application to get started.</p>
+                </div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {apps.map(app => (
+                        <div key={app.id} style={{ padding: '16px', background: 'var(--bg-tertiary)', borderRadius: '10px', border: '1px solid var(--stroke)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                <div>
+                                    <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>{app.name}</div>
+                                    {app.description && <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>{app.description}</div>}
+                                </div>
+                                <button onClick={() => handleDelete(app.id)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', padding: '4px' }}>
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                <div style={{ marginBottom: '4px' }}>Client ID: <code style={{ color: 'var(--text-secondary)' }}>{app.clientId}</code></div>
+                                {app.redirectUris?.length > 0 && <div>Redirect URIs: {app.redirectUris.join(', ')}</div>}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </>
+    );
+}
 
 export default SettingsModal;

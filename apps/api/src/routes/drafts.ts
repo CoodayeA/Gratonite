@@ -7,6 +7,19 @@ import { requireAuth } from '../middleware/auth';
 
 export const draftsRouter = Router({ mergeParams: true });
 
+// GET /users/@me/drafts — list all drafts for the current user
+draftsRouter.get('/users/@me/drafts', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const drafts = await db.select()
+      .from(messageDrafts)
+      .where(eq(messageDrafts.userId, req.userId!));
+    res.json(drafts);
+  } catch (err) {
+    logger.error('[drafts] GET all error:', err);
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
 // GET /channels/:channelId/draft — get user's draft for this channel
 draftsRouter.get('/channels/:channelId/draft', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {

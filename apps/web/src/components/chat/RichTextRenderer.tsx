@@ -243,6 +243,25 @@ function applyRemainingRules(text: string, ctx: InlineCtx, _startRule: number, d
 function renderLeaf(text: string, ctx: InlineCtx, depth: number): React.ReactNode[] {
     const kp = `${ctx.keyPrefix}-leaf${depth}`;
 
+    // Item 87: @everyone / @here highlight
+    const everyoneRe = /(@everyone|@here)/g;
+    if (everyoneRe.test(text)) {
+        const parts = text.split(/(@everyone|@here)/g);
+        const result: React.ReactNode[] = [];
+        parts.forEach((part, i) => {
+            if (part === '@everyone' || part === '@here') {
+                result.push(
+                    <span key={`${kp}-everyone-${i}`} className="mention" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', fontWeight: 600 }}>
+                        {part}
+                    </span>
+                );
+            } else if (part) {
+                result.push(...renderLeaf(part, { ...ctx, keyPrefix: `${kp}-ev-${i}` }, depth + 1));
+            }
+        });
+        return result;
+    }
+
     // Parse <@userId> user mentions
     const userMentionRe = /<@([a-zA-Z0-9_-]+)>/g;
     if (userMentionRe.test(text)) {

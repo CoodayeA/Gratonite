@@ -12,10 +12,11 @@
 
 import { Router, Request, Response } from 'express';
 import { logger } from '../lib/logger';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 
 import { db } from '../db/index';
 import { webhooks } from '../db/schema/webhooks';
+import { webhookDeliveryLogs } from '../db/schema/webhook-delivery-logs';
 import { channels } from '../db/schema/channels';
 import { messages } from '../db/schema/messages';
 import { guildMembers } from '../db/schema/guilds';
@@ -249,6 +250,49 @@ webhooksRouter.post(
     } catch (err) {
       logger.error('[webhooks] execute error:', err);
       res.status(500).json({ error: 'Webhook execution failed' });
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// GET /webhooks/:webhookId/deliveries — delivery logs (auth required)
+// ---------------------------------------------------------------------------
+
+webhooksRouter.get(
+  '/webhooks/:webhookId/deliveries',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const webhookId = req.params.webhookId as string;
+      const [webhook] = await db
+        .select()
+        .from(webhooks)
+        .where(eq(webhooks.id, webhookId))
+        .limit(1);
+      if (!webhook) {
+        res.status(404).json({ code: 'NOT_FOUND', message: 'Webhook not found' });
+        return;
+      }
+      // Verify membership
+      const [member] = await db
+        .select()
+        .from(guildMembers)
+        .where(and(eq(guildMembers.guildId, webhook.guildId), eq(guildMembers.userId, req.userId!)))
+        .limit(1);
+      if (!member) {
+        res.status(403).json({ code: 'FORBIDDEN', message: 'Not a member' });
+        return;
+      }
+      const logs = await db
+        .select()
+        .from(webhookDeliveryLogs)
+        .where(eq(webhookDeliveryLogs.webhookId, webhookId))
+        .orderBy(desc(webhookDeliveryLogs.attemptedAt))
+        .limit(50);
+      res.json(logs);
+    } catch (err) {
+      logger.error('[webhooks] delivery logs error:', err);
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
 );

@@ -7,7 +7,7 @@ import {
     Volume2, Trash2, Copy, Pin, Share2, Link2, FileText, Download,
     Pause, MessageSquare, MoreHorizontal, Square, Plus, Mic, BarChart2, Clock, Users,
     ThumbsUp, Star, Flag, Edit2, Search, ChevronUp, ChevronDown, Eye, ChevronLeft, ChevronRight,
-    BookOpen, User as UserIcon, Ban, ShieldAlert, VolumeX
+    BookOpen, User as UserIcon, Ban, ShieldAlert, VolumeX, Zap, Megaphone, Rss, Bell, BellOff, Code
 } from 'lucide-react';
 import Skeleton from '../../components/ui/Skeleton';
 import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
@@ -134,6 +134,9 @@ import EmojiPicker from '../../components/chat/EmojiPicker';
 import ChatPoll from '../../components/chat/ChatPoll';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { RichTextRenderer } from '../../components/chat/RichTextRenderer';
+import { MessageLinkPreview } from '../../components/chat/MessageLinkPreview';
+import { addRecentChannel } from '../../components/guild/RecentChannels';
+import { SharedMediaGallery } from '../../components/guild/SharedMediaGallery';
 import { Tooltip } from '../../components/ui/Tooltip';
 import ForwardModal from '../../components/modals/ForwardModal';
 import EditHistoryPopover from '../../components/chat/EditHistoryPopover';
@@ -145,7 +148,77 @@ import { EmbedBuilder, type CustomEmbed } from '../../components/chat/EmbedBuild
 import { ChannelWelcomeCard } from '../../components/chat/ChannelWelcomeCard';
 import { VoiceMessagePlayer } from '../../components/chat/VoiceMessagePlayer';
 import { JumpToDatePicker } from '../../components/chat/JumpToDatePicker';
-import { Languages, Calendar } from 'lucide-react';
+import { BUILTIN_COMMANDS, TEXT_COMMANDS, parseRemindTime } from '../../components/chat/SlashCommandPalette';
+import { RemindersList } from '../../components/chat/RemindersList';
+import { GifReactionPicker } from '../../components/chat/GifReactionPicker';
+import { Languages, Calendar, Timer } from 'lucide-react';
+import ForumView from '../../components/chat/ForumView';
+
+/** Item 91: Auto-collapse long messages */
+const CollapsibleMessage = ({ content, threshold = 10, children }: { content: string; threshold?: number; children: React.ReactNode }) => {
+    const [collapsed, setCollapsed] = useState(true);
+    const lineCount = (content || '').split('\n').length;
+    const isLong = lineCount > threshold;
+
+    if (!isLong) {
+        return <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.5' }}>{children}</div>;
+    }
+
+    return (
+        <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.5', position: 'relative' }}>
+            <div style={{
+                maxHeight: collapsed ? `${threshold * 1.5}em` : 'none',
+                overflow: 'hidden',
+                transition: 'max-height 0.3s ease',
+            }}>
+                {children}
+            </div>
+            {collapsed && (
+                <div style={{
+                    position: 'absolute', bottom: 0, left: 0, right: 0, height: '3em',
+                    background: 'linear-gradient(transparent, var(--bg-primary))',
+                    pointerEvents: 'none',
+                }} />
+            )}
+            <button
+                onClick={(e) => { e.stopPropagation(); setCollapsed(!collapsed); }}
+                style={{
+                    background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                    borderRadius: '4px', padding: '2px 10px', fontSize: '11px', fontWeight: 600,
+                    color: 'var(--accent-primary)', cursor: 'pointer', marginTop: collapsed ? '-8px' : '4px',
+                    position: 'relative', zIndex: 1,
+                }}
+            >
+                {collapsed ? `Show more (${lineCount} lines)` : 'Show less'}
+            </button>
+        </div>
+    );
+};
+
+/** Disappearing message countdown component */
+const DisappearCountdown = ({ expiresAt }: { expiresAt: string }) => {
+    const [remaining, setRemaining] = useState('');
+    useEffect(() => {
+        const tick = () => {
+            const diff = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
+            if (diff <= 0) { setRemaining('expiring...'); return; }
+            if (diff < 60) setRemaining(`${diff}s`);
+            else if (diff < 3600) setRemaining(`${Math.floor(diff / 60)}m`);
+            else if (diff < 86400) setRemaining(`${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`);
+            else setRemaining(`${Math.floor(diff / 86400)}d ${Math.floor((diff % 86400) / 3600)}h`);
+        };
+        tick();
+        const iv = setInterval(tick, diff() < 60 ? 1000 : 60000);
+        function diff() { return Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)); }
+        return () => clearInterval(iv);
+    }, [expiresAt]);
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', fontSize: '10px', color: 'var(--text-muted)' }}>
+            <Timer size={10} />
+            <span>Disappears in {remaining}</span>
+        </div>
+    );
+};
 
 const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApiId, channelId, onReaction }: { emoji: string; emojiUrl?: string; isCustom?: boolean; count: number; me: boolean; messageApiId?: string; channelId?: string; onReaction?: (apiId: string, emoji: string, me: boolean) => void }) => {
     const [tooltip, setTooltip] = useState<{ users: Array<{ id?: string; displayName?: string; username: string; avatarHash?: string | null }>; total: number } | null>(null);
@@ -206,6 +279,78 @@ const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApiId, cha
     );
 };
 
+// Inline code file preview component
+const CodeFilePreview = ({ url, filename, sizeStr }: { url: string; filename: string; sizeStr: string }) => {
+    const [code, setCode] = useState<string | null>(null);
+    const [collapsed, setCollapsed] = useState(false);
+    const [loadError, setLoadError] = useState(false);
+
+    useEffect(() => {
+        fetch(url)
+            .then(r => {
+                if (!r.ok) throw new Error('fetch failed');
+                return r.text();
+            })
+            .then(text => setCode(text.slice(0, 8000)))
+            .catch(() => setLoadError(true));
+    }, [url]);
+
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+
+    if (loadError || code === null) {
+        return (
+            <a href={url} download={filename} target="_blank" rel="noopener noreferrer" style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '10px 14px', background: 'var(--bg-tertiary)',
+                border: '1px solid var(--stroke)', borderRadius: '8px',
+                textDecoration: 'none', color: 'var(--text-primary)',
+                maxWidth: '320px', cursor: 'pointer',
+            }}>
+                <FileText size={20} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--accent-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{filename}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{loadError ? 'Preview unavailable' : 'Loading...'} · {sizeStr}</div>
+                </div>
+            </a>
+        );
+    }
+
+    const lines = code.split('\n');
+    const displayLines = collapsed ? [] : lines.slice(0, 25);
+    const truncated = lines.length > 25;
+
+    return (
+        <div style={{ maxWidth: '520px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', borderBottom: '1px solid var(--stroke)', background: 'var(--bg-secondary)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <Code size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{filename}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>{sizeStr}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                    <button onClick={() => setCollapsed(!collapsed)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px', padding: 0 }}>{collapsed ? 'Expand' : 'Collapse'}</button>
+                    <a href={url} download={filename} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', fontSize: '12px', textDecoration: 'none', fontWeight: 500 }}>Download</a>
+                </div>
+            </div>
+            {!collapsed && (
+                <pre style={{ margin: 0, padding: '10px 12px', fontSize: '12px', lineHeight: '1.5', fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-primary)', overflowX: 'auto', maxHeight: '350px', overflowY: 'auto', whiteSpace: 'pre' }}>
+                    <code>{displayLines.map((line, i) => (
+                        <div key={i} style={{ display: 'flex' }}>
+                            <span style={{ color: 'var(--text-muted)', minWidth: '3ch', textAlign: 'right', marginRight: '12px', userSelect: 'none', flexShrink: 0, opacity: 0.5 }}>{i + 1}</span>
+                            <span>{line}</span>
+                        </div>
+                    ))}</code>
+                    {truncated && (
+                        <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontStyle: 'italic', marginTop: '4px', paddingLeft: '3ch' }}>
+                            ... {lines.length - 25} more lines
+                        </div>
+                    )}
+                </pre>
+            )}
+        </div>
+    );
+};
+
 const MemoizedMessageItem = memo(({
     msg,
     prevMsg,
@@ -236,7 +381,14 @@ const MemoizedMessageItem = memo(({
     compactMode,
     isNewMessageDivider,
     decryptedFileUrls = new Map(),
+    editingMessageApiId,
+    editContent,
+    setEditContent,
+    onEditSubmit,
+    onEditCancel,
 }: any) => {
+    const isBeingEdited = editingMessageApiId === msg.apiId;
+    const inlineEditRef = useRef<HTMLTextAreaElement>(null);
     const [isHovered, setIsHovered] = useState(false);
     const [famGiven, setFamGiven] = useState(false);
     const [showFameSparkle, setShowFameSparkle] = useState(false);
@@ -261,6 +413,17 @@ const MemoizedMessageItem = memo(({
     const cancelUserPrefetch = useCallback(() => {
         if (userPrefetchTimer.current) { clearTimeout(userPrefetchTimer.current); userPrefetchTimer.current = null; }
     }, []);
+
+    // Auto-focus and auto-resize inline edit textarea
+    useEffect(() => {
+        if (isBeingEdited && inlineEditRef.current) {
+            const ta = inlineEditRef.current;
+            ta.focus();
+            ta.selectionStart = ta.selectionEnd = ta.value.length;
+            ta.style.height = 'auto';
+            ta.style.height = ta.scrollHeight + 'px';
+        }
+    }, [isBeingEdited]);
 
     // Close reaction picker on click-outside
     useEffect(() => {
@@ -305,8 +468,19 @@ const MemoizedMessageItem = memo(({
         msg.createdAt && prevMsg.createdAt &&
         new Date(msg.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() < 5 * 60 * 1000);
 
-    // Feature 3: Mention highlight detection
+    // Feature 3 + Item 87: Mention highlight detection (personal + @everyone/@here)
     const isMentioned = Boolean(
+        msg.content && (
+            (currentUserId && currentUsername && (
+                msg.content.includes(`@${currentUsername}`) ||
+                msg.content.includes(`<@${currentUserId}>`)
+            )) ||
+            msg.content.includes('@everyone') ||
+            msg.content.includes('@here')
+        )
+    );
+    const isEveryoneMention = Boolean(msg.content && (msg.content.includes('@everyone') || msg.content.includes('@here')));
+    const isPersonalMention = Boolean(
         currentUserId && currentUsername && msg.content && (
             msg.content.includes(`@${currentUsername}`) ||
             msg.content.includes(`<@${currentUserId}>`)
@@ -345,7 +519,9 @@ const MemoizedMessageItem = memo(({
                     marginTop: isGrouped ? '2px' : (compactMode ? '1px' : '16px'),
                     paddingTop: isGrouped ? '2px' : (compactMode ? '2px' : '16px'),
                     paddingBottom: isGrouped ? '2px' : (compactMode ? '2px' : '16px'),
-                    ...(isMentioned ? { borderLeft: '3px solid var(--accent-primary)', background: 'color-mix(in srgb, var(--accent-primary) 6%, transparent)' } : {}),
+                    ...(isPersonalMention ? { borderLeft: '3px solid var(--accent-primary)', background: 'color-mix(in srgb, var(--accent-primary) 8%, transparent)' }
+                      : isEveryoneMention ? { borderLeft: '3px solid #f59e0b', background: 'rgba(245, 158, 11, 0.06)' }
+                      : {}),
                 }}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
@@ -357,14 +533,16 @@ const MemoizedMessageItem = memo(({
                     null
                 ) : isGrouped ? (
                     <div style={{ width: '40px', flexShrink: 0, position: 'relative' }}>
-                        <span style={{
-                            position: 'absolute', right: '0', top: '2px',
-                            fontSize: '10px', color: 'var(--text-muted)',
-                            opacity: isHovered ? 1 : 0,
-                            transition: 'opacity 0.2s'
-                        }}>
-                            {msg.time.split(' ')[0]}
-                        </span>
+                        <Tooltip content={msg.createdAt ? new Date(msg.createdAt).toLocaleString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : msg.time} position="top" delay={200}>
+                            <span style={{
+                                position: 'absolute', right: '0', top: '2px',
+                                fontSize: '10px', color: 'var(--text-muted)',
+                                opacity: isHovered ? 1 : 0,
+                                transition: 'opacity 0.2s'
+                            }}>
+                                {msg.time.split(' ')[0]}
+                            </span>
+                        </Tooltip>
                     </div>
                 ) : (
                     <div
@@ -415,7 +593,9 @@ const MemoizedMessageItem = memo(({
                         /* Feature 13: Compact mode header — timestamp inline before author */
                         (!isGrouped || compactMode) && (
                             <div className="msg-header" style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                                <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>{msg.time}</span>
+                                <Tooltip content={msg.createdAt ? new Date(msg.createdAt).toLocaleString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : msg.time} position="top" delay={200}>
+                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>{msg.time}</span>
+                                </Tooltip>
                                 <span
                                     className={`msg-author ${msg.system ? 'system' : ''} ${msg.authorNameplateStyle && msg.authorNameplateStyle !== 'none' ? `nameplate-${msg.authorNameplateStyle}` : (isCurrentUserMessage && currentUserNameplateStyle && currentUserNameplateStyle !== 'none' ? `nameplate-${currentUserNameplateStyle}` : '')}`}
                                     onClick={(e) => { if (!msg.system) onProfileClick?.({ user: msg.author, userId: msg.authorId || '', x: e.clientX, y: e.clientY }); }}
@@ -441,7 +621,9 @@ const MemoizedMessageItem = memo(({
                                 >
                                     {msg.author}
                                 </span>
-                                <span className="msg-timestamp">{msg.time}</span>
+                                <Tooltip content={msg.createdAt ? new Date(msg.createdAt).toLocaleString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : msg.time} position="top" delay={200}>
+                                    <span className="msg-timestamp">{msg.time}</span>
+                                </Tooltip>
                             </div>
                         )
                     )}
@@ -519,11 +701,61 @@ const MemoizedMessageItem = memo(({
                                     <img src={msg.mediaUrl} alt="Attached Media" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 </div>
                             </div>
+                        ) : isBeingEdited ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
+                                <textarea
+                                    ref={inlineEditRef}
+                                    value={editContent}
+                                    onChange={(e) => {
+                                        setEditContent(e.target.value);
+                                        e.target.style.height = 'auto';
+                                        e.target.style.height = e.target.scrollHeight + 'px';
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Escape') {
+                                            e.stopPropagation();
+                                            onEditCancel?.();
+                                        } else if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            onEditSubmit?.();
+                                        }
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        background: 'var(--bg-tertiary)',
+                                        border: '1px solid var(--accent-primary)',
+                                        borderRadius: '6px',
+                                        color: 'var(--text-primary)',
+                                        fontSize: '15px',
+                                        lineHeight: '1.5',
+                                        padding: '8px 10px',
+                                        resize: 'none',
+                                        overflow: 'hidden',
+                                        fontFamily: 'inherit',
+                                        outline: 'none',
+                                        minHeight: '38px',
+                                    }}
+                                />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                                    <span>escape to <button onClick={onEditCancel} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: '11px', fontFamily: 'inherit', textDecoration: 'underline' }}>cancel</button></span>
+                                    <span style={{ margin: '0 2px' }}>·</span>
+                                    <span>enter to <button onClick={onEditSubmit} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: '11px', fontFamily: 'inherit', textDecoration: 'underline' }}>save</button></span>
+                                </div>
+                            </div>
                         ) : (
-                            <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.5', willChange: 'transform, opacity' }}>
+                            <CollapsibleMessage content={msg.content} threshold={10}>
                                 <RichTextRenderer content={msg.content} customEmojis={customEmojis} members={members} channels={channels} />
                                 {msg.edited && msg.apiId && msgChannelId && <EditHistoryPopover channelId={msgChannelId} messageApiId={msg.apiId} />}
-                            </div>
+                                {/* Item 90: Inline message link previews */}
+                                {msg.content && (() => {
+                                    const linkMatches = msg.content.match(/channels\/[a-f0-9-]+(?:\/messages\/|#)[a-f0-9-]+/gi);
+                                    if (!linkMatches) return null;
+                                    return linkMatches.map((url: string, li: number) => (
+                                        <MessageLinkPreview key={li} messageUrl={url} />
+                                    ));
+                                })()}
+                            </CollapsibleMessage>
                         )}
                         {/* Attachment rendering — skip duplicates of mediaUrl */}
                         {msg.attachments && msg.attachments.length > 0 && (() => {
@@ -601,6 +833,29 @@ const MemoizedMessageItem = memo(({
                                         );
                                     }
                                     const sizeStr = att.size < 1024 ? `${att.size} B` : att.size < 1048576 ? `${(att.size / 1024).toFixed(1)} KB` : `${(att.size / 1048576).toFixed(1)} MB`;
+                                    const isPdf = displayMime === 'application/pdf' || /\.pdf$/i.test(displayName);
+                                    const codeExts = /\.(js|jsx|ts|tsx|py|rb|go|rs|java|c|cpp|h|hpp|cs|swift|kt|sh|bash|zsh|yml|yaml|json|toml|xml|html|css|scss|sass|less|sql|md|txt|log|ini|cfg|conf|env|dockerfile|makefile)$/i;
+                                    const isCode = codeExts.test(displayName) || displayMime?.startsWith('text/') || displayMime === 'application/json' || displayMime === 'application/xml';
+                                    if (isPdf) {
+                                        return (
+                                            <div key={att.id} style={{ maxWidth: '480px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid var(--stroke)' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                                                        <FileText size={16} style={{ color: '#ef4444', flexShrink: 0 }} />
+                                                        <span style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</span>
+                                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>{sizeStr}</span>
+                                                    </div>
+                                                    <a href={displayUrl} download={displayName} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', fontSize: '12px', textDecoration: 'none', flexShrink: 0, fontWeight: 500 }}>Open</a>
+                                                </div>
+                                                <iframe src={displayUrl} style={{ width: '100%', height: '400px', border: 'none', background: 'white' }} title={displayName} />
+                                            </div>
+                                        );
+                                    }
+                                    if (isCode) {
+                                        return (
+                                            <CodeFilePreview key={att.id} url={displayUrl} filename={displayName} sizeStr={sizeStr} />
+                                        );
+                                    }
                                     return (
                                         <a key={att.id} href={displayUrl} download={displayName} target="_blank" rel="noopener noreferrer" style={{
                                             display: 'flex', alignItems: 'center', gap: '10px',
@@ -663,6 +918,10 @@ const MemoizedMessageItem = memo(({
                                     <ReactionBadge key={r.emoji} emoji={r.emoji} emojiUrl={r.emojiUrl} isCustom={r.isCustom} count={r.count} me={r.me} messageApiId={msg.apiId} channelId={msgChannelId} onReaction={onReaction} />
                                 ))}
                             </div>
+                        )}
+                        {/* Disappearing message countdown */}
+                        {msg.expiresAt && (
+                            <DisappearCountdown expiresAt={msg.expiresAt} />
                         )}
                         {/* Optimistic send status indicator */}
                         {msg.sendStatus === 'sending' && (
@@ -795,6 +1054,19 @@ const MemoizedMessageItem = memo(({
                                 <Share2 size={16} />
                             </button>
                         </Tooltip>
+                        {msg._isAnnouncementChannel && msg.apiId && (
+                            <Tooltip content="Publish to followers" position="top">
+                                <button className="message-action-btn" onClick={async (e) => {
+                                    e.stopPropagation();
+                                    try {
+                                        const result = await api.channels.crosspost(msgChannelId!, msg.apiId!);
+                                        addToast?.({ title: `Published to ${result?.crossposted ?? 0} follower(s)`, variant: 'success' });
+                                    } catch { addToast?.({ title: 'Failed to publish', variant: 'error' }); }
+                                }} style={{ color: '#10b981' }}>
+                                    <Zap size={16} />
+                                </button>
+                            </Tooltip>
+                        )}
                         <Tooltip content="More" position="top">
                             <button className="message-action-btn" onClick={(e) => handleMessageContext(e, msg)}>
                                 <MoreHorizontal size={16} />
@@ -915,6 +1187,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     const navigate = useNavigate();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [showScrollButton, setShowScrollButton] = useState(false);
+    const [newMsgCount, setNewMsgCount] = useState(0);
     const [inputValue, setInputValue] = useState('');
     const [replyingTo, setReplyingTo] = useState<{ id: number; apiId?: string; author: string; content: string } | null>(null);
     const [editingMessage, setEditingMessage] = useState<{ id: number; apiId: string; content: string } | null>(null);
@@ -931,13 +1204,15 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
 
     // Feature 5: Markdown Preview State
     const [showPreview, setShowPreview] = useState(false);
+    // Item 106: Media Gallery
+    const [showMediaGallery, setShowMediaGallery] = useState(false);
 
     // Feature 9: New Messages Divider — lastReadMessageId per channel
     const [lastReadMessageId, setLastReadMessageId] = useState<string | null>(null);
 
     // Feature 12: Read Receipts — other users' read positions
     const [otherReadStates, setOtherReadStates] = useState<{ userId: string; lastReadMessageId: string | null }[]>([]);
-    const showReadReceipts = (() => { try { return localStorage.getItem('gratonite:show-read-receipts') === 'true'; } catch { return false; } })();
+    const showReadReceipts = (() => { try { return localStorage.getItem('gratonite:show-read-receipts') !== 'false'; } catch { return true; } })();
 
     // Feature 13: Compact Mode State
     const [compactMode, setCompactMode] = useState(() => localStorage.getItem('messageDisplay') === 'compact');
@@ -1032,6 +1307,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     const [pollQuestion, setPollQuestion] = useState('');
     const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
     const [pollDuration, setPollDuration] = useState<number | null>(null); // minutes; null = no expiry
+    const [pollMultiselect, setPollMultiselect] = useState(false);
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const [emojiSearch, setEmojiSearch] = useState<string | null>(null);
     const [emojiIndex, setEmojiIndex] = useState(0);
@@ -1070,6 +1346,10 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     const [rateLimitPerUser, setRateLimitPerUser] = useState(0);
     const [lastSentAt, setLastSentAt] = useState<number | null>(null);
     const [slowRemaining, setSlowRemaining] = useState(0);
+    const [isAnnouncementChannel, setIsAnnouncementChannel] = useState(false);
+    const [channelForumTags, setChannelForumTags] = useState<Array<{ id: string; name: string; color?: string }>>([]);
+    const [channelTypeStr, setChannelTypeStr] = useState('');
+    const [channelDisappearTimer, setChannelDisappearTimer] = useState<number | null>(null);
 
     // Slowmode countdown timer
     useEffect(() => {
@@ -1148,6 +1428,8 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     useEffect(() => {
         if (!channelId) return;
         markRead(channelId);
+        // Fire-and-forget server-side read receipt tracking
+        api.messages.markRead(channelId).catch(() => {});
     }, [channelId]);
 
     // Listen for remote typing events
@@ -1326,10 +1608,18 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             api.channels.get(channelId).then(async (rawCh) => {
                 const ch = rawCh as ChannelDetail;
                 setChannelName(ch.name);
+                setChannelTypeStr(ch.type || '');
                 setChannelTopic(ch.topic || null);
                 setRateLimitPerUser(ch.rateLimitPerUser || 0);
                 setChannelIsEncrypted(!!ch.isEncrypted);
                 setChannelAttachmentsEnabled(ch.attachmentsEnabled !== false);
+                setIsAnnouncementChannel(!!(ch as any).isAnnouncement);
+                if (Array.isArray((ch as any).forumTags)) setChannelForumTags((ch as any).forumTags);
+                if ((ch as any).disappearTimer != null) setChannelDisappearTimer((ch as any).disappearTimer);
+                // Item 89: Track recent channels
+                if (guildId) {
+                    addRecentChannel({ id: channelId!, name: ch.name, guildId, type: ch.type || 'text' });
+                }
                 // Load channel background if set (for all users to see same theme)
                 if (ch.backgroundUrl) {
                     setBgMedia({
@@ -1505,6 +1795,14 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 }
             }] : []),
             ...(msg.apiId ? [{
+                id: 'remind', label: 'Remind Me', icon: Clock, onClick: () => {
+                    const remindAt = new Date(Date.now() + 3600000).toISOString(); // 1 hour from now
+                    api.reminders.create({ messageId: msg.apiId!, channelId: channelId!, remindAt, note: (msg.content || '').slice(0, 100) })
+                      .then(() => addToast({ title: 'Reminder set for 1 hour', variant: 'success' }))
+                      .catch(() => addToast({ title: 'Failed to set reminder', variant: 'error' }));
+                }
+            }] : []),
+            ...(msg.apiId ? [{
                 id: 'mark-unread', label: 'Mark as Unread', icon: Eye, onClick: () => {
                     if (!channelId || !msg.apiId) return;
                     // Find the message right before this one to set as the last-read position
@@ -1580,6 +1878,8 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     const [showThreadsPanel, setShowThreadsPanel] = useState(false);
     const [showNotesPanel, setShowNotesPanel] = useState(false);
     const [isLoadingPins, setIsLoadingPins] = useState(false);
+    const [channelNotifLevel, setChannelNotifLevel] = useState<string>('default');
+    const [showNotifDropdown, setShowNotifDropdown] = useState(false);
 
     const handleAddToReadLater = useCallback(() => {
         if (!channelId) return;
@@ -1650,6 +1950,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             isBot: (m.author as any)?.isBot ?? false,
             components: Array.isArray((m as any).components) && (m as any).components.length > 0 ? (m as any).components : undefined,
             expiresAt: m.expiresAt ?? null,
+            _isAnnouncementChannel: isAnnouncementChannel,
             createdAt: m.createdAt ?? null,
         };
     };
@@ -1826,6 +2127,10 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         }).then(r => r.ok ? r.json() : []).then(data => {
             setScheduledMessages(Array.isArray(data) ? data : []);
         }).catch((err) => { console.error('Failed to load scheduled messages:', err); });
+        // Load channel notification prefs
+        api.channelNotifPrefs.get(channelId).then(data => {
+            setChannelNotifLevel(data?.level || 'default');
+        }).catch(() => {});
     }, [channelId]);
 
     // Load older messages when scrolling to top
@@ -2283,6 +2588,28 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         return () => { unsubCreate(); unsubUpdate(); unsubDelete(); unsubDeleteBulk(); unsubReactionAdd(); unsubReactionRemove(); unsubThreadCreate(); };
     }, [channelId, currentUserId]);
 
+    // Socket listener for MESSAGE_READ events (read receipts real-time update)
+    useEffect(() => {
+        if (!channelId) return;
+        const socket = getSocket();
+        if (!socket) return;
+        const handler = (data: { channelId: string; userId: string; lastReadMessageId: string | null }) => {
+            if (data.channelId !== channelId || data.userId === currentUserId) return;
+            setOtherReadStates(prev => {
+                const existing = prev.findIndex(s => s.userId === data.userId);
+                const updated = { userId: data.userId, lastReadMessageId: data.lastReadMessageId };
+                if (existing >= 0) {
+                    const next = [...prev];
+                    next[existing] = updated;
+                    return next;
+                }
+                return [...prev, updated];
+            });
+        };
+        socket.on('MESSAGE_READ', handler);
+        return () => { socket.off('MESSAGE_READ', handler); };
+    }, [channelId, currentUserId]);
+
     // Socket listener for embed updates (URL unfurling)
     useEffect(() => {
         if (!channelId) return;
@@ -2384,7 +2711,9 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 loadOlderMessages();
             }
             const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-            setShowScrollButton(distFromBottom > 200);
+            const isScrolledUp = distFromBottom > 200;
+            setShowScrollButton(isScrolledUp);
+            if (!isScrolledUp) setNewMsgCount(0);
             // Debounced save of scroll position per channel
             if (channelId) {
                 if (scrollSaveTimer.current) clearTimeout(scrollSaveTimer.current);
@@ -2432,7 +2761,8 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         if (!parentRef.current) return;
         const el = parentRef.current;
         const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-        if (distFromBottom < 300) scrollToBottom();
+        if (distFromBottom < 300) { scrollToBottom(); setNewMsgCount(0); }
+        else setNewMsgCount(c => c + 1);
     }, [messages.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
@@ -2526,6 +2856,31 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             addToast({ title: `Rate limited. Wait ${rateLimitRemaining}s`, variant: 'error' });
             return;
         }
+        // Handle /remind command locally
+        const remindMatch = inputValue.match(/^\/remind\s+(\S+)\s+(.+)/i);
+        if (remindMatch) {
+            const timeMs = parseRemindTime(remindMatch[1]);
+            if (!timeMs) {
+                addToast({ title: 'Invalid time format. Use e.g. 30m, 2h, 1d', variant: 'error' });
+                return;
+            }
+            const remindAt = new Date(Date.now() + timeMs).toISOString();
+            try {
+                const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
+                await api.reminders.create({
+                    messageId: lastMsg?.apiId || 'self',
+                    channelId: channelId!,
+                    remindAt,
+                    note: remindMatch[2],
+                });
+                addToast({ title: 'Reminder set', description: `I'll remind you: ${remindMatch[2]}`, variant: 'success' });
+            } catch {
+                addToast({ title: 'Failed to set reminder', variant: 'error' });
+            }
+            setInputValue('');
+            return;
+        }
+
         playSound('messageSend');
         haptic.messageSent();
 
@@ -2889,11 +3244,20 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         setChannelSearch(null);
     };
 
+    const [showGifPicker, setShowGifPicker] = useState(false);
+
     const selectSlashCommand = (cmd: { id: string; name: string; description: string; options?: any[] }) => {
-        // Replace /search with /commandName, then send as interaction
-        setInputValue(`/${cmd.name} `);
         setSlashSearch(null);
-        // If command has no options, send interaction immediately
+        // Handle built-in commands
+        if (cmd.id.startsWith('__')) {
+            if (TEXT_COMMANDS[cmd.name]) { setInputValue(TEXT_COMMANDS[cmd.name]); return; }
+            if (cmd.name === 'poll') { setShowPollCreator(true); setInputValue(''); return; }
+            if (cmd.name === 'giphy') { setShowGifPicker(true); setInputValue(''); return; }
+            if (cmd.name === 'remind') { setInputValue('/remind '); return; }
+            return;
+        }
+        // Server commands
+        setInputValue(`/${cmd.name} `);
         if (!cmd.options || cmd.options.length === 0) {
             api.post(`/channels/${channelId}/interactions`, { commandId: cmd.id, options: {} })
               .catch((err: any) => { console.error('Failed to execute command:', err); addToast({ title: 'Failed to execute command', variant: 'error' }); });
@@ -2901,7 +3265,8 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         }
     };
 
-    const filteredCommands = slashSearch !== null ? guildCommands.filter(c => c.name.toLowerCase().includes(slashSearch.toLowerCase())).slice(0, 10) : [];
+    const allSlashCommands = [...BUILTIN_COMMANDS.map(c => ({ id: c.id, name: c.name, description: c.description, options: c.options })), ...guildCommands];
+    const filteredCommands = slashSearch !== null ? allSlashCommands.filter(c => c.name.toLowerCase().includes(slashSearch.toLowerCase())).slice(0, 15) : [];
 
     const insertEmoji = (emojiName: string) => {
         if (emojiSearch === null) return;
@@ -2996,11 +3361,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
 
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            if (editingMessage) {
-                handleEditSubmit();
-            } else {
-                handleSendMessage();
-            }
+            handleSendMessage();
         }
     };
 
@@ -3112,6 +3473,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     question: pollQuestion.trim(),
                     options: validOptions.map(o => o.trim()),
                     ...(pollDuration ? { duration: pollDuration } : {}),
+                    ...(pollMultiselect ? { multiselect: true } : {}),
                 });
                 setMessages(prev => [...prev, {
                     id: Date.now(),
@@ -3136,6 +3498,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 setPollQuestion('');
                 setPollOptions(['', '']);
                 setPollDuration(null);
+                setPollMultiselect(false);
                 setShowPollCreator(false);
                 return;
             } catch {
@@ -3265,6 +3628,16 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                         <Lock size={12} /> Encrypted
                     </span>
                 )}
+                {isAnnouncementChannel && (
+                    <span title="Announcement Channel" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '8px', padding: '2px 8px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', fontSize: '11px', fontWeight: 600, color: '#3b82f6' }}>
+                        <Megaphone size={12} /> Announcements
+                    </span>
+                )}
+                {channelDisappearTimer && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '8px', padding: '2px 8px', borderRadius: '10px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', fontSize: '11px', fontWeight: 600, color: '#f59e0b' }}>
+                        <Timer size={12} /> Disappearing
+                    </span>
+                )}
 
                 <div style={{ flex: 1 }}></div>
 
@@ -3276,6 +3649,20 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                         </div>
                     )}
                     <input type="file" ref={fileInputRef} hidden accept="image/*,video/*" onChange={handleUploadBg} />
+                    {isAnnouncementChannel && (
+                        <button
+                            className="action-icon-btn hidden-on-mobile"
+                            onClick={async () => {
+                                try {
+                                    await api.channels.follow(channelId);
+                                    addToast({ title: 'Following this channel!', variant: 'success' });
+                                } catch { addToast({ title: 'Failed to follow channel', variant: 'error' }); }
+                            }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
+                        >
+                            <Rss size={16} /> Follow
+                        </button>
+                    )}
 
                     <div
                         className="action-icon-btn hidden-on-mobile"
@@ -3328,6 +3715,53 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                         <BookOpen size={18} style={{ color: 'var(--text-secondary)' }} />
                     </div>
 
+                    {/* Channel Notification Prefs — Item 14 */}
+                    <div
+                        className="action-icon-btn hidden-on-mobile"
+                        onClick={() => setShowNotifDropdown(!showNotifDropdown)}
+                        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}
+                        title="Notification Settings"
+                    >
+                        {channelNotifLevel === 'none' ? (
+                            <BellOff size={18} style={{ color: 'var(--text-muted)' }} />
+                        ) : (
+                            <Bell size={18} style={{ color: showNotifDropdown ? 'var(--accent-primary)' : channelNotifLevel !== 'default' ? 'var(--accent-primary)' : 'var(--text-secondary)' }} />
+                        )}
+                        {showNotifDropdown && (
+                            <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', padding: '6px', minWidth: '200px', zIndex: 50 }} onClick={e => e.stopPropagation()}>
+                                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', padding: '6px 10px', marginBottom: '4px' }}>NOTIFICATION LEVEL</div>
+                                {([
+                                    { value: 'default', label: 'Default', desc: 'Use server default' },
+                                    { value: 'all', label: 'All Messages', desc: 'Notify for every message' },
+                                    { value: 'mentions', label: 'Only Mentions', desc: 'Only when mentioned' },
+                                    { value: 'none', label: 'Nothing', desc: 'Mute this channel' },
+                                ] as const).map(opt => (
+                                    <div
+                                        key={opt.value}
+                                        onClick={() => {
+                                            setChannelNotifLevel(opt.value);
+                                            setShowNotifDropdown(false);
+                                            if (channelId) {
+                                                api.channelNotifPrefs.set(channelId, opt.value).catch(() => {
+                                                    addToast({ title: 'Failed to update notification preference', variant: 'error' });
+                                                });
+                                            }
+                                        }}
+                                        style={{
+                                            padding: '8px 10px', borderRadius: '6px', cursor: 'pointer',
+                                            background: channelNotifLevel === opt.value ? 'var(--accent-primary)' : 'transparent',
+                                            color: channelNotifLevel === opt.value ? 'white' : 'var(--text-secondary)',
+                                            marginBottom: '2px',
+                                        }}
+                                    >
+                                        <div style={{ fontSize: '13px', fontWeight: 600 }}>{opt.label}</div>
+                                        <div style={{ fontSize: '11px', opacity: 0.7 }}>{opt.desc}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     <TopBarActions />
 
                     <div className="action-divider hidden-on-mobile" style={{ width: '1px', height: '24px', background: 'var(--stroke)' }}></div>
@@ -3349,6 +3783,15 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     >
                         <Users size={20} />
                     </div>
+                    {guildId && (
+                        <div
+                            onClick={() => setShowMediaGallery(true)}
+                            style={{ cursor: 'pointer', color: 'var(--text-secondary)' }}
+                            title="Media Gallery"
+                        >
+                            <ImageIcon size={20} />
+                        </div>
+                    )}
                 </div>
             </header>
 
@@ -3473,31 +3916,59 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             )}
             {!isViewingHistory && showScrollButton && (
                 <button
-                    onClick={() => parentRef.current?.scrollTo({ top: parentRef.current.scrollHeight, behavior: 'smooth' })}
+                    onClick={() => { parentRef.current?.scrollTo({ top: parentRef.current.scrollHeight, behavior: 'smooth' }); setNewMsgCount(0); }}
                     style={{
                         position: 'absolute',
                         bottom: 80,
                         left: '50%',
                         transform: 'translateX(-50%)',
                         background: 'var(--accent-primary)',
-                        color: 'white',
+                        color: '#000',
                         border: 'none',
                         borderRadius: 20,
                         padding: '8px 16px',
                         cursor: 'pointer',
                         zIndex: 10,
                         fontSize: 13,
+                        fontWeight: 600,
                         display: 'flex',
                         alignItems: 'center',
                         gap: 6,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                        animation: 'fadeInSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
                     }}
-                    aria-label="Jump to bottom"
+                    aria-label={`Jump to bottom${newMsgCount > 0 ? `, ${newMsgCount} new messages` : ''}`}
                 >
-                    <ChevronDown size={16} /> New messages
+                    <ChevronDown size={16} />
+                    {newMsgCount > 0 ? `${newMsgCount} new message${newMsgCount > 1 ? 's' : ''}` : 'Jump to bottom'}
+                    {newMsgCount > 0 && (
+                        <span style={{
+                            background: '#000',
+                            color: 'var(--accent-primary)',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            borderRadius: '10px',
+                            padding: '1px 7px',
+                            minWidth: '20px',
+                            textAlign: 'center',
+                            lineHeight: '16px',
+                        }}>
+                            {newMsgCount > 99 ? '99+' : newMsgCount}
+                        </span>
+                    )}
                 </button>
             )}
-            <div ref={parentRef} className="message-area" role="log" aria-label={`Messages in #${channelName}`} aria-live="polite" style={{ overflowY: 'auto', zIndex: 2, position: 'relative' }}>
+            {/* Forum View — renders instead of message list for GUILD_FORUM channels */}
+            {channelTypeStr === 'GUILD_FORUM' && channelForumTags.length > 0 ? (
+                <ForumView
+                    channelId={channelId}
+                    channelName={channelName}
+                    forumTags={channelForumTags}
+                    onOpenThread={(threadId) => setActiveThreadMessage?.({ id: 0, apiId: threadId } as any)}
+                />
+            ) : null}
+
+            <div ref={parentRef} className="message-area" role="log" aria-label={`Messages in #${channelName}`} aria-live="polite" style={{ overflowY: 'auto', zIndex: 2, position: 'relative', ...(channelTypeStr === 'GUILD_FORUM' && channelForumTags.length > 0 ? { display: 'none' } : {}) }}>
                 {/* Pull-to-refresh indicator (mobile) */}
                 {isMobile && pullDistance > 0 && (
                     <div className="pull-to-refresh-indicator" style={{ height: `${pullDistance}px` }}>
@@ -3598,6 +4069,11 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                         compactMode={compactMode}
                                         isNewMessageDivider={!!(lastReadMessageId && prevMsg?.apiId === lastReadMessageId && msg.apiId !== lastReadMessageId)}
                                         decryptedFileUrls={decryptedFileUrls}
+                                        editingMessageApiId={editingMessage?.apiId ?? null}
+                                        editContent={editContent}
+                                        setEditContent={setEditContent}
+                                        onEditSubmit={handleEditSubmit}
+                                        onEditCancel={() => { setEditingMessage(null); setEditContent(''); }}
                                     />
                                     </SwipeableMessage>
                                     {/* Feature 12: Read Receipt Dots */}
@@ -3608,19 +4084,23 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                         const readerMembers = readers.map(r => guildMembers.find(m => m.id === r.userId)).filter(Boolean);
                                         if (readerMembers.length === 0) return null;
                                         return (
-                                            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '2px 8px 0', gap: '2px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '2px 8px 0', gap: '4px' }}>
+                                                <Eye size={10} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                                                 {readerMembers.slice(0, 5).map((member: any) => (
-                                                    <img
+                                                    <Avatar
                                                         key={member.id}
-                                                        src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.displayName || member.username)}&size=24&background=5865f2&color=fff`}
-                                                        alt={member.displayName || member.username}
-                                                        title={`Read by ${member.displayName || member.username}`}
-                                                        style={{ width: '12px', height: '12px', borderRadius: '50%', objectFit: 'cover' }}
+                                                        userId={member.id}
+                                                        displayName={member.displayName || member.username}
+                                                        avatarHash={member.avatarHash}
+                                                        size={14}
                                                     />
                                                 ))}
                                                 {readerMembers.length > 5 && (
-                                                    <span style={{ fontSize: '9px', color: 'var(--text-muted)', lineHeight: '12px' }}>+{readerMembers.length - 5}</span>
+                                                    <span style={{ fontSize: '9px', color: 'var(--text-muted)', lineHeight: '14px' }}>+{readerMembers.length - 5}</span>
                                                 )}
+                                                <span style={{ fontSize: '9px', color: 'var(--text-muted)' }} title={readerMembers.map((m: any) => m.displayName || m.username).join(', ')}>
+                                                    {readerMembers.length === 1 ? (readerMembers[0].displayName || readerMembers[0].username) : `${readerMembers.length} read`}
+                                                </span>
                                             </div>
                                         );
                                     })()}
@@ -3641,24 +4121,67 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     padding: '12px 16px',
                     display: 'flex', alignItems: 'center', gap: '12px',
                     zIndex: 50,
+                    animation: 'fadeInSlideUp 0.2s ease-out',
                 }}>
-                    <span style={{ fontSize: '14px', color: 'var(--text-primary)' }}>
+                    <span style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: 600 }}>
                         {selectedMessages.size} message{selectedMessages.size !== 1 ? 's' : ''} selected
                     </span>
+                    <button
+                        onClick={() => {
+                            if (!channelId) return;
+                            const ids = [...selectedMessages];
+                            Promise.all(ids.map(id => api.messages.pin(channelId, id))).then(() => {
+                                addToast({ title: `Pinned ${ids.length} messages`, variant: 'success' });
+                                loadPinnedMessages();
+                            }).catch(() => addToast({ title: 'Failed to pin some messages', variant: 'error' }));
+                            setSelectedMessages(new Set()); setSelectionMode(false);
+                        }}
+                        style={{
+                            padding: '8px 16px', background: 'var(--bg-elevated)', color: 'var(--text-primary)',
+                            border: '1px solid var(--stroke)', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px',
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                        }}
+                    >
+                        <Pin size={14} /> Pin
+                    </button>
+                    <button
+                        onClick={() => {
+                            const ids = [...selectedMessages];
+                            const token = localStorage.getItem('gratonite_access_token');
+                            Promise.all(ids.map(id =>
+                                fetch(`${API_BASE}/users/@me/bookmarks`, {
+                                    method: 'POST',
+                                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ messageId: id }),
+                                })
+                            )).then(() => {
+                                addToast({ title: `Bookmarked ${ids.length} messages`, variant: 'success' });
+                            }).catch(() => addToast({ title: 'Failed to bookmark some messages', variant: 'error' }));
+                            setSelectedMessages(new Set()); setSelectionMode(false);
+                        }}
+                        style={{
+                            padding: '8px 16px', background: 'var(--bg-elevated)', color: 'var(--text-primary)',
+                            border: '1px solid var(--stroke)', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px',
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                        }}
+                    >
+                        <Star size={14} /> Bookmark
+                    </button>
                     <button
                         onClick={handleBulkDelete}
                         style={{
                             padding: '8px 16px', background: 'var(--error, #ed4245)', color: '#fff',
-                            border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '14px',
+                            border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px',
+                            display: 'flex', alignItems: 'center', gap: '6px',
                         }}
                     >
-                        Delete {selectedMessages.size} message{selectedMessages.size !== 1 ? 's' : ''}
+                        <Trash2 size={14} /> Delete {selectedMessages.size}
                     </button>
                     <button
                         onClick={() => { setSelectedMessages(new Set()); setSelectionMode(false); }}
                         style={{
                             padding: '8px 16px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
-                            border: '1px solid var(--stroke)', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '14px',
+                            border: '1px solid var(--stroke)', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '13px',
                         }}
                     >
                         Cancel
@@ -3835,12 +4358,28 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             <div className="input-area" style={{ zIndex: 2, position: 'relative' }}>
                 {slowRemaining > 0 && (
                     <div style={{
-                        display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 16px',
+                        display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 16px',
                         fontSize: '12px', color: 'var(--text-muted)', background: 'var(--bg-tertiary)',
                         margin: '0 16px 4px', borderRadius: '8px',
                     }}>
-                        <Clock size={14} style={{ flexShrink: 0 }} />
-                        <span>Slowmode enabled. You can send another message in <strong style={{ color: 'var(--text-primary)' }}>{slowRemaining}s</strong></span>
+                        {/* Circular countdown timer */}
+                        <div style={{ position: 'relative', width: '28px', height: '28px', flexShrink: 0 }}>
+                            <svg width="28" height="28" viewBox="0 0 28 28" style={{ transform: 'rotate(-90deg)' }}>
+                                <circle cx="14" cy="14" r="12" fill="none" stroke="var(--stroke)" strokeWidth="2" />
+                                <circle
+                                    cx="14" cy="14" r="12" fill="none"
+                                    stroke="var(--accent-primary)" strokeWidth="2"
+                                    strokeDasharray={`${2 * Math.PI * 12}`}
+                                    strokeDashoffset={`${2 * Math.PI * 12 * (1 - slowRemaining / (rateLimitPerUser || 1))}`}
+                                    strokeLinecap="round"
+                                    style={{ transition: 'stroke-dashoffset 1s linear' }}
+                                />
+                            </svg>
+                            <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                                {slowRemaining}
+                            </span>
+                        </div>
+                        <span>Slowmode active — wait <strong style={{ color: 'var(--text-primary)' }}>{slowRemaining}s</strong> to send</span>
                     </div>
                 )}
                 {typingUsers.size > 0 && (
@@ -4126,9 +4665,9 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                 className="chat-input"
                                 aria-label="Message input"
                                 rows={1}
-                                placeholder={editingMessage ? 'Edit your message...' : `Message #${channelName}...`}
-                                value={editingMessage ? editContent : inputValue}
-                                onChange={editingMessage ? (e) => setEditContent(e.target.value) : handleInputChange}
+                                placeholder={`Message #${channelName}...`}
+                                value={inputValue}
+                                onChange={handleInputChange}
                                 onKeyDown={handleInputKeyDown}
                                 onInput={(e) => { const t = e.target as HTMLTextAreaElement; t.style.height = '24px'; t.style.height = Math.min(t.scrollHeight, 200) + 'px'; }}
                                 onPaste={(e) => {
@@ -4201,22 +4740,20 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                     </button>
                                 </>
                             )}
-                            {(editingMessage ? editContent.trim().length > 0 : inputValue.trim().length > 0) && (
+                            {inputValue.trim().length > 0 && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    {!editingMessage && (
-                                        <button
-                                            className="input-icon-btn"
-                                            title="Schedule Message"
-                                            onClick={() => setIsScheduleOpen(!isScheduleOpen)}
-                                            style={{ color: isScheduleOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
-                                        >
-                                            <Clock size={18} />
-                                        </button>
-                                    )}
+                                    <button
+                                        className="input-icon-btn"
+                                        title="Schedule Message"
+                                        onClick={() => setIsScheduleOpen(!isScheduleOpen)}
+                                        style={{ color: isScheduleOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
+                                    >
+                                        <Clock size={18} />
+                                    </button>
                                     <button
                                         className="input-icon-btn primary"
                                         aria-label={rateLimitRemaining > 0 ? `Rate limited, wait ${rateLimitRemaining}s` : 'Send message'}
-                                        onClick={editingMessage ? handleEditSubmit : handleSendMessage}
+                                        onClick={handleSendMessage}
                                         disabled={rateLimitRemaining > 0}
                                         style={{ position: 'relative', opacity: rateLimitRemaining > 0 ? 0.5 : 1, cursor: rateLimitRemaining > 0 ? 'not-allowed' : undefined }}
                                     >
@@ -4289,6 +4826,19 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                             onStickerSelect={handleSendSticker}
                             guildId={guildId}
                         />
+                    )}
+
+                    {/* GIF Reaction Picker */}
+                    {showGifPicker && (
+                        <div style={{ position: 'absolute', bottom: 'calc(100% + 12px)', right: '100px', zIndex: 15 }}>
+                            <GifReactionPicker
+                                onSelect={(gifUrl) => {
+                                    handleSendGif(gifUrl);
+                                    setShowGifPicker(false);
+                                }}
+                                onClose={() => setShowGifPicker(false)}
+                            />
+                        </div>
                     )}
 
                     {/* Feature 19: Sticker Picker Panel */}
@@ -4487,6 +5037,11 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                 )}
                             </div>
 
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                                <input type="checkbox" checked={pollMultiselect} onChange={e => setPollMultiselect(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
+                                Allow multiple votes
+                            </label>
+
                             <div>
                                 <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>Poll Duration</label>
                                 <select
@@ -4618,6 +5173,10 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                         setForwardingMessage(null);
                     }}
                 />
+            )}
+
+            {showMediaGallery && guildId && (
+                <SharedMediaGallery guildId={guildId} onClose={() => setShowMediaGallery(false)} />
             )}
 
             </div>

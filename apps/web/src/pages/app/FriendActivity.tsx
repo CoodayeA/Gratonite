@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Activity, Users, Star, Zap, Gift, ArrowLeft, RefreshCw, Loader2 } from 'lucide-react';
+import { Activity, Users, Star, Zap, Gift, ArrowLeft, RefreshCw, Loader2, Gamepad2, Headphones, Eye, Circle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import Avatar from '../../components/ui/Avatar';
+import { getSocket } from '../../lib/socket';
 
 type FeedEvent = {
   id: string;
@@ -66,6 +67,25 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
+type FriendPresence = {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarHash: string | null;
+  status: 'online' | 'idle' | 'dnd' | 'offline';
+  activity?: { name: string; type: string } | null;
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  online: '#10b981', idle: '#f59e0b', dnd: '#ef4444', offline: '#6b7280',
+};
+
+const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
+  PLAYING: <Gamepad2 size={12} />,
+  LISTENING: <Headphones size={12} />,
+  WATCHING: <Eye size={12} />,
+};
+
 const FriendActivity = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState<FeedEvent[]>([]);
@@ -73,6 +93,7 @@ const FriendActivity = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [friendPresences, setFriendPresences] = useState<FriendPresence[]>([]);
 
   const load = useCallback(async (append = false, before?: string) => {
     if (append) setLoadingMore(true); else setLoading(true);
@@ -100,6 +121,35 @@ const FriendActivity = () => {
     load();
   }, [load]);
 
+  // Load friend presences
+  useEffect(() => {
+    api.relationships.listFriends().then((friends: any[]) => {
+      const presences: FriendPresence[] = (Array.isArray(friends) ? friends : []).map((f: any) => ({
+        id: f.userId || f.id,
+        username: f.username || '',
+        displayName: f.displayName || f.username || '',
+        avatarHash: f.avatarHash || null,
+        status: f.presence?.status || f.status || 'offline',
+        activity: f.presence?.activity || f.activity || null,
+      }));
+      setFriendPresences(presences);
+    }).catch(() => {});
+
+    // Listen for real-time presence updates
+    const socket = getSocket();
+    if (socket) {
+      const handler = (data: { userId: string; status: string; activity?: any }) => {
+        setFriendPresences(prev => prev.map(f =>
+          f.id === data.userId ? { ...f, status: data.status as any, activity: data.activity || null } : f
+        ));
+      };
+      socket.on('PRESENCE_UPDATE', handler);
+      return () => { socket.off('PRESENCE_UPDATE', handler); };
+    }
+  }, []);
+
+  const onlineFriends = friendPresences.filter(f => f.status !== 'offline');
+
   const loadMore = () => {
     if (loadingMore || !hasMore || events.length === 0) return;
     const last = events[events.length - 1];
@@ -120,6 +170,53 @@ const FriendActivity = () => {
         <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', marginBottom: '16px' }}>
           <ArrowLeft size={16} /> Back
         </button>
+
+        {/* Online Friends Status Section */}
+        {onlineFriends.length > 0 && (
+          <div style={{ marginBottom: '24px', padding: '16px', borderRadius: '12px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '12px' }}>
+              <Circle size={8} fill="#10b981" stroke="none" style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+              Online Friends -- {onlineFriends.length}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {onlineFriends.slice(0, 10).map(friend => (
+                <div
+                  key={friend.id}
+                  onClick={() => navigate(`/dms/${friend.id}`)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px',
+                    borderRadius: '8px', cursor: 'pointer', transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <Avatar userId={friend.id} avatarHash={friend.avatarHash} displayName={friend.displayName} size={32} status={friend.status} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{friend.displayName}</div>
+                    {friend.activity ? (
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {ACTIVITY_ICONS[friend.activity.type] || null}
+                        <span>
+                          {friend.activity.type === 'PLAYING' ? 'Playing' : friend.activity.type === 'LISTENING' ? 'Listening to' : friend.activity.type === 'WATCHING' ? 'Watching' : friend.activity.type}
+                          {' '}{friend.activity.name}
+                        </span>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '12px', color: STATUS_COLORS[friend.status] }}>
+                        {friend.status === 'online' ? 'Online' : friend.status === 'idle' ? 'Idle' : friend.status === 'dnd' ? 'Do Not Disturb' : 'Offline'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {onlineFriends.length > 10 && (
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '4px' }}>
+                  +{onlineFriends.length - 10} more online
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
