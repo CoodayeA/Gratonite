@@ -85,12 +85,12 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       }
       case 'encryptFile': {
         const result = await encryptFileOp(payload.key, payload.buffer, payload.filename);
-        self.postMessage({ id, result }, [result.encryptedBuffer] as any);
+        self.postMessage({ id, result }, [result.encryptedBuffer] as unknown as Transferable[]);
         break;
       }
       case 'decryptFile': {
         const result = await decryptFileOp(payload.key, payload.buffer, payload.ivB64, payload.encryptedFilename);
-        self.postMessage({ id, result }, [result.decryptedBuffer] as any);
+        self.postMessage({ id, result }, [result.decryptedBuffer] as unknown as Transferable[]);
         break;
       }
       default:

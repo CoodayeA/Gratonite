@@ -64,7 +64,7 @@ export default function PhotoAlbums({ guildId }: PhotoAlbumsProps) {
   const createAlbum = async () => {
     if (!newName.trim()) return;
     try {
-      const album = await api.photoAlbums.create(guildId, { name: newName, description: newDesc || undefined }) as any;
+      const album = await api.photoAlbums.create(guildId, { name: newName, description: newDesc || undefined }) as { id: string };
       setShowCreate(false);
       setNewName('');
       setNewDesc('');

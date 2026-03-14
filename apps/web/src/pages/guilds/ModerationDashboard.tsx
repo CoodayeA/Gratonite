@@ -29,6 +29,16 @@ interface BannedUser {
     bannedAt: string;
 }
 
+interface AuditLogItem {
+    id: string;
+    action: string;
+    userDisplayName?: string;
+    userName?: string;
+    targetId?: string;
+    reason: string | null;
+    createdAt: string;
+}
+
 function StatCard({ icon: Icon, label, value, color }: { icon: typeof Shield; label: string; value: number; color: string }) {
     return (
         <div style={{
@@ -82,7 +92,7 @@ export default function ModerationDashboard() {
             Promise.resolve([]),
             api.guilds.getBans(guildId).catch(() => []),
         ]).then(([auditLog, warns, bannedUsers]) => {
-            setRecentActions((auditLog as any[]).map((e: any) => ({
+            setRecentActions((auditLog as AuditLogItem[]).map((e) => ({
                 id: e.id,
                 action: e.action,
                 userName: e.userDisplayName || e.userName || 'Unknown',
@@ -90,10 +100,10 @@ export default function ModerationDashboard() {
                 reason: e.reason,
                 createdAt: e.createdAt,
             })));
-            setWarnings((warns as any[]).map((w: any) => ({
+            setWarnings((warns as AuditLogItem[]).map((w) => ({
                 id: w.id,
-                userId: w.userId,
-                username: w.username || w.userDisplayName || 'Unknown',
+                userId: w.targetId || '',
+                username: w.userName || w.userDisplayName || 'Unknown',
                 reason: w.reason || 'No reason',
                 createdAt: w.createdAt,
             })));

@@ -26,6 +26,13 @@ const patchSettingsSchema = z.object({
   highContrast: z.boolean().optional(),
   compactMode: z.boolean().optional(),
   accentColor: z.string().max(20).nullable().optional(),
+  customThemeId: z.string().uuid().nullable().optional(),
+  themePreferences: z.object({
+    colorMode: z.enum(['dark', 'light']).optional(),
+    accentColor: z.string().max(20).nullable().optional(),
+    glassMode: z.enum(['off', 'subtle', 'full']).optional(),
+    customVars: z.record(z.string(), z.string()).optional(),
+  }).nullable().optional(),
   birthday: z.object({
     month: z.number().int().min(1).max(12),
     day: z.number().int().min(1).max(31),
@@ -62,6 +69,8 @@ settingsRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
       highContrast: false,
       compactMode: false,
       accentColor: null,
+      customThemeId: null,
+      themePreferences: null,
     });
     return;
   }

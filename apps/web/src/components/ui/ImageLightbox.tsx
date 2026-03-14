@@ -12,6 +12,7 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ url, imageUrls = [], onCl
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const dragRef = useRef({ dragging: false, startX: 0, startY: 0, startPanX: 0, startPanY: 0 });
+  const pinchRef = useRef({ active: false, startDist: 0, startZoom: 1 });
   const containerRef = useRef<HTMLDivElement>(null);
 
   const currentIndex = imageUrls.indexOf(url);
@@ -154,14 +155,47 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ url, imageUrls = [], onCl
           if (zoom > 1) { setZoom(1); setPan({ x: 0, y: 0 }); }
           else { setZoom(2); }
         }}
+        /* Pinch-to-zoom for touch (Item 53) */
+        onTouchStart={(e) => {
+          if (e.touches.length === 2) {
+            e.stopPropagation();
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            pinchRef.current = { active: true, startDist: Math.hypot(dx, dy), startZoom: zoom };
+          } else if (e.touches.length === 1 && zoom > 1) {
+            dragRef.current = { dragging: true, startX: e.touches[0].clientX, startY: e.touches[0].clientY, startPanX: pan.x, startPanY: pan.y };
+          }
+        }}
+        onTouchMove={(e) => {
+          if (e.touches.length === 2 && pinchRef.current.active) {
+            e.stopPropagation();
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const dist = Math.hypot(dx, dy);
+            const scale = dist / pinchRef.current.startDist;
+            const newZoom = Math.max(0.5, Math.min(5, pinchRef.current.startZoom * scale));
+            setZoom(newZoom);
+          } else if (e.touches.length === 1 && dragRef.current.dragging) {
+            const ddx = e.touches[0].clientX - dragRef.current.startX;
+            const ddy = e.touches[0].clientY - dragRef.current.startY;
+            setPan({ x: dragRef.current.startPanX + ddx, y: dragRef.current.startPanY + ddy });
+          }
+        }}
+        onTouchEnd={(e) => {
+          e.stopPropagation();
+          pinchRef.current.active = false;
+          dragRef.current.dragging = false;
+          if (zoom <= 1) setPan({ x: 0, y: 0 });
+        }}
         style={{
           maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain',
           borderRadius: 8,
           cursor: zoom > 1 ? (dragRef.current.dragging ? 'grabbing' : 'grab') : 'zoom-in',
           boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
           transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
-          transition: dragRef.current.dragging ? 'none' : 'transform 0.15s ease-out',
+          transition: dragRef.current.dragging || pinchRef.current.active ? 'none' : 'transform 0.15s ease-out',
           userSelect: 'none',
+          touchAction: 'none',
         }}
         draggable={false}
       />

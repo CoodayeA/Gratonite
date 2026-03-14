@@ -31,6 +31,8 @@ export const themes = pgTable('themes', {
   rating: numeric('rating', { precision: 3, scale: 2 }).notNull().default('0'),
   reviewCount: integer('review_count').notNull().default(0),
   previewImageUrl: varchar('preview_image_url', { length: 512 }),
+  version: integer('version').notNull().default(1),
+  reportCount: integer('report_count').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

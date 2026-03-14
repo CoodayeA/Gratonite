@@ -1,16 +1,22 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { X, Check, ZoomIn, ZoomOut, RotateCw, Volume2, VolumeX, Eye, EyeOff, Copy, Info, Link2, Globe, Search, Download, Upload } from 'lucide-react';
+import { X, Check, ZoomIn, ZoomOut, RotateCw, Volume2, VolumeX, Copy, Info, Link2, Globe, Search, Download, Upload, Star, Sun, Moon, Dices, Eye, Sparkles, Palette, ShoppingBag, Edit3, Trash2, Share2 } from 'lucide-react';
 import { useTheme, ButtonShape, AppTheme, ColorMode, FontFamily, FontSize, GlassMode, FocusIndicatorSize, ColorBlindMode } from '../ui/ThemeProvider';
+import { haptic } from '../../utils/haptics';
 import { useToast } from '../ui/ToastManager';
 import { useUser } from '../../contexts/UserContext';
 import { isSoundMuted, setSoundMuted, getSoundVolume, setSoundVolume, getSoundPack, setSoundPack, playSound } from '../../utils/SoundManager';
 import { api, API_BASE } from '../../lib/api';
-import PrivacyScoreWidget from '../PrivacyScore';
-import AccountRecoveryKitWidget from '../AccountRecoveryKit';
-import DataExportWidget from '../../pages/app/DataExport';
 import LoginHistoryPage from '../../pages/app/LoginHistory';
+import { SettingsAccountTab, SettingsFeedbackTab, SettingsAchievementsTab, SettingsStatsTab, SettingsConnectionsTab, SettingsPrivacyTab } from './settings';
+import type { UserProfileLike, UserThemeLike } from './settings/types';
 import { AVAILABLE_LOCALES, getLocale, setLocale } from '../../i18n';
 import { CODE_THEMES as codeThemeOptions, getCodeTheme as codeThemeGet, setCodeTheme as codeThemeSet, type CodeThemeId } from '../../utils/codeTheme';
+import { getAllThemesIncludingCustom, getAllThemes, searchThemes, getThemesByCategory, getCategories, toggleFavoriteTheme, isFavoriteTheme, getFavoriteThemeIds, getRecentThemeIds, resolveTheme, getCustomThemes, deleteCustomTheme, saveCustomTheme } from '../../themes/registry';
+import type { ThemeDefinition, ThemeCategory } from '../../themes/types';
+import ThemePreview from '../ui/ThemePreview';
+import ThemeEditorModal from './ThemeEditorModal';
+import ThemeStoreModal from './ThemeStoreModal';
+import { CODE_THEMES as codeThemeList } from '../../utils/codeTheme';
 
 // ─── Image Crop Modal ────────────────────────────────────────────────────────
 
@@ -197,51 +203,6 @@ const CropModal = ({
     );
 };
 
-// ─── Privacy Toggle Component ────────────────────────────────────────────────
-
-const PrivacyToggle = ({ label, description, storageKey, defaultValue, onChange }: { label: string; description: string; storageKey: string; defaultValue: boolean; onChange?: (value: boolean) => void }) => {
-    const [enabled, setEnabled] = useState(() => {
-        try {
-            const saved = localStorage.getItem(storageKey);
-            return saved !== null ? saved === 'true' : defaultValue;
-        } catch {
-            return defaultValue;
-        }
-    });
-
-    const toggle = () => {
-        const next = !enabled;
-        setEnabled(next);
-        try { localStorage.setItem(storageKey, String(next)); } catch {}
-        api.users.updateSettings({ [storageKey]: next }).catch(() => {});
-        onChange?.(next);
-    };
-
-    return (
-        <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '4px' }}>{label}</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.4' }}>{description}</div>
-            </div>
-            <div
-                onClick={toggle}
-                style={{
-                    width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer',
-                    background: enabled ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                    border: `1px solid ${enabled ? 'transparent' : 'var(--stroke)'}`,
-                    position: 'relative', transition: 'background 0.2s ease', flexShrink: 0,
-                }}
-            >
-                <div style={{
-                    width: '18px', height: '18px', borderRadius: '50%', background: 'white',
-                    position: 'absolute', top: '2px', left: enabled ? '22px' : '2px',
-                    transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                }} />
-            </div>
-        </div>
-    );
-};
-
 // ─── Main Settings Modal ─────────────────────────────────────────────────────
 
 const SettingsModal = ({
@@ -252,10 +213,10 @@ const SettingsModal = ({
     setUserTheme
 }: {
     onClose: () => void;
-    userProfile?: any;
-    setUserProfile?: any;
-    userTheme?: any;
-    setUserTheme?: any;
+    userProfile?: UserProfileLike;
+    setUserProfile?: React.Dispatch<React.SetStateAction<UserProfileLike>>;
+    userTheme?: UserThemeLike;
+    setUserTheme?: (theme: UserThemeLike) => void;
 }) => {
     const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections' | 'achievements' | 'stats' | 'wardrobe'>('account');
     const [settingsSearch, setSettingsSearch] = useState('');
@@ -291,7 +252,7 @@ const SettingsModal = ({
     // Auto-navigate to first matching tab when searching
     useEffect(() => {
         if (matchingTabs && matchingTabs.size > 0 && !(matchingTabs as Set<string>).has(activeTab)) {
-            setActiveTab(matchingTabs.values().next().value as any);
+            setActiveTab(matchingTabs.values().next().value as typeof activeTab);
         }
     }, [matchingTabs, activeTab]);
 
@@ -307,11 +268,45 @@ const SettingsModal = ({
         return () => window.removeEventListener('keydown', handler);
     }, []);
 
-    const [feedbackCategory, setFeedbackCategory] = useState('general');
-    const [feedbackBody, setFeedbackBody] = useState('');
-    const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
     const [customHex, setCustomHex] = useState('');
     const [codeThemeId, setCodeThemeId] = useState<string>(codeThemeGet());
+    const [themeSearchQuery, setThemeSearchQuery] = useState('');
+    const [themeCategory, setThemeCategory] = useState<ThemeCategory | 'all'>('all');
+    const [favIds, setFavIds] = useState<string[]>(() => getFavoriteThemeIds());
+    const [showThemeEditor, setShowThemeEditor] = useState(false);
+    const [editingCustomThemeId, setEditingCustomThemeId] = useState<string | undefined>();
+    const [showThemeStore, setShowThemeStore] = useState(false);
+    const [customThemesList, setCustomThemesList] = useState<ThemeDefinition[]>(() => getCustomThemes());
+    const themeImportRef = useRef<HTMLInputElement>(null);
+    const [codeSuggestion, setCodeSuggestion] = useState<{ themeName: string; codeTheme: string } | null>(null);
+    const [fullPreviewId, setFullPreviewId] = useState<string | undefined>(() => (window as any).__gratoniteFullPreview);
+
+    // Sync full-preview state from window global
+    useEffect(() => {
+        const handler = () => setFullPreviewId((window as any).__gratoniteFullPreview);
+        window.addEventListener('gratonite:full-preview-changed', handler);
+        return () => window.removeEventListener('gratonite:full-preview-changed', handler);
+    }, []);
+
+    // Item 23: Show code theme suggestion when theme changes
+    useEffect(() => {
+        const def = resolveTheme(theme);
+        if (def?.suggestedCodeTheme && def.suggestedCodeTheme !== codeThemeId) {
+            setCodeSuggestion({ themeName: def.name, codeTheme: def.suggestedCodeTheme });
+        } else {
+            setCodeSuggestion(null);
+        }
+    }, [theme]);
+
+    // Seasonal theme suggestion helper
+    const getSeasonalSuggestion = useCallback(() => {
+        const month = new Date().getMonth(); // 0-indexed
+        if (month === 9) return { message: "It's spooky season! Try the Cyberpunk theme", themeId: 'cyberpunk', emoji: '🎃' };
+        if (month === 11) return { message: "Happy holidays! Try the Arctic theme", themeId: 'arctic', emoji: '🎄' };
+        if (month === 5) return { message: "Happy Pride Month! Try the Bubblegum theme", themeId: 'bubblegum', emoji: '🌈' };
+        return null;
+    }, []);
+
     const [hexError, setHexError] = useState(false);
     const [soundMuted, setSoundMutedState] = useState(isSoundMuted());
     const [soundVolume, setSoundVolumeState] = useState(getSoundVolume());
@@ -340,11 +335,10 @@ const SettingsModal = ({
     const [joinedGuilds, setJoinedGuilds] = useState<Array<{ id: string; name: string; iconHash: string | null; memberCount: number; nickname?: string | null }>>([]);
     const [nicknameDrafts, setNicknameDrafts] = useState<Record<string, string>>({});
     const [savingNicknameForGuildId, setSavingNicknameForGuildId] = useState<string | null>(null);
-    const [achievements, setAchievements] = useState<any[]>([]);
-    const [userStats, setUserStats] = useState<any>(null);
 
     // Wardrobe tab state
-    const [wardrobeItems, setWardrobeItems] = useState<any[]>([]);
+    interface WardrobeItem { itemId: string; type: string; equipped?: boolean; assetConfig?: Record<string, unknown>; name?: string; rarity?: string; previewUrl?: string; [key: string]: unknown; }
+    const [wardrobeItems, setWardrobeItems] = useState<WardrobeItem[]>([]);
     const [wardrobeCategory, setWardrobeCategory] = useState<string>('avatar_frame');
     const [wardrobePreviewFrame, setWardrobePreviewFrame] = useState<string>('none');
     const [wardrobePreviewFrameColor, setWardrobePreviewFrameColor] = useState<string | undefined>();
@@ -362,10 +356,6 @@ const SettingsModal = ({
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
-            if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
-                e.preventDefault();
-                settingsSearchRef.current?.focus();
-            }
         };
         window.addEventListener('keydown', handleKey);
         return () => window.removeEventListener('keydown', handleKey);
@@ -373,22 +363,20 @@ const SettingsModal = ({
 
     // Fetch email notification settings on mount
     useEffect(() => {
-        api.users.getSettings().then((settings: any) => {
-            if (settings?.emailNotifications) {
-                setEmailMentions(settings.emailNotifications.mentions ?? false);
-                setEmailDms(settings.emailNotifications.dms ?? false);
-                setEmailFrequency(settings.emailNotifications.frequency ?? 'never');
+        api.users.getSettings().then((settings: Record<string, unknown>) => {
+            const emailNotifs = settings?.emailNotifications as Record<string, unknown> | undefined;
+            if (emailNotifs) {
+                setEmailMentions((emailNotifs.mentions as boolean) ?? false);
+                setEmailDms((emailNotifs.dms as boolean) ?? false);
+                setEmailFrequency((emailNotifs.frequency as 'instant' | 'daily' | 'never') ?? 'never');
             }
         }).catch(e => console.error('Failed to load settings:', e));
     }, []);
 
-    // Inline editing states for account fields
-    const [editingField, setEditingField] = useState<'displayName' | 'username' | 'email' | null>(null);
     const { user: ctxUser, updateUser, refetchUser } = useUser();
     const [editDisplayName, setEditDisplayName] = useState('');
     const [editUsername, setEditUsername] = useState('');
     const [editEmail, setEditEmail] = useState('');
-    const [tempEditValue, setTempEditValue] = useState('');
 
     // Populate edit fields from UserContext on mount / when user changes
     useEffect(() => {
@@ -399,18 +387,6 @@ const SettingsModal = ({
         }
     }, [ctxUser.id, ctxUser.name, ctxUser.handle, ctxUser.email]);
 
-    // Change password state
-    const [showPasswordForm, setShowPasswordForm] = useState(false);
-    const [currentPassword, setCurrentPassword] = useState('');
-    const [newPassword, setNewPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [showCurrentPw, setShowCurrentPw] = useState(false);
-    const [showNewPw, setShowNewPw] = useState(false);
-
-    // Delete account state
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [deleteConfirmText, setDeleteConfirmText] = useState('');
-    const [deletePassword, setDeletePassword] = useState('');
 
     // 2FA states
     const [authenticatorEnabled, setAuthenticatorEnabled] = useState(false);
@@ -431,48 +407,13 @@ const SettingsModal = ({
     const [backupCodesVerifyCode, setBackupCodesVerifyCode] = useState('');
     const [showBackupCodesVerify, setShowBackupCodesVerify] = useState(false);
 
-    // Connections tab state
-    const PROVIDERS = ['github', 'twitch', 'steam', 'twitter', 'youtube', 'spotify'] as const;
-    type Provider = typeof PROVIDERS[number];
-    const [connectionUsernames, setConnectionUsernames] = useState<Record<Provider, string>>({
-        github: '', twitch: '', steam: '', twitter: '', youtube: '', spotify: '',
-    });
-    const [connectionProfileUrls, setConnectionProfileUrls] = useState<Record<Provider, string>>({
-        github: '', twitch: '', steam: '', twitter: '', youtube: '', spotify: '',
-    });
-    const [connectionSaving, setConnectionSaving] = useState<Provider | null>(null);
-    const [connectionRemoving, setConnectionRemoving] = useState<Provider | null>(null);
-
-    useEffect(() => {
-        if (activeTab !== 'connections') return;
-        const controller = new AbortController();
-        fetch(`${API_BASE}/users/@me/connections`, {
-            credentials: 'include',
-            headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}` },
-            signal: controller.signal,
-        })
-            .then(r => r.ok ? r.json() : [])
-            .then((rows: any[]) => {
-                if (!Array.isArray(rows)) return;
-                const usernames: Record<string, string> = {};
-                const profileUrls: Record<string, string> = {};
-                rows.forEach((r: any) => {
-                    usernames[r.provider] = r.providerUsername ?? '';
-                    profileUrls[r.provider] = r.profileUrl ?? '';
-                });
-                setConnectionUsernames(prev => ({ ...prev, ...usernames }) as Record<Provider, string>);
-                setConnectionProfileUrls(prev => ({ ...prev, ...profileUrls }) as Record<Provider, string>);
-            })
-            .catch((err: any) => { if (err.name === 'AbortError') return; });
-        return () => controller.abort();
-    }, [activeTab]);
 
     // Fetch wardrobe inventory
     useEffect(() => {
         if (activeTab !== 'wardrobe') return;
         setWardrobeLoading(true);
-        api.inventory.get().then((data: any) => {
-            const items = data.items ?? [];
+        api.inventory.get().then((data: Record<string, unknown>) => {
+            const items = (data.items ?? []) as WardrobeItem[];
             setWardrobeItems(items);
             // Pre-select currently equipped items
             const selected: Record<string, string> = {};
@@ -480,8 +421,8 @@ const SettingsModal = ({
                 if (item.equipped) selected[item.type] = item.itemId;
             }
             setWardrobeSelectedIds(selected);
-            const equippedFrame = items.find((i: any) => i.type === 'avatar_frame' && i.equipped);
-            const equippedNameplate = items.find((i: any) => i.type === 'nameplate' && i.equipped);
+            const equippedFrame = items.find((i) => i.type === 'avatar_frame' && i.equipped);
+            const equippedNameplate = items.find((i) => i.type === 'nameplate' && i.equipped);
             if (equippedFrame) {
                 const cfg = (equippedFrame.assetConfig ?? {}) as Record<string, unknown>;
                 setWardrobePreviewFrame((cfg.frameStyle as string) ?? 'neon');
@@ -494,100 +435,7 @@ const SettingsModal = ({
         }).catch(e => console.error('Failed to load wardrobe:', e)).finally(() => setWardrobeLoading(false));
     }, [activeTab]);
 
-    // Fetch achievements and stats
-    useEffect(() => {
-        if (activeTab !== 'achievements' && activeTab !== 'stats') return;
-        const controller = new AbortController();
-        const token = localStorage.getItem('gratonite_access_token') ?? '';
-        fetch(`${API_BASE}/users/@me/achievements`, {
-            credentials: 'include',
-            headers: { Authorization: `Bearer ${token}` },
-            signal: controller.signal,
-        }).then(r => r.ok ? r.json() : []).then((data: any[]) => { if (Array.isArray(data)) setAchievements(data); }).catch((err: any) => { if (err.name === 'AbortError') return; });
-        fetch(`${API_BASE}/users/@me/stats`, {
-            credentials: 'include',
-            headers: { Authorization: `Bearer ${token}` },
-            signal: controller.signal,
-        }).then(r => r.ok ? r.json() : null).then((data: any) => { if (data) setUserStats(data); }).catch((err: any) => { if (err.name === 'AbortError') return; });
-        return () => controller.abort();
-    }, [activeTab]);
 
-    const URL_TEMPLATES: Record<string, string> = {
-        github: 'https://github.com/',
-        twitch: 'https://twitch.tv/',
-        steam: 'https://steamcommunity.com/id/',
-        twitter: 'https://x.com/',
-        youtube: 'https://youtube.com/@',
-        spotify: 'https://open.spotify.com/user/',
-    };
-
-    const saveConnection = async (provider: Provider) => {
-        const username = connectionUsernames[provider];
-        if (!username.trim()) return;
-        setConnectionSaving(provider);
-        try {
-            const explicitUrl = connectionProfileUrls[provider].trim();
-            const autoUrl = URL_TEMPLATES[provider] ? `${URL_TEMPLATES[provider]}${username.trim()}` : undefined;
-            const profileUrl = explicitUrl || autoUrl;
-            await fetch(`${API_BASE}/users/@me/connections`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}`,
-                },
-                body: JSON.stringify({
-                    provider,
-                    providerUsername: username.trim(),
-                    profileUrl,
-                }),
-            });
-            if (profileUrl && !explicitUrl) {
-                setConnectionProfileUrls(prev => ({ ...prev, [provider]: profileUrl }));
-            }
-            addToast({ title: `${provider} connected`, variant: 'success' });
-        } catch {
-            addToast({ title: `Failed to save ${provider}`, variant: 'error' });
-        } finally {
-            setConnectionSaving(null);
-        }
-    };
-
-    const removeConnection = async (provider: Provider) => {
-        setConnectionRemoving(provider);
-        try {
-            await fetch(`${API_BASE}/users/@me/connections/${provider}`, {
-                method: 'DELETE',
-                credentials: 'include',
-                headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}` },
-            });
-            setConnectionUsernames(prev => ({ ...prev, [provider]: '' }));
-            setConnectionProfileUrls(prev => ({ ...prev, [provider]: '' }));
-            addToast({ title: `${provider} removed`, variant: 'success' });
-        } catch {
-            addToast({ title: `Failed to remove ${provider}`, variant: 'error' });
-        } finally {
-            setConnectionRemoving(null);
-        }
-    };
-
-    const PROVIDER_LABELS: Record<Provider, string> = {
-        github: 'GitHub',
-        twitch: 'Twitch',
-        steam: 'Steam',
-        twitter: 'Twitter / X',
-        youtube: 'YouTube',
-        spotify: 'Spotify',
-    };
-
-    const PROVIDER_URL_TEMPLATES: Record<Provider, string> = {
-        github: 'https://github.com/',
-        twitch: 'https://twitch.tv/',
-        steam: 'https://steamcommunity.com/id/',
-        twitter: 'https://x.com/',
-        youtube: 'https://youtube.com/@',
-        spotify: 'https://open.spotify.com/user/',
-    };
 
     const [showServerOverrideInfo, setShowServerOverrideInfo] = useState(false);
     const [seasonalEnabled, setSeasonalEnabled] = useState(() => localStorage.getItem('gratonite-seasonal-effects') === 'true');
@@ -609,21 +457,21 @@ const SettingsModal = ({
         }).catch(() => { /* MFA status may not be available */ });
     }, [activeTab]);
 
-    const { theme, setTheme, colorMode, setColorMode, fontFamily, setFontFamily, fontSize, setFontSize, showChannelBackgrounds, setShowChannelBackgrounds, playMovingBackgrounds, setPlayMovingBackgrounds, glassMode, setGlassMode, reducedEffects, setReducedEffects, lowPower, setLowPower, accentColor, setAccentColor, highContrast, setHighContrast, compactMode, setCompactMode, buttonShape, setButtonShape, screenReaderMode, setScreenReaderMode, linkUnderlines, setLinkUnderlines, focusIndicatorSize, setFocusIndicatorSize, colorBlindMode, setColorBlindMode } = useTheme();
+    const { theme, setTheme, colorMode, setColorMode, fontFamily, setFontFamily, fontSize, setFontSize, showChannelBackgrounds, setShowChannelBackgrounds, playMovingBackgrounds, setPlayMovingBackgrounds, glassMode, setGlassMode, reducedEffects, setReducedEffects, lowPower, setLowPower, accentColor, setAccentColor, highContrast, setHighContrast, compactMode, setCompactMode, buttonShape, setButtonShape, screenReaderMode, setScreenReaderMode, linkUnderlines, setLinkUnderlines, focusIndicatorSize, setFocusIndicatorSize, colorBlindMode, setColorBlindMode, lowDataMode, setLowDataMode, previewTheme } = useTheme();
     const { addToast } = useToast();
 
     useEffect(() => {
         if (activeTab !== 'profile') return;
         let cancelled = false;
         api.guilds.getMine()
-            .then((rows: any[]) => {
+            .then((rows: Array<Record<string, unknown>>) => {
                 if (cancelled) return;
-                const normalized = (Array.isArray(rows) ? rows : []).map((g: any) => ({
-                    id: g.id,
-                    name: g.name,
-                    iconHash: g.iconHash ?? null,
+                const normalized = (Array.isArray(rows) ? rows : []).map((g) => ({
+                    id: g.id as string,
+                    name: g.name as string,
+                    iconHash: (g.iconHash as string | null) ?? null,
                     memberCount: typeof g.memberCount === 'number' ? g.memberCount : 0,
-                    nickname: g.nickname ?? '',
+                    nickname: (g.nickname as string | null) ?? '',
                 }));
                 setJoinedGuilds(normalized);
                 const drafts: Record<string, string> = {};
@@ -648,27 +496,27 @@ const SettingsModal = ({
     useEffect(() => {
         if (settingsFetchedRef.current) return;
         settingsFetchedRef.current = true;
-        api.users.getSettings().then((s: any) => {
-            if (s?.theme) setTheme(s.theme);
-            if (s?.colorMode) setColorMode(s.colorMode);
-            if (s?.fontFamily) setFontFamily(s.fontFamily);
-            if (s?.fontSize) setFontSize(s.fontSize);
-            if (s?.glassMode !== undefined) setGlassMode(s.glassMode);
-            if (s?.buttonShape) setButtonShape(s.buttonShape);
-            if (s?.highContrast !== undefined) setHighContrast(s.highContrast);
-            if (s?.compactMode !== undefined) setCompactMode(s.compactMode);
-            if (s?.accentColor) setAccentColor(s.accentColor);
-            if (s?.reducedMotion !== undefined) setReducedEffects(s.reducedMotion);
-            if (s?.lowPower !== undefined) setLowPower(s.lowPower);
+        api.users.getSettings().then((s: Record<string, unknown>) => {
+            if (s?.theme) setTheme(s.theme as AppTheme);
+            if (s?.colorMode) setColorMode(s.colorMode as ColorMode);
+            if (s?.fontFamily) setFontFamily(s.fontFamily as FontFamily);
+            if (s?.fontSize) setFontSize(s.fontSize as FontSize);
+            if (s?.glassMode !== undefined) setGlassMode(s.glassMode as GlassMode);
+            if (s?.buttonShape) setButtonShape(s.buttonShape as ButtonShape);
+            if (s?.highContrast !== undefined) setHighContrast(s.highContrast as boolean);
+            if (s?.compactMode !== undefined) setCompactMode(s.compactMode as boolean);
+            if (s?.accentColor) setAccentColor(s.accentColor as string);
+            if (s?.reducedMotion !== undefined) setReducedEffects(s.reducedMotion as boolean);
+            if (s?.lowPower !== undefined) setLowPower(s.lowPower as boolean);
             if (s?.soundVolume !== undefined) {
-                const vol = s.soundVolume > 1 ? s.soundVolume / 100 : s.soundVolume;
+                const vol = (s.soundVolume as number) > 1 ? (s.soundVolume as number) / 100 : (s.soundVolume as number);
                 setSoundVolumeState(vol);
                 setSoundVolume(vol);
             }
             if (s?.colorBlindMode !== undefined) {
                 // Migrate old boolean true → 'deuteranopia'
                 const cb = s.colorBlindMode === true ? 'deuteranopia' : s.colorBlindMode === false ? 'none' : s.colorBlindMode;
-                if (cb === 'deuteranopia' || cb === 'protanopia' || cb === 'tritanopia' || cb === 'none') setColorBlindMode(cb);
+                if (cb === 'deuteranopia' || cb === 'protanopia' || cb === 'tritanopia' || cb === 'none') setColorBlindMode(cb as ColorBlindMode);
             }
             // Mark as loaded AFTER applying server values so auto-save doesn't fire with defaults
             settingsLoadedRef.current = true;
@@ -713,7 +561,7 @@ const SettingsModal = ({
     const applyGlobalAvatarFrame = (frame: 'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse') => {
         setPreviewAvatarFrame(frame);
         if (setUserProfile) {
-            setUserProfile((prev: any) => ({ ...prev, avatarFrame: frame }));
+            setUserProfile((prev: UserProfileLike) => ({ ...prev, avatarFrame: frame }));
         }
         try {
             const userId = userProfile?.id || 'me';
@@ -727,7 +575,7 @@ const SettingsModal = ({
     const applyGlobalNameplateStyle = (style: 'none' | 'rainbow' | 'fire' | 'ice' | 'gold' | 'glitch') => {
         setNameplateStyle(style);
         if (setUserProfile) {
-            setUserProfile((prev: any) => ({ ...prev, nameplateStyle: style }));
+            setUserProfile((prev: UserProfileLike) => ({ ...prev, nameplateStyle: style }));
         }
         try {
             const userId = userProfile?.id || 'me';
@@ -820,8 +668,8 @@ const SettingsModal = ({
             await api.profiles.updateMemberProfile(guildId, { nickname: draft.length ? draft : null });
             setJoinedGuilds((prev) => prev.map((g) => (g.id === guildId ? { ...g, nickname: draft.length ? draft : null } : g)));
             addToast({ title: 'Server nickname updated', variant: 'success' });
-        } catch (err: any) {
-            addToast({ title: 'Failed to update server nickname', description: err?.message || 'Unknown error', variant: 'error' });
+        } catch (err: unknown) {
+            addToast({ title: 'Failed to update server nickname', description: (err instanceof Error ? err.message : '') || 'Unknown error', variant: 'error' });
         } finally {
             setSavingNicknameForGuildId(null);
         }
@@ -830,7 +678,7 @@ const SettingsModal = ({
     return (
         <>
             <div className="modal-overlay" onClick={onClose} style={{ background: 'rgba(0, 0, 0, 0.6)' }}>
-                <div className="settings-modal flex-row glass-panel" onClick={e => e.stopPropagation()} style={{ width: 'min(960px, 90vw)', height: 'min(680px, 85vh)', padding: 0, overflow: 'hidden' }}>
+                <div className="settings-modal flex-row glass-panel" onClick={e => e.stopPropagation()} style={{ width: 'min(960px, 95vw)', height: 'min(680px, 90vh)', padding: 0, overflow: 'hidden' }}>
                     {/* Left Sidebar */}
                     <div className="settings-sidebar" style={{ width: '220px', background: 'var(--bg-elevated)', padding: '16px 16px 32px', borderRight: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
                         {/* Search */}
@@ -898,200 +746,15 @@ const SettingsModal = ({
                         </button>
 
                         {activeTab === 'account' && (
-                            <>
-                                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '24px' }}>My Account</h2>
-
-                                <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', padding: '24px', border: '1px solid var(--stroke)', marginBottom: '32px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginBottom: '24px' }}>
-                                        <div style={{
-                                            width: '80px', height: '80px', borderRadius: '50%',
-                                            background: avatarStyle, backgroundSize: 'cover', backgroundPosition: 'center',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 'bold'
-                                        }}>
-                                            {avatarStyle.includes('gradient') ? (editDisplayName?.[0]?.toUpperCase() || '?') : ''}
-                                        </div>
-                                        <button className="auth-button" onClick={() => setActiveTab('profile')} style={{ marginTop: 0, width: 'auto', padding: '0 16px', height: '36px', background: 'transparent', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)' }}>Edit User Profile</button>
-                                    </div>
-
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                        {/* Display Name */}
-                                        <div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div>
-                                                    <div style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '4px' }}>DISPLAY NAME</div>
-                                                    {editingField !== 'displayName' && <div style={{ fontSize: '15px' }}>{editDisplayName}</div>}
-                                                </div>
-                                                {editingField !== 'displayName' && (
-                                                    <button onClick={() => { setEditingField('displayName'); setTempEditValue(editDisplayName); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '6px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Edit</button>
-                                                )}
-                                            </div>
-                                            {editingField === 'displayName' && (
-                                                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={tempEditValue}
-                                                        onChange={e => setTempEditValue(e.target.value)}
-                                                        autoFocus
-                                                        style={{ flex: 1, padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--accent-primary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
-                                                    />
-                                                    <button onClick={() => { api.users.updateAccountBasics({ displayName: tempEditValue }).then(() => { setEditDisplayName(tempEditValue); updateUser({ name: tempEditValue }); if (setUserProfile) setUserProfile((prev: any) => ({ ...prev, name: tempEditValue })); setEditingField(null); addToast({ title: 'Display Name Updated', description: `Display name changed to "${tempEditValue}".`, variant: 'success' }); }).catch(() => addToast({ title: 'Failed to update display name', variant: 'error' })); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Save</button>
-                                                    <button onClick={() => setEditingField(null)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Cancel</button>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Username */}
-                                        <div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div>
-                                                    <div style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '4px' }}>USERNAME</div>
-                                                    {editingField !== 'username' && <div style={{ fontSize: '15px' }}>{editUsername}</div>}
-                                                </div>
-                                                {editingField !== 'username' && (
-                                                    <button onClick={() => { setEditingField('username'); setTempEditValue(editUsername); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '6px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Edit</button>
-                                                )}
-                                            </div>
-                                            {editingField === 'username' && (
-                                                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={tempEditValue}
-                                                        onChange={e => setTempEditValue(e.target.value)}
-                                                        autoFocus
-                                                        style={{ flex: 1, padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--accent-primary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
-                                                    />
-                                                    <button onClick={() => { api.users.updateAccountBasics({ username: tempEditValue }).then(() => { setEditUsername(tempEditValue); updateUser({ handle: tempEditValue }); setEditingField(null); addToast({ title: 'Username Updated', description: `Username changed to "${tempEditValue}".`, variant: 'success' }); }).catch((e: any) => addToast({ title: 'Failed to update username', description: e?.message || 'Unknown error', variant: 'error' })); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Save</button>
-                                                    <button onClick={() => setEditingField(null)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Cancel</button>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Email */}
-                                        <div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div>
-                                                    <div style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '4px' }}>EMAIL</div>
-                                                    {editingField !== 'email' && <div style={{ fontSize: '15px' }}>{editEmail}</div>}
-                                                </div>
-                                                {editingField !== 'email' && (
-                                                    <button onClick={() => { setEditingField('email'); setTempEditValue(editEmail); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '6px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Edit</button>
-                                                )}
-                                            </div>
-                                            {editingField === 'email' && (
-                                                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                                                    <input
-                                                        type="email"
-                                                        value={tempEditValue}
-                                                        onChange={e => setTempEditValue(e.target.value)}
-                                                        autoFocus
-                                                        style={{ flex: 1, padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--accent-primary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
-                                                    />
-                                                    <button onClick={() => { api.users.updateAccountBasics({ email: tempEditValue }).then(() => { setEditEmail(tempEditValue); updateUser({ email: tempEditValue.toLowerCase() }); setEditingField(null); addToast({ title: 'Email Updated', description: 'Email saved. Please re-verify this address if required.', variant: 'success' }); }).catch((e: any) => addToast({ title: 'Failed to update email', description: e?.message || 'Unknown error', variant: 'error' })); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Save</button>
-                                                    <button onClick={() => setEditingField(null)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Cancel</button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Password & Authentication</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '48px' }}>
-                                    {!showPasswordForm ? (
-                                        <button onClick={() => setShowPasswordForm(true)} className="auth-button" style={{ marginTop: 0, background: 'var(--accent-primary)', width: 'fit-content', padding: '0 24px' }}>Change Password</button>
-                                    ) : (
-                                        <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: '20px', border: '1px solid var(--stroke)' }}>
-                                            <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px' }}>Change Password</div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                <div>
-                                                    <label style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>CURRENT PASSWORD</label>
-                                                    <div style={{ position: 'relative' }}>
-                                                        <input type={showCurrentPw ? 'text' : 'password'} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder="Enter current password" style={{ width: '100%', padding: '8px 36px 8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
-                                                        <button onClick={() => setShowCurrentPw(!showCurrentPw)} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}>{showCurrentPw ? <EyeOff size={16} /> : <Eye size={16} />}</button>
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <label style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>NEW PASSWORD</label>
-                                                    <div style={{ position: 'relative' }}>
-                                                        <input type={showNewPw ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Enter new password" style={{ width: '100%', padding: '8px 36px 8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
-                                                        <button onClick={() => setShowNewPw(!showNewPw)} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}>{showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}</button>
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <label style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>CONFIRM NEW PASSWORD</label>
-                                                    <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirm new password" style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-primary)', border: `1px solid ${confirmPassword && confirmPassword !== newPassword ? 'var(--error)' : 'var(--stroke)'}`, borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
-                                                    {confirmPassword && confirmPassword !== newPassword && <div style={{ fontSize: '12px', color: 'var(--error)', marginTop: '4px' }}>Passwords do not match</div>}
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                                                    <button
-                                                        onClick={() => {
-                                                            if (currentPassword && newPassword && newPassword === confirmPassword) {
-                                                                api.users.changePassword(currentPassword, newPassword).then(() => {
-                                                                    setShowPasswordForm(false);
-                                                                    setCurrentPassword('');
-                                                                    setNewPassword('');
-                                                                    setConfirmPassword('');
-                                                                    addToast({ title: 'Password Changed', description: 'Your password has been updated successfully.', variant: 'success' });
-                                                                }).catch((e: any) => addToast({ title: 'Failed to change password', description: e?.message || 'Check your current password', variant: 'error' }));
-                                                            }
-                                                        }}
-                                                        disabled={!currentPassword || !newPassword || newPassword !== confirmPassword}
-                                                        style={{ background: currentPassword && newPassword && newPassword === confirmPassword ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: 'none', padding: '8px 20px', borderRadius: 'var(--radius-sm)', color: currentPassword && newPassword && newPassword === confirmPassword ? '#000' : 'var(--text-muted)', cursor: currentPassword && newPassword && newPassword === confirmPassword ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: '13px' }}
-                                                    >Save</button>
-                                                    <button onClick={() => { setShowPasswordForm(false); setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); }} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', padding: '8px 20px', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Cancel</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                    <button className="auth-button" onClick={() => setActiveTab('security')} style={{ marginTop: 0, background: 'var(--bg-tertiary)', color: 'white', border: '1px solid var(--stroke)', width: 'fit-content', padding: '0 24px' }}>Enable Two-Factor Auth</button>
-                                </div>
-
-                                <div style={{ paddingLeft: '16px', borderLeft: '4px solid var(--error)' }}>
-                                    <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--error)', marginBottom: '8px' }}>Danger Zone</h3>
-                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Permanently delete your account and all data.</p>
-                                    {!showDeleteConfirm ? (
-                                        <button onClick={() => setShowDeleteConfirm(true)} className="auth-button" style={{ marginTop: 0, background: 'transparent', border: '1px solid var(--error)', color: 'var(--error)', width: 'fit-content', padding: '0 24px' }}>Delete Account</button>
-                                    ) : (
-                                        <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid var(--error)', borderRadius: 'var(--radius-md)', padding: '20px', marginTop: '8px' }}>
-                                            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--error)', marginBottom: '8px' }}>Are you absolutely sure?</div>
-                                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>This action cannot be undone. This will permanently delete your account, messages, and remove all your data from our servers.</p>
-                                            <label style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>Enter your password</label>
-                                            <input
-                                                type="password"
-                                                value={deletePassword}
-                                                onChange={e => setDeletePassword(e.target.value)}
-                                                placeholder="Password"
-                                                style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', marginBottom: '12px', boxSizing: 'border-box' }}
-                                            />
-                                            <label style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>Type DELETE to confirm</label>
-                                            <input
-                                                type="text"
-                                                value={deleteConfirmText}
-                                                onChange={e => setDeleteConfirmText(e.target.value)}
-                                                placeholder="DELETE"
-                                                style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', marginBottom: '12px', boxSizing: 'border-box' }}
-                                            />
-                                            <div style={{ display: 'flex', gap: '8px' }}>
-                                                <button
-                                                    onClick={() => {
-                                                        if (deleteConfirmText === 'DELETE' && deletePassword) {
-                                                            api.users.deleteAccount(deletePassword).then(() => {
-                                                                setShowDeleteConfirm(false);
-                                                                setDeleteConfirmText('');
-                                                                addToast({ title: 'Account Deleted', description: 'Your account has been scheduled for deletion.', variant: 'success' });
-                                                                window.location.href = '/login';
-                                                            }).catch((e: any) => addToast({ title: 'Failed to delete account', description: e?.message || 'Unknown error', variant: 'error' }));
-                                                        }
-                                                    }}
-                                                    disabled={deleteConfirmText !== 'DELETE' || !deletePassword}
-                                                    style={{ background: deleteConfirmText === 'DELETE' && deletePassword ? 'var(--error)' : 'var(--bg-elevated)', border: 'none', padding: '8px 20px', borderRadius: 'var(--radius-sm)', color: deleteConfirmText === 'DELETE' && deletePassword ? 'white' : 'var(--text-muted)', cursor: deleteConfirmText === 'DELETE' && deletePassword ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: '13px' }}
-                                                >Delete My Account</button>
-                                                <button onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); setDeletePassword(''); }} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '8px 20px', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Cancel</button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </>
+                            <SettingsAccountTab
+                                addToast={addToast}
+                                userProfile={userProfile}
+                                setUserProfile={setUserProfile}
+                                onNavigateToProfile={() => setActiveTab('profile')}
+                                onNavigateToSecurity={() => setActiveTab('security')}
+                            />
                         )}
+
 
                         {activeTab === 'security' && (
                             <>
@@ -1127,8 +790,8 @@ const SettingsModal = ({
                                                             setMfaVerifyCode('');
                                                             setShowAuthenticatorSetup(true);
                                                             setMfaStep(1);
-                                                        } catch (err: any) {
-                                                            addToast({ title: 'MFA Setup Failed', description: err?.message || 'Could not start MFA setup.', variant: 'error' });
+                                                        } catch (err: unknown) {
+                                                            addToast({ title: 'MFA Setup Failed', description: (err instanceof Error ? err.message : '') || 'Could not start MFA setup.', variant: 'error' });
                                                         } finally {
                                                             setMfaLoading(false);
                                                         }
@@ -1162,8 +825,8 @@ const SettingsModal = ({
                                                                 setShowMfaDisableDialog(false);
                                                                 setMfaDisableCode('');
                                                                 addToast({ title: 'Authenticator Disabled', description: '2FA via authenticator app has been disabled.', variant: 'success' });
-                                                            } catch (err: any) {
-                                                                addToast({ title: 'Failed to Disable', description: err?.message || 'Invalid code. Please try again.', variant: 'error' });
+                                                            } catch (err: unknown) {
+                                                                addToast({ title: 'Failed to Disable', description: (err instanceof Error ? err.message : '') || 'Invalid code. Please try again.', variant: 'error' });
                                                             } finally {
                                                                 setMfaLoading(false);
                                                             }
@@ -1248,8 +911,8 @@ const SettingsModal = ({
                                                                     setMfaStep(3);
                                                                 }
                                                                 addToast({ title: 'Authenticator Enabled', description: '2FA via authenticator app is now active.', variant: 'success' });
-                                                            } catch (err: any) {
-                                                                addToast({ title: 'Verification Failed', description: err?.message || 'Invalid code. Please try again.', variant: 'error' });
+                                                            } catch (err: unknown) {
+                                                                addToast({ title: 'Verification Failed', description: (err instanceof Error ? err.message : '') || 'Invalid code. Please try again.', variant: 'error' });
                                                             } finally {
                                                                 setMfaLoading(false);
                                                             }
@@ -1357,8 +1020,8 @@ const SettingsModal = ({
                                                                 setShowBackupCodes(true);
                                                                 setShowBackupCodesVerify(false);
                                                                 addToast({ title: 'Backup Codes Generated', description: 'Save these codes in a safe place.', variant: 'success' });
-                                                            } catch (err: any) {
-                                                                addToast({ title: 'Failed', description: err?.message || 'Invalid code. Please try again.', variant: 'error' });
+                                                            } catch (err: unknown) {
+                                                                addToast({ title: 'Failed', description: (err instanceof Error ? err.message : '') || 'Invalid code. Please try again.', variant: 'error' });
                                                             } finally {
                                                                 setBackupCodesLoading(false);
                                                             }
@@ -1825,82 +1488,498 @@ const SettingsModal = ({
                                     </div>
                                 </div>
 
-                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Theme Base</h3>
-                                <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '32px' }}>
-                                    {[
-                                        {
-                                            id: 'default', label: 'Default', desc: 'Clean & modern',
-                                            preview: { bg: '#0f172a', sidebar: '#1e293b', accent: '#3b82f6', text: '#94a3b8', msg1: '#2d3748', msg2: '#1e293b' }
-                                        },
-                                        {
-                                            id: 'neobrutalism', label: 'NeoBrutalism', desc: 'Bold & loud',
-                                            preview: { bg: '#fef3c7', sidebar: '#fbbf24', accent: '#000000', text: '#1c1c1c', msg1: '#ffffff', msg2: '#e5e7eb' }
-                                        },
-                                        {
-                                            id: 'glass', label: 'Glass UI', desc: 'Frosted & ethereal',
-                                            preview: { bg: '#0a0a1a', sidebar: 'rgba(255,255,255,0.05)', accent: '#8b5cf6', text: 'rgba(255,255,255,0.6)', msg1: 'rgba(255,255,255,0.08)', msg2: 'rgba(255,255,255,0.04)' }
-                                        },
-                                        {
-                                            id: 'synthwave', label: 'Synthwave', desc: 'Retro neon future',
-                                            preview: { bg: '#0d0221', sidebar: '#1a0533', accent: '#f72585', text: '#b5179e', msg1: '#240046', msg2: '#10002b' }
-                                        },
-                                        {
-                                            id: 'memphis', label: 'Memphis', desc: 'Playful geometry',
-                                            preview: { bg: '#fff5f5', sidebar: '#ffe0e0', accent: '#ff4d6d', text: '#555', msg1: '#fff0f3', msg2: '#ffe8ec' }
-                                        },
-                                        {
-                                            id: 'y2k', label: 'Y2K Chrome', desc: 'Shiny millennium',
-                                            preview: { bg: '#e8eaf6', sidebar: '#c5cae9', accent: '#5c6bc0', text: '#3949ab', msg1: '#ede7f6', msg2: '#d1c4e9' }
-                                        },
-                                        {
-                                            id: 'high-contrast', label: 'High Contrast', desc: 'Maximum readability',
-                                            preview: { bg: '#000000', sidebar: '#0a0a0a', accent: '#5b9fff', text: '#e0e0e0', msg1: '#1a1a1a', msg2: '#0a0a0a' }
-                                        },
-                                    ].map(t => {
-                                        const isSelected = theme === t.id;
-                                        const p = t.preview;
+                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Theme</h3>
+
+                                {/* Action buttons: Create, Store, Import, Export */}
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                                    <button
+                                        onClick={() => { setEditingCustomThemeId(undefined); setShowThemeEditor(true); }}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '6px',
+                                            padding: '8px 14px', borderRadius: '8px',
+                                            background: 'var(--accent-primary)', color: '#fff',
+                                            border: 'none', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                                        }}
+                                    >
+                                        <Palette size={14} /> Create Theme
+                                    </button>
+                                    <button
+                                        onClick={() => setShowThemeStore(true)}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '6px',
+                                            padding: '8px 14px', borderRadius: '8px',
+                                            background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
+                                            border: '1px solid var(--stroke)', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                                        }}
+                                    >
+                                        <ShoppingBag size={14} /> Theme Store
+                                    </button>
+                                    <button
+                                        onClick={() => themeImportRef.current?.click()}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '6px',
+                                            padding: '8px 14px', borderRadius: '8px',
+                                            background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
+                                            border: '1px solid var(--stroke)', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                                        }}
+                                    >
+                                        <Upload size={14} /> Import
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const currentTheme = resolveTheme(theme);
+                                            if (currentTheme) {
+                                                const blob = new Blob([JSON.stringify(currentTheme, null, 2)], { type: 'application/json' });
+                                                const url = URL.createObjectURL(blob);
+                                                const a = document.createElement('a');
+                                                a.href = url;
+                                                a.download = `${currentTheme.name.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
+                                                a.click();
+                                                URL.revokeObjectURL(url);
+                                                toast.addToast('Theme exported!', 'success');
+                                            }
+                                        }}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '6px',
+                                            padding: '8px 14px', borderRadius: '8px',
+                                            background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
+                                            border: '1px solid var(--stroke)', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                                        }}
+                                    >
+                                        <Download size={14} /> Export Current
+                                    </button>
+                                    {/* Hidden file input for import (Item 32) */}
+                                    <input
+                                        ref={themeImportRef}
+                                        type="file"
+                                        accept=".json"
+                                        style={{ display: 'none' }}
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+                                            const reader = new FileReader();
+                                            reader.onload = () => {
+                                                try {
+                                                    const parsed = JSON.parse(reader.result as string);
+                                                    if (!parsed.id || !parsed.name || !parsed.dark || !parsed.light) {
+                                                        toast.addToast('Invalid theme file: missing required fields (id, name, dark, light)', 'error');
+                                                        return;
+                                                    }
+                                                    parsed.id = `imported-${Date.now()}`;
+                                                    saveCustomTheme(parsed);
+                                                    setCustomThemesList(getCustomThemes());
+                                                    setTheme(parsed.id);
+                                                    toast.addToast(`Imported theme "${parsed.name}"!`, 'success');
+                                                } catch {
+                                                    toast.addToast('Failed to parse theme file', 'error');
+                                                }
+                                            };
+                                            reader.readAsText(file);
+                                            e.target.value = '';
+                                        }}
+                                    />
+                                </div>
+
+                                {/* My Themes section (Item 31) */}
+                                {customThemesList.length > 0 && (
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <h4 style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '10px', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <Palette size={12} color="var(--accent-primary)" /> My Themes ({customThemesList.length})
+                                        </h4>
+                                        <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                                            {customThemesList.map(t => {
+                                                const isSelected = theme === t.id;
+                                                const p = t.preview;
+                                                return (
+                                                    <div
+                                                        key={`custom-${t.id}`}
+                                                        role="button"
+                                                        tabIndex={0}
+                                                        onClick={() => setTheme(t.id as any)}
+                                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTheme(t.id as any); } }}
+                                                        onMouseEnter={() => previewTheme(t.id)}
+                                                        onMouseLeave={() => previewTheme(null)}
+                                                        style={{
+                                                            background: 'var(--bg-elevated)',
+                                                            border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--stroke)'}`,
+                                                            borderRadius: '12px',
+                                                            overflow: 'hidden',
+                                                            cursor: 'pointer',
+                                                            transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.15s',
+                                                            boxShadow: isSelected ? '0 0 0 1px var(--accent-primary)' : 'none',
+                                                            position: 'relative',
+                                                        }}
+                                                    >
+                                                        <div style={{ height: '72px', background: p.bg, display: 'flex', gap: '4px', padding: '6px' }}>
+                                                            <div style={{ width: '22px', background: p.sidebar, borderRadius: '4px', flexShrink: 0 }}></div>
+                                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                                                <div style={{ height: '8px', width: '50%', background: p.accent, borderRadius: '3px' }}></div>
+                                                                <div style={{ height: '6px', width: '80%', background: p.text, borderRadius: '3px', opacity: 0.5 }}></div>
+                                                                <div style={{ height: '6px', width: '60%', background: p.text, borderRadius: '3px', opacity: 0.3 }}></div>
+                                                                <div style={{ height: '4px', width: '30%', background: p.accent, borderRadius: '3px', opacity: 0.6 }}></div>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                            <div style={{ minWidth: 0 }}>
+                                                                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                    {t.name}
+                                                                </div>
+                                                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>Custom</div>
+                                                            </div>
+                                                            <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); setEditingCustomThemeId(t.id); setShowThemeEditor(true); }}
+                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }}
+                                                                    title="Edit theme"
+                                                                >
+                                                                    <Edit3 size={12} color="var(--text-muted)" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (confirm(`Publish "${t.name}" to the Theme Store? This will make it visible to all users.`)) {
+                                                                            const varsForApi: Record<string, string> = {};
+                                                                            for (const [k, v] of Object.entries(t.dark)) {
+                                                                                varsForApi[`dark.${k}`] = String(v);
+                                                                            }
+                                                                            for (const [k, v] of Object.entries(t.light)) {
+                                                                                varsForApi[`light.${k}`] = String(v);
+                                                                            }
+                                                                            api.themes.create({
+                                                                                name: t.name,
+                                                                                description: t.description,
+                                                                                tags: [t.category],
+                                                                                vars: varsForApi,
+                                                                            }).then((created: any) => {
+                                                                                return api.themes.publish(created.id);
+                                                                            }).then(() => {
+                                                                                toast.addToast(`"${t.name}" published to the Theme Store!`, 'success');
+                                                                            }).catch(() => {
+                                                                                toast.addToast('Failed to publish theme', 'error');
+                                                                            });
+                                                                        }
+                                                                    }}
+                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }}
+                                                                    title="Publish to Theme Store"
+                                                                >
+                                                                    <Share2 size={12} color="var(--text-muted)" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (confirm(`Delete "${t.name}"?`)) {
+                                                                            deleteCustomTheme(t.id);
+                                                                            setCustomThemesList(getCustomThemes());
+                                                                            if (theme === t.id) setTheme('default');
+                                                                            toast.addToast('Theme deleted', 'success');
+                                                                        }
+                                                                    }}
+                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }}
+                                                                    title="Delete theme"
+                                                                >
+                                                                    <Trash2 size={12} color="var(--error)" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        {isSelected && (
+                                                            <div style={{ position: 'absolute', top: 6, right: 6, background: 'var(--accent-primary)', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                <Check size={11} color="#000" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Search input */}
+                                <div style={{ position: 'relative', marginBottom: '12px' }}>
+                                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                                    <input
+                                        type="text"
+                                        placeholder="Search themes..."
+                                        value={themeSearchQuery}
+                                        onChange={(e) => setThemeSearchQuery(e.target.value)}
+                                        className="auth-input"
+                                        style={{ width: '100%', padding: '10px 12px 10px 36px', margin: 0, fontSize: '13px' }}
+                                    />
+                                </div>
+
+                                {/* Category filter pills */}
+                                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', marginBottom: '16px', scrollbarWidth: 'none' }}>
+                                    {(['all', 'dark', 'light', 'colorful', 'minimal', 'retro', 'nature', 'developer', 'accessibility'] as const).map(cat => (
+                                        <button
+                                            key={cat}
+                                            onClick={() => setThemeCategory(cat)}
+                                            style={{
+                                                padding: '5px 12px',
+                                                borderRadius: '16px',
+                                                border: 'none',
+                                                background: themeCategory === cat ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                                color: themeCategory === cat ? '#fff' : 'var(--text-secondary)',
+                                                fontSize: '12px',
+                                                fontWeight: 600,
+                                                cursor: 'pointer',
+                                                whiteSpace: 'nowrap',
+                                                transition: 'background 0.15s, color 0.15s',
+                                                textTransform: 'capitalize',
+                                            }}
+                                        >
+                                            {cat === 'all' ? 'All' : cat}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Item 25: Seasonal suggestion */}
+                                {(() => { const s = getSeasonalSuggestion(); if (!s || theme === s.themeId) return null; return (<div onClick={() => { setTheme(s.themeId as any); playSound('click'); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', marginBottom: '16px', borderRadius: '10px', background: 'var(--bg-tertiary)', border: '1px solid var(--accent-primary)', cursor: 'pointer' }}><Sparkles size={16} color="var(--accent-primary)" /><span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>{s.emoji} {s.message}</span><span style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 700 }}>Try it</span></div>); })()}
+                                {/* Item 22: Random Theme */}
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}><button onClick={() => { const all = getAllThemes(); const pick = all[Math.floor(Math.random() * all.length)]; if (pick) { previewTheme(pick.id); (window as any).__gratoniteFullPreview = pick.id; setFullPreviewId(pick.id); window.dispatchEvent(new CustomEvent('gratonite:full-preview-changed')); } playSound('click'); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}><Dices size={14} /> Random Theme</button></div>
+                                {/* Item 23: Code theme suggestion */}
+                                {codeSuggestion && (<div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', marginBottom: '16px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px dashed var(--stroke)' }}><Info size={14} color="var(--accent-primary)" /><span style={{ fontSize: '11px', color: 'var(--text-secondary)', flex: 1 }}>Suggested code theme for {codeSuggestion.themeName}: <strong>{codeThemeList.find(c => c.id === codeSuggestion.codeTheme)?.label || codeSuggestion.codeTheme}</strong></span><button onClick={() => { setCodeThemeId(codeSuggestion.codeTheme); codeThemeSet(codeSuggestion.codeTheme as any); setCodeSuggestion(null); }} style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: 'var(--accent-primary)', color: '#000', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Apply</button><button onClick={() => setCodeSuggestion(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }}><X size={12} color="var(--text-muted)" /></button></div>)}
+                                {/* Favorites section */}
+                                {themeCategory === 'all' && !themeSearchQuery && (() => {
+                                    const favThemes = favIds.map(id => resolveTheme(id)).filter((t): t is ThemeDefinition => !!t);
+                                    if (favThemes.length === 0) return null;
+                                    return (
+                                        <div style={{ marginBottom: '20px' }}>
+                                            <h4 style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '10px', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <Star size={12} fill="var(--warning)" color="var(--warning)" /> Favorites
+                                            </h4>
+                                            <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                                                {favThemes.map(t => {
+                                                    const isSelected = theme === t.id;
+                                                    const p = t.preview;
+                                                    return (
+                                                        <div
+                                                            key={`fav-${t.id}`}
+                                                            role="button"
+                                                            tabIndex={0}
+                                                            onClick={() => { haptic.themeSwitch(); setTheme(t.id as any); }}
+                                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTheme(t.id as any); } }}
+                                                            onMouseEnter={() => previewTheme(t.id)}
+                                                            onMouseLeave={() => previewTheme(null)}
+                                                            style={{
+                                                                background: 'var(--bg-elevated)',
+                                                                border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--stroke)'}`,
+                                                                borderRadius: '12px',
+                                                                overflow: 'hidden',
+                                                                cursor: 'pointer',
+                                                                transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.15s',
+                                                                boxShadow: isSelected ? '0 0 0 1px var(--accent-primary)' : 'none',
+                                                                position: 'relative',
+                                                            }}
+                                                        >
+                                                            <div style={{ height: '72px', background: p.bg, display: 'flex', gap: '4px', padding: '6px' }}>
+                                                                <div style={{ width: '22px', background: p.sidebar, borderRadius: '4px', flexShrink: 0 }}></div>
+                                                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                                                    <div style={{ height: '8px', width: '50%', background: p.accent, borderRadius: '3px' }}></div>
+                                                                    <div style={{ height: '6px', width: '80%', background: p.text, borderRadius: '3px', opacity: 0.5 }}></div>
+                                                                    <div style={{ height: '6px', width: '60%', background: p.text, borderRadius: '3px', opacity: 0.3 }}></div>
+                                                                    <div style={{ height: '4px', width: '30%', background: p.accent, borderRadius: '3px', opacity: 0.6 }}></div>
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                                <div>
+                                                                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                        {t.name}
+                                                                        {t.isDark ? <Moon size={10} color="var(--text-muted)" /> : <Sun size={10} color="var(--warning)" />}
+                                                                    </div>
+                                                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                                                                        <span style={{ background: 'var(--bg-tertiary)', padding: '1px 5px', borderRadius: '4px', fontSize: '9px', textTransform: 'capitalize' }}>{t.category}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); toggleFavoriteTheme(t.id); setFavIds(getFavoriteThemeIds()); }}
+                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }}
+                                                                    title="Remove from favorites"
+                                                                >
+                                                                    <Star size={14} fill="var(--warning)" color="var(--warning)" />
+                                                                </button>
+                                                            </div>
+                                                            {isSelected && (
+                                                                <div style={{ position: 'absolute', top: 6, right: 6, background: 'var(--accent-primary)', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                    <Check size={11} color="#000" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* Recently used section */}
+                                {themeCategory === 'all' && !themeSearchQuery && (() => {
+                                    const recentIds = getRecentThemeIds();
+                                    const recentThemes = recentIds.map(id => resolveTheme(id)).filter((t): t is ThemeDefinition => !!t);
+                                    if (recentThemes.length === 0) return null;
+                                    return (
+                                        <div style={{ marginBottom: '20px' }}>
+                                            <h4 style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '10px', letterSpacing: '0.05em' }}>
+                                                Recently Used
+                                            </h4>
+                                            <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                                                {recentThemes.map(t => {
+                                                    const isSelected = theme === t.id;
+                                                    const p = t.preview;
+                                                    const isFav = favIds.includes(t.id);
+                                                    return (
+                                                        <div
+                                                            key={`recent-${t.id}`}
+                                                            role="button"
+                                                            tabIndex={0}
+                                                            onClick={() => { haptic.themeSwitch(); setTheme(t.id as any); }}
+                                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTheme(t.id as any); } }}
+                                                            onMouseEnter={() => previewTheme(t.id)}
+                                                            onMouseLeave={() => previewTheme(null)}
+                                                            style={{
+                                                                background: 'var(--bg-elevated)',
+                                                                border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--stroke)'}`,
+                                                                borderRadius: '12px',
+                                                                overflow: 'hidden',
+                                                                cursor: 'pointer',
+                                                                transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.15s',
+                                                                boxShadow: isSelected ? '0 0 0 1px var(--accent-primary)' : 'none',
+                                                                position: 'relative',
+                                                            }}
+                                                        >
+                                                            <div style={{ height: '72px', background: p.bg, display: 'flex', gap: '4px', padding: '6px' }}>
+                                                                <div style={{ width: '22px', background: p.sidebar, borderRadius: '4px', flexShrink: 0 }}></div>
+                                                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                                                    <div style={{ height: '8px', width: '50%', background: p.accent, borderRadius: '3px' }}></div>
+                                                                    <div style={{ height: '6px', width: '80%', background: p.text, borderRadius: '3px', opacity: 0.5 }}></div>
+                                                                    <div style={{ height: '6px', width: '60%', background: p.text, borderRadius: '3px', opacity: 0.3 }}></div>
+                                                                    <div style={{ height: '4px', width: '30%', background: p.accent, borderRadius: '3px', opacity: 0.6 }}></div>
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                                <div>
+                                                                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                        {t.name}
+                                                                        {t.isDark ? <Moon size={10} color="var(--text-muted)" /> : <Sun size={10} color="var(--warning)" />}
+                                                                    </div>
+                                                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                                                                        <span style={{ background: 'var(--bg-tertiary)', padding: '1px 5px', borderRadius: '4px', fontSize: '9px', textTransform: 'capitalize' }}>{t.category}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); toggleFavoriteTheme(t.id); setFavIds(getFavoriteThemeIds()); }}
+                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }}
+                                                                    title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                                                                >
+                                                                    <Star size={14} fill={isFav ? 'var(--warning)' : 'none'} color={isFav ? 'var(--warning)' : 'var(--text-muted)'} />
+                                                                </button>
+                                                            </div>
+                                                            {isSelected && (
+                                                                <div style={{ position: 'absolute', top: 6, right: 6, background: 'var(--accent-primary)', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                    <Check size={11} color="#000" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* All themes grid */}
+                                {(() => {
+                                    let filteredThemes: ThemeDefinition[];
+                                    if (themeSearchQuery.trim()) {
+                                        filteredThemes = searchThemes(themeSearchQuery);
+                                        if (themeCategory !== 'all') {
+                                            filteredThemes = filteredThemes.filter(t => t.category === themeCategory);
+                                        }
+                                    } else if (themeCategory !== 'all') {
+                                        filteredThemes = getThemesByCategory(themeCategory);
+                                    } else {
+                                        filteredThemes = getAllThemesIncludingCustom();
+                                    }
+
+                                    if (filteredThemes.length === 0) {
                                         return (
-                                            <div
-                                                key={t.id}
-                                                role="button"
-                                                tabIndex={0}
-                                                onClick={() => setTheme(t.id as any)}
-                                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTheme(t.id as any); } }}
-                                                style={{
-                                                    background: 'var(--bg-elevated)',
-                                                    border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--stroke)'}`,
-                                                    borderRadius: '12px',
-                                                    overflow: 'hidden',
-                                                    cursor: 'pointer',
-                                                    transition: 'border-color 0.2s, box-shadow 0.2s',
-                                                    boxShadow: isSelected ? '0 0 0 1px var(--accent-primary)' : 'none',
-                                                    position: 'relative',
-                                                }}
-                                            >
-                                                {/* Mini preview */}
-                                                <div style={{ height: '72px', background: p.bg, display: 'flex', gap: '4px', padding: '6px' }}>
-                                                    <div style={{ width: '22px', background: p.sidebar, borderRadius: '4px', flexShrink: 0 }}></div>
-                                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                                        <div style={{ height: '8px', width: '50%', background: p.accent, borderRadius: '3px' }}></div>
-                                                        <div style={{ height: '6px', width: '80%', background: p.msg1, borderRadius: '3px' }}></div>
-                                                        <div style={{ height: '6px', width: '60%', background: p.msg2, borderRadius: '3px' }}></div>
-                                                        <div style={{ height: '6px', width: '70%', background: p.msg1, borderRadius: '3px', marginTop: '2px' }}></div>
-                                                    </div>
-                                                </div>
-                                                {/* Label */}
-                                                <div style={{ padding: '8px 10px' }}>
-                                                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>{t.label}</div>
-                                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{t.desc}</div>
-                                                </div>
-                                                {isSelected && (
-                                                    <div style={{ position: 'absolute', top: 6, right: 6, background: 'var(--accent-primary)', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                        <Check size={11} color="#000" />
-                                                    </div>
-                                                )}
+                                            <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                                                No themes found{themeSearchQuery ? ` for "${themeSearchQuery}"` : ''}.
                                             </div>
                                         );
-                                    })}
-                                </div>
+                                    }
+
+                                    return (
+                                        <div style={{ marginBottom: '20px' }}>
+                                            {(themeCategory === 'all' && !themeSearchQuery) && (
+                                                <h4 style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '10px', letterSpacing: '0.05em' }}>
+                                                    All Themes ({filteredThemes.length})
+                                                </h4>
+                                            )}
+                                            <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                                                {filteredThemes.map(t => {
+                                                    const isSelected = theme === t.id;
+                                                    const p = t.preview;
+                                                    const isFav = favIds.includes(t.id);
+                                                    return (
+                                                        <div
+                                                            key={t.id}
+                                                            role="button"
+                                                            tabIndex={0}
+                                                            onClick={() => { haptic.themeSwitch(); setTheme(t.id as any); }}
+                                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTheme(t.id as any); } }}
+                                                            onMouseEnter={() => previewTheme(t.id)}
+                                                            onMouseLeave={() => previewTheme(null)}
+                                                            style={{
+                                                                background: 'var(--bg-elevated)',
+                                                                border: `2px solid ${isSelected ? 'var(--accent-primary)' : 'var(--stroke)'}`,
+                                                                borderRadius: '12px',
+                                                                overflow: 'hidden',
+                                                                cursor: 'pointer',
+                                                                transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.15s',
+                                                                boxShadow: isSelected ? '0 0 0 1px var(--accent-primary)' : 'none',
+                                                                position: 'relative',
+                                                            }}
+                                                        >
+                                                            {/* Item 16: Realistic ThemePreview */}
+                                                            <div style={{ height: '72px', position: 'relative' }}>
+                                                                <ThemePreview theme={t} colorMode={colorMode} style={{ height: '100%' }} />
+                                                                {/* Item 18: Try it button */}
+                                                                <button onClick={(e) => { e.stopPropagation(); previewTheme(t.id); (window as any).__gratoniteFullPreview = t.id; setFullPreviewId(t.id); window.dispatchEvent(new CustomEvent('gratonite:full-preview-changed')); }} style={{ position: 'absolute', bottom: 4, right: 4, padding: '2px 8px', borderRadius: '4px', border: 'none', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '9px', fontWeight: 700, cursor: 'pointer', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '3px' }}><Eye size={9} /> Try</button>
+                                                            </div>
+                                                            {/* Theme info — Item 19: metadata */}
+                                                            <div style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                                <div style={{ minWidth: 0 }}>
+                                                                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</span>
+                                                                        {t.isDark ? <Moon size={10} color="var(--text-muted)" /> : <Sun size={10} color="var(--warning)" />}
+                                                                    </div>
+                                                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                                                                        <span style={{ background: 'var(--bg-tertiary)', padding: '1px 5px', borderRadius: '4px', fontSize: '9px', textTransform: 'capitalize' }}>{t.category}</span>
+                                                                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: p.accent, flexShrink: 0, border: '1px solid var(--stroke)' }} title={'Accent: ' + p.accent}></span>
+                                                                    </div>
+                                                                    {t.description && <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.description}</div>}
+                                                                </div>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); toggleFavoriteTheme(t.id); setFavIds(getFavoriteThemeIds()); }}
+                                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', flexShrink: 0 }}
+                                                                    title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                                                                >
+                                                                    <Star size={14} fill={isFav ? 'var(--warning)' : 'none'} color={isFav ? 'var(--warning)' : 'var(--text-muted)'} />
+                                                                </button>
+                                                            </div>
+                                                            {isSelected && (
+                                                                <div style={{ position: 'absolute', top: 6, right: 6, background: 'var(--accent-primary)', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                    <Check size={11} color="#000" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
+                                <div style={{ marginBottom: '32px' }}></div>
 
                                 <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Typography</h3>
                                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '40px' }}>
@@ -2190,6 +2269,19 @@ const SettingsModal = ({
                                             <option value="protanopia">Protanopia (red-weak)</option>
                                             <option value="tritanopia">Tritanopia (blue-weak)</option>
                                         </select>
+                                    </div>
+                                </div>
+
+                                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Data & Performance</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+                                    <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <div style={{ fontWeight: 600 }}>Low Data Mode</div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Reduces bandwidth usage: lower-res images, disables GIF/video auto-play, defers embed loading.</div>
+                                        </div>
+                                        <div role="switch" aria-checked={lowDataMode} aria-label="Low Data Mode" tabIndex={0} onClick={() => { setLowDataMode(!lowDataMode); playSound('click'); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setLowDataMode(!lowDataMode); playSound('click'); } }} style={{ width: '40px', height: '24px', background: lowDataMode ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
+                                            <div style={{ position: 'absolute', height: '16px', width: '16px', left: lowDataMode ? '20px' : '4px', bottom: '4px', backgroundColor: lowDataMode ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -2612,318 +2704,10 @@ const SettingsModal = ({
                                 </div>
                             </>
                         )}
-                        {activeTab === 'privacy' && (
-                            <>
-                                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Privacy &amp; Safety</h2>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Control who can contact you and how messages are filtered.</p>
-
-                                {/* DM & Message Requests */}
-                                <div style={{ marginBottom: '32px' }}>
-                                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Direct Messages</h3>
-
-                                    <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
-                                        <PrivacyToggle
-                                            label="Filter message requests"
-                                            description="Automatically filter DMs from people you don't know into Message Requests. Suspected spam will be moved to a separate Spam folder."
-                                            storageKey="privacy-filter-message-requests"
-                                            defaultValue={true}
-                                        />
-                                        <div style={{ height: '1px', background: 'var(--stroke)' }} />
-                                        <PrivacyToggle
-                                            label="Allow DMs from server members"
-                                            description="Allow direct messages from people in your shared servers. When disabled, only friends can DM you directly."
-                                            storageKey="privacy-allow-server-dms"
-                                            defaultValue={true}
-                                        />
-                                        <div style={{ height: '1px', background: 'var(--stroke)' }} />
-                                        <PrivacyToggle
-                                            label="Allow DMs from everyone"
-                                            description="When enabled, anyone on Gratonite can send you a direct message. When disabled, only friends and server members (if allowed above) can message you."
-                                            storageKey="privacy-allow-all-dms"
-                                            defaultValue={false}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Server-specific DM settings */}
-                                <div style={{ marginBottom: '32px' }}>
-                                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Server Privacy Defaults</h3>
-
-                                    <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
-                                        <PrivacyToggle
-                                            label="Allow DMs from new server members"
-                                            description="When you join a new server, allow members of that server to send you direct messages. You can override this per-server in server settings."
-                                            storageKey="privacy-new-server-dms"
-                                            defaultValue={true}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Profile Visitors */}
-                                <div style={{ marginBottom: '32px' }}>
-                                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Profile Visitors</h3>
-                                    <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
-                                        <PrivacyToggle
-                                            label="Allow others to see when I view profiles"
-                                            description="When enabled, your visits will appear in other users' profile visitors list."
-                                            storageKey="privacy-profile-visitors"
-                                            defaultValue={false}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Streamer Mode */}
-                                <div style={{ marginBottom: '32px' }}>
-                                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Streamer Mode</h3>
-                                    <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
-                                        <PrivacyToggle
-                                            label="Enable Streamer Mode"
-                                            description="Hides sensitive information like email addresses, invite links, and personal details behind a blur. Hover to reveal."
-                                            storageKey="gratonite:streamer-mode"
-                                            defaultValue={false}
-                                            onChange={(val) => {
-                                                if (val) {
-                                                    document.body.classList.add('streamer-mode');
-                                                } else {
-                                                    document.body.classList.remove('streamer-mode');
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Read Receipts */}
-                                <div style={{ marginBottom: '32px' }}>
-                                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Read Receipts</h3>
-                                    <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
-                                        <PrivacyToggle
-                                            label="Show Read Receipts"
-                                            description="Allow others to see when you've read their messages. When disabled, your read status won't be shared with other users."
-                                            storageKey="gratonite:show-read-receipts"
-                                            defaultValue={false}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Content filtering */}
-                                <div style={{ marginBottom: '32px' }}>
-                                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Safe Messaging</h3>
-
-                                    <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
-                                        <PrivacyToggle
-                                            label="Scan messages from everyone"
-                                            description="Automatically scan and filter direct messages from all users for explicit or harmful content."
-                                            storageKey="privacy-scan-all-messages"
-                                            defaultValue={true}
-                                        />
-                                        <div style={{ height: '1px', background: 'var(--stroke)' }} />
-                                        <PrivacyToggle
-                                            label="Block suspicious links"
-                                            description="Automatically detect and block messages containing known phishing or malicious links."
-                                            storageKey="privacy-block-suspicious-links"
-                                            defaultValue={true}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Privacy Score */}
-                                <div style={{ marginBottom: '32px' }}>
-                                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Privacy Score</h3>
-                                    <PrivacyScoreWidget userSettings={{}} userProfile={userProfile} onNavigate={(tab: string) => setActiveTab(tab as any)} />
-                                </div>
-
-                                {/* Data Export (GDPR) */}
-                                <div style={{ marginBottom: '32px' }}>
-                                    <DataExportWidget />
-                                </div>
-
-                                {/* Account Recovery Kit */}
-                                <div style={{ marginBottom: '32px' }}>
-                                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Account Recovery</h3>
-                                    <AccountRecoveryKitWidget userId={userProfile?.id || ''} username={userProfile?.username || ''} email={userProfile?.email || ''} />
-                                </div>
-                            </>
-                        )}
-                        {activeTab === 'connections' && (
-                            <>
-                                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Connected Accounts</h2>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Link your third-party accounts to display them on your profile.</p>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                    {PROVIDERS.map((provider) => {
-                                        const hasUsername = !!connectionUsernames[provider].trim();
-                                        const autoUrl = hasUsername ? `${PROVIDER_URL_TEMPLATES[provider]}${connectionUsernames[provider].trim()}` : '';
-                                        const displayUrl = connectionProfileUrls[provider] || autoUrl;
-                                        return (
-                                        <div key={provider} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                                                <Link2 size={16} color="var(--accent-primary)" />
-                                                <span style={{ fontWeight: 600, fontSize: '14px' }}>{PROVIDER_LABELS[provider]}</span>
-                                                {hasUsername && (
-                                                    <span style={{ fontSize: '11px', color: 'var(--success, #10b981)', fontWeight: 500 }}>Connected</span>
-                                                )}
-                                            </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                <div style={{ display: 'flex', gap: '8px' }}>
-                                                    <input
-                                                        type="text"
-                                                        placeholder={`Your ${PROVIDER_LABELS[provider]} username`}
-                                                        value={connectionUsernames[provider]}
-                                                        onChange={e => setConnectionUsernames(prev => ({ ...prev, [provider]: e.target.value }))}
-                                                        style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
-                                                    />
-                                                    <button
-                                                        onClick={() => saveConnection(provider)}
-                                                        disabled={connectionSaving === provider || !connectionUsernames[provider].trim()}
-                                                        style={{
-                                                            padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: 600, fontSize: '13px',
-                                                            background: 'var(--accent-primary)', color: '#000', cursor: 'pointer', whiteSpace: 'nowrap',
-                                                            opacity: (!connectionUsernames[provider].trim() || connectionSaving === provider) ? 0.6 : 1,
-                                                        }}
-                                                    >
-                                                        {connectionSaving === provider ? 'Saving...' : 'Save'}
-                                                    </button>
-                                                    {hasUsername && (
-                                                        <button
-                                                            onClick={() => removeConnection(provider)}
-                                                            disabled={connectionRemoving === provider}
-                                                            style={{
-                                                                padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', fontWeight: 600, fontSize: '13px',
-                                                                background: 'var(--bg-elevated)', color: 'var(--error)', cursor: 'pointer',
-                                                            }}
-                                                        >
-                                                            {connectionRemoving === provider ? '...' : 'Remove'}
-                                                        </button>
-                                                    )}
-                                                </div>
-                                                {hasUsername && displayUrl && (
-                                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                        <Link2 size={12} />
-                                                        <a href={displayUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>{displayUrl}</a>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                        );
-                                    })}
-                                </div>
-                            </>
-                        )}
-                        {activeTab === 'feedback' && (
-                            <>
-                                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Send Feedback</h2>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Help us improve Gratonite by sharing your thoughts, reporting bugs, or suggesting features.</p>
-
-                                {feedbackSubmitted ? (
-                                    <div style={{ textAlign: 'center', padding: '48px 0' }}>
-                                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                                            <Check size={32} color="#10b981" />
-                                        </div>
-                                        <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>Feedback Sent!</h3>
-                                        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px' }}>Thank you for helping us improve Gratonite.</p>
-                                        <button onClick={() => { setFeedbackSubmitted(false); setFeedbackBody(''); setFeedbackCategory('general'); }} style={{ padding: '10px 24px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
-                                            Send More Feedback
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                        <div>
-                                            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Category</label>
-                                            <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                                                {[
-                                                    { id: 'general', label: 'General' },
-                                                    { id: 'bug', label: 'Bug Report' },
-                                                    { id: 'feature', label: 'Feature Request' },
-                                                    { id: 'ux', label: 'UX Issue' },
-                                                ].map(cat => (
-                                                    <button key={cat.id} onClick={() => setFeedbackCategory(cat.id)} style={{
-                                                        padding: '10px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
-                                                        background: feedbackCategory === cat.id ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                                                        color: feedbackCategory === cat.id ? '#000' : 'var(--text-secondary)',
-                                                        border: `1px solid ${feedbackCategory === cat.id ? 'var(--accent-primary)' : 'var(--stroke)'}`,
-                                                    }}>{cat.label}</button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Your Feedback</label>
-                                            <textarea
-                                                value={feedbackBody}
-                                                onChange={e => setFeedbackBody(e.target.value)}
-                                                placeholder="Describe your feedback, bug, or suggestion in detail..."
-                                                maxLength={2000}
-                                                style={{ width: '100%', height: '140px', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', resize: 'none', fontFamily: 'inherit' }}
-                                            />
-                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', textAlign: 'right' }}>{feedbackBody.length}/2000</div>
-                                        </div>
-
-                                        <button
-                                            onClick={async () => {
-                                                if (!feedbackBody.trim()) return;
-                                                try {
-                                                    await api.bugReports.create({
-                                                        title: feedbackCategory === 'bug' ? 'Bug Report' : feedbackCategory === 'feature' ? 'Feature Request' : feedbackCategory === 'ux' ? 'UX Issue' : 'General Feedback',
-                                                        summary: feedbackBody.trim(),
-                                                        route: window.location.pathname,
-                                                        pageUrl: window.location.href,
-                                                        viewport: `${window.innerWidth}x${window.innerHeight}`,
-                                                        userAgent: navigator.userAgent,
-                                                        clientTimestamp: new Date().toISOString(),
-                                                        metadata: { category: feedbackCategory },
-                                                    });
-                                                    setFeedbackSubmitted(true);
-                                                    addToast({ title: 'Feedback Sent', description: 'Your feedback has been submitted. Thank you!', variant: 'success' });
-                                                } catch {
-                                                    addToast({ title: 'Error', description: 'Failed to submit feedback. Please try again.', variant: 'error' });
-                                                }
-                                            }}
-                                            disabled={!feedbackBody.trim()}
-                                            style={{
-                                                padding: '12px 24px', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '14px', cursor: feedbackBody.trim() ? 'pointer' : 'not-allowed',
-                                                background: feedbackBody.trim() ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                                                color: feedbackBody.trim() ? '#000' : 'var(--text-muted)',
-                                                alignSelf: 'flex-start',
-                                            }}
-                                        >
-                                            Submit Feedback
-                                        </button>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                        {activeTab === 'achievements' && (
-                            <div style={{ padding: '0 40px' }}>
-                                <h2 style={{ color: 'var(--text-primary)', marginBottom: '8px' }}>Achievements</h2>
-                                <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '24px' }}>
-                                    {achievements.filter(a => a.earned).length} / {achievements.length} earned
-                                </p>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
-                                    {achievements.map((a: any) => (
-                                        <div key={a.id} style={{
-                                            padding: '16px',
-                                            background: a.earned ? 'var(--bg-elevated)' : 'var(--bg-tertiary)',
-                                            borderRadius: 'var(--radius-md)',
-                                            border: `1px solid ${a.earned ? 'var(--accent-primary)' : 'var(--stroke)'}`,
-                                            opacity: a.earned ? 1 : 0.5,
-                                            display: 'flex', flexDirection: 'column', gap: '8px',
-                                        }}>
-                                            <div style={{ fontSize: '24px' }}>
-                                                {a.earned ? '🏆' : '🔒'}
-                                            </div>
-                                            <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>{a.name}</div>
-                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{a.description}</div>
-                                            {a.earned && <div style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 600 }}>+{a.points} pts</div>}
-                                        </div>
-                                    ))}
-                                    {achievements.length === 0 && (
-                                        <div style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--text-muted)', padding: '40px' }}>
-                                            Loading achievements...
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
+                        {activeTab === 'privacy' && <SettingsPrivacyTab addToast={addToast} userProfile={userProfile} onNavigateTab={(tab) => setActiveTab(tab as typeof activeTab)} />}
+                        {activeTab === 'connections' && <SettingsConnectionsTab addToast={addToast} />}
+                        {activeTab === 'feedback' && <SettingsFeedbackTab addToast={addToast} />}
+                        {activeTab === 'achievements' && <SettingsAchievementsTab />}
 
                         {activeTab === 'wardrobe' && (() => {
                             const wardrobeCats = [
@@ -2932,8 +2716,8 @@ const SettingsModal = ({
                                 { key: 'profile_effect', label: 'Effects' },
                                 { key: 'decoration', label: 'Decorations' },
                             ];
-                            const categoryItems = wardrobeItems.filter((i: any) => i.type === wardrobeCategory);
-                            const handleWardrobeSelect = (item: any) => {
+                            const categoryItems = wardrobeItems.filter((i: WardrobeItem) => i.type === wardrobeCategory);
+                            const handleWardrobeSelect = (item: WardrobeItem) => {
                                 const cfg = (item.assetConfig ?? {}) as Record<string, unknown>;
                                 const isAlreadySelected = wardrobeSelectedIds[item.type] === item.itemId;
                                 setWardrobeSelectedIds(prev => ({
@@ -2956,7 +2740,7 @@ const SettingsModal = ({
                                     const userId = userProfile?.id || 'me';
                                     for (const [type, itemId] of Object.entries(wardrobeSelectedIds)) {
                                         if (!itemId) continue;
-                                        const item = wardrobeItems.find((i: any) => i.itemId === itemId && i.type === type);
+                                        const item = wardrobeItems.find((i: WardrobeItem) => i.itemId === itemId && i.type === type);
                                         if (!item) continue;
                                         const res = item.source === 'shop'
                                             ? await api.shop.equipItem(itemId)
@@ -3013,7 +2797,7 @@ const SettingsModal = ({
                                                 </div>
                                             ) : (
                                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '10px', maxHeight: '340px', overflowY: 'auto' }}>
-                                                    {categoryItems.map((item: any) => {
+                                                    {categoryItems.map((item: WardrobeItem) => {
                                                         const isSelected = wardrobeSelectedIds[item.type] === item.itemId;
                                                         const rarityColors: Record<string, string> = { common: '#9ca3af', uncommon: '#22c55e', rare: '#3b82f6', epic: '#a855f7', legendary: '#f59e0b' };
                                                         const rColor = rarityColors[item.rarity] ?? '#9ca3af';
@@ -3111,50 +2895,7 @@ const SettingsModal = ({
                             );
                         })()}
 
-                        {activeTab === 'stats' && (
-                            <div style={{ padding: '0 40px' }}>
-                                <h2 style={{ color: 'var(--text-primary)', marginBottom: '8px' }}>Your Stats</h2>
-                                <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '24px' }}>Activity overview</p>
-                                {userStats ? (
-                                    <>
-                                        {/* XP Progress bar */}
-                                        <div style={{ marginBottom: '24px', padding: '16px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                                <span style={{ fontWeight: 700, fontSize: '16px', color: 'var(--accent-primary)' }}>Level {userStats.level}</span>
-                                                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{userStats.xp} / {userStats.xpToNextLevel} XP</span>
-                                            </div>
-                                            <div style={{ background: 'var(--bg-tertiary)', borderRadius: '4px', height: '8px', overflow: 'hidden' }}>
-                                                <div style={{
-                                                    height: '100%', borderRadius: '4px', background: 'var(--accent-primary)',
-                                                    width: `${Math.min(100, ((userStats.xp - userStats.xpForCurrentLevel) / (userStats.xpToNextLevel - userStats.xpForCurrentLevel)) * 100)}%`,
-                                                    transition: 'width 0.5s ease',
-                                                }} />
-                                            </div>
-                                        </div>
-                                        {/* Stats grid */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
-                                            {[
-                                                { label: '🔥 Current Streak', value: `${userStats.currentStreak} ${userStats.currentStreak === 1 ? 'day' : 'days'}` },
-                                                { label: '🏆 Best Streak', value: `${userStats.longestStreak} ${userStats.longestStreak === 1 ? 'day' : 'days'}` },
-                                                { label: '🪙 Coins', value: userStats.coins },
-                                                { label: '⭐ Achievements', value: userStats.achievementsEarned },
-                                                { label: '🔖 Bookmarks', value: userStats.bookmarks },
-                                            ].map(stat => (
-                                                <div key={stat.label} style={{
-                                                    padding: '16px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)',
-                                                    border: '1px solid var(--stroke)', textAlign: 'center',
-                                                }}>
-                                                    <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--accent-primary)', marginBottom: '4px' }}>{stat.value}</div>
-                                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{stat.label}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px' }}>Loading stats...</div>
-                                )}
-                            </div>
-                        )}
+                        {activeTab === 'stats' && <SettingsStatsTab />}
                     </div>
                 </div>
             </div>
@@ -3166,6 +2907,21 @@ const SettingsModal = ({
                     aspect={cropTarget === 'avatar' ? 'circle' : 'banner'}
                     onConfirm={handleCropConfirm}
                     onCancel={() => { setCropTarget(null); setPendingFile(null); }}
+                />
+            )}
+
+            {/* Theme Editor Modal (Items 26-29) */}
+            {showThemeEditor && (
+                <ThemeEditorModal
+                    onClose={() => { setShowThemeEditor(false); setEditingCustomThemeId(undefined); setCustomThemesList(getCustomThemes()); }}
+                    editingThemeId={editingCustomThemeId}
+                />
+            )}
+
+            {/* Theme Store Modal (Items 33-40) */}
+            {showThemeStore && (
+                <ThemeStoreModal
+                    onClose={() => { setShowThemeStore(false); setCustomThemesList(getCustomThemes()); }}
                 />
             )}
         </>

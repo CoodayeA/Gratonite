@@ -111,7 +111,7 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
 
                 if (cancelled) return;
                 const combined: SearchResult[] = [];
-                for (const u of users as any[]) {
+                for (const u of users as Array<Record<string, string>>) {
                     combined.push({
                         id: u.id,
                         type: 'user',
@@ -121,7 +121,7 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                         targetUserId: u.id,
                     });
                 }
-                for (const m of (messages as any).results || []) {
+                for (const m of ((messages as Record<string, unknown>).results ?? []) as Array<Record<string, string>>) {
                     combined.push({
                         id: m.id,
                         type: 'message',

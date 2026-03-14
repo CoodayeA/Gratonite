@@ -398,7 +398,7 @@ const EventScheduler = () => {
                                         <select
                                             value={selectedChannelId}
                                             onChange={e => setSelectedChannelId(e.target.value)}
-                                            style={{ ...inputStyle, cursor: 'pointer', appearance: 'auto' as any }}
+                                            style={{ ...inputStyle, cursor: 'pointer', appearance: 'auto' } as React.CSSProperties}
                                         >
                                             <option value="">Select a voice channel...</option>
                                             {voiceChannels.map(ch => (

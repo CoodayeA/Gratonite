@@ -62,7 +62,7 @@ export default function AdminFeedback() {
 
   useEffect(() => {
     api.feedback.list({ limit: 200 }).then(res => {
-      const raw: any[] = Array.isArray(res) ? res : (res as any).items ?? [];
+      const raw: Record<string, unknown>[] = Array.isArray(res) ? res : ((res as Record<string, unknown>).items ?? []) as Record<string, unknown>[];
       const categoryMap: Record<string, FeedbackCategory> = {
         bug: 'Bug Report', bug_report: 'Bug Report',
         feature: 'Feature Request', feature_request: 'Feature Request',
@@ -258,7 +258,7 @@ export default function AdminFeedback() {
             {showFilterMenu && (
               <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '4px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', zIndex: 50, minWidth: '160px', overflow: 'hidden' }}>
                 {(['All', 'Bug Report', 'Feature Request', 'General', 'UX Issue'] as const).map(cat => (
-                  <button key={cat} onClick={() => { setCategoryFilter(cat as any); setShowFilterMenu(false); }} style={{ display: 'block', width: '100%', padding: '8px 14px', background: categoryFilter === cat ? 'var(--bg-tertiary)' : 'transparent', border: 'none', color: categoryFilter === cat ? 'var(--accent-primary)' : 'var(--text-secondary)', fontSize: '13px', cursor: 'pointer', textAlign: 'left', fontWeight: categoryFilter === cat ? 600 : 400 }}>
+                  <button key={cat} onClick={() => { setCategoryFilter(cat); setShowFilterMenu(false); }} style={{ display: 'block', width: '100%', padding: '8px 14px', background: categoryFilter === cat ? 'var(--bg-tertiary)' : 'transparent', border: 'none', color: categoryFilter === cat ? 'var(--accent-primary)' : 'var(--text-secondary)', fontSize: '13px', cursor: 'pointer', textAlign: 'left', fontWeight: categoryFilter === cat ? 600 : 400 }}>
                     {cat}
                   </button>
                 ))}

@@ -44,6 +44,9 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
     const [positioned, setPositioned] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
+    // Detect touch-only devices (no fine pointer / no hover)
+    const isTouchDevice = typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
+
     const openMenuAt = useCallback((x: number, y: number, items: ContextMenuItem[]) => {
         setPositioned(false);
         setState({
@@ -128,32 +131,52 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
             {children}
 
             {state.isOpen && (
+                <>
+                {/* Touch backdrop for bottom-sheet style */}
+                {isTouchDevice && (
+                    <div
+                        onClick={closeMenu}
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            background: 'rgba(0,0,0,0.5)',
+                            zIndex: 99998,
+                        }}
+                    />
+                )}
                 <div
                     ref={menuRef}
+                    className={isTouchDevice ? 'context-menu-touch' : ''}
                     style={{
                         position: 'fixed',
-                        top: state.y,
-                        left: state.x,
+                        top: isTouchDevice ? undefined : state.y,
+                        left: isTouchDevice ? undefined : state.x,
                         zIndex: 99999,
                         background: 'var(--bg-elevated)',
                         border: '1px solid var(--stroke)',
-                        borderRadius: 'var(--radius-md)',
+                        borderRadius: isTouchDevice ? '16px 16px 0 0' : 'var(--radius-md)',
                         boxShadow: '0 16px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05) inset',
                         padding: '8px',
                         minWidth: '200px',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '2px',
-                        animation: positioned ? 'popIn 0.15s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+                        animation: positioned ? (isTouchDevice ? 'bottomSheetSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)' : 'popIn 0.15s cubic-bezier(0.16, 1, 0.3, 1)') : 'none',
                         transformOrigin: 'top left',
                         backdropFilter: 'blur(20px)',
                         visibility: positioned ? 'visible' : 'hidden',
+                        ...(isTouchDevice ? { bottom: 0, left: 0, right: 0, top: 'auto', paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))' } : {}),
                     }}
                     role="menu"
                     aria-label="Context Menu"
                     onClick={(e) => e.stopPropagation()}
                     onContextMenu={(e) => e.preventDefault()}
                 >
+                    {isTouchDevice && (
+                        <div className="context-menu-handle" style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 4px' }}>
+                            <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'var(--text-muted)', opacity: 0.4 }} />
+                        </div>
+                    )}
                     {state.items.map((item, idx) => (
                         <React.Fragment key={item.id}>
                             <button
@@ -164,7 +187,8 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
                                     alignItems: 'center',
                                     gap: '12px',
                                     width: '100%',
-                                    padding: '8px 12px',
+                                    padding: isTouchDevice ? '12px 16px' : '8px 12px',
+                                    minHeight: isTouchDevice ? '48px' : undefined,
                                     background: 'transparent',
                                     border: 'none',
                                     borderRadius: '6px',
@@ -173,7 +197,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
                                     transition: 'background 0.1s, color 0.1s',
                                     textAlign: 'left',
                                     fontFamily: 'var(--font-sans)',
-                                    fontSize: '14px',
+                                    fontSize: isTouchDevice ? '16px' : '14px',
                                     fontWeight: 500,
                                     outline: state.focusedIndex === idx ? '2px solid var(--accent-primary)' : 'none',
                                     outlineOffset: '-2px'
@@ -192,13 +216,14 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
                                     closeMenu();
                                 }}
                             >
-                                {item.icon && <item.icon size={16} />}
+                                {item.icon && <item.icon size={isTouchDevice ? 20 : 16} />}
                                 {item.label}
                             </button>
                             {item.divider && <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />}
                         </React.Fragment>
                     ))}
                 </div>
+                </>
             )}
         </ContextMenuContext.Provider>
     );

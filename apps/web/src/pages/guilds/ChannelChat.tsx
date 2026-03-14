@@ -28,6 +28,9 @@ import SwipeableMessage from '../../components/chat/SwipeableMessage';
 import { saveScrollPosition, getScrollPosition } from '../../store/scrollPositionStore';
 import { queryClient } from '../../lib/queryClient';
 import { userQueryKey } from '../../hooks/queries/useUserQuery';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { haptic } from '../../utils/haptics';
 import { encrypt, decrypt, getOrCreateKeyPair, decryptGroupKey, generateGroupKey, encryptGroupKey, importPublicKey, encryptFile, decryptFile } from '../../lib/e2e';
 import { Lock, Loader2 as Loader2Icon } from 'lucide-react';
 
@@ -40,6 +43,7 @@ type OutletContextType = {
     setActiveModal: (modal: 'settings' | 'userProfile' | 'createGuild' | null) => void;
     toggleGuildRail: () => void;
     toggleSidebar: () => void;
+    toggleMemberDrawer?: () => void;
     userProfile?: {
         id?: string;
         avatarFrame?: 'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse';
@@ -53,7 +57,22 @@ type Attachment = {
     filename: string;
     size: number;
     mimeType: string;
+    type?: string;
 };
+
+/** Extended channel properties returned from GET /channels/:id */
+interface ChannelDetail {
+    id: string;
+    name: string;
+    type: string;
+    topic?: string | null;
+    rateLimitPerUser?: number;
+    isEncrypted?: boolean;
+    attachmentsEnabled?: boolean;
+    backgroundUrl?: string;
+    backgroundType?: string;
+    [key: string]: unknown;
+}
 
 type Message = {
     id: number;
@@ -526,7 +545,7 @@ const MemoizedMessageItem = memo(({
                                     const isImage = displayMime?.startsWith('image/');
                                     const isVideo = displayMime?.startsWith('video/') || /\.(mp4|webm|mov|ogg)$/i.test(displayName);
                                     const isAudio = displayMime?.startsWith('audio/') || /\.(mp3|wav|flac|m4a|aac)$/i.test(displayName);
-                                    const isSticker = (att as any).type === 'sticker';
+                                    const isSticker = att.type === 'sticker';
                                     if (isSticker) {
                                         return (
                                             <img key={att.id} src={displayUrl} alt={displayName} loading="lazy" decoding="async" width={160} height={160} style={{ width: '160px', height: '160px', objectFit: 'contain' }} />
@@ -877,7 +896,7 @@ function VoicePlayer({ url, duration }: { url: string; duration?: string }) {
 
 const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; guildIdProp?: string } = {}) => {
     const outletCtx = useOutletContext<OutletContextType>() ?? {} as OutletContextType;
-    const { bgMedia, hasCustomBg, setBgMedia, toggleGuildRail, toggleSidebar, userProfile } = outletCtx;
+    const { bgMedia, hasCustomBg, setBgMedia, toggleGuildRail, toggleSidebar, toggleMemberDrawer, userProfile } = outletCtx;
     const params = useParams<{ channelId: string; guildId: string }>();
     const channelId = channelIdProp || params.channelId;
     const guildId = guildIdProp || params.guildId;
@@ -1292,21 +1311,22 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     // Fetch channel info for name
     useEffect(() => {
         if (channelId) {
-            api.channels.get(channelId).then(async (ch) => {
+            api.channels.get(channelId).then(async (rawCh) => {
+                const ch = rawCh as ChannelDetail;
                 setChannelName(ch.name);
-                setChannelTopic((ch as any).topic || null);
-                setRateLimitPerUser((ch as any).rateLimitPerUser || 0);
-                setChannelIsEncrypted(!!(ch as any).isEncrypted);
-                setChannelAttachmentsEnabled((ch as any).attachmentsEnabled !== false);
+                setChannelTopic(ch.topic || null);
+                setRateLimitPerUser(ch.rateLimitPerUser || 0);
+                setChannelIsEncrypted(!!ch.isEncrypted);
+                setChannelAttachmentsEnabled(ch.attachmentsEnabled !== false);
                 // Load channel background if set (for all users to see same theme)
-                if ((ch as any).backgroundUrl) {
+                if (ch.backgroundUrl) {
                     setBgMedia({
-                        url: (ch as any).backgroundUrl,
-                        type: (ch as any).backgroundType || 'image'
+                        url: ch.backgroundUrl,
+                        type: (ch.backgroundType || 'image') as MediaType
                     });
                 }
                 // Load E2E encryption key if channel is encrypted
-                if ((ch as any).isEncrypted && guildId && currentUserId) {
+                if (ch.isEncrypted && guildId && currentUserId) {
                     try {
                         const result = await getOrCreateKeyPair(currentUserId);
                         if (result) {
@@ -2291,6 +2311,16 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     }, []);
 
     const parentRef = useRef<HTMLDivElement>(null);
+    const isMobile = useIsMobile();
+
+    // Pull-to-refresh: reload messages when user pulls down on mobile
+    const { isRefreshing: isPullRefreshing, pullDistance } = usePullToRefresh(parentRef, {
+        onRefresh: async () => {
+            haptic.pullThreshold();
+            await fetchMessages();
+        },
+        disabled: !isMobile,
+    });
 
     const rowVirtualizer = useVirtualizer({
         count: messages.length,
@@ -2458,7 +2488,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
 
         result = result.replace(/(?<!\\):([a-zA-Z0-9_]+):/g, (match, name) => {
             const found = allEmojis.find(e => e.name === name);
-            if (found) return found.isCustom ? `:${found.name}:` : (found as any).emoji;
+            if (found) return found.isCustom ? `:${found.name}:` : found.emoji;
             return match;
         });
         result = result.replace(/\\:([a-zA-Z0-9_]+):/g, ':$1:');
@@ -2481,6 +2511,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             return;
         }
         playSound('messageSend');
+        haptic.messageSent();
 
         const processedContent = processEmojis(inputValue);
 
@@ -2660,6 +2691,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     // Reaction handler — toggles add/remove via API
     const handleReaction = useCallback(async (messageApiId: string, emoji: string, alreadyReacted: boolean) => {
         if (!channelId || !messageApiId) return;
+        haptic.reaction();
 
         // Optimistically update local state BEFORE the API call
         setMessages(prev => prev.map(m => {
@@ -3284,11 +3316,11 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     <div className="action-divider hidden-on-mobile" style={{ width: '1px', height: '24px', background: 'var(--stroke)' }}></div>
 
                     <div
-                        className="action-icon-btn member-list-toggle-btn"
+                        className="action-icon-btn member-list-toggle-btn member-count-toggle"
                         onClick={() => {
-                            // Desktop: toggle member list panel; Mobile: toggle sidebar
+                            // Desktop: toggle member list panel; Mobile: open slide-over drawer
                             if (window.innerWidth <= 768) {
-                                toggleSidebar();
+                                toggleMemberDrawer?.();
                             } else {
                                 const next = !memberListOpen;
                                 setMemberListOpen(next);
@@ -3449,6 +3481,13 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 </button>
             )}
             <div ref={parentRef} className="message-area" role="log" aria-label={`Messages in #${channelName}`} aria-live="polite" style={{ overflowY: 'auto', zIndex: 2, position: 'relative' }}>
+                {/* Pull-to-refresh indicator (mobile) */}
+                {isMobile && pullDistance > 0 && (
+                    <div className="pull-to-refresh-indicator" style={{ height: `${pullDistance}px` }}>
+                        <div className={`pull-to-refresh-spinner${isPullRefreshing ? ' spinning' : ''}`}
+                            style={{ transform: `rotate(${pullDistance * 3}deg)` }} />
+                    </div>
+                )}
                 {/* Channel Welcome Card */}
                 {channelId && !isLoadingMessages && (
                     <ChannelWelcomeCard channelId={channelId} channelName={channelName} topic={channelTopic} />
@@ -4215,7 +4254,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                     {emoji.isCustom && emoji.url ? (
                                         <img src={emoji.url} alt={emoji.name} loading="lazy" decoding="async" width={20} height={20} style={{ width: '20px', height: '20px', objectFit: 'contain' }} />
                                     ) : (
-                                        <span style={{ fontSize: '20px' }}>{emoji.isCustom ? emoji.name : (emoji as any).emoji}</span>
+                                        <span style={{ fontSize: '20px' }}>{emoji.isCustom ? emoji.name : emoji.emoji}</span>
                                     )}
                                     <span style={{ fontSize: '14px', fontWeight: 500 }}>:{emoji.name}:</span>
                                 </div>

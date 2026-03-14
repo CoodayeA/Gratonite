@@ -84,7 +84,7 @@ interface RateLimitConfig {
  *
  * All Redis commands run inside a pipeline for atomicity and performance.
  */
-function createRateLimiter(config: RateLimitConfig) {
+export function createRateLimiter(config: RateLimitConfig) {
   const { prefix, maxRequests, windowSeconds, keyFn } = config;
 
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {

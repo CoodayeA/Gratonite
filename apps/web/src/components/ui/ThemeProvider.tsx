@@ -1,7 +1,11 @@
+import '../../themes/overrides/neobrutalism.css';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { MotionConfig } from 'framer-motion';
+import { resolveTheme, addRecentTheme, getScheduledTheme } from '../../themes/registry';
+import { applyThemeSync, applyThemeWithTransition } from '../../themes/injector';
+import type { ThemeVariables } from '../../themes/types';
 
-export type AppTheme = 'default' | 'glass' | 'neobrutalism' | 'synthwave' | 'y2k' | 'memphis' | 'artdeco' | 'terminal' | 'aurora' | 'vaporwave' | 'nord' | 'solarized' | 'bubblegum' | 'obsidian' | 'sakura' | 'midnight' | 'forest' | 'cyberpunk' | 'pastel' | 'monochrome' | 'ocean' | 'fire' | 'desert' | 'lavender' | 'coffee' | 'matrix' | 'rose_gold' | 'emerald' | 'dracula' | 'monokai' | 'catppuccin' | 'gruvbox' | 'tokyo_night' | 'everforest' | 'arctic' | 'neon' | 'midnight_blue' | 'high-contrast';
+export type AppTheme = string; // Now accepts any theme ID (preset or custom)
 export type ColorMode = 'light' | 'dark';
 export type FontFamily = 'inter' | 'outfit' | 'space-grotesk' | 'fira-code';
 export type FontSize = 'small' | 'medium' | 'large' | 'extra-large';
@@ -45,6 +49,11 @@ type ThemeContextType = {
     setFocusIndicatorSize: (size: FocusIndicatorSize) => void;
     colorBlindMode: ColorBlindMode;
     setColorBlindMode: (cb: ColorBlindMode) => void;
+    lowDataMode: boolean;
+    setLowDataMode: (ldm: boolean) => void;
+    /** Preview a theme temporarily (revert with null) */
+    previewTheme: (themeId: string | null) => void;
+    isPreviewActive: boolean;
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -55,20 +64,29 @@ export const useTheme = () => {
     return ctx;
 };
 
+/**
+ * Resolve the ThemeVariables for a given theme + color mode.
+ * Falls back to the theme's default mode if the requested mode isn't available.
+ */
+function resolveVars(themeId: string, mode: ColorMode): ThemeVariables | null {
+    const def = resolveTheme(themeId);
+    if (!def) return null;
+    return mode === 'light' ? def.light : def.dark;
+}
+
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     const [theme, setThemeState] = useState<AppTheme>(() => {
         const saved = localStorage.getItem('gratonite_theme');
-        return (saved as AppTheme) || 'default';
+        return saved || 'default';
     });
 
     const [colorMode, setColorModeState] = useState<ColorMode>(() => {
         const saved = localStorage.getItem('gratonite_color_mode');
         if (saved) return saved as ColorMode;
-        // Check OS preference
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
             return 'light';
         }
-        return 'dark'; // default
+        return 'dark';
     });
 
     const [fontFamily, setFontFamilyState] = useState<FontFamily>(() => {
@@ -102,13 +120,12 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     const [lowPower, setLowPowerState] = useState<boolean>(() => {
         const saved = localStorage.getItem('gratonite_low_power');
         if (saved !== null) return saved === 'true';
-        // Default on for desktop — backdrop-filter tanks Windows perf
         if ((window as any).gratoniteDesktop?.isDesktop) return true;
         return false;
     });
 
     const [accentColor, setAccentColorState] = useState<string>(() => {
-        return localStorage.getItem('gratonite_accent_color') || '#3b82f6';
+        return localStorage.getItem('gratonite_accent_color') || '';
     });
 
     const [highContrast, setHighContrastState] = useState<boolean>(() => {
@@ -141,15 +158,27 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
     const [colorBlindMode, setColorBlindModeState] = useState<ColorBlindMode>(() => {
         const saved = localStorage.getItem('gratonite_color_blind_mode');
-        // Migrate old boolean 'true' to 'deuteranopia'
         if (saved === 'true') return 'deuteranopia';
         if (saved === 'deuteranopia' || saved === 'protanopia' || saved === 'tritanopia') return saved;
         return 'none';
     });
 
+    const [lowDataMode, setLowDataModeState] = useState<boolean>(() => {
+        const saved = localStorage.getItem('gratonite_low_data_mode');
+        if (saved !== null) return saved === 'true';
+        if ((navigator as any).connection?.saveData) return true;
+        return false;
+    });
+
+    // Preview state
+    const [previewThemeId, setPreviewThemeId] = useState<string | null>(null);
+    const isPreviewActive = previewThemeId !== null;
+    const activeThemeId = previewThemeId || theme;
+
     const setTheme = (newTheme: AppTheme) => {
         setThemeState(newTheme);
         localStorage.setItem('gratonite_theme', newTheme);
+        addRecentTheme(newTheme);
     };
 
     const setColorMode = (newMode: ColorMode) => {
@@ -232,74 +261,87 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem('gratonite_color_blind_mode', cb);
     };
 
-    // Apply data attributes so CSS can hook into them
+    const setLowDataMode = (ldm: boolean) => {
+        setLowDataModeState(ldm);
+        localStorage.setItem('gratonite_low_data_mode', ldm.toString());
+    };
+
+    const previewTheme = (themeId: string | null) => {
+        setPreviewThemeId(themeId);
+    };
+
+    // Apply theme variables via injector (replaces CSS [data-theme] approach)
     useEffect(() => {
-        document.documentElement.setAttribute('data-theme', theme);
+        const vars = resolveVars(activeThemeId, colorMode);
+        if (vars) {
+            // Use transition animation for user-initiated theme changes
+            if (previewThemeId !== null) {
+                applyThemeSync(vars);
+            } else {
+                applyThemeWithTransition(vars);
+            }
+        }
+
+        // Keep data-theme attribute for backward compatibility (neobrutalism overrides, etc.)
+        document.documentElement.setAttribute('data-theme', activeThemeId);
         document.documentElement.setAttribute('data-color-mode', colorMode);
         document.documentElement.setAttribute('data-font', fontFamily);
         document.documentElement.setAttribute('data-font-size', fontSize);
         document.documentElement.setAttribute('data-glass-mode', glassMode);
         document.documentElement.setAttribute('data-button-shape', buttonShape);
 
-        if (reducedEffects) document.documentElement.classList.add('reduced-effects');
-        else document.documentElement.classList.remove('reduced-effects');
+        // Toggle classes
+        const el = document.documentElement;
+        el.classList.toggle('reduced-effects', reducedEffects);
+        el.classList.toggle('low-power', lowPower);
+        el.classList.toggle('high-contrast', highContrast);
+        el.classList.toggle('compact-mode', compactMode);
+        el.classList.toggle('screen-reader-mode', screenReaderMode);
+        el.classList.toggle('link-underlines', linkUnderlines);
+        el.classList.toggle('focus-large', focusIndicatorSize === 'large');
+        el.classList.toggle('low-data-mode', lowDataMode);
 
-        if (lowPower) document.documentElement.classList.add('low-power');
-        else document.documentElement.classList.remove('low-power');
+        el.setAttribute('data-cb-mode', colorBlindMode);
+        el.classList.toggle('color-blind-mode', colorBlindMode !== 'none');
 
-        if (highContrast) document.documentElement.classList.add('high-contrast');
-        else document.documentElement.classList.remove('high-contrast');
-
-        if (compactMode) document.documentElement.classList.add('compact-mode');
-        else document.documentElement.classList.remove('compact-mode');
-
-        if (screenReaderMode) document.documentElement.classList.add('screen-reader-mode');
-        else document.documentElement.classList.remove('screen-reader-mode');
-
-        if (linkUnderlines) document.documentElement.classList.add('link-underlines');
-        else document.documentElement.classList.remove('link-underlines');
-
-        if (focusIndicatorSize === 'large') document.documentElement.classList.add('focus-large');
-        else document.documentElement.classList.remove('focus-large');
-
-        document.documentElement.setAttribute('data-cb-mode', colorBlindMode);
-        if (colorBlindMode !== 'none') {
-            document.documentElement.classList.add('color-blind-mode');
-        } else {
-            document.documentElement.classList.remove('color-blind-mode');
-        }
-
+        // Custom accent color override
         if (accentColor) {
-            document.documentElement.style.setProperty('--accent-primary', accentColor);
+            el.style.setProperty('--accent-primary', accentColor);
         }
 
-        // Map abstract fonts to specific CSS variables
+        // Font family
         const fontMap: Record<FontFamily, string> = {
             'inter': "'Inter', sans-serif",
             'outfit': "'Outfit', sans-serif",
             'space-grotesk': "'Space Grotesk', sans-serif",
             'fira-code': "'Fira Code', monospace"
         };
-        const resolvedFont = fontMap[fontFamily] || fontMap['inter'];
-        document.documentElement.style.setProperty('--font-sans', resolvedFont);
+        el.style.setProperty('--font-sans', fontMap[fontFamily] || fontMap['inter']);
 
-        // Font size scaling — use root font-size percentage (rem-based)
+        // Font size scaling
         const fontSizeMap: Record<FontSize, string> = {
-            'small': '87.5%',
-            'medium': '100%',
-            'large': '112.5%',
-            'extra-large': '125%'
+            'small': '87.5%', 'medium': '100%', 'large': '112.5%', 'extra-large': '125%'
         };
         const scaleMap: Record<FontSize, number> = {
-            'small': 0.875,
-            'medium': 1.0,
-            'large': 1.125,
-            'extra-large': 1.25
+            'small': 0.875, 'medium': 1.0, 'large': 1.125, 'extra-large': 1.25
         };
-        document.documentElement.style.fontSize = fontSizeMap[fontSize] ?? '100%';
-        document.documentElement.style.setProperty('--font-scale', (scaleMap[fontSize] ?? 1.0).toString());
+        el.style.fontSize = fontSizeMap[fontSize] ?? '100%';
+        el.style.setProperty('--font-scale', (scaleMap[fontSize] ?? 1.0).toString());
 
-    }, [theme, colorMode, fontFamily, fontSize, glassMode, reducedEffects, lowPower, accentColor, highContrast, compactMode, buttonShape, screenReaderMode, linkUnderlines, focusIndicatorSize, colorBlindMode]);
+    }, [activeThemeId, colorMode, fontFamily, fontSize, glassMode, reducedEffects, lowPower, accentColor, highContrast, compactMode, buttonShape, screenReaderMode, linkUnderlines, focusIndicatorSize, colorBlindMode, lowDataMode, previewThemeId]);
+
+    // Scheduled theme auto-switch (Item 15)
+    useEffect(() => {
+        const checkSchedule = () => {
+            const scheduled = getScheduledTheme();
+            if (scheduled && scheduled !== theme && !previewThemeId) {
+                setTheme(scheduled);
+            }
+        };
+        checkSchedule();
+        const interval = setInterval(checkSchedule, 60000); // Check every minute
+        return () => clearInterval(interval);
+    }, [theme, previewThemeId]);
 
     return (
         <ThemeContext.Provider value={{
@@ -317,7 +359,9 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
             screenReaderMode, setScreenReaderMode,
             linkUnderlines, setLinkUnderlines,
             focusIndicatorSize, setFocusIndicatorSize,
-            colorBlindMode, setColorBlindMode
+            colorBlindMode, setColorBlindMode,
+            lowDataMode, setLowDataMode,
+            previewTheme, isPreviewActive,
         }}>
             <MotionConfig reducedMotion={reducedEffects ? 'always' : 'user'}>
                 {children}

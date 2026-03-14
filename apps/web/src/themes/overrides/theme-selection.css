@@ -1,0 +1,29 @@
+/**
+ * Theme-aware selection color (Item 93).
+ * Applies the theme accent color to text selection highlights.
+ */
+
+::selection {
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
+::-moz-selection {
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
+/* Use alpha variant for less intense selection on large text blocks */
+.message-area ::selection,
+.chat-input ::selection,
+textarea ::selection {
+  background: var(--accent-primary-alpha, var(--accent-primary));
+  color: var(--text-primary);
+}
+
+.message-area ::-moz-selection,
+.chat-input ::-moz-selection,
+textarea ::-moz-selection {
+  background: var(--accent-primary-alpha, var(--accent-primary));
+  color: var(--text-primary);
+}
