@@ -11,6 +11,7 @@ import { requireAuth } from '../middleware/auth';
 import { getIO } from '../lib/socket-io';
 import { incrementChallengeProgress } from './daily-challenges';
 import { dispatchEvent } from '../lib/webhook-dispatch';
+import { messageService, ServiceError } from '../services/message.service';
 
 export const reactionsRouter = Router({ mergeParams: true });
 
@@ -19,41 +20,20 @@ reactionsRouter.put(
   '/:emoji/@me',
   requireAuth,
   async (req: Request, res: Response): Promise<void> => {
-    const { channelId, messageId, emoji } = req.params as Record<string, string>;
-    const decodedEmoji = decodeURIComponent(emoji);
-
-    // Verify message exists in channel
-    const [msg] = await db.select({ id: messages.id }).from(messages)
-      .where(and(eq(messages.id, messageId), eq(messages.channelId, channelId))).limit(1);
-    if (!msg) { res.status(404).json({ code: 'NOT_FOUND', message: 'Message not found' }); return; }
-
-    // Add reaction (upsert)
-    await db.insert(messageReactions).values({
-      messageId,
-      userId: req.userId!,
-      emoji: decodedEmoji,
-    }).onConflictDoNothing();
-
     try {
-      getIO().to(`channel:${channelId}`).emit('MESSAGE_REACTION_ADD', {
-        messageId, channelId, userId: req.userId!, emoji: decodedEmoji,
-      });
-    } catch {}
+      const { channelId, messageId, emoji } = req.params as Record<string, string>;
 
-    // Dispatch reaction_add to installed bots
-    const [reactChan] = await db.select({ guildId: channels.guildId }).from(channels)
-      .where(eq(channels.id, channelId)).limit(1);
-    if (reactChan?.guildId) {
-      dispatchEvent(reactChan.guildId, 'reaction_add', {
-        channelId, messageId, userId: req.userId!, emoji: decodedEmoji,
-      });
+      await messageService.addReaction(channelId, messageId, req.userId!, emoji);
+
+      res.json({ code: 'OK' });
+    } catch (err) {
+      if (err instanceof ServiceError) {
+        const status = err.code === 'NOT_FOUND' ? 404 : err.code === 'FORBIDDEN' ? 403 : 400;
+        res.status(status).json({ code: err.code, message: err.message });
+        return;
+      }
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
-
-    // Daily challenge progress (fire-and-forget)
-    incrementChallengeProgress(req.userId!, 'react_to_messages');
-    incrementChallengeProgress(req.userId!, 'send_reactions');
-
-    res.json({ code: 'OK' });
   },
 );
 
@@ -62,33 +42,20 @@ reactionsRouter.delete(
   '/:emoji/@me',
   requireAuth,
   async (req: Request, res: Response): Promise<void> => {
-    const { channelId, messageId, emoji } = req.params as Record<string, string>;
-    const decodedEmoji = decodeURIComponent(emoji);
-
-    await db.delete(messageReactions).where(
-      and(
-        eq(messageReactions.messageId, messageId),
-        eq(messageReactions.userId, req.userId!),
-        eq(messageReactions.emoji, decodedEmoji),
-      ),
-    );
-
     try {
-      getIO().to(`channel:${channelId}`).emit('MESSAGE_REACTION_REMOVE', {
-        messageId, channelId, userId: req.userId!, emoji: decodedEmoji,
-      });
-    } catch {}
+      const { channelId, messageId, emoji } = req.params as Record<string, string>;
 
-    // Dispatch reaction_remove to installed bots
-    const [rmChan] = await db.select({ guildId: channels.guildId }).from(channels)
-      .where(eq(channels.id, channelId)).limit(1);
-    if (rmChan?.guildId) {
-      dispatchEvent(rmChan.guildId, 'reaction_remove', {
-        channelId, messageId, userId: req.userId!, emoji: decodedEmoji,
-      });
+      await messageService.removeReaction(channelId, messageId, req.userId!, emoji);
+
+      res.json({ code: 'OK' });
+    } catch (err) {
+      if (err instanceof ServiceError) {
+        const status = err.code === 'NOT_FOUND' ? 404 : err.code === 'FORBIDDEN' ? 403 : 400;
+        res.status(status).json({ code: err.code, message: err.message });
+        return;
+      }
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
-
-    res.json({ code: 'OK' });
   },
 );
 
