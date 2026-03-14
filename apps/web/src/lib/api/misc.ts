@@ -193,6 +193,31 @@ export const relationshipsApi = {
       method: 'POST',
       body: JSON.stringify({ userId }),
     }),
+
+  // Friend groups
+  getGroups: () =>
+    apiFetch<{ id: string; name: string; color: string; position: number; friendIds: string[] }[]>('/relationships/groups'),
+
+  createGroup: (name: string, color?: string) =>
+    apiFetch<{ id: string; name: string; color: string; position: number; friendIds: string[] }>('/relationships/groups', {
+      method: 'POST',
+      body: JSON.stringify({ name, color }),
+    }),
+
+  updateGroup: (groupId: string, data: { name?: string; color?: string }) =>
+    apiFetch<any>(`/relationships/groups/${groupId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  deleteGroup: (groupId: string) =>
+    apiFetch<void>(`/relationships/groups/${groupId}`, { method: 'DELETE' }),
+
+  addToGroup: (groupId: string, userId: string) =>
+    apiFetch<void>(`/relationships/groups/${groupId}/members/${userId}`, { method: 'PUT' }),
+
+  removeFromGroup: (groupId: string, userId: string) =>
+    apiFetch<void>(`/relationships/groups/${groupId}/members/${userId}`, { method: 'DELETE' }),
 };
 
 export const groupDmsApi = {

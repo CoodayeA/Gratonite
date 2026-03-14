@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSocket } from '../../lib/socket';
 import { useNavigate } from 'react-router-dom';
-import { Search, UserPlus, MoreVertical, MessageSquare, X, UserMinus, VolumeX, Flag, Phone, Video, User, Gamepad2, Headphones, Eye } from 'lucide-react';
+import { Search, UserPlus, MoreVertical, MessageSquare, X, UserMinus, VolumeX, Flag, Phone, Video, User, Gamepad2, Headphones, Eye, ChevronDown, ChevronRight, FolderPlus, Pencil, Trash2, Palette } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { api, ApiRequestError } from '../../lib/api';
 import { type ActivityEntry } from '../../utils/activity';
@@ -49,6 +49,8 @@ function ReferralCard() {
 
 type FriendStatus = 'online' | 'idle' | 'dnd' | 'offline';
 
+interface FriendGroupData { id: string; name: string; color: string; position: number; friendIds: string[] }
+
 interface Friend {
     id: string;
     username: string;
@@ -75,6 +77,110 @@ const Friends = () => {
     const [requests, setRequests] = useState<{ id: string; username: string; displayName: string; type: string; avatar: string; avatarHash?: string; nameplateStyle?: string }[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [fetchError, setFetchError] = useState(false);
+
+    // Friend groups
+    const [friendGroups, setFriendGroups] = useState<FriendGroupData[]>([]);
+    const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
+        try { const saved = localStorage.getItem('gratonite:friend-groups-collapsed'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+    });
+    const [groupContextMenu, setGroupContextMenu] = useState<{ groupId: string; x: number; y: number } | null>(null);
+    const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+    const [editingGroupName, setEditingGroupName] = useState('');
+    const [draggedFriendId, setDraggedFriendId] = useState<string | null>(null);
+    const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null);
+    const [showCreateGroup, setShowCreateGroup] = useState(false);
+    const [newGroupName, setNewGroupName] = useState('');
+
+    const GROUP_COLORS = ['#526df5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
+
+    const fetchGroups = useCallback(async () => {
+        try {
+            const groups = await api.relationships.getGroups();
+            setFriendGroups(groups);
+        } catch { /* ignore */ }
+    }, []);
+
+    useEffect(() => { fetchGroups(); }, [fetchGroups]);
+
+    const toggleGroupCollapse = (groupId: string) => {
+        setCollapsedGroups(prev => {
+            const next = { ...prev, [groupId]: !prev[groupId] };
+            localStorage.setItem('gratonite:friend-groups-collapsed', JSON.stringify(next));
+            return next;
+        });
+    };
+
+    const handleCreateGroup = async () => {
+        const name = newGroupName.trim();
+        if (!name) return;
+        try {
+            const group = await api.relationships.createGroup(name);
+            setFriendGroups(prev => [...prev, group]);
+            setNewGroupName('');
+            setShowCreateGroup(false);
+            addToast({ title: 'Group created', description: `"${name}" group created`, variant: 'success' });
+        } catch {
+            addToast({ title: 'Failed to create group', variant: 'error' });
+        }
+    };
+
+    const handleRenameGroup = async (groupId: string) => {
+        const name = editingGroupName.trim();
+        if (!name) { setEditingGroupId(null); return; }
+        try {
+            await api.relationships.updateGroup(groupId, { name });
+            setFriendGroups(prev => prev.map(g => g.id === groupId ? { ...g, name } : g));
+            setEditingGroupId(null);
+        } catch {
+            addToast({ title: 'Failed to rename group', variant: 'error' });
+        }
+    };
+
+    const handleDeleteGroup = async (groupId: string) => {
+        try {
+            await api.relationships.deleteGroup(groupId);
+            setFriendGroups(prev => prev.filter(g => g.id !== groupId));
+            addToast({ title: 'Group deleted', variant: 'info' });
+        } catch {
+            addToast({ title: 'Failed to delete group', variant: 'error' });
+        }
+    };
+
+    const handleChangeGroupColor = async (groupId: string, color: string) => {
+        try {
+            await api.relationships.updateGroup(groupId, { color });
+            setFriendGroups(prev => prev.map(g => g.id === groupId ? { ...g, color } : g));
+        } catch { /* ignore */ }
+    };
+
+    const handleDropFriendOnGroup = async (friendId: string, targetGroupId: string) => {
+        // Remove from old group(s) first, await all before adding
+        await Promise.all(
+            friendGroups
+                .filter(g => g.friendIds.includes(friendId))
+                .map(g => api.relationships.removeFromGroup(g.id, friendId).catch(() => {}))
+        );
+        // Add to new group
+        if (targetGroupId !== '__ungrouped__') {
+            await api.relationships.addToGroup(targetGroupId, friendId).catch(() => {});
+        }
+        // Update local state optimistically
+        setFriendGroups(prev => prev.map(g => {
+            const without = g.friendIds.filter(id => id !== friendId);
+            if (g.id === targetGroupId) return { ...g, friendIds: [...without, friendId] };
+            return { ...g, friendIds: without };
+        }));
+        setDraggedFriendId(null);
+        setDragOverGroupId(null);
+    };
+
+    // Close group context menu on click outside
+    useEffect(() => {
+        if (!groupContextMenu) return;
+        const handler = () => setGroupContextMenu(null);
+        document.addEventListener('click', handler);
+        return () => document.removeEventListener('click', handler);
+    }, [groupContextMenu]);
 
     // Friend suggestions
     const [suggestions, setSuggestions] = useState<{ id: string; username: string; display_name: string; avatar: string | null; sharedServers: number; mutualFriends: number }[]>([]);
@@ -656,13 +762,252 @@ const Friends = () => {
                     })()}
 
                     {activeTab === 'all' && (() => {
-                        const allFiltered = friends.filter(f => f.username.includes(searchQuery) || f.displayName.includes(searchQuery));
+                        const allFiltered = friends.filter(f => f.username.toLowerCase().includes(searchQuery.toLowerCase()) || f.displayName.toLowerCase().includes(searchQuery.toLowerCase()));
+                        const groupedFriendIds = new Set(friendGroups.flatMap(g => g.friendIds));
+                        const ungroupedFriends = allFiltered.filter(f => !groupedFriendIds.has(f.id));
+
+                        const renderDraggableFriendList = (friendList: Friend[], groupId?: string) => (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                {friendList.map(friend => (
+                                    <div
+                                        key={friend.id}
+                                        draggable
+                                        onDragStart={() => setDraggedFriendId(friend.id)}
+                                        onDragEnd={() => { setDraggedFriendId(null); setDragOverGroupId(null); }}
+                                        className="friend-row"
+                                        onClick={(e) => handleFriendRowClick(friend, e)}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                            padding: '12px 16px', borderRadius: '8px', cursor: 'grab',
+                                            transition: 'background 0.2s', borderTop: '1px solid transparent',
+                                            background: selectedFriend?.id === friend.id ? 'var(--bg-tertiary)' : draggedFriendId === friend.id ? 'var(--bg-elevated)' : 'transparent',
+                                            opacity: draggedFriendId === friend.id ? 0.5 : 1,
+                                        }}
+                                        onMouseOver={e => { if (selectedFriend?.id !== friend.id) e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
+                                        onMouseOut={e => { if (selectedFriend?.id !== friend.id && draggedFriendId !== friend.id) e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                            <Avatar userId={friend.id} displayName={friend.displayName} size={40} status={friend.status} statusRingColor="var(--bg-primary)" avatarHash={friend.avatarHash} />
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                                    <span style={{ fontWeight: 600, fontSize: '15px' }}>{friend.displayName}</span>
+                                                    <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{friend.username}</span>
+                                                </div>
+                                                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                                    {friend.customStatus || (friend.status === 'dnd' ? 'Do Not Disturb' : friend.status.charAt(0).toUpperCase() + friend.status.slice(1))}
+                                                </span>
+                                                {friend.activity && <ActivityCard activity={friend.activity} compact />}
+                                            </div>
+                                        </div>
+                                        <div className="friend-actions" style={{ display: 'flex', gap: '8px', position: 'relative' }}>
+                                            <button onClick={() => handleOpenDm(friend.id, friend.displayName)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} title="Message">
+                                                <MessageSquare size={18} />
+                                            </button>
+                                            <button onClick={() => setMoreMenuId(moreMenuId === friend.id ? null : friend.id)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: moreMenuId === friend.id ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: 'none', color: moreMenuId === friend.id ? '#000' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} title="More">
+                                                <MoreVertical size={18} />
+                                            </button>
+                                            {moreMenuId === friend.id && (
+                                                <div style={{ position: 'absolute', top: '42px', right: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '4px', minWidth: '180px', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+                                                    {/* Move to group options */}
+                                                    {friendGroups.length > 0 && (
+                                                        <>
+                                                            <div style={{ padding: '4px 12px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Move to group</div>
+                                                            {friendGroups.map(g => (
+                                                                <div key={g.id} onClick={() => { setMoreMenuId(null); handleDropFriendOnGroup(friend.id, g.id); }}
+                                                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }}
+                                                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: g.color }} /> {g.name}
+                                                                    {g.friendIds.includes(friend.id) && <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-muted)' }}>current</span>}
+                                                                </div>
+                                                            ))}
+                                                            {groupedFriendIds.has(friend.id) && (
+                                                                <div onClick={() => { setMoreMenuId(null); handleDropFriendOnGroup(friend.id, '__ungrouped__'); }}
+                                                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }}
+                                                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                                    <X size={12} /> Remove from group
+                                                                </div>
+                                                            )}
+                                                            <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />
+                                                        </>
+                                                    )}
+                                                    <div onClick={() => { setMoreMenuId(null); handleRemoveFriend(friend.id, friend.displayName); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                                                        <UserMinus size={14} /> Remove Friend
+                                                    </div>
+                                                    <div onClick={() => { setMoreMenuId(null); addToast({ title: 'User Muted', description: `${friend.displayName} has been muted.`, variant: 'info' }); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                                                        <VolumeX size={14} /> Mute
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        );
+
                         return (
                             <div>
-                                <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px', borderBottom: '1px solid var(--stroke)', paddingBottom: '8px' }}>
-                                    All Friends — {friends.length}
-                                </h3>
-                                {renderFriendList(allFiltered)}
+                                {/* Create Group button */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                                    <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, margin: 0 }}>
+                                        All Friends — {friends.length}
+                                    </h3>
+                                    <button
+                                        onClick={() => setShowCreateGroup(true)}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '12px', fontWeight: 600, padding: '4px 8px', borderRadius: '4px', transition: 'all 0.15s' }}
+                                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        <FolderPlus size={14} /> New Group
+                                    </button>
+                                </div>
+
+                                {/* Create group inline form */}
+                                {showCreateGroup && (
+                                    <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            className="chat-input"
+                                            placeholder="Group name..."
+                                            value={newGroupName}
+                                            onChange={e => setNewGroupName(e.target.value)}
+                                            onKeyDown={e => { if (e.key === 'Enter') handleCreateGroup(); if (e.key === 'Escape') { setShowCreateGroup(false); setNewGroupName(''); } }}
+                                            style={{ flex: 1, padding: '8px 12px', fontSize: '14px', background: 'var(--bg-primary)' }}
+                                            maxLength={100}
+                                        />
+                                        <button onClick={handleCreateGroup} style={{ background: 'var(--accent-primary)', color: '#000', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Create</button>
+                                        <button onClick={() => { setShowCreateGroup(false); setNewGroupName(''); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={18} /></button>
+                                    </div>
+                                )}
+
+                                {/* Friend groups */}
+                                {friendGroups.map(group => {
+                                    const groupFriends = allFiltered.filter(f => group.friendIds.includes(f.id));
+                                    const isCollapsed = collapsedGroups[group.id];
+                                    const isDragOver = dragOverGroupId === group.id && draggedFriendId;
+
+                                    return (
+                                        <div key={group.id} style={{ marginBottom: '8px' }}>
+                                            {/* Group header */}
+                                            <div
+                                                onContextMenu={e => { e.preventDefault(); setGroupContextMenu({ groupId: group.id, x: e.clientX, y: e.clientY }); }}
+                                                onDragOver={e => { e.preventDefault(); setDragOverGroupId(group.id); }}
+                                                onDragLeave={() => { if (dragOverGroupId === group.id) setDragOverGroupId(null); }}
+                                                onDrop={e => { e.preventDefault(); if (draggedFriendId) handleDropFriendOnGroup(draggedFriendId, group.id); }}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 8px',
+                                                    cursor: 'pointer', borderRadius: '6px', userSelect: 'none',
+                                                    transition: 'background 0.15s',
+                                                    background: isDragOver ? 'rgba(82,109,245,0.15)' : 'transparent',
+                                                    border: isDragOver ? '1px dashed var(--accent-primary)' : '1px solid transparent',
+                                                }}
+                                                onClick={() => toggleGroupCollapse(group.id)}
+                                                onMouseEnter={e => { if (!isDragOver) e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
+                                                onMouseLeave={e => { if (!isDragOver) e.currentTarget.style.background = 'transparent'; }}
+                                            >
+                                                {isCollapsed ? <ChevronRight size={14} color="var(--text-muted)" /> : <ChevronDown size={14} color="var(--text-muted)" />}
+                                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: group.color, flexShrink: 0 }} />
+                                                {editingGroupId === group.id ? (
+                                                    <input
+                                                        autoFocus
+                                                        type="text"
+                                                        className="chat-input"
+                                                        value={editingGroupName}
+                                                        onChange={e => setEditingGroupName(e.target.value)}
+                                                        onKeyDown={e => { if (e.key === 'Enter') handleRenameGroup(group.id); if (e.key === 'Escape') setEditingGroupId(null); }}
+                                                        onBlur={() => handleRenameGroup(group.id)}
+                                                        onClick={e => e.stopPropagation()}
+                                                        style={{ padding: '2px 8px', fontSize: '12px', background: 'var(--bg-primary)', flex: 1 }}
+                                                        maxLength={100}
+                                                    />
+                                                ) : (
+                                                    <span style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.5px' }}>
+                                                        {group.name} — {groupFriends.length}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Group context menu */}
+                                            {groupContextMenu?.groupId === group.id && (
+                                                <div style={{
+                                                    position: 'fixed', top: groupContextMenu.y, left: groupContextMenu.x,
+                                                    background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+                                                    borderRadius: '8px', padding: '4px', minWidth: '180px', zIndex: 100,
+                                                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                                                }}>
+                                                    <div onClick={() => { setGroupContextMenu(null); setEditingGroupId(group.id); setEditingGroupName(group.name); }}
+                                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)' }}
+                                                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                        <Pencil size={14} /> Rename
+                                                    </div>
+                                                    {/* Color picker */}
+                                                    <div style={{ padding: '8px 12px' }}>
+                                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 600, textTransform: 'uppercase' }}>Color</div>
+                                                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                                            {GROUP_COLORS.map(c => (
+                                                                <button key={c} onClick={() => { setGroupContextMenu(null); handleChangeGroupColor(group.id, c); }}
+                                                                    style={{ width: '22px', height: '22px', borderRadius: '50%', background: c, border: group.color === c ? '2px solid white' : '2px solid transparent', cursor: 'pointer', transition: 'border-color 0.15s' }} />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />
+                                                    <div onClick={() => { setGroupContextMenu(null); handleDeleteGroup(group.id); }}
+                                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--error)' }}
+                                                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                        <Trash2 size={14} /> Delete Group
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Group members */}
+                                            {!isCollapsed && groupFriends.length > 0 && (
+                                                <div style={{ paddingLeft: '12px' }}>
+                                                    {renderDraggableFriendList(groupFriends, group.id)}
+                                                </div>
+                                            )}
+                                            {!isCollapsed && groupFriends.length === 0 && (
+                                                <div
+                                                    onDragOver={e => { e.preventDefault(); setDragOverGroupId(group.id); }}
+                                                    onDragLeave={() => setDragOverGroupId(null)}
+                                                    onDrop={e => { e.preventDefault(); if (draggedFriendId) handleDropFriendOnGroup(draggedFriendId, group.id); }}
+                                                    style={{
+                                                        padding: '16px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)',
+                                                        border: isDragOver ? '1px dashed var(--accent-primary)' : '1px dashed var(--stroke)',
+                                                        borderRadius: '8px', margin: '8px 0 8px 12px',
+                                                        background: isDragOver ? 'rgba(82,109,245,0.08)' : 'transparent',
+                                                        transition: 'all 0.15s',
+                                                    }}
+                                                >
+                                                    Drag friends here
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+
+                                {/* Ungrouped friends */}
+                                {ungroupedFriends.length > 0 && (
+                                    <div
+                                        onDragOver={e => { e.preventDefault(); setDragOverGroupId('__ungrouped__'); }}
+                                        onDragLeave={() => { if (dragOverGroupId === '__ungrouped__') setDragOverGroupId(null); }}
+                                        onDrop={e => { e.preventDefault(); if (draggedFriendId) handleDropFriendOnGroup(draggedFriendId, '__ungrouped__'); }}
+                                        style={{ marginTop: friendGroups.length > 0 ? '8px' : 0 }}
+                                    >
+                                        {friendGroups.length > 0 && (
+                                            <h3 style={{
+                                                fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)',
+                                                fontWeight: 600, marginBottom: '8px', padding: '8px 8px',
+                                                borderBottom: '1px solid var(--stroke)',
+                                                background: dragOverGroupId === '__ungrouped__' ? 'rgba(82,109,245,0.08)' : 'transparent',
+                                                borderRadius: dragOverGroupId === '__ungrouped__' ? '6px' : 0,
+                                                transition: 'background 0.15s',
+                                            }}>
+                                                Ungrouped — {ungroupedFriends.length}
+                                            </h3>
+                                        )}
+                                        {renderDraggableFriendList(ungroupedFriends)}
+                                    </div>
+                                )}
 
                                 {/* Suggested Friends */}
                                 {suggestions.length > 0 && (
