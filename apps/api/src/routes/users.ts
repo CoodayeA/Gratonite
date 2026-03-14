@@ -49,6 +49,15 @@ import { validate } from '../middleware/validate';
 import { redis } from '../lib/redis';
 import { getIO } from '../lib/socket-io';
 import { asc } from 'drizzle-orm';
+import { ServiceError } from '../services/guild.service';
+import {
+  safeProfile,
+  publicProfile,
+  getUserById,
+  updateProfile as updateProfileService,
+  getOnlineStatus,
+  searchUsers as searchUsersService,
+} from '../services/user.service';
 
 const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -77,79 +86,8 @@ const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => P
   };
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Helpers — safeProfile and publicProfile are now in services/user.service.ts
 // ---------------------------------------------------------------------------
-
-/**
- * safeProfile — Return all non-sensitive user fields (no passwordHash).
- *
- * Used for /@me responses where the authenticated user sees their own full
- * profile including email.
- *
- * @param user - A full user row from the database.
- * @returns    An object with all public and semi-private fields, minus passwordHash.
- */
-function safeProfile(user: typeof users.$inferSelect) {
-  // Parse interests from JSON string back to array
-  let parsedInterests: string[] | null = null;
-  if (user.interests) {
-    try { parsedInterests = JSON.parse(user.interests); } catch { parsedInterests = null; }
-  }
-
-  return {
-    id: user.id,
-    username: user.username,
-    email: user.email,
-    emailVerified: user.emailVerified,
-    createdAt: user.createdAt,
-    isAdmin: user.isAdmin,
-    onboardingCompleted: user.onboardingCompleted,
-    interests: parsedInterests,
-    status: user.status,
-    profile: {
-      displayName: user.displayName,
-      avatarHash: user.avatarHash ?? null,
-      avatarAnimated: user.avatarAnimated ?? false,
-      bannerHash: user.bannerHash ?? null,
-      bannerAnimated: user.bannerAnimated ?? false,
-      bio: user.bio ?? null,
-      pronouns: user.pronouns ?? null,
-      nameplateStyle: user.nameplateStyle ?? 'none',
-      avatarDecorationId: null,
-      profileEffectId: null,
-      nameplateId: null,
-      tier: 'free',
-      previousAvatarHashes: [],
-      messageCount: 0,
-    },
-  };
-}
-
-/**
- * publicProfile — Return only fields safe to expose to other users.
- *
- * Omits email, isAdmin, emailVerified, and other internal fields.
- *
- * @param user - A full user row from the database.
- * @returns    A public-safe subset of user fields.
- */
-function publicProfile(user: typeof users.$inferSelect) {
-  return {
-    id: user.id,
-    username: user.username,
-    displayName: user.displayName,
-    avatarHash: user.avatarHash,
-    avatarAnimated: user.avatarAnimated ?? false,
-    bannerHash: user.bannerHash,
-    bannerAnimated: user.bannerAnimated ?? false,
-    bio: user.bio,
-    pronouns: user.pronouns,
-    status: user.status,
-    customStatus: user.customStatus,
-    badges: user.badges ?? [],
-    createdAt: user.createdAt,
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Zod validation schemas
@@ -244,18 +182,16 @@ usersRouter.get('/', requireAuth, asyncHandler(async (req: Request, res: Respons
 }));
 
 usersRouter.get('/@me', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, req.userId!))
-    .limit(1);
-
-  if (!user) {
-    res.status(404).json({ code: 'NOT_FOUND', message: 'User not found' });
-    return;
+  try {
+    const user = await getUserById(req.userId!);
+    res.status(200).json(safeProfile(user));
+  } catch (err) {
+    if (err instanceof ServiceError && err.code === 'NOT_FOUND') {
+      res.status(404).json({ code: 'NOT_FOUND', message: err.message });
+      return;
+    }
+    throw err;
   }
-
-  res.status(200).json(safeProfile(user));
 }));
 
 // ---------------------------------------------------------------------------
@@ -319,32 +255,17 @@ usersRouter.patch(
   requireAuth,
   validate(patchMeSchema),
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const { displayName, bio, pronouns, customStatus, onboardingCompleted, interests, nameplateStyle, statusEmoji, statusExpiresAt } = req.body as z.infer<typeof patchMeSchema>;
-
-    // Build update payload — only include explicitly provided fields.
-    const updateData: Partial<typeof users.$inferInsert> = { updatedAt: new Date() };
-    if (displayName !== undefined) updateData.displayName = displayName;
-    if (bio !== undefined) updateData.bio = bio;
-    if (pronouns !== undefined) updateData.pronouns = pronouns;
-    if (customStatus !== undefined) updateData.customStatus = customStatus;
-    if (onboardingCompleted !== undefined) updateData.onboardingCompleted = onboardingCompleted;
-    if (interests !== undefined) updateData.interests = interests ? JSON.stringify(interests) : null;
-    if (nameplateStyle !== undefined) updateData.nameplateStyle = nameplateStyle;
-    if (statusEmoji !== undefined) updateData.statusEmoji = statusEmoji;
-    if (statusExpiresAt !== undefined) updateData.statusExpiresAt = statusExpiresAt ? new Date(statusExpiresAt) : null;
-
-    const [updated] = await db
-      .update(users)
-      .set(updateData)
-      .where(eq(users.id, req.userId!))
-      .returning();
-
-    if (!updated) {
-      res.status(404).json({ code: 'NOT_FOUND', message: 'User not found' });
-      return;
+    try {
+      const data = req.body as z.infer<typeof patchMeSchema>;
+      const updated = await updateProfileService(req.userId!, data);
+      res.status(200).json(safeProfile(updated));
+    } catch (err) {
+      if (err instanceof ServiceError && err.code === 'NOT_FOUND') {
+        res.status(404).json({ code: 'NOT_FOUND', message: err.message });
+        return;
+      }
+      throw err;
     }
-
-    res.status(200).json(safeProfile(updated));
   }),
 );
 
@@ -494,33 +415,17 @@ usersRouter.patch(
  * @returns 400 Missing or too-short query parameter
  */
 usersRouter.get('/search', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
-
-  if (q.length < 2) {
-    res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Search query must be at least 2 characters' });
-    return;
+  try {
+    const q = typeof req.query.q === 'string' ? req.query.q : '';
+    const results = await searchUsersService(q);
+    res.status(200).json(results);
+  } catch (err) {
+    if (err instanceof ServiceError && err.code === 'VALIDATION_ERROR') {
+      res.status(400).json({ code: 'VALIDATION_ERROR', message: err.message });
+      return;
+    }
+    throw err;
   }
-
-  const escaped = q.replace(/[%_\\]/g, '\\$&');
-  const pattern = `%${escaped}%`;
-
-  const results = await db
-    .select({
-      id: users.id,
-      username: users.username,
-      displayName: users.displayName,
-      avatarHash: users.avatarHash,
-    })
-    .from(users)
-    .where(
-      or(
-        sql`${users.username} ILIKE ${pattern}`,
-        sql`${users.displayName} ILIKE ${pattern}`,
-      ),
-    )
-    .limit(20);
-
-  res.status(200).json(results);
 }));
 
 // ---------------------------------------------------------------------------
@@ -539,43 +444,8 @@ usersRouter.get('/presences', requireAuth, asyncHandler(async (req: Request, res
     return;
   }
 
-  try {
-    const pipeline = redis.pipeline();
-    for (const id of ids) {
-      pipeline.get(`presence:${id}`);
-      pipeline.pttl(`presence:${id}`);
-    }
-    const results = await pipeline.exec();
-    const now = Date.now();
-    const presences: Array<{ userId: string; status: string; updatedAt: string; lastSeen: number | null }> = [];
-    ids.forEach((id, i) => {
-      const statusResult = results?.[i * 2];
-      const ttlResult = results?.[(i * 2) + 1];
-      const rawStatus = (statusResult && statusResult[1] as string) || 'offline';
-      // Never leak "invisible" to other users — show as "offline"
-      const status = rawStatus === 'invisible' ? 'offline' : rawStatus;
-      const ttlMs = Number(ttlResult?.[1] ?? -1);
-      const updatedAt = status === 'offline' || ttlMs < 0
-        ? new Date(now).toISOString()
-        : new Date(now - (300_000 - ttlMs)).toISOString();
-      presences.push({
-        userId: id,
-        status,
-        updatedAt,
-        lastSeen: status === 'offline' ? now : null,
-      });
-    });
-    res.json(presences);
-  } catch {
-    const now = Date.now();
-    const presences = ids.map((id) => ({
-      userId: id,
-      status: 'offline',
-      updatedAt: new Date(now).toISOString(),
-      lastSeen: now,
-    }));
-    res.json(presences);
-  }
+  const presences = await getOnlineStatus(ids);
+  res.json(presences);
 }));
 
 // ---------------------------------------------------------------------------
@@ -598,20 +468,17 @@ usersRouter.get(
   '/:userId/profile',
   requireAuth,
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const { userId } = req.params as Record<string, string>;
-
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-
-    if (!user) {
-      res.status(404).json({ code: 'NOT_FOUND', message: 'User not found' });
-      return;
+    try {
+      const { userId } = req.params as Record<string, string>;
+      const user = await getUserById(userId);
+      res.status(200).json(publicProfile(user));
+    } catch (err) {
+      if (err instanceof ServiceError && err.code === 'NOT_FOUND') {
+        res.status(404).json({ code: 'NOT_FOUND', message: err.message });
+        return;
+      }
+      throw err;
     }
-
-    res.status(200).json(publicProfile(user));
   }),
 );
 
