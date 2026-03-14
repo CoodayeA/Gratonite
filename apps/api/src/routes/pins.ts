@@ -6,6 +6,7 @@ import { messages } from '../db/schema/messages';
 import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
 import { getIO } from '../lib/socket-io';
+import { messageService, ServiceError } from '../services/message.service';
 
 export const pinsRouter = Router({ mergeParams: true });
 
@@ -54,41 +55,35 @@ pinsRouter.get('/', requireAuth, async (req: Request, res: Response): Promise<vo
 
 /** PUT /channels/:channelId/pins/:messageId */
 pinsRouter.put('/:messageId', requireAuth, async (req: Request, res: Response): Promise<void> => {
-  const { channelId, messageId } = req.params as Record<string, string>;
-
-  // Verify message exists in channel
-  const [msg] = await db.select({ id: messages.id }).from(messages)
-    .where(and(eq(messages.id, messageId), eq(messages.channelId, channelId))).limit(1);
-  if (!msg) { res.status(404).json({ code: 'NOT_FOUND', message: 'Message not found' }); return; }
-
-  // Check max 50 pins
-  const [{ pinCount }] = await db.select({ pinCount: count() }).from(channelPins).where(eq(channelPins.channelId, channelId));
-  if (pinCount >= 50) { res.status(400).json({ code: 'MAX_PINS', message: 'Maximum 50 pins per channel' }); return; }
-
-  await db.insert(channelPins).values({
-    channelId,
-    messageId,
-    pinnedBy: req.userId!,
-  }).onConflictDoNothing();
-
   try {
-    getIO().to(`channel:${channelId}`).emit('CHANNEL_PINS_UPDATE', { channelId, messageId, pinned: true });
-  } catch {}
+    const { channelId, messageId } = req.params as Record<string, string>;
 
-  res.json({ code: 'OK' });
+    await messageService.pinMessage(channelId, messageId, req.userId!);
+
+    res.json({ code: 'OK' });
+  } catch (err) {
+    if (err instanceof ServiceError) {
+      const status = err.code === 'NOT_FOUND' ? 404 : err.code === 'MAX_PINS' ? 400 : 400;
+      res.status(status).json({ code: err.code, message: err.message });
+      return;
+    }
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });
 
 /** DELETE /channels/:channelId/pins/:messageId */
 pinsRouter.delete('/:messageId', requireAuth, async (req: Request, res: Response): Promise<void> => {
-  const { channelId, messageId } = req.params as Record<string, string>;
-
-  await db.delete(channelPins).where(
-    and(eq(channelPins.channelId, channelId), eq(channelPins.messageId, messageId)),
-  );
-
   try {
-    getIO().to(`channel:${channelId}`).emit('CHANNEL_PINS_UPDATE', { channelId, messageId, pinned: false });
-  } catch {}
+    const { channelId, messageId } = req.params as Record<string, string>;
 
-  res.json({ code: 'OK' });
+    await messageService.unpinMessage(channelId, messageId);
+
+    res.json({ code: 'OK' });
+  } catch (err) {
+    if (err instanceof ServiceError) {
+      res.status(400).json({ code: err.code, message: err.message });
+      return;
+    }
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });

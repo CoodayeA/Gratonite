@@ -64,6 +64,7 @@ import { messagesSentTotal } from '../lib/metrics';
 import { AppError, handleAppError } from '../lib/errors.js';
 import { safeJsonParse } from '../lib/safe-json.js';
 import { incrementChallengeProgress } from './daily-challenges';
+import { messageService, ServiceError } from '../services/message.service';
 
 /** Use mergeParams so `:channelId` from the parent mount path is accessible. */
 export const messagesRouter = Router({ mergeParams: true });
@@ -244,156 +245,21 @@ const editMessageSchema = z.object({
 messagesRouter.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { channelId } = req.params as Record<string, string>;
-    await resolveChannel(channelId, req.userId!);
-
     const limitParam = Number(req.query.limit) || 50;
-    const limit = Math.min(limitParam, 100);
     const beforeId = typeof req.query.before === 'string' ? req.query.before : undefined;
 
-    // Build cursor condition.
-    let cursorCondition = undefined;
-    if (beforeId) {
-      // Fetch the cursor message's createdAt to build the keyset cursor.
-      const [cursorMsg] = await db
-        .select({ createdAt: messages.createdAt })
-        .from(messages)
-        .where(eq(messages.id, beforeId))
-        .limit(1);
-
-      if (cursorMsg) {
-        cursorCondition = lt(messages.createdAt, cursorMsg.createdAt);
-      }
-    }
-
-    const rows = await db
-      .select({
-        id: messages.id,
-        channelId: messages.channelId,
-        content: messages.content,
-        attachments: messages.attachments,
-        edited: messages.edited,
-        editedAt: messages.editedAt,
-        createdAt: messages.createdAt,
-        expiresAt: messages.expiresAt,
-        replyToId: messages.replyToId,
-        embeds: messages.embeds,
-        isEncrypted: messages.isEncrypted,
-        encryptedContent: messages.encryptedContent,
-        keyVersion: messages.keyVersion,
-        authorId: messages.authorId,
-        authorUsername: users.username,
-        authorDisplayName: users.displayName,
-        authorAvatarHash: users.avatarHash,
-        authorNameplateStyle: users.nameplateStyle,
-        authorIsBot: users.isBot,
-      })
-      .from(messages)
-      .leftJoin(users, eq(users.id, messages.authorId))
-      .where(
-        and(
-          eq(messages.channelId, channelId),
-          or(
-            isNull(messages.threadId),
-            sql`${messages.id} IN (SELECT origin_message_id FROM threads WHERE origin_message_id IS NOT NULL)`,
-          ),
-          or(isNull(messages.expiresAt), gt(messages.expiresAt, new Date())),
-          ...(cursorCondition ? [cursorCondition] : []),
-        ),
-      )
-      .orderBy(desc(messages.createdAt))
-      .limit(limit);
-
-    // Fetch reactions for all returned messages in one query
-    const messageIds = rows.map((r) => r.id);
-    let reactionRows: { messageId: string; userId: string; emoji: string }[] = [];
-    if (messageIds.length > 0) {
-      reactionRows = await db
-        .select({ messageId: messageReactions.messageId, userId: messageReactions.userId, emoji: messageReactions.emoji })
-        .from(messageReactions)
-        .where(inArray(messageReactions.messageId, messageIds));
-    }
-
-    // Group reactions by messageId -> emoji
-    const reactionsByMessage = new Map<string, Map<string, { emoji: string; count: number; userIds: string[] }>>();
-    for (const r of reactionRows) {
-      if (!reactionsByMessage.has(r.messageId)) reactionsByMessage.set(r.messageId, new Map());
-      const emojiMap = reactionsByMessage.get(r.messageId)!;
-      if (!emojiMap.has(r.emoji)) emojiMap.set(r.emoji, { emoji: r.emoji, count: 0, userIds: [] });
-      const entry = emojiMap.get(r.emoji)!;
-      entry.count++;
-      entry.userIds.push(r.userId);
-    }
-
-    // Fetch pinned message IDs for this channel in one query
-    let pinnedSet = new Set<string>();
-    if (messageIds.length > 0) {
-      const pinRows = await db
-        .select({ messageId: channelPins.messageId })
-        .from(channelPins)
-        .where(inArray(channelPins.messageId, messageIds));
-      pinnedSet = new Set(pinRows.map((p) => p.messageId));
-    }
-
-    // Fetch thread reply counts: count messages per thread, grouped by originMessageId
-    const threadReplyCountMap = new Map<string, number>();
-    if (messageIds.length > 0) {
-      const threadRows = await db
-        .select({
-          originMessageId: threads.originMessageId,
-          replyCount: sql<number>`cast(count(${messages.id}) as int)`,
-        })
-        .from(threads)
-        .leftJoin(messages, eq(messages.threadId, threads.id))
-        .where(inArray(threads.originMessageId, messageIds))
-        .groupBy(threads.originMessageId);
-      for (const t of threadRows) {
-        if (t.originMessageId) threadReplyCountMap.set(t.originMessageId, t.replyCount ?? 0);
-      }
-    }
-
-    const formatted = rows.map((row) => {
-      const emojiMap = reactionsByMessage.get(row.id);
-      const reactions = emojiMap
-        ? Array.from(emojiMap.values()).map((e) => ({
-            emoji: e.emoji,
-            count: e.count,
-            me: e.userIds.includes(req.userId!),
-          }))
-        : [];
-
-      return {
-        id: row.id,
-        channelId: row.channelId,
-        authorId: row.authorId,
-        content: row.content,
-        attachments: row.attachments,
-        edited: row.edited,
-        editedAt: row.editedAt,
-        createdAt: row.createdAt,
-        embeds: row.embeds ?? [],
-        expiresAt: row.expiresAt ?? null,
-        replyToId: row.replyToId ?? null,
-        isEncrypted: row.isEncrypted ?? false,
-        encryptedContent: row.encryptedContent ?? null,
-        keyVersion: row.keyVersion ?? null,
-        pinned: pinnedSet.has(row.id),
-        threadReplyCount: threadReplyCountMap.get(row.id) ?? 0,
-        reactions,
-        author: row.authorId
-          ? {
-              id: row.authorId,
-              username: row.authorUsername,
-              displayName: row.authorDisplayName,
-              avatarHash: row.authorAvatarHash,
-              nameplateStyle: row.authorNameplateStyle ?? 'none',
-              isBot: row.authorIsBot ?? false,
-            }
-          : null,
-      };
+    const result = await messageService.getMessages(channelId, req.userId!, {
+      before: beforeId,
+      limit: limitParam,
     });
 
-    res.status(200).json(formatted);
+    res.status(200).json(result);
   } catch (err) {
+    if (err instanceof ServiceError) {
+      const status = err.code === 'NOT_FOUND' ? 404 : err.code === 'FORBIDDEN' ? 403 : 400;
+      res.status(status).json({ code: err.code, message: err.message });
+      return;
+    }
     handleAppError(res, err, 'messages');
   }
 });
@@ -622,497 +488,34 @@ messagesRouter.post(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { channelId } = req.params as Record<string, string>;
-      const channel = await resolveChannel(channelId, req.userId!);
+      const body = req.body as z.infer<typeof sendMessageSchema>;
 
-      // Check SEND_MESSAGES permission for guild channels
-      if (channel.guildId) {
-        const canSend = await hasChannelPermission(req.userId!, channel.guildId, channelId, Permissions.SEND_MESSAGES);
-        if (!canSend) {
-          throw new AppError(403, 'Missing SEND_MESSAGES permission in this channel', 'FORBIDDEN');
-        }
+      const result = await messageService.createMessage(channelId, req.userId!, body);
+
+      if (result.scheduled) {
+        res.status(202).json(result.data);
+      } else {
+        res.status(201).json(result.data);
       }
-
-      // Check if user is timed out in this guild
-      if (channel.guildId) {
-        const [member] = await db.select({ timeoutUntil: guildMembers.timeoutUntil })
-          .from(guildMembers)
-          .where(and(eq(guildMembers.guildId, channel.guildId), eq(guildMembers.userId, req.userId!)))
-          .limit(1);
-        if (member?.timeoutUntil && member.timeoutUntil > new Date()) {
-          res.status(403).json({ code: 'FORBIDDEN', message: 'You are timed out in this server' });
-          return;
-        }
-      }
-
-      // Slow mode enforcement
-      const [slowCh] = await db.select({ rateLimitPerUser: channels.rateLimitPerUser }).from(channels).where(eq(channels.id, channelId)).limit(1);
-      if (slowCh?.rateLimitPerUser && slowCh.rateLimitPerUser > 0) {
-        const slowKey = `slowmode:${channelId}:${req.userId}`;
-        const remaining = await redis.ttl(slowKey);
-        if (remaining > 0) {
-          res.status(429).json({ error: 'SLOW_MODE', retryAfter: remaining }); return;
-        }
-      }
-
-      const { content, attachmentIds, replyToId, threadId, expiresIn, scheduledAt, forwardedFromMessageId, isEncrypted, encryptedContent, keyVersion, embeds: userEmbeds } = req.body as z.infer<typeof sendMessageSchema>;
-
-      // Handle scheduled messages: insert into scheduled_messages instead of messages
-      if (scheduledAt) {
-        const scheduledDate = new Date(scheduledAt);
-        if (scheduledDate <= new Date()) {
-          res.status(400).json({ code: 'VALIDATION_ERROR', message: 'scheduledAt must be in the future' });
-          return;
-        }
-        const [scheduled] = await db.insert(scheduledMessages).values({
-          channelId,
-          authorId: req.userId!,
-          content: content ?? '',
-          scheduledAt: scheduledDate,
-        }).returning();
-        res.status(202).json(scheduled);
-        return;
-      }
-
-      // Automod check: check message content against enabled keyword rules
-      if (channel.guildId && content) {
-        try {
-          const rules = await db.select().from(automodRules)
-            .where(and(eq(automodRules.guildId, channel.guildId), eq(automodRules.enabled, true)));
-
-          for (const rule of rules) {
-            if (rule.triggerType !== 'KEYWORD') continue;
-            const metadata = rule.triggerMetadata as { keywords?: string[] };
-            const keywords: string[] = metadata?.keywords || [];
-            // Skip excessively large automod rules to prevent DoS
-            if (keywords.length > 1000) continue;
-            const totalSize = keywords.reduce((sum, kw) => sum + kw.length, 0);
-            if (totalSize > 50_000) continue;
-            const msgLower = content.toLowerCase();
-            const matched = keywords.some((kw: string) => msgLower.includes(kw.toLowerCase()));
-            if (!matched) continue;
-
-            const actions = (rule.actions as Array<{ type: string; alertChannelId?: string }>) || [];
-            for (const action of actions) {
-              if (action.type === 'BLOCK_MESSAGE') {
-                res.status(403).json({ code: 'AUTOMOD_BLOCKED', message: 'Message blocked by auto-moderation' });
-                return;
-              }
-            }
-          }
-        } catch { /* automod should not break message sending */ }
-      }
-
-      // Phase E: Block file attachments if disabled for this channel
-      if (attachmentIds && attachmentIds.length > 0 && channel.attachmentsEnabled === false) {
-        res.status(403).json({ code: 'FORBIDDEN', message: 'File attachments are disabled in this channel' });
-        return;
-      }
-
-      // Word filter check
-      let wordFilterDeleteAfterInsert = false;
-      if (channel.guildId && content) {
-        try {
-          const [wordFilter] = await db.select().from(guildWordFilters)
-            .where(eq(guildWordFilters.guildId, channel.guildId!)).limit(1);
-          if (wordFilter && wordFilter.words && wordFilter.words.length > 0) {
-            const contentLower = content.toLowerCase();
-            const matched = wordFilter.words.some((w: string) => contentLower.includes(w.toLowerCase()));
-            if (matched) {
-              if (wordFilter.action === 'block') {
-                res.status(400).json({ code: 'BLOCKED_CONTENT', message: 'Your message contains blocked words' });
-                return;
-              }
-              if (wordFilter.action === 'warn') {
-                res.status(400).json({ code: 'WORD_FILTER_WARN', message: 'Your message was blocked for containing filtered words. This is a warning.' });
-                return;
-              }
-              if (wordFilter.action === 'delete') {
-                wordFilterDeleteAfterInsert = true;
-              }
-            }
-          }
-        } catch { /* word filter should not break message sending */ }
-      }
-
-      // Resolve attachments and verify ownership.
-      let attachmentSnapshot: Array<{
-        id: string;
-        url: string;
-        filename: string;
-        size: number;
-        mimeType: string;
-      }> = [];
-
-      if (attachmentIds && attachmentIds.length > 0) {
-        // Fetch all referenced files in one query.
-        const fileRows = await db
-          .select()
-          .from(files)
-          .where(
-            or(
-              ...attachmentIds.map((id) => eq(files.id, id)),
-            ) as ReturnType<typeof eq>,
-          );
-
-        // Ensure all requested IDs were found and belong to this user.
-        if (fileRows.length !== attachmentIds.length) {
-          res.status(400).json({ code: 'VALIDATION_ERROR', message: 'One or more attachment IDs are invalid' });
-          return;
-        }
-
-        for (const file of fileRows) {
-          if (file.uploaderId !== req.userId) {
-            res.status(400).json({ code: 'VALIDATION_ERROR', message: 'You can only attach files you have uploaded' });
-            return;
-          }
-        }
-
-        attachmentSnapshot = fileRows.map((f) => ({
-          id: f.id,
-          url: f.url,
-          filename: f.filename,
-          size: f.size,
-          mimeType: f.mimeType,
-        }));
-      }
-
-      // Compute expiresAt: client-specified expiresIn takes priority, then channel disappear timer.
-      let expiresAt: Date | undefined;
-      if (expiresIn) {
-        expiresAt = new Date(Date.now() + expiresIn * 1000);
-      } else if (channel.disappearTimer) {
-        expiresAt = new Date(Date.now() + channel.disappearTimer * 1000);
-      }
-
-      // Build embeds: include forwarded message reference if provided
-      const embeds: Array<Record<string, unknown>> = [];
-      if (forwardedFromMessageId) {
-        // Verify the user has access to the source message's channel
-        const [sourceMsg] = await db
-          .select({ channelId: messages.channelId })
-          .from(messages)
-          .where(eq(messages.id, forwardedFromMessageId))
-          .limit(1);
-        if (!sourceMsg) {
-          res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Forwarded message not found' });
-          return;
-        }
-        const [sourceChannel] = await db
-          .select({ guildId: channels.guildId })
-          .from(channels)
-          .where(eq(channels.id, sourceMsg.channelId))
-          .limit(1);
-        if (sourceChannel?.guildId) {
-          const [srcMembership] = await db
-            .select({ id: guildMembers.id })
-            .from(guildMembers)
-            .where(and(eq(guildMembers.guildId, sourceChannel.guildId), eq(guildMembers.userId, req.userId!)))
-            .limit(1);
-          if (!srcMembership) {
-            res.status(403).json({ code: 'FORBIDDEN', message: 'You do not have access to the forwarded message' });
-            return;
-          }
-        } else {
-          // DM channel — verify participation
-          const [srcDmMembership] = await db
-            .select({ id: dmChannelMembers.id })
-            .from(dmChannelMembers)
-            .where(and(eq(dmChannelMembers.channelId, sourceMsg.channelId), eq(dmChannelMembers.userId, req.userId!)))
-            .limit(1);
-          if (!srcDmMembership) {
-            res.status(403).json({ code: 'FORBIDDEN', message: 'You do not have access to the forwarded message' });
-            return;
-          }
-        }
-        embeds.push({ type: 'forwarded', messageId: forwardedFromMessageId });
-      }
-      if (userEmbeds && userEmbeds.length > 0) {
-        embeds.push(...userEmbeds);
-      }
-
-      // Insert the message.
-      const [newMessage] = await db
-        .insert(messages)
-        .values({
-          channelId,
-          authorId: req.userId!,
-          content: content ?? null,
-          attachments: attachmentSnapshot,
-          ...(embeds.length > 0 ? { embeds } : {}),
-          ...(replyToId ? { replyToId } : {}),
-          ...(threadId ? { threadId } : {}),
-          ...(expiresAt ? { expiresAt } : {}),
-          ...(isEncrypted ? { isEncrypted, encryptedContent: encryptedContent ?? null, ...(keyVersion !== undefined ? { keyVersion } : {}) } : {}),
-        })
-        .returning();
-
-      // Fetch author info for the response and Socket.io payload.
-      const [author] = await db
-        .select({
-          id: users.id,
-          username: users.username,
-          displayName: users.displayName,
-          avatarHash: users.avatarHash,
-          nameplateStyle: users.nameplateStyle,
-          isBot: users.isBot,
-        })
-        .from(users)
-        .where(eq(users.id, req.userId!))
-        .limit(1);
-
-      const payload = formatMessage(newMessage, author ?? null);
-
-      // Set slow mode cooldown after successful message insert — re-read current
-      // channel config so admin changes take effect immediately
-      const [currentSlowCh] = await db.select({ rateLimitPerUser: channels.rateLimitPerUser }).from(channels).where(eq(channels.id, channelId)).limit(1);
-      if (currentSlowCh?.rateLimitPerUser && currentSlowCh.rateLimitPerUser > 0) {
-        await redis.set(`slowmode:${channelId}:${req.userId}`, '1', 'EX', currentSlowCh.rateLimitPerUser);
-      }
-
-      // Emit real-time event to all clients subscribed to this channel.
-      try {
-        getIO().to(`channel:${channelId}`).emit('MESSAGE_CREATE', payload);
-        messagesSentTotal.inc();
-      } catch {
-        // Socket.io not yet initialised (e.g. test environment); non-fatal.
-      }
-
-      // Word filter "delete" action: let the message appear briefly, then auto-delete
-      if (wordFilterDeleteAfterInsert) {
-        setTimeout(async () => {
-          try {
-            await db.delete(messages).where(eq(messages.id, newMessage.id));
-            getIO().to(`channel:${channelId}`).emit('MESSAGE_DELETE', { id: newMessage.id, channelId });
-          } catch { /* non-fatal */ }
-        }, 5000);
-      }
-
-      // Award XP (non-critical, fire and forget)
-      ;(async () => {
-        try {
-          const xpKey = `xp:cooldown:${req.userId!}:${channelId}`;
-          const already = await redis.get(xpKey);
-          if (!already) {
-            await redis.set(xpKey, '1', 'EX', 60);
-            const updatedUser = await db.update(users)
-              .set({ xp: sql`xp + 5` })
-              .where(eq(users.id, req.userId!))
-              .returning({ xp: users.xp, level: users.level });
-            if (updatedUser.length > 0) {
-              const { xp, level } = updatedUser[0];
-              const newLevel = Math.floor(Math.sqrt((xp ?? 0) / 100)) + 1;
-              if (newLevel > (level ?? 1)) {
-                await db.update(users).set({ level: newLevel }).where(eq(users.id, req.userId!));
-                try {
-                  const io = getIO();
-                  io.to(`user:${req.userId!}`).emit('LEVEL_UP', { level: newLevel });
-                } catch { /* non-fatal */ }
-              }
-            }
-          }
-          // Check achievements
-          const { checkAchievements } = await import('./achievements');
-          await checkAchievements(req.userId!, 'message_sent');
-        } catch { /* non-critical */ }
-      })();
-
-      // --- Notification generation (fire-and-forget) ---
-      const senderName = author?.displayName || author?.username || 'Someone';
-      const preview = isEncrypted ? 'Encrypted message' : (content ?? '').slice(0, 100);
-
-      // Resolve the channel to check if it's a DM or guild channel.
-      const [chan] = await db
-        .select({ guildId: channels.guildId, type: channels.type })
-        .from(channels)
-        .where(eq(channels.id, channelId))
-        .limit(1);
-
-      // --- Webhook bot dispatch (guild channels only, fire-and-forget) ---
-      if (chan?.guildId && author) {
-        dispatchMessageCreate({
-          guildId: chan.guildId,
-          channelId,
-          messageId: newMessage.id,
-          content: content ?? '',
-          author: {
-            id: author.id,
-            username: author.username,
-            displayName: author.displayName ?? null,
-          },
-          timestamp: newMessage.createdAt.toISOString(),
-        });
-      }
-
-      // --- Channel read-state: increment mention counts for <@userId> mentions ---
-      if (content && chan?.guildId) {
-        const mentionRegex = /<@([a-f0-9-]{36})>/g;
-        const rawMentionedIds = new Set<string>();
-        let mentionResult = mentionRegex.exec(content);
-        while (mentionResult !== null) {
-          if (mentionResult[1] !== req.userId!) rawMentionedIds.add(mentionResult[1]);
-          mentionResult = mentionRegex.exec(content);
-        }
-
-        // Filter to only actual guild members to prevent mention spam for non-members
-        let mentionedIds = new Set<string>();
-        if (rawMentionedIds.size > 0) {
-          const memberRows = await db.select({ userId: guildMembers.userId })
-            .from(guildMembers)
-            .where(and(eq(guildMembers.guildId, chan.guildId), inArray(guildMembers.userId, [...rawMentionedIds])));
-          mentionedIds = new Set(memberRows.map(m => m.userId));
-        }
-
-        for (const mentionedUserId of mentionedIds) {
-          try {
-            const [row] = await db
-              .insert(channelReadState)
-              .values({
-                channelId,
-                userId: mentionedUserId,
-                lastReadAt: new Date(0),
-                mentionCount: 1,
-              })
-              .onConflictDoUpdate({
-                target: [channelReadState.channelId, channelReadState.userId],
-                set: {
-                  mentionCount: sql`${channelReadState.mentionCount} + 1`,
-                },
-              })
-              .returning({ mentionCount: channelReadState.mentionCount });
-
-            try {
-              getIO().to(`user:${mentionedUserId}`).emit('MENTION_CREATED', {
-                channelId,
-                guildId: chan.guildId,
-                mentionCount: row?.mentionCount ?? 1,
-              });
-            } catch { /* non-fatal */ }
-          } catch { /* skip failed upserts */ }
-        }
-      }
-
-      // --- AutoMod check (fire-and-forget) ---
-      if (chan?.guildId && content) {
-        (async () => {
-          try {
-            const guildWorkflows = await db
-              .select()
-              .from(workflows)
-              .where(and(eq(workflows.guildId, chan.guildId!), eq(workflows.enabled, true)));
-
-            for (const wf of guildWorkflows) {
-              const triggers = await db
-                .select()
-                .from(workflowTriggers)
-                .where(and(eq(workflowTriggers.workflowId, wf.id), eq(workflowTriggers.type, 'message_contains')));
-
-              for (const trigger of triggers) {
-                const config = trigger.config as { keywords?: string[] };
-                const keywords: string[] = config?.keywords || [];
-                const msgLower = content.toLowerCase();
-                const matched = keywords.some((kw: string) => msgLower.includes(kw.toLowerCase()));
-                if (!matched) continue;
-
-                const actions = await db
-                  .select()
-                  .from(workflowActions)
-                  .where(eq(workflowActions.workflowId, wf.id));
-
-                for (const action of actions) {
-                  if (action.type === 'delete_message') {
-                    await db.delete(messages).where(eq(messages.id, newMessage.id));
-                    getIO().to(`channel:${channelId}`).emit('MESSAGE_DELETE', { id: newMessage.id, channelId });
-                  }
-                }
-              }
-            }
-          } catch (automodErr) {
-            logger.error('[automod] check failed:', automodErr);
-          }
-        })();
-      }
-
-      // 1) DM notification — notify the other participant(s)
-      if (chan && !chan.guildId) {
-        const dmMembers = await db
-          .select({ userId: dmChannelMembers.userId })
-          .from(dmChannelMembers)
-          .where(eq(dmChannelMembers.channelId, channelId));
-
-        for (const member of dmMembers) {
-          if (member.userId !== req.userId!) {
-            createNotification({
-              userId: member.userId,
-              type: 'dm',
-              title: `New message from ${senderName}`,
-              body: preview || '(attachment)',
-              data: { senderId: req.userId!, senderName, channelId },
-            }).catch(err => logger.error('[messages] notification failed:', err));
-          }
-        }
-      }
-
-      // 2) @mention notifications — parse @username from content
-      if (content) {
-        const mentionPattern = /@([a-zA-Z0-9_]+)/g;
-        const mentionedUsernames = new Set<string>();
-        let mentionMatch: RegExpExecArray | null;
-        while ((mentionMatch = mentionPattern.exec(content)) !== null) {
-          mentionedUsernames.add(mentionMatch[1].toLowerCase());
-        }
-
-        if (mentionedUsernames.size > 0) {
-          for (const uname of mentionedUsernames) {
-            try {
-              const rows = await db
-                .select({ id: users.id, username: users.username })
-                .from(users)
-                .where(eq(users.username, uname))
-                .limit(1);
-
-              const mentionedUser = rows[0];
-              if (mentionedUser && mentionedUser.id !== req.userId!) {
-                createNotification({
-                  userId: mentionedUser.id,
-                  type: 'mention',
-                  title: `${senderName} mentioned you`,
-                  body: preview,
-                  data: { senderId: req.userId!, senderName, channelId, guildId: chan?.guildId ?? null },
-                }).catch(err => logger.error('[messages] mention notification failed:', err));
-              }
-            } catch { /* skip failed lookups */ }
-          }
-        }
-      }
-
-      res.status(201).json(payload);
-
-      // Clear draft for this user/channel (fire-and-forget)
-      db.delete(messageDrafts)
-        .where(and(eq(messageDrafts.userId, req.userId!), eq(messageDrafts.channelId, channelId)))
-        .catch(err => logger.error('[messages] draft cleanup failed:', err));
-
-      // Daily challenge progress (fire-and-forget)
-      incrementChallengeProgress(req.userId!, 'send_messages');
-      if (req.body.replyToId) incrementChallengeProgress(req.userId!, 'reply_to_messages');
-
-      // Fire-and-forget URL embed scraping
-      (async () => {
-        const urls = extractUrls(content || '');
-        if (urls.length === 0) return;
-
-        const embedResults = await Promise.all(urls.map(u => scrapeUrl(u)));
-        const embeds = embedResults.filter(Boolean);
-        if (embeds.length === 0) return;
-
-        await db.update(messages).set({ embeds }).where(eq(messages.id, newMessage.id));
-
-        getIO().to(`channel:${channelId}`).emit('MESSAGE_EMBED_UPDATE', {
-          messageId: newMessage.id,
-          embeds,
-        });
-      })().catch(err => logger.error('[messages] embed scraping failed:', err));
     } catch (err) {
+      if (err instanceof ServiceError) {
+        const statusMap: Record<string, number> = {
+          NOT_FOUND: 404,
+          FORBIDDEN: 403,
+          VALIDATION_ERROR: 400,
+          AUTOMOD_BLOCKED: 403,
+          BLOCKED_CONTENT: 400,
+          WORD_FILTER_WARN: 400,
+          RATE_LIMITED: 429,
+        };
+        const status = statusMap[err.code] ?? 400;
+        if (err.code === 'RATE_LIMITED') {
+          res.status(status).json({ error: 'SLOW_MODE', retryAfter: err.retryAfter });
+        } else {
+          res.status(status).json({ code: err.code, message: err.message });
+        }
+        return;
+      }
       handleAppError(res, err, 'messages');
     }
   },
@@ -1150,86 +553,17 @@ messagesRouter.patch(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { channelId, messageId } = req.params as Record<string, string>;
-      await resolveChannel(channelId, req.userId!);
+      const body = req.body as z.infer<typeof editMessageSchema>;
 
-      const [message] = await db
-        .select()
-        .from(messages)
-        .where(and(eq(messages.id, messageId), eq(messages.channelId, channelId)))
-        .limit(1);
-
-      if (!message) {
-        res.status(404).json({ code: 'NOT_FOUND', message: 'Message not found' });
-        return;
-      }
-
-      if (message.authorId !== req.userId) {
-        res.status(403).json({ code: 'FORBIDDEN', message: 'You can only edit your own messages' });
-        return;
-      }
-
-      const { content, encryptedContent, isEncrypted, keyVersion } = req.body as z.infer<typeof editMessageSchema>;
-
-      // Save current content to edit history before overwriting
-      if (message.content) {
-        await db.insert(messageEditHistory).values({
-          messageId: message.id,
-          content: message.content,
-        });
-      }
-
-      const updateFields: Record<string, unknown> = { edited: true, editedAt: new Date() };
-      if (isEncrypted) {
-        updateFields.content = null;
-        updateFields.encryptedContent = encryptedContent ?? null;
-        updateFields.isEncrypted = true;
-        if (keyVersion !== undefined) updateFields.keyVersion = keyVersion;
-      } else {
-        updateFields.content = content;
-        updateFields.isEncrypted = false;
-        updateFields.encryptedContent = null;
-      }
-
-      const [updated] = await db
-        .update(messages)
-        .set(updateFields)
-        .where(eq(messages.id, messageId))
-        .returning();
-
-      // Fetch author info.
-      const [author] = await db
-        .select({
-          id: users.id,
-          username: users.username,
-          displayName: users.displayName,
-          avatarHash: users.avatarHash,
-          nameplateStyle: users.nameplateStyle,
-          isBot: users.isBot,
-        })
-        .from(users)
-        .where(eq(users.id, req.userId!))
-        .limit(1);
-
-      const payload = formatMessage(updated, author ?? null);
-
-      try {
-        getIO().to(`channel:${channelId}`).emit('MESSAGE_UPDATE', payload);
-      } catch {
-        // Non-fatal if Socket.io not initialised.
-      }
-
-      // Dispatch message_update to installed bots
-      const [editChan] = await db.select({ guildId: channels.guildId }).from(channels)
-        .where(eq(channels.id, channelId)).limit(1);
-      if (editChan?.guildId) {
-        dispatchEvent(editChan.guildId, 'message_update', {
-          channelId, messageId, content: updated.content ?? '',
-          authorId: updated.authorId,
-        });
-      }
+      const payload = await messageService.updateMessage(channelId, messageId, req.userId!, body);
 
       res.status(200).json(payload);
     } catch (err) {
+      if (err instanceof ServiceError) {
+        const status = err.code === 'NOT_FOUND' ? 404 : err.code === 'FORBIDDEN' ? 403 : 400;
+        res.status(status).json({ code: err.code, message: err.message });
+        return;
+      }
       handleAppError(res, err, 'messages');
     }
   },
@@ -1340,49 +674,16 @@ messagesRouter.delete(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { channelId, messageId } = req.params as Record<string, string>;
-      const channel = await resolveChannel(channelId, req.userId!);
 
-      const [message] = await db
-        .select()
-        .from(messages)
-        .where(and(eq(messages.id, messageId), eq(messages.channelId, channelId)))
-        .limit(1);
-
-      if (!message) {
-        res.status(404).json({ code: 'NOT_FOUND', message: 'Message not found' });
-        return;
-      }
-
-      // Allow deletion if: (a) caller is the author, OR (b) caller has MANAGE_MESSAGES permission.
-      const isAuthor = message.authorId === req.userId;
-      let canManageMessages = false;
-
-      if (!isAuthor && channel.guildId) {
-        canManageMessages = await hasPermission(req.userId!, channel.guildId, Permissions.MANAGE_MESSAGES);
-      }
-
-      if (!isAuthor && !canManageMessages) {
-        res.status(403).json({ code: 'FORBIDDEN', message: 'You do not have permission to delete this message' });
-        return;
-      }
-
-      await db.delete(messages).where(eq(messages.id, messageId));
-
-      try {
-        getIO()
-          .to(`channel:${channelId}`)
-          .emit('MESSAGE_DELETE', { id: messageId, channelId });
-      } catch {
-        // Non-fatal.
-      }
-
-      // Dispatch message_delete to installed bots
-      if (channel.guildId) {
-        dispatchEvent(channel.guildId, 'message_delete', { channelId, messageId });
-      }
+      await messageService.deleteMessage(channelId, messageId, req.userId!);
 
       res.status(200).json({ code: 'OK', message: 'Message deleted' });
     } catch (err) {
+      if (err instanceof ServiceError) {
+        const status = err.code === 'NOT_FOUND' ? 404 : err.code === 'FORBIDDEN' ? 403 : 400;
+        res.status(status).json({ code: err.code, message: err.message });
+        return;
+      }
       handleAppError(res, err, 'messages');
     }
   },
