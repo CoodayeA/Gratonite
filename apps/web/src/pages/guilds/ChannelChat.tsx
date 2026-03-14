@@ -651,7 +651,7 @@ const MemoizedMessageItem = memo(({
                         )}
                         {/* Message Components (buttons, select menus) */}
                         {msg.components && Array.isArray(msg.components) && msg.components.length > 0 && (
-                            <MessageComponents components={msg.components} channelId={channelId!} messageId={msg.id} />
+                            <MessageComponents components={msg.components} channelId={msgChannelId!} messageId={msg.id} />
                         )}
                         {msg.widgetData && (
                             <EmbeddedWidget type={msg.widgetData.type} data={msg.widgetData.data} />
