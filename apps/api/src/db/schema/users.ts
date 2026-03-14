@@ -196,6 +196,9 @@ export const users = pgTable('users', {
 
   /** Public key PEM for signing federation activities (set for federated users). */
   federationPublicKeyPem: text('federation_public_key_pem'),
+
+  /** Whether this user is a bot account (virtual user for a bot application). */
+  isBot: boolean('is_bot').notNull().default(false),
 });
 
 /**

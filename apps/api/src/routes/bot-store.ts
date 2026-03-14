@@ -12,10 +12,13 @@ import { z } from 'zod';
 import { eq, and, desc, sql, ilike, or } from 'drizzle-orm';
 import { db } from '../db/index';
 import { botListings, botReviews, botInstalls } from '../db/schema/bot-store';
+import { botApplications } from '../db/schema/bot-applications';
+import { botGuildPermissions } from '../db/schema/bot-guild-permissions';
 import { users } from '../db/schema/users';
-import { guilds } from '../db/schema/guilds';
+import { guilds, guildMembers } from '../db/schema/guilds';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { getIO } from '../lib/socket-io';
 
 export const botStoreRouter = Router({ mergeParams: true });
 
@@ -412,6 +415,41 @@ botStoreRouter.post('/bots/installs', requireAuth, validate(installBotSchema), a
     .set({ installCount: sql`${botListings.installCount} + 1`, updatedAt: new Date() })
     .where(eq(botListings.id, listing.id));
 
+  // Add bot's virtual user to guild members + create default permissions
+  const [botApp] = await db.select({ botUserId: botApplications.botUserId })
+    .from(botApplications)
+    .where(eq(botApplications.id, applicationId))
+    .limit(1);
+
+  if (botApp?.botUserId) {
+    await db.insert(guildMembers).values({
+      guildId,
+      userId: botApp.botUserId,
+    }).onConflictDoNothing();
+
+    await db.update(guilds)
+      .set({ memberCount: sql`${guilds.memberCount} + 1`, updatedAt: new Date() })
+      .where(eq(guilds.id, guildId));
+
+    // Emit GUILD_MEMBER_ADD for the bot user
+    const [botUser] = await db.select({ id: users.id, username: users.username, displayName: users.displayName, avatarHash: users.avatarHash, isBot: users.isBot })
+      .from(users).where(eq(users.id, botApp.botUserId)).limit(1);
+    if (botUser) {
+      try {
+        getIO().to(`guild:${guildId}`).emit('GUILD_MEMBER_ADD', {
+          guildId,
+          user: { id: botUser.id, username: botUser.username, displayName: botUser.displayName, avatarHash: botUser.avatarHash, isBot: true },
+        });
+      } catch { /* non-fatal */ }
+    }
+  }
+
+  // Create default bot permissions for this guild
+  await db.insert(botGuildPermissions).values({
+    botApplicationId: applicationId,
+    guildId,
+  }).onConflictDoNothing();
+
   res.status(201).json(install);
 });
 
@@ -466,6 +504,32 @@ botStoreRouter.delete('/bots/installs/:guildId/:appId', requireAuth, async (req:
       updatedAt: new Date(),
     })
     .where(eq(botListings.id, existing.botId));
+
+  // Remove bot's virtual user from guild members
+  if (existing.applicationId) {
+    const [botApp] = await db.select({ botUserId: botApplications.botUserId })
+      .from(botApplications)
+      .where(eq(botApplications.id, existing.applicationId))
+      .limit(1);
+
+    if (botApp?.botUserId) {
+      await db.delete(guildMembers).where(
+        and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, botApp.botUserId)),
+      );
+      await db.update(guilds)
+        .set({ memberCount: sql`GREATEST(${guilds.memberCount} - 1, 0)`, updatedAt: new Date() })
+        .where(eq(guilds.id, guildId));
+
+      try {
+        getIO().to(`guild:${guildId}`).emit('GUILD_MEMBER_REMOVE', { guildId, userId: botApp.botUserId });
+      } catch { /* non-fatal */ }
+    }
+
+    // Remove bot permissions
+    await db.delete(botGuildPermissions).where(
+      and(eq(botGuildPermissions.botApplicationId, existing.applicationId), eq(botGuildPermissions.guildId, guildId)),
+    );
+  }
 
   res.status(204).send();
 });

@@ -14,6 +14,7 @@ interface Member {
   status?: 'online' | 'idle' | 'dnd' | 'invisible' | 'offline';
   activity?: { name: string; type: string } | null;
   roles: string[];
+  isBot?: boolean;
 }
 
 interface Props {
@@ -54,7 +55,7 @@ const MemberRow = memo(function MemberRow({ member, onMemberClick }: { member: M
         />
       </div>
       <div className="member-info">
-        <div className="member-name">{name}</div>
+        <div className="member-name">{name}{member.isBot && <span style={{ display: 'inline-block', marginLeft: '4px', background: 'var(--accent-primary)', color: '#000', fontSize: '8px', fontWeight: 700, padding: '1px 4px', borderRadius: '3px', verticalAlign: 'middle', letterSpacing: '0.5px' }}>BOT</span>}</div>
         {member.activity && (
           <div className="member-activity">
             {activityLabel(member.activity.type)} {member.activity.name}

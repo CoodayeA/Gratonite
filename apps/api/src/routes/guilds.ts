@@ -55,6 +55,7 @@ import { redis } from '../lib/redis';
 import { toRows } from '../lib/to-rows.js';
 import { cacheControl } from '../middleware/cache';
 import { recordActivity } from './activity';
+import { dispatchEvent } from '../lib/webhook-dispatch';
 
 export const guildsRouter = Router();
 
@@ -760,6 +761,12 @@ guildsRouter.post(
 
         // Record activity event
         recordActivity(req.userId!, 'joined_server', { guildId, guildName: guild.name });
+
+        // Dispatch member_join to installed bots
+        dispatchEvent(guildId, 'member_join', {
+          userId: req.userId!,
+          user: joiningUser ? { id: joiningUser.id, username: joiningUser.username, displayName: joiningUser.displayName } : { id: req.userId! },
+        });
       }
 
       const [fresh] = await db
@@ -1878,6 +1885,9 @@ guildsRouter.delete(
 
       // Notify the leaving user to remove guild from sidebar (they already left the guild room)
       getIO().to(`user:${userId}`).emit('GUILD_LEFT', { guildId });
+
+      // Dispatch member_leave to installed bots
+      dispatchEvent(guildId, 'member_leave', { userId });
 
       // Trigger E2E key rotation for any encrypted channels in this guild
       await emitKeyRotationForEncryptedChannels(guildId, 'member_removed');

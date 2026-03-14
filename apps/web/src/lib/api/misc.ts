@@ -495,6 +495,13 @@ export const cosmeticsApi = {
     apiFetch<any>(`/cosmetics/${cosmeticId}/equip`, { method: 'PATCH' }),
 };
 
+export const interactionsApi = {
+  create: (channelId: string, data: { commandId: string; options?: Record<string, unknown> }) =>
+    apiFetch<any>(`/channels/${channelId}/interactions`, { method: 'POST', body: JSON.stringify(data) }),
+  component: (channelId: string, messageId: string, customId: string, data?: { values?: string[] }) =>
+    apiFetch<any>(`/channels/${channelId}/messages/${messageId}/components/${encodeURIComponent(customId)}/interactions`, { method: 'POST', body: JSON.stringify(data ?? {}) }),
+};
+
 export const botStoreApi = {
   list: (params?: { category?: string; verified?: boolean; search?: string; limit?: number; offset?: number }) => {
     const q = new URLSearchParams();

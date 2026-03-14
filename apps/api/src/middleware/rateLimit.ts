@@ -279,3 +279,14 @@ export const searchRateLimit = createRateLimiter({
   windowSeconds: 60,
   keyFn: (req) => req.userId ?? null,
 });
+
+/**
+ * botApiRateLimit — 30 requests per 60 seconds, keyed by botId.
+ * Apply to bot-authenticated API endpoints.
+ */
+export const botApiRateLimit = createRateLimiter({
+  prefix: 'rl:bot',
+  maxRequests: 30,
+  windowSeconds: 60,
+  keyFn: (req) => req.botId ?? null,
+});

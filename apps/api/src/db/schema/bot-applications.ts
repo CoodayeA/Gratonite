@@ -14,6 +14,7 @@ import {
   text,
   boolean,
   timestamp,
+  jsonb,
 } from 'drizzle-orm/pg-core';
 import { users } from './users';
 import { botListings } from './bot-store';
@@ -37,6 +38,10 @@ export const botApplications = pgTable('bot_applications', {
   apiToken: varchar('api_token', { length: 512 }).notNull(),
   listingId: uuid('listing_id').references(() => botListings.id, { onDelete: 'set null' }),
   isActive: boolean('is_active').notNull().default(true),
+  /** JSON array of event types this bot is subscribed to. Null = all events (legacy default). */
+  subscribedEvents: jsonb('subscribed_events').default(['message_create']),
+  /** Virtual user ID for the bot (bot appears as a user in guilds). */
+  botUserId: uuid('bot_user_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

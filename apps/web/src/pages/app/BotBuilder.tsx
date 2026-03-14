@@ -28,12 +28,15 @@ const CATEGORIES: BotCategoryOption[] = [
     { value: 'other', label: 'Other' },
 ];
 
+const ALL_BOT_EVENTS = ['message_create', 'message_update', 'message_delete', 'member_join', 'member_leave', 'reaction_add', 'reaction_remove', 'component_interaction'] as const;
+
 interface WebhookBot {
     id: string;
     name: string;
     description: string | null;
     webhookUrl: string;
     isActive: boolean;
+    subscribedEvents?: string[];
     createdAt: string;
 }
 
@@ -167,6 +170,7 @@ const BotBuilder = () => {
                     description: b.description ?? null,
                     webhookUrl: b.webhookUrl ?? '',
                     isActive: b.isActive ?? true,
+                    subscribedEvents: Array.isArray(b.subscribedEvents) ? b.subscribedEvents : ['message_create'],
                     createdAt: b.createdAt ?? '',
                 })));
             })
@@ -769,6 +773,32 @@ const BotBuilder = () => {
                                                 </div>
                                                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'monospace' }}>
                                                     {bot.webhookUrl}
+                                                </div>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                                                    {ALL_BOT_EVENTS.map(evt => {
+                                                        const active = bot.subscribedEvents?.includes(evt) ?? false;
+                                                        return (
+                                                            <button
+                                                                key={evt}
+                                                                onClick={() => {
+                                                                    const current = bot.subscribedEvents ?? ['message_create'];
+                                                                    const next = active ? current.filter(e => e !== evt) : [...current, evt];
+                                                                    api.botApplications.update(bot.id, { subscribedEvents: next } as any).then(() => {
+                                                                        setWebhookBots(prev => prev.map(b => b.id === bot.id ? { ...b, subscribedEvents: next } : b));
+                                                                    }).catch(() => {});
+                                                                }}
+                                                                style={{
+                                                                    padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 600,
+                                                                    border: active ? '1px solid var(--accent-primary)' : '1px solid var(--stroke)',
+                                                                    background: active ? 'rgba(99,102,241,0.12)' : 'var(--bg-tertiary)',
+                                                                    color: active ? 'var(--accent-primary)' : 'var(--text-muted)',
+                                                                    cursor: 'pointer',
+                                                                }}
+                                                            >
+                                                                {evt}
+                                                            </button>
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
                                             <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>

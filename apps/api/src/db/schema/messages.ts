@@ -164,8 +164,15 @@ export const messages = pgTable(
      * JSON array of OpenGraph embed objects for URLs found in the message.
      * Each element has the shape:
      *   { url: string, title?: string, description?: string, image?: string, siteName?: string }
+     * For bot rich embeds: { type: 'rich', title, description, color, fields, thumbnail, footer }
      */
     embeds: jsonb('embeds').default([]),
+
+    /**
+     * JSON array of message components (action rows with buttons / select menus).
+     * Structure: [{ type: 'action_row', components: [{ type: 'button', ... }] }]
+     */
+    components: jsonb('components').default([]),
 
     // -- Federation columns (added by migration 0120) --
 
