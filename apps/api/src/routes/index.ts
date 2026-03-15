@@ -95,6 +95,8 @@ import { guildQuestsRouter } from './guild-quests';
 import { guildFormsRouter } from './guild-forms';
 import { confessionsRouter } from './confessions';
 import { federationRouter } from './federation';
+import { relayRouter } from './relay';
+import { setupRouter } from './setup';
 import { tasksRouter } from './tasks';
 import { profilesSocialRouter } from './profiles-social';
 import { clientErrorsRouter } from './client-errors';
@@ -347,6 +349,12 @@ router.use('/', confessionsRouter);
 
 // Federation
 router.use('/federation', federationRouter);
+
+// Relay directory
+router.use('/relays', relayRouter);
+
+// Self-host setup wizard
+router.use('/setup', setupRouter);
 
 // Task boards (Kanban per channel)
 router.use('/tasks', tasksRouter);

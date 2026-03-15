@@ -113,6 +113,11 @@ export * from './federation-activities';
 export * from './instance-blocks';
 export * from './account-imports';
 
+// Relay network
+export * from './relay-nodes';
+export * from './relay-connections';
+export * from './relay-instance-keys';
+
 // Daily challenges
 export * from './daily-challenges';
 

@@ -1,0 +1,76 @@
+---
+title: "Why Self-Host Gratonite?"
+description: "Your server, your rules. Here's why self-hosting Gratonite is easier than you think — and why it matters."
+date: "2026-03-14"
+author: "Gratonite Team"
+tag: "Guide"
+---
+
+## Your community deserves better
+
+Every community platform makes the same promise: "We'll take care of everything." And then one day the rules change, the algorithm shifts, or the platform decides your community isn't worth keeping.
+
+Self-hosting means that can never happen. Your server runs on your hardware (or a cheap VPS), under your control. No one can shut you down, throttle your features, or read your messages.
+
+## It takes 5 minutes
+
+We're not exaggerating. If you have Docker installed, it's five commands:
+
+```bash
+git clone github.com/CoodayeA/Gratonite
+cd Gratonite/deploy/self-host
+cp .env.example .env
+nano .env
+docker compose up -d
+```
+
+Open your browser, walk through the setup wizard, and you're running your own Gratonite instance. The wizard handles everything: creating your admin account, generating encryption keys, and connecting to the federation network.
+
+## No coding required
+
+The setup wizard is designed for people who've never touched a terminal. Point-and-click configuration for everything that matters: your domain, your admin account, federation settings, and relay network connection.
+
+If you can rent a $5/month VPS and paste five commands, you can self-host Gratonite.
+
+## You're not alone — federation connects you
+
+Self-hosting doesn't mean isolation. Gratonite's federation protocol connects your instance to every other Gratonite server in the network.
+
+Your users can join servers on other instances. Users from other instances can join yours. Voice calls work across instances. It's one network, many servers — the way the internet was supposed to work.
+
+## Behind a home router? No problem
+
+Don't have a public IP or want to deal with port forwarding? The relay network handles it. Your instance connects outbound to a relay, which routes encrypted traffic to and from other instances.
+
+The relay never sees your messages — everything is end-to-end encrypted with AES-256-GCM. All it sees is fixed-size encrypted envelopes.
+
+Alternatively, use a free Cloudflare Tunnel to expose your home server with zero port forwarding and automatic TLS.
+
+## What you get
+
+Everything the hosted version has. No feature gating, no premium tiers, no artificial limits:
+
+- **Full chat** — text channels, threads, DMs, group DMs
+- **Voice and video** — powered by LiveKit (optional, easy to add)
+- **Federation** — connect with the entire Gratonite network
+- **E2E encryption** — for DMs and cross-instance communication
+- **Customization** — themes, cosmetics, the full shop system
+- **Admin dashboard** — full control over your instance, users, and federation
+
+## What it costs
+
+The software is free and open source. You pay for hosting:
+
+- **Home PC**: Free (use Cloudflare Tunnel or the relay network)
+- **Small VPS**: $5-10/month (DigitalOcean, Hetzner, Linode)
+- **Dedicated server**: $20+/month (for larger communities)
+
+Hardware requirements are modest: 1 CPU, 1GB RAM, 10GB storage gets you started.
+
+## Get started
+
+Ready to run your own? Head to the [self-hosting guide](/docs/self-hosting) for the full walkthrough.
+
+Or if you want to help the network grow, consider [running a relay node](/docs/relay) — it takes even less resources and helps instances behind NAT communicate.
+
+Your server. Your rules. Your community.

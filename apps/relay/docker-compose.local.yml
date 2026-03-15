@@ -1,0 +1,61 @@
+version: '3.8'
+
+# For running a relay on a home machine with zero port-forwarding.
+# Set RELAY_TUNNEL_MODE and the appropriate token.
+
+services:
+  relay:
+    build: .
+    environment:
+      RELAY_DOMAIN: ${RELAY_DOMAIN}
+      RELAY_PORT: 4100
+      RELAY_HEALTH_PORT: 4101
+      REDIS_URL: redis://redis:6379
+      RELAY_RATE_LIMIT: ${RELAY_RATE_LIMIT:-100}
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  # Cloudflare Tunnel — zero port-forwarding, free TLS
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    profiles:
+      - cloudflare
+    depends_on:
+      - relay
+    restart: unless-stopped
+
+  # DuckDNS + Caddy — free domain + auto-TLS
+  duckdns:
+    image: lscr.io/linuxserver/duckdns:latest
+    environment:
+      SUBDOMAINS: ${DUCKDNS_SUBDOMAIN}
+      TOKEN: ${DUCKDNS_TOKEN}
+    profiles:
+      - duckdns
+    restart: unless-stopped
+
+  caddy-duckdns:
+    image: caddy:2-alpine
+    ports:
+      - '443:443'
+      - '80:80'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+    profiles:
+      - duckdns
+    depends_on:
+      - relay
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  caddy_data:
