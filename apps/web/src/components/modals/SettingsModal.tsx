@@ -10,6 +10,7 @@ import LoginHistoryPage from '../../pages/app/LoginHistory';
 import { ProfileThemeEditor } from '../guild/ProfileThemeEditor';
 import Avatar from '../ui/Avatar';
 import { SettingsAccountTab, SettingsFeedbackTab, SettingsAchievementsTab, SettingsStatsTab, SettingsConnectionsTab, SettingsPrivacyTab, SettingsThemeTab, SettingsAccessibilityTab, SettingsSoundTab } from './settings';
+import { SettingsFederationTab } from './settings/SettingsFederationTab';
 import type { UserProfileLike, UserThemeLike } from './settings/types';
 import { AVAILABLE_LOCALES, getLocale, setLocale } from '../../i18n';
 import { CODE_THEMES as codeThemeOptions, getCodeTheme as codeThemeGet, setCodeTheme as codeThemeSet, type CodeThemeId } from '../../utils/codeTheme';
@@ -234,6 +235,7 @@ const SettingsModal = ({
         { tab: 'sessions', label: 'Sessions', keywords: ['sessions', 'devices', 'login', 'active sessions', 'mutes', 'muted users'] },
         { tab: 'privacy', label: 'Privacy & Safety', keywords: ['privacy', 'safety', 'block', 'data export', 'gdpr', 'dm', 'direct message', 'friend request'] },
         { tab: 'connections', label: 'Connections', keywords: ['connections', 'linked accounts', 'github', 'spotify', 'twitter'] },
+        { tab: 'federation', label: 'Federation', keywords: ['federation', 'relay', 'federated', 'instances', 'self-host', 'export', 'import', 'portability'] },
         { tab: 'achievements', label: 'Achievements', keywords: ['achievements', 'badges', 'trophies', 'unlocked'] },
         { tab: 'stats', label: 'Stats', keywords: ['stats', 'statistics', 'messages sent', 'activity', 'analytics'] },
         { tab: 'wardrobe', label: 'Wardrobe', keywords: ['wardrobe', 'cosmetics', 'avatar frame', 'decoration', 'nameplate style'] },
@@ -1492,6 +1494,7 @@ const SettingsModal = ({
                         {activeTab === 'sound' && <SettingsSoundTab addToast={addToast} />}
                         {activeTab === 'privacy' && <SettingsPrivacyTab addToast={addToast} userProfile={userProfile} onNavigateTab={(tab) => setActiveTab(tab as typeof activeTab)} />}
                         {activeTab === 'connections' && <SettingsConnectionsTab addToast={addToast} />}
+                        {activeTab === 'federation' && <SettingsFederationTab />}
                         {activeTab === 'feedback' && <SettingsFeedbackTab addToast={addToast} />}
                         {activeTab === 'achievements' && <SettingsAchievementsTab />}
 
