@@ -32,6 +32,19 @@ import { logger } from '../lib/logger';
 
 export const voiceRouter = Router();
 
+/** Check if a participant identity is from a federated instance. */
+export function isFederatedIdentity(identity: string): boolean {
+  return identity.startsWith('fed:');
+}
+
+/** Parse a federated identity: fed:{domain}:{userId} */
+export function parseFederatedIdentity(identity: string): { domain: string; userId: string } | null {
+  if (!identity.startsWith('fed:')) return null;
+  const parts = identity.split(':');
+  if (parts.length !== 3) return null;
+  return { domain: parts[1], userId: parts[2] };
+}
+
 /**
  * Separate router for the channel-scoped voice-states endpoint.
  * Mounted at /api/v1/channels/:channelId in routes/index.ts.
