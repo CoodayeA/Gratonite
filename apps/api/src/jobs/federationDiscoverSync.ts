@@ -149,8 +149,14 @@ async function syncDiscoverableGuilds(): Promise<void> {
   }
 }
 
+/** BullMQ processor — syncs discoverable guilds with the federation hub. */
+export async function processFederationDiscoverSync(): Promise<void> {
+  await syncDiscoverableGuilds();
+}
+
 let syncTimer: ReturnType<typeof setInterval> | null = null;
 
+/** @deprecated Use BullMQ scheduler in worker.ts instead. */
 export function startFederationDiscoverSyncJob(): void {
   if (syncTimer) return;
 

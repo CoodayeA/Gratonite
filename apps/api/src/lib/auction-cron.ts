@@ -181,7 +181,12 @@ async function closeExpiredAuctions(): Promise<void> {
   }
 }
 
-/** Start the auction closure job. Runs every 60 seconds. */
+/** BullMQ processor — closes expired auctions. */
+export async function processAuctionCron(): Promise<void> {
+  await closeExpiredAuctions();
+}
+
+/** @deprecated Use BullMQ scheduler in worker.ts instead. Start the auction closure job. Runs every 60 seconds. */
 export function startAuctionCron(): void {
   console.log('[auction-cron] Starting auction closure job (interval: 60s)');
   // Run immediately on startup, then on interval

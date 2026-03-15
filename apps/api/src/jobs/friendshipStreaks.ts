@@ -11,6 +11,43 @@ const MILESTONE_THRESHOLDS: Array<{ milestone: string; days: number }> = [
   { milestone: '1_year', days: 365 },
 ];
 
+/** BullMQ processor — resets expired streaks and checks milestones. */
+export async function processFriendshipStreaks(): Promise<void> {
+  // Reset streaks where lastInteraction > 48 hours ago
+  await db.update(friendshipStreaks)
+    .set({ currentStreak: 0 })
+    .where(and(
+      isNotNull(friendshipStreaks.lastInteraction),
+      lt(friendshipStreaks.lastInteraction, new Date(Date.now() - 48 * 60 * 60 * 1000)),
+      sql`${friendshipStreaks.currentStreak} > 0`,
+    ));
+
+  // Check for new milestones based on friendsSince date
+  const allStreaks = await db.select({
+    id: friendshipStreaks.id,
+    userId: friendshipStreaks.userId,
+    friendId: friendshipStreaks.friendId,
+    friendsSince: friendshipStreaks.friendsSince,
+  }).from(friendshipStreaks);
+
+  for (const streak of allStreaks) {
+    const daysSinceFriends = Math.floor(
+      (Date.now() - new Date(streak.friendsSince).getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    for (const { milestone, days } of MILESTONE_THRESHOLDS) {
+      if (daysSinceFriends >= days) {
+        await db.insert(friendshipMilestones).values({
+          userId: streak.userId,
+          friendId: streak.friendId,
+          milestone,
+        }).onConflictDoNothing();
+      }
+    }
+  }
+}
+
+/** @deprecated Use BullMQ scheduler in worker.ts instead. */
 export function startFriendshipStreaksJob() {
   // Run daily (every 24 hours)
   setInterval(async () => {
