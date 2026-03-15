@@ -22,7 +22,11 @@
     "verify:release": "pnpm run build && pnpm run guard:placeholders && pnpm run gate:data && pnpm run test:guild-get-contract && pnpm run lint"
   },
   "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^8.4.3",
+    "@bull-board/api": "^6.20.5",
+    "@bull-board/express": "^6.20.5",
     "argon2": "^0.44.0",
+    "bullmq": "^5.71.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
