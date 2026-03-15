@@ -21,9 +21,8 @@ jobs:
 
       - name: Build API
         run: |
-          cd apps/api
           pnpm install --frozen-lockfile
-          pnpm run build
+          pnpm --dir apps/api run build
 
       - name: Build Web
         run: |
@@ -44,7 +43,7 @@ jobs:
           cp -r apps/api/dist deploy/api/
           cp -r apps/api/drizzle deploy/api/
           cp apps/api/package.json deploy/api/
-          cp apps/api/pnpm-lock.yaml deploy/api/
+          cp pnpm-lock.yaml deploy/api/
           cp apps/api/drizzle.config.ts deploy/api/
           cp -r apps/web/dist/. deploy/web/dist/
 
