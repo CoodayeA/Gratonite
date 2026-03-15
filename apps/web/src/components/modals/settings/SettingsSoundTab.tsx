@@ -36,6 +36,9 @@ const SettingsSoundTab = ({ addToast }: Props) => {
   const [pttKey, setPttKey] = useState<string>(
     () => localStorage.getItem('gratonite_ptt_key') || 'Space'
   );
+  const [pttReleaseDelay, setPttReleaseDelay] = useState<number>(
+    () => parseInt(localStorage.getItem('gratonite_ptt_release_delay') || '200', 10)
+  );
   const [listeningForKey, setListeningForKey] = useState(false);
   const keyListenerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
 
@@ -296,6 +299,35 @@ const SettingsSoundTab = ({ addToast }: Props) => {
                 {listeningForKey ? 'Press a key...' : formatKeyDisplay(pttKey)}
               </button>
             </div>
+            {/* Release delay slider */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '2px' }}>Release Delay</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Keeps the mic open briefly after releasing the key to prevent clipping.</div>
+                </div>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent-primary)', fontFamily: 'monospace', minWidth: '50px', textAlign: 'right' }}>{pttReleaseDelay}ms</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={500}
+                step={25}
+                value={pttReleaseDelay}
+                onChange={e => {
+                  const v = parseInt(e.target.value, 10);
+                  setPttReleaseDelay(v);
+                  localStorage.setItem('gratonite_ptt_release_delay', String(v));
+                }}
+                style={{ width: '100%', accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                <span>0ms</span>
+                <span>250ms</span>
+                <span>500ms</span>
+              </div>
+            </div>
+
             {isDesktop && (
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-elevated)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--stroke)' }}>
                 On desktop, the global hotkey <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>Cmd/Ctrl+Shift+T</span> also works as a PTT toggle even when Gratonite is not focused.
