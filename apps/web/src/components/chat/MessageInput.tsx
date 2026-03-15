@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import {
     Send, Smile, Image as ImageIcon, Reply, X, Plus, Mic, BarChart2, Clock,
-    Edit2, Eye, Volume2, Square, Trash2, Hash
+    Edit2, Eye, Volume2, Square, Trash2, Hash, FileText
 } from 'lucide-react';
 import Avatar from '../ui/Avatar';
 import EmojiPicker from './EmojiPicker';

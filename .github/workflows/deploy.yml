@@ -25,6 +25,9 @@ jobs:
       - name: Build API
         run: pnpm --filter gratonite-api run build
 
+      - name: Build Types Package
+        run: pnpm --filter @gratonite/types run build
+
       - name: Build Web
         run: |
           cd apps/web
