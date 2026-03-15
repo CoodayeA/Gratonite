@@ -2972,7 +2972,10 @@ button:active:not(:disabled) {
 }
 
 
-/* macOS desktop title bar spacing */
+/* macOS desktop title bar spacing — clear traffic light buttons */
+body.electron-mac .guild-rail {
+  padding-top: 40px;
+}
 body.electron-mac .app-sidebar,
 body.electron-mac .sidebar-header {
   padding-top: 28px;

@@ -1105,26 +1105,6 @@ export const encryptionApi = {
     apiFetch<{ ok: boolean; enabled: boolean }>(`/channels/${channelId}/e2e-toggle`, { method: 'POST', body: JSON.stringify({ enabled }) }),
 };
 
-export const federationApi = {
-  discoverGuilds: (params?: { q?: string; category?: string; sort?: string; limit?: number; offset?: number }) => {
-    const qs = new URLSearchParams();
-    if (params?.q) qs.set('q', params.q);
-    if (params?.category) qs.set('category', params.category);
-    if (params?.sort) qs.set('sort', params.sort);
-    if (params?.limit) qs.set('limit', String(params.limit));
-    if (params?.offset) qs.set('offset', String(params.offset));
-    const query = qs.toString();
-    return apiFetch<Array<{
-      id: string; remoteGuildId: string; federationAddress: string; name: string; description: string | null;
-      iconUrl: string | null; bannerUrl: string | null; memberCount: number; onlineCount: number;
-      category: string | null; tags: string[]; averageRating: number; totalRatings: number;
-      instance: { id: string; baseUrl: string; trustLevel: string; trustScore: number; softwareVersion: string | null; lastSeenAt: string | null };
-    }>>(`/federation/discover/remote-guilds${query ? `?${query}` : ''}`);
-  },
-  joinRemoteGuild: (remoteGuildId: string) =>
-    apiFetch<{ federationAddress: string; instanceUrl: string; joinUrl: string; guildName: string; instanceTrustLevel: string }>(`/federation/discover/remote-guilds/${remoteGuildId}/join`, { method: 'POST', body: JSON.stringify({}) }),
-};
-
 export const profileVisitorsApi = {
   record: (userId: string) =>
     apiFetch<{ recorded: boolean }>(`/users/${userId}/profile-view`, { method: 'POST', body: '{}' }),
@@ -1505,4 +1485,73 @@ export const genericApi = {
   delete: <T = unknown>(path: string) => apiFetch<T>(path, { method: 'DELETE' }),
   put: <T = unknown>(path: string, data: unknown) =>
     apiFetch<T>(path, { method: 'PUT', body: JSON.stringify(data) }),
+};
+
+// ---------------------------------------------------------------------------
+// Federation + Relay API
+// ---------------------------------------------------------------------------
+
+export const federationApi = {
+  /** Discover remote guilds from federated instances. */
+  discoverGuilds: (params?: { q?: string; category?: string; sort?: string; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.q) query.set('q', params.q);
+    if (params?.category) query.set('category', params.category);
+    if (params?.sort) query.set('sort', params.sort);
+    if (params?.limit) query.set('limit', String(params.limit));
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return apiFetch(`/federation/discover/remote-guilds${suffix}`);
+  },
+
+  /** Get join info for a remote guild. */
+  joinRemoteGuild: (remoteGuildId: string) =>
+    apiFetch(`/federation/discover/remote-guilds/${remoteGuildId}/join`, { method: 'POST' }),
+
+  /** Resolve a federation address. */
+  resolve: (address: string) => apiFetch(`/federation/resolve/${encodeURIComponent(address)}`),
+
+  /** Export account data. */
+  exportAccount: () => apiFetch('/federation/export'),
+
+  /** Import account data. */
+  importAccount: (data: unknown, signature: string) =>
+    apiFetch('/federation/import', { method: 'POST', body: JSON.stringify({ data, signature }) }),
+
+  /** Admin: list instances. */
+  adminInstances: () => apiFetch('/federation/admin/instances'),
+
+  /** Admin: federation stats. */
+  adminStats: () => apiFetch('/federation/admin/stats'),
+
+  /** Admin: activity queue. */
+  adminQueue: () => apiFetch('/federation/admin/queue'),
+
+  /** Admin: blocks. */
+  adminBlocks: () => apiFetch('/federation/admin/blocks'),
+
+  /** Admin: add block. */
+  adminAddBlock: (domain: string, reason?: string) =>
+    apiFetch('/federation/admin/blocks', { method: 'POST', body: JSON.stringify({ domain, reason }) }),
+
+  /** Admin: remove block. */
+  adminRemoveBlock: (blockId: string) =>
+    apiFetch(`/federation/admin/blocks/${blockId}`, { method: 'DELETE' }),
+
+  /** Admin: discover guilds (including unapproved). */
+  adminDiscover: () => apiFetch('/federation/admin/discover'),
+};
+
+export const relayApi = {
+  /** List available relays with reputation scores. */
+  list: () => apiFetch('/relays'),
+
+  /** Get detailed relay status. */
+  status: (relayId: string) => apiFetch(`/relays/${relayId}/status`),
+
+  /** Report a relay. */
+  report: (relayId: string, reason: string) =>
+    apiFetch(`/relays/${relayId}/report`, { method: 'POST', body: JSON.stringify({ reason }) }),
+
+  /** Get reputation breakdown. */
+  reputation: (relayId: string) => apiFetch(`/relays/reputation/${relayId}`),
 };
