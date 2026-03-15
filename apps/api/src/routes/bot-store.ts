@@ -19,6 +19,8 @@ import { guilds, guildMembers } from '../db/schema/guilds';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { getIO } from '../lib/socket-io';
+import { logger } from '../lib/logger';
+import { invalidateBotCache } from '../lib/webhook-dispatch';
 
 export const botStoreRouter = Router({ mergeParams: true });
 
@@ -440,7 +442,7 @@ botStoreRouter.post('/bots/installs', requireAuth, validate(installBotSchema), a
           guildId,
           user: { id: botUser.id, username: botUser.username, displayName: botUser.displayName, avatarHash: botUser.avatarHash, isBot: true },
         });
-      } catch { /* non-fatal */ }
+      } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'bot-store', err }); }
     }
   }
 
@@ -449,6 +451,9 @@ botStoreRouter.post('/bots/installs', requireAuth, validate(installBotSchema), a
     botApplicationId: applicationId,
     guildId,
   }).onConflictDoNothing();
+
+  // Invalidate cached bot list for this guild
+  await invalidateBotCache(guildId);
 
   res.status(201).json(install);
 });
@@ -522,7 +527,7 @@ botStoreRouter.delete('/bots/installs/:guildId/:appId', requireAuth, async (req:
 
       try {
         getIO().to(`guild:${guildId}`).emit('GUILD_MEMBER_REMOVE', { guildId, userId: botApp.botUserId });
-      } catch { /* non-fatal */ }
+      } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'bot-store', err }); }
     }
 
     // Remove bot permissions
@@ -530,6 +535,9 @@ botStoreRouter.delete('/bots/installs/:guildId/:appId', requireAuth, async (req:
       and(eq(botGuildPermissions.botApplicationId, existing.applicationId), eq(botGuildPermissions.guildId, guildId)),
     );
   }
+
+  // Invalidate cached bot list for this guild
+  await invalidateBotCache(guildId);
 
   res.status(204).send();
 });

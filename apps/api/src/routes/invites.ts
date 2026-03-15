@@ -10,6 +10,7 @@ import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { getIO } from '../lib/socket-io';
+import { logger } from '../lib/logger';
 import { hasPermission } from './roles';
 import { redis } from '../lib/redis';
 import { publicInviteRateLimit } from '../middleware/rateLimit';
@@ -172,7 +173,7 @@ invitesRouter.post('/invites/:code', requireAuth, async (req: Request, res: Resp
 
     try {
       getIO().to(`guild:${vanityGuild.id}`).emit('GUILD_MEMBER_ADD', { guildId: vanityGuild.id, user });
-    } catch {}
+    } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'GUILD_MEMBER_ADD', err }); }
 
     res.json({ code: 'OK', guildId: vanityGuild.id });
     return;
@@ -227,7 +228,7 @@ invitesRouter.post('/invites/:code', requireAuth, async (req: Request, res: Resp
 
   try {
     getIO().to(`guild:${invite.guildId}`).emit('GUILD_MEMBER_ADD', { guildId: invite.guildId, user });
-  } catch {}
+  } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'GUILD_MEMBER_ADD', err }); }
 
   // Record activity event
   const [guildInfo] = await db.select({ name: guilds.name }).from(guilds).where(eq(guilds.id, invite.guildId)).limit(1);

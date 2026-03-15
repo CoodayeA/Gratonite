@@ -22,6 +22,7 @@ import { dmChannelMembers } from '../db/schema/channels';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { getIO } from '../lib/socket-io';
+import { logger } from '../lib/logger';
 
 export const keysRouter = Router();
 
@@ -125,8 +126,8 @@ keysRouter.post(
         for (const { channelId } of dmPartners) {
           io.to(`channel:${channelId}`).emit('USER_KEY_CHANGED', { userId });
         }
-      } catch {
-        // Non-fatal
+      } catch (err) {
+        logger.debug({ msg: 'socket emit failed', event: 'USER_KEY_CHANGED', err });
       }
     }
 

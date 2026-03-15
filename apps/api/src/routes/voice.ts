@@ -28,6 +28,7 @@ import { hasChannelPermission } from './roles';
 import { redis } from '../lib/redis';
 import { desc } from 'drizzle-orm';
 import { safeJsonParse } from '../lib/safe-json.js';
+import { logger } from '../lib/logger';
 
 export const voiceRouter = Router();
 
@@ -287,8 +288,8 @@ voiceRouter.post(
         selfMute: selfMute ?? false,
         selfDeaf: selfDeaf ?? false,
       });
-    } catch {
-      // Socket.io may not be initialised in tests
+    } catch (err) {
+      logger.debug({ msg: 'socket emit failed', event: 'voice', err });
     }
 
     res.json({
@@ -485,8 +486,8 @@ voiceRouter.post(
           io.to(`user:${member.userId}`).emit('CALL_INVITE', payload);
         }
       }
-    } catch {
-      // Socket.io may not be initialised in tests
+    } catch (err) {
+      logger.debug({ msg: 'socket emit failed', event: 'voice', err });
     }
 
     res.json({ ok: true });
@@ -544,8 +545,8 @@ voiceRouter.post(
     try {
       const io = getIO();
       io.to(`user:${pending.callerId}`).emit('CALL_ANSWER', { channelId, userId });
-    } catch {
-      // Socket.io may not be initialised in tests
+    } catch (err) {
+      logger.debug({ msg: 'socket emit failed', event: 'voice', err });
     }
 
     // Generate LiveKit token for the answerer
@@ -663,8 +664,8 @@ voiceRouter.post(
           io.to(`user:${member.userId}`).emit('CALL_CANCEL', { channelId, userId });
         }
       }
-    } catch {
-      // Socket.io may not be initialised in tests
+    } catch (err) {
+      logger.debug({ msg: 'socket emit failed', event: 'voice', err });
     }
 
     res.json({ ok: true });

@@ -310,7 +310,8 @@ async function getMfaBackupHashes(userId: string): Promise<string[]> {
   try {
     const parsed = JSON.parse(raw) as MfaBackupCodesCache;
     return Array.isArray(parsed.hashes) ? parsed.hashes : [];
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to parse MFA backup codes', err });
     return [];
   }
 }
@@ -780,7 +781,8 @@ const enableMfaHandler = async (req: Request, res: Response): Promise<void> => {
   try {
     const setup = JSON.parse(setupRaw) as MfaSetupCache;
     encryptedSecret = setup.encryptedSecret;
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to parse MFA setup data', err });
     encryptedSecret = null;
   }
 
@@ -792,7 +794,8 @@ const enableMfaHandler = async (req: Request, res: Response): Promise<void> => {
   let plainSecret: string;
   try {
     plainSecret = decryptMfaSecret(encryptedSecret);
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to decrypt MFA secret', err });
     res.status(500).json({ code: 'MFA_SECRET_ERROR', message: 'Could not process MFA secret' });
     return;
   }
@@ -850,7 +853,8 @@ authRouter.post('/mfa/disable', requireAuth, asyncHandler(async (req: Request, r
   try {
     const secret = decryptMfaSecret(user.mfaSecret);
     verified = verifyTotpCode(secret, code);
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'MFA verification failed', err });
     verified = false;
   }
 
@@ -902,7 +906,8 @@ authRouter.post('/mfa/backup-codes/regenerate', requireAuth, asyncHandler(async 
   try {
     const secret = decryptMfaSecret(user.mfaSecret);
     verified = verifyTotpCode(secret, code);
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'MFA verification failed during backup code regeneration', err });
     verified = false;
   }
 

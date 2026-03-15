@@ -106,8 +106,8 @@ async function emitKeyRotationForEncryptedChannels(
         reason,
       });
     }
-  } catch {
-    // Non-critical — rotation will be triggered on next membership change
+  } catch (err) {
+    logger.debug({ msg: 'socket emit failed', event: 'GROUP_KEY_ROTATION_NEEDED', err });
   }
 }
 
@@ -792,7 +792,8 @@ guildsRouter.get('/trending', requireAuth, async (req: Request, res: Response): 
     })).filter(g => g.id);
 
     res.json(result);
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to fetch trending guilds', err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1802,7 +1803,7 @@ guildsRouter.post(
 
       try {
         getIO().to(`guild:${guildId}`).emit('GUILD_UPDATE', { guildId, boostCount: newCount, boostTier: newTier });
-      } catch { /* non-fatal */ }
+      } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'GUILD_UPDATE boost', err }); }
 
       res.status(201).json({ boostCount: newCount, boostTier: newTier });
     } catch (err) {
@@ -1845,7 +1846,7 @@ guildsRouter.delete(
 
       try {
         getIO().to(`guild:${guildId}`).emit('GUILD_UPDATE', { guildId, boostCount: newCount, boostTier: newTier });
-      } catch { /* non-fatal */ }
+      } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'GUILD_UPDATE boost', err }); }
 
       res.json({ boostCount: newCount, boostTier: newTier });
     } catch (err) {
@@ -2006,7 +2007,8 @@ guildsRouter.post('/:guildId/members/bulk-kick', requireAuth, async (req: Reques
         await db.update(guilds).set({ memberCount: sql`GREATEST(${guilds.memberCount} - 1, 0)`, updatedAt: new Date() }).where(eq(guilds.id, guildId));
         getIO().to(`guild:${guildId}`).emit('MEMBER_REMOVE', { guildId, userId });
         results.processed++;
-      } catch {
+      } catch (err) {
+        logger.debug({ msg: 'bulk kick failed for user', userId, err });
         results.failed.push(userId);
       }
     }
@@ -2045,7 +2047,8 @@ guildsRouter.post('/:guildId/members/bulk-ban', requireAuth, async (req: Request
         await db.update(guilds).set({ memberCount: sql`GREATEST(${guilds.memberCount} - 1, 0)`, updatedAt: new Date() }).where(eq(guilds.id, guildId));
         getIO().to(`guild:${guildId}`).emit('MEMBER_REMOVE', { guildId, userId });
         results.processed++;
-      } catch {
+      } catch (err) {
+        logger.debug({ msg: 'bulk ban failed for user', userId, err });
         results.failed.push(userId);
       }
     }
@@ -2089,7 +2092,8 @@ guildsRouter.post('/:guildId/members/bulk-role', requireAuth, async (req: Reques
           }
         }
         results.processed++;
-      } catch {
+      } catch (err) {
+        logger.debug({ msg: 'bulk role update failed for user', userId, err });
         results.failed.push(userId);
       }
     }

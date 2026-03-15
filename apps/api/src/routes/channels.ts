@@ -40,6 +40,7 @@ import { requireMember } from './guilds';
 import { hasPermission, hasChannelPermission } from './roles';
 import { logAuditEvent, AuditActionTypes } from '../lib/audit';
 import { getIO } from '../lib/socket-io';
+import { logger } from '../lib/logger';
 import { AppError, handleAppError } from '../lib/errors.js';
 import { ServiceError } from '../services/guild.service';
 import {
@@ -498,7 +499,7 @@ channelsRouter.post(
             crossposted: true,
             sourceChannelId: channelId,
           });
-        } catch { /* non-fatal */ }
+        } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'MESSAGE_CREATE crosspost', err }); }
       }
 
       res.json({ crossposted: followers.length });
@@ -522,7 +523,8 @@ channelsRouter.get('/channels/:channelId/featured', requireAuth, async (req: Req
     await canAccessChannel(channel, userId);
     const featured = await db.select().from(channelFeaturedMessages).where(eq(channelFeaturedMessages.channelId, channelId));
     res.json(featured);
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to fetch featured messages', err });
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -542,7 +544,8 @@ channelsRouter.post('/channels/:channelId/featured', requireAuth, async (req: Re
       .onConflictDoNothing()
       .returning();
     res.status(201).json(row);
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to create featured message', err });
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -559,7 +562,8 @@ channelsRouter.delete('/channels/:channelId/featured/:messageId', requireAuth, a
       and(eq(channelFeaturedMessages.channelId, channelId), eq(channelFeaturedMessages.messageId, messageId))
     );
     res.status(204).send();
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to delete featured message', err });
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -592,7 +596,8 @@ channelsRouter.get('/channels/:channelId/voice-messages', requireAuth, async (re
       .orderBy(desc(voiceMessages.createdAt))
       .limit(limit);
     res.json(msgs.reverse());
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to fetch voice messages', err });
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -617,10 +622,11 @@ channelsRouter.post('/channels/:channelId/voice-messages', requireAuth, async (r
     try {
       const io = getIO();
       io.to(channelId).emit('VOICE_MESSAGE_CREATE', msg);
-    } catch { /* non-fatal */ }
+    } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'VOICE_MESSAGE_CREATE', err }); }
 
     res.status(201).json(msg);
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to create voice message', err });
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -656,7 +662,7 @@ channelsRouter.post('/channels/:channelId/duplicate', requireAuth, async (req: R
     try {
       const io = getIO();
       io.to(source.guildId).emit('CHANNEL_CREATE', newChannel);
-    } catch { /* non-fatal */ }
+    } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'CHANNEL_CREATE', err }); }
 
     res.status(201).json(newChannel);
   } catch (err) {
@@ -820,7 +826,7 @@ channelsRouter.post(
           toggledBy: userId,
           toggledByName: togglerName,
         });
-      } catch { /* socket may not be initialised in tests */ }
+      } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'E2E_STATE_CHANGED', err }); }
 
       res.json({ ok: true, enabled });
     } catch (err) {

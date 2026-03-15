@@ -42,6 +42,7 @@ import { validate } from '../middleware/validate';
 import { createNotification } from '../lib/notifications';
 import { getIO } from '../lib/socket-io';
 import { AppError, handleAppError } from '../lib/errors.js';
+import { logger } from '../lib/logger';
 
 export const relationshipsRouter = Router();
 
@@ -590,7 +591,7 @@ relationshipsRouter.post(
           channel: newChannel,
           initiator: initiator ? { id: initiator.id, username: initiator.username, displayName: initiator.displayName, avatarHash: initiator.avatarHash } : { id: userId },
         });
-      } catch { /* socket may not be initialised in tests */ }
+      } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'relationships', err }); }
     } catch (err) {
       handleAppError(res, err, 'relationships');
     }
@@ -699,8 +700,8 @@ relationshipsRouter.post(
           body: `${senderName} sent you a friend request.`,
           data: { senderId: userId, senderName },
         });
-      } catch {
-        console.warn('[relationships] failed to create notification for friend request, continuing');
+      } catch (err) {
+        logger.debug({ msg: 'failed to create friend request notification', err });
       }
 
       // Emit real-time socket event so the target's Friends page updates instantly
@@ -708,7 +709,7 @@ relationshipsRouter.post(
         getIO().to(`user:${targetUserId}`).emit('FRIEND_REQUEST_RECEIVED', {
           from: { userId, username: requester?.username || '', displayName: requester?.displayName || '' },
         });
-      } catch { /* socket may not be initialised in tests */ }
+      } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'relationships', err }); }
 
       res.status(201).json({ code: 'OK', message: 'Friend request sent' });
     } catch (err) {
@@ -805,7 +806,7 @@ relationshipsRouter.put(
           displayName: requesterUser?.displayName,
           avatarHash: requesterUser?.avatarHash,
         });
-      } catch { /* socket may not be initialised in tests */ }
+      } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'relationships', err }); }
     } catch (err) {
       handleAppError(res, err, 'relationships');
     }
@@ -851,7 +852,7 @@ relationshipsRouter.delete(
       // Emit friend removed to the other user
       try {
         getIO().to(`user:${targetId}`).emit('FRIEND_REMOVED', { userId: targetId, removedById: userId });
-      } catch { /* socket may not be initialised in tests */ }
+      } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'relationships', err }); }
     } catch (err) {
       handleAppError(res, err, 'relationships');
     }

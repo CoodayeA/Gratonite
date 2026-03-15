@@ -5,6 +5,7 @@ import { guildWordFilters } from '../db/schema/guild-word-filters';
 import { Permissions } from '../db/schema/roles';
 import { requireAuth } from '../middleware/auth';
 import { hasPermission } from './roles';
+import { logger } from '../lib/logger';
 
 export const wordFilterRouter = Router({ mergeParams: true });
 
@@ -62,8 +63,8 @@ wordFilterRouter.put('/', requireAuth, async (req: Request, res: Response): Prom
       try {
         new RegExp(pat); // validate
         sanitizedRegex.push(pat);
-      } catch {
-        // skip invalid patterns
+      } catch (err) {
+        logger.debug({ msg: 'skipping invalid regex pattern', pattern: pat, err });
       }
     }
   }

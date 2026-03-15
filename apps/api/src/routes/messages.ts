@@ -727,8 +727,8 @@ messagesRouter.post('/typing', requireAuth, async (req: Request, res: Response):
       getIO()
         .to(`channel:${channelId}`)
         .emit('TYPING_START', { userId: req.userId!, channelId, username });
-    } catch {
-      // Non-fatal if Socket.io not initialised.
+    } catch (err) {
+      logger.debug({ msg: 'socket emit failed', event: 'TYPING_START', err });
     }
 
     res.status(200).json({ ok: true });
@@ -846,7 +846,7 @@ messagesRouter.post('/read', requireAuth, validate(readSchema), async (req: Requ
           lastReadAt: now.toISOString(),
           lastReadMessageId: resolvedId ?? null,
         });
-      } catch { /* non-fatal */ }
+      } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'MESSAGE_READ', err }); }
 
       res.status(200).json({ ok: true });
       return;
@@ -906,8 +906,8 @@ messagesRouter.post('/read', requireAuth, validate(readSchema), async (req: Requ
           });
         }
       }
-    } catch {
-      // Non-fatal.
+    } catch (err) {
+      logger.debug({ msg: 'socket emit failed', event: 'DM_READ', err });
     }
 
     res.status(200).json({ ok: true });

@@ -4,6 +4,7 @@ import { db } from '../db/index';
 import { collectibleCards, cardPacks, userCards, cardTrades, cardTradeItems } from '../db/schema/collectible-cards';
 import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
+import { logger } from '../lib/logger';
 
 export const cardsRouter = Router();
 
@@ -53,7 +54,8 @@ cardsRouter.get('/packs', requireAuth, async (_req: Request, res: Response): Pro
       .from(cardPacks)
       .where(eq(cardPacks.available, true));
     res.json(packs);
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to load card packs', err });
     res.status(500).json({ error: 'Failed to load packs' });
   }
 });
@@ -189,7 +191,8 @@ cardsRouter.post('/trade', requireAuth, async (req: Request, res: Response): Pro
     }
 
     res.status(201).json({ tradeId: trade.id, status: 'pending' });
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to create trade', err });
     res.status(500).json({ error: 'Failed to create trade' });
   }
 });
@@ -233,7 +236,8 @@ cardsRouter.post('/trade/:tradeId/accept', requireAuth, async (req: Request, res
       .where(eq(cardTrades.id, tradeId));
 
     res.json({ status: 'accepted' });
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to accept trade', err });
     res.status(500).json({ error: 'Failed to accept trade' });
   }
 });
@@ -259,7 +263,8 @@ cardsRouter.post('/trade/:tradeId/decline', requireAuth, async (req: Request, re
       .where(eq(cardTrades.id, tradeId));
 
     res.json({ status: 'declined' });
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to decline trade', err });
     res.status(500).json({ error: 'Failed to decline trade' });
   }
 });
@@ -282,7 +287,8 @@ cardsRouter.get('/trades', requireAuth, async (req: Request, res: Response): Pro
       );
 
     res.json(trades);
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to load trades', err });
     res.status(500).json({ error: 'Failed to load trades' });
   }
 });

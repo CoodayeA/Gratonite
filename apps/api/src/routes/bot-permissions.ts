@@ -83,7 +83,8 @@ botPermissionsRouter.patch(
       }
 
       let permBigint: bigint;
-      try { permBigint = BigInt(permissions); } catch {
+      try { permBigint = BigInt(permissions); } catch (err) {
+        logger.debug({ msg: 'invalid permissions value', err });
         res.status(400).json({ code: 'VALIDATION_ERROR', message: 'permissions must be a valid integer' }); return;
       }
 

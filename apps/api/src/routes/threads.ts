@@ -8,6 +8,7 @@ import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { getIO } from '../lib/socket-io';
+import { logger } from '../lib/logger';
 
 export const threadsRouter = Router({ mergeParams: true });
 
@@ -54,7 +55,7 @@ threadsRouter.post('/', requireAuth, validate(createThreadSchema), async (req: R
 
   try {
     getIO().to(`channel:${channelId}`).emit('THREAD_CREATE', thread);
-  } catch {}
+  } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'THREAD_CREATE', err }); }
 
   res.status(201).json(thread);
 });

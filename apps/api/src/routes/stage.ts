@@ -21,6 +21,7 @@ import { channels } from '../db/schema/channels';
 import { stageSessions, stageSpeakers } from '../db/schema/stage';
 import { requireAuth } from '../middleware/auth';
 import { getIO } from '../lib/socket-io';
+import { logger } from '../lib/logger';
 import { AppError, handleAppError } from '../lib/errors.js';
 
 export const stageRouter = Router();
@@ -147,7 +148,7 @@ stageRouter.post(
           hostId: session.hostId,
           topic: session.topic ?? null,
         });
-      } catch { /* socket may not be initialised in tests */ }
+      } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'stage', err }); }
 
       res.status(201).json({ session, speakers: [] });
     } catch (err) {
@@ -190,7 +191,7 @@ stageRouter.delete(
           channelId,
           sessionId: session.id,
         });
-      } catch { /* socket may not be initialised in tests */ }
+      } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'stage', err }); }
 
       res.status(200).json({ session: ended });
     } catch (err) {
@@ -241,7 +242,7 @@ stageRouter.post(
           userId,
           invitedBy: req.userId!,
         });
-      } catch { /* socket may not be initialised in tests */ }
+      } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'stage', err }); }
 
       res.status(201).json({ speaker: speaker ?? null });
     } catch (err) {
@@ -282,7 +283,7 @@ stageRouter.delete(
           sessionId: session.id,
           userId,
         });
-      } catch { /* socket may not be initialised in tests */ }
+      } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'stage', err }); }
 
       res.status(200).json({ code: 'OK', message: 'Speaker removed' });
     } catch (err) {
@@ -314,7 +315,7 @@ stageRouter.post(
           sessionId: session.id,
           userId: req.userId!,
         });
-      } catch { /* socket may not be initialised in tests */ }
+      } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'stage', err }); }
 
       res.status(200).json({ code: 'OK', message: 'Hand raised' });
     } catch (err) {

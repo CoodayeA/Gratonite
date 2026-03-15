@@ -242,8 +242,8 @@ webhooksRouter.post(
               isWebhook: true,
             },
           });
-      } catch {
-        // Socket.io not ready
+      } catch (err) {
+        logger.debug({ msg: 'socket emit failed', event: 'MESSAGE_CREATE webhook', err });
       }
 
       res.status(201).json(msg);

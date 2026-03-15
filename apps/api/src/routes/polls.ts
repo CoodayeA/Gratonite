@@ -24,6 +24,7 @@ import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { getIO } from '../lib/socket-io';
+import { logger } from '../lib/logger';
 
 // Channel-scoped router (mounted at /channels/:channelId/polls)
 export const channelPollsRouter = Router({ mergeParams: true });
@@ -177,8 +178,8 @@ channelPollsRouter.post('/', requireAuth, validate(createPollSchema), async (req
       replyToId: null,
       pollData: result,
     });
-  } catch {
-    // Non-fatal if socket not available
+  } catch (err) {
+    logger.debug({ msg: 'socket emit failed', event: 'MESSAGE_CREATE poll', err });
   }
 
   res.status(201).json(result);

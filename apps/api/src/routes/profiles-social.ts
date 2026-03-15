@@ -19,6 +19,7 @@ import { eq, and, desc, sql, gte } from 'drizzle-orm';
 import { db } from '../db/index';
 import { requireAuth } from '../middleware/auth';
 import { userWallets, economyLedger } from '../db/schema/economy';
+import { logger } from '../lib/logger';
 
 export const profilesSocialRouter = Router();
 
@@ -165,7 +166,7 @@ profilesSocialRouter.post(
           source: 'daily_checkin',
           description: `Daily spin: ${reward.label}`,
         });
-      } catch { /* wallet may not exist yet */ }
+      } catch (err) { logger.debug({ msg: 'wallet ledger insert failed', err }); }
     }
 
     res.json({ reward: { type: reward.type, amount: reward.amount, label: reward.label } });

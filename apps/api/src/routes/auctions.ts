@@ -537,14 +537,14 @@ auctionsRouter.post(
       try {
         const [c] = await db.select({ name: cosmetics.name }).from(cosmetics).where(eq(cosmetics.id, updatedAuction!.cosmeticId)).limit(1);
         if (c) cosmeticName = c.name;
-      } catch { /* non-fatal */ }
+      } catch (err) { logger.debug({ msg: 'auction notification failed', err }); }
 
       // Fetch bidder name
       let bidderName = 'Someone';
       try {
         const [u] = await db.select({ displayName: users.displayName, username: users.username }).from(users).where(eq(users.id, bidderId)).limit(1);
         if (u) bidderName = u.displayName || u.username || 'Someone';
-      } catch { /* non-fatal */ }
+      } catch (err) { logger.debug({ msg: 'auction notification failed', err }); }
 
       // Notify seller about new bid
       try {
@@ -555,7 +555,7 @@ auctionsRouter.post(
           body: `${bidderName} bid ${amount} Gratonites on your auction.`,
           data: { auctionId, bidderId, amount, cosmeticName },
         });
-      } catch { /* non-fatal */ }
+      } catch (err) { logger.debug({ msg: 'auction notification failed', err }); }
 
       // Notify previous bidder they were outbid
       if (auction.currentBidderId && auction.currentBidderId !== bidderId) {
@@ -567,7 +567,7 @@ auctionsRouter.post(
             body: `Someone placed a higher bid of ${amount} Gratonites. Your ${auction.currentBid} Gratonites have been refunded.`,
             data: { auctionId, amount, cosmeticName },
           });
-        } catch { /* non-fatal */ }
+        } catch (err) { logger.debug({ msg: 'auction notification failed', err }); }
       }
 
       res.status(200).json(auctionJson(updatedAuction!));

@@ -24,6 +24,7 @@ import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { getIO } from '../lib/socket-io';
 import { AppError, handleAppError } from '../lib/errors.js';
+import { logger } from '../lib/logger';
 
 export const groupDmsRouter = Router();
 
@@ -210,8 +211,8 @@ groupDmsRouter.post(
           channelId,
           reason: 'member_added',
         });
-      } catch {
-        // Non-fatal if Socket.io not initialised.
+      } catch (err) {
+        logger.debug({ msg: 'socket emit failed', event: 'GROUP_KEY_ROTATION_NEEDED', err });
       }
     } catch (err) {
       handleAppError(res, err, 'group-dms');
