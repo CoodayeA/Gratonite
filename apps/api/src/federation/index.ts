@@ -1,6 +1,7 @@
 /** federation/index.ts — Federation subsystem initialization. */
 
 import { generateKeyPairIfNeeded } from './crypto';
+import { initRelay, isRelayEnabled } from '../relay/index';
 
 /** Whether federation is enabled on this instance. */
 export function isFederationEnabled(): boolean {
@@ -16,6 +17,7 @@ export function getFederationFlags() {
     allowJoins: process.env.FEDERATION_ALLOW_JOINS !== 'false',
     allowReplication: process.env.FEDERATION_ALLOW_REPLICATION === 'true',
     discoverRegistration: process.env.FEDERATION_DISCOVER_REGISTRATION === 'true',
+    relayEnabled: isRelayEnabled(),
   };
 }
 
@@ -31,7 +33,7 @@ export function getFederationHubUrl(): string {
 
 /**
  * Initialize federation subsystem. Called from main index.ts on startup.
- * Generates keypair if none exists and starts background jobs.
+ * Generates keypair if none exists, starts background jobs, and connects relay.
  */
 export async function initFederation(): Promise<void> {
   if (!isFederationEnabled()) {
@@ -44,4 +46,11 @@ export async function initFederation(): Promise<void> {
   await generateKeyPairIfNeeded();
 
   console.info(`[federation] Federation enabled for domain: ${getInstanceDomain()}`);
+
+  // Initialize relay client if enabled
+  try {
+    await initRelay();
+  } catch (err) {
+    console.error('[federation] Relay initialization failed:', (err as Error).message);
+  }
 }
