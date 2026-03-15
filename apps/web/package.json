@@ -13,6 +13,7 @@
     "verify:prod": "npm run build && npm run lint && npm run guard:placeholders"
   },
   "dependencies": {
+    "@gratonite/types": "workspace:*",
     "@tanstack/react-query": "^5.90.21",
     "@tanstack/react-virtual": "^3.13.19",
     "dompurify": "^3.3.2",

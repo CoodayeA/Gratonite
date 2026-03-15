@@ -2,7 +2,7 @@
  * Messages domain: message CRUD, reactions, pins, typing, threads, search.
  */
 import { apiFetch, buildQuery } from './_core';
-import type { Message, Thread, CursorPaginationParams, SearchMessagesResponse, InviteInfo, Guild } from './_core';
+import type { Message, Thread, CursorPaginationParams, SearchMessagesResponse, InviteInfo, Guild, ReactionGroup } from './_core';
 
 export const messagesApi = {
   list: (channelId: string, params?: CursorPaginationParams) =>
@@ -44,7 +44,7 @@ export const messagesApi = {
     }),
 
   getReactions: (channelId: string, messageId: string) =>
-    apiFetch<any[]>(`/channels/${channelId}/messages/${messageId}/reactions`),
+    apiFetch<ReactionGroup[]>(`/channels/${channelId}/messages/${messageId}/reactions`),
 
   getPins: (channelId: string) =>
     apiFetch<Message[]>(`/channels/${channelId}/pins`),

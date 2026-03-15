@@ -3,9 +3,27 @@
  * Internal module -- consumers should import from the barrel (../api).
  */
 import { isAuthGuardEnabled, isAuthRuntimeExpired, setAuthRuntimeState, transitionAuthExpired } from '../authRuntime';
+import type {
+  Guild as SharedGuild,
+  Channel as SharedChannel,
+  Message as SharedMessage,
+  GuildMember as SharedGuildMember,
+  Thread as SharedThread,
+  Role,
+  Invite,
+  Notification,
+  UserSummary,
+  UserStatus,
+  ReactionGroup,
+} from '@gratonite/types';
 
 // ---------------------------------------------------------------------------
-// Inline types (standalone -- no @gratonite/types dependency)
+// Re-export shared types for downstream consumers
+// ---------------------------------------------------------------------------
+export type { Role, Invite, Notification, UserSummary, UserStatus, ReactionGroup } from '@gratonite/types';
+
+// ---------------------------------------------------------------------------
+// API-layer types (extend shared types with runtime/index-signature flexibility)
 // ---------------------------------------------------------------------------
 
 export interface AuthResponse {
@@ -38,59 +56,36 @@ export interface CursorPaginationParams {
   limit?: number;
 }
 
-export interface Guild {
-  id: string;
-  name: string;
-  ownerId: string;
-  iconHash: string | null;
-  bannerHash: string | null;
-  description: string | null;
-  memberCount: number;
-  createdAt: string;
+/** Guild — extends the shared type with an index signature for extra runtime fields. */
+export interface Guild extends SharedGuild {
   [key: string]: unknown;
 }
 
-export interface Channel {
-  id: string;
-  guildId: string | null;
-  name: string;
-  type: string;
-  topic: string | null;
-  parentId: string | null;
-  position: number;
+/** Channel — extends the shared type with an index signature for extra runtime fields. */
+export interface Channel extends SharedChannel {
   [key: string]: unknown;
 }
 
-export interface Message {
-  id: string;
-  channelId: string;
-  authorId: string;
-  content: string;
-  type: number;
-  createdAt: string;
-  editedAt: string | null;
+/** Message — extends the shared type with extra fields used by the frontend. */
+export interface Message extends SharedMessage {
+  /** Numeric message type (system, default, reply, etc.) */
+  type?: number;
   [key: string]: unknown;
 }
 
-export interface GuildMember {
-  userId: string;
-  guildId: string;
-  nickname: string | null;
+/** GuildMember — extends the shared type with flattened user fields used by the member list. */
+export interface GuildMember extends SharedGuildMember {
   username?: string;
   displayName?: string;
   avatarHash?: string | null;
   roleIds?: string[];
-  roles?: string[];
   groupIds?: string[];
   status?: PresenceStatus;
-  joinedAt: string;
   [key: string]: unknown;
 }
 
-export interface Thread {
-  id: string;
-  channelId: string;
-  name: string;
+/** Thread — extends the shared type with an index signature for extra runtime fields. */
+export interface Thread extends SharedThread {
   [key: string]: unknown;
 }
 
@@ -509,7 +504,7 @@ export async function refreshAccessToken(): Promise<string | null> {
 // Core fetch wrapper
 // ---------------------------------------------------------------------------
 
-export async function apiFetch<T = any>(
+export async function apiFetch<T = unknown>(
   path: string,
   options: RequestInit = {},
   retried = false,

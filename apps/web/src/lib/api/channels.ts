@@ -65,16 +65,16 @@ export const channelsApi = {
     }),
 
   follow: (channelId: string, targetChannelId?: string) =>
-    apiFetch<any>(`/channels/${channelId}/followers`, {
+    apiFetch<{ channelId: string; targetChannelId: string }>(`/channels/${channelId}/followers`, {
       method: 'POST',
       body: JSON.stringify({ targetChannelId }),
     }),
 
   crosspost: (channelId: string, messageId: string) =>
-    apiFetch<any>(`/channels/${channelId}/messages/${messageId}/crosspost`, { method: 'POST' }),
+    apiFetch<{ messageId: string }>(`/channels/${channelId}/messages/${messageId}/crosspost`, { method: 'POST' }),
 
   getCallHistory: (channelId: string) =>
-    apiFetch<any[]>(`/channels/${channelId}/call-history`),
+    apiFetch<Array<{ id: string; channelId: string; initiatorId: string; startedAt: string; endedAt: string | null; participants: string[] }>>(`/channels/${channelId}/call-history`),
 
   delete: (channelId: string) =>
     apiFetch<void>(`/channels/${channelId}`, { method: 'DELETE' }),
@@ -122,7 +122,7 @@ export const channelsApi = {
 
   uploadEncryptionKeys: (guildId: string, channelId: string, data: { version: number; keyData: Record<string, string> }) => {
     assertGuildId(guildId);
-    return apiFetch<any>(`/guilds/${guildId}/channels/${channelId}/encryption-keys`, {
+    return apiFetch<{ id: string; channelId: string; version: number; keyData: Record<string, string> }>(`/guilds/${guildId}/channels/${channelId}/encryption-keys`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -132,7 +132,7 @@ export const channelsApi = {
     apiFetch<{ level: string; mutedUntil: string | null }>(`/channels/${channelId}/notification-prefs`),
 
   setNotificationPrefs: (channelId: string, data: { level: 'all' | 'mentions' | 'none' | 'default'; mutedUntil?: string | null }) =>
-    apiFetch<any>(`/channels/${channelId}/notification-prefs`, {
+    apiFetch<{ level: string; mutedUntil: string | null }>(`/channels/${channelId}/notification-prefs`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
