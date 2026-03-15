@@ -38,6 +38,38 @@ const ScreenShareModal = ({
     const [elapsedTime, setElapsedTime] = useState(0);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+    // Electron desktop source picker state
+    const isDesktop = !!window.gratoniteDesktop?.isDesktop;
+    const [desktopSources, setDesktopSources] = useState<Array<{
+        id: string;
+        name: string;
+        thumbnailDataUrl: string;
+        displayId: string;
+        appIconDataUrl: string | null;
+    }>>([]);
+    const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
+    const [loadingSources, setLoadingSources] = useState(false);
+
+    // Load Electron desktop sources when modal opens
+    useEffect(() => {
+        if (!isOpen || !isDesktop || isSharing) return;
+        const loadSources = async () => {
+            setLoadingSources(true);
+            try {
+                const sources = await window.gratoniteDesktop!.getScreenSources!();
+                setDesktopSources(sources);
+                if (sources.length > 0 && !selectedSourceId) {
+                    setSelectedSourceId(sources[0].id);
+                }
+            } catch {
+                setDesktopSources([]);
+            } finally {
+                setLoadingSources(false);
+            }
+        };
+        loadSources();
+    }, [isOpen, isDesktop, isSharing]);
+
     // Esc key handler
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') handleStop(); };
@@ -63,7 +95,7 @@ const ScreenShareModal = ({
         return `${m}:${s}`;
     };
 
-    // Start screen share — native getDisplayMedia (works without LiveKit too)
+    // Start screen share — native getDisplayMedia or Electron desktopCapturer
     const startNativeScreenShare = useCallback(async () => {
         setIsStarting(true);
         setShareError(null);
@@ -72,10 +104,44 @@ const ScreenShareModal = ({
                 ? { width: 1920, height: 1080 }
                 : { width: 1280, height: 720 };
 
-            const stream = await navigator.mediaDevices.getDisplayMedia({
-                video: { ...res, frameRate: { ideal: frameRate } },
-                audio: true,
-            });
+            let stream: MediaStream;
+
+            // Electron desktop path: use selected source from desktopCapturer
+            if (isDesktop && selectedSourceId) {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    audio: false,
+                    video: {
+                        mandatory: {
+                            chromeMediaSource: 'desktop',
+                            chromeMediaSourceId: selectedSourceId,
+                            maxWidth: res.width,
+                            maxHeight: res.height,
+                            maxFrameRate: frameRate,
+                        },
+                    } as any,
+                });
+
+                // Try to get system audio separately
+                try {
+                    const audioStream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            mandatory: {
+                                chromeMediaSource: 'desktop',
+                            },
+                        } as any,
+                        video: false,
+                    });
+                    audioStream.getAudioTracks().forEach(track => stream.addTrack(track));
+                } catch {
+                    // Audio capture not available on all platforms
+                }
+            } else {
+                // Standard browser path
+                stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { ...res, frameRate: { ideal: frameRate } },
+                    audio: true,
+                });
+            }
 
             streamRef.current = stream;
 
@@ -93,6 +159,7 @@ const ScreenShareModal = ({
             }
 
             setIsSharing(true);
+            setDesktopSources([]); // Clear source picker
             addToast({ title: 'Screen Share Started', description: 'You are now sharing your screen.', variant: 'success' });
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Failed to start screen share';
@@ -105,7 +172,7 @@ const ScreenShareModal = ({
         } finally {
             setIsStarting(false);
         }
-    }, [streamQuality, frameRate, addToast]);
+    }, [streamQuality, frameRate, addToast, isDesktop, selectedSourceId]);
 
     // Start screen share (LiveKit path or native fallback)
     const handleStart = useCallback(async () => {
@@ -248,17 +315,93 @@ const ScreenShareModal = ({
 
                         {/* Pre-share prompt */}
                         {!isSharing && !isStarting && (
-                            <div style={{ textAlign: 'center', zIndex: 1, padding: '40px' }}>
+                            <div style={{ textAlign: 'center', zIndex: 1, padding: '40px', width: '100%', maxHeight: '100%', overflowY: 'auto' }}>
                                 <MonitorUp size={64} style={{ color: 'rgba(255,255,255,0.15)', marginBottom: '24px' }} />
                                 <h3 style={{ fontSize: '20px', color: 'var(--text-primary)', fontFamily: 'var(--font-display)', marginBottom: '12px' }}>
                                     Share Your Screen
                                 </h3>
-                                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '32px', maxWidth: '360px', lineHeight: '1.5' }}>
-                                    Choose a screen, window, or tab to share with others in this call.
+                                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '32px', maxWidth: '360px', lineHeight: '1.5', margin: '0 auto 32px' }}>
+                                    {isDesktop ? 'Select a screen or window to share with others in this call.' : 'Choose a screen, window, or tab to share with others in this call.'}
                                 </p>
 
                                 {shareError && (
                                     <p style={{ fontSize: '13px', color: 'var(--error)', marginBottom: '16px' }}>{shareError}</p>
+                                )}
+
+                                {/* Electron source picker grid */}
+                                {isDesktop && desktopSources.length > 0 && (
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                                        gap: '12px',
+                                        marginBottom: '24px',
+                                        maxWidth: '700px',
+                                        margin: '0 auto 24px',
+                                    }}>
+                                        {desktopSources.map(source => (
+                                            <div
+                                                key={source.id}
+                                                onClick={() => setSelectedSourceId(source.id)}
+                                                style={{
+                                                    cursor: 'pointer',
+                                                    borderRadius: '8px',
+                                                    border: selectedSourceId === source.id
+                                                        ? '2px solid var(--accent-primary)'
+                                                        : '2px solid var(--stroke)',
+                                                    overflow: 'hidden',
+                                                    background: 'var(--bg-tertiary)',
+                                                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                                                    boxShadow: selectedSourceId === source.id
+                                                        ? '0 0 0 2px rgba(99, 102, 241, 0.3)'
+                                                        : 'none',
+                                                }}
+                                            >
+                                                <img
+                                                    src={source.thumbnailDataUrl}
+                                                    alt={source.name}
+                                                    style={{
+                                                        width: '100%',
+                                                        aspectRatio: '16/9',
+                                                        objectFit: 'cover',
+                                                        display: 'block',
+                                                        background: '#000',
+                                                    }}
+                                                />
+                                                <div style={{
+                                                    padding: '8px 10px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                }}>
+                                                    {source.appIconDataUrl && (
+                                                        <img
+                                                            src={source.appIconDataUrl}
+                                                            alt=""
+                                                            style={{ width: '16px', height: '16px', flexShrink: 0 }}
+                                                        />
+                                                    )}
+                                                    <span style={{
+                                                        fontSize: '12px',
+                                                        color: selectedSourceId === source.id ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                                        fontWeight: selectedSourceId === source.id ? 600 : 400,
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap',
+                                                    }}>
+                                                        {source.name}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Loading state for desktop sources */}
+                                {isDesktop && loadingSources && (
+                                    <div style={{ marginBottom: '24px' }}>
+                                        <Loader2 size={24} style={{ color: 'var(--accent-primary)', animation: 'spin 1s linear infinite' }} />
+                                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '8px' }}>Loading screens and windows...</p>
+                                    </div>
                                 )}
 
                                 {/* Quality presets */}
@@ -287,22 +430,23 @@ const ScreenShareModal = ({
 
                                 <button
                                     onClick={handleStart}
+                                    disabled={isDesktop && !selectedSourceId}
                                     style={{
                                         padding: '12px 32px',
                                         borderRadius: '8px',
                                         border: 'none',
-                                        background: 'var(--accent-primary)',
-                                        color: 'white',
+                                        background: (isDesktop && !selectedSourceId) ? 'var(--bg-tertiary)' : 'var(--accent-primary)',
+                                        color: (isDesktop && !selectedSourceId) ? 'var(--text-muted)' : 'white',
                                         fontSize: '15px',
                                         fontWeight: 600,
-                                        cursor: 'pointer',
+                                        cursor: (isDesktop && !selectedSourceId) ? 'not-allowed' : 'pointer',
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: '8px',
                                         margin: '0 auto',
                                         transition: 'all 0.2s',
                                     }}
-                                    onMouseOver={e => e.currentTarget.style.opacity = '0.9'}
+                                    onMouseOver={e => { if (!isDesktop || selectedSourceId) e.currentTarget.style.opacity = '0.9'; }}
                                     onMouseOut={e => e.currentTarget.style.opacity = '1'}
                                 >
                                     <MonitorUp size={18} />

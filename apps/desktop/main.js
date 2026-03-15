@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage, globalShortcut, Notification, crashReporter, powerMonitor, screen, dialog } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage, globalShortcut, Notification, crashReporter, powerMonitor, screen, dialog, desktopCapturer, systemPreferences } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -890,6 +890,56 @@ ipcMain.on('exit-mini-mode', () => {
   updateTrayMenu();
 });
 ipcMain.handle('is-mini-mode', () => !!(miniWindow && !miniWindow.isDestroyed()));
+
+// --- Push-to-Talk Global Toggle (CmdOrCtrl+Shift+T) ---
+let pttKey = 'CmdOrCtrl+Shift+T'; // Default PTT toggle key
+let pttRegistered = false;
+
+ipcMain.on('ptt-register', (_event, key) => {
+  if (pttRegistered) {
+    try { globalShortcut.unregister(pttKey); } catch {}
+  }
+  pttKey = key || 'CmdOrCtrl+Shift+T';
+
+  const success = globalShortcut.register(pttKey, () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('ptt-toggle');
+    }
+  });
+
+  pttRegistered = success;
+  if (!success) {
+    console.warn(`Failed to register PTT key: ${pttKey}`);
+  }
+});
+
+ipcMain.on('ptt-unregister', () => {
+  if (pttRegistered) {
+    try { globalShortcut.unregister(pttKey); } catch {}
+    pttRegistered = false;
+  }
+});
+
+// --- Desktop Screen Capture Sources ---
+ipcMain.handle('get-screen-sources', async () => {
+  try {
+    const sources = await desktopCapturer.getSources({
+      types: ['screen', 'window'],
+      thumbnailSize: { width: 320, height: 180 },
+      fetchWindowIcons: true,
+    });
+    return sources.map(source => ({
+      id: source.id,
+      name: source.name,
+      thumbnailDataUrl: source.thumbnail.toDataURL(),
+      displayId: source.display_id,
+      appIconDataUrl: source.appIcon ? source.appIcon.toDataURL() : null,
+    }));
+  } catch (err) {
+    console.error('Failed to get screen sources:', err);
+    return [];
+  }
+});
 
 // --- Task #92: Desktop Notification Actions ---
 ipcMain.on('show-message-notification', (_event, data) => {
