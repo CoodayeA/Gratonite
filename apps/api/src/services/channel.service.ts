@@ -54,7 +54,7 @@ export async function getChannels(guildId: string, userId: string) {
     }
   }
 
-  return rows.filter(ch => visibleChannelIds.has(ch.id));
+  return rows.filter((ch: any) => visibleChannelIds.has(ch.id));
 }
 
 /**
@@ -330,7 +330,7 @@ export async function reorderChannels(
     .from(channels)
     .where(and(eq(channels.guildId, guildId), inArray(channels.id, channelIds)));
 
-  const existingIds = new Set(existingChannels.map((c) => c.id));
+  const existingIds = new Set(existingChannels.map((c: any) => c.id));
   for (const u of positions) {
     if (!existingIds.has(u.id)) {
       throw new ServiceError('VALIDATION_ERROR', `Channel ${u.id} does not belong to this guild`);

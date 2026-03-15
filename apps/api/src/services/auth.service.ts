@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 /**
  * services/auth.service.ts — Business logic for authentication operations.
  *

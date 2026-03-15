@@ -2,7 +2,7 @@
  * bot-guild-permissions.ts — Per-guild permissions for installed bots.
  */
 
-import { pgTable, uuid, bigint, timestamp, unique } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, bigint, timestamp, unique, index } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { botApplications } from './bot-applications';
 import { guilds } from './guilds';
@@ -20,6 +20,7 @@ export const botGuildPermissions = pgTable('bot_guild_permissions', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   unique('bot_guild_permissions_bot_guild_key').on(table.botApplicationId, table.guildId),
+  index('bot_guild_permissions_app_guild_idx').on(table.botApplicationId, table.guildId),
 ]);
 
 export type BotGuildPermission = typeof botGuildPermissions.$inferSelect;

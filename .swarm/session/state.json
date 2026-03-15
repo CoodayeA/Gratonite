@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "writtenAt": 1773527641306,
+  "toolAggregates": {
+    "read": {
+      "tool": "read",
+      "count": 1,
+      "successCount": 1,
+      "failureCount": 0,
+      "totalDuration": 58
+    }
+  },
+  "activeAgent": {
+    "ses_311841567ffet9E41twmjCsGDP": "architect"
+  },
+  "delegationChains": {},
+  "agentSessions": {
+    "ses_311841567ffet9E41twmjCsGDP": {
+      "agentName": "architect",
+      "lastToolCallTime": 1773527624804,
+      "lastAgentEventTime": 1773527624804,
+      "delegationActive": false,
+      "activeInvocationId": 0,
+      "lastInvocationIdByAgent": {},
+      "windows": {},
+      "lastCompactionHint": 0,
+      "architectWriteCount": 0,
+      "lastCoderDelegationTaskId": null,
+      "currentTaskId": null,
+      "gateLog": {},
+      "reviewerCallCount": {},
+      "lastGateFailure": null,
+      "partialGateWarningsIssuedForTask": [
+        "ses_311841567ffet9E41twmjCsGDP:unknown"
+      ],
+      "selfFixAttempted": false,
+      "selfCodingWarnedAtCount": 0,
+      "catastrophicPhaseWarnings": [],
+      "lastPhaseCompleteTimestamp": 0,
+      "lastPhaseCompletePhase": 0,
+      "phaseAgentsDispatched": [],
+      "lastCompletedPhaseAgentsDispatched": [],
+      "qaSkipCount": 0,
+      "qaSkipTaskIds": [],
+      "taskWorkflowStates": {},
+      "scopeViolationDetected": false
+    }
+  }
+}

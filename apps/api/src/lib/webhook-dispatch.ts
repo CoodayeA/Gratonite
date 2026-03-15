@@ -16,6 +16,7 @@ import { logger } from './logger';
 import { webhookDispatchTotal } from './metrics';
 import { eq, and, sql } from 'drizzle-orm';
 import { signPayload, deliverWebhookWithRetry } from './webhook-signing';
+import { redis } from './redis';
 
 import { db } from '../db/index';
 import { botApplications } from '../db/schema/bot-applications';
@@ -242,8 +243,11 @@ export async function processActions(actions: BotAction[], guildId: string, botA
 }
 
 // ---------------------------------------------------------------------------
-// Bot lookup helper
+// Bot lookup helper (with Redis cache)
 // ---------------------------------------------------------------------------
+
+const BOT_CACHE_TTL = 60; // seconds
+const BOT_CACHE_PREFIX = 'guild:bots:';
 
 interface BotRow {
   id: string;
@@ -254,6 +258,14 @@ interface BotRow {
 }
 
 async function getInstalledBots(guildId: string): Promise<BotRow[]> {
+  // Check Redis cache first
+  try {
+    const cached = await redis.get(`${BOT_CACHE_PREFIX}${guildId}`);
+    if (cached) return JSON.parse(cached) as BotRow[];
+  } catch (err) {
+    logger.warn('[webhook-dispatch] redis cache read error:', err);
+  }
+
   const bots = await db
     .select({
       id: botApplications.id,
@@ -267,7 +279,25 @@ async function getInstalledBots(guildId: string): Promise<BotRow[]> {
     .innerJoin(botInstalls, eq(botInstalls.botId, botApplications.listingId!))
     .where(eq(botInstalls.guildId, guildId));
 
-  return bots.filter(b => b.isActive) as BotRow[];
+  const activeBots = bots.filter(b => b.isActive) as BotRow[];
+
+  // Cache result in Redis
+  try {
+    await redis.set(`${BOT_CACHE_PREFIX}${guildId}`, JSON.stringify(activeBots), 'EX', BOT_CACHE_TTL);
+  } catch (err) {
+    logger.warn('[webhook-dispatch] redis cache write error:', err);
+  }
+
+  return activeBots;
+}
+
+/** Invalidate the cached bot list for a guild. Call on install/uninstall. */
+export async function invalidateBotCache(guildId: string): Promise<void> {
+  try {
+    await redis.del(`${BOT_CACHE_PREFIX}${guildId}`);
+  } catch (err) {
+    logger.warn('[webhook-dispatch] redis cache invalidation error:', err);
+  }
 }
 
 // ---------------------------------------------------------------------------
