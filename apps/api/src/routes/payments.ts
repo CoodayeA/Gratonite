@@ -23,7 +23,8 @@ async function getStripe(): Promise<any> {
     const mod = await import('stripe' as any);
     stripe = new ((mod as any).default ?? mod)(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
     return stripe;
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to load Stripe module', err });
     return null;
   }
 }

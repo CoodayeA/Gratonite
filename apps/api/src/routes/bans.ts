@@ -11,6 +11,7 @@ import { validate } from '../middleware/validate';
 import { getIO } from '../lib/socket-io';
 import { hasPermission } from './roles';
 import { logAuditEvent, AuditActionTypes } from '../lib/audit';
+import { logger } from '../lib/logger';
 
 export const bansRouter = Router({ mergeParams: true });
 
@@ -60,7 +61,7 @@ bansRouter.put(
     try {
       getIO().to(`guild:${guildId}`).emit('GUILD_BAN_ADD', { guildId, userId });
       getIO().to(`user:${userId}`).emit('GUILD_BAN_ADD', { guildId });
-    } catch {}
+    } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'GUILD_BAN_ADD', err }); }
 
     res.json({ code: 'OK' });
   },
@@ -81,7 +82,7 @@ bansRouter.delete('/:userId', requireAuth, async (req: Request, res: Response): 
 
   try {
     getIO().to(`guild:${guildId}`).emit('GUILD_BAN_REMOVE', { guildId, userId });
-  } catch {}
+  } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'GUILD_BAN_REMOVE', err }); }
 
   res.json({ code: 'OK' });
 });
@@ -194,7 +195,7 @@ bansRouter.patch('/:userId/appeal', requireAuth, async (req: Request, res: Respo
     await db.delete(guildBans).where(eq(guildBans.id, ban.id));
     try {
       getIO().to(`guild:${guildId}`).emit('GUILD_BAN_REMOVE', { guildId, userId });
-    } catch {}
+    } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'GUILD_BAN_REMOVE', err }); }
     res.json({ code: 'OK', message: 'Appeal approved, ban removed' });
   } else {
     await db.update(guildBans).set({

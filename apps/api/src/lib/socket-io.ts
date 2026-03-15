@@ -24,6 +24,7 @@
  */
 
 import { Server as SocketIOServer } from 'socket.io';
+import { logger } from './logger';
 
 /** The single Socket.io server instance, set once at startup. */
 let _io: SocketIOServer | null = null;
@@ -54,4 +55,23 @@ export function getIO(): SocketIOServer {
     throw new Error('Socket.io instance has not been initialised. Call setIO() first.');
   }
   return _io;
+}
+
+/**
+ * emitSafe — Emit a Socket.io event, swallowing any errors with a debug log.
+ *
+ * Useful in route handlers where socket emit failures should not break the
+ * HTTP response flow (e.g. when Socket.io is not initialised in tests, or
+ * a room/socket has already disconnected).
+ *
+ * @param socket  Any object with an `emit` method (Socket.io Server, Room, etc.)
+ * @param event   The event name to emit.
+ * @param args    Arguments forwarded to `socket.emit`.
+ */
+export function emitSafe(socket: { emit: (...a: any[]) => any }, event: string, ...args: any[]): void {
+  try {
+    socket.emit(event, ...args);
+  } catch (err) {
+    logger.debug({ msg: 'socket emit failed', event, err });
+  }
 }

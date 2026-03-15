@@ -103,7 +103,8 @@ async function pingWebhook(webhookUrl: string): Promise<boolean> {
     clearTimeout(timer);
     // Treat any HTTP-level response (even 4xx/5xx) as "reachable".
     return resp.status > 0;
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'URL reachability check failed', err });
     return false;
   }
 }

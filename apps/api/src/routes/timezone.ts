@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '../db/index';
 import { userSettings } from '../db/schema/settings';
 import { requireAuth } from '../middleware/auth';
+import { logger } from '../lib/logger';
 
 export const timezoneRouter = Router();
 
@@ -27,7 +28,8 @@ timezoneRouter.patch('/@me/timezone', requireAuth, async (req: Request, res: Res
   }
 
   // Validate timezone
-  try { new Intl.DateTimeFormat('en-US', { timeZone: timezone }); } catch {
+  try { new Intl.DateTimeFormat('en-US', { timeZone: timezone }); } catch (err) {
+    logger.debug({ msg: 'invalid timezone provided', err });
     res.status(400).json({ code: 'BAD_REQUEST', message: 'Invalid timezone' }); return;
   }
 
@@ -62,7 +64,7 @@ timezoneRouter.get('/:userId/timezone', requireAuth, async (req: Request, res: R
   if (tz) {
     try {
       localTime = new Date().toLocaleTimeString('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: true });
-    } catch { /* ignore */ }
+    } catch (err) { logger.debug({ msg: 'failed to format local time', err }); }
   }
 
   res.json({ timezone: tz, localTime });

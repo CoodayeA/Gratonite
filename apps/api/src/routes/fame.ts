@@ -98,7 +98,7 @@ fameRouter.post(
               lifetimeEarned: sql`${userWallets.lifetimeEarned} + 200`,
             },
           });
-      } catch { /* wallet reward non-critical */ }
+      } catch (err) { logger.debug({ msg: 'wallet reward failed', err }); }
 
       // Create system message in the channel & emit socket event
       try {
@@ -126,7 +126,7 @@ fameRouter.post(
             author: { id: giverId, username: giver?.username, displayName: giver?.displayName },
           });
         }
-      } catch { /* system message non-critical */ }
+      } catch (err) { logger.debug({ msg: 'fame system message failed', err }); }
 
       const newCount = currentCount + 1;
       res.status(200).json({ success: true, fameGiven: newCount, remaining: DAILY_FAME_LIMIT - newCount });

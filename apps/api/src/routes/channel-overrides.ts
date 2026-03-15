@@ -23,6 +23,7 @@ import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { requireMember } from './guilds';
 import { hasPermission } from './roles';
+import { logger } from '../lib/logger';
 
 export const channelOverridesRouter = Router({ mergeParams: true });
 
@@ -66,7 +67,8 @@ channelOverridesRouter.get('/', requireAuth, async (req: Request, res: Response)
   // Verify the user is a guild member
   try {
     await requireMember(channel.guildId!, req.userId!);
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'requireMember check failed', err });
     res.status(403).json({ code: 'FORBIDDEN', message: 'Not a guild member' });
     return;
   }

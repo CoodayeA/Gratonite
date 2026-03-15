@@ -9,6 +9,7 @@ import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { getIO } from '../lib/socket-io';
 import { logAuditEvent, AuditActionTypes } from '../lib/audit';
+import { logger } from '../lib/logger';
 
 export const rolesRouter = Router({ mergeParams: true });
 
@@ -203,7 +204,7 @@ rolesRouter.post('/', requireAuth, validate(createRoleSchema), async (req: Reque
 
   try {
     getIO().to(`guild:${guildId}`).emit('GUILD_ROLE_CREATE', { ...created, permissions: created.permissions.toString() });
-  } catch {}
+  } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'GUILD_ROLE_CREATE', err }); }
 
   res.status(201).json({ ...created, permissions: created.permissions.toString() });
 });
@@ -246,7 +247,7 @@ rolesRouter.patch('/:roleId', requireAuth, validate(patchRoleSchema), async (req
 
   try {
     getIO().to(`guild:${guildId}`).emit('GUILD_ROLE_UPDATE', { ...updated, permissions: updated.permissions.toString() });
-  } catch {}
+  } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'GUILD_ROLE_UPDATE', err }); }
 
   res.json({ ...updated, permissions: updated.permissions.toString() });
 });
@@ -270,7 +271,7 @@ rolesRouter.delete('/:roleId', requireAuth, async (req: Request, res: Response):
 
   try {
     getIO().to(`guild:${guildId}`).emit('GUILD_ROLE_DELETE', { roleId, guildId });
-  } catch {}
+  } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'GUILD_ROLE_DELETE', err }); }
 
   res.json({ code: 'OK', message: 'Role deleted' });
 });
@@ -324,7 +325,7 @@ rolesRouter.put('/members/:userId/roles/:roleId', requireAuth, async (req: Reque
 
   try {
     getIO().to(`guild:${guildId}`).emit('GUILD_MEMBER_ROLE_ADD', { userId, roleId, guildId });
-  } catch {}
+  } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'GUILD_MEMBER_ROLE_ADD', err }); }
 
   res.json({ code: 'OK' });
 });
@@ -341,7 +342,7 @@ rolesRouter.delete('/members/:userId/roles/:roleId', requireAuth, async (req: Re
 
   try {
     getIO().to(`guild:${guildId}`).emit('GUILD_MEMBER_ROLE_REMOVE', { userId, roleId, guildId });
-  } catch {}
+  } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'GUILD_MEMBER_ROLE_REMOVE', err }); }
 
   res.json({ code: 'OK' });
 });

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { verifyAccessToken } from '../lib/jwt';
+import { logger } from '../lib/logger';
 
 export const telemetryRouter = Router();
 
@@ -31,7 +32,8 @@ function resolveUserId(req: Request): string | null {
   try {
     const payload = verifyAccessToken(token);
     return payload.userId;
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'telemetry token verification failed', err });
     return null;
   }
 }

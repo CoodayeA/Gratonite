@@ -54,7 +54,7 @@ statsRouter.get('/guilds/:guildId', async (req: Request, res: Response): Promise
     const { guildId } = req.params as Record<string, string>;
 
     const cacheKey = `guild_stats:${guildId}`;
-    const cached = await redis.get(cacheKey).catch(() => null);
+    const cached = await redis.get(cacheKey).catch((err: unknown) => { logger.debug({ msg: 'redis cache get failed', err }); return null; });
     if (cached) {
       const parsed = safeJsonParse(cached, null);
       if (parsed) {
@@ -135,7 +135,8 @@ statsRouter.get('/guilds/:guildId', async (req: Request, res: Response): Promise
             }
           }
           return online;
-        } catch {
+        } catch (err) {
+          logger.debug({ msg: 'failed to count online members', err });
           return 0;
         }
       })(),
@@ -184,7 +185,7 @@ statsRouter.get('/guilds/:guildId', async (req: Request, res: Response): Promise
       activity,
     };
 
-    await redis.setex(cacheKey, GUILD_STATS_TTL, JSON.stringify(data)).catch(() => {});
+    await redis.setex(cacheKey, GUILD_STATS_TTL, JSON.stringify(data)).catch((err: unknown) => { logger.debug({ msg: 'redis cache set failed', err }); });
     res.json(data);
   } catch (err) {
     logger.error('[stats] failed to fetch guild stats:', err);

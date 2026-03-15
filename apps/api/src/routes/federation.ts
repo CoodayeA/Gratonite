@@ -22,6 +22,7 @@ import { recordInboundActivity } from '../federation/activities';
 import { parseFederationAddress, createShadowUser } from '../federation/user-resolver';
 import { exportAccount, verifyImportSignature, startImport, ExportData } from '../federation/export-import';
 import { assertNotPrivateHost } from '../lib/ssrf-guard';
+import { logger } from '../lib/logger';
 
 export const federationRouter = Router();
 
@@ -54,7 +55,8 @@ export function wellKnownHandler(_req: Request, res: Response): void {
   try {
     publicKeyPem = getPublicKeyPem();
     keyId = getKeyId();
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'federation keys not initialized', err });
     res.status(503).json({ error: 'Federation not initialized' });
     return;
   }
@@ -107,7 +109,8 @@ federationRouter.post('/handshake', async (req: Request, res: Response) => {
   try {
     const parsed = new URL(instanceUrl);
     baseUrl = `${parsed.protocol}//${parsed.host}`;
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'invalid federation instanceUrl', err });
     res.status(400).json({ code: 'INVALID_URL', message: 'Invalid instanceUrl format' });
     return;
   }
@@ -143,7 +146,8 @@ federationRouter.post('/handshake', async (req: Request, res: Response) => {
       res.status(400).json({ code: 'KEY_MISMATCH', message: 'Public key does not match well-known endpoint' });
       return;
     }
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'federation remote verification failed', err });
     res.status(400).json({ code: 'VERIFICATION_FAILED', message: 'Could not reach remote instance for verification' });
     return;
   }
@@ -538,7 +542,7 @@ federationRouter.post('/discover/register', requireFederationAuth, async (req: R
       const parsed = new URL(url);
       if (['javascript:', 'data:', 'vbscript:', 'file:'].some(s => url.toLowerCase().startsWith(s))) return false;
       return parsed.protocol === 'https:' || parsed.protocol === 'http:';
-    } catch { return false; }
+    } catch (err) { logger.debug({ msg: 'URL validation failed', err }); return false; }
   };
 
   const sanitizeText = (text: string, maxLen: number): string =>

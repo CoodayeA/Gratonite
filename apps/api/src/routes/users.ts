@@ -913,7 +913,7 @@ usersRouter.patch('/@me/activity', requireAuth, validate(activitySchema), asyncH
   await db.update(users).set({ activity, updatedAt: new Date() }).where(eq(users.id, req.userId!));
 
   // Cache in Redis so the members endpoint can read it without a DB join
-  try { await redis.set(`presence:${req.userId!}:activity`, JSON.stringify(activity), 'EX', 600); } catch { /* non-fatal */ }
+  try { await redis.set(`presence:${req.userId!}:activity`, JSON.stringify(activity), 'EX', 600); } catch (err) { logger.debug({ msg: 'redis presence set failed', err }); }
 
   try {
     const memberships = await db.select({ guildId: guildMembers.guildId }).from(guildMembers).where(eq(guildMembers.userId, req.userId!));
@@ -921,7 +921,7 @@ usersRouter.patch('/@me/activity', requireAuth, validate(activitySchema), asyncH
     for (const { guildId } of memberships) {
       io.to(`guild:${guildId}`).emit('PRESENCE_UPDATE', { userId: req.userId!, activity });
     }
-  } catch { /* non-fatal */ }
+  } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'PRESENCE_UPDATE', err }); }
 
   res.json({ activity });
 }));
@@ -931,7 +931,7 @@ usersRouter.delete('/@me/activity', requireAuth, asyncHandler(async (req: Reques
   await db.update(users).set({ activity: null, updatedAt: new Date() }).where(eq(users.id, req.userId!));
 
   // Remove from Redis cache
-  try { await redis.del(`presence:${req.userId!}:activity`); } catch { /* non-fatal */ }
+  try { await redis.del(`presence:${req.userId!}:activity`); } catch (err) { logger.debug({ msg: 'redis presence del failed', err }); }
 
   try {
     const memberships = await db.select({ guildId: guildMembers.guildId }).from(guildMembers).where(eq(guildMembers.userId, req.userId!));
@@ -939,7 +939,7 @@ usersRouter.delete('/@me/activity', requireAuth, asyncHandler(async (req: Reques
     for (const { guildId } of memberships) {
       io.to(`guild:${guildId}`).emit('PRESENCE_UPDATE', { userId: req.userId!, activity: null });
     }
-  } catch { /* non-fatal */ }
+  } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'PRESENCE_UPDATE', err }); }
 
   res.json({ code: 'OK' });
 }));
@@ -972,7 +972,8 @@ usersRouter.get('/@me/stats', requireAuth, async (req: Request, res: Response): 
       achievementsEarned: earnedCount?.count ?? 0,
       bookmarks: bookmarkCount?.count ?? 0,
     });
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to fetch user stats', err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -983,7 +984,8 @@ usersRouter.get('/@me/quick-reactions', requireAuth, async (req: Request, res: R
   try {
     const [row] = await db.select().from(userQuickReactions).where(eq(userQuickReactions.userId, userId)).limit(1);
     res.json(row ?? { userId, emojis: ['👍', '❤️', '😂', '🎉', '🔥', '😮', '😢', '👀'] });
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to fetch quick reactions', err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1000,7 +1002,8 @@ usersRouter.put('/@me/quick-reactions', requireAuth, async (req: Request, res: R
     await db.insert(userQuickReactions).values({ userId, emojis })
       .onConflictDoUpdate({ target: userQuickReactions.userId, set: { emojis } });
     res.json({ emojis });
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to update quick reactions', err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1011,7 +1014,8 @@ usersRouter.get('/@me/status-presets', requireAuth, async (req: Request, res: Re
   try {
     const presets = await db.select().from(statusPresets).where(eq(statusPresets.userId, userId));
     res.json(presets);
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to fetch status presets', err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1026,7 +1030,8 @@ usersRouter.post('/@me/status-presets', requireAuth, async (req: Request, res: R
     if (existing.length >= 5) { res.status(400).json({ error: 'Maximum 5 status presets allowed' }); return; }
     const [preset] = await db.insert(statusPresets).values({ userId, status, customText, emoji }).returning();
     res.status(201).json(preset);
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to create status preset', err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1038,7 +1043,8 @@ usersRouter.delete('/@me/status-presets/:id', requireAuth, async (req: Request, 
   try {
     await db.delete(statusPresets).where(and(eq(statusPresets.id, id), eq(statusPresets.userId, userId)));
     res.status(204).send();
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to delete status preset', err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1057,7 +1063,8 @@ usersRouter.post('/@me/status-presets/:id/apply', requireAuth, async (req: Reque
       statusEmoji: preset.emoji ?? null,
     }).where(eq(users.id, userId));
     res.json({ applied: true });
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to apply status preset', err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1111,7 +1118,8 @@ usersRouter.post('/@me/gift', requireAuth, async (req: Request, res: Response): 
     await checkAchievements(userId, 'coins_gifted');
 
     res.json({ success: true, amount });
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to gift coins', err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1129,7 +1137,8 @@ usersRouter.post('/@me/onboarding-complete', requireAuth, async (req: Request, r
       await db.insert(userAchievements).values({ userId, achievementId: 'early_adopter' }).onConflictDoNothing();
     }
     res.json({ success: true });
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to complete onboarding', err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1174,7 +1183,8 @@ usersRouter.get('/@me/sessions', requireAuth, async (req: Request, res: Response
       }));
 
     res.json(sessions);
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to fetch sessions', err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1188,7 +1198,8 @@ usersRouter.delete('/@me/sessions/:sessionId', requireAuth, async (req: Request,
       .delete(refreshTokens)
       .where(and(eq(refreshTokens.id, sessionId), eq(refreshTokens.userId, userId)));
     res.json({ success: true });
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to revoke session', err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1220,7 +1231,8 @@ usersRouter.delete('/@me/sessions', requireAuth, async (req: Request, res: Respo
     }
 
     res.json({ success: true, message: 'All other sessions revoked' });
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to revoke all sessions', err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1237,7 +1249,8 @@ usersRouter.get('/@me/data-exports', requireAuth, async (req: Request, res: Resp
       .where(eq(dataExports.userId, userId))
       .orderBy(sql`${dataExports.createdAt} DESC`);
     res.json(exports);
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to fetch data exports', err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1251,7 +1264,8 @@ usersRouter.post('/@me/data-exports', requireAuth, async (req: Request, res: Res
       .values({ userId, status: 'pending' })
       .returning();
     res.status(201).json(exported);
-  } catch {
+  } catch (err) {
+    logger.debug({ msg: 'failed to create data export', err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
