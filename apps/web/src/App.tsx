@@ -3545,9 +3545,11 @@ export const AppLayout = () => {
 
     // Push to Talk: Hold configured key to unmute while in voice, release to re-mute
     const pttActiveRef = useRef(false);
+    const pttReleaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(() => {
         const getVoiceMode = () => localStorage.getItem('gratonite_voice_mode') || 'voice_activity';
         const getPttKeyCode = () => localStorage.getItem('gratonite_ptt_key') || 'Space';
+        const getPttDelay = () => parseInt(localStorage.getItem('gratonite_ptt_release_delay') || '200', 10);
 
         const handlePttDown = (e: KeyboardEvent) => {
             if (e.repeat) return;
@@ -3557,6 +3559,11 @@ export const AppLayout = () => {
             const tag = (e.target as HTMLElement)?.tagName;
             const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable;
             if (isInput) return;
+            // Cancel any pending release — user pressed again before delay expired
+            if (pttReleaseTimerRef.current) {
+                clearTimeout(pttReleaseTimerRef.current);
+                pttReleaseTimerRef.current = null;
+            }
             if (!voiceCtx.connected || !voiceCtx.muted) return;
             e.preventDefault();
             pttActiveRef.current = true;
@@ -3572,17 +3579,23 @@ export const AppLayout = () => {
             const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable;
             if (isInput) return;
             e.preventDefault();
-            pttActiveRef.current = false;
-            window.dispatchEvent(new CustomEvent('ptt-active-change', { detail: { active: false } }));
-            if (voiceCtx.connected && !voiceCtx.muted) {
-                voiceCtx.toggleMute();
-            }
+            const delay = getPttDelay();
+            // Delay the mic cutoff so the tail end of speech isn't clipped
+            pttReleaseTimerRef.current = setTimeout(() => {
+                pttReleaseTimerRef.current = null;
+                pttActiveRef.current = false;
+                window.dispatchEvent(new CustomEvent('ptt-active-change', { detail: { active: false } }));
+                if (voiceCtx.connected && !voiceCtx.muted) {
+                    voiceCtx.toggleMute();
+                }
+            }, delay);
         };
         window.addEventListener('keydown', handlePttDown);
         window.addEventListener('keyup', handlePttUp);
         return () => {
             window.removeEventListener('keydown', handlePttDown);
             window.removeEventListener('keyup', handlePttUp);
+            if (pttReleaseTimerRef.current) clearTimeout(pttReleaseTimerRef.current);
         };
     }, [voiceCtx]);
 
