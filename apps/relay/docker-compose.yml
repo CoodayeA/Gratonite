@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  relay:
+    build: .
+    ports:
+      - '4100:4100'
+      - '4101:4101'
+    environment:
+      RELAY_DOMAIN: ${RELAY_DOMAIN}
+      RELAY_PORT: 4100
+      RELAY_HEALTH_PORT: 4101
+      REDIS_URL: redis://redis:6379
+      RELAY_RATE_LIMIT: ${RELAY_RATE_LIMIT:-100}
+      TURN_SERVER: ${TURN_SERVER:-}
+      TURN_SECRET: ${TURN_SECRET:-}
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - '443:443'
+      - '80:80'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - relay
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  caddy_data:
+  caddy_config:
