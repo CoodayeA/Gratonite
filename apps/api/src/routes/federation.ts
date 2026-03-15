@@ -11,17 +11,22 @@ import { remoteUsers } from '../db/schema/remote-users';
 import { remoteGuilds } from '../db/schema/remote-guilds';
 import { instanceBlocks } from '../db/schema/instance-blocks';
 import { users } from '../db/schema/users';
-import { guilds } from '../db/schema/guilds';
+import { guilds, guildMembers } from '../db/schema/guilds';
+import { messages } from '../db/schema/messages';
+import { channels } from '../db/schema/channels';
 import { eq, and, desc, sql, ilike, or, notInArray } from 'drizzle-orm';
 import { requireAuth } from '../middleware/auth';
 import { requireFederationAuth } from '../middleware/federation-auth';
 import { federationSanitizeMiddleware, sanitizeFederationContent } from '../middleware/federation-sanitize';
 import { isFederationEnabled, getFederationFlags, getInstanceDomain } from '../federation/index';
 import { getPublicKeyPem, getKeyId } from '../federation/crypto';
-import { recordInboundActivity } from '../federation/activities';
-import { parseFederationAddress, createShadowUser } from '../federation/user-resolver';
+import { recordInboundActivity, queueOutboundActivity } from '../federation/activities';
+import { parseFederationAddress, createShadowUser, resolveRemoteUser } from '../federation/user-resolver';
 import { exportAccount, verifyImportSignature, startImport, ExportData } from '../federation/export-import';
+import { emitFederationEvent } from '../federation/realtime';
+import { isRelayEnabled, getRelayConfig, getRelayClient } from '../relay/index';
 import { assertNotPrivateHost } from '../lib/ssrf-guard';
+import { getIO } from '../lib/socket-io';
 import { logger } from '../lib/logger';
 
 export const federationRouter = Router();
@@ -76,6 +81,11 @@ export function wellKnownHandler(_req: Request, res: Response): void {
       protocol: 'gratonite-federation/v1',
       features: getFederationFlags(),
     },
+    relay: isRelayEnabled() ? {
+      enabled: true,
+      connected: getRelayClient()?.isConnected() ?? false,
+      relayDomain: getRelayClient()?.getRelayDomain() ?? null,
+    } : { enabled: false },
   });
 }
 
@@ -230,29 +240,217 @@ federationRouter.post('/inbox',
           res.status(403).json({ code: 'JOINS_DISABLED', message: 'Remote joins are disabled' });
           return;
         }
-        // TODO: Process guild join request — create shadow user + guild member
-        res.json({ type: 'GuildJoinApproved', status: 'pending' });
+
+        const { guildId: joinGuildId, federationAddress: joinFedAddr, username: joinUsername, displayName: joinDisplayName, avatarUrl: joinAvatarUrl, publicKeyPem: joinPubKey } = payload as {
+          guildId?: string; federationAddress?: string; username?: string; displayName?: string; avatarUrl?: string; publicKeyPem?: string;
+        };
+
+        if (!joinGuildId || !joinFedAddr) {
+          res.status(400).json({ code: 'MISSING_FIELDS', message: 'guildId and federationAddress are required' });
+          return;
+        }
+
+        // Verify the guild exists locally
+        const [joinGuild] = await db.select({ id: guilds.id, memberCount: guilds.memberCount }).from(guilds).where(eq(guilds.id, joinGuildId)).limit(1);
+        if (!joinGuild) {
+          res.status(404).json({ code: 'GUILD_NOT_FOUND', message: 'Guild not found on this instance' });
+          return;
+        }
+
+        // Create or get shadow user for the remote member
+        const shadowUserId = await createShadowUser(instanceId, {
+          id: joinFedAddr,
+          username: joinUsername || parseFederationAddress(joinFedAddr)?.username || 'unknown',
+          displayName: joinDisplayName,
+          avatarUrl: joinAvatarUrl,
+          publicKeyPem: joinPubKey,
+        }, joinFedAddr);
+
+        // Check if already a member (idempotent)
+        const [existingMember] = await db.select({ id: guildMembers.id })
+          .from(guildMembers)
+          .where(and(eq(guildMembers.guildId, joinGuildId), eq(guildMembers.userId, shadowUserId)))
+          .limit(1);
+
+        if (!existingMember) {
+          // Insert guild_member row
+          await db.insert(guildMembers).values({
+            guildId: joinGuildId,
+            userId: shadowUserId,
+            remoteUserId: shadowUserId,
+            viaInstanceId: instanceId,
+          });
+
+          // Increment member count
+          await db.update(guilds)
+            .set({ memberCount: sql`${guilds.memberCount} + 1` })
+            .where(eq(guilds.id, joinGuildId));
+
+          // Emit GUILD_MEMBER_ADD to guild room
+          try {
+            const io = getIO();
+            io.to(`guild:${joinGuildId}`).emit('GUILD_MEMBER_ADD', {
+              guildId: joinGuildId,
+              userId: shadowUserId,
+              federationAddress: joinFedAddr,
+              displayName: joinDisplayName || joinUsername,
+              isFederated: true,
+            });
+          } catch { /* socket may not be available */ }
+        }
+
+        // Send GuildJoinApproved back to the requesting instance
+        await queueOutboundActivity(instanceId, 'GuildJoinApproved', {
+          guildId: joinGuildId,
+          federationAddress: joinFedAddr,
+          shadowUserId,
+        });
+
+        res.json({ type: 'GuildJoinApproved', status: 'approved', shadowUserId });
         return;
       }
 
       case 'MessageCreate': {
         // A remote instance is forwarding a message to a local guild
         const sanitized = sanitizeFederationContent(payload);
-        // TODO: Insert message from federated source
-        res.json({ status: 'accepted' });
+        const { channelId: msgChannelId, content: msgContent, federationAddress: msgFedAddr, remoteMessageId: msgRemoteId, attachments: msgAttachments, embeds: msgEmbeds } = sanitized as {
+          channelId?: string; content?: string; federationAddress?: string; remoteMessageId?: string; attachments?: unknown[]; embeds?: unknown[];
+        };
+
+        if (!msgChannelId || !msgFedAddr) {
+          res.status(400).json({ code: 'MISSING_FIELDS', message: 'channelId and federationAddress are required' });
+          return;
+        }
+
+        // Verify channel exists and belongs to a local guild
+        const [msgChannel] = await db.select({ id: channels.id, guildId: channels.guildId })
+          .from(channels).where(eq(channels.id, msgChannelId)).limit(1);
+        if (!msgChannel || !msgChannel.guildId) {
+          res.status(404).json({ code: 'CHANNEL_NOT_FOUND', message: 'Channel not found' });
+          return;
+        }
+
+        // Resolve or create shadow user
+        let msgAuthorId: string | null = null;
+        try {
+          msgAuthorId = await resolveRemoteUser(msgFedAddr);
+        } catch { /* ignore resolution failure */ }
+        if (!msgAuthorId) {
+          // Create minimal shadow user from federation address
+          msgAuthorId = await createShadowUser(instanceId, {
+            id: msgFedAddr,
+            username: parseFederationAddress(msgFedAddr)?.username || 'unknown',
+          }, msgFedAddr);
+        }
+
+        // Insert message with federation metadata
+        const [insertedMsg] = await db.insert(messages).values({
+          channelId: msgChannelId,
+          authorId: msgAuthorId,
+          content: msgContent ?? null,
+          attachments: Array.isArray(msgAttachments) ? msgAttachments : [],
+          embeds: Array.isArray(msgEmbeds) ? msgEmbeds : [],
+          originInstanceId: instanceId,
+          remoteMessageId: msgRemoteId ?? null,
+          remoteAuthorId: msgAuthorId,
+        }).returning({ id: messages.id, createdAt: messages.createdAt });
+
+        // Emit MESSAGE_CREATE to channel room
+        try {
+          const io = getIO();
+          io.to(`channel:${msgChannelId}`).emit('MESSAGE_CREATE', {
+            id: insertedMsg.id,
+            channelId: msgChannelId,
+            authorId: msgAuthorId,
+            content: msgContent,
+            attachments: msgAttachments || [],
+            embeds: msgEmbeds || [],
+            createdAt: insertedMsg.createdAt,
+            isFederated: true,
+            federationAddress: msgFedAddr,
+          });
+        } catch { /* socket may not be available */ }
+
+        res.json({ status: 'accepted', messageId: insertedMsg.id });
         return;
       }
 
       case 'GuildLeave': {
         // A remote user is leaving a local guild
-        // TODO: Remove shadow user from guild members
+        const { guildId: leaveGuildId, federationAddress: leaveFedAddr } = payload as {
+          guildId?: string; federationAddress?: string;
+        };
+
+        if (!leaveGuildId || !leaveFedAddr) {
+          res.status(400).json({ code: 'MISSING_FIELDS', message: 'guildId and federationAddress are required' });
+          return;
+        }
+
+        // Find the shadow user by federation address
+        const [leaveUser] = await db.select({ id: users.id })
+          .from(users)
+          .where(eq(users.federationAddress, leaveFedAddr))
+          .limit(1);
+
+        if (leaveUser) {
+          // Delete guild_member row
+          const deleted = await db.delete(guildMembers)
+            .where(and(eq(guildMembers.guildId, leaveGuildId), eq(guildMembers.userId, leaveUser.id)))
+            .returning({ id: guildMembers.id });
+
+          if (deleted.length > 0) {
+            // Decrement member count
+            await db.update(guilds)
+              .set({ memberCount: sql`GREATEST(${guilds.memberCount} - 1, 0)` })
+              .where(eq(guilds.id, leaveGuildId));
+
+            // Emit GUILD_MEMBER_REMOVE
+            try {
+              const io = getIO();
+              io.to(`guild:${leaveGuildId}`).emit('GUILD_MEMBER_REMOVE', {
+                guildId: leaveGuildId,
+                userId: leaveUser.id,
+                federationAddress: leaveFedAddr,
+              });
+            } catch { /* socket may not be available */ }
+          }
+        }
+
         res.json({ status: 'ok' });
         return;
       }
 
       case 'UserProfileSync': {
         // Remote instance is syncing a user profile update
-        // TODO: Update shadow user profile
+        const { federationAddress: syncFedAddr, displayName: syncDisplayName, avatarUrl: syncAvatarUrl, username: syncUsername } = payload as {
+          federationAddress?: string; displayName?: string; avatarUrl?: string; username?: string;
+        };
+
+        if (!syncFedAddr) {
+          res.status(400).json({ code: 'MISSING_FIELDS', message: 'federationAddress is required' });
+          return;
+        }
+
+        // Update remote_users record
+        const syncUpdates: Record<string, unknown> = { lastSyncedAt: new Date() };
+        if (syncDisplayName !== undefined) syncUpdates.displayName = syncDisplayName;
+        if (syncAvatarUrl !== undefined) syncUpdates.avatarUrl = syncAvatarUrl;
+        if (syncUsername !== undefined) syncUpdates.username = syncUsername;
+
+        await db.update(remoteUsers)
+          .set(syncUpdates)
+          .where(eq(remoteUsers.federationAddress, syncFedAddr));
+
+        // Update shadow user in users table
+        const shadowUpdates: Record<string, unknown> = {};
+        if (syncDisplayName !== undefined) shadowUpdates.displayName = syncDisplayName;
+
+        if (Object.keys(shadowUpdates).length > 0) {
+          await db.update(users)
+            .set(shadowUpdates)
+            .where(eq(users.federationAddress, syncFedAddr));
+        }
+
         res.json({ status: 'ok' });
         return;
       }
@@ -260,6 +458,17 @@ federationRouter.post('/inbox',
       case 'ReplicaAck': {
         // Replica acknowledged sync cursor
         res.json({ status: 'ok' });
+        return;
+      }
+
+      case 'VoiceJoinRequest':
+      case 'VoiceLeave':
+      case 'VoiceStateUpdate': {
+        const { processVoiceActivity } = await import('../federation/voice-bridge');
+        const instanceUrl = (req as Request & { federationInstanceUrl?: string }).federationInstanceUrl || '';
+        const instanceDomain = instanceUrl ? new URL(instanceUrl).hostname : 'unknown';
+        const voiceResult = await processVoiceActivity(instanceId, type, payload, instanceDomain);
+        res.json(voiceResult);
         return;
       }
 
