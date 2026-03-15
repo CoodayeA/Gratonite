@@ -7,6 +7,12 @@ import { sendMail } from '../lib/mailer';
 import { redis } from '../lib/redis';
 import { eq, and, sql } from 'drizzle-orm';
 
+/** Core processor — used by both the legacy setInterval and BullMQ worker. */
+export async function processEmailNotifications(): Promise<void> {
+  return runEmailNotifications();
+}
+
+/** @deprecated Legacy setInterval starter — kept for fallback. Use BullMQ worker instead. */
 export function startEmailNotificationJob(): void {
   setInterval(async () => {
     try {
