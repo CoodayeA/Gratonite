@@ -30,7 +30,7 @@ import path from 'path';
 import { logger } from '../lib/logger';
 import fs from 'fs';
 import crypto from 'crypto';
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { eq, or, like } from 'drizzle-orm';
 
@@ -49,6 +49,20 @@ const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'audio/'];
 const ALLOWED_MIME_TYPES = new Set([
   'application/pdf',
   'text/plain',
+  'application/zip',
+  'application/json',
+]);
+
+/**
+ * Dangerous file extensions that must never be uploaded, regardless of MIME type.
+ * These can be executed by the OS or browser if a user downloads and opens them.
+ */
+const BLOCKED_EXTENSIONS = new Set([
+  '.exe', '.bat', '.cmd', '.com', '.msi', '.scr', '.pif',
+  '.vbs', '.vbe', '.js', '.jse', '.ws', '.wsf', '.wsc', '.wsh',
+  '.ps1', '.ps2', '.psc1', '.psc2', '.msh', '.msh1', '.msh2',
+  '.inf', '.reg', '.rgs', '.sct', '.shb', '.shs',
+  '.lnk', '.dll', '.sys', '.cpl', '.hta', '.html', '.htm',
 ]);
 
 /**
@@ -187,6 +201,18 @@ const upload = multer({
   limits: {
     fileSize: 25 * 1024 * 1024, // 25 MB
   },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (BLOCKED_EXTENSIONS.has(ext)) {
+      cb(new Error(`File type ${ext} is not allowed`));
+      return;
+    }
+    if (!isAllowedMimeType(file.mimetype)) {
+      cb(new Error(`MIME type ${file.mimetype} is not allowed`));
+      return;
+    }
+    cb(null, true);
+  },
 });
 
 // ---------------------------------------------------------------------------
@@ -212,7 +238,24 @@ const upload = multer({
 filesRouter.post(
   '/upload',
   requireAuth,
-  upload.single('file'),
+  (req: Request, res: Response, next: NextFunction) => {
+    upload.single('file')(req, res, (err: any) => {
+      if (err) {
+        if (err instanceof multer.MulterError) {
+          if (err.code === 'LIMIT_FILE_SIZE') {
+            res.status(400).json({ code: 'VALIDATION_ERROR', message: 'File exceeds the 25 MB size limit.' });
+          } else {
+            res.status(400).json({ code: 'VALIDATION_ERROR', message: err.message });
+          }
+          return;
+        }
+        // fileFilter errors come as plain Error
+        res.status(400).json({ code: 'VALIDATION_ERROR', message: err.message });
+        return;
+      }
+      next();
+    });
+  },
   async (req: Request, res: Response): Promise<void> => {
     // multer attaches the file as `req.file` if successful.
     if (!req.file) {
@@ -304,7 +347,7 @@ filesRouter.post(
  * @returns 200 File contents with correct Content-Type header
  * @returns 404 File record not found in database or missing from disk
  */
-filesRouter.get('/:fileId', publicFileRateLimit, (req: Request, res: Response, next: Function) => {
+filesRouter.get('/:fileId', publicFileRateLimit, (req: Request, res: Response, next: NextFunction) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
 }, async (req: Request, res: Response): Promise<void> => {
