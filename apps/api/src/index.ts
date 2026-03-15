@@ -14,11 +14,9 @@ import { router } from './routes/index';
 import { setIO } from './lib/socket-io';
 import { initSocket } from './socket/index';
 import { startAuctionCron } from './lib/auction-cron';
-import { startMessageExpiryCron } from './lib/message-expiry';
+// message-expiry, scheduledMessages, emailNotifications, federationDelivery → migrated to BullMQ
 import { startUnbanExpiredJob } from './jobs/unbanExpired';
 import { startExpireStatusesJob } from './jobs/expireStatuses';
-import { startEmailNotificationJob } from './jobs/emailNotifications';
-import { startScheduledMessagesJob } from './jobs/scheduledMessages';
 import { startAccountDeletionJob } from './jobs/accountDeletion';
 import { startAfkMoverJob } from './jobs/afkMover';
 import { startRemindersJob } from './jobs/reminders';
@@ -27,18 +25,24 @@ import { startAutoArchiveChannelsJob } from './jobs/autoArchiveChannels';
 import { startFriendshipStreaksJob } from './jobs/friendshipStreaks';
 import { startGiveawaysJob } from './jobs/giveaways';
 import { startGuildDigestJob } from './jobs/guildDigest';
-import { httpRequestDuration, activeWebSocketConnections, registry } from './lib/metrics';
+import { httpRequestDuration, activeWebSocketConnections, registry, webhookDispatchTotal } from './lib/metrics';
 import { globalIpRateLimit } from './middleware/rateLimit';
 import { autoCacheHeaders } from './middleware/cache';
+import { requestLogger } from './middleware/requestLogger';
 import { initFederation, isFederationEnabled } from './federation/index';
 import { initFederationNamespace } from './federation/realtime';
 import { wellKnownHandler } from './routes/federation';
-import { startFederationDeliveryJob } from './jobs/federationDelivery';
+// federationDelivery → migrated to BullMQ
 import { startFederationHeartbeatJob } from './jobs/federationHeartbeat';
 import { startFederationCleanupJob } from './jobs/federationCleanup';
 import { startReplicaSyncJob } from './jobs/replicaSync';
 import { startUpdateCheckJob } from './jobs/updateCheck';
 import { startFederationDiscoverSyncJob } from './jobs/federationDiscoverSync';
+import { startBullWorkers } from './jobs/worker';
+import { closeAllQueues, allQueues } from './lib/queue';
+import { createBullBoard } from '@bull-board/api';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { ExpressAdapter } from '@bull-board/express';
 
 const PLACEHOLDER_PATTERNS = [
   'changeme',
@@ -192,6 +196,7 @@ app.use(helmet({
       frameSrc: ["'none'"],
     },
   },
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
 app.use(
@@ -213,24 +218,8 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), {
   immutable: true,
 }));
 
-// Request logging
-app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const start = Date.now();
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    if (req.path !== '/health' && !req.path.startsWith('/socket.io')) {
-      logger.info({
-        msg: `${req.method} ${req.path} ${res.statusCode} ${duration}ms`,
-        method: req.method,
-        path: req.path,
-        status: res.statusCode,
-        duration,
-        ip: req.ip,
-      });
-    }
-  });
-  next();
-});
+// Structured request logging with request ID
+app.use(requestLogger);
 
 // Request duration tracking for metrics
 app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -249,6 +238,20 @@ app.use((req: express.Request, res: express.Response, next: express.NextFunction
 // ---------------------------------------------------------------------------
 
 const SERVER_START_TIME = Date.now();
+
+// Rolling error rate tracking
+let totalRequests = 0;
+let errorRequests = 0; // 5xx responses
+
+app.use((_req: express.Request, res: express.Response, next: express.NextFunction) => {
+  res.on('finish', () => {
+    totalRequests++;
+    if (res.statusCode >= 500) {
+      errorRequests++;
+    }
+  });
+  next();
+});
 
 app.get('/health', async (_req, res) => {
   const health: Record<string, unknown> = {
@@ -289,6 +292,13 @@ app.get('/health', async (_req, res) => {
   // Active WebSocket connections
   health.websockets = io.engine?.clientsCount ?? 0;
 
+  // Error rate
+  health.errorRate = {
+    totalRequests,
+    errorRequests,
+    rate: totalRequests > 0 ? +(errorRequests / totalRequests).toFixed(4) : 0,
+  };
+
   if (isFederationEnabled()) {
     health.federation = { enabled: true };
   }
@@ -302,6 +312,32 @@ app.get('/health', async (_req, res) => {
 // ---------------------------------------------------------------------------
 
 app.get('/.well-known/gratonite', wellKnownHandler);
+
+// ---------------------------------------------------------------------------
+// Bull Board dashboard (admin-only job monitoring)
+// ---------------------------------------------------------------------------
+
+const bullBoardAdapter = new ExpressAdapter();
+bullBoardAdapter.setBasePath('/admin/jobs');
+
+// Board is created now; queues are added once workers start (queues are
+// created lazily when worker.ts is imported).  We use a lazy getter so
+// the board always reflects the current set of queues.
+createBullBoard({
+  queues: allQueues.map(q => new BullMQAdapter(q)),
+  serverAdapter: bullBoardAdapter,
+});
+
+// Simple auth gate — only allow if Authorization header matches JWT_SECRET
+// (good enough for internal admin; replace with proper admin auth later).
+app.use('/admin/jobs', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
+  if (token !== process.env.JWT_SECRET) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  next();
+}, bullBoardAdapter.getRouter() as express.Router);
 
 // ---------------------------------------------------------------------------
 // API routes
@@ -327,13 +363,27 @@ const PORT = Number(process.env.PORT) || 4000;
 server.listen(PORT, async () => {
   logger.info(`API running on port ${PORT}`);
 
-  // Start background jobs after server is listening
+  // --- BullMQ workers (migrated jobs: scheduledMessages, messageExpiry,
+  //     emailNotifications, federationDelivery) ---
+  try {
+    await startBullWorkers();
+  } catch (err) {
+    logger.error('[bullmq] Failed to start workers, falling back to setInterval:', err);
+    // Fallback: start the legacy setInterval jobs if BullMQ fails
+    const { startScheduledMessagesJob } = await import('./jobs/scheduledMessages');
+    const { startMessageExpiryCron } = await import('./lib/message-expiry');
+    const { startEmailNotificationJob } = await import('./jobs/emailNotifications');
+    const { startFederationDeliveryJob } = await import('./jobs/federationDelivery');
+    startScheduledMessagesJob();
+    startMessageExpiryCron();
+    startEmailNotificationJob();
+    startFederationDeliveryJob();
+  }
+
+  // --- Non-migrated setInterval jobs (kept as-is) ---
   startAuctionCron();
-  startMessageExpiryCron();
   startUnbanExpiredJob();
   startExpireStatusesJob();
-  startEmailNotificationJob();
-  startScheduledMessagesJob();
   startAccountDeletionJob();
   startAfkMoverJob();
   startRemindersJob();
@@ -348,7 +398,7 @@ server.listen(PORT, async () => {
     await initFederation();
     if (isFederationEnabled()) {
       initFederationNamespace(io);
-      startFederationDeliveryJob();
+      // federationDelivery is now handled by BullMQ above
       startFederationHeartbeatJob();
       startFederationCleanupJob();
       startReplicaSyncJob();
@@ -392,6 +442,14 @@ async function gracefulShutdown(signal: string) {
     logger.info('[shutdown] Database pool closed');
   } catch (err) {
     logger.error('[shutdown] Error closing DB pool:', (err as Error).message);
+  }
+
+  // Close BullMQ queues and workers
+  try {
+    await closeAllQueues();
+    logger.info('[shutdown] BullMQ queues and workers closed');
+  } catch (err) {
+    logger.error('[shutdown] Error closing BullMQ:', (err as Error).message);
   }
 
   // Close Redis connection

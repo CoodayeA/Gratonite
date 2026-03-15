@@ -13,6 +13,7 @@
  */
 
 import { logger } from './logger';
+import { webhookDispatchTotal } from './metrics';
 import { eq, and, sql } from 'drizzle-orm';
 import { signPayload, deliverWebhookWithRetry } from './webhook-signing';
 
@@ -287,6 +288,7 @@ async function _sendToBot(
     });
 
     if (!result.ok) {
+      webhookDispatchTotal.inc({ status: 'failure' });
       logger.warn('[webhook-dispatch] delivery failed for bot', bot.id, 'status:', result.status);
       return null;
     }
@@ -296,12 +298,15 @@ async function _sendToBot(
       try { responseBody = JSON.parse(result.body) as BotActionResponse; } catch { /* ignore */ }
     }
 
+    webhookDispatchTotal.inc({ status: 'success' });
+
     if (Array.isArray(responseBody.actions) && responseBody.actions.length > 0) {
       await processActions(responseBody.actions, guildId, bot.botUserId);
     }
 
     return responseBody;
   } catch (err) {
+    webhookDispatchTotal.inc({ status: 'failure' });
     logger.error('[webhook-dispatch] unexpected error for bot', bot.id, err);
     return null;
   }

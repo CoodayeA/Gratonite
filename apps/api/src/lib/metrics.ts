@@ -16,3 +16,7 @@ export const activeWebSocketConnections = {
   inc: (_value?: number) => {},
   dec: (_value?: number) => {},
 };
+
+export const webhookDispatchTotal = {
+  inc: (_labels?: Record<string, string>) => {},
+};
