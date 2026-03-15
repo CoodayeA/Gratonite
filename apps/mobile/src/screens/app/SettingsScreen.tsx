@@ -38,6 +38,8 @@ const PREFERENCES_ROWS: SettingsRow[] = [
   { icon: 'musical-notes-outline', label: 'Sound', screen: 'SettingsSound' },
   { icon: 'shield-outline', label: 'Privacy', screen: 'SettingsPrivacy' },
   { icon: 'volume-mute-outline', label: 'Muted Users', screen: 'SettingsMutedUsers' },
+  { icon: 'server-outline', label: 'Server', screen: 'SettingsServer' },
+  { icon: 'globe-outline', label: 'Federation', screen: 'Federation' },
 ];
 
 const SOCIAL_ROWS: SettingsRow[] = [
