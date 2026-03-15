@@ -26,7 +26,11 @@ jobs:
         run: pnpm --filter gratonite-api run build
 
       - name: Build Web
-        run: pnpm --filter webapp run build
+        run: |
+          cd apps/web
+          sed -i 's/"@gratonite\/types": "workspace:\*"/"@gratonite\/types": "file:..\/..\/packages\/types"/' package.json
+          npm install
+          npm run build
 
       - name: Build Landing Page
         run: |
