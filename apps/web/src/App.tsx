@@ -44,6 +44,8 @@ const AdminBotModeration = lazy(() => import('./pages/admin/AdminBotModeration')
 const AdminFeedback = lazy(() => import('./pages/admin/AdminFeedback'));
 const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
 const AdminPortals = lazy(() => import('./pages/admin/AdminPortals'));
+const FederationAdmin = lazy(() => import('./pages/admin/FederationAdmin'));
+const SetupPage = lazy(() => import('./pages/Setup'));
 const HelpCenter = lazy(() => import('./pages/app/HelpCenter'));
 const MeProfile = lazy(() => import('./pages/app/MeProfile'));
 const ReadLater = lazy(() => import('./pages/app/ReadLater'));
@@ -3541,12 +3543,17 @@ export const AppLayout = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [activeModal, location.pathname, guildSession, navigate, voiceCtx]);
 
-    // Push to Talk: Hold Space to unmute while in voice, release to re-mute
+    // Push to Talk: Hold configured key to unmute while in voice, release to re-mute
     const pttActiveRef = useRef(false);
     useEffect(() => {
+        const getVoiceMode = () => localStorage.getItem('gratonite_voice_mode') || 'voice_activity';
+        const getPttKeyCode = () => localStorage.getItem('gratonite_ptt_key') || 'Space';
+
         const handlePttDown = (e: KeyboardEvent) => {
             if (e.repeat) return;
-            if (e.key !== ' ') return;
+            if (getVoiceMode() !== 'push_to_talk') return;
+            const pttKeyCode = getPttKeyCode();
+            if (e.code !== pttKeyCode) return;
             const tag = (e.target as HTMLElement)?.tagName;
             const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable;
             if (isInput) return;
@@ -3554,15 +3561,19 @@ export const AppLayout = () => {
             e.preventDefault();
             pttActiveRef.current = true;
             voiceCtx.toggleMute();
+            window.dispatchEvent(new CustomEvent('ptt-active-change', { detail: { active: true } }));
         };
         const handlePttUp = (e: KeyboardEvent) => {
-            if (e.key !== ' ') return;
+            if (getVoiceMode() !== 'push_to_talk') return;
+            const pttKeyCode = getPttKeyCode();
+            if (e.code !== pttKeyCode) return;
             if (!pttActiveRef.current) return;
             const tag = (e.target as HTMLElement)?.tagName;
             const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable;
             if (isInput) return;
             e.preventDefault();
             pttActiveRef.current = false;
+            window.dispatchEvent(new CustomEvent('ptt-active-change', { detail: { active: false } }));
             if (voiceCtx.connected && !voiceCtx.muted) {
                 voiceCtx.toggleMute();
             }
@@ -3575,13 +3586,32 @@ export const AppLayout = () => {
         };
     }, [voiceCtx]);
 
-    // Desktop push-to-talk: global toggle via Electron (CmdOrCtrl+Shift+T)
+    // Desktop push-to-talk: global toggle via Electron
     useEffect(() => {
         const desktop = window.gratoniteDesktop;
         if (!desktop?.isDesktop || !desktop.onPttToggle || !desktop.registerPushToTalk) return;
 
-        // Register the global PTT toggle key
-        desktop.registerPushToTalk('CmdOrCtrl+Shift+T');
+        // Map localStorage key code to Electron accelerator format
+        const mapCodeToAccelerator = (code: string): string => {
+            if (code === 'Space') return 'Space';
+            if (code === 'Tab') return 'Tab';
+            if (code === 'CapsLock') return 'CapsLock';
+            if (code.startsWith('Key')) return code.slice(3); // KeyA → A
+            if (code.startsWith('Digit')) return code.slice(5); // Digit1 → 1
+            if (code.startsWith('F') && /^F\d+$/.test(code)) return code; // F1-F12
+            return code;
+        };
+
+        const voiceMode = localStorage.getItem('gratonite_voice_mode') || 'voice_activity';
+        const pttKeyCode = localStorage.getItem('gratonite_ptt_key') || 'Space';
+
+        // Always register the global hotkey (CmdOrCtrl+Shift+T as fallback toggle)
+        // Plus register the user's chosen key as a global accelerator if PTT mode
+        const accelerator = voiceMode === 'push_to_talk'
+            ? `CmdOrCtrl+Shift+${mapCodeToAccelerator(pttKeyCode)}`
+            : 'CmdOrCtrl+Shift+T';
+
+        desktop.registerPushToTalk(accelerator);
 
         // Listen for PTT toggle events from main process
         const cleanup = desktop.onPttToggle(() => {
@@ -4020,6 +4050,9 @@ const appRouter = createBrowserRouter(
             {/* Task #89: Desktop Mini Mode */}
             <Route path="mini-mode" element={<Suspense fallback={<LazyFallback />}><MiniMode /></Suspense>} />
 
+            {/* Self-host setup wizard */}
+            <Route path="setup" element={<Suspense fallback={<LazyFallback />}><SetupPage /></Suspense>} />
+
             {/* Private App Routes */}
             <Route path="/" element={<RequireAuth><AppLayout /></RequireAuth>}>
                 <Route index element={<Suspense fallback={<LazyFallback />}><HomePage /></Suspense>} />
@@ -4050,6 +4083,7 @@ const appRouter = createBrowserRouter(
                 <Route path="admin/feedback" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminFeedback /></Suspense></RequireAdmin>} />
                 <Route path="admin/reports" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminReports /></Suspense></RequireAdmin>} />
                 <Route path="admin/portals" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminPortals /></Suspense></RequireAdmin>} />
+                <Route path="admin/federation" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><FederationAdmin /></Suspense></RequireAdmin>} />
                 <Route path="dm/:id" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><DirectMessage /></Suspense></ErrorBoundary>} />
                 {/* Parameterized guild routes */}
                 <Route path="guild/:guildId" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><GuildOverview /></Suspense></ErrorBoundary>} />
