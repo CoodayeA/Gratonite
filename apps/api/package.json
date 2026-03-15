@@ -40,6 +40,7 @@
     "open-graph-scraper": "^6.11.0",
     "pg": "^8.19.0",
     "socket.io": "^4.8.3",
+    "ws": "^8.16.0",
     "zod": "^4.3.6"
   },
   "pnpm": {
@@ -58,6 +59,7 @@
     "@types/node": "^25.3.3",
     "@types/nodemailer": "^7.0.11",
     "@types/pg": "^8.18.0",
+    "@types/ws": "^8.5.10",
     "drizzle-kit": "^0.31.9",
     "eslint": "^9.39.1",
     "globals": "^16.4.0",
