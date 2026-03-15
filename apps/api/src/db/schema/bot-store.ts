@@ -13,6 +13,7 @@ import {
   jsonb,
   numeric,
   unique,
+  index,
 } from 'drizzle-orm/pg-core';
 import { users } from './users';
 import { guilds } from './guilds';
@@ -82,6 +83,7 @@ export const botInstalls = pgTable(
   },
   (table) => [
     unique('bot_installs_guild_bot_key').on(table.guildId, table.botId),
+    index('bot_installs_guild_id_idx').on(table.guildId),
   ],
 );
 

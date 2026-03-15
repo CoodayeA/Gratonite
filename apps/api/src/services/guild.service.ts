@@ -322,7 +322,7 @@ export class GuildService {
       /* socket may not be initialised in tests */
     }
 
-    await db.transaction(async (tx) => {
+    await db.transaction(async (tx: any) => {
       await tx.delete(guilds).where(eq(guilds.id, guildId));
     });
   }
@@ -646,7 +646,7 @@ export class GuildService {
     }
 
     // Fetch presence from Redis
-    const userIds = rows.map((row) => row.userId);
+    const userIds = rows.map((row: any) => row.userId);
     const statusByUser = new Map<string, PresenceStatus>();
     const activityByUser = new Map<string, { name: string; type: string } | null>();
 
@@ -658,7 +658,7 @@ export class GuildService {
           pipeline.get(`presence:${uid}:activity`);
         }
         const pipelineResult = await pipeline.exec();
-        userIds.forEach((uid, index) => {
+        userIds.forEach((uid: string, index: number) => {
           const redisStatus = pipelineResult?.[index * 2]?.[1] as string | null;
           statusByUser.set(uid, redisStatus ? normalizePresenceStatus(redisStatus) : 'offline');
 

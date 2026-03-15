@@ -108,20 +108,24 @@ export const usersApi = {
       body: JSON.stringify(data),
     }),
 
-  getSummaries: (ids: string[]) =>
-    apiFetch<Array<{ id: string; username: string; displayName: string; avatarHash: string | null }>>(
+  getSummaries: (ids: string[]) => {
+    if (!ids.length) return Promise.resolve([]);
+    return apiFetch<Array<{ id: string; username: string; displayName: string; avatarHash: string | null }>>(
       `/users?ids=${encodeURIComponent(ids.join(','))}`,
-    ),
+    );
+  },
 
   searchUsers: (query: string) =>
     apiFetch<Array<{ id: string; username: string; displayName: string; avatarHash: string | null }>>(
       `/users/search?q=${encodeURIComponent(query)}`,
     ),
 
-  getPresences: (ids: string[]) =>
-    apiFetch<Array<{ userId: string; status: PresenceStatus; updatedAt: string; lastSeen: number | null }>>(
+  getPresences: (ids: string[]) => {
+    if (!ids.length) return Promise.resolve([]);
+    return apiFetch<Array<{ userId: string; status: PresenceStatus; updatedAt: string; lastSeen: number | null }>>(
       `/users/presences?ids=${encodeURIComponent(ids.join(','))}`,
-    ),
+    );
+  },
 
   getProfile: (userId: string) =>
     apiFetch<{

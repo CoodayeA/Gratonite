@@ -19,10 +19,11 @@ jobs:
         with:
           version: 10
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Build API
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm --dir apps/api run build
+        run: pnpm --filter gratonite-api run build
 
       - name: Build Web
         run: |

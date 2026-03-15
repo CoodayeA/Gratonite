@@ -101,7 +101,7 @@ export function initSocket(io: SocketIOServer): void {
    *
    * Rejects the connection with an error if the token is missing or invalid.
    */
-  io.use((socket: Socket, next) => {
+  io.use((socket: Socket, next: any) => {
     try {
       // Accept token from: Authorization header, query param, or auth object.
       const authHeader = socket.handshake.headers.authorization as string | undefined;
@@ -160,7 +160,7 @@ export function initSocket(io: SocketIOServer): void {
         .from(guildMembers)
         .where(eq(guildMembers.userId, userId));
 
-      userGuildIds = memberships.map(m => m.guildId);
+      userGuildIds = memberships.map((m: any) => m.guildId);
       for (const guildId of userGuildIds) {
         await socket.join(`guild:${guildId}`);
       }
