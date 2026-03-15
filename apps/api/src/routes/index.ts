@@ -116,8 +116,7 @@ import { guildBackupRouter } from './guild-backup';
 import { modQueueRouter } from './mod-queue';
 import { guildHighlightsRouter } from './guild-highlights';
 import { vanityProfileRouter } from './vanity-profile';
-// OpenAPI disabled: zod-to-openapi requires .openapi() extension incompatible with Zod v4
-// import { openapiRouter } from './openapi';
+import { openapiRouter } from './openapi';
 
 export const router = Router();
 
@@ -152,8 +151,7 @@ router.get('/capabilities', (_req, res) => {
   });
 });
 
-// OpenAPI spec disabled: zod-to-openapi incompatible with Zod v4
-// router.use('/docs', openapiRouter);
+router.use('/docs', openapiRouter);
 
 // Public stats (no auth, before rate limiter)
 router.use('/stats', statsRouter);
