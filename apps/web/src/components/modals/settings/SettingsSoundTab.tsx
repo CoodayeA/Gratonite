@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef } from 'react';
-import { Check, Volume2, VolumeX } from 'lucide-react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { Check, Volume2, VolumeX, Keyboard } from 'lucide-react';
 import { isSoundMuted, setSoundMuted, getSoundVolume, setSoundVolume, getSoundPack, setSoundPack, playSound } from '../../../utils/SoundManager';
 import { api } from '../../../lib/api';
 import type { SettingsTabProps } from './types';
@@ -28,6 +28,50 @@ const SettingsSoundTab = ({ addToast }: Props) => {
   const [emailMentions, setEmailMentions] = useState(false);
   const [emailDms, setEmailDms] = useState(false);
   const [emailFrequency, setEmailFrequency] = useState<'instant' | 'daily' | 'never'>('never');
+
+  // Voice Input Mode state
+  const [voiceMode, setVoiceMode] = useState<'voice_activity' | 'push_to_talk'>(
+    () => (localStorage.getItem('gratonite_voice_mode') as 'voice_activity' | 'push_to_talk') || 'voice_activity'
+  );
+  const [pttKey, setPttKey] = useState<string>(
+    () => localStorage.getItem('gratonite_ptt_key') || 'Space'
+  );
+  const [listeningForKey, setListeningForKey] = useState(false);
+  const keyListenerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
+
+  // Keybind picker logic
+  useEffect(() => {
+    if (!listeningForKey) return;
+    const handler = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.key === 'Escape') {
+        setListeningForKey(false);
+        return;
+      }
+      if (e.key === 'Enter') return; // disallow Enter
+      const code = e.code; // e.g. 'Space', 'KeyV', 'F5', 'Tab', 'CapsLock'
+      setPttKey(code);
+      localStorage.setItem('gratonite_ptt_key', code);
+      setListeningForKey(false);
+    };
+    window.addEventListener('keydown', handler, true);
+    keyListenerRef.current = handler;
+    return () => {
+      window.removeEventListener('keydown', handler, true);
+      keyListenerRef.current = null;
+    };
+  }, [listeningForKey]);
+
+  const isDesktop = !!(window as any).gratoniteDesktop?.isDesktop;
+
+  // Format key code for display
+  const formatKeyDisplay = (code: string): string => {
+    if (code === 'Space') return 'Space';
+    if (code.startsWith('Key')) return code.slice(3);
+    if (code.startsWith('Digit')) return code.slice(5);
+    return code;
+  };
 
   // Debounced settings save
   const settingsSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -185,6 +229,87 @@ const SettingsSoundTab = ({ addToast }: Props) => {
           </div>
         </div>
       </div>
+
+      {/* Voice Input Mode */}
+      <div style={{ height: '1px', background: 'var(--stroke)', margin: '24px 0' }} />
+      <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Voice Input Mode</h3>
+      <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--stroke)', overflow: 'hidden', marginBottom: '32px' }}>
+        {/* Mode toggle */}
+        <div style={{ display: 'flex', gap: '8px', padding: '16px 20px' }}>
+          {(['voice_activity', 'push_to_talk'] as const).map(mode => {
+            const selected = voiceMode === mode;
+            const label = mode === 'voice_activity' ? 'Voice Activity' : 'Push to Talk';
+            const desc = mode === 'voice_activity' ? 'Microphone is always on when connected' : 'Hold a key to transmit';
+            return (
+              <div
+                key={mode}
+                onClick={() => {
+                  setVoiceMode(mode);
+                  localStorage.setItem('gratonite_voice_mode', mode);
+                  window.dispatchEvent(new CustomEvent('voice-mode-change', { detail: mode }));
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px 14px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  border: `2px solid ${selected ? 'var(--accent-primary)' : 'var(--stroke)'}`,
+                  background: selected ? 'rgba(82, 109, 245, 0.1)' : 'var(--bg-elevated)',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <div style={{ fontWeight: 600, fontSize: '13px', color: selected ? 'var(--accent-primary)' : 'var(--text-primary)', marginBottom: '2px' }}>{label}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{desc}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* PTT key picker (only when push_to_talk) */}
+        {voiceMode === 'push_to_talk' && (
+          <div style={{ padding: '0 20px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '2px' }}>Push to Talk Key</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Click to change, then press the key you want to use.</div>
+              </div>
+              <button
+                onClick={() => setListeningForKey(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: listeningForKey ? '2px solid var(--accent-primary)' : '1px solid var(--stroke)',
+                  background: listeningForKey ? 'rgba(82, 109, 245, 0.15)' : 'var(--bg-elevated)',
+                  color: listeningForKey ? 'var(--accent-primary)' : 'var(--text-primary)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  fontFamily: 'monospace',
+                  transition: 'all 0.2s',
+                  animation: listeningForKey ? 'pttKeybindPulse 1.5s ease-in-out infinite' : 'none',
+                }}
+              >
+                <Keyboard size={14} />
+                {listeningForKey ? 'Press a key...' : formatKeyDisplay(pttKey)}
+              </button>
+            </div>
+            {isDesktop && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-elevated)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--stroke)' }}>
+                On desktop, the global hotkey <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>Cmd/Ctrl+Shift+T</span> also works as a PTT toggle even when Gratonite is not focused.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      <style>{`
+        @keyframes pttKeybindPulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(82, 109, 245, 0.4); }
+          50% { box-shadow: 0 0 0 6px rgba(82, 109, 245, 0); }
+        }
+      `}</style>
 
       {/* Email Notifications */}
       <div style={{ height: '1px', background: 'var(--stroke)', margin: '24px 0' }} />

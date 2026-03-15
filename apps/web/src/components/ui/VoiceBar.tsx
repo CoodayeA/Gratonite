@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mic, MicOff, Headphones, HeadphoneOff, PhoneOff, Settings, Users } from 'lucide-react';
 import { useVoice } from '../../contexts/VoiceContext';
@@ -9,6 +9,40 @@ export default function VoiceBar() {
   const navigate = useNavigate();
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
   const [connectionQuality] = useState<'good' | 'fair' | 'poor'>('good');
+
+  // PTT state
+  const [pttMode, setPttMode] = useState(() => localStorage.getItem('gratonite_voice_mode') === 'push_to_talk');
+  const [pttActive, setPttActive] = useState(false);
+  const [pttKey] = useState(() => {
+    const code = localStorage.getItem('gratonite_ptt_key') || 'Space';
+    // Format for display
+    if (code === 'Space') return 'Space';
+    if (code.startsWith('Key')) return code.slice(3);
+    if (code.startsWith('Digit')) return code.slice(5);
+    return code;
+  });
+
+  useEffect(() => {
+    const handlePttChange = (e: Event) => {
+      setPttActive((e as CustomEvent).detail?.active ?? false);
+    };
+    const handleModeChange = (e: Event) => {
+      const mode = (e as CustomEvent).detail;
+      setPttMode(mode === 'push_to_talk');
+    };
+    // Also listen for storage changes to voice mode
+    const handleStorage = () => {
+      setPttMode(localStorage.getItem('gratonite_voice_mode') === 'push_to_talk');
+    };
+    window.addEventListener('ptt-active-change', handlePttChange);
+    window.addEventListener('voice-mode-change', handleModeChange);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('ptt-active-change', handlePttChange);
+      window.removeEventListener('voice-mode-change', handleModeChange);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
 
   if (!connected) return null;
 
@@ -135,22 +169,47 @@ export default function VoiceBar() {
       {/* Right: controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
         {/* Mute toggle */}
-        <button
-          onClick={toggleMute}
-          onMouseEnter={() => setHoveredBtn('mute')}
-          onMouseLeave={() => setHoveredBtn(null)}
-          title={muted ? 'Unmute' : 'Mute'}
-          style={{
-            ...btnBase,
-            background: muted
-              ? 'rgba(237, 66, 69, 0.15)'
-              : hoveredBtn === 'mute' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-            color: muted ? '#ed4245' : 'var(--text-secondary)',
-            transform: hoveredBtn === 'mute' ? 'scale(1.08)' : 'scale(1)',
-          }}
-        >
-          {muted ? <MicOff size={19} /> : <Mic size={19} />}
-        </button>
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={toggleMute}
+            onMouseEnter={() => setHoveredBtn('mute')}
+            onMouseLeave={() => setHoveredBtn(null)}
+            title={muted ? 'Unmute' : 'Mute'}
+            style={{
+              ...btnBase,
+              background: pttActive
+                ? 'rgba(67, 181, 129, 0.2)'
+                : muted
+                  ? 'rgba(237, 66, 69, 0.15)'
+                  : hoveredBtn === 'mute' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+              color: pttActive ? '#43b581' : muted ? '#ed4245' : 'var(--text-secondary)',
+              transform: hoveredBtn === 'mute' ? 'scale(1.08)' : 'scale(1)',
+              boxShadow: pttActive ? '0 0 0 2px #43b581, 0 0 12px rgba(67, 181, 129, 0.5)' : 'none',
+              animation: pttActive ? 'pttGlow 1.5s ease-in-out infinite' : 'none',
+            }}
+          >
+            {muted ? <MicOff size={19} /> : <Mic size={19} />}
+          </button>
+          {/* PTT badge */}
+          {pttMode && pttActive && (
+            <span style={{
+              position: 'absolute',
+              top: '-4px',
+              right: '-4px',
+              background: '#43b581',
+              color: '#fff',
+              fontSize: '8px',
+              fontWeight: 700,
+              padding: '1px 4px',
+              borderRadius: '4px',
+              lineHeight: '1.3',
+              letterSpacing: '0.5px',
+              boxShadow: '0 0 6px rgba(67, 181, 129, 0.6)',
+            }}>
+              PTT
+            </span>
+          )}
+        </div>
 
         {/* Deafen toggle */}
         <button
@@ -209,11 +268,36 @@ export default function VoiceBar() {
         </button>
       </div>
 
+      {/* PTT hint */}
+      {pttMode && (
+        <div style={{
+          position: 'absolute',
+          bottom: '56px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(0, 0, 0, 0.85)',
+          color: 'var(--text-muted)',
+          fontSize: '11px',
+          padding: '4px 10px',
+          borderRadius: '6px',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+        }}>
+          Hold <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-secondary)' }}>[{pttKey}]</span> to talk
+        </div>
+      )}
+
       {/* Animations */}
       <style>{`
         @keyframes voiceBarPulse {
           0%, 100% { transform: scale(1); opacity: 0.6; }
           50% { transform: scale(1.5); opacity: 0; }
+        }
+        @keyframes pttGlow {
+          0%, 100% { box-shadow: 0 0 0 2px #43b581, 0 0 12px rgba(67, 181, 129, 0.5); }
+          50% { box-shadow: 0 0 0 3px #43b581, 0 0 20px rgba(67, 181, 129, 0.7); }
         }
       `}</style>
     </div>
