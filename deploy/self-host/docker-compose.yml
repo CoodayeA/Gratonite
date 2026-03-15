@@ -90,6 +90,16 @@ services:
       - web
     restart: unless-stopped
 
+  # Optional: Cloudflare Tunnel for zero-port-forwarding hosting
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - caddy
+    profiles:
+      - tunnel
+    restart: unless-stopped
+
   # Optional: LiveKit for voice/video
   livekit:
     image: livekit/livekit-server:latest
