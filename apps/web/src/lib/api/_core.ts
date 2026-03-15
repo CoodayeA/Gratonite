@@ -58,19 +58,19 @@ export interface CursorPaginationParams {
 
 /** Guild — extends the shared type with an index signature for extra runtime fields. */
 export interface Guild extends SharedGuild {
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 /** Channel — extends the shared type with an index signature for extra runtime fields. */
 export interface Channel extends SharedChannel {
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 /** Message — extends the shared type with extra fields used by the frontend. */
 export interface Message extends SharedMessage {
   /** Numeric message type (system, default, reply, etc.) */
   type?: number;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 /** GuildMember — extends the shared type with flattened user fields used by the member list. */
@@ -81,19 +81,19 @@ export interface GuildMember extends SharedGuildMember {
   roleIds?: string[];
   groupIds?: string[];
   status?: PresenceStatus;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 /** Thread — extends the shared type with an index signature for extra runtime fields. */
 export interface Thread extends SharedThread {
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface GuildEmoji {
   id: string;
   guildId: string;
   name: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export type AvatarDecoration = unknown;
