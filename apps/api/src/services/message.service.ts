@@ -219,7 +219,7 @@ export class MessageService {
       .limit(limit);
 
     // Fetch reactions for all returned messages in one query
-    const messageIds = rows.map((r) => r.id);
+    const messageIds = rows.map((r: any) => r.id);
     let reactionRows: { messageId: string; userId: string; emoji: string }[] = [];
     if (messageIds.length > 0) {
       reactionRows = await db
@@ -246,7 +246,7 @@ export class MessageService {
         .select({ messageId: channelPins.messageId })
         .from(channelPins)
         .where(inArray(channelPins.messageId, messageIds));
-      pinnedSet = new Set(pinRows.map((p) => p.messageId));
+      pinnedSet = new Set(pinRows.map((p: any) => p.messageId));
     }
 
     // Fetch thread reply counts
@@ -266,7 +266,7 @@ export class MessageService {
       }
     }
 
-    return rows.map((row) => {
+    return rows.map((row: any) => {
       const emojiMap = reactionsByMessage.get(row.id);
       const reactions = emojiMap
         ? Array.from(emojiMap.values()).map((e) => ({
@@ -479,7 +479,7 @@ export class MessageService {
         }
       }
 
-      attachmentSnapshot = fileRows.map((f) => ({
+      attachmentSnapshot = fileRows.map((f: any) => ({
         id: f.id,
         url: f.url,
         filename: f.filename,
@@ -663,7 +663,7 @@ export class MessageService {
         const memberRows = await db.select({ userId: guildMembers.userId })
           .from(guildMembers)
           .where(and(eq(guildMembers.guildId, chan.guildId), inArray(guildMembers.userId, [...rawMentionedIds])));
-        mentionedIds = new Set(memberRows.map(m => m.userId));
+        mentionedIds = new Set(memberRows.map((m: any) => m.userId));
       }
 
       for (const mentionedUserId of mentionedIds) {
@@ -792,7 +792,7 @@ export class MessageService {
     // Clear draft (fire-and-forget)
     db.delete(messageDrafts)
       .where(and(eq(messageDrafts.userId, authorId), eq(messageDrafts.channelId, channelId)))
-      .catch(err => logger.error('[messages] draft cleanup failed:', err));
+      .catch((err: any) => logger.error('[messages] draft cleanup failed:', err));
 
     // Daily challenge progress (fire-and-forget)
     incrementChallengeProgress(authorId, 'send_messages');

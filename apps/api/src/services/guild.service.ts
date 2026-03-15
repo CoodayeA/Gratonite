@@ -672,11 +672,11 @@ export class GuildService {
           }
         });
       } catch {
-        userIds.forEach((uid) => statusByUser.set(uid, 'offline'));
+        userIds.forEach((uid: string) => statusByUser.set(uid, 'offline'));
       }
     }
 
-    const membersWithRoles = rows.map((row) => ({
+    const membersWithRoles = rows.map((row: any) => ({
       ...row,
       status: statusByUser.get(row.userId) ?? 'offline',
       activity: activityByUser.get(row.userId) ?? null,
@@ -688,15 +688,15 @@ export class GuildService {
     let filtered = membersWithRoles;
     if (statusFilter === 'online') {
       filtered = filtered.filter(
-        (member) => member.status !== 'offline' && member.status !== 'invisible',
+        (member: any) => member.status !== 'offline' && member.status !== 'invisible',
       );
     } else if (statusFilter === 'offline') {
       filtered = filtered.filter(
-        (member) => member.status === 'offline' || member.status === 'invisible',
+        (member: any) => member.status === 'offline' || member.status === 'invisible',
       );
     }
     if (groupIdFilter) {
-      filtered = filtered.filter((member) => member.groupIds.includes(groupIdFilter));
+      filtered = filtered.filter((member: any) => member.groupIds.includes(groupIdFilter));
     }
 
     return filtered.slice(offset, offset + limit);
