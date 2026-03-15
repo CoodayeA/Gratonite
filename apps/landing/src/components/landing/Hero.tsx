@@ -63,6 +63,12 @@ export function Hero() {
               <Button variant="outline" size="lg" href="/app">
                 Open in Browser
               </Button>
+              <a
+                href="/docs/self-hosting"
+                className="inline-flex items-center gap-2 text-sm font-bold text-foreground/50 hover:text-purple transition-colors underline underline-offset-4 decoration-foreground/20 hover:decoration-purple self-center"
+              >
+                Self-Host It
+              </a>
             </div>
 
             {/* Stats strip */}
