@@ -10,6 +10,7 @@ import { eq, desc } from 'drizzle-orm';
 import { requireAuth } from '../middleware/auth';
 import { requireFederationAuth } from '../middleware/federation-auth';
 import { users } from '../db/schema/users';
+import { redis } from '../lib/redis';
 import { logger } from '../lib/logger';
 
 export const relayRouter = Router();
@@ -112,6 +113,14 @@ relayRouter.post('/:relayId/report', requireAuth, async (req: Request, res: Resp
     return;
   }
 
+  // Rate limit: one report per relay per user per 24h
+  const dedupKey = `relay:report:${req.userId}:${relayId}`;
+  const alreadyReported = await redis.get(dedupKey);
+  if (alreadyReported) {
+    res.status(429).json({ code: 'ALREADY_REPORTED', message: 'You have already reported this relay recently' });
+    return;
+  }
+
   const [relay] = await db.select({ domain: relayNodes.domain, reputationScore: relayNodes.reputationScore })
     .from(relayNodes).where(eq(relayNodes.id, relayId)).limit(1);
 
@@ -120,7 +129,9 @@ relayRouter.post('/:relayId/report', requireAuth, async (req: Request, res: Resp
     return;
   }
 
-  // Decrease reputation on report (weighted by reporter trust — simplified for now)
+  // Mark as reported (24h cooldown)
+  await redis.set(dedupKey, '1', 'EX', 86400);
+
   const newScore = Math.max(0, relay.reputationScore - 2);
   await db.update(relayNodes)
     .set({ reputationScore: newScore, updatedAt: new Date() })

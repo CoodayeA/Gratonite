@@ -386,6 +386,17 @@ federationRouter.post('/inbox',
           return;
         }
 
+        // Verify the requesting instance has authority over this federation address
+        const leaveInstanceUrl = (req as Request & { federationInstanceUrl?: string }).federationInstanceUrl || '';
+        const leaveParsed = parseFederationAddress(leaveFedAddr);
+        if (leaveParsed && leaveInstanceUrl) {
+          const requestingDomain = new URL(leaveInstanceUrl).hostname;
+          if (leaveParsed.domain !== requestingDomain) {
+            res.status(403).json({ code: 'AUTHORITY_MISMATCH', message: 'Instance cannot act on behalf of users from another domain' });
+            return;
+          }
+        }
+
         // Find the shadow user by federation address
         const [leaveUser] = await db.select({ id: users.id })
           .from(users)
@@ -429,6 +440,17 @@ federationRouter.post('/inbox',
         if (!syncFedAddr) {
           res.status(400).json({ code: 'MISSING_FIELDS', message: 'federationAddress is required' });
           return;
+        }
+
+        // Verify the requesting instance has authority over this federation address
+        const syncInstanceUrl = (req as Request & { federationInstanceUrl?: string }).federationInstanceUrl || '';
+        const syncParsed = parseFederationAddress(syncFedAddr);
+        if (syncParsed && syncInstanceUrl) {
+          const syncRequestingDomain = new URL(syncInstanceUrl).hostname;
+          if (syncParsed.domain !== syncRequestingDomain) {
+            res.status(403).json({ code: 'AUTHORITY_MISMATCH', message: 'Instance cannot sync profiles for users from another domain' });
+            return;
+          }
         }
 
         // Update remote_users record

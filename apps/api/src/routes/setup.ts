@@ -13,6 +13,7 @@ import { db } from '../db/index';
 import { users } from '../db/schema/users';
 import { federationKeyPairs } from '../db/schema/federation-key-pairs';
 import { eq, sql } from 'drizzle-orm';
+import { assertNotPrivateHost } from '../lib/ssrf-guard';
 import { logger } from '../lib/logger';
 
 export const setupRouter = Router();
@@ -149,6 +150,8 @@ setupRouter.post('/test-domain', async (req: Request, res: Response) => {
   }
 
   try {
+    await assertNotPrivateHost(domain);
+
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 5000);
 
