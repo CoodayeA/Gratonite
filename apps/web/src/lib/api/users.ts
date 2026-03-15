@@ -40,7 +40,7 @@ export const usersApi = {
   },
 
   updateProfile: (data: { displayName?: string; bio?: string; pronouns?: string; accentColor?: string; primaryColor?: string; onboardingCompleted?: boolean; interests?: string[] | null; nameplateStyle?: string; customStatus?: string }) =>
-    apiFetch<any>('/users/@me', {
+    apiFetch<{ success: boolean }>('/users/@me', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
@@ -87,7 +87,7 @@ export const usersApi = {
     apiFetch<void>('/users/@me/banner', { method: 'DELETE' }),
 
   updateSettings: (data: Record<string, unknown>) =>
-    apiFetch<any>('/users/@me/settings', {
+    apiFetch<Record<string, unknown>>('/users/@me/settings', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
@@ -103,7 +103,7 @@ export const usersApi = {
     }>('/users/@me/dnd-schedule'),
 
   updateDndSchedule: (data: Record<string, unknown>) =>
-    apiFetch<any>('/users/@me/dnd-schedule', {
+    apiFetch<{ enabled: boolean; startTime: string; endTime: string; timezone: string; daysOfWeek: number; allowExceptions: string[] }>('/users/@me/dnd-schedule', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
@@ -156,7 +156,7 @@ export const usersApi = {
     apiFetch<Array<{ id: string; provider: string; providerUsername: string; profileUrl: string | null }>>('/users/@me/connections'),
 
   addConnection: (data: { provider: string; providerUsername: string; profileUrl?: string }) =>
-    apiFetch<any>('/users/@me/connections', { method: 'POST', body: JSON.stringify(data) }),
+    apiFetch<{ id: string; provider: string; providerUsername: string; profileUrl: string | null }>('/users/@me/connections', { method: 'POST', body: JSON.stringify(data) }),
 
   removeConnection: (provider: string) =>
     apiFetch<void>(`/users/@me/connections/${provider}`, { method: 'DELETE' }),
@@ -201,19 +201,19 @@ export const usersApi = {
     }),
 
   getSettings: () =>
-    apiFetch<any>('/users/@me/settings'),
+    apiFetch<Record<string, unknown>>('/users/@me/settings'),
 
   getGuildFolders: () =>
-    apiFetch<any[]>('/users/@me/guild-folders'),
+    apiFetch<Array<{ id: string; name: string; color: string; guildIds: string[]; position: number }>>('/users/@me/guild-folders'),
 
   createGuildFolder: (data: { name: string; color: string; guildIds: string[] }) =>
-    apiFetch<any>('/users/@me/guild-folders', {
+    apiFetch<{ id: string; name: string; color: string; guildIds: string[]; position: number }>('/users/@me/guild-folders', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
   updateGuildFolder: (folderId: string, data: { name?: string; color?: string; guildIds?: string[] }) =>
-    apiFetch<any>(`/users/@me/guild-folders/${folderId}`, {
+    apiFetch<{ id: string; name: string; color: string; guildIds: string[]; position: number }>(`/users/@me/guild-folders/${folderId}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
@@ -222,10 +222,10 @@ export const usersApi = {
     apiFetch<void>(`/users/@me/guild-folders/${folderId}`, { method: 'DELETE' }),
 
   getFavorites: () =>
-    apiFetch<any[]>('/users/@me/favorites'),
+    apiFetch<Array<{ channelId: string; position: number }>>('/users/@me/favorites'),
 
   addFavorite: (channelId: string) =>
-    apiFetch<any>(`/users/@me/favorites/${channelId}`, {
+    apiFetch<{ channelId: string; position: number }>(`/users/@me/favorites/${channelId}`, {
       method: 'PUT',
     }),
 
@@ -233,24 +233,24 @@ export const usersApi = {
     apiFetch<void>(`/users/@me/favorites/${channelId}`, { method: 'DELETE' }),
 
   getSessions: () =>
-    apiFetch<any[]>('/users/@me/sessions'),
+    apiFetch<Array<{ id: string; deviceName: string | null; ipAddress: string | null; userAgent: string | null; lastActiveAt: string; createdAt: string; current?: boolean }>>('/users/@me/sessions'),
   revokeSession: (sessionId: string) =>
     apiFetch<void>(`/users/@me/sessions/${sessionId}`, { method: 'DELETE' }),
   revokeAllOtherSessions: () =>
     apiFetch<void>('/users/@me/sessions', { method: 'DELETE' }),
 
   getDataExports: () =>
-    apiFetch<any[]>('/users/@me/data-exports'),
+    apiFetch<Array<{ id: string; status: string; createdAt: string; downloadUrl: string | null; expiresAt: string | null }>>('/users/@me/data-exports'),
   requestDataExport: () =>
-    apiFetch<any>('/users/@me/data-exports', { method: 'POST', body: '{}' }),
+    apiFetch<{ id: string; status: string; createdAt: string }>('/users/@me/data-exports', { method: 'POST', body: '{}' }),
 };
 
 export const profilesApi = {
   getMemberProfile: (guildId: string, userId: string) =>
-    apiFetch<any>(`/guilds/${guildId}/members/${userId}/profile`),
+    apiFetch<{ userId: string; guildId: string; nickname: string | null; bio: string | null; avatarHash: string | null; bannerHash: string | null; joinedAt: string }>(`/guilds/${guildId}/members/${userId}/profile`),
 
   updateMemberProfile: (guildId: string, data: { nickname?: string | null; bio?: string | null }) =>
-    apiFetch<any>(`/guilds/${guildId}/members/@me/profile`, {
+    apiFetch<{ nickname: string | null; bio: string | null }>(`/guilds/${guildId}/members/@me/profile`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
@@ -258,26 +258,26 @@ export const profilesApi = {
   uploadMemberAvatar: (guildId: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return apiFetch<any>(`/guilds/${guildId}/members/@me/profile/avatar`, {
+    return apiFetch<{ avatarHash: string }>(`/guilds/${guildId}/members/@me/profile/avatar`, {
       method: 'POST',
       body: formData,
     });
   },
 
   deleteMemberAvatar: (guildId: string) =>
-    apiFetch<any>(`/guilds/${guildId}/members/@me/profile/avatar`, { method: 'DELETE' }),
+    apiFetch<void>(`/guilds/${guildId}/members/@me/profile/avatar`, { method: 'DELETE' }),
 
   uploadMemberBanner: (guildId: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return apiFetch<any>(`/guilds/${guildId}/members/@me/profile/banner`, {
+    return apiFetch<{ bannerHash: string }>(`/guilds/${guildId}/members/@me/profile/banner`, {
       method: 'POST',
       body: formData,
     });
   },
 
   deleteMemberBanner: (guildId: string) =>
-    apiFetch<any>(`/guilds/${guildId}/members/@me/profile/banner`, { method: 'DELETE' }),
+    apiFetch<void>(`/guilds/${guildId}/members/@me/profile/banner`, { method: 'DELETE' }),
 
   getAvatarDecorations: () =>
     apiFetch<AvatarDecoration[]>('/avatar-decorations'),
@@ -289,7 +289,7 @@ export const profilesApi = {
     apiFetch<Nameplate[]>('/nameplates'),
 
   updateCustomization: (data: { avatarDecorationId?: string | null; profileEffectId?: string | null; nameplateId?: string | null }) =>
-    apiFetch<any>('/users/@me/customization', {
+    apiFetch<{ avatarDecorationId: string | null; profileEffectId: string | null; nameplateId: string | null }>('/users/@me/customization', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),

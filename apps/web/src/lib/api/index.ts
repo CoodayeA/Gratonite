@@ -152,9 +152,17 @@ export type {
   CurrencyLedgerEntry,
   BetaBugReport,
   BetaBugReportInboxItem,
+  Role,
+  Invite,
+  Notification,
+  UserSummary,
+  UserStatus,
+  ReactionGroup,
 } from './_core';
 
 export type { AvatarDecoration, ProfileEffect, Nameplate, PresenceStatus } from './_core';
+
+export type { ThemeItem } from './themes';
 
 // --- Assembled api object (matches original shape) ---
 export const api = {

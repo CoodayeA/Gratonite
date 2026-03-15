@@ -12,9 +12,9 @@ export const voiceApi = {
   leave: () =>
     apiFetch<void>('/voice/leave', { method: 'POST' }),
   getChannelStates: (channelId: string) =>
-    apiFetch<any[]>(`/channels/${channelId}/voice-states`),
+    apiFetch<Array<{ userId: string; channelId: string; muted: boolean; deafened: boolean; selfMute: boolean; selfDeaf: boolean }>>(`/channels/${channelId}/voice-states`),
   getGuildVoiceStates: (guildId: string) =>
-    apiFetch<any[]>(`/guilds/${guildId}/voice-states`),
+    apiFetch<Array<{ userId: string; channelId: string; muted: boolean; deafened: boolean; selfMute: boolean; selfDeaf: boolean }>>(`/guilds/${guildId}/voice-states`),
   getSoundboard: (guildId: string) =>
     apiFetch<Array<{
       id: string;
@@ -35,7 +35,7 @@ export const voiceApi = {
     guildId: string,
     data: { name: string; soundHash: string; volume?: number; emojiName?: string },
   ) =>
-    apiFetch<any>(`/guilds/${guildId}/soundboard`, {
+    apiFetch<{ id: string; guildId: string; name: string; soundHash: string; volume: number; emojiName: string | null; uploaderId: string; available: boolean }>(`/guilds/${guildId}/soundboard`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -44,14 +44,14 @@ export const voiceApi = {
     soundId: string,
     data: { name?: string; volume?: number; available?: boolean; emojiName?: string | null },
   ) =>
-    apiFetch<any>(`/guilds/${guildId}/soundboard/${soundId}`, {
+    apiFetch<{ id: string; guildId: string; name: string; soundHash: string; volume: number; emojiName: string | null; available: boolean }>(`/guilds/${guildId}/soundboard/${soundId}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
   deleteSoundboard: (guildId: string, soundId: string) =>
     apiFetch<void>(`/guilds/${guildId}/soundboard/${soundId}`, { method: 'DELETE' }),
   getStageInstances: (guildId: string) =>
-    apiFetch<any[]>(`/guilds/${guildId}/stage-instances`),
+    apiFetch<Array<{ id: string; guildId: string; channelId: string; topic: string; createdAt: string }>>(`/guilds/${guildId}/stage-instances`),
   requestToSpeak: (channelId: string) =>
     apiFetch<void>(`/channels/${channelId}/voice/request-speak`, { method: 'PUT' }),
   addSpeaker: (channelId: string, userId: string) =>
@@ -59,7 +59,7 @@ export const voiceApi = {
   removeSpeaker: (channelId: string, userId: string) =>
     apiFetch<void>(`/channels/${channelId}/voice/speakers/${userId}`, { method: 'DELETE' }),
   createStageInstance: (channelId: string, data: { topic: string }) =>
-    apiFetch<any>('/stage-instances', {
+    apiFetch<{ id: string; guildId: string; channelId: string; topic: string; createdAt: string }>('/stage-instances', {
       method: 'POST',
       body: JSON.stringify({ channelId, ...data }),
     }),

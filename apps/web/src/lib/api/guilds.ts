@@ -2,7 +2,7 @@
  * Guilds domain: guild CRUD, settings, members, roles, bans, emojis, etc.
  */
 import { apiFetch } from './_core';
-import type { Guild, GuildMember, GuildEmoji } from './_core';
+import type { Guild, GuildMember, GuildEmoji, Role } from './_core';
 
 function assertGuildId(guildId: string): asserts guildId is string {
   if (!guildId || guildId === 'null' || guildId === 'undefined') {
@@ -97,10 +97,10 @@ export const guildsApi = {
     ),
 
   createMemberGroup: (guildId: string, data: { name: string; color?: string; position?: number }) =>
-    apiFetch<any>(`/guilds/${guildId}/member-groups`, { method: 'POST', body: JSON.stringify(data) }),
+    apiFetch<{ id: string; guildId: string; name: string; color: string; position: number; memberIds: string[] }>(`/guilds/${guildId}/member-groups`, { method: 'POST', body: JSON.stringify(data) }),
 
   updateMemberGroup: (guildId: string, groupId: string, data: { name?: string; color?: string; position?: number }) =>
-    apiFetch<any>(`/guilds/${guildId}/member-groups/${groupId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    apiFetch<{ id: string; guildId: string; name: string; color: string; position: number; memberIds: string[] }>(`/guilds/${guildId}/member-groups/${groupId}`, { method: 'PATCH', body: JSON.stringify(data) }),
 
   deleteMemberGroup: (guildId: string, groupId: string) =>
     apiFetch<void>(`/guilds/${guildId}/member-groups/${groupId}`, { method: 'DELETE' }),
@@ -153,16 +153,16 @@ export const guildsApi = {
   deleteBanner: (guildId: string) =>
     apiFetch<void>(`/guilds/${guildId}/banner`, { method: 'DELETE' }),
 
-  getRoles: (guildId: string) => { assertGuildId(guildId); return apiFetch<any[]>(`/guilds/${guildId}/roles`); },
+  getRoles: (guildId: string) => { assertGuildId(guildId); return apiFetch<Role[]>(`/guilds/${guildId}/roles`); },
 
   createRole: (guildId: string, data: { name: string; color?: string; mentionable?: boolean; permissions?: string }) =>
-    apiFetch<any>(`/guilds/${guildId}/roles`, {
+    apiFetch<Role>(`/guilds/${guildId}/roles`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
   updateRole: (guildId: string, roleId: string, data: { name?: string; color?: string; mentionable?: boolean; permissions?: string; unicodeEmoji?: string | null }) =>
-    apiFetch<any>(`/guilds/${guildId}/roles/${roleId}`, {
+    apiFetch<Role>(`/guilds/${guildId}/roles/${roleId}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
@@ -170,7 +170,7 @@ export const guildsApi = {
   deleteRole: (guildId: string, roleId: string) =>
     apiFetch<void>(`/guilds/${guildId}/roles/${roleId}`, { method: 'DELETE' }),
 
-  getMemberRoles: (guildId: string, userId: string) => { assertGuildId(guildId); return apiFetch<any[]>(`/guilds/${guildId}/members/${userId}/roles`); },
+  getMemberRoles: (guildId: string, userId: string) => { assertGuildId(guildId); return apiFetch<Role[]>(`/guilds/${guildId}/members/${userId}/roles`); },
 
   assignMemberRole: (guildId: string, userId: string, roleId: string) =>
     apiFetch<void>(`/guilds/${guildId}/members/${userId}/roles/${roleId}`, { method: 'PUT' }),
@@ -179,7 +179,7 @@ export const guildsApi = {
     apiFetch<void>(`/guilds/${guildId}/members/${userId}/roles/${roleId}`, { method: 'DELETE' }),
 
   getBans: (guildId: string) =>
-    apiFetch<any[]>(`/guilds/${guildId}/bans`),
+    apiFetch<Array<{ userId: string; guildId: string; reason: string | null; bannedAt: string; expiresAt: string | null; bannedBy: string; user?: { id: string; username: string; displayName: string; avatarHash: string | null } }>>(`/guilds/${guildId}/bans`),
 
   ban: (guildId: string, userId: string, reason?: string, duration?: number) =>
     apiFetch<void>(`/guilds/${guildId}/bans/${userId}`, {
@@ -200,13 +200,13 @@ export const guildsApi = {
     }),
 
   warnMember: (guildId: string, userId: string, reason: string) =>
-    apiFetch<any>(`/guilds/${guildId}/members/${userId}/warnings`, {
+    apiFetch<{ id: string; userId: string; guildId: string; reason: string; moderatorId: string; createdAt: string }>(`/guilds/${guildId}/members/${userId}/warnings`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
     }),
 
   getMemberWarnings: (guildId: string, userId: string) =>
-    apiFetch<any[]>(`/guilds/${guildId}/members/${userId}/warnings`),
+    apiFetch<Array<{ id: string; userId: string; guildId: string; reason: string; moderatorId: string; createdAt: string }>>(`/guilds/${guildId}/members/${userId}/warnings`),
 
   getVanityUrl: (guildId: string) =>
     apiFetch<{ code: string | null }>(`/guilds/${guildId}/vanity-url`),
@@ -218,30 +218,30 @@ export const guildsApi = {
     }),
 
   getTemplates: (guildId: string) =>
-    apiFetch<any[]>(`/guilds/${guildId}/templates`),
+    apiFetch<Array<{ id: string; guildId: string; name: string; description: string | null; code: string; createdAt: string }>>(`/guilds/${guildId}/templates`),
 
   createTemplate: (guildId: string, data: { name: string; description?: string }) =>
-    apiFetch<any>(`/guilds/${guildId}/templates`, {
+    apiFetch<{ id: string; guildId: string; name: string; description: string | null; code: string; createdAt: string }>(`/guilds/${guildId}/templates`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
   syncTemplate: (guildId: string, templateId: string) =>
-    apiFetch<any>(`/guilds/${guildId}/templates/${templateId}`, { method: 'PATCH' }),
+    apiFetch<{ id: string; guildId: string; name: string; description: string | null; code: string; createdAt: string }>(`/guilds/${guildId}/templates/${templateId}`, { method: 'PATCH' }),
 
   deleteTemplate: (guildId: string, templateId: string) =>
     apiFetch<void>(`/guilds/${guildId}/templates/${templateId}`, { method: 'DELETE' }),
 
   createFromTemplate: (code: string) =>
-    apiFetch<any>(`/guilds/templates/${code}`, { method: 'POST' }),
+    apiFetch<Guild>(`/guilds/templates/${code}`, { method: 'POST' }),
 
   boost: (guildId: string) =>
-    apiFetch<any>(`/guilds/${guildId}/boost`, { method: 'POST' }),
+    apiFetch<{ boostCount: number; boostTier: number }>(`/guilds/${guildId}/boost`, { method: 'POST' }),
 
   removeBoost: (guildId: string) =>
     apiFetch<void>(`/guilds/${guildId}/boost`, { method: 'DELETE' }),
 
-  getCommands: (guildId: string) => { assertGuildId(guildId); return apiFetch<any[]>(`/guilds/${guildId}/commands`); },
+  getCommands: (guildId: string) => { assertGuildId(guildId); return apiFetch<Array<{ id: string; name: string; description: string; options?: Array<Record<string, unknown>> }>>(`/guilds/${guildId}/commands`); },
 
   getAuditLog: (guildId: string, params?: { limit?: number; offset?: number; action?: string; userId?: string }) => {
     const q = new URLSearchParams();

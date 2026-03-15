@@ -84,7 +84,7 @@ export const authApi = {
     }),
 
   getKnownDevices: () =>
-    apiFetch<any[]>('/auth/devices'),
+    apiFetch<Array<{ id: string; ip: string; device: string; firstSeenAt: string; lastSeenAt: string }>>('/auth/devices'),
   removeKnownDevice: (deviceId: string) =>
     apiFetch<void>(`/auth/devices/${deviceId}`, { method: 'DELETE' }),
   clearAllKnownDevices: () =>
