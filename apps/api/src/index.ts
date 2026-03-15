@@ -13,18 +13,7 @@ import { sql } from 'drizzle-orm';
 import { router } from './routes/index';
 import { setIO } from './lib/socket-io';
 import { initSocket } from './socket/index';
-import { startAuctionCron } from './lib/auction-cron';
-// message-expiry, scheduledMessages, emailNotifications, federationDelivery → migrated to BullMQ
-import { startUnbanExpiredJob } from './jobs/unbanExpired';
-import { startExpireStatusesJob } from './jobs/expireStatuses';
-import { startAccountDeletionJob } from './jobs/accountDeletion';
-import { startAfkMoverJob } from './jobs/afkMover';
-import { startRemindersJob } from './jobs/reminders';
-import { startAutoRolesJob } from './jobs/autoRoles';
-import { startAutoArchiveChannelsJob } from './jobs/autoArchiveChannels';
-import { startFriendshipStreaksJob } from './jobs/friendshipStreaks';
-import { startGiveawaysJob } from './jobs/giveaways';
-import { startGuildDigestJob } from './jobs/guildDigest';
+// All cron jobs migrated to BullMQ — legacy setInterval starters kept as fallback
 import { httpRequestDuration, activeWebSocketConnections, registry, webhookDispatchTotal } from './lib/metrics';
 import { globalIpRateLimit } from './middleware/rateLimit';
 import { autoCacheHeaders } from './middleware/cache';
@@ -32,12 +21,6 @@ import { requestLogger } from './middleware/requestLogger';
 import { initFederation, isFederationEnabled } from './federation/index';
 import { initFederationNamespace } from './federation/realtime';
 import { wellKnownHandler } from './routes/federation';
-// federationDelivery → migrated to BullMQ
-import { startFederationHeartbeatJob } from './jobs/federationHeartbeat';
-import { startFederationCleanupJob } from './jobs/federationCleanup';
-import { startReplicaSyncJob } from './jobs/replicaSync';
-import { startUpdateCheckJob } from './jobs/updateCheck';
-import { startFederationDiscoverSyncJob } from './jobs/federationDiscoverSync';
 import { startBullWorkers } from './jobs/worker';
 import { closeAllQueues, allQueues } from './lib/queue';
 import { createBullBoard } from '@bull-board/api';
@@ -363,8 +346,7 @@ const PORT = Number(process.env.PORT) || 4000;
 server.listen(PORT, async () => {
   logger.info(`API running on port ${PORT}`);
 
-  // --- BullMQ workers (migrated jobs: scheduledMessages, messageExpiry,
-  //     emailNotifications, federationDelivery) ---
+  // --- BullMQ workers (all cron jobs) ---
   try {
     await startBullWorkers();
   } catch (err) {
@@ -374,42 +356,53 @@ server.listen(PORT, async () => {
     const { startMessageExpiryCron } = await import('./lib/message-expiry');
     const { startEmailNotificationJob } = await import('./jobs/emailNotifications');
     const { startFederationDeliveryJob } = await import('./jobs/federationDelivery');
+    const { startAccountDeletionJob } = await import('./jobs/accountDeletion');
+    const { startAfkMoverJob } = await import('./jobs/afkMover');
+    const { startAutoArchiveChannelsJob } = await import('./jobs/autoArchiveChannels');
+    const { startAutoRolesJob } = await import('./jobs/autoRoles');
+    const { startExpireStatusesJob } = await import('./jobs/expireStatuses');
+    const { startFederationCleanupJob } = await import('./jobs/federationCleanup');
+    const { startFederationDiscoverSyncJob } = await import('./jobs/federationDiscoverSync');
+    const { startFederationHeartbeatJob } = await import('./jobs/federationHeartbeat');
+    const { startFriendshipStreaksJob } = await import('./jobs/friendshipStreaks');
+    const { startGiveawaysJob } = await import('./jobs/giveaways');
+    const { startGuildDigestJob } = await import('./jobs/guildDigest');
+    const { startRemindersJob } = await import('./jobs/reminders');
+    const { startReplicaSyncJob } = await import('./jobs/replicaSync');
+    const { startUnbanExpiredJob } = await import('./jobs/unbanExpired');
+    const { startUpdateCheckJob } = await import('./jobs/updateCheck');
+    const { startAuctionCron } = await import('./lib/auction-cron');
     startScheduledMessagesJob();
     startMessageExpiryCron();
     startEmailNotificationJob();
     startFederationDeliveryJob();
+    startAccountDeletionJob();
+    startAfkMoverJob();
+    startAutoArchiveChannelsJob();
+    startAutoRolesJob();
+    startExpireStatusesJob();
+    startFederationCleanupJob();
+    startFederationDiscoverSyncJob();
+    startFederationHeartbeatJob();
+    startFriendshipStreaksJob();
+    startGiveawaysJob();
+    startGuildDigestJob();
+    startRemindersJob();
+    startReplicaSyncJob();
+    startUnbanExpiredJob();
+    startUpdateCheckJob();
+    startAuctionCron();
   }
-
-  // --- Non-migrated setInterval jobs (kept as-is) ---
-  startAuctionCron();
-  startUnbanExpiredJob();
-  startExpireStatusesJob();
-  startAccountDeletionJob();
-  startAfkMoverJob();
-  startRemindersJob();
-  startAutoRolesJob();
-  startFriendshipStreaksJob();
-  startGiveawaysJob();
-  startGuildDigestJob();
-  startAutoArchiveChannelsJob();
 
   // Initialize federation subsystem (gated behind FEDERATION_ENABLED)
   try {
     await initFederation();
     if (isFederationEnabled()) {
       initFederationNamespace(io);
-      // federationDelivery is now handled by BullMQ above
-      startFederationHeartbeatJob();
-      startFederationCleanupJob();
-      startReplicaSyncJob();
-      startFederationDiscoverSyncJob();
     }
   } catch (err) {
     logger.error('[federation] Failed to initialize:', (err as Error).message);
   }
-
-  // Update check runs regardless of federation status
-  startUpdateCheckJob();
 });
 
 // ---------------------------------------------------------------------------

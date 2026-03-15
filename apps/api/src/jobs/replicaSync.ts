@@ -12,28 +12,33 @@ import { isFederationEnabled, getFederationFlags } from '../federation/index';
 
 const SYNC_INTERVAL = 30_000; // 30 seconds
 
+/** BullMQ processor — syncs guild replicas with primary instances. */
+export async function processReplicaSync(): Promise<void> {
+  if (!isFederationEnabled()) return;
+  const flags = getFederationFlags();
+  if (!flags.allowReplication) return;
+
+  const replicas = await db
+    .select({ id: guildReplicas.id })
+    .from(guildReplicas)
+    .where(and(
+      eq(guildReplicas.role, 'secondary'),
+      eq(guildReplicas.enabled, true),
+    ))
+    .limit(10);
+
+  if (replicas.length === 0) return;
+
+  await Promise.allSettled(
+    replicas.map(r => syncReplica(r.id)),
+  );
+}
+
+/** @deprecated Use BullMQ scheduler in worker.ts instead. */
 export function startReplicaSyncJob(): void {
   setInterval(async () => {
-    if (!isFederationEnabled()) return;
-    const flags = getFederationFlags();
-    if (!flags.allowReplication) return;
-
     try {
-      // Find enabled secondary replicas that need syncing
-      const replicas = await db
-        .select({ id: guildReplicas.id })
-        .from(guildReplicas)
-        .where(and(
-          eq(guildReplicas.role, 'secondary'),
-          eq(guildReplicas.enabled, true),
-        ))
-        .limit(10);
-
-      if (replicas.length === 0) return;
-
-      await Promise.allSettled(
-        replicas.map(r => syncReplica(r.id)),
-      );
+      await processReplicaSync();
     } catch (err) {
       logger.error('[replicaSync] Error:', err);
     }

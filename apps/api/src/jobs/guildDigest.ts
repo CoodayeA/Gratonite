@@ -82,6 +82,63 @@ async function generateDigestContent(guildId: string) {
   };
 }
 
+/** BullMQ processor — generates weekly guild digests. */
+export async function processGuildDigest(): Promise<void> {
+  const today = new Date().getDay(); // 0=Sunday, 1=Monday, etc.
+
+  const configs = await db.select()
+    .from(guildDigestConfig)
+    .where(and(
+      eq(guildDigestConfig.enabled, true),
+      eq(guildDigestConfig.dayOfWeek, today),
+    ));
+
+  for (const config of configs) {
+    // Skip if already sent within the last 20 hours
+    if (config.lastSentAt) {
+      const hoursSince = (Date.now() - new Date(config.lastSentAt).getTime()) / (1000 * 60 * 60);
+      if (hoursSince < 20) continue;
+    }
+
+    const content = await generateDigestContent(config.guildId);
+
+    // Save digest
+    await db.insert(guildDigests).values({
+      guildId: config.guildId,
+      weekStart: new Date(content.weekStart),
+      content,
+    });
+
+    // Post to target channel
+    if (config.targetChannelId) {
+      const summary = [
+        `**Weekly Server Digest**`,
+        `Messages this week: **${content.messageCount}**`,
+        `New members: **${content.newMembers.length}**`,
+        content.activeChannels.length > 0
+          ? `Most active channel: **#${content.activeChannels[0].channelName}** (${content.activeChannels[0].messageCount} messages)`
+          : null,
+        content.activeMembers.length > 0
+          ? `Most active member: **${content.activeMembers[0].displayName || content.activeMembers[0].username}** (${content.activeMembers[0].messageCount} messages)`
+          : null,
+      ].filter(Boolean).join('\n');
+
+      await db.insert(messages).values({
+        channelId: config.targetChannelId,
+        content: summary,
+      });
+    }
+
+    // Update last sent
+    await db.update(guildDigestConfig)
+      .set({ lastSentAt: new Date() })
+      .where(eq(guildDigestConfig.guildId, config.guildId));
+
+    console.log(`[guildDigest] Generated digest for guild ${config.guildId}`);
+  }
+}
+
+/** @deprecated Use BullMQ scheduler in worker.ts instead. */
 export function startGuildDigestJob() {
   // Check once per hour
   setInterval(async () => {

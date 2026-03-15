@@ -5,7 +5,13 @@ import { channels } from '../db/schema/channels';
 import { messages } from '../db/schema/messages';
 import { getIO } from '../lib/socket-io';
 
+/** BullMQ processor — executes the auto-archive logic. */
+export async function processAutoArchiveChannels(): Promise<void> {
+  await runAutoArchive();
+}
+
 /**
+ * @deprecated Use BullMQ scheduler in worker.ts instead.
  * Background job: every hour, find channels with auto_archive_days set
  * that have had no messages for N days, and archive them.
  */

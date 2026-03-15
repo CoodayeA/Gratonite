@@ -12,25 +12,30 @@ import { isFederationEnabled } from '../federation/index';
 const CLEANUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
 const RETENTION_DAYS = 30;
 
+/** BullMQ processor — prunes old federation activities. */
+export async function processFederationCleanup(): Promise<void> {
+  if (!isFederationEnabled()) return;
+
+  const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
+
+  await db
+    .delete(federationActivities)
+    .where(and(
+      or(
+        eq(federationActivities.status, 'delivered'),
+        eq(federationActivities.status, 'dead'),
+      ),
+      lt(federationActivities.createdAt, cutoff),
+    ));
+
+  console.info(`[federationCleanup] Pruned activities older than ${RETENTION_DAYS} days`);
+}
+
+/** @deprecated Use BullMQ scheduler in worker.ts instead. */
 export function startFederationCleanupJob(): void {
   setInterval(async () => {
-    if (!isFederationEnabled()) return;
-
     try {
-      const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
-
-      const result = await db
-        .delete(federationActivities)
-        .where(and(
-          or(
-            eq(federationActivities.status, 'delivered'),
-            eq(federationActivities.status, 'dead'),
-          ),
-          lt(federationActivities.createdAt, cutoff),
-        ));
-
-      // Note: Drizzle delete doesn't easily return count, but that's fine
-      console.info(`[federationCleanup] Pruned activities older than ${RETENTION_DAYS} days`);
+      await processFederationCleanup();
     } catch (err) {
       logger.error('[federationCleanup] Error:', err);
     }

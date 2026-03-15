@@ -10,6 +10,12 @@ const VOICE_STATE_PREFIX = 'voice:channel:';
 const VOICE_USER_PREFIX = 'voice:user:';
 const VOICE_ACTIVITY_PREFIX = 'voice:activity:';
 
+/** BullMQ processor — executes the AFK mover logic. */
+export async function processAfkMover(): Promise<void> {
+  await runAfkMover();
+}
+
+/** @deprecated Use BullMQ scheduler in worker.ts instead. */
 export function startAfkMoverJob() {
   setInterval(async () => {
     try {
