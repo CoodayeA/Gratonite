@@ -47,6 +47,18 @@ declare global {
       onFullscreenChanged?: (cb: (isFullscreen: boolean) => void) => (() => void);
       getVersion?: () => Promise<string>;
       getPlatform?: () => Promise<string>;
+      // Push-to-Talk global toggle
+      registerPushToTalk?: (key: string) => void;
+      unregisterPushToTalk?: () => void;
+      onPttToggle?: (cb: () => void) => (() => void);
+      // Desktop screen capture
+      getScreenSources?: () => Promise<Array<{
+        id: string;
+        name: string;
+        thumbnailDataUrl: string;
+        displayId: string;
+        appIconDataUrl: string | null;
+      }>>;
     };
   }
 }

@@ -4,6 +4,10 @@ export interface VoiceParticipant {
   id: string;
   username: string;
   isSpeaking: boolean;
+  /** Whether this participant is from a federated instance */
+  isFederated?: boolean;
+  /** The home instance domain (e.g. "chat.example.com") */
+  instanceDomain?: string;
 }
 
 interface VoiceState {

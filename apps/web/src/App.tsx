@@ -3575,6 +3575,26 @@ export const AppLayout = () => {
         };
     }, [voiceCtx]);
 
+    // Desktop push-to-talk: global toggle via Electron (CmdOrCtrl+Shift+T)
+    useEffect(() => {
+        const desktop = window.gratoniteDesktop;
+        if (!desktop?.isDesktop || !desktop.onPttToggle || !desktop.registerPushToTalk) return;
+
+        // Register the global PTT toggle key
+        desktop.registerPushToTalk('CmdOrCtrl+Shift+T');
+
+        // Listen for PTT toggle events from main process
+        const cleanup = desktop.onPttToggle(() => {
+            if (!voiceCtx.connected) return;
+            voiceCtx.toggleMute();
+        });
+
+        return () => {
+            cleanup();
+            desktop.unregisterPushToTalk?.();
+        };
+    }, [voiceCtx]);
+
     // Close drawers on route change
     useEffect(() => {
         setIsGuildRailOpen(false);

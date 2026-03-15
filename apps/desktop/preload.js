@@ -118,6 +118,18 @@ contextBridge.exposeInMainWorld('gratoniteDesktop', {
     return () => ipcRenderer.removeListener('navigate', handler);
   },
 
+  // Push-to-Talk global toggle
+  registerPushToTalk: (key) => ipcRenderer.send('ptt-register', key),
+  unregisterPushToTalk: () => ipcRenderer.send('ptt-unregister'),
+  onPttToggle: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('ptt-toggle', handler);
+    return () => ipcRenderer.removeListener('ptt-toggle', handler);
+  },
+
+  // Desktop screen capture (Electron desktopCapturer)
+  getScreenSources: () => ipcRenderer.invoke('get-screen-sources'),
+
   // Task #92: Notification Actions
   showMessageNotification: (data) => ipcRenderer.send('show-message-notification', data),
   onNotificationClicked: (callback) => {

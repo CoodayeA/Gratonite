@@ -871,6 +871,13 @@ export function connectSocket(): GratoniteSocket {
   /* ── Track liveness on every incoming event ──── */
   socket.onAny(() => { touchLiveness(); });
 
+  // Engine-level pong also proves the connection is alive
+  // (onAny only catches application events, not ping/pong)
+  socket.io.engine?.on('pong', () => { touchLiveness(); });
+  socket.io.on('open', () => {
+    socket!.io.engine?.on('pong', () => { touchLiveness(); });
+  });
+
   /* ── Dispatch gateway events to registered listeners ──── */
 
   socket.on('PRESENCE_UPDATE', (data: PresenceUpdatePayload) => {
