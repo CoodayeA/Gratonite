@@ -27,7 +27,7 @@ import { logger } from '../lib/logger';
 import fs from 'fs';
 import { randomUUID } from 'crypto';
 
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import multer from 'multer';
 import { z } from 'zod';
@@ -46,7 +46,18 @@ export const cosmeticsRouter = Router();
 // Multer — memory storage; validation happens in route handler
 // ---------------------------------------------------------------------------
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB max (images); sound check is tighter in handler
+  fileFilter: (_req, file, cb) => {
+    const allAllowed = new Set([...IMAGE_MIME_TYPES, ...SOUND_MIME_TYPES]);
+    if (allAllowed.has(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('File type not allowed. Accepted: PNG, GIF, WebP images or MP3, OGG, WAV audio.'));
+    }
+  },
+});
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -499,7 +510,19 @@ cosmeticsRouter.delete(
 cosmeticsRouter.post(
   '/:id/upload',
   requireAuth,
-  upload.single('file'),
+  (req: Request, res: Response, next: NextFunction) => {
+    upload.single('file')(req, res, (err: any) => {
+      if (err) {
+        if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+          res.status(400).json({ code: 'FILE_TOO_LARGE', message: 'File exceeds the 2 MB size limit.' });
+        } else {
+          res.status(400).json({ code: 'VALIDATION_ERROR', message: err.message });
+        }
+        return;
+      }
+      next();
+    });
+  },
   async (req: Request, res: Response): Promise<void> => {
     try {
       const cosmeticId = param(req, 'id');
