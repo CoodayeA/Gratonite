@@ -26,10 +26,7 @@ jobs:
         run: pnpm --filter gratonite-api run build
 
       - name: Build Web
-        run: |
-          cd apps/web
-          npm install
-          npm run build
+        run: pnpm --filter webapp run build
 
       - name: Build Landing Page
         run: |
