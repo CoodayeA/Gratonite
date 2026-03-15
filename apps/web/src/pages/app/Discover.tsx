@@ -361,6 +361,7 @@ const Discover = () => {
     const [activeTab, setActiveTab] = useState<Tab>('portals');
     const [searchQuery, setSearchQuery] = useState('');
     const [joiningPortal, setJoiningPortal] = useState<PortalInfo | null>(null);
+    const [selfHostBannerDismissed, setSelfHostBannerDismissed] = useState(() => !!localStorage.getItem('dismiss-self-host-banner'));
     const [portals, setPortals] = useState<PortalInfo[]>(initialPortals);
     const [selectedCategory, setSelectedCategory] = useState('');
     const [tagFilters, setTagFilters] = useState<string[]>([]);
@@ -1060,7 +1061,7 @@ const Discover = () => {
                     </div>
 
                     {/* Self-hosting banner */}
-                    {!localStorage.getItem('dismiss-self-host-banner') && (
+                    {!selfHostBannerDismissed && (
                         <div style={{
                             display: 'flex', alignItems: 'center', gap: '12px',
                             padding: '12px 16px', marginBottom: '20px', borderRadius: 'var(--radius-md)',
@@ -1077,7 +1078,7 @@ const Discover = () => {
                                 </a>
                             </span>
                             <button
-                                onClick={() => { localStorage.setItem('dismiss-self-host-banner', '1'); window.location.reload(); }}
+                                onClick={() => { localStorage.setItem('dismiss-self-host-banner', '1'); setSelfHostBannerDismissed(true); }}
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}
                             >
                                 <X size={14} />
