@@ -189,7 +189,13 @@ app.use(
   })
 );
 // Global IP-based rate limit BEFORE body parsing so large payloads are rejected early
-app.use(globalIpRateLimit);
+// Skip rate limiting for file/asset serving — these are CDN-like GETs that can burst heavily
+app.use((req, res, next) => {
+  if (req.method === 'GET' && req.path.match(/^\/api\/v1\/files\//)) {
+    return next();
+  }
+  return globalIpRateLimit(req, res, next);
+});
 
 // Stripe webhook needs the raw body for signature verification — mount BEFORE express.json()
 app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json' }));
