@@ -35,6 +35,9 @@ import { processReplicaSync } from './replicaSync';
 import { processUnbanExpired } from './unbanExpired';
 import { processUpdateCheck } from './updateCheck';
 import { processAuctionCron } from '../lib/auction-cron';
+import { processRelayDirectorySync } from './relayDirectorySync';
+import { processRelayHealthCheck } from './relayHealthCheck';
+import { processRelayReputationCalc } from './relayReputationCalc';
 
 // ---------------------------------------------------------------------------
 // Queue definitions
@@ -60,6 +63,9 @@ export const replicaSyncQueue = createQueue('replica-sync');
 export const unbanExpiredQueue = createQueue('unban-expired');
 export const updateCheckQueue = createQueue('update-check');
 export const auctionCronQueue = createQueue('auction-cron');
+export const relayDirectorySyncQueue = createQueue('relay-directory-sync');
+export const relayHealthCheckQueue = createQueue('relay-health-check');
+export const relayReputationCalcQueue = createQueue('relay-reputation-calc');
 
 // ---------------------------------------------------------------------------
 // Start workers and add repeatable schedules
@@ -264,6 +270,36 @@ export async function startBullWorkers(): Promise<void> {
     'auction-cron-repeat',
     { every: 60_000 },
     { name: 'auction-cron-tick' },
+  );
+
+  // --- Relay Directory Sync (every 30 min) ---
+  createWorker('relay-directory-sync', async () => {
+    await processRelayDirectorySync();
+  });
+  await relayDirectorySyncQueue.upsertJobScheduler(
+    'relay-directory-sync-repeat',
+    { every: 30 * 60_000 },
+    { name: 'relay-directory-sync-tick' },
+  );
+
+  // --- Relay Health Check (every 60s) ---
+  createWorker('relay-health-check', async () => {
+    await processRelayHealthCheck();
+  });
+  await relayHealthCheckQueue.upsertJobScheduler(
+    'relay-health-check-repeat',
+    { every: 60_000 },
+    { name: 'relay-health-check-tick' },
+  );
+
+  // --- Relay Reputation Calc (every 5 min) ---
+  createWorker('relay-reputation-calc', async () => {
+    await processRelayReputationCalc();
+  });
+  await relayReputationCalcQueue.upsertJobScheduler(
+    'relay-reputation-calc-repeat',
+    { every: 5 * 60_000 },
+    { name: 'relay-reputation-calc-tick' },
   );
 
   logger.info('[bullmq] All workers started and repeatable jobs registered');
