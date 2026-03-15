@@ -88,8 +88,8 @@ setupRouter.post('/init', async (req: Request, res: Response) => {
 
   try {
     // Hash the admin password
-    const bcrypt = await import('bcrypt');
-    const passwordHash = await bcrypt.hash(adminPassword, 12);
+    const argon2 = await import('argon2');
+    const passwordHash = await argon2.hash(adminPassword);
 
     // Create admin user
     const username = adminUsername || 'admin';
