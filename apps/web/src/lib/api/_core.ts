@@ -565,7 +565,7 @@ export async function apiFetch<T = any>(
 
   const requestId = res.headers.get('x-request-id') ?? res.headers.get('x-correlation-id');
 
-  if (res.status === 401 && !retried) {
+  if (res.status === 401 && !retried && !shouldBypassAuthGate(path)) {
     const newToken = await refreshAccessToken();
     if (newToken) {
       return apiFetch<T>(path, options, true);
@@ -587,6 +587,11 @@ export async function apiFetch<T = any>(
         timestamp: new Date().toISOString(),
       });
     }
+    const body = await res.json().catch(() => ({ code: 'UNAUTHORIZED', message: 'Unauthorized' }));
+    throw new ApiRequestError(401, body as ApiError, requestId);
+  }
+
+  if (res.status === 401 && shouldBypassAuthGate(path)) {
     const body = await res.json().catch(() => ({ code: 'UNAUTHORIZED', message: 'Unauthorized' }));
     throw new ApiRequestError(401, body as ApiError, requestId);
   }
