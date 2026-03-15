@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, X, Compass, Users, BookOpen, Music, Briefcase, Gamepad2, Coffee } from 'lucide-react';
+import { Camera, X, Compass, Users, BookOpen, Music, Briefcase, Gamepad2, Coffee, Server } from 'lucide-react';
 import { useToast } from '../ui/ToastManager';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
@@ -277,6 +277,41 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                             >
                                 <span style={{ fontSize: '22px' }}>📋</span>
                                 <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Use a Template</span>
+                            </div>
+                        </div>
+
+                        {/* ── Self-host separator + CTA ── */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '18px 0 14px' }}>
+                            <div style={{ flex: 1, height: '1px', background: 'var(--stroke)' }} />
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '1px' }}>or</span>
+                            <div style={{ flex: 1, height: '1px', background: 'var(--stroke)' }} />
+                        </div>
+                        <div
+                            onClick={() => window.open('https://gratonite.chat/docs/self-hosting', '_blank')}
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.08))',
+                                border: '1px dashed rgba(99,102,241,0.35)',
+                                borderRadius: '10px',
+                                padding: '14px 16px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                transition: 'all 0.15s',
+                            }}
+                            onMouseEnter={e => {
+                                (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--accent-primary)';
+                                (e.currentTarget as HTMLDivElement).style.background = 'linear-gradient(135deg, rgba(99,102,241,0.14), rgba(168,85,247,0.14))';
+                            }}
+                            onMouseLeave={e => {
+                                (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(99,102,241,0.35)';
+                                (e.currentTarget as HTMLDivElement).style.background = 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.08))';
+                            }}
+                        >
+                            <Server size={20} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                            <div>
+                                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>Self-Host Your Own Server</div>
+                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Your server, your rules. Set up in 5 minutes. No coding required.</div>
                             </div>
                         </div>
                     </>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Compass, Bot, Palette, Star, Users, ArrowRight, X, Shield, MessageSquare, Globe, ExternalLink } from 'lucide-react';
+import { Search, Compass, Bot, Palette, Star, Users, ArrowRight, X, Shield, MessageSquare, Globe, ExternalLink, Server } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { useTheme, AppTheme } from '../../components/ui/ThemeProvider';
 import { api, API_BASE } from '../../lib/api';
@@ -361,6 +361,7 @@ const Discover = () => {
     const [activeTab, setActiveTab] = useState<Tab>('portals');
     const [searchQuery, setSearchQuery] = useState('');
     const [joiningPortal, setJoiningPortal] = useState<PortalInfo | null>(null);
+    const [selfHostBannerDismissed, setSelfHostBannerDismissed] = useState(() => !!localStorage.getItem('dismiss-self-host-banner'));
     const [portals, setPortals] = useState<PortalInfo[]>(initialPortals);
     const [selectedCategory, setSelectedCategory] = useState('');
     const [tagFilters, setTagFilters] = useState<string[]>([]);
@@ -1058,6 +1059,32 @@ const Discover = () => {
                             placeholder={`Search for ${activeTab}...`}
                         />
                     </div>
+
+                    {/* Self-hosting banner */}
+                    {!selfHostBannerDismissed && (
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: '12px',
+                            padding: '12px 16px', marginBottom: '20px', borderRadius: 'var(--radius-md)',
+                            background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.06))',
+                            border: '1px solid rgba(99,102,241,0.2)',
+                        }}>
+                            <Server size={18} style={{ color: '#818cf8', flexShrink: 0 }} />
+                            <span style={{ flex: 1, fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                <strong style={{ color: 'var(--text-primary)' }}>Want your own server?</strong>{' '}
+                                Self-host Gratonite in 5 minutes. Full control, same features.{' '}
+                                <a href="https://gratonite.chat/docs/self-hosting" target="_blank" rel="noreferrer"
+                                   style={{ color: '#818cf8', fontWeight: 600, textDecoration: 'none' }}>
+                                    Learn more
+                                </a>
+                            </span>
+                            <button
+                                onClick={() => { localStorage.setItem('dismiss-self-host-banner', '1'); setSelfHostBannerDismissed(true); }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                    )}
 
                     {renderTabs()}
 

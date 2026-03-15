@@ -136,3 +136,49 @@ export function emitFederationEvent(guildId: string, event: string, data: unknow
     // Namespace may not exist if federation not initialized
   }
 }
+
+/**
+ * Process a relay-delivered envelope that has been decrypted.
+ * Re-emits the contained activity to the appropriate local rooms.
+ */
+export function handleRelayDeliveredActivity(activity: {
+  type: string;
+  data: Record<string, unknown>;
+}): void {
+  const io = getIO();
+
+  switch (activity.type) {
+    case 'MessageCreate': {
+      const d = activity.data as { channelId?: string; [k: string]: unknown };
+      if (d.channelId) {
+        const sanitized = sanitizeFederationContent(d);
+        io.to(`channel:${d.channelId}`).emit('MESSAGE_CREATE', sanitized);
+      }
+      break;
+    }
+    case 'TypingStart': {
+      const d = activity.data as { channelId?: string; [k: string]: unknown };
+      if (d.channelId) {
+        io.to(`channel:${d.channelId}`).emit('TYPING_START', d);
+      }
+      break;
+    }
+    case 'PresenceUpdate': {
+      const d = activity.data as { guildId?: string; [k: string]: unknown };
+      if (d.guildId) {
+        io.to(`guild:${d.guildId}`).emit('PRESENCE_UPDATE', d);
+      }
+      break;
+    }
+    case 'VoiceStateUpdate': {
+      const d = activity.data as { channelId?: string; guildId?: string; [k: string]: unknown };
+      if (d.guildId) {
+        io.to(`guild:${d.guildId}`).emit('VOICE_STATE_UPDATE', d);
+      }
+      break;
+    }
+    default:
+      // Unknown activity type — log and ignore
+      break;
+  }
+}

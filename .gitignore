@@ -52,3 +52,4 @@ archive/
 # TypeScript cache
 *.tsbuildinfo
 .worktrees/
+.superpowers/

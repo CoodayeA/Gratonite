@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense } from 'react';
-import { Hash, Compass, MessageSquare, ClipboardList, Heart, Settings, Star, Monitor, Search, Plus } from 'lucide-react';
+import { Hash, Compass, MessageSquare, ClipboardList, Heart, Settings, Star, Monitor, Search, Plus, Server } from 'lucide-react';
 import { useOutletContext, useNavigate, Link } from 'react-router-dom';
 import { api, API_BASE } from '../../lib/api';
 import { useToast } from '../../components/ui/ToastManager';
@@ -345,6 +345,16 @@ const Home = () => {
                         <div className="action-card-text">
                             <div className="action-title" style={{ color: 'var(--warning)' }}>FAME Dashboard</div>
                             <div className="action-subtext">Give FAME, view leaderboards, and rate servers · You have 5 FAME tokens to give today</div>
+                        </div>
+                    </div>
+
+                    <div className="action-card hover-lift" role="button" tabIndex={0} aria-label="Self-Host Gratonite — Run your own instance" onClick={() => window.open('https://gratonite.chat/docs/self-hosting', '_blank')} onKeyDown={(e) => handleCardKeyDown(e, () => window.open('https://gratonite.chat/docs/self-hosting', '_blank'))} style={{ cursor: 'pointer', background: 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(168,85,247,0.06))', border: '1px solid rgba(99,102,241,0.2)' }}>
+                        <div className="action-card-icon" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }} aria-hidden="true">
+                            <Server size={24} color="#111" />
+                        </div>
+                        <div className="action-card-text">
+                            <div className="action-title" style={{ color: '#818cf8' }}>Self-Host Gratonite</div>
+                            <div className="action-subtext">Run your own instance. Your server, your rules. 5 minutes to set up.</div>
                         </div>
                     </div>
                 </div>

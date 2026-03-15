@@ -1,0 +1,17 @@
+{$RELAY_DOMAIN} {
+  # WebSocket proxy to relay server
+  reverse_proxy relay:4100
+
+  # Health endpoint
+  handle /health {
+    reverse_proxy relay:4101
+  }
+
+  handle /.well-known/gratonite-relay {
+    reverse_proxy relay:4101
+  }
+
+  handle /metrics {
+    reverse_proxy relay:4101
+  }
+}

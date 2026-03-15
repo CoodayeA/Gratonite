@@ -109,9 +109,75 @@ import type {
 
 // For local dev, use your machine's LAN IP (not localhost) so the phone can reach it.
 // In production, this should be https://api.gratonite.chat
-const API_BASE = 'https://api.gratonite.chat/api/v1';
+const DEFAULT_API_BASE = 'https://api.gratonite.chat/api/v1';
+let API_BASE = DEFAULT_API_BASE;
 
 export { API_BASE };
+
+/**
+ * Get the current server configuration.
+ */
+export async function getServerConfig(): Promise<{ apiBase: string; isCustom: boolean }> {
+  try {
+    const stored = await SecureStore.getItemAsync('server_api_base');
+    if (stored) {
+      return { apiBase: stored, isCustom: true };
+    }
+  } catch { /* ignore */ }
+  return { apiBase: DEFAULT_API_BASE, isCustom: false };
+}
+
+/**
+ * Set a custom server URL. Pass null to reset to official server.
+ * Triggers a full reconnect (caller must handle auth refresh).
+ */
+export async function setServerConfig(apiBaseUrl: string | null): Promise<void> {
+  if (apiBaseUrl) {
+    // Normalize: ensure it ends with /api/v1
+    let normalized = apiBaseUrl.replace(/\/+$/, '');
+    if (!normalized.endsWith('/api/v1')) {
+      normalized += '/api/v1';
+    }
+    API_BASE = normalized;
+    await SecureStore.setItemAsync('server_api_base', normalized);
+  } else {
+    API_BASE = DEFAULT_API_BASE;
+    await SecureStore.deleteItemAsync('server_api_base');
+  }
+}
+
+/**
+ * Test if a server URL is reachable and is a valid Gratonite instance.
+ */
+export async function testServerConnection(url: string): Promise<{ ok: boolean; version?: string; error?: string }> {
+  try {
+    let base = url.replace(/\/+$/, '');
+    if (!base.endsWith('/api/v1')) base += '/api/v1';
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+
+    const resp = await fetch(`${base}/../health`, { signal: controller.signal });
+    clearTimeout(timer);
+
+    if (!resp.ok) return { ok: false, error: `Server responded with ${resp.status}` };
+
+    const data = await resp.json();
+    return { ok: true, version: data.version };
+  } catch (err) {
+    return { ok: false, error: 'Could not reach server' };
+  }
+}
+
+/**
+ * Initialize server config from SecureStore on app startup.
+ */
+export async function initServerConfig(): Promise<void> {
+  try {
+    const stored = await SecureStore.getItemAsync('server_api_base');
+    if (stored) API_BASE = stored;
+  } catch { /* use default */ }
+}
 
 // ---------------------------------------------------------------------------
 // Token management (SecureStore for mobile)

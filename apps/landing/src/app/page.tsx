@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { Hero } from "@/components/landing/Hero";
 import { Features } from "@/components/landing/Features";
+import { SelfHosting } from "@/components/landing/SelfHosting";
 import { Showcase } from "@/components/landing/Showcase";
 import { SocialProof } from "@/components/landing/SocialProof";
 import { FAQ, faqs } from "@/components/landing/FAQ";
@@ -69,6 +70,7 @@ export default function Home() {
       />
       <Hero />
       <Features />
+      <SelfHosting />
       <Showcase />
       <SocialProof />
       <FAQ />

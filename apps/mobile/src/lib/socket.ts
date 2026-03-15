@@ -10,13 +10,16 @@ let socket: Socket | null = null;
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
 // Derive the socket URL from API_BASE (strip /api/v1)
-const SOCKET_URL = 'https://api.gratonite.chat';
+function getSocketUrl(): string {
+  // Remove /api/v1 from the end to get base server URL
+  return API_BASE.replace(/\/api\/v1\/?$/, '') || 'https://api.gratonite.chat';
+}
 
 export function connectSocket(): Socket {
   if (socket?.connected) return socket;
 
   const token = getAccessToken();
-  socket = io(SOCKET_URL, {
+  socket = io(getSocketUrl(), {
     autoConnect: false,
     transports: ['websocket', 'polling'],
     reconnection: true,
