@@ -1,19 +1,19 @@
 import type { MDXRemoteProps } from "next-mdx-remote/rsc";
 
 export const mdxComponents: MDXRemoteProps["components"] = {
-  h1: (props) => (
+  h1: ({ ref: _ref, ...props }) => (
     <h1
       className="font-display text-4xl sm:text-5xl font-bold tracking-tight mb-6 mt-12"
       {...props}
     />
   ),
-  h2: (props) => (
+  h2: ({ ref: _ref, ...props }) => (
     <h2
       className="font-display text-2xl sm:text-3xl font-bold tracking-tight mb-4 mt-10"
       {...props}
     />
   ),
-  h3: (props) => (
+  h3: ({ ref: _ref, ...props }) => (
     <h3
       className="font-display text-xl font-bold mb-3 mt-8"
       {...props}
