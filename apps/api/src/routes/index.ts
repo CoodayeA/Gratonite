@@ -116,6 +116,7 @@ import { guildBackupRouter } from './guild-backup';
 import { modQueueRouter } from './mod-queue';
 import { guildHighlightsRouter } from './guild-highlights';
 import { vanityProfileRouter } from './vanity-profile';
+import { openapiRouter } from './openapi';
 
 export const router = Router();
 
@@ -149,6 +150,9 @@ router.get('/capabilities', (_req, res) => {
     source: 'server',
   });
 });
+
+// OpenAPI spec (no auth, before rate limiter)
+router.use('/docs', openapiRouter);
 
 // Public stats (no auth, before rate limiter)
 router.use('/stats', statsRouter);
