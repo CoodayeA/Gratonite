@@ -226,7 +226,7 @@ export const usernameCheckRateLimit = createRateLimiter({
  */
 export const globalIpRateLimit = createRateLimiter({
   prefix: 'rl:global',
-  maxRequests: 300,
+  maxRequests: 600,
   windowSeconds: 60,
   keyFn: (req) => req.ip ?? req.socket.remoteAddress ?? null,
 });
