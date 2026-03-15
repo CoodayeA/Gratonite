@@ -1,347 +1,376 @@
-# Gratonite ✨
+# Gratonite
 
-Gratonite is a multi-platform community chat app built as a privacy-first, open-source alternative to Discord. It includes web, mobile, desktop, and API apps in a single monorepo, with real-time messaging, voice/video, guilds, DMs, threads, moderation, and community features.
+A privacy-first, open-source alternative to Discord. Real-time chat, voice, video, federation, and 140+ features across web, mobile, and desktop — all self-hostable in 5 minutes.
 
-> Privacy-first, open source, and built for communities that want more control. 💬
+> Your server, your rules. No ads, no tracking, no phone number required.
 
-## Features 🚀
+## What is Gratonite?
 
-### Messaging & Communication 💬
-- Real-time text chat in guild channels, DMs, group DMs, and threads
-- Voice and video calls powered by LiveKit
-- Message editing with full edit history
-- Replies, forwarding, and message pinning
-- Emoji reactions, custom emoji, and sticker support
+Gratonite is a community platform built for people who want control over their online spaces. It's everything you'd expect from a modern chat app — text, voice, video, threads, bots, moderation — plus federation so independent instances can talk to each other, a relay network for NAT traversal, and end-to-end encryption for DMs.
+
+**[Try it](https://gratonite.chat/app)** | **[Self-Host](https://gratonite.chat/docs/self-hosting)** | **[Download](https://gratonite.chat/download)**
+
+## At a Glance
+
+| | |
+|---|---|
+| **140** database schemas | **134** API route modules |
+| **70+** frontend pages | **50+** mobile screens |
+| **23** background jobs | **5 apps** in one monorepo |
+
+---
+
+## Features
+
+### Messaging
+- Real-time text in guild channels, DMs, group DMs, and threads
+- Message editing with full revision history
+- Replies, forwarding, pinning, sticky messages
+- Emoji reactions, custom emoji, stickers, text reactions
 - Typing indicators and read receipts
 - Disappearing messages with configurable timers
 - Scheduled messages and draft auto-save
-- Message bookmarks and global search
-- Polls with multiple choice and expiry
-- Voice messages
+- Message bookmarks with folder organization
+- Voice messages and inline media player
 - Message reminders
-- Sticky messages
-- Inline media player (video/audio)
+- Polls with multiple choice and expiry
+- Global search (PostgreSQL full-text)
 
-### Guilds & Community 🌐
-- Guild (server) creation with custom icons and banners
+### Voice and Video
+- LiveKit-powered voice and video channels
+- Screen sharing
+- Stage channels for presentations
+- Voice effects and soundboard
+- Music rooms and study rooms (co-working)
+- Watch parties (synchronized video)
+- Collaborative playlists
+- Call history
+- Clips (short recordings)
+
+### Guilds and Community
+- Guild creation with custom icons, banners, accent colors
 - Role-based permissions with per-channel overrides
 - Invite links with expiry and usage limits
-- Public server discovery with interest tags
-- Scheduled events
-- Server templates and vanity URLs
-- Forum, announcement, wiki, and Q&A channel types
-- Server folders and favorites
-- Server boost system
-- Guild timeline and digest
+- Public server discovery with interest tags and ratings
+- 9 channel types: text, voice, forum, announcement, wiki, Q&A, stage, confession, task (Kanban)
+- Server templates, vanity URLs, welcome screens
+- Server folders and favorite channels
+- Guild timeline, digest, insights, and analytics
 - Onboarding wizard for new members
-- Photo albums
+- Photo albums, mood boards, whiteboards
+- Guild forms, quests, workflows
+- Server boosts
 - Confession boards
-- Guild forms and workflows
-- Guild quests
-- Server ratings and reviews
 
-### Moderation & Safety 🛡️
+### Moderation and Safety
 - Audit logs for all administrative actions
-- Automod with keyword-based filtering
-- Word filters with block/delete/warn actions
-- User timeouts and temp bans
+- AutoMod with keyword filtering and configurable actions (block/delete/warn)
+- User timeouts, temp bans, permanent bans
 - Ban appeals system
 - Raid protection mode
 - Slow mode per channel
 - Member screening and server rules gate
-- Starboard (highlight popular messages)
-- Reaction roles and auto roles
-- Ticket system
-- Account deletion (GDPR compliance)
+- Starboard for community highlights
+- Reaction roles and auto-roles
+- Ticket system for support
+- Moderation dashboard
+- GDPR-compliant account deletion and data export
 
-### Privacy & Encryption 🔒
-- End-to-end encryption for all DMs and group DMs — enabled automatically
-- Private keys never leave your device
-- Encrypted message editing
-- Key rotation on group membership changes
+### Encryption and Privacy
+- End-to-end encryption for all DMs and group DMs (AES-GCM-256 via ECDH P-256)
+- Automatic — no toggle needed
+- Private keys stored in IndexedDB, never transmitted
+- Group key rotation on membership changes
 - Identity verification via safety numbers
 - Encryption failure warnings (never silently falls back to plaintext)
-- See the [End-to-End Encryption](#end-to-end-encryption-) section below for full details
+- Key versioning for backward-compatible decryption
 
-### User Features 👤
-- User profiles with display names, bios, banners, and custom nameplate styles
-- Status, custom status with emoji, and rich presence
-- Friend system with friend requests and blocking
-- User notes (private, per-user)
-- XP and leveling system
-- Achievements and badges
-- Notification preferences per channel
-- Web push notifications
-- Session management (view/revoke active sessions)
-- GDPR data export
-- FAME system (give and receive fame)
+### Federation
+- **Protocol**: HTTP Signatures with Ed25519 keys
+- **Inbox handlers**: GuildJoinRequest, MessageCreate, GuildLeave, UserProfileSync, VoiceJoinRequest
+- **Shadow users**: Remote members represented locally with deterministic usernames
+- **Account portability**: Export/import profiles, settings, relationships between instances
+- **Guild discovery**: Federated servers appear in the Discover directory
+- **Relay network**: E2E encrypted envelope routing for instances behind NAT
+  - Traffic-padded envelopes (4KB/16KB/64KB buckets) prevent content-size analysis
+  - Relay mesh with bloom filter routing (max 2-hop chain)
+  - Relay reputation scoring (uptime, delivery rate, latency, age, reports)
+  - Auto-discovery and relay selection by score
+- **Voice federation**: Relay-mediated LiveKit token exchange with TURN proxy fallback
+- **Zero breaking changes**: All federation features are opt-in
+
+### User Features
+- Profiles with display names, bios, banners, custom nameplate styles
+- Custom status with emoji, rich presence, status presets
+- Friend system with requests, blocking, and suggestions
 - Friendship streaks
-- Greeting cards
-- Profile showcase
-- Cosmetics (frames, effects, decorations)
-- Inventory system
-- Theme builder
-- Message requests
-- Activity feed
-- Connected accounts
-- Status presets
-
-### Gamification & Economy 🎮
-- XP and leveling with per-server leaderboards
-- FAME system with profile stats
+- User notes (private, per-user)
+- XP and leveling system with per-server leaderboards
 - Achievements and badge collection
-- Server-wide leaderboards and analytics
-- Virtual currency and economy system
-- Cosmetics shop (frames, effects, decorations)
-- User marketplace and auctions
+- FAME system (give/receive fame, leaderboards, daily limits)
+- Notification preferences per channel
+- Web push notifications and email digest
+- Session management (view/revoke)
+- Connected accounts
+- Activity feed
+- Profile showcase and vanity profiles
+- Greeting cards
+- Interest tags
+
+### Economy and Gamification
+- Virtual currency with server-specific currencies
+- Cosmetics shop (avatar frames, nameplates, effects, decorations)
+- User marketplace and auction house
+- Inventory system
+- Collectible cards (gacha) with trading
+- Daily challenges with rewards
+- Giveaways with automatic winner selection
+- Guild quests
+- Seasonal events
 - Server boosts with perks
+- Reputation system
+- Quizzes
+- User titles
 
-### Voice & Media 🎙️
-- LiveKit-powered voice and video channels
-- Screen sharing
-- Stage channels for presentations
-- Voice effects
-- Music rooms
-- Study rooms (co-working spaces)
-- Soundboard with custom sounds
-- Clips (short recordings)
-
-### Creative & Collaboration 🎨
+### Creative and Productivity
 - Whiteboards for collaborative drawing
 - Mood boards
 - Photo albums
-- Wiki channels for persistent docs
+- Wiki channels for persistent documentation
 - Form builder for applications and surveys
-- Greeting cards
+- Task boards (Kanban per channel)
+- Calendar and meeting scheduler
+- Todo lists
+- Standup (team check-ins)
+- Message reminders
 - Theme builder with custom CSS
+- Theme store for community themes
 
-### Community Tools 🏆
-- Giveaways with automatic winner selection
-- Seasonal events
-- Ticket system for support
-- Starboard for community highlights
-- Guild quests and challenges
-- Confession boards
-- Reaction roles and auto roles
-- Server analytics and insights
-- Guild timeline and weekly digest
-
-### Security 🔐
-- HTTP security headers via Helmet.js (HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy)
-- JWT authentication with refresh tokens
-- Argon2id password hashing
-- TOTP-based two-factor authentication
-- Redis rate limiting (6 configurable limiters)
-- Zod request validation on all endpoints
-- File upload checks (MIME type + magic bytes)
+### Bots and Integrations
+- Bot store with discoverable bots
+- Bot builder for custom bots
+- Slash commands (Discord-compatible)
+- Message components (buttons, select menus)
+- Webhooks with delivery logs and auditing
 - OAuth2 authorization flow
-- CORS configuration
-- Federation HTTP signatures (Ed25519)
-
-### Platform & Integrations 🔌
-- OAuth2 authorization flow for third-party apps
-- Webhooks with delivery logs
-- Bot application framework with a bot store
-- Slash commands
 - Stripe payment integration
 - Referral system
 
-## Scale 📊
+### Security
+- JWT authentication with refresh tokens
+- Argon2id password hashing
+- TOTP-based two-factor authentication
+- HTTP security headers (Helmet.js: HSTS, CSP, X-Frame-Options)
+- 6 configurable rate limiters (auth, API, global, etc.)
+- Zod request validation on all endpoints
+- File upload validation (MIME type + magic bytes)
+- CORS configuration
+- Federation HTTP signatures (Ed25519)
+- SSRF protection on federation handshake
 
-- **109** database schemas
-- **91** API route modules
-- **51** frontend pages
-- **77** React components
+---
 
-## Repository Layout 🗂️
+## Repository Layout
 
 ```
 apps/
-  api/       Express + TypeScript API, Socket.IO, Drizzle ORM, PostgreSQL, Redis, LiveKit
+  api/       Express + TypeScript backend (PostgreSQL, Redis, Socket.IO, LiveKit)
   web/       React + Vite web client
-  mobile/    Expo / React Native mobile app
-  desktop/   Electron desktop wrapper
+  mobile/    Expo / React Native (iOS + Android)
+  desktop/   Electron wrapper
   landing/   Next.js marketing site
-deploy/      Docker Compose, Caddyfile, deploy script
-docs/        Deployment and configuration guides
+  relay/     Standalone federation relay server
+deploy/      Docker Compose, Caddyfile, self-host configs
+docs/        Self-hosting, relay operator, and federation protocol guides
+packages/    Shared TypeScript types
 tools/       Release verification scripts
 ```
 
-## Tech Stack 🧱
+## Tech Stack
 
-| Layer      | Technology                            |
-|------------|---------------------------------------|
-| Frontend   | React, TypeScript, Vite               |
-| Mobile     | Expo, React Native                    |
-| Desktop    | Electron                              |
-| Backend    | Node.js, Express, TypeScript          |
-| Database   | PostgreSQL, Drizzle ORM               |
-| Cache      | Redis                                 |
-| Realtime   | Socket.IO                             |
-| Voice      | LiveKit                               |
-| Auth       | JWT, Argon2id, TOTP MFA               |
-| Federation | HTTP Signatures, Ed25519              |
-| Search     | PostgreSQL full-text search            |
-| Metrics    | Prometheus                            |
-| Email      | Nodemailer                            |
-| Deployment | Docker Compose, Caddy, GitHub Actions |
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, TypeScript, Vite, Framer Motion |
+| Mobile | Expo, React Native |
+| Desktop | Electron |
+| Backend | Node.js, Express 5, TypeScript |
+| Database | PostgreSQL, Drizzle ORM (140 tables) |
+| Cache | Redis (IoRedis) |
+| Real-time | Socket.IO |
+| Voice/Video | LiveKit |
+| Jobs | BullMQ (23 queues) |
+| Auth | JWT, Argon2id, TOTP MFA |
+| Encryption | AES-GCM-256, ECDH P-256, Ed25519, X25519 |
+| Federation | HTTP Signatures, E2E relay envelopes |
+| Search | PostgreSQL full-text |
+| Payments | Stripe |
+| Metrics | Prometheus |
+| Email | Nodemailer |
+| Landing | Next.js |
+| Deploy | Docker Compose, Caddy, GitHub Actions |
 
-## Getting Started 🛠️
+---
 
-### API
+## Getting Started
+
+### Development
 
 ```bash
+# API
 cd apps/api
-cp .env.example .env    # edit with your DB/Redis/SMTP credentials
+cp .env.example .env    # set DB, Redis, SMTP credentials
 pnpm install
 pnpm run db:migrate
 pnpm run dev
-```
 
-### Web
-
-```bash
+# Web
 cd apps/web
 cp .env.example .env    # set VITE_API_URL
 npm install
 npm run dev
-```
 
-### Mobile
-
-```bash
+# Mobile
 cd apps/mobile
 npm install
 npm run start
-```
 
-### Desktop
-
-```bash
+# Desktop
 cd apps/desktop
 npm install
 npm run dev
 ```
 
-## Self-Hosting 🏠
-
-Run your own Gratonite instance. You'll need a Linux server, Docker, and a domain name. No coding required — everything runs in Docker containers.
-
-### What You Need Before Starting
-
-1. **A Linux server** — A VPS from any provider (Hetzner, DigitalOcean, Linode, etc.) with at least 1 GB RAM. Ubuntu 22.04 or Debian 12 recommended.
-2. **A domain name** — Buy one from any registrar (Namecheap, Cloudflare, etc.). You'll point it at your server's IP address.
-3. **SSH access** — You need to be able to log into your server via terminal/command line.
-
-> **Don't have a server yet?** Sign up for a VPS provider, create the cheapest Linux server they offer (1 GB RAM is enough), and note the IP address they give you. Then buy a domain and create an **A record** pointing your domain to that IP address. Wait 5-10 minutes for DNS to propagate.
-
-### Step 1: Install Docker on Your Server
-
-SSH into your server and run:
-
-```bash
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
-```
-
-**Log out and log back in** (this is required for the group change to take effect), then verify:
-
-```bash
-docker --version          # Should show Docker Engine 24+
-docker compose version    # Should show Docker Compose v2.x
-```
-
-### Step 2: Open Firewall Ports
-
-Your server needs ports 80 (HTTP) and 443 (HTTPS) open for web traffic:
-
-```bash
-# On Ubuntu/Debian:
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-```
-
-### Step 3: Clone and Configure
+### Self-Hosting (5 Minutes)
 
 ```bash
 git clone https://github.com/CoodayeA/Gratonite.git
-cd Gratonite
-cp deploy/self-host/.env.example deploy/self-host/.env
+cd Gratonite/deploy/self-host
+cp .env.example .env
+nano .env               # set INSTANCE_DOMAIN, DB_PASSWORD, ADMIN_EMAIL, ADMIN_PASSWORD
+docker compose up -d
 ```
 
-Now open the config file in a text editor:
+Open `https://your-domain.com` and log in. That's it.
+
+**Behind NAT / no port forwarding?** Use Cloudflare Tunnel:
+```bash
+# Add to .env:
+CLOUDFLARE_TUNNEL_TOKEN=your-token
+# Start with tunnel profile:
+docker compose --profile tunnel up -d
+```
+
+**Enable federation** to connect with other instances:
+```bash
+# Add to .env:
+FEDERATION_ENABLED=true
+RELAY_ENABLED=true      # for relay network (NAT traversal)
+# Restart:
+docker compose restart api
+```
+
+**Enable voice/video** with LiveKit:
+```bash
+docker compose --profile voice up -d
+```
+
+Full guide: [docs/self-hosting/README.md](docs/self-hosting/README.md)
+
+### Running a Relay Node
+
+Help the federation network by running a relay (256MB RAM, 1 vCPU):
 
 ```bash
-nano deploy/self-host/.env
+cd apps/relay
+cp .env.example .env    # set RELAY_DOMAIN, REDIS_URL
+docker compose up -d
 ```
 
-You only need to change **4 lines**. Find and replace these values:
+Full guide: [docs/relay/README.md](docs/relay/README.md)
 
-```bash
-# Change "chat.example.com" to YOUR domain (no https://, no trailing slash)
-INSTANCE_DOMAIN=your-domain.com
+---
 
-# Change to YOUR email and pick a strong password
-ADMIN_EMAIL=you@gmail.com
-ADMIN_PASSWORD=MyStr0ngP@ssword!
+## Federation
 
-# Generate a random database password (run: openssl rand -base64 24)
-DB_PASSWORD=paste-your-random-password-here
-```
+Gratonite instances can federate — users on one instance can join guilds on another, send messages, and even join voice channels across instances.
 
-**To generate a random DB password**, run this in a separate terminal:
-```bash
-openssl rand -base64 24
-```
-Copy the output and paste it as your `DB_PASSWORD`.
+### How It Works
 
-Save the file (`Ctrl+O`, then `Enter`, then `Ctrl+X` in nano).
+1. **Discovery**: Instances expose `/.well-known/gratonite` with their public key and endpoints
+2. **Authentication**: All instance-to-instance requests use Ed25519 HTTP Signatures
+3. **Delivery**: Activities are sent directly via HTTP POST, or through the relay network if the target is behind NAT
+4. **Encryption**: Relay traffic is E2E encrypted (X25519 ECDH + AES-256-GCM) with traffic-padded envelopes
+5. **Voice**: Federated voice uses relay-mediated LiveKit token exchange
 
-> **That's all you need to set.** JWT secrets, HTTPS certificates, and everything else is handled automatically.
+### Relay Network
 
-### Step 4: Launch
+The relay network connects instances that can't reach each other directly:
+- Relays forward encrypted envelopes — they never see message content
+- Fixed-size envelope padding prevents traffic analysis
+- Relay mesh with bloom filter routing enables cross-relay delivery
+- Reputation scoring keeps bad relays out of the directory
+- Optional TURN proxy for federated voice NAT traversal
 
-```bash
-docker compose -f deploy/self-host/docker-compose.yml up -d
-```
+Protocol reference: [docs/federation/README.md](docs/federation/README.md)
 
-This pulls the Docker images and starts all services. It takes 1-2 minutes on first run.
+---
 
-### Step 5: Verify Everything Started
+## End-to-End Encryption
 
-Check that the setup container completed successfully:
+All DMs and group DMs are end-to-end encrypted by default.
 
-```bash
-docker compose -f deploy/self-host/docker-compose.yml logs setup
-```
+- **Key agreement**: ECDH on P-256 (NIST curve)
+- **Symmetric encryption**: AES-GCM with 256-bit keys, unique 12-byte IV per message
+- **Key storage**: Browser IndexedDB (private keys never leave your device)
+- **Group DMs**: Symmetric group key, wrapped per-member via ephemeral ECDH
+- **Key rotation**: Automatic on membership change; key versioning for backward compatibility
+- **Identity verification**: Safety numbers (SHA-256 hash of combined public keys, displayed as 60-digit grid)
 
-You should see output ending with:
-```
-=== Gratonite Instance Setup ===
-Running database migrations... done.
-Generated JWT secrets.
-Generating Ed25519 instance keypair... done.
-Creating admin account... done.
-=== Setup complete! ===
-```
+| Content | Encrypted? |
+|---|---|
+| DM text messages | Yes (AES-GCM-256) |
+| Group DM text messages | Yes (AES-GCM-256) |
+| Edited messages | Yes (re-encrypted) |
+| Guild channel messages | No |
+| Federated relay traffic | Yes (X25519 + AES-256-GCM) |
+| Voice/video | Encrypted by LiveKit (DTLS-SRTP) |
+| Notification previews | Shows "Encrypted message" |
 
-Check all containers are running:
-```bash
-docker compose -f deploy/self-host/docker-compose.yml ps
-```
+---
 
-All services should show `Up` or `running`.
+## Background Jobs
 
-### Step 6: Log In
+23 BullMQ queues handle automated tasks:
 
-Open **https://your-domain.com** in your browser. Log in with the email and password you set in Step 3.
+| Job | Interval | Purpose |
+|---|---|---|
+| Scheduled messages | 30s | Send messages at scheduled times |
+| Federation delivery | 10s | Deliver outbound federation activities |
+| Federation heartbeat | 5min | Ping connected instances |
+| Federation discover sync | 30min | Register with Discover directory |
+| Federation cleanup | 24h | Purge old delivered/dead activities |
+| Relay directory sync | 30min | Sync relay directory |
+| Relay health check | 60s | Check relay availability |
+| Relay reputation calc | 5min | Recalculate relay scores |
+| Replica sync | 30s | Sync guild replicas |
+| Message expiry | 60s | Delete expired disappearing messages |
+| Message reminders | 30s | Fire message reminders |
+| Giveaways | 30s | Check giveaway deadlines |
+| Auto-roles | 5min | Assign roles to new members |
+| Auto-archive channels | 1h | Archive inactive channels |
+| AFK mover | 30s | Move idle voice users |
+| Expire statuses | 5min | Clear expired custom statuses |
+| Unban expired | 60s | Lift expired temp bans |
+| Email notifications | 15min | Batch email digests |
+| Account deletion | 24h | Process deletion requests |
+| Friendship streaks | 24h | Update streaks |
+| Guild digest | 1h | Generate weekly digests |
+| Auctions | 60s | Process auction bids/endings |
+| Update check | 6h | Check for new versions |
 
-**First things to do:**
-- Create your first server (called a "guild") by clicking the **+** button in the sidebar
-- Invite friends by right-clicking your server and creating an invite link
-- Explore **Settings > Admin** for instance-wide settings
+---
 
-### Updating to New Versions
+## Updating
 
 ```bash
 cd Gratonite
@@ -350,161 +379,40 @@ docker compose -f deploy/self-host/docker-compose.yml pull
 docker compose -f deploy/self-host/docker-compose.yml up -d
 ```
 
-Database migrations run automatically on every update. Your data is preserved.
+Migrations run automatically. Data is preserved.
 
-### Backups
+## Backups
 
 ```bash
-# Database backup (do this regularly!)
+# Database
 docker compose -f deploy/self-host/docker-compose.yml exec postgres \
   pg_dump -U gratonite gratonite | gzip > backup-$(date +%Y%m%d).sql.gz
 
-# File uploads backup
+# Uploads
 docker compose -f deploy/self-host/docker-compose.yml cp api:/app/uploads ./uploads-backup
 ```
 
-### Federation: List Your Server on Gratonite Discover (Optional)
+---
 
-Federation lets your instance connect with other Gratonite instances. Your public servers can appear on the [Discover](https://gratonite.chat/app/discover) directory so anyone can find them.
+## Why Gratonite
 
-**Step 1:** Open your `.env` file and add these two lines:
-
-```bash
-nano deploy/self-host/.env
-```
-
-Find the federation section and uncomment/set:
-```bash
-FEDERATION_ENABLED=true
-FEDERATION_DISCOVER_REGISTRATION=true
-```
-
-**Step 2:** Restart the API to apply changes:
-
-```bash
-docker compose -f deploy/self-host/docker-compose.yml restart api
-```
-
-**Step 3:** Create a server and make it discoverable. Log into your instance, create a server (guild), then go to **Server Settings > Overview** and enable the **"Listed in Server Discovery"** toggle.
-
-**Step 4:** Verify federation is working:
-
-```bash
-curl https://your-domain.com/.well-known/gratonite
-```
-
-You should see a JSON response with your instance's public key and endpoints. If you see this, federation is active.
-
-**Step 5:** Wait up to 30 minutes. Your discoverable servers will automatically sync to gratonite.chat and appear in the "Self-Hosted Servers" section of the Discover page.
-
-### Troubleshooting
-
-| Problem | How to fix |
-|---------|-----------|
-| **Can't access my instance** | Check DNS: `dig your-domain.com +short` should return your server's IP. Check ports 80/443 are open. Check containers are running with `docker compose ps`. |
-| **Setup container failed** | Run `docker compose -f deploy/self-host/docker-compose.yml logs setup` and check the error. Most common: wrong DB_PASSWORD. |
-| **HTTPS certificate error** | Caddy gets certificates automatically, but your domain must resolve to your server's public IP first. Check `docker compose logs caddy`. |
-| **Federation not working** | Make sure `FEDERATION_ENABLED=true` is set, and you restarted the API. Verify with `curl https://your-domain.com/.well-known/gratonite`. |
-
-### Full Documentation
-
-- **[Self-Hosting Guide](docs/federation/self-hosting-guide.md)** — Complete reference with all configuration options, architecture details, advanced troubleshooting
-- **[Federation Guide](docs/federation/federation-guide.md)** — Connecting to other instances
-- **[Protocol Spec](docs/federation/protocol-spec.md)** — Federation protocol technical reference
-
-## End-to-End Encryption 🔐
-
-Gratonite uses **end-to-end encryption (E2E)** for all direct messages and group DMs. Messages are encrypted on your device before being sent and can only be decrypted by the intended recipients. The server never has access to plaintext message content.
-
-### How It Works
-
-#### Direct Messages (1-on-1)
-
-1. **Key generation** — When you first open a DM, your browser generates an **ECDH P-256 key pair** (a public key and a private key). The private key is stored in your browser's **IndexedDB** and never leaves your device.
-2. **Key exchange** — Your public key is uploaded to the server. When you message someone, both sides fetch the other's public key.
-3. **Shared secret derivation** — Using **ECDH (Elliptic-Curve Diffie-Hellman)**, your browser derives a shared secret from your private key and the recipient's public key. Both sides independently compute the same shared secret without it ever being transmitted.
-4. **Message encryption** — Each message is encrypted using **AES-GCM with a 256-bit key** derived from the shared secret. A unique 12-byte IV (initialization vector) is generated per message to ensure no two ciphertexts are alike.
-5. **Transmission** — The encrypted ciphertext (Base64-encoded) is sent to the server. The server stores only the ciphertext — it cannot read the message.
-6. **Decryption** — The recipient's browser derives the same shared secret and decrypts the ciphertext locally.
-
-#### Group DMs
-
-1. **Group key generation** — The group creator generates a random **AES-GCM 256-bit symmetric key** for the group.
-2. **Key wrapping** — The group key is encrypted (wrapped) individually for each member using per-member **ephemeral ECDH key pairs**. Each member receives a copy of the group key encrypted with their public key.
-3. **Key storage** — Wrapped keys are stored on the server. Each member can only unwrap the copy encrypted for them.
-4. **Encryption/decryption** — All group messages are encrypted and decrypted using the shared group key with AES-GCM-256.
-
-#### Key Rotation
-
-- **Group DMs**: When a member is added or removed from a group DM, the group owner automatically generates a new group key and distributes it to all current members. This ensures that removed members cannot decrypt future messages and new members cannot decrypt past messages.
-- **Key versioning**: Each encrypted message is tagged with the key version it was encrypted with, so messages encrypted with older keys can still be decrypted if the key history is available.
-- **Public key rotation**: If a user rotates their ECDH key pair, all DM partners are notified via a real-time `USER_KEY_CHANGED` event so they can re-derive the shared secret.
-
-#### Identity Verification (Safety Numbers)
-
-Gratonite supports **safety numbers** for verifying the identity of your DM partner:
-
-1. Both users' public keys are deterministically ordered and concatenated.
-2. A **SHA-256 hash** is computed over the combined keys.
-3. The hash is formatted as a **60-digit number** displayed in a grid.
-4. Users can compare this number out-of-band (in person, over a phone call, etc.) to verify that no man-in-the-middle attack has occurred.
-
-If a partner's key changes, a warning banner is displayed in the conversation.
-
-### What Users See
-
-| Indicator | Meaning |
-|-----------|---------|
-| Lock icon in DM header | E2E encryption is active for this conversation |
-| "Messages are not encrypted" warning | Key exchange failed — messages are sent in plaintext |
-| "Partner's encryption key has changed" banner | The other user has rotated their key — tap to re-verify |
-| Safety number grid (in DM settings) | Use to verify your partner's identity |
-
-### What Is Encrypted
-
-| Content | Encrypted? |
-|---------|------------|
-| DM text messages | Yes (AES-GCM-256) |
-| Group DM text messages | Yes (AES-GCM-256) |
-| Edited messages | Yes (re-encrypted before sending) |
-| Guild (server) channel messages | No |
-| File attachments | Not yet (planned) |
-| Voice/video calls | Encrypted by LiveKit (DTLS-SRTP), not by Gratonite E2E |
-| Message metadata (timestamps, sender, channel) | No (server needs this for delivery) |
-| Notification previews | Shows "Encrypted message" instead of content |
-
-### Technical Details
-
-- **Key agreement**: ECDH on the P-256 curve (NIST)
-- **Symmetric encryption**: AES-GCM with 256-bit keys
-- **IV**: 12 bytes, randomly generated per message
-- **Key storage**: Browser IndexedDB (private keys never transmitted)
-- **Key exchange transport**: Authenticated API calls with Bearer tokens
-- **Real-time events**: Socket.IO events for key rotation (`GROUP_KEY_ROTATION_NEEDED`) and key changes (`USER_KEY_CHANGED`)
-- **Ciphertext format**: Base64-encoded `iv:ciphertext`
-
-### Limitations
-
-- **No forward secrecy**: The same shared secret is used for all messages in a conversation until a key is rotated. Compromise of a private key exposes all past and future messages encrypted with that key.
-- **Trust on first use (TOFU)**: The server distributes public keys. A compromised server could substitute keys. Use safety numbers to verify.
-- **Device-bound keys**: Private keys are stored in IndexedDB. Clearing browser data or switching browsers requires generating a new key pair. Messages encrypted with the old key cannot be decrypted.
-- **No multi-device sync**: Each browser/device has its own key pair. E2E encryption is active on whichever device you are currently using.
-
-## Roadmap 🗺️
-
-See [ROADMAP.md](ROADMAP.md) for planned features and long-term direction.
-
-## Why Gratonite 💜
-
-- No phone-number gate to join communities
-- No ad-driven engagement loop
-- No premium paywall on basic social features
-- Privacy-first with optional E2E encryption
+- No phone number required to join
+- No ad-driven engagement loops
+- No premium paywall on basic features
+- Privacy-first with automatic E2E encryption
 - Fully open source and self-hostable
+- Federation connects independent instances into one network
+- Relay network works behind NAT — no port forwarding needed
 
-## Links 🔗
+## Links
 
 - Website: [gratonite.chat](https://gratonite.chat)
-- Main repo: [CoodayeA/Gratonite](https://github.com/CoodayeA/Gratonite)
+- Self-Hosting Guide: [docs/self-hosting](docs/self-hosting/README.md)
+- Relay Operator Guide: [docs/relay](docs/relay/README.md)
+- Federation Protocol: [docs/federation](docs/federation/README.md)
+- Repository: [CoodayeA/Gratonite](https://github.com/CoodayeA/Gratonite)
 - Organization: [Gratonite-Labs](https://github.com/Gratonite-Labs)
-- Releases: [v1.0.0](https://github.com/CoodayeA/Gratonite/releases)
+
+## License
+
+Open source. See [LICENSE](LICENSE) for details.
