@@ -873,7 +873,7 @@ export const MemoizedMessageItem = memo(({
                                 <button className="message-action-btn" onClick={async (e) => {
                                     e.stopPropagation();
                                     try {
-                                        const result = await api.channels.crosspost(msgChannelId!, msg.apiId!);
+                                        const result: any = await api.channels.crosspost(msgChannelId!, msg.apiId!);
                                         addToast?.({ title: `Published to ${result?.crossposted ?? 0} follower(s)`, variant: 'success' });
                                     } catch { addToast?.({ title: 'Failed to publish', variant: 'error' }); }
                                 }} style={{ color: '#10b981' }}>
