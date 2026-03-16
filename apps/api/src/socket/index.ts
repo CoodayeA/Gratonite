@@ -622,6 +622,111 @@ export function initSocket(io: SocketIOServer): void {
       });
     });
 
+    // Track which channels this user has presence in (for efficient cleanup on disconnect)
+    const presenceChannels = new Set<string>();
+
+    // -------------------------------------------------------------------------
+    // CHANNEL_PRESENCE_JOIN — track user viewing a channel
+    // -------------------------------------------------------------------------
+    socket.on('CHANNEL_PRESENCE_JOIN', async (data: { channelId: string }) => {
+      if (!data?.channelId) return;
+      try {
+        await redis.sadd(`channel-presence:${data.channelId}`, userId);
+        await redis.expire(`channel-presence:${data.channelId}`, 3600);
+        const [user] = await db
+          .select({ id: users.id, username: users.username, avatarHash: users.avatarHash })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
+        presenceChannels.add(data.channelId);
+        if (user) {
+          socket.to(`channel:${data.channelId}`).emit('CHANNEL_PRESENCE_UPDATE', {
+            channelId: data.channelId,
+            action: 'join',
+            user: { userId: user.id, username: user.username, avatarHash: user.avatarHash },
+          });
+        }
+      } catch (err) {
+        logger.error('[socket.io] CHANNEL_PRESENCE_JOIN error:', err);
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // CHANNEL_PRESENCE_LEAVE — stop tracking user viewing a channel
+    // -------------------------------------------------------------------------
+    socket.on('CHANNEL_PRESENCE_LEAVE', async (data: { channelId: string }) => {
+      if (!data?.channelId) return;
+      try {
+        presenceChannels.delete(data.channelId);
+        await redis.srem(`channel-presence:${data.channelId}`, userId);
+        socket.to(`channel:${data.channelId}`).emit('CHANNEL_PRESENCE_UPDATE', {
+          channelId: data.channelId,
+          action: 'leave',
+          user: { userId },
+        });
+      } catch (err) {
+        logger.error('[socket.io] CHANNEL_PRESENCE_LEAVE error:', err);
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // VOICE_REACTION — audio emoji reaction in voice channel
+    // -------------------------------------------------------------------------
+    socket.on('VOICE_REACTION', (data: { channelId: string; reactionId: string; emoji: string }) => {
+      if (!data?.channelId || !data?.reactionId) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      io.to(`channel:${data.channelId}`).emit('VOICE_REACTION', {
+        channelId: data.channelId,
+        userId,
+        reactionId: data.reactionId,
+        emoji: String(data.emoji || '').slice(0, 4),
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // FOCUS_SESSION_UPDATE — sync focus timer state across participants
+    // -------------------------------------------------------------------------
+    socket.on('FOCUS_SESSION_UPDATE', (data: { channelId: string; sessionId: string; phase: string; roundNumber?: number }) => {
+      if (!data?.channelId || !data?.sessionId) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      io.to(`channel:${data.channelId}`).emit('FOCUS_SESSION_UPDATE', {
+        channelId: data.channelId,
+        sessionId: data.sessionId,
+        phase: data.phase,
+        roundNumber: data.roundNumber,
+        updatedBy: userId,
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // AMBIENT_ROOM_UPDATE — broadcast ambient room changes
+    // -------------------------------------------------------------------------
+    socket.on('AMBIENT_ROOM_UPDATE', (data: { channelId: string; action: string; theme?: string; status?: string }) => {
+      if (!data?.channelId) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      io.to(`channel:${data.channelId}`).emit('AMBIENT_ROOM_UPDATE', {
+        channelId: data.channelId,
+        action: data.action,
+        userId,
+        theme: data.theme,
+        status: data.status,
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // P2P_SIGNAL — relay WebRTC signaling data for peer-to-peer file transfer
+    // -------------------------------------------------------------------------
+    socket.on('P2P_SIGNAL', (data: { targetUserId: string; signal: any; transferId: string; fileName?: string; fileSize?: number }) => {
+      if (!data?.targetUserId || !data?.signal || !data?.transferId) return;
+      io.to(`user:${data.targetUserId}`).emit('P2P_SIGNAL', {
+        fromUserId: userId,
+        signal: data.signal,
+        transferId: data.transferId,
+        fileName: data.fileName,
+        fileSize: data.fileSize,
+      });
+    });
+
     // -------------------------------------------------------------------------
     // Disconnect handler
     // -------------------------------------------------------------------------
@@ -632,6 +737,15 @@ export function initSocket(io: SocketIOServer): void {
         posMap.delete(userId);
         if (posMap.size === 0) spatialPositions.delete(channelId);
       }
+      // Clean up channel presence for this user (O(k) where k = channels joined, not O(N) keyspace)
+      for (const channelId of presenceChannels) {
+        try {
+          await redis.srem(`channel-presence:${channelId}`, userId);
+        } catch {
+          // Non-fatal
+        }
+      }
+      presenceChannels.clear();
       // Check if the user has other active sockets
       const userRoom = io.sockets.adapter.rooms.get(`user:${userId}`);
       if (!userRoom || userRoom.size === 0) {

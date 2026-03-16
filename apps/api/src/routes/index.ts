@@ -120,6 +120,24 @@ import { guildHighlightsRouter } from './guild-highlights';
 import { vanityProfileRouter } from './vanity-profile';
 import { openapiRouter } from './openapi';
 
+// Cutting-edge features (Wave 26)
+import { spatialRoomsRouter } from './spatial-rooms';
+import { channelPresenceRouter } from './channel-presence';
+import { ephemeralPodsRouter } from './ephemeral-pods';
+import { voiceReactionsRouter } from './voice-reactions';
+import { focusSessionsRouter } from './focus-sessions';
+import { channelBookmarksRouter } from './channel-bookmarks';
+import { messageComponentsRouter } from './message-components';
+import { guildDigestGenerateRouter } from './guild-digest-generate';
+import { threadDashboardRouter } from './thread-dashboard';
+import { notificationSoundsRouter } from './notification-sounds';
+import { ambientRoomsRouter } from './ambient-rooms';
+import { p2pTransferRouter } from './p2p-transfer';
+import { serverStatusRouter } from './server-status';
+import { scheduleCalendarRouter } from './schedule-calendar';
+import { readingListsRouter } from './reading-lists';
+import { channelFollowingRouter, guildFollowingRouter } from './channel-following';
+
 export const router = Router();
 
 // Health check
@@ -427,3 +445,22 @@ router.use('/', loginRewardsRouter);
 router.use('/', userTitlesRouter);
 router.use('/guilds/:guildId/quizzes', quizzesRouter);
 router.use('/', reputationRouter);
+
+// Wave 26: Cutting-edge features
+router.use('/channels/:channelId/spatial-room', spatialRoomsRouter);
+router.use('/channels/:channelId/presence', channelPresenceRouter);
+router.use('/guilds/:guildId/pods', ephemeralPodsRouter);
+router.use('/voice-reactions', voiceReactionsRouter);
+router.use('/channels/:channelId/focus-sessions', focusSessionsRouter);
+router.use('/channels/:channelId/bookmarks', channelBookmarksRouter);
+router.use('/channels/:channelId/messages/:messageId/components', messageComponentsRouter);
+router.use('/guilds/:guildId/digest', guildDigestGenerateRouter);
+router.use('/guilds/:guildId/threads', threadDashboardRouter);
+router.use('/notification-sounds', notificationSoundsRouter);
+router.use('/channels/:channelId/ambient-room', ambientRoomsRouter);
+router.use('/p2p', p2pTransferRouter);
+router.use('/guilds/:guildId/status', serverStatusRouter);
+router.use('/users/@me/scheduled-messages', scheduleCalendarRouter);
+router.use('/channels/:channelId/reading-list', readingListsRouter);
+router.use('/channels/:channelId/followers', channelFollowingRouter);
+router.use('/guilds/:guildId/following', guildFollowingRouter);
