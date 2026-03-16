@@ -3,8 +3,9 @@ import { X, Sparkles, Zap, Shield, Bug } from 'lucide-react';
 import { ModalWrapper } from '../ui/ModalWrapper';
 
 interface ChangelogEntry {
-  version: string;
+  id: string;
   date: string;
+  title: string;
   entries: Array<{
     type: 'feature' | 'improvement' | 'fix' | 'security';
     text: string;
@@ -13,8 +14,9 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
-    version: '3.0',
-    date: 'March 2026',
+    id: '2026-03-15',
+    date: 'March 15, 2026',
+    title: '20 New Features Drop',
     entries: [
       { type: 'feature', text: 'Proximity Voice Rooms — walk around a 2D space, voice adjusts by distance like Gather.town' },
       { type: 'feature', text: 'Live Co-Presence — see who else is viewing the same channel with live avatar indicators' },
@@ -23,7 +25,7 @@ const CHANGELOG: ChangelogEntry[] = [
       { type: 'feature', text: 'Voice Reactions — tap audio emoji (applause, airhorn, drum roll) during voice calls without unmuting' },
       { type: 'feature', text: 'Shared Focus Timers — collaborative Pomodoro sessions with synced work/break phases' },
       { type: 'feature', text: 'Channel Bookmarks Bar — pin links, files, and messages at the top of any channel' },
-      { type: 'feature', text: 'Interactive Messages v2 — buttons, dropdowns, carousels, accordions, and progress bars in messages' },
+      { type: 'feature', text: 'Interactive Messages — buttons, dropdowns, carousels, accordions, and progress bars in messages' },
       { type: 'feature', text: 'Multi-Account Switching — add multiple accounts and switch instantly without logging out' },
       { type: 'feature', text: 'Server Digest — auto-generated weekly newsletter with top messages, stats, and highlights' },
       { type: 'feature', text: 'Screen Recording to Chat — record your screen and post directly as a video message' },
@@ -41,8 +43,9 @@ const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.1',
-    date: 'March 2026',
+    id: '2026-03-10',
+    date: 'March 10, 2026',
+    title: 'Theme System Overhaul',
     entries: [
       { type: 'feature', text: 'Complete theme system rebuild with live preview, preset themes, and custom theme builder' },
       { type: 'feature', text: 'Per-server theme overrides — set a unique look for each guild' },
@@ -55,8 +58,9 @@ const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.0',
-    date: 'March 2026',
+    id: '2026-03-04',
+    date: 'March 4, 2026',
+    title: 'Productivity & Quality of Life',
     entries: [
       { type: 'feature', text: 'Real-time guild/channel updates without page refresh' },
       { type: 'feature', text: 'Task boards (Kanban) in channels' },
@@ -102,7 +106,7 @@ const TYPE_COLORS = {
 
 export default function WhatsNewModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
-    localStorage.setItem('gratonite:last-seen-changelog', CHANGELOG[0]?.version ?? '');
+    localStorage.setItem('gratonite:last-seen-changelog', CHANGELOG[0]?.id ?? '');
   }, []);
 
   return (
@@ -117,9 +121,9 @@ export default function WhatsNewModal({ onClose }: { onClose: () => void }) {
             <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}><X size={20} /></button>
           </div>
           {CHANGELOG.map(release => (
-            <div key={release.version} style={{ marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>v{release.version}</span>
+            <div key={release.id} style={{ marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{release.title}</span>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{release.date}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

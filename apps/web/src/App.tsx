@@ -3000,7 +3000,7 @@ export const AppLayout = () => {
     // Show "What's New" modal if user hasn't seen the latest changelog
     useEffect(() => {
         const lastSeen = localStorage.getItem('gratonite:last-seen-changelog');
-        if (lastSeen !== '3.0' && ctxUser.id) {
+        if (lastSeen !== '2026-03-15' && ctxUser.id) {
             setTimeout(() => setShowWhatsNew(true), 2000);
         }
     }, [ctxUser.id]);
