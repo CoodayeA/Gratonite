@@ -150,3 +150,16 @@ export * from './xp-system';
 export * from './user-titles';
 export * from './quizzes';
 export * from './reputation';
+
+// DND schedules & message snippets
+export * from './dnd-schedules';
+export * from './message-snippets';
+
+// RSS feed subscriptions
+export * from './rss-feeds';
+
+// Collaborative documents (CRDT)
+export * from './collaborative-documents';
+
+// Per-server member profiles
+export * from './guild-member-profiles';

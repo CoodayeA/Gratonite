@@ -528,6 +528,62 @@ export function onPlaylistVote(cb: PlaylistVoteCallback): () => void {
   return () => { playlistVoteListeners.delete(cb); };
 }
 
+/* ── Collaborative Document events ─────────────────────────── */
+
+export interface DocumentUpdatePayload {
+  channelId: string;
+  update: string; // base64-encoded Yjs update
+  userId: string;
+}
+
+export interface DocumentAwarenessPayload {
+  channelId: string;
+  state: string; // JSON-encoded awareness state
+  userId: string;
+}
+
+export interface DocumentPresenceUpdatePayload {
+  channelId: string;
+  action: 'join' | 'leave';
+  user: { userId: string; username?: string; avatarHash?: string | null };
+}
+
+export interface DocumentTitleUpdatePayload {
+  channelId: string;
+  title: string;
+  userId: string;
+}
+
+type DocumentUpdateCallback = (payload: DocumentUpdatePayload) => void;
+type DocumentAwarenessCallback = (payload: DocumentAwarenessPayload) => void;
+type DocumentPresenceUpdateCallback = (payload: DocumentPresenceUpdatePayload) => void;
+type DocumentTitleUpdateCallback = (payload: DocumentTitleUpdatePayload) => void;
+
+const documentUpdateListeners = new Set<DocumentUpdateCallback>();
+const documentAwarenessListeners = new Set<DocumentAwarenessCallback>();
+const documentPresenceUpdateListeners = new Set<DocumentPresenceUpdateCallback>();
+const documentTitleUpdateListeners = new Set<DocumentTitleUpdateCallback>();
+
+export function onDocumentUpdate(cb: DocumentUpdateCallback): () => void {
+  documentUpdateListeners.add(cb);
+  return () => { documentUpdateListeners.delete(cb); };
+}
+
+export function onDocumentAwareness(cb: DocumentAwarenessCallback): () => void {
+  documentAwarenessListeners.add(cb);
+  return () => { documentAwarenessListeners.delete(cb); };
+}
+
+export function onDocumentPresenceUpdate(cb: DocumentPresenceUpdateCallback): () => void {
+  documentPresenceUpdateListeners.add(cb);
+  return () => { documentPresenceUpdateListeners.delete(cb); };
+}
+
+export function onDocumentTitleUpdate(cb: DocumentTitleUpdateCallback): () => void {
+  documentTitleUpdateListeners.add(cb);
+  return () => { documentTitleUpdateListeners.delete(cb); };
+}
+
 /* ── Screen Annotation events ──────────────────────────────── */
 
 export interface ScreenAnnotationPayload {
@@ -1058,6 +1114,22 @@ export function connectSocket(): GratoniteSocket {
 
   socket.on('SCREEN_ANNOTATION_CLEAR', (data: ScreenAnnotationClearPayload) => {
     screenAnnotationClearListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('DOCUMENT_UPDATE', (data: DocumentUpdatePayload) => {
+    documentUpdateListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('DOCUMENT_AWARENESS', (data: DocumentAwarenessPayload) => {
+    documentAwarenessListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('DOCUMENT_PRESENCE_UPDATE', (data: DocumentPresenceUpdatePayload) => {
+    documentPresenceUpdateListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('DOCUMENT_TITLE_UPDATE', (data: DocumentTitleUpdatePayload) => {
+    documentTitleUpdateListeners.forEach(cb => cb(data));
   });
 
   socket.on('disconnect', () => {

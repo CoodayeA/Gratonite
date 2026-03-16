@@ -1,6 +1,8 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import hljs from 'highlight.js';
 import DOMPurify from 'dompurify';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 import { getCodeTheme, applyCodeTheme } from '../../utils/codeTheme';
 
 // Apply the saved code theme on first load
@@ -45,6 +47,119 @@ const CodeBlock = ({ code, lang, idx }: { code: string; lang: string; idx: numbe
                 dangerouslySetInnerHTML={{ __html: safeHtml }}
             />
         </pre>
+    );
+};
+
+// ─── Mermaid Diagram Block ────────────────────────────────────────────────────
+const MermaidBlock = ({ code, idx }: { code: string; idx: number }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [svg, setSvg] = useState<string>('');
+    const [error, setError] = useState<string>('');
+
+    useEffect(() => {
+        let cancelled = false;
+        import('mermaid').then(mod => {
+            const mermaid = mod.default;
+            mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'strict' });
+            const id = `mermaid-${idx}-${Date.now()}`;
+            mermaid.render(id, code).then(({ svg: result }) => {
+                // SAFETY: DOMPurify.sanitize ensures no XSS from mermaid SVG output
+                if (!cancelled) setSvg(DOMPurify.sanitize(result));
+            }).catch((err: Error) => {
+                if (!cancelled) setError(err.message || 'Failed to render diagram');
+            });
+        });
+        return () => { cancelled = true; };
+    }, [code, idx]);
+
+    if (error) {
+        return <pre style={{ color: '#ef4444', background: 'var(--bg-tertiary)', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', whiteSpace: 'pre-wrap' }}>Mermaid error: {error}</pre>;
+    }
+    if (!svg) {
+        return <div style={{ padding: '12px', color: 'var(--text-muted)', fontSize: '13px' }}>Loading diagram...</div>;
+    }
+    return (
+        <div
+            ref={containerRef}
+            style={{ margin: '6px 0', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--stroke)', overflow: 'auto', maxWidth: '100%' }}
+            // SAFETY: svg is DOMPurify.sanitize'd above — safe for rendering
+            dangerouslySetInnerHTML={{ __html: svg }}
+        />
+    );
+};
+
+// ─── KaTeX Math Rendering ─────────────────────────────────────────────────────
+const InlineMath = ({ tex }: { tex: string }) => {
+    const html = useMemo(() => {
+        try {
+            // SAFETY: KaTeX output is safe by design — it only generates math markup
+            return katex.renderToString(tex, { throwOnError: false, displayMode: false });
+        } catch {
+            return `<span style="color:#ef4444">${DOMPurify.sanitize(tex)}</span>`;
+        }
+    }, [tex]);
+    // SAFETY: KaTeX renderToString produces safe HTML; fallback uses DOMPurify
+    return <span dangerouslySetInnerHTML={{ __html: html }} style={{ verticalAlign: 'middle' }} />;
+};
+
+const BlockMath = ({ tex, keyStr }: { tex: string; keyStr: string }) => {
+    const html = useMemo(() => {
+        try {
+            // SAFETY: KaTeX output is safe by design — it only generates math markup
+            return katex.renderToString(tex, { throwOnError: false, displayMode: true });
+        } catch {
+            return `<div style="color:#ef4444">${DOMPurify.sanitize(tex)}</div>`;
+        }
+    }, [tex]);
+    return (
+        // SAFETY: KaTeX renderToString produces safe HTML; fallback uses DOMPurify
+        <div key={keyStr} style={{ margin: '8px 0', textAlign: 'center', overflow: 'auto' }} dangerouslySetInnerHTML={{ __html: html }} />
+    );
+};
+
+// ─── Markdown Table Parser ────────────────────────────────────────────────────
+const MarkdownTable = ({ rows, ctx, keyStr }: { rows: string[]; ctx: InlineCtx; keyStr: string }) => {
+    const headerCells = rows[0].split('|').map(c => c.trim()).filter(Boolean);
+    const alignRow = rows[1].split('|').map(c => c.trim()).filter(Boolean);
+    const alignments = alignRow.map(a => {
+        if (a.startsWith(':') && a.endsWith(':')) return 'center' as const;
+        if (a.endsWith(':')) return 'right' as const;
+        return 'left' as const;
+    });
+    const bodyRows = rows.slice(2).map(r => r.split('|').map(c => c.trim()).filter(Boolean));
+
+    return (
+        <div key={keyStr} style={{ margin: '6px 0', overflow: 'auto', maxWidth: '100%' }}>
+            <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '13px' }}>
+                <thead>
+                    <tr>
+                        {headerCells.map((cell, ci) => (
+                            <th key={ci} style={{
+                                padding: '6px 12px', textAlign: alignments[ci] || 'left',
+                                borderBottom: '2px solid var(--stroke)', color: 'var(--text-primary)',
+                                fontWeight: 700, background: 'var(--bg-tertiary)', whiteSpace: 'nowrap',
+                            }}>
+                                {renderInline(cell, { ...ctx, keyPrefix: `${keyStr}-th-${ci}` })}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {bodyRows.map((row, ri) => (
+                        <tr key={ri}>
+                            {row.map((cell, ci) => (
+                                <td key={ci} style={{
+                                    padding: '5px 12px', textAlign: alignments[ci] || 'left',
+                                    borderBottom: '1px solid var(--stroke)', color: 'var(--text-secondary)',
+                                }}>
+                                    {renderInline(cell, { ...ctx, keyPrefix: `${keyStr}-td-${ri}-${ci}` })}
+                                </td>
+                            ))}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
     );
 };
 
@@ -163,6 +278,12 @@ function renderInline(text: string, ctx: InlineCtx, depth = 0): React.ReactNode[
             wrap: (inner, key) => <span key={key} style={{ textDecoration: 'line-through', color: 'var(--text-muted)' }}>{inner}</span>,
             recurse: true,
         },
+        // Inline math $...$  (not $$)
+        {
+            re: /(?<!\$)\$(?!\$)([^$\n]+?)\$(?!\$)/g,
+            wrap: (_inner, key) => null, // handled specially below
+            recurse: false,
+        },
     ];
 
     // Try each rule in order
@@ -196,6 +317,31 @@ function renderInline(text: string, ctx: InlineCtx, depth = 0): React.ReactNode[
                     parts.push(...renderInline(text.slice(lastIndex), ctx, depth + 1));
                 }
                 return parts;
+            }
+            continue;
+        }
+
+        // Special handling for inline math $...$
+        if (rule.re.source.includes('\\$')) {
+            const mathRe = /(?<!\$)\$(?!\$)([^$\n]+?)\$(?!\$)/g;
+            const mathParts: React.ReactNode[] = [];
+            let mathLastIndex = 0;
+            let mathMatch: RegExpExecArray | null;
+            let mathFound = false;
+
+            while ((mathMatch = mathRe.exec(text)) !== null) {
+                mathFound = true;
+                if (mathMatch.index > mathLastIndex) {
+                    mathParts.push(...renderInline(text.slice(mathLastIndex, mathMatch.index), ctx, depth + 1));
+                }
+                mathParts.push(<InlineMath key={`${kp}-math-${mathMatch.index}`} tex={mathMatch[1]} />);
+                mathLastIndex = mathMatch.index + mathMatch[0].length;
+            }
+            if (mathFound) {
+                if (mathLastIndex < text.length) {
+                    mathParts.push(...renderInline(text.slice(mathLastIndex), ctx, depth + 1));
+                }
+                return mathParts;
             }
             continue;
         }
@@ -398,7 +544,7 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({ content, cus
 
     topParts.forEach((part, idx) => {
         if (idx % 2 !== 0) {
-            // Code block content — render with syntax highlighting + copy button
+            // Code block content — render with syntax highlighting, mermaid, or copy button
             const lines = part.trim();
             const firstNewline = lines.indexOf('\n');
             let lang = '';
@@ -406,6 +552,11 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({ content, cus
             if (firstNewline > 0 && firstNewline < 20 && /^[a-zA-Z0-9+#]+$/.test(lines.slice(0, firstNewline).trim())) {
                 lang = lines.slice(0, firstNewline).trim();
                 code = lines.slice(firstNewline + 1);
+            }
+            // Feature 3: Mermaid diagram rendering
+            if (lang.toLowerCase() === 'mermaid') {
+                rendered.push(<MermaidBlock key={`mermaid-${idx}`} code={code} idx={idx} />);
+                return;
             }
             rendered.push(<CodeBlock key={`cb-${idx}`} code={code} lang={lang} idx={idx} />);
             return;
@@ -548,6 +699,46 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({ content, cus
             // If we had a list going, flush it
             if (listBuffer.length > 0) {
                 flushList();
+            }
+
+            // Feature 1: Block math $$...$$
+            if (trimmed.startsWith('$$')) {
+                flushList();
+                // Single-line block math: $$e=mc^2$$
+                if (trimmed.endsWith('$$') && trimmed.length > 4) {
+                    const tex = trimmed.slice(2, -2).trim();
+                    rendered.push(<BlockMath key={`bmath-${idx}-${i}`} tex={tex} keyStr={`bmath-${idx}-${i}`} />);
+                    i++;
+                    continue;
+                }
+                // Multi-line block math
+                const mathLines: string[] = [];
+                i++; // skip opening $$
+                while (i < lines.length && !lines[i].trim().startsWith('$$')) {
+                    mathLines.push(lines[i]);
+                    i++;
+                }
+                if (i < lines.length) i++; // skip closing $$
+                rendered.push(<BlockMath key={`bmath-${idx}-${i}`} tex={mathLines.join('\n')} keyStr={`bmath-${idx}-${i}`} />);
+                continue;
+            }
+
+            // Feature 2: Markdown tables (| header | header | with |---|---| separator)
+            if (trimmed.includes('|') && i + 1 < lines.length) {
+                const nextTrimmed = lines[i + 1]?.trim() || '';
+                // Check if next line is a separator row like |---|---|
+                if (/^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?\s*$/.test(nextTrimmed)) {
+                    flushList();
+                    const tableRows: string[] = [trimmed, nextTrimmed];
+                    let ti = i + 2;
+                    while (ti < lines.length && lines[ti].trim().includes('|')) {
+                        tableRows.push(lines[ti].trim());
+                        ti++;
+                    }
+                    rendered.push(<MarkdownTable key={`table-${idx}-${i}`} rows={tableRows} ctx={ctx} keyStr={`table-${idx}-${i}`} />);
+                    i = ti;
+                    continue;
+                }
             }
 
             // Empty line

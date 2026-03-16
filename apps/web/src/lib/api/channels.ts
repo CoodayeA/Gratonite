@@ -36,6 +36,7 @@ export const channelsApi = {
       if (raw === 'TEXT' || raw === 'GUILD_TEXT') return 'GUILD_TEXT';
       if (raw === 'VOICE' || raw === 'GUILD_VOICE') return 'GUILD_VOICE';
       if (raw === 'CATEGORY' || raw === 'GUILD_CATEGORY') return 'GUILD_CATEGORY';
+      if (raw === 'DOCUMENT' || raw === 'GUILD_DOCUMENT') return 'GUILD_DOCUMENT';
       return raw;
     })();
 

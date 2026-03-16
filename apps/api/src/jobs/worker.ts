@@ -38,6 +38,10 @@ import { processAuctionCron } from '../lib/auction-cron';
 import { processRelayDirectorySync } from './relayDirectorySync';
 import { processRelayHealthCheck } from './relayHealthCheck';
 import { processRelayReputationCalc } from './relayReputationCalc';
+import { processDisappearingMessages } from './disappearingMessages';
+import { processDndSchedule } from './dndSchedule';
+import { processRssFeedPoller } from './rssFeedPoller';
+import { processCalendarSync } from './calendarSync';
 
 // ---------------------------------------------------------------------------
 // Queue definitions
@@ -66,6 +70,10 @@ export const auctionCronQueue = createQueue('auction-cron');
 export const relayDirectorySyncQueue = createQueue('relay-directory-sync');
 export const relayHealthCheckQueue = createQueue('relay-health-check');
 export const relayReputationCalcQueue = createQueue('relay-reputation-calc');
+export const disappearingMessagesQueue = createQueue('disappearing-messages');
+export const dndScheduleQueue = createQueue('dnd-schedule');
+export const rssFeedPollerQueue = createQueue('rss-feed-poller');
+export const calendarSyncQueue = createQueue('calendar-sync');
 
 // ---------------------------------------------------------------------------
 // Start workers and add repeatable schedules
@@ -300,6 +308,46 @@ export async function startBullWorkers(): Promise<void> {
     'relay-reputation-calc-repeat',
     { every: 5 * 60_000 },
     { name: 'relay-reputation-calc-tick' },
+  );
+
+  // --- Disappearing Messages (every 30s) ---
+  createWorker('disappearing-messages', async () => {
+    await processDisappearingMessages();
+  });
+  await disappearingMessagesQueue.upsertJobScheduler(
+    'disappearing-messages-repeat',
+    { every: 30_000 },
+    { name: 'disappearing-messages-tick' },
+  );
+
+  // --- DND Schedule (every 60s) ---
+  createWorker('dnd-schedule', async () => {
+    await processDndSchedule();
+  });
+  await dndScheduleQueue.upsertJobScheduler(
+    'dnd-schedule-repeat',
+    { every: 60_000 },
+    { name: 'dnd-schedule-tick' },
+  );
+
+  // --- RSS Feed Poller (every 60s) ---
+  createWorker('rss-feed-poller', async () => {
+    await processRssFeedPoller();
+  });
+  await rssFeedPollerQueue.upsertJobScheduler(
+    'rss-feed-poller-repeat',
+    { every: 60_000 },
+    { name: 'rss-feed-poller-tick' },
+  );
+
+  // --- Calendar Sync (every 5 min) ---
+  createWorker('calendar-sync', async () => {
+    await processCalendarSync();
+  });
+  await calendarSyncQueue.upsertJobScheduler(
+    'calendar-sync-repeat',
+    { every: 5 * 60_000 },
+    { name: 'calendar-sync-tick' },
   );
 
   logger.info('[bullmq] All workers started and repeatable jobs registered');

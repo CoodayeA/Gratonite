@@ -398,6 +398,8 @@ server.listen(PORT, async () => {
     startUnbanExpiredJob();
     startUpdateCheckJob();
     startAuctionCron();
+    const { startCalendarSyncJob } = await import('./jobs/calendarSync');
+    startCalendarSyncJob();
   }
 
   // Initialize federation subsystem (gated behind FEDERATION_ENABLED)

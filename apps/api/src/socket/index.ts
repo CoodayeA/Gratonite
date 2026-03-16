@@ -728,9 +728,111 @@ export function initSocket(io: SocketIOServer): void {
     });
 
     // -------------------------------------------------------------------------
+    // DOCUMENT_JOIN — user opens a collaborative document channel
+    // -------------------------------------------------------------------------
+    const joinedDocChannels = new Set<string>();
+
+    socket.on('DOCUMENT_JOIN', async (data: { channelId: string }) => {
+      if (!data?.channelId) return;
+      try {
+        await redis.sadd(`doc-presence:${data.channelId}`, userId);
+        await redis.expire(`doc-presence:${data.channelId}`, 3600);
+        joinedDocChannels.add(data.channelId);
+
+        const [user] = await db
+          .select({ id: users.id, username: users.username, avatarHash: users.avatarHash })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
+
+        if (user) {
+          socket.to(`channel:${data.channelId}`).emit('DOCUMENT_PRESENCE_UPDATE', {
+            channelId: data.channelId,
+            action: 'join',
+            user: { userId: user.id, username: user.username, avatarHash: user.avatarHash },
+          });
+        }
+      } catch (err) {
+        logger.error('[socket.io] DOCUMENT_JOIN error:', err);
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // DOCUMENT_LEAVE — user closes a collaborative document channel
+    // -------------------------------------------------------------------------
+    socket.on('DOCUMENT_LEAVE', async (data: { channelId: string }) => {
+      if (!data?.channelId) return;
+      try {
+        joinedDocChannels.delete(data.channelId);
+        await redis.srem(`doc-presence:${data.channelId}`, userId);
+        socket.to(`channel:${data.channelId}`).emit('DOCUMENT_PRESENCE_UPDATE', {
+          channelId: data.channelId,
+          action: 'leave',
+          user: { userId },
+        });
+      } catch (err) {
+        logger.error('[socket.io] DOCUMENT_LEAVE error:', err);
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // DOCUMENT_UPDATE — relay Yjs update binary to peers (CRDT sync)
+    // -------------------------------------------------------------------------
+    socket.on('DOCUMENT_UPDATE', (data: { channelId: string; update: string }) => {
+      if (!data?.channelId || !data?.update) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      // Relay the Yjs update (base64-encoded) to all other clients on the same channel
+      socket.to(`channel:${data.channelId}`).emit('DOCUMENT_UPDATE', {
+        channelId: data.channelId,
+        update: data.update,
+        userId,
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // DOCUMENT_AWARENESS — relay Yjs awareness state (cursor positions, selections)
+    // -------------------------------------------------------------------------
+    socket.on('DOCUMENT_AWARENESS', (data: { channelId: string; state: string }) => {
+      if (!data?.channelId || !data?.state) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      socket.to(`channel:${data.channelId}`).emit('DOCUMENT_AWARENESS', {
+        channelId: data.channelId,
+        state: data.state,
+        userId,
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // DOCUMENT_TITLE_UPDATE — relay title changes in real time
+    // -------------------------------------------------------------------------
+    socket.on('DOCUMENT_TITLE_UPDATE', (data: { channelId: string; title: string }) => {
+      if (!data?.channelId || typeof data.title !== 'string') return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      socket.to(`channel:${data.channelId}`).emit('DOCUMENT_TITLE_UPDATE', {
+        channelId: data.channelId,
+        title: data.title.slice(0, 200),
+        userId,
+      });
+    });
+
+    // -------------------------------------------------------------------------
     // Disconnect handler
     // -------------------------------------------------------------------------
     socket.on('disconnect', async () => {
+      // Clean up document presence
+      for (const channelId of joinedDocChannels) {
+        try {
+          await redis.srem(`doc-presence:${channelId}`, userId);
+          socket.to(`channel:${channelId}`).emit('DOCUMENT_PRESENCE_UPDATE', {
+            channelId,
+            action: 'leave',
+            user: { userId },
+          });
+        } catch {
+          // Non-fatal
+        }
+      }
+      joinedDocChannels.clear();
       activeWebSocketConnections.dec();
       // Clean up spatial positions for this user
       for (const [channelId, posMap] of spatialPositions) {

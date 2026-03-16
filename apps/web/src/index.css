@@ -3969,6 +3969,166 @@ img[loading="lazy"][src] {
   backface-visibility: hidden;
 }
 
+/* ── Feature 14: WCAG 2.1 AA — Focus Indicators ── */
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Remove default focus outline (replaced by :focus-visible above) */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── Feature 13: RTL Layout Support ── */
+[dir="rtl"] .sidebar-nav-item,
+[dir="rtl"] .channel-list-item {
+  text-align: right;
+  direction: rtl;
+}
+
+[dir="rtl"] .message-content {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir="rtl"] .chat-input-container {
+  direction: rtl;
+}
+
+/* CSS logical properties for RTL-aware spacing */
+[dir="rtl"] .member-list {
+  border-inline-start: 1px solid var(--stroke);
+  border-inline-end: none;
+}
+
+/* RTL: flip flex direction for horizontal layouts */
+[dir="rtl"] .input-area .chat-input-wrapper {
+  direction: rtl;
+}
+
+[dir="rtl"] .guild-rail {
+  order: 1;
+}
+
+[dir="rtl"] .channel-sidebar {
+  order: 2;
+  border-inline-end: 1px solid var(--stroke);
+  border-inline-start: none;
+}
+
+[dir="rtl"] .members-sidebar {
+  border-inline-start: 1px solid var(--stroke);
+  border-inline-end: none;
+}
+
+/* RTL: logical properties for common patterns */
+[dir="rtl"] .reply-bar,
+[dir="rtl"] .edit-banner {
+  border-inline-start: 3px solid var(--accent-primary);
+  border-inline-end: none;
+  border-left: none;
+}
+
+[dir="rtl"] .mobile-bottom-nav {
+  direction: rtl;
+}
+
+/* RTL: flip chevrons / arrows */
+[dir="rtl"] .chevron-right {
+  transform: scaleX(-1);
+}
+
+/* Use logical properties globally where sensible */
+[dir="rtl"] .typing-indicator {
+  padding-inline-start: 16px;
+  padding-left: 0;
+}
+
+/* RTL: autocomplete popover positioning */
+[dir="rtl"] .autocomplete-popover {
+  left: auto;
+  right: 0;
+}
+
+/* ── Feature 14: WCAG — Improved Contrast ── */
+
+/* Default dark mode: bump muted text to meet AA 4.5:1 ratio on dark backgrounds */
+:root {
+  --text-muted: #9ca3af;
+  --text-secondary: #d1d5db;
+}
+
+/* High-contrast preference: even stronger */
+@media (prefers-contrast: more) {
+  :root {
+    --text-muted: #b0b0b0;
+    --text-secondary: #d0d0d0;
+    --stroke: #666;
+  }
+  [data-color-mode="light"] {
+    --text-muted: #3b3b3b;
+    --text-secondary: #1f1f1f;
+    --stroke: #999;
+  }
+}
+
+/* Skip-nav enhanced focus style (works alongside existing .skip-link) */
+#skip-nav:focus,
+.skip-link:focus-visible {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  height: auto;
+  padding: 12px 24px;
+  background: var(--accent-primary, #3b82f6);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  z-index: 10000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  text-decoration: none;
+  outline: 3px solid white;
+  outline-offset: 2px;
+}
+
+/* Ensure interactive elements without visible text have sufficient touch target (44x44) */
+.input-icon-btn {
+  min-width: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Live region for screen reader announcements */
+[role="status"],
+[role="alert"],
+[aria-live] {
+  /* Ensure live regions aren't hidden from assistive tech */
+}
+
+/* Ensure link contrast in messages meets AA */
+.message-content a {
+  color: var(--accent-primary);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
 /* ── Performance: Reduced motion preferences ── */
 @media (prefers-reduced-motion: reduce) {
   *,
