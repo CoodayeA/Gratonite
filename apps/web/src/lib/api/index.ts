@@ -141,6 +141,8 @@ import {
   scheduleCalendarApi,
   readingListsApi,
   channelFollowingApi,
+  calendarSyncApi,
+  messageTranslateApi,
 } from './misc';
 
 // --- Re-export core utilities & errors ---
@@ -323,6 +325,8 @@ export const api = {
   scheduleCalendar: scheduleCalendarApi,
   readingLists: readingListsApi,
   channelFollowing: channelFollowingApi,
+  calendarSync: calendarSyncApi,
+  messageTranslate: messageTranslateApi,
   get: genericApi.get,
   post: genericApi.post,
   patch: genericApi.patch,

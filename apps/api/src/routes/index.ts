@@ -137,6 +137,10 @@ import { serverStatusRouter } from './server-status';
 import { scheduleCalendarRouter } from './schedule-calendar';
 import { readingListsRouter } from './reading-lists';
 import { channelFollowingRouter, guildFollowingRouter } from './channel-following';
+import { dndScheduleRouter } from './dnd-schedule';
+import { snippetsRouter } from './snippets';
+import { documentsRouter } from './documents';
+import { rssFeedsRouter } from './rss-feeds';
 
 export const router = Router();
 
@@ -464,3 +468,23 @@ router.use('/users/@me/scheduled-messages', scheduleCalendarRouter);
 router.use('/channels/:channelId/reading-list', readingListsRouter);
 router.use('/channels/:channelId/followers', channelFollowingRouter);
 router.use('/guilds/:guildId/following', guildFollowingRouter);
+router.use('/', dndScheduleRouter);
+router.use('/', snippetsRouter);
+
+// RSS feed subscriptions
+router.use('/guilds/:guildId/rss-feeds', rssFeedsRouter);
+
+// Collaborative documents (CRDT)
+router.use('/', documentsRouter);
+
+// Google Calendar sync (user-scoped integrations)
+import { calendarSyncRouter } from './calendar-sync';
+router.use('/', calendarSyncRouter);
+
+// Inline message translation (LibreTranslate)
+import { translateRouter } from './translate';
+router.use('/messages', translateRouter);
+
+// Per-server member profiles
+import { guildMemberProfilesRouter } from './guild-member-profiles';
+router.use('/guilds/:guildId/members', guildMemberProfilesRouter);

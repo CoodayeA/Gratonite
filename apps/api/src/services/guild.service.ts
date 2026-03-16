@@ -18,6 +18,7 @@ import { roles, memberRoles, DEFAULT_PERMISSIONS, Permissions } from '../db/sche
 import { guildMemberGroupMembers } from '../db/schema/member-groups';
 import { guildMemberOnboarding } from '../db/schema/guild-onboarding';
 import { guildTags } from '../db/schema/guild-tags';
+import { guildMemberProfiles } from '../db/schema/guild-member-profiles';
 import { getIO } from '../lib/socket-io';
 import { logAuditEvent, AuditActionTypes } from '../lib/audit';
 import { redis } from '../lib/redis';
@@ -599,9 +600,19 @@ export class GuildService {
         avatarHash: users.avatarHash,
         nickname: guildMembers.nickname,
         joinedAt: guildMembers.joinedAt,
+        serverDisplayName: guildMemberProfiles.displayName,
+        serverAvatarUrl: guildMemberProfiles.avatarUrl,
+        serverBio: guildMemberProfiles.bio,
       })
       .from(guildMembers)
       .innerJoin(users, eq(users.id, guildMembers.userId))
+      .leftJoin(
+        guildMemberProfiles,
+        and(
+          eq(guildMemberProfiles.userId, guildMembers.userId),
+          eq(guildMemberProfiles.guildId, guildMembers.guildId),
+        ),
+      )
       .where(
         search.length > 0
           ? and(
@@ -610,6 +621,7 @@ export class GuildService {
                 ${users.username} ILIKE ${`%${escapedSearch}%`}
                 OR ${users.displayName} ILIKE ${`%${escapedSearch}%`}
                 OR ${guildMembers.nickname} ILIKE ${`%${escapedSearch}%`}
+                OR ${guildMemberProfiles.displayName} ILIKE ${`%${escapedSearch}%`}
               )`,
             )
           : eq(guildMembers.guildId, guildId),

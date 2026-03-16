@@ -1299,6 +1299,35 @@ export const calendarsApi = {
     apiFetch<any[]>(`/guilds/${guildId}/calendar/${eventId}/rsvps`),
 };
 
+export const calendarSyncApi = {
+  list: () => apiFetch<any[]>('/users/@me/calendar-integrations'),
+  connectGoogle: (guildId?: string) =>
+    apiFetch<{ authUrl: string }>('/users/@me/calendar-integrations/google/connect', {
+      method: 'POST',
+      body: JSON.stringify({ guildId }),
+    }),
+  disconnect: (id: string) =>
+    apiFetch<void>(`/users/@me/calendar-integrations/${id}`, { method: 'DELETE' }),
+  sync: (id: string) =>
+    apiFetch<{ synced: boolean; eventCount: number; events: any[] }>(
+      `/users/@me/calendar-integrations/${id}/sync`,
+      { method: 'POST' },
+    ),
+  toggleSync: (id: string, syncEnabled: boolean) =>
+    apiFetch<any>(`/users/@me/calendar-integrations/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ syncEnabled }),
+    }),
+};
+
+export const messageTranslateApi = {
+  translate: (messageId: string, targetLang: string) =>
+    apiFetch<{ translatedContent: string; sourceLang: string | null; targetLang: string; cached: boolean }>(
+      `/messages/${messageId}/translate`,
+      { method: 'POST', body: JSON.stringify({ targetLang }) },
+    ),
+};
+
 export const codePlaygroundApi = {
   // Code playground is purely frontend (sandboxed iframe), no API needed
 };

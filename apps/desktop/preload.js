@@ -130,6 +130,32 @@ contextBridge.exposeInMainWorld('gratoniteDesktop', {
   // Desktop screen capture (Electron desktopCapturer)
   getScreenSources: () => ipcRenderer.invoke('get-screen-sources'),
 
+  // --- Feature #23: Configurable Global Hotkeys ---
+  getHotkeys: () => ipcRenderer.invoke('get-hotkeys'),
+  setHotkeys: (hotkeys) => ipcRenderer.invoke('set-hotkeys', hotkeys),
+  resetHotkeys: () => ipcRenderer.invoke('reset-hotkeys'),
+  getDefaultHotkeys: () => ipcRenderer.invoke('get-default-hotkeys'),
+  onHotkeyPressed: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('hotkey-pressed', handler);
+    return () => ipcRenderer.removeListener('hotkey-pressed', handler);
+  },
+
+  // --- Feature #24: System Tray & Minimize-to-Tray ---
+  updateTrayBadge: (count) => ipcRenderer.send('update-tray-badge', { count }),
+  getMinimizeToTray: () => ipcRenderer.invoke('get-minimize-to-tray'),
+  setMinimizeToTray: (value) => ipcRenderer.send('set-minimize-to-tray', value),
+  getStartOnLogin: () => ipcRenderer.invoke('get-start-on-login'),
+  setStartOnLogin: (value) => ipcRenderer.send('set-start-on-login', value),
+
+  // Deafen state (synced with tray)
+  getDeafenState: () => ipcRenderer.invoke('get-deafen-state'),
+  setDeafenState: (deafened) => ipcRenderer.send('set-deafen-state', deafened),
+
+  // DND state (synced with tray)
+  getDndState: () => ipcRenderer.invoke('get-dnd-state'),
+  setDndState: (enabled) => ipcRenderer.send('set-dnd-state', enabled),
+
   // Task #92: Notification Actions
   showMessageNotification: (data) => ipcRenderer.send('show-message-notification', data),
   onNotificationClicked: (callback) => {

@@ -1,7 +1,7 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, lazy, Suspense } from 'react';
 import {
     Send, Smile, Image as ImageIcon, Reply, X, Plus, Mic, BarChart2, Clock,
-    Edit2, Eye, Volume2, Square, Trash2, Hash, FileText
+    Edit2, Eye, Volume2, Square, Trash2, Hash, FileText, Scissors
 } from 'lucide-react';
 import Avatar from '../ui/Avatar';
 import EmojiPicker from './EmojiPicker';
@@ -10,6 +10,9 @@ import { EmbedBuilder, type CustomEmbed } from './EmbedBuilder';
 import { RichTextRenderer } from './RichTextRenderer';
 import { GifReactionPicker } from './GifReactionPicker';
 import SoundboardMenu from './SoundboardMenu';
+
+const ImageEditor = lazy(() => import('./ImageEditor'));
+const VideoTrimmer = lazy(() => import('./VideoTrimmer'));
 
 import type { Message } from './chatTypes';
 
@@ -222,7 +225,56 @@ const MessageInput: React.FC<MessageInputProps> = ({
     draftSaveTimerRef,
     processEmojis,
 }) => {
+    const [editingFileIndex, setEditingFileIndex] = useState<number | null>(null);
+    const [editingFileType, setEditingFileType] = useState<'image' | 'video' | null>(null);
+
     return (
+        <>
+        {editingFileIndex !== null && editingFileType === 'image' && chatAttachedFiles[editingFileIndex] && (
+            <Suspense fallback={null}>
+                <ImageEditor
+                    file={chatAttachedFiles[editingFileIndex].file}
+                    onSave={(editedFile) => {
+                        setChatAttachedFiles(prev => prev.map((f, i) => {
+                            if (i !== editingFileIndex) return f;
+                            const oldPreview = f.previewUrl;
+                            if (oldPreview) URL.revokeObjectURL(oldPreview);
+                            return {
+                                ...f,
+                                name: editedFile.name,
+                                size: editedFile.size < 1024 ? `${editedFile.size} B` : editedFile.size < 1048576 ? `${(editedFile.size / 1024).toFixed(1)} KB` : `${(editedFile.size / 1048576).toFixed(1)} MB`,
+                                file: editedFile,
+                                previewUrl: URL.createObjectURL(editedFile),
+                            };
+                        }));
+                        setEditingFileIndex(null);
+                        setEditingFileType(null);
+                    }}
+                    onCancel={() => { setEditingFileIndex(null); setEditingFileType(null); }}
+                />
+            </Suspense>
+        )}
+        {editingFileIndex !== null && editingFileType === 'video' && chatAttachedFiles[editingFileIndex] && (
+            <Suspense fallback={null}>
+                <VideoTrimmer
+                    file={chatAttachedFiles[editingFileIndex].file}
+                    onSave={(trimmedFile) => {
+                        setChatAttachedFiles(prev => prev.map((f, i) => {
+                            if (i !== editingFileIndex) return f;
+                            return {
+                                ...f,
+                                name: trimmedFile.name,
+                                size: trimmedFile.size < 1024 ? `${trimmedFile.size} B` : trimmedFile.size < 1048576 ? `${(trimmedFile.size / 1024).toFixed(1)} KB` : `${(trimmedFile.size / 1048576).toFixed(1)} MB`,
+                                file: trimmedFile,
+                            };
+                        }));
+                        setEditingFileIndex(null);
+                        setEditingFileType(null);
+                    }}
+                    onCancel={() => { setEditingFileIndex(null); setEditingFileType(null); }}
+                />
+            </Suspense>
+        )}
         <div className="input-area" style={{ zIndex: 2, position: 'relative' }}>
             {slowRemaining > 0 && (
                 <div style={{
@@ -355,6 +407,16 @@ const MessageInput: React.FC<MessageInputProps> = ({
                             {f.previewUrl ? <img src={f.previewUrl} style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover' }} alt="" /> : <ImageIcon size={12} />}
                             <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
                             <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{f.size}</span>
+                            {f.file.type.startsWith('image/') && (
+                                <button onClick={() => { setEditingFileIndex(i); setEditingFileType('image'); }} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, display: 'flex' }} title="Edit image">
+                                    <Edit2 size={12} />
+                                </button>
+                            )}
+                            {f.file.type.startsWith('video/') && (
+                                <button onClick={() => { setEditingFileIndex(i); setEditingFileType('video'); }} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, display: 'flex' }} title="Trim video">
+                                    <Scissors size={12} />
+                                </button>
+                            )}
                             <button onClick={() => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl); setChatAttachedFiles(prev => prev.filter((_, idx) => idx !== i)); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex' }}>
                                 <X size={12} />
                             </button>
@@ -565,6 +627,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
                         <button
                             className={`input-icon-btn ${showFormattingToolbar ? 'primary' : ''}`}
                             title="Toggle Formatting Toolbar"
+                            aria-label="Toggle formatting toolbar"
+                            aria-pressed={showFormattingToolbar}
                             onClick={() => setShowFormattingToolbar(p => !p)}
                         >
                             <Edit2 size={16} />
@@ -573,6 +637,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
                         <button
                             className={`input-icon-btn ${showEmbedBuilder ? 'primary' : ''}`}
                             title="Embed Builder"
+                            aria-label="Toggle embed builder"
+                            aria-pressed={showEmbedBuilder}
                             onClick={() => setShowEmbedBuilder(p => !p)}
                         >
                             <FileText size={16} />
@@ -581,6 +647,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
                         <button
                             className={`input-icon-btn ${showPreview ? 'primary' : ''}`}
                             title="Toggle Markdown Preview (Ctrl+Shift+P)"
+                            aria-label="Toggle markdown preview"
+                            aria-pressed={showPreview}
                             onClick={() => setShowPreview(p => !p)}
                         >
                             <Eye size={18} />
@@ -592,13 +660,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
                                     <span className="shortcut-hint" style={{ position: 'absolute', bottom: '-14px', left: '50%', transform: 'translateX(-50%)', fontSize: '9px', color: 'var(--text-muted)', opacity: 0.4, whiteSpace: 'nowrap', pointerEvents: 'none', fontWeight: 500 }}>Ctrl+E</span>
                                 </button>
                                 {/* Sticker Picker Button */}
-                                <button className={`input-icon-btn ${stickerPickerOpen ? 'primary' : ''}`} title="Sticker Picker" onClick={() => { setStickerPickerOpen(!stickerPickerOpen); setIsEmojiPickerOpen(false); }}>
+                                <button className={`input-icon-btn ${stickerPickerOpen ? 'primary' : ''}`} title="Sticker Picker" aria-label="Open sticker picker" aria-pressed={stickerPickerOpen} onClick={() => { setStickerPickerOpen(!stickerPickerOpen); setIsEmojiPickerOpen(false); }}>
                                     <Square size={18} />
                                 </button>
-                                <button className="input-icon-btn" title="Create Poll" onClick={() => setShowPollCreator(!showPollCreator)}>
+                                <button className="input-icon-btn" title="Create Poll" aria-label="Create poll" onClick={() => setShowPollCreator(!showPollCreator)}>
                                     <BarChart2 size={20} />
                                 </button>
-                                <button className={`input-icon-btn ${soundboardOpen ? 'primary' : ''}`} title="Soundboard" onClick={() => setSoundboardOpen(!soundboardOpen)}>
+                                <button className={`input-icon-btn ${soundboardOpen ? 'primary' : ''}`} title="Soundboard" aria-label="Open soundboard" aria-pressed={soundboardOpen} onClick={() => setSoundboardOpen(!soundboardOpen)}>
                                     <Volume2 size={20} />
                                 </button>
                             </>
@@ -608,6 +676,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                                 <button
                                     className="input-icon-btn"
                                     title="Schedule Message"
+                                    aria-label="Schedule message"
                                     onClick={() => setIsScheduleOpen(!isScheduleOpen)}
                                     style={{ color: isScheduleOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
                                 >
@@ -904,6 +973,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
             </div>
         </div>
+        </>
     );
 };
 

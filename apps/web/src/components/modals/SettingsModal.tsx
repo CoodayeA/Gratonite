@@ -19,6 +19,7 @@ import type { ThemeDefinition, ThemeCategory } from '../../themes/types';
 import ThemePreview from '../ui/ThemePreview';
 import ThemeEditorModal from './ThemeEditorModal';
 import ThemeStoreModal from './ThemeStoreModal';
+import PluginStoreModal from './PluginStoreModal';
 import { CODE_THEMES as codeThemeList } from '../../utils/codeTheme';
 
 // ─── Image Crop Modal ────────────────────────────────────────────────────────
@@ -224,7 +225,7 @@ const SettingsModal = ({
     const { theme, setTheme, colorMode, setColorMode, fontFamily, setFontFamily, fontSize, setFontSize, showChannelBackgrounds, setShowChannelBackgrounds, playMovingBackgrounds, setPlayMovingBackgrounds, glassMode, setGlassMode, reducedEffects, setReducedEffects, lowPower, setLowPower, accentColor, setAccentColor, highContrast, setHighContrast, compactMode, setCompactMode, buttonShape, setButtonShape, screenReaderMode, setScreenReaderMode, linkUnderlines, setLinkUnderlines, focusIndicatorSize, setFocusIndicatorSize, colorBlindMode, setColorBlindMode, lowDataMode, setLowDataMode, previewTheme } = useTheme();
     const { addToast } = useToast();
 
-    const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections' | 'federation' | 'achievements' | 'stats' | 'wardrobe' | 'notifications' | 'muted-users' | 'referrals' | 'developer'>('account');
+    const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections' | 'federation' | 'achievements' | 'stats' | 'wardrobe' | 'notifications' | 'muted-users' | 'referrals' | 'developer' | 'dnd-schedule' | 'snippets'>('account');
     const [settingsSearch, setSettingsSearch] = useState('');
     const settingsSearchRef = useRef<HTMLInputElement>(null);
 
@@ -287,6 +288,7 @@ const SettingsModal = ({
     const [showThemeEditor, setShowThemeEditor] = useState(false);
     const [editingCustomThemeId, setEditingCustomThemeId] = useState<string | undefined>();
     const [showThemeStore, setShowThemeStore] = useState(false);
+    const [showPluginStore, setShowPluginStore] = useState(false);
     const [customThemesList, setCustomThemesList] = useState<ThemeDefinition[]>(() => getCustomThemes());
     const themeImportRef = useRef<HTMLInputElement>(null);
     const [codeSuggestion, setCodeSuggestion] = useState<{ themeName: string; codeTheme: string } | null>(null);
@@ -346,6 +348,8 @@ const SettingsModal = ({
     const [joinedGuilds, setJoinedGuilds] = useState<Array<{ id: string; name: string; iconHash: string | null; memberCount: number; nickname?: string | null }>>([]);
     const [nicknameDrafts, setNicknameDrafts] = useState<Record<string, string>>({});
     const [savingNicknameForGuildId, setSavingNicknameForGuildId] = useState<string | null>(null);
+    const [serverProfileDrafts, setServerProfileDrafts] = useState<Record<string, { displayName: string; bio: string }>>({});
+    const [savingServerProfileForGuildId, setSavingServerProfileForGuildId] = useState<string | null>(null);
 
     // Wardrobe tab state
     interface WardrobeItem { itemId: string; type: string; equipped?: boolean; assetConfig?: Record<string, unknown>; name?: string; rarity?: string; previewUrl?: string; [key: string]: unknown; }
@@ -683,6 +687,36 @@ const SettingsModal = ({
         }
     };
 
+    const saveServerProfile = async (guildId: string) => {
+        const draft = serverProfileDrafts[guildId];
+        if (!draft) return;
+        setSavingServerProfileForGuildId(guildId);
+        try {
+            await api.profiles.updateServerProfile(guildId, {
+                displayName: draft.displayName.trim() || null,
+                bio: draft.bio.trim() || null,
+            });
+            addToast({ title: 'Server profile updated', variant: 'success' });
+        } catch (err: unknown) {
+            addToast({ title: 'Failed to update server profile', description: (err instanceof Error ? err.message : '') || 'Unknown error', variant: 'error' });
+        } finally {
+            setSavingServerProfileForGuildId(null);
+        }
+    };
+
+    const resetServerProfile = async (guildId: string) => {
+        setSavingServerProfileForGuildId(guildId);
+        try {
+            await api.profiles.deleteServerProfile(guildId);
+            setServerProfileDrafts((prev) => ({ ...prev, [guildId]: { displayName: '', bio: '' } }));
+            addToast({ title: 'Server profile reset to global', variant: 'success' });
+        } catch (err: unknown) {
+            addToast({ title: 'Failed to reset server profile', description: (err instanceof Error ? err.message : '') || 'Unknown error', variant: 'error' });
+        } finally {
+            setSavingServerProfileForGuildId(null);
+        }
+    };
+
     return (
         <>
             <div className="modal-overlay" onClick={onClose} style={{ background: 'rgba(0, 0, 0, 0.6)' }}>
@@ -733,12 +767,15 @@ const SettingsModal = ({
                             {(!matchingTabs || matchingTabs.has('notifications')) && <div className={`sidebar-nav-item ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => { setActiveTab('notifications'); setSettingsSearch(''); }}>Notifications</div>}
                             {(!matchingTabs || matchingTabs.has('muted-users')) && <div className={`sidebar-nav-item ${activeTab === 'muted-users' ? 'active' : ''}`} onClick={() => { setActiveTab('muted-users'); setSettingsSearch(''); }}>Muted Users</div>}
                             {(!matchingTabs || matchingTabs.has('referrals')) && <div className={`sidebar-nav-item ${activeTab === 'referrals' ? 'active' : ''}`} onClick={() => { setActiveTab('referrals'); setSettingsSearch(''); }}>Referrals</div>}
+                            {(!matchingTabs || matchingTabs.has('dnd-schedule')) && <div className={`sidebar-nav-item ${activeTab === 'dnd-schedule' ? 'active' : ''}`} onClick={() => { setActiveTab('dnd-schedule'); setSettingsSearch(''); }}>DND Schedule</div>}
+                            {(!matchingTabs || matchingTabs.has('snippets')) && <div className={`sidebar-nav-item ${activeTab === 'snippets' ? 'active' : ''}`} onClick={() => { setActiveTab('snippets'); setSettingsSearch(''); }}>Snippets</div>}
                         </div>
                         )}
                         {(!matchingTabs || matchingTabs.has('developer')) && (
                         <div>
                             <div className="sidebar-section-label">DEVELOPER</div>
                             {(!matchingTabs || matchingTabs.has('developer')) && <div className={`sidebar-nav-item ${activeTab === 'developer' ? 'active' : ''}`} onClick={() => { setActiveTab('developer'); setSettingsSearch(''); }}>Applications</div>}
+                            <div className="sidebar-nav-item" onClick={() => setShowPluginStore(true)}>Plugins</div>
                         </div>
                         )}
                         {(!matchingTabs || matchingTabs.has('feedback')) && (
@@ -1339,8 +1376,8 @@ const SettingsModal = ({
 
                                         {/* Per-Server Profile Overrides */}
                                         <div>
-                                            <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '4px' }}>Per-Server Profile Overrides</h3>
-                                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>Customize your nickname and nameplate style per server. Overrides your global defaults.</p>
+                                            <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '4px' }}>Per-Server Profiles</h3>
+                                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>Customize your display name, avatar, bio, and nickname per server. Overrides your global defaults.</p>
 
                                             {joinedGuilds.map(server => (
                                                 <div key={server.id} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '10px', padding: '12px 14px', marginBottom: '8px' }}>
@@ -1361,7 +1398,27 @@ const SettingsModal = ({
                                                             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{server.memberCount.toLocaleString()} members</div>
                                                         </div>
                                                     </div>
-                                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                            <input
+                                                                className="auth-input"
+                                                                placeholder="Server Display Name"
+                                                                style={{ flex: 1, minWidth: '100px', padding: '6px 10px', fontSize: '12px', height: 'auto' }}
+                                                                maxLength={64}
+                                                                value={serverProfileDrafts[server.id]?.displayName ?? ''}
+                                                                onChange={(e) => setServerProfileDrafts((prev) => ({ ...prev, [server.id]: { ...prev[server.id] ?? { displayName: '', bio: '' }, displayName: e.target.value } }))}
+                                                            />
+                                                        </div>
+                                                        <textarea
+                                                            className="auth-input"
+                                                            placeholder="Server Bio (optional)"
+                                                            maxLength={190}
+                                                            rows={2}
+                                                            style={{ width: '100%', padding: '6px 10px', fontSize: '12px', resize: 'vertical', minHeight: '36px' }}
+                                                            value={serverProfileDrafts[server.id]?.bio ?? ''}
+                                                            onChange={(e) => setServerProfileDrafts((prev) => ({ ...prev, [server.id]: { ...prev[server.id] ?? { displayName: '', bio: '' }, bio: e.target.value } }))}
+                                                        />
+                                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                                                         <input
                                                             className="auth-input"
                                                             placeholder="Nickname (optional)"
@@ -1385,18 +1442,27 @@ const SettingsModal = ({
                                                         </select>
                                                         <button
                                                             className="auth-button"
-                                                            onClick={() => saveNicknameOverride(server.id)}
-                                                            disabled={savingNicknameForGuildId === server.id}
+                                                            onClick={() => { saveNicknameOverride(server.id); saveServerProfile(server.id); }}
+                                                            disabled={savingNicknameForGuildId === server.id || savingServerProfileForGuildId === server.id}
                                                             style={{ marginTop: 0, width: 'auto', minWidth: '84px', padding: '0 14px', height: '34px', background: 'var(--accent-primary)', color: '#000' }}
                                                         >
-                                                            {savingNicknameForGuildId === server.id ? 'Saving…' : 'Save'}
+                                                            {(savingNicknameForGuildId === server.id || savingServerProfileForGuildId === server.id) ? 'Saving…' : 'Save'}
                                                         </button>
+                                                        <button
+                                                            className="auth-button"
+                                                            onClick={() => resetServerProfile(server.id)}
+                                                            disabled={savingServerProfileForGuildId === server.id}
+                                                            style={{ marginTop: 0, width: 'auto', minWidth: '64px', padding: '0 10px', height: '34px', background: 'transparent', border: '1px solid var(--stroke)', color: 'var(--text-muted)', fontSize: '11px' }}
+                                                        >
+                                                            Reset
+                                                        </button>
+                                                    </div>
                                                     </div>
                                                 </div>
                                             ))}
                                             {joinedGuilds.length === 0 && (
                                                 <div style={{ width: '100%', padding: '10px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px dashed var(--stroke)', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600 }}>
-                                                    Join a server to configure per-server profile overrides.
+                                                    Join a server to configure per-server profiles.
                                                 </div>
                                             )}
                                             <button onClick={() => setShowServerOverrideInfo(!showServerOverrideInfo)} style={{ width: '100%', padding: '8px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px dashed var(--stroke)', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', marginTop: '4px' }}>
@@ -1406,8 +1472,8 @@ const SettingsModal = ({
                                                 <div style={{ marginTop: '8px', padding: '12px 14px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-primary)', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                                                     <Info size={16} color="var(--accent-primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
                                                     <div>
-                                                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Server Profile Overrides</div>
-                                                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5', margin: 0 }}>Join more servers to add per-server overrides for your identity. Each server you join will appear here, letting you set a unique nickname and nameplate style that only applies in that server.</p>
+                                                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Per-Server Profiles</div>
+                                                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5', margin: 0 }}>Each server you join will appear here, letting you set a unique display name, bio, and nickname that only applies in that server. Other members will see your server-specific profile instead of your global one.</p>
                                                     </div>
                                                 </div>
                                             )}
@@ -1695,6 +1761,12 @@ const SettingsModal = ({
                         {/* Referrals */}
                         {activeTab === 'referrals' && <SettingsReferralsPanel addToast={addToast} />}
 
+                        {/* DND Schedule */}
+                        {activeTab === 'dnd-schedule' && <SettingsDndSchedulePanel addToast={addToast} />}
+
+                        {/* Message Snippets */}
+                        {activeTab === 'snippets' && <SettingsSnippetsPanel addToast={addToast} />}
+
                         {/* Developer / OAuth Apps */}
                         {activeTab === 'developer' && <SettingsDeveloperPanel addToast={addToast} />}
                     </div>
@@ -1724,6 +1796,11 @@ const SettingsModal = ({
                 <ThemeStoreModal
                     onClose={() => { setShowThemeStore(false); setCustomThemesList(getCustomThemes()); }}
                 />
+            )}
+
+            {/* Plugin Store Modal */}
+            {showPluginStore && (
+                <PluginStoreModal onClose={() => setShowPluginStore(false)} />
             )}
         </>
     );
@@ -2136,6 +2213,254 @@ function SettingsDeveloperPanel({ addToast }: { addToast: (t: any) => void }) {
                             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                                 <div style={{ marginBottom: '4px' }}>Client ID: <code style={{ color: 'var(--text-secondary)' }}>{app.clientId}</code></div>
                                 {app.redirectUris?.length > 0 && <div>Redirect URIs: {app.redirectUris.join(', ')}</div>}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// DND Schedule Panel — Feature 18
+// ---------------------------------------------------------------------------
+const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function SettingsDndSchedulePanel({ addToast }: { addToast: (t: any) => void }) {
+    const [enabled, setEnabled] = useState(false);
+    const [startTime, setStartTime] = useState('22:00');
+    const [endTime, setEndTime] = useState('08:00');
+    const [days, setDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]); // all days
+    const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        api.get('/users/@me/dnd-schedule').then((r: any) => {
+            if (r && r.enabled !== undefined) {
+                setEnabled(r.enabled);
+                setStartTime(r.startTime || '22:00');
+                setEndTime(r.endTime || '08:00');
+                setDays(r.days || [0, 1, 2, 3, 4, 5, 6]);
+                setTimezone(r.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+            }
+        }).catch(() => {}).finally(() => setLoading(false));
+    }, []);
+
+    const toggleDay = (day: number) => {
+        setDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day].sort());
+    };
+
+    const save = async () => {
+        setSaving(true);
+        try {
+            await api.put('/users/@me/dnd-schedule', { enabled, startTime, endTime, days, timezone });
+            addToast({ title: 'DND schedule saved', variant: 'success' });
+        } catch {
+            addToast({ title: 'Failed to save DND schedule', variant: 'error' });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>;
+
+    return (
+        <>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>DND Schedule</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
+                Automatically set your status to Do Not Disturb on a schedule. Notifications will be suppressed during DND hours.
+            </p>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: 'var(--text-primary)', cursor: 'pointer', marginBottom: '20px' }}>
+                <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }} />
+                Enable automatic DND schedule
+            </label>
+
+            {enabled && (
+                <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--stroke)', padding: '20px' }}>
+                    <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                        <div style={{ flex: 1 }}>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Start Time</label>
+                            <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
+                                style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                            />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>End Time</label>
+                            <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
+                                style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                            />
+                        </div>
+                    </div>
+
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Active Days</label>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            {DAYS_OF_WEEK.map((day, i) => (
+                                <button key={i} onClick={() => toggleDay(i)}
+                                    style={{
+                                        padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                                        background: days.includes(i) ? 'var(--accent-primary)' : 'var(--bg-primary)',
+                                        color: days.includes(i) ? 'white' : 'var(--text-secondary)',
+                                        border: `1px solid ${days.includes(i) ? 'var(--accent-primary)' : 'var(--stroke)'}`,
+                                        transition: 'all 0.15s',
+                                    }}
+                                >{day.slice(0, 3)}</button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Timezone</label>
+                        <select value={timezone} onChange={e => setTimezone(e.target.value)}
+                            style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                        >
+                            {Intl.supportedValuesOf('timeZone').map(tz => <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>)}
+                        </select>
+                    </div>
+
+                    <div style={{ padding: '10px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '8px', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                        DND will activate from <strong style={{ color: 'var(--text-primary)' }}>{startTime}</strong> to <strong style={{ color: 'var(--text-primary)' }}>{endTime}</strong> on selected days. Your status will automatically restore when DND ends.
+                    </div>
+                </div>
+            )}
+
+            <button onClick={save} disabled={saving}
+                style={{
+                    marginTop: '20px', padding: '10px 24px', borderRadius: '8px', border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
+                    background: 'var(--accent-primary)', color: 'white', fontSize: '14px', fontWeight: 600, fontFamily: 'inherit', opacity: saving ? 0.6 : 1,
+                }}
+            >{saving ? 'Saving...' : 'Save Schedule'}</button>
+        </>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Message Snippets Panel — Feature 21
+// ---------------------------------------------------------------------------
+function SettingsSnippetsPanel({ addToast }: { addToast: (t: any) => void }) {
+    const [snippets, setSnippets] = useState<Array<{ id: string; title: string; content: string; tags: string[]; usageCount: number }>>([]);
+    const [loading, setLoading] = useState(true);
+    const [showCreate, setShowCreate] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [title, setTitle] = useState('');
+    const [content, setContent] = useState('');
+    const [tags, setTags] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const fetchSnippets = () => {
+        api.get(`/users/@me/snippets${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`).then((data: any) => {
+            setSnippets(Array.isArray(data) ? data : []);
+        }).catch(() => {}).finally(() => setLoading(false));
+    };
+
+    useEffect(() => { fetchSnippets(); }, [searchQuery]);
+
+    const resetForm = () => {
+        setTitle(''); setContent(''); setTags('');
+        setShowCreate(false); setEditingId(null);
+    };
+
+    const handleSave = async () => {
+        if (!title.trim() || !content.trim()) return;
+        const payload = { title: title.trim(), content: content.trim(), tags: tags.split(',').map(t => t.trim()).filter(Boolean) };
+        try {
+            if (editingId) {
+                await api.patch(`/users/@me/snippets/${editingId}`, payload);
+                addToast({ title: 'Snippet updated', variant: 'success' });
+            } else {
+                await api.post('/users/@me/snippets', payload);
+                addToast({ title: 'Snippet created', variant: 'success' });
+            }
+            resetForm();
+            fetchSnippets();
+        } catch {
+            addToast({ title: 'Failed to save snippet', variant: 'error' });
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        try {
+            await api.delete(`/users/@me/snippets/${id}`);
+            addToast({ title: 'Snippet deleted', variant: 'success' });
+            fetchSnippets();
+        } catch {
+            addToast({ title: 'Failed to delete snippet', variant: 'error' });
+        }
+    };
+
+    const startEdit = (snippet: typeof snippets[0]) => {
+        setEditingId(snippet.id);
+        setTitle(snippet.title);
+        setContent(snippet.content);
+        setTags(snippet.tags.join(', '));
+        setShowCreate(true);
+    };
+
+    return (
+        <>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Message Snippets</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '20px', fontSize: '13px' }}>
+                Save reusable text snippets for quick insertion. Use <code style={{ background: 'var(--bg-tertiary)', padding: '2px 6px', borderRadius: '4px' }}>/snippet</code> in chat to insert.
+            </p>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ flex: 1, position: 'relative' }}>
+                    <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input placeholder="Search snippets..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px 10px 34px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                    />
+                </div>
+                <button onClick={() => { resetForm(); setShowCreate(true); }}
+                    style={{ padding: '10px 16px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                >New Snippet</button>
+            </div>
+
+            {showCreate && (
+                <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--stroke)', padding: '16px', marginBottom: '16px' }}>
+                    <input placeholder="Snippet title" value={title} onChange={e => setTitle(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', marginBottom: '10px', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                    />
+                    <textarea placeholder="Snippet content..." value={content} onChange={e => setContent(e.target.value)} rows={4}
+                        style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', resize: 'vertical', marginBottom: '10px', boxSizing: 'border-box', fontFamily: 'var(--font-mono)' }}
+                    />
+                    <input placeholder="Tags (comma-separated)" value={tags} onChange={e => setTags(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', marginBottom: '12px', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                    />
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <button onClick={resetForm} style={{ padding: '8px 16px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>Cancel</button>
+                        <button onClick={handleSave} style={{ padding: '8px 16px', borderRadius: '6px', background: 'var(--accent-primary)', border: 'none', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: 'inherit' }}>{editingId ? 'Update' : 'Create'}</button>
+                    </div>
+                </div>
+            )}
+
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
+            ) : snippets.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
+                    {searchQuery ? 'No snippets match your search.' : 'No snippets yet. Create one to get started!'}
+                </div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {snippets.map(s => (
+                        <div key={s.id} style={{ background: 'var(--bg-tertiary)', borderRadius: '10px', border: '1px solid var(--stroke)', padding: '14px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{s.title}</span>
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                    <button onClick={() => startEdit(s)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}><Edit3 size={14} /></button>
+                                    <button onClick={() => handleDelete(s.id)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', padding: '4px' }}><Trash2 size={14} /></button>
+                                </div>
+                            </div>
+                            <pre style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 8px', whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', background: 'var(--bg-primary)', padding: '8px', borderRadius: '6px', maxHeight: '100px', overflow: 'auto' }}>{s.content}</pre>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                    {s.tags.map(tag => (
+                                        <span key={tag} style={{ padding: '2px 8px', borderRadius: '10px', background: 'rgba(99,102,241,0.15)', color: 'var(--accent-primary)', fontSize: '11px', fontWeight: 600 }}>{tag}</span>
+                                    ))}
+                                </div>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Used {s.usageCount}x</span>
                             </div>
                         </div>
                     ))}

@@ -75,6 +75,7 @@ import { RemindersList } from '../../components/chat/RemindersList';
 import { GifReactionPicker } from '../../components/chat/GifReactionPicker';
 import { Languages, Calendar, Timer } from 'lucide-react';
 import ForumView from '../../components/chat/ForumView';
+import DocumentChannel from '../../components/channel/DocumentChannel';
 
 
 // Components extracted to: ../../components/chat/MessageItem.tsx, ReactionBar.tsx, chatTypes.ts
@@ -2959,6 +2960,11 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     )}
                 </button>
             )}
+            {/* Document Channel — renders collaborative editor instead of message list */}
+            {channelTypeStr === 'GUILD_DOCUMENT' ? (
+                <DocumentChannel channelId={channelId!} channelName={channelName} />
+            ) : null}
+
             {/* Forum View — renders instead of message list for GUILD_FORUM channels */}
             {channelTypeStr === 'GUILD_FORUM' && channelForumTags.length > 0 ? (
                 <ForumView
@@ -2969,7 +2975,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 />
             ) : null}
 
-            <div ref={parentRef} className="message-area" role="log" aria-label={`Messages in #${channelName}`} aria-live="polite" style={{ overflowY: 'auto', zIndex: 2, position: 'relative', ...(channelTypeStr === 'GUILD_FORUM' && channelForumTags.length > 0 ? { display: 'none' } : {}) }}>
+            <div ref={parentRef} className="message-area" role="log" aria-label={`Messages in #${channelName}`} aria-live="polite" style={{ overflowY: 'auto', zIndex: 2, position: 'relative', ...((channelTypeStr === 'GUILD_FORUM' && channelForumTags.length > 0) || channelTypeStr === 'GUILD_DOCUMENT' ? { display: 'none' } : {}) }}>
                 {/* Pull-to-refresh indicator (mobile) */}
                 {isMobile && pullDistance > 0 && (
                     <div className="pull-to-refresh-indicator" style={{ height: `${pullDistance}px` }}>

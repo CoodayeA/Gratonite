@@ -33,6 +33,7 @@ import { hasPermission, hasChannelPermission } from '../routes/roles';
 import { createNotification } from '../lib/notifications';
 import { dispatchMessageCreate, dispatchEvent } from '../lib/webhook-dispatch';
 import { scrapeUrl, extractUrls } from '../lib/og-scraper';
+import { unfurlGitHubUrl } from '../lib/unfurl/github';
 import { redis } from '../lib/redis';
 import { logger } from '../lib/logger';
 import { messagesSentTotal } from '../lib/metrics';
@@ -803,7 +804,16 @@ export class MessageService {
       const urls = extractUrls(content || '');
       if (urls.length === 0) return;
 
-      const embedResults = await Promise.all(urls.map(u => scrapeUrl(u)));
+      // Try GitHub unfurling first for github.com URLs, fall back to OG scraping
+      const embedResults = await Promise.all(
+        urls.map(async (u) => {
+          if (/^https?:\/\/github\.com\//i.test(u)) {
+            const ghEmbed = await unfurlGitHubUrl(u);
+            if (ghEmbed) return ghEmbed;
+          }
+          return scrapeUrl(u);
+        }),
+      );
       const scrapedEmbeds = embedResults.filter(Boolean);
       if (scrapedEmbeds.length === 0) return;
 

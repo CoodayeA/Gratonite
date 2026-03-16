@@ -46,6 +46,7 @@ import { files } from '../db/schema/files';
 import { guildMemberOnboarding } from '../db/schema/guild-onboarding';
 import { channelReadState } from '../db/schema/channel-read-state';
 import { guildRatings } from '../db/schema/guild-ratings';
+import { guildMemberProfiles } from '../db/schema/guild-member-profiles';
 import { messages } from '../db/schema/messages';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
@@ -1365,9 +1366,19 @@ guildsRouter.get(
           avatarHash: users.avatarHash,
           bannerHash: users.bannerHash,
           joinedAt: guildMembers.joinedAt,
+          serverDisplayName: guildMemberProfiles.displayName,
+          serverAvatarUrl: guildMemberProfiles.avatarUrl,
+          serverBio: guildMemberProfiles.bio,
         })
         .from(guildMembers)
         .innerJoin(users, eq(users.id, guildMembers.userId))
+        .leftJoin(
+          guildMemberProfiles,
+          and(
+            eq(guildMemberProfiles.userId, guildMembers.userId),
+            eq(guildMemberProfiles.guildId, guildMembers.guildId),
+          ),
+        )
         .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, targetUserId)))
         .limit(1);
 
@@ -1380,12 +1391,16 @@ guildsRouter.get(
         guildId: member.guildId,
         userId: member.userId,
         username: member.username,
-        displayName: member.displayName,
+        displayName: member.serverDisplayName ?? member.displayName,
         nickname: member.nickname ?? null,
-        bio: null,
+        bio: member.serverBio ?? null,
         avatarHash: member.avatarHash ?? null,
+        serverAvatarUrl: member.serverAvatarUrl ?? null,
         bannerHash: member.bannerHash ?? null,
         updatedAt: member.joinedAt,
+        serverProfile: member.serverDisplayName || member.serverAvatarUrl || member.serverBio
+          ? { displayName: member.serverDisplayName, avatarUrl: member.serverAvatarUrl, bio: member.serverBio }
+          : null,
       });
     } catch (err) {
       handleAppError(res, err);
@@ -1403,9 +1418,7 @@ guildsRouter.get(
  * Update the caller's guild-scoped profile fields.
  * Persisted fields:
  *   - nickname (stored on `guild_members.nickname`)
- *
- * Accepted but currently non-persistent:
- *   - bio
+ *   - bio (stored on `guild_member_profiles.bio`)
  */
 guildsRouter.patch(
   '/:guildId/members/@me/profile',
@@ -1416,13 +1429,33 @@ guildsRouter.patch(
       const { guildId } = req.params as Record<string, string>;
       await requireMember(guildId, req.userId!);
 
-      const { nickname } = req.body as z.infer<typeof updateMemberProfileSchema>;
+      const { nickname, bio } = req.body as z.infer<typeof updateMemberProfileSchema>;
       if (nickname !== undefined) {
         const normalizedNickname = nickname === null ? null : nickname.trim() || null;
         await db
           .update(guildMembers)
           .set({ nickname: normalizedNickname })
           .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, req.userId!)));
+      }
+
+      // Persist bio to guild_member_profiles (upsert)
+      if (bio !== undefined) {
+        const [existing] = await db
+          .select({ id: guildMemberProfiles.id })
+          .from(guildMemberProfiles)
+          .where(and(eq(guildMemberProfiles.guildId, guildId), eq(guildMemberProfiles.userId, req.userId!)))
+          .limit(1);
+
+        if (existing) {
+          await db
+            .update(guildMemberProfiles)
+            .set({ bio: bio, updatedAt: new Date() })
+            .where(eq(guildMemberProfiles.id, existing.id));
+        } else {
+          await db
+            .insert(guildMemberProfiles)
+            .values({ userId: req.userId!, guildId, bio: bio });
+        }
       }
 
       const [member] = await db
@@ -1435,9 +1468,19 @@ guildsRouter.patch(
           avatarHash: users.avatarHash,
           bannerHash: users.bannerHash,
           joinedAt: guildMembers.joinedAt,
+          serverBio: guildMemberProfiles.bio,
+          serverDisplayName: guildMemberProfiles.displayName,
+          serverAvatarUrl: guildMemberProfiles.avatarUrl,
         })
         .from(guildMembers)
         .innerJoin(users, eq(users.id, guildMembers.userId))
+        .leftJoin(
+          guildMemberProfiles,
+          and(
+            eq(guildMemberProfiles.userId, guildMembers.userId),
+            eq(guildMemberProfiles.guildId, guildMembers.guildId),
+          ),
+        )
         .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, req.userId!)))
         .limit(1);
 
@@ -1450,10 +1493,11 @@ guildsRouter.patch(
         guildId: member.guildId,
         userId: member.userId,
         username: member.username,
-        displayName: member.displayName,
+        displayName: member.serverDisplayName ?? member.displayName,
         nickname: member.nickname ?? null,
-        bio: null,
+        bio: member.serverBio ?? null,
         avatarHash: member.avatarHash ?? null,
+        serverAvatarUrl: member.serverAvatarUrl ?? null,
         bannerHash: member.bannerHash ?? null,
         updatedAt: member.joinedAt,
       });

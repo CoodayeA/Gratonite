@@ -279,6 +279,23 @@ export const profilesApi = {
   deleteMemberBanner: (guildId: string) =>
     apiFetch<void>(`/guilds/${guildId}/members/@me/profile/banner`, { method: 'DELETE' }),
 
+  // Per-server profiles
+  getServerProfile: (guildId: string, userId: string) =>
+    apiFetch<{
+      userId: string; guildId: string; displayName: string | null; avatarUrl: string | null;
+      bio: string | null; nickname: string | null; avatarHash: string | null; hasServerProfile: boolean;
+      serverProfile: { displayName: string | null; avatarUrl: string | null; bio: string | null } | null;
+    }>(`/guilds/${guildId}/members/${userId}/server-profile`),
+
+  updateServerProfile: (guildId: string, data: { displayName?: string | null; avatarUrl?: string | null; bio?: string | null }) =>
+    apiFetch<{ id: string; displayName: string | null; avatarUrl: string | null; bio: string | null }>(`/guilds/${guildId}/members/@me/server-profile`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteServerProfile: (guildId: string) =>
+    apiFetch<{ success: boolean }>(`/guilds/${guildId}/members/@me/server-profile`, { method: 'DELETE' }),
+
   getAvatarDecorations: () =>
     apiFetch<AvatarDecoration[]>('/avatar-decorations'),
 

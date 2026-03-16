@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
-import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star, Shield, ArrowLeft } from 'lucide-react';
+import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star, Shield, ArrowLeft, MessageSquare } from 'lucide-react';
 import { getOrCreateKeyPair, exportPublicKey, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported, generateGroupKey, encryptGroupKey, decryptGroupKey, computeSafetyNumber, encryptFile, decryptFile } from '../../lib/e2e';
 import { onGroupKeyRotationNeeded, onUserKeyChanged, onE2EStateChanged } from '../../lib/socket';
 import type { GroupKeyRotationNeededPayload, UserKeyChangedPayload, E2EStateChangedPayload } from '../../lib/socket';
@@ -10,6 +10,7 @@ import { useToast } from '../../components/ui/ToastManager';
 import { useContextMenu } from '../../components/ui/ContextMenu';
 import EmojiPicker from '../../components/chat/EmojiPicker';
 import ForwardModal from '../../components/modals/ForwardModal';
+import ThreadPanel from '../../components/chat/ThreadPanel';
 import EditHistoryPopover from '../../components/chat/EditHistoryPopover';
 import { RichTextRenderer } from '../../components/chat/RichTextRenderer';
 import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
@@ -18,7 +19,7 @@ import { ErrorState } from '../../components/ui/ErrorState';
 import { api, ApiRequestError, API_BASE } from '../../lib/api';
 import { markRead as markReadStore } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
-import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onMessageRead, onCallAnswer, onCallReject, onPresenceUpdate, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type MessageReadPayload, type PresenceUpdatePayload } from '../../lib/socket';
+import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onMessageRead, onCallAnswer, onCallReject, onPresenceUpdate, onThreadCreate, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type MessageReadPayload, type PresenceUpdatePayload } from '../../lib/socket';
 import { getDeterministicGradient } from '../../utils/colors';
 import { useLiveKit, type LiveKitParticipant } from '../../lib/useLiveKit';
 import Avatar from '../../components/ui/Avatar';
@@ -75,6 +76,7 @@ type Message = {
     createdAt?: string | null;
     isEncrypted?: boolean;
     encryptedContent?: string | null;
+    threadReplyCount?: number;
 };
 
 // Video element component for rendering participant video
@@ -209,6 +211,7 @@ const DirectMessage = () => {
     const [isEditingGroupName, setIsEditingGroupName] = useState(false);
     const [replyingTo, setReplyingTo] = useState<{ id: number; apiId?: string; author: string; content: string } | null>(null);
     const [editingMessage, setEditingMessage] = useState<{ id: number; apiId: string; content: string } | null>(null);
+    const [activeThreadMessage, setActiveThreadMessage] = useState<Message | null>(null);
     const [editGroupNameValue, setEditGroupNameValue] = useState('');
     const [addMemberInput, setAddMemberInput] = useState('');
     const [showAddMember, setShowAddMember] = useState(false);
@@ -697,6 +700,7 @@ const DirectMessage = () => {
             createdAt: m.createdAt ?? null,
             isEncrypted: m.isEncrypted ?? false,
             encryptedContent: m.encryptedContent ?? null,
+            threadReplyCount: m.threadReplyCount ?? 0,
         };
     };
 
@@ -928,6 +932,18 @@ const DirectMessage = () => {
             if (payload.userId === currentUserId) return;
             setPartnerLastReadAt(payload.lastReadAt);
             setPartnerLastReadMessageId(payload.lastReadMessageId);
+        }));
+
+        // THREAD_CREATE — mark origin message as having a thread
+        unsubs.push(onThreadCreate((data: any) => {
+            if (data.channelId !== dmChannelId) return;
+            setMessages(prev => prev.map(msg => {
+                if (msg.apiId !== data.originMessageId) return msg;
+                if ((msg.threadReplyCount ?? 0) === 0) {
+                    return { ...msg, threadReplyCount: 1 };
+                }
+                return msg;
+            }));
         }));
 
         return () => { unsubs.forEach(fn => fn()); };
@@ -2440,6 +2456,7 @@ const DirectMessage = () => {
                                         const isOwnMessage = msg.authorId === userProfile?.id;
                                         openMenu(e, [
                                             { id: 'reply', label: 'Reply', icon: Reply, onClick: () => setReplyingTo({ id: msg.id, apiId: msg.apiId, author: msg.author, content: (msg.content || '').slice(0, 80) }) },
+                                            { id: 'thread', label: 'Create Thread', icon: MessageSquare, onClick: () => setActiveThreadMessage(msg) },
                                             ...(isOwnMessage && msg.apiId ? [{ id: 'edit', label: 'Edit Message', icon: Pencil, onClick: () => setEditingMessage({ id: msg.id, apiId: msg.apiId!, content: msg.content || '' }) }] : []),
                                             { id: 'forward', label: 'Forward Message', icon: Share2, onClick: () => setForwardingMessage(msg) },
                                             {
@@ -2654,6 +2671,26 @@ const DirectMessage = () => {
                                                 ))}
                                             </div>
                                         )}
+                                        {/* Thread reply count */}
+                                        {(msg.threadReplyCount ?? 0) > 0 && (
+                                            <div
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px',
+                                                    padding: '4px 8px', borderRadius: '6px', cursor: 'pointer',
+                                                    background: (msg.threadReplyCount ?? 0) >= 3 ? 'rgba(var(--accent-primary-rgb, 99,102,241), 0.08)' : 'transparent',
+                                                }}
+                                                onClick={() => setActiveThreadMessage(msg)}
+                                                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(var(--accent-primary-rgb, 99,102,241), 0.12)')}
+                                                onMouseLeave={e => (e.currentTarget.style.background = (msg.threadReplyCount ?? 0) >= 3 ? 'rgba(var(--accent-primary-rgb, 99,102,241), 0.08)' : 'transparent')}
+                                            >
+                                                <MessageSquare size={14} style={{ color: 'var(--accent-primary)' }} />
+                                                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--accent-primary)' }}>
+                                                    {(msg.threadReplyCount ?? 0) >= 3
+                                                        ? `View ${msg.threadReplyCount} replies`
+                                                        : `${msg.threadReplyCount} ${msg.threadReplyCount === 1 ? 'reply' : 'replies'}`}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                     {/* Quick Reaction Picker */}
                                     {reactionPickerMessageId === msg.id && (
@@ -2668,8 +2705,9 @@ const DirectMessage = () => {
                                     {/* Hover actions */}
                                     {hoveredMessageId === msg.id && !msg.system && (
                                         <div style={{ position: 'absolute', top: '-12px', right: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', padding: '4px', display: 'flex', gap: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', zIndex: 10 }}>
-                                            <button onClick={() => setReactionPickerMessageId(reactionPickerMessageId === msg.id ? null : msg.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}><Smile size={16} /></button>
-                                            <button onClick={() => { if (msg.content) navigator.clipboard.writeText(msg.content); addToast({ title: 'Copied', variant: 'info' }); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}><Copy size={16} /></button>
+                                            <button onClick={() => setReactionPickerMessageId(reactionPickerMessageId === msg.id ? null : msg.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')} title="Add Reaction"><Smile size={16} /></button>
+                                            <button onClick={() => setActiveThreadMessage(msg)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')} title="Create Thread"><MessageSquare size={16} /></button>
+                                            <button onClick={() => { if (msg.content) navigator.clipboard.writeText(msg.content); addToast({ title: 'Copied', variant: 'info' }); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')} title="Copy Text"><Copy size={16} /></button>
                                         </div>
                                     )}
                                 </div>
@@ -3156,6 +3194,15 @@ const DirectMessage = () => {
                             }
                         }
                     }}
+                />
+            )}
+
+            {/* Thread Panel */}
+            {activeThreadMessage && dmChannelId && (
+                <ThreadPanel
+                    originalMessage={activeThreadMessage}
+                    channelId={dmChannelId}
+                    onClose={() => setActiveThreadMessage(null)}
                 />
             )}
 

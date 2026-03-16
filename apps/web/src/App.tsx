@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense, type
 import { UserProvider, useUser } from './contexts/UserContext';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, Navigate, Outlet, Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar, Compass, User, Columns, Paintbrush, PenLine } from 'lucide-react';
+import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar, Compass, User, Columns, Paintbrush, PenLine, FileText } from 'lucide-react';
 import './components/chat.css';
 import CommandPalette from './components/ui/CommandPalette';
 import { playSound, setSoundVolume } from './utils/SoundManager';
@@ -63,6 +63,7 @@ const StoreModal = lazy(() => import('./pages/app/StoreModal'));
 const DailyChallenges = lazy(() => import('./pages/app/DailyChallenges'));
 const MiniMode = lazy(() => import('./components/desktop/MiniMode'));
 const VanityProfile = lazy(() => import('./pages/app/VanityProfile'));
+const UnifiedInbox = lazy(() => import('./pages/app/UnifiedInbox'));
 
 import InviteAccept from './pages/InviteAccept';
 import { NotFound } from './pages/ErrorStates';
@@ -81,6 +82,7 @@ import { useDesktopIdleDetection } from './hooks/useDesktopIdleDetection';
 import { useDesktopMenuNavigation } from './hooks/useDesktopMenuNavigation';
 import { useDesktopNotifications } from './hooks/useDesktopNotifications';
 import { useGameActivity } from './hooks/useGameActivity';
+import { useKeyboardNav } from './hooks/useKeyboardNav';
 import UpdateBanner from './components/ui/UpdateBanner';
 
 // Lazy-loaded modal components for code splitting
@@ -587,7 +589,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const [channelSettingsOpen, setChannelSettingsOpen] = useState<{ id: string; name: string; topic?: string; rateLimitPerUser?: number; isNsfw?: boolean; channelType?: string; userLimit?: number } | null>(null);
     const unreadMap = useUnreadStore();
     const [privateToggle, setPrivateToggle] = useState(false);
-    const [showCreateChannel, setShowCreateChannel] = useState<{ type: 'text' | 'voice'; parentId?: string } | null>(null);
+    const [showCreateChannel, setShowCreateChannel] = useState<{ type: 'text' | 'voice' | 'document'; parentId?: string } | null>(null);
     const [notifPrefs, setNotifPrefs] = useState<{ type: 'guild' | 'channel'; id: string; name: string } | null>(null);
     const [newChannelName, setNewChannelName] = useState('');
     const [selectedTemplate, setSelectedTemplate] = useState<{ name: string; topic?: string; rateLimitPerUser?: number; isAnnouncement?: boolean; channelType?: string } | null>(null);
@@ -970,7 +972,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const handleCreateChannel = async () => {
         if (!activeGuildId || !newChannelName.trim() || !showCreateChannel) return;
         try {
-            const channelType = showCreateChannel.type === 'voice' ? 'GUILD_VOICE' : 'GUILD_TEXT';
+            const channelType = showCreateChannel.type === 'voice' ? 'GUILD_VOICE' : showCreateChannel.type === 'document' ? 'GUILD_DOCUMENT' : 'GUILD_TEXT';
             const slug = newChannelName.trim().toLowerCase().replace(/\s+/g, '-');
             const created = await api.channels.create(activeGuildId, {
                 name: slug,
@@ -2023,7 +2025,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                     }}>
                                     <div className={`channel-item ${isActive ? 'active' : ''}`} tabIndex={0} role="option" aria-selected={isActive} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: isMuted ? 0.5 : undefined, cursor: canManageChannels ? 'grab' : undefined }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                                            {isPrivate ? <Lock size={18} style={{ flexShrink: 0, opacity: 0.7 }} /> : <HashIcon size={18} style={{ flexShrink: 0, opacity: 0.7 }} />}
+                                            {ch.type === 'GUILD_DOCUMENT' ? <FileText size={18} style={{ flexShrink: 0, opacity: 0.7 }} /> : isPrivate ? <Lock size={18} style={{ flexShrink: 0, opacity: 0.7 }} /> : <HashIcon size={18} style={{ flexShrink: 0, opacity: 0.7 }} />}
                                             {ch.topic ? (
                                                 <Tooltip content={ch.topic} position="right" delay={400}>
                                                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: hasUnread ? 600 : undefined, color: hasUnread ? 'var(--text-primary)' : undefined }}>{ch.name}</span>
@@ -2067,7 +2069,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     }
 
                     // Separate uncategorized channels into text and voice
-                    const uncatText = uncategorized.filter(c => !isVoiceChannelType(c.type));
+                    const uncatText = uncategorized.filter(c => !isVoiceChannelType(c.type) && c.type !== 'GUILD_DOCUMENT');
                     const uncatVoice = uncategorized.filter(c => isVoiceChannelType(c.type));
 
                     // Separate categories into text-oriented and voice-oriented
@@ -2191,6 +2193,29 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                     {voiceCategories.map(cat => renderCategory(cat, 'voice'))}
                                 </>
                             )}
+
+                            {/* ── DOCUMENT CHANNELS ── */}
+                            {(() => {
+                                const docChannels = guildChannels.filter((ch: any) => ch.type === 'GUILD_DOCUMENT');
+                                if (docChannels.length === 0 && !canManageChannels) return null;
+                                return (
+                                    <>
+                                        <div
+                                            style={{ ...sectionHeaderStyle, marginTop: '12px' }}
+                                            onClick={() => toggleCategory('__document_channels__')}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <span style={{ transition: 'transform 0.15s ease', transform: collapsed['__document_channels__'] ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}><ChevronDown size={10} /></span>
+                                                <span>Document Channels</span>
+                                            </div>
+                                            {canManageChannels && <Plus size={14} style={{ cursor: 'pointer', opacity: 0.7 }}
+                                                onClick={(e) => { e.stopPropagation(); setShowCreateChannel({ type: 'document' }); setNewChannelName(''); }}
+                                            />}
+                                        </div>
+                                        {!collapsed['__document_channels__'] && docChannels.map(renderChannel)}
+                                    </>
+                                );
+                            })()}
                         </>
                     );
                 })()}
@@ -2200,7 +2225,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
             {showCreateChannel && (
                 <div style={{ padding: '12px 16px', background: 'var(--bg-elevated)', borderTop: '1px solid var(--stroke)', borderBottom: '1px solid var(--stroke)', maxHeight: '400px', overflowY: 'auto' }}>
                     <div style={{ fontSize: '12px', textTransform: 'uppercase', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
-                        Create {showCreateChannel.type === 'voice' ? 'Voice' : 'Text'} Channel
+                        Create {showCreateChannel.type === 'voice' ? 'Voice' : showCreateChannel.type === 'document' ? 'Document' : 'Text'} Channel
                     </div>
 
                     {/* Channel Templates */}
@@ -2266,10 +2291,10 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     )}
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                        {showCreateChannel.type === 'voice' ? <Mic size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : <HashIcon size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
+                        {showCreateChannel.type === 'voice' ? <Mic size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : showCreateChannel.type === 'document' ? <FileText size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : <HashIcon size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
                         <input
                             type="text"
-                            placeholder={showCreateChannel.type === 'voice' ? 'new-voice' : 'new-channel'}
+                            placeholder={showCreateChannel.type === 'voice' ? 'new-voice' : showCreateChannel.type === 'document' ? 'new-document' : 'new-channel'}
                             value={newChannelName}
                             onChange={(e) => setNewChannelName(e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') handleCreateChannel(); if (e.key === 'Escape') { setShowCreateChannel(null); setNewChannelName(''); setSelectedTemplate(null); } }}
@@ -2861,7 +2886,6 @@ export const AppLayout = () => {
     // Voice context for keyboard shortcuts (mute/deafen)
     const voiceCtx = useVoice();
 
-
     // Per-channel background persistence via localStorage
     const channelBgKey = `gratonite-bg:${location.pathname}`;
 
@@ -2911,6 +2935,17 @@ export const AppLayout = () => {
     // Rules gate state (used by the Server Rules Gate overlay below)
     const [rulesAgreedGuilds, setRulesAgreedGuilds] = useState<Set<string>>(new Set());
     const [showRulesGate, setShowRulesGate] = useState(false);
+
+    // Global keyboard navigation (Feature 15)
+    useKeyboardNav({
+        onEscape: () => {
+            if (activeModal) setActiveModal(null);
+        },
+        onQuickSwitch: () => setActiveModal('globalSearch'),
+        onToggleMute: () => voiceCtx.toggleMute?.(),
+        onToggleDeafen: () => voiceCtx.toggleDeafen?.(),
+        onGoToInbox: () => setActiveModal('notifications'),
+    });
 
     // Per-guild theme override
     const defaultThemeRef = useRef<string | null>(null);
@@ -4108,6 +4143,7 @@ const appRouter = createBrowserRouter(
                 <Route path="friend-activity" element={<Suspense fallback={<LazyFallback />}><FriendActivity /></Suspense>} />
                 <Route path="daily-challenges" element={<Suspense fallback={<LazyFallback />}><DailyChallenges /></Suspense>} />
                 <Route path="trading" element={<Suspense fallback={<LazyFallback />}><Trading /></Suspense>} />
+                <Route path="inbox" element={<Suspense fallback={<LazyFallback />}><UnifiedInbox /></Suspense>} />
                 <Route path="admin/team" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminTeam /></Suspense></RequireAdmin>} />
                 <Route path="admin/audit" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminAuditLog /></Suspense></RequireAdmin>} />
                 <Route path="admin/bot-moderation" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminBotModeration /></Suspense></RequireAdmin>} />

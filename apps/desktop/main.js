@@ -13,6 +13,11 @@ let mainWindow = null;
 let miniWindow = null;
 let tray = null;
 let isMuted = false;
+let isDeafened = false;
+let isDndEnabled = false;
+let minimizeToTray = true;
+let startOnLogin = false;
+let trayUnreadCount = 0;
 
 // --- Task #91: Crash Reporting ---
 crashReporter.start({
@@ -95,6 +100,105 @@ function debouncedSaveWindowState() {
   if (saveStateTimeout) clearTimeout(saveStateTimeout);
   saveStateTimeout = setTimeout(saveWindowState, 500);
 }
+
+// --- Feature #23: Desktop Global Hotkeys Configuration ---
+const hotkeysConfigFile = path.join(app.getPath('userData'), 'hotkeys.json');
+
+const DEFAULT_HOTKEYS = {
+  'toggle-mute': 'CmdOrCtrl+Shift+M',
+  'toggle-deafen': 'CmdOrCtrl+Shift+D',
+  'push-to-talk': '',
+  'toggle-dnd': 'CmdOrCtrl+Shift+N',
+  'quick-switch': 'CmdOrCtrl+K',
+};
+
+function loadHotkeysConfig() {
+  try {
+    const data = JSON.parse(fs.readFileSync(hotkeysConfigFile, 'utf8'));
+    // Merge with defaults so new keys are always present
+    return { ...DEFAULT_HOTKEYS, ...data };
+  } catch {}
+  return { ...DEFAULT_HOTKEYS };
+}
+
+function saveHotkeysConfig(config) {
+  try { fs.writeFileSync(hotkeysConfigFile, JSON.stringify(config, null, 2)); } catch {}
+}
+
+let currentHotkeys = loadHotkeysConfig();
+
+function hotkeyAction(action) {
+  switch (action) {
+    case 'toggle-mute':
+      isMuted = !isMuted;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('hotkey-pressed', { action: 'toggle-mute', state: isMuted });
+        mainWindow.webContents.send('mute-toggled', isMuted);
+      }
+      updateTrayMenu();
+      break;
+    case 'toggle-deafen':
+      isDeafened = !isDeafened;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('hotkey-pressed', { action: 'toggle-deafen', state: isDeafened });
+      }
+      updateTrayMenu();
+      break;
+    case 'push-to-talk':
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('hotkey-pressed', { action: 'push-to-talk' });
+      }
+      break;
+    case 'toggle-dnd':
+      isDndEnabled = !isDndEnabled;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('hotkey-pressed', { action: 'toggle-dnd', state: isDndEnabled });
+      }
+      updateTrayMenu();
+      break;
+    case 'quick-switch':
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show();
+        mainWindow.focus();
+        mainWindow.webContents.send('hotkey-pressed', { action: 'quick-switch' });
+      }
+      break;
+  }
+}
+
+function registerConfigurableHotkeys() {
+  // Unregister all first, then re-register
+  globalShortcut.unregisterAll();
+
+  for (const [action, accelerator] of Object.entries(currentHotkeys)) {
+    if (!accelerator) continue; // Skip empty bindings (e.g. push-to-talk with no default)
+    try {
+      const success = globalShortcut.register(accelerator, () => hotkeyAction(action));
+      if (!success) {
+        console.warn(`Failed to register hotkey ${accelerator} for ${action}`);
+      }
+    } catch (err) {
+      console.warn(`Error registering hotkey ${accelerator} for ${action}:`, err.message);
+    }
+  }
+}
+
+// --- Feature #24: Minimize-to-Tray Settings ---
+const traySettingsFile = path.join(app.getPath('userData'), 'tray-settings.json');
+
+function loadTraySettings() {
+  try {
+    const data = JSON.parse(fs.readFileSync(traySettingsFile, 'utf8'));
+    if (typeof data.minimizeToTray === 'boolean') minimizeToTray = data.minimizeToTray;
+    if (typeof data.startOnLogin === 'boolean') startOnLogin = data.startOnLogin;
+  } catch {}
+}
+
+function saveTraySettings() {
+  try { fs.writeFileSync(traySettingsFile, JSON.stringify({ minimizeToTray, startOnLogin }, null, 2)); } catch {}
+}
+
+loadTraySettings();
 
 // --- Task #88: System Idle Detection ---
 let idleCheckInterval = null;
@@ -392,7 +496,8 @@ function createWindow() {
   mainWindow.on('close', (event) => {
     // Task #44: Save state before closing
     saveWindowState();
-    if (process.platform === 'darwin' && !app.isQuitting) {
+    // Feature #24: Minimize to tray on all platforms (if enabled)
+    if (!app.isQuitting && minimizeToTray) {
       event.preventDefault();
       mainWindow.hide();
     }
@@ -482,9 +587,10 @@ function createTray() {
 }
 
 function updateTrayMenu() {
+  const unreadLabel = trayUnreadCount > 0 ? ` (${trayUnreadCount} unread)` : '';
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: 'Open Gratonite',
+      label: `Open Gratonite${unreadLabel}`,
       click: () => {
         if (mainWindow) {
           mainWindow.show();
@@ -494,19 +600,45 @@ function updateTrayMenu() {
         }
       },
     },
+    { type: 'separator' },
     {
-      label: 'Mute Notifications',
+      label: 'Mute',
       type: 'checkbox',
       checked: isMuted,
       click: (menuItem) => {
         isMuted = menuItem.checked;
-        // Notify renderer process of mute state change
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('mute-toggled', isMuted);
+          mainWindow.webContents.send('hotkey-pressed', { action: 'toggle-mute', state: isMuted });
         }
         updateTrayMenu();
       },
     },
+    {
+      label: 'Deafen',
+      type: 'checkbox',
+      checked: isDeafened,
+      click: (menuItem) => {
+        isDeafened = menuItem.checked;
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('hotkey-pressed', { action: 'toggle-deafen', state: isDeafened });
+        }
+        updateTrayMenu();
+      },
+    },
+    {
+      label: 'Do Not Disturb',
+      type: 'checkbox',
+      checked: isDndEnabled,
+      click: (menuItem) => {
+        isDndEnabled = menuItem.checked;
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('hotkey-pressed', { action: 'toggle-dnd', state: isDndEnabled });
+        }
+        updateTrayMenu();
+      },
+    },
+    { type: 'separator' },
     // Task #89: Mini Mode toggle in tray
     {
       label: 'Mini Mode',
@@ -581,22 +713,10 @@ function createBadgeOverlay(count) {
   return nativeImage.createFromBuffer(canvas, { width: size, height: size });
 }
 
-// --- Item 261: Global Keyboard Shortcut for Mute ---
+// --- Item 261 + Feature #23: Global Keyboard Shortcuts (configurable) ---
+// registerGlobalShortcuts now delegates to registerConfigurableHotkeys (Feature #23)
 function registerGlobalShortcuts() {
-  // CmdOrCtrl+Shift+M to toggle mute
-  const ret = globalShortcut.register('CmdOrCtrl+Shift+M', () => {
-    isMuted = !isMuted;
-    // Notify renderer process
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('mute-toggled', isMuted);
-    }
-    // Update tray menu checkbox
-    updateTrayMenu();
-  });
-
-  if (!ret) {
-    console.warn('Failed to register global shortcut CmdOrCtrl+Shift+M');
-  }
+  registerConfigurableHotkeys();
 }
 
 // --- Task #86: Deep Link Protocol ---
@@ -818,7 +938,8 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  // Feature #24: Don't quit if minimize-to-tray is enabled (tray stays alive)
+  if (process.platform !== 'darwin' && !minimizeToTray) {
     app.quit();
   }
 });
@@ -1004,6 +1125,76 @@ ipcMain.on('show-message-notification', (_event, data) => {
   });
 
   notification.show();
+});
+
+// --- Feature #23: Hotkeys IPC ---
+ipcMain.handle('get-hotkeys', () => {
+  return { ...currentHotkeys };
+});
+
+ipcMain.handle('set-hotkeys', (_event, newHotkeys) => {
+  if (!newHotkeys || typeof newHotkeys !== 'object') return { success: false, error: 'Invalid hotkeys' };
+  // Validate: only allow known action names, values must be strings
+  const validActions = Object.keys(DEFAULT_HOTKEYS);
+  const sanitized = {};
+  for (const action of validActions) {
+    sanitized[action] = typeof newHotkeys[action] === 'string' ? newHotkeys[action] : (currentHotkeys[action] || '');
+  }
+  currentHotkeys = sanitized;
+  saveHotkeysConfig(currentHotkeys);
+  registerConfigurableHotkeys();
+  return { success: true, hotkeys: { ...currentHotkeys } };
+});
+
+ipcMain.handle('reset-hotkeys', () => {
+  currentHotkeys = { ...DEFAULT_HOTKEYS };
+  saveHotkeysConfig(currentHotkeys);
+  registerConfigurableHotkeys();
+  return { success: true, hotkeys: { ...currentHotkeys } };
+});
+
+ipcMain.handle('get-default-hotkeys', () => {
+  return { ...DEFAULT_HOTKEYS };
+});
+
+// --- Feature #24: Tray Badge & Settings IPC ---
+ipcMain.on('update-tray-badge', (_event, data) => {
+  const count = (data && typeof data.count === 'number') ? data.count : 0;
+  trayUnreadCount = count;
+  updateBadgeCount(count);
+  // Update tray icon tooltip and menu
+  if (tray) {
+    tray.setToolTip(count > 0 ? `Gratonite (${count} unread)` : 'Gratonite');
+  }
+  updateTrayMenu();
+});
+
+ipcMain.handle('get-minimize-to-tray', () => minimizeToTray);
+ipcMain.on('set-minimize-to-tray', (_event, value) => {
+  minimizeToTray = !!value;
+  saveTraySettings();
+});
+
+ipcMain.handle('get-start-on-login', () => startOnLogin);
+ipcMain.on('set-start-on-login', (_event, value) => {
+  startOnLogin = !!value;
+  saveTraySettings();
+  app.setLoginItemSettings({
+    openAtLogin: startOnLogin,
+    openAsHidden: true,
+  });
+});
+
+ipcMain.handle('get-deafen-state', () => isDeafened);
+ipcMain.on('set-deafen-state', (_event, deafened) => {
+  isDeafened = !!deafened;
+  updateTrayMenu();
+});
+
+ipcMain.handle('get-dnd-state', () => isDndEnabled);
+ipcMain.on('set-dnd-state', (_event, enabled) => {
+  isDndEnabled = !!enabled;
+  updateTrayMenu();
 });
 
 // --- Task #104: Rich Presence Integration IPC ---
