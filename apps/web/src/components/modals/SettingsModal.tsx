@@ -248,6 +248,8 @@ const SettingsModal = ({
         { tab: 'developer', label: 'Developer', keywords: ['developer', 'oauth', 'application', 'api', 'bot', 'token'] },
         { tab: 'accessibility', label: 'Accessibility', keywords: ['accessibility', 'screen reader', 'reduced motion', 'color blind', 'focus', 'underline', 'high contrast', 'link underlines'] },
         { tab: 'feedback', label: 'Send Feedback', keywords: ['feedback', 'bug', 'report', 'suggestion', 'feature request'] },
+        { tab: 'dnd-schedule', label: 'DND Schedule', keywords: ['dnd', 'do not disturb', 'schedule', 'quiet hours', 'auto dnd', 'sleep'] },
+        { tab: 'snippets', label: 'Snippets', keywords: ['snippets', 'quick reply', 'template', 'canned response', 'saved text'] },
     ] as const, []);
 
     // Filter tabs based on search
@@ -2317,7 +2319,7 @@ function SettingsDndSchedulePanel({ addToast }: { addToast: (t: any) => void }) 
                         <select value={timezone} onChange={e => setTimezone(e.target.value)}
                             style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box' }}
                         >
-                            {Intl.supportedValuesOf('timeZone').map(tz => <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>)}
+                            {(typeof (Intl as any).supportedValuesOf === 'function' ? (Intl as any).supportedValuesOf('timeZone') as string[] : ['UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Berlin', 'Europe/Paris', 'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Kolkata', 'Australia/Sydney']).map((tz: string) => <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>)}
                         </select>
                     </div>
 

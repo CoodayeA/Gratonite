@@ -18,49 +18,40 @@ export default function CalendarSync() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
-  const toast = useToast();
+  const { addToast } = useToast();
 
   const fetchIntegrations = useCallback(async () => {
     try {
       const data = await api.get('/users/@me/calendar-integrations');
       setIntegrations(data as CalendarIntegration[]);
-    } catch (err) {
-      console.error('Failed to fetch calendar integrations:', err);
+    } catch {
+      // endpoint may not exist yet
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchIntegrations();
-  }, [fetchIntegrations]);
+  useEffect(() => { fetchIntegrations(); }, [fetchIntegrations]);
 
-  // Check URL for calendarConnected param (after OAuth redirect)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('calendarConnected') === 'true') {
-      toast.success('Google Calendar connected successfully!');
-      // Clean up URL
+      addToast({ title: 'Google Calendar connected!', variant: 'success' });
       const url = new URL(window.location.href);
       url.searchParams.delete('calendarConnected');
       window.history.replaceState({}, '', url.toString());
       fetchIntegrations();
     }
-  }, [toast, fetchIntegrations]);
+  }, [addToast, fetchIntegrations]);
 
   const handleConnect = async () => {
     setConnecting(true);
     try {
       const data = await api.post('/users/@me/calendar-integrations/google/connect', {}) as { authUrl: string };
-      // Open Google OAuth in popup
       const popup = window.open(data.authUrl, 'google-calendar-auth', 'width=600,height=700,popup=yes');
-      if (!popup) {
-        // Fallback: redirect in same window
-        window.location.href = data.authUrl;
-      }
-    } catch (err) {
-      toast.error('Failed to initiate Google Calendar connection');
-      console.error(err);
+      if (!popup) window.location.href = data.authUrl;
+    } catch {
+      addToast({ title: 'Failed to connect Google Calendar', variant: 'error' });
     } finally {
       setConnecting(false);
     }
@@ -70,10 +61,9 @@ export default function CalendarSync() {
     try {
       await api.delete(`/users/@me/calendar-integrations/${id}`);
       setIntegrations(prev => prev.filter(i => i.id !== id));
-      toast.success('Calendar disconnected');
-    } catch (err) {
-      toast.error('Failed to disconnect calendar');
-      console.error(err);
+      addToast({ title: 'Calendar disconnected', variant: 'success' });
+    } catch {
+      addToast({ title: 'Failed to disconnect', variant: 'error' });
     }
   };
 
@@ -81,119 +71,89 @@ export default function CalendarSync() {
     setSyncing(id);
     try {
       const result = await api.post(`/users/@me/calendar-integrations/${id}/sync`, {}) as { eventCount: number };
-      toast.success(`Synced ${result.eventCount} events`);
+      addToast({ title: `Synced ${result.eventCount} events`, variant: 'success' });
       fetchIntegrations();
-    } catch (err) {
-      toast.error('Sync failed');
-      console.error(err);
+    } catch {
+      addToast({ title: 'Sync failed', variant: 'error' });
     } finally {
       setSyncing(null);
     }
   };
 
-  const handleToggleSync = async (id: string, currentState: boolean) => {
+  const handleToggleSync = async (id: string, current: boolean) => {
     try {
-      const updated = await api.patch(`/users/@me/calendar-integrations/${id}`, { syncEnabled: !currentState }) as CalendarIntegration;
+      const updated = await api.patch(`/users/@me/calendar-integrations/${id}`, { syncEnabled: !current }) as CalendarIntegration;
       setIntegrations(prev => prev.map(i => i.id === id ? { ...i, syncEnabled: updated.syncEnabled } : i));
-    } catch (err) {
-      toast.error('Failed to update sync setting');
-      console.error(err);
+    } catch {
+      addToast({ title: 'Failed to update sync', variant: 'error' });
     }
   };
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return 'Never';
-    return new Date(dateStr).toLocaleString();
-  };
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            Calendar Sync
+          <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            <Calendar size={18} /> Calendar Sync
           </h3>
-          <p className="text-sm text-gray-400 mt-1">
-            Connect your Google Calendar to sync events with Gratonite.
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+            Connect your Google Calendar to sync events.
           </p>
         </div>
-        <button
-          onClick={handleConnect}
-          disabled={connecting}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-md text-sm font-medium transition-colors"
-        >
-          <ExternalLink className="w-4 h-4" />
-          {connecting ? 'Connecting...' : 'Connect Google Calendar'}
+        <button onClick={handleConnect} disabled={connecting}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px',
+            background: 'var(--accent-primary)', border: 'none', borderRadius: '8px',
+            color: 'white', fontSize: '13px', fontWeight: 600, cursor: connecting ? 'not-allowed' : 'pointer',
+            opacity: connecting ? 0.6 : 1, fontFamily: 'inherit',
+          }}>
+          <ExternalLink size={14} /> {connecting ? 'Connecting...' : 'Connect Google Calendar'}
         </button>
       </div>
 
       {loading ? (
-        <div className="text-center py-8 text-gray-500">Loading integrations...</div>
+        <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
       ) : integrations.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 border border-dashed border-gray-700 rounded-lg">
-          <Calendar className="w-10 h-10 mx-auto mb-2 opacity-40" />
-          <p>No calendars connected yet.</p>
-          <p className="text-xs mt-1">Connect your Google Calendar to get started.</p>
+        <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)', border: '1px dashed var(--stroke)', borderRadius: '12px' }}>
+          <Calendar size={40} style={{ marginBottom: '8px', opacity: 0.4 }} />
+          <p style={{ margin: 0 }}>No calendars connected yet.</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {integrations.map(integration => (
-            <div
-              key={integration.id}
-              className="flex items-center justify-between p-4 bg-gray-800/50 border border-gray-700 rounded-lg"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-blue-400" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {integrations.map(i => (
+            <div key={i.id} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '14px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '10px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(59,130,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Calendar size={18} style={{ color: '#60a5fa' }} />
                 </div>
                 <div>
-                  <div className="text-white font-medium capitalize">
-                    {integration.provider} Calendar
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    Calendar: {integration.calendarId} &middot; Last synced: {formatDate(integration.lastSyncAt)}
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', textTransform: 'capitalize' }}>{i.provider} Calendar</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    Last synced: {i.lastSyncAt ? new Date(i.lastSyncAt).toLocaleString() : 'Never'}
                   </div>
                 </div>
               </div>
-
-              <div className="flex items-center gap-2">
-                {/* Toggle sync */}
-                <button
-                  onClick={() => handleToggleSync(integration.id, integration.syncEnabled)}
-                  className="p-2 rounded-md hover:bg-gray-700 transition-colors"
-                  title={integration.syncEnabled ? 'Disable auto-sync' : 'Enable auto-sync'}
-                >
-                  {integration.syncEnabled ? (
-                    <ToggleRight className="w-5 h-5 text-green-400" />
-                  ) : (
-                    <ToggleLeft className="w-5 h-5 text-gray-500" />
-                  )}
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button onClick={() => handleToggleSync(i.id, i.syncEnabled)} title={i.syncEnabled ? 'Disable sync' : 'Enable sync'}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', color: i.syncEnabled ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
+                  {i.syncEnabled ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
                 </button>
-
-                {/* Manual sync */}
-                <button
-                  onClick={() => handleSync(integration.id)}
-                  disabled={syncing === integration.id}
-                  className="p-2 rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50"
-                  title="Sync now"
-                >
-                  <RefreshCw className={`w-5 h-5 text-gray-400 ${syncing === integration.id ? 'animate-spin' : ''}`} />
+                <button onClick={() => handleSync(i.id)} disabled={syncing === i.id} title="Sync now"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', color: 'var(--text-muted)', opacity: syncing === i.id ? 0.5 : 1 }}>
+                  <RefreshCw size={16} style={syncing === i.id ? { animation: 'spin 1s linear infinite' } : undefined} />
                 </button>
-
-                {/* Disconnect */}
-                <button
-                  onClick={() => handleDisconnect(integration.id)}
-                  className="p-2 rounded-md hover:bg-red-900/30 transition-colors"
-                  title="Disconnect"
-                >
-                  <Trash2 className="w-5 h-5 text-red-400" />
+                <button onClick={() => handleDisconnect(i.id)} title="Disconnect"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', color: '#ef4444' }}>
+                  <Trash2 size={16} />
                 </button>
               </div>
             </div>
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }
