@@ -391,7 +391,7 @@ export default function CollaborativeEditor({ channelId, channelName }: Collabor
           {activeEditors.map(editor => (
             <div key={editor.userId} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
               <div style={{ position: 'relative' }}>
-                <Avatar userId={editor.userId} hash={editor.avatarHash || null} size={24} />
+                <Avatar userId={editor.userId} avatarHash={editor.avatarHash || null} size={24} />
                 <Circle
                   size={8}
                   fill={getCursorColor(editor.userId)}
