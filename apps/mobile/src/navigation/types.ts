@@ -111,7 +111,9 @@ export type AppStackParamList = {
   UserStats: undefined;
   BotStore: undefined;
   SettingsSecurity: undefined;
+  SettingsServer: undefined;
   KeyVerification: { userId: string };
+  Federation: undefined;
   // Wave H: Feature Enhancement
   MusicRoom: { channelId: string; channelName: string };
   StudyRoom: { channelId: string; channelName: string; guildId: string };

@@ -114,6 +114,10 @@ let API_BASE = DEFAULT_API_BASE;
 
 export { API_BASE };
 
+export function getApiBase(): string {
+  return API_BASE;
+}
+
 /**
  * Get the current server configuration.
  */
@@ -211,6 +215,12 @@ export async function setTokens(access: string | null, refresh?: string | null):
       await SecureStore.deleteItemAsync(REFRESH_KEY);
     }
   }
+
+  if (access) {
+    scheduleProactiveRefresh();
+  } else {
+    cancelProactiveRefresh();
+  }
 }
 
 export function getAccessToken(): string | null {
@@ -255,7 +265,28 @@ export class RateLimitError extends Error {
 // Token refresh
 // ---------------------------------------------------------------------------
 
-async function refreshAccessToken(): Promise<string | null> {
+let proactiveRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleProactiveRefresh(): void {
+  if (proactiveRefreshTimer) clearTimeout(proactiveRefreshTimer);
+  // Refresh 60s before the 15-minute TTL expires
+  const refreshInMs = (15 * 60 - 60) * 1000; // 14 minutes
+  proactiveRefreshTimer = setTimeout(async () => {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      scheduleProactiveRefresh();
+    }
+  }, refreshInMs);
+}
+
+export function cancelProactiveRefresh(): void {
+  if (proactiveRefreshTimer) {
+    clearTimeout(proactiveRefreshTimer);
+    proactiveRefreshTimer = null;
+  }
+}
+
+export async function refreshAccessToken(): Promise<string | null> {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
@@ -279,6 +310,7 @@ async function refreshAccessToken(): Promise<string | null> {
         await SecureStore.setItemAsync(REFRESH_KEY, data.refreshToken);
       }
       await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
+      scheduleProactiveRefresh();
       return accessToken;
     } catch {
       accessToken = null;
@@ -295,7 +327,7 @@ async function refreshAccessToken(): Promise<string | null> {
 // Core fetch wrapper
 // ---------------------------------------------------------------------------
 
-async function apiFetch<T>(
+export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
   retried = false,

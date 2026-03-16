@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { AppState as RNAppState } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { auth, users, userSettings as settingsApi, loadTokens, setTokens, getAccessToken, encryption as encryptionApi } from '../lib/api';
+import { auth, users, userSettings as settingsApi, loadTokens, setTokens, getAccessToken, encryption as encryptionApi, initServerConfig } from '../lib/api';
 import { connectSocket, disconnectSocket } from '../lib/socket';
 import { presenceStore } from '../lib/presenceStore';
 import { getOrCreateKeyPair, clearKeyPairFromSecureStore } from '../lib/crypto';
@@ -32,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
+        await initServerConfig();
         await loadTokens();
         // Restore saved theme
         const savedTheme = await SecureStore.getItemAsync('gratonite_theme');
