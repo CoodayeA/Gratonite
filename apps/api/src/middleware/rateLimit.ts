@@ -200,12 +200,13 @@ export const publicInviteRateLimit = createRateLimiter({
 });
 
 /**
- * publicFileRateLimit — 60 requests per 60 seconds, keyed by IP.
- * Apply to GET /files/:fileId to prevent bandwidth abuse.
+ * publicFileRateLimit — 600 requests per 60 seconds, keyed by IP.
+ * Apply to GET /files/:fileId. High limit because a single chat scroll
+ * can load 30+ images (avatars, attachments, embeds) simultaneously.
  */
 export const publicFileRateLimit = createRateLimiter({
   prefix: 'rl:file',
-  maxRequests: 60,
+  maxRequests: 600,
   windowSeconds: 60,
   keyFn: (req) => req.ip ?? req.socket.remoteAddress ?? null,
 });
@@ -228,7 +229,7 @@ export const usernameCheckRateLimit = createRateLimiter({
  */
 export const globalIpRateLimit = createRateLimiter({
   prefix: 'rl:global',
-  maxRequests: 600,
+  maxRequests: 1200,
   windowSeconds: 60,
   keyFn: (req) => req.ip ?? req.socket.remoteAddress ?? null,
 });
