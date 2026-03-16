@@ -13,6 +13,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import OfflineBanner from './src/components/OfflineBanner';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { connectSocket, disconnectSocket } from './src/lib/socket';
+import { refreshAccessToken, getAccessToken } from './src/lib/api';
 import { colors } from './src/lib/theme';
 import { useTheme, themeStore } from './src/lib/themeStore';
 import { registerForPushNotifications, setupNotificationHandlers } from './src/lib/notifications';
@@ -128,18 +129,37 @@ function ThemedApp() {
     });
   }, []);
 
+  const isLockedRef = useRef(isLocked);
+  React.useEffect(() => { isLockedRef.current = isLocked; }, [isLocked]);
+
+  const onUnlockRef = useRef<(() => void) | null>(null);
+
   React.useEffect(() => {
     const sub = AppState.addEventListener('change', async (nextState) => {
       if (nextState === 'active') {
-        connectSocket();
         // Re-lock if enabled and away for 30+ seconds
+        let needsLock = false;
         if (backgroundTimestamp.current) {
           const elapsed = Date.now() - backgroundTimestamp.current;
           backgroundTimestamp.current = null;
           if (elapsed >= 30000) {
             const enabled = await appLockStore.isEnabled();
-            if (enabled) setIsLocked(true);
+            if (enabled) {
+              needsLock = true;
+              setIsLocked(true);
+            }
           }
+        }
+
+        if (needsLock) {
+          // Defer token refresh + socket reconnect until after unlock
+          onUnlockRef.current = () => {
+            refreshAccessToken().then(() => connectSocket()).catch(() => {});
+          };
+        } else if (getAccessToken()) {
+          // No lock needed — refresh token then reconnect (only if logged in)
+          await refreshAccessToken();
+          connectSocket();
         }
       }
       if (nextState === 'background') {
@@ -195,7 +215,13 @@ function ThemedApp() {
           <RootNavigator />
         </ErrorBoundary>
         <StatusBar style={isDark ? 'light' : 'dark'} />
-        {isLocked && lockCheckDone && <AppLockScreen onUnlock={() => setIsLocked(false)} />}
+        {isLocked && lockCheckDone && <AppLockScreen onUnlock={() => {
+          setIsLocked(false);
+          if (onUnlockRef.current) {
+            onUnlockRef.current();
+            onUnlockRef.current = null;
+          }
+        }} />}
       </AuthProvider>
     </NavigationContainer>
   );

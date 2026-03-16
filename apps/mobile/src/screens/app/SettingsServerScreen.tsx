@@ -68,10 +68,10 @@ export default function SettingsServerScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={{ padding: spacing.md }}>
-      <View style={[styles.card, { backgroundColor: colors.card, borderRadius: borderRadius.lg }]}>
-        <Ionicons name="server-outline" size={48} color={colors.primary} style={styles.icon} />
-        <Text style={[styles.title, { color: colors.text, fontSize: fontSize.lg }]}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.bgPrimary }]} contentContainerStyle={{ padding: spacing.md }}>
+      <View style={[styles.card, { backgroundColor: colors.bgElevated, borderRadius: borderRadius.lg }]}>
+        <Ionicons name="server-outline" size={48} color={colors.accentPrimary} style={styles.icon} />
+        <Text style={[styles.title, { color: colors.textPrimary, fontSize: fontSize.lg }]}>
           Connect to a Gratonite Server
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: fontSize.sm }]}>
@@ -81,10 +81,10 @@ export default function SettingsServerScreen({ navigation }: Props) {
         </Text>
       </View>
 
-      <View style={[styles.card, { backgroundColor: colors.card, borderRadius: borderRadius.lg, marginTop: spacing.md }]}>
-        <Text style={[styles.label, { color: colors.text, fontSize: fontSize.sm }]}>Server URL</Text>
+      <View style={[styles.card, { backgroundColor: colors.bgElevated, borderRadius: borderRadius.lg, marginTop: spacing.md }]}>
+        <Text style={[styles.label, { color: colors.textPrimary, fontSize: fontSize.sm }]}>Server URL</Text>
         <TextInput
-          style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderRadius: borderRadius.md, fontSize: fontSize.md }]}
+          style={[styles.input, { backgroundColor: colors.bgPrimary, color: colors.textPrimary, borderRadius: borderRadius.md, fontSize: fontSize.md }]}
           value={serverUrl}
           onChangeText={setServerUrl}
           placeholder="https://your-server.example.com"
@@ -97,21 +97,21 @@ export default function SettingsServerScreen({ navigation }: Props) {
         <View style={styles.row}>
           <PressableScale
             onPress={handleTest}
-            style={[styles.button, { backgroundColor: colors.primary + '20', borderRadius: borderRadius.md }]}
+            style={[styles.button, { backgroundColor: colors.accentPrimary + '20', borderRadius: borderRadius.md }]}
           >
             {testing ? (
-              <ActivityIndicator color={colors.primary} size="small" />
+              <ActivityIndicator color={colors.accentPrimary} size="small" />
             ) : (
               <>
-                <Ionicons name="wifi-outline" size={18} color={colors.primary} />
-                <Text style={[styles.buttonText, { color: colors.primary, fontSize: fontSize.sm }]}>Test Connection</Text>
+                <Ionicons name="wifi-outline" size={18} color={colors.accentPrimary} />
+                <Text style={[styles.buttonText, { color: colors.accentPrimary, fontSize: fontSize.sm }]}>Test Connection</Text>
               </>
             )}
           </PressableScale>
 
           <PressableScale
             onPress={handleSave}
-            style={[styles.button, { backgroundColor: colors.primary, borderRadius: borderRadius.md }]}
+            style={[styles.button, { backgroundColor: colors.accentPrimary, borderRadius: borderRadius.md }]}
           >
             <Ionicons name="checkmark-outline" size={18} color="#fff" />
             <Text style={[styles.buttonText, { color: '#fff', fontSize: fontSize.sm }]}>Connect</Text>
@@ -119,13 +119,13 @@ export default function SettingsServerScreen({ navigation }: Props) {
         </View>
 
         {testResult && (
-          <View style={[styles.result, { backgroundColor: testResult.ok ? colors.primary + '15' : '#ff000015', borderRadius: borderRadius.md }]}>
+          <View style={[styles.result, { backgroundColor: testResult.ok ? colors.accentPrimary + '15' : '#ff000015', borderRadius: borderRadius.md }]}>
             <Ionicons
               name={testResult.ok ? 'checkmark-circle' : 'close-circle'}
               size={20}
-              color={testResult.ok ? colors.primary : '#ff4444'}
+              color={testResult.ok ? colors.accentPrimary : '#ff4444'}
             />
-            <Text style={{ color: testResult.ok ? colors.primary : '#ff4444', marginLeft: 8, fontSize: fontSize.sm }}>
+            <Text style={{ color: testResult.ok ? colors.accentPrimary : '#ff4444', marginLeft: 8, fontSize: fontSize.sm }}>
               {testResult.ok ? `Connected! Server v${testResult.version || 'unknown'}` : testResult.error}
             </Text>
           </View>
@@ -137,8 +137,8 @@ export default function SettingsServerScreen({ navigation }: Props) {
           onPress={handleReset}
           style={[styles.resetButton, { borderColor: colors.border, borderRadius: borderRadius.md, marginTop: spacing.md }]}
         >
-          <Ionicons name="refresh-outline" size={18} color={colors.primary} />
-          <Text style={[styles.buttonText, { color: colors.primary, fontSize: fontSize.sm }]}>
+          <Ionicons name="refresh-outline" size={18} color={colors.accentPrimary} />
+          <Text style={[styles.buttonText, { color: colors.accentPrimary, fontSize: fontSize.sm }]}>
             Use Official Server
           </Text>
         </PressableScale>

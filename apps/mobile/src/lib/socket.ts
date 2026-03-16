@@ -4,7 +4,7 @@
  */
 
 import { io, Socket } from 'socket.io-client';
-import { API_BASE, getAccessToken } from './api';
+import { getApiBase, getAccessToken } from './api';
 
 let socket: Socket | null = null;
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
@@ -12,7 +12,7 @@ let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 // Derive the socket URL from API_BASE (strip /api/v1)
 function getSocketUrl(): string {
   // Remove /api/v1 from the end to get base server URL
-  return API_BASE.replace(/\/api\/v1\/?$/, '') || 'https://api.gratonite.chat';
+  return getApiBase().replace(/\/api\/v1\/?$/, '') || 'https://api.gratonite.chat';
 }
 
 export function connectSocket(): Socket {

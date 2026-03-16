@@ -125,7 +125,9 @@ import ActivityFeedScreen from '../screens/app/ActivityFeedScreen';
 import UserStatsScreen from '../screens/app/UserStatsScreen';
 import BotStoreScreen from '../screens/app/BotStoreScreen';
 import SettingsSecurityScreen from '../screens/app/SettingsSecurityScreen';
+import SettingsServerScreen from '../screens/app/SettingsServerScreen';
 import KeyVerificationScreen from '../screens/app/KeyVerificationScreen';
+import FederationScreen from '../screens/app/FederationScreen';
 
 // Wave H: Feature Enhancement
 import MusicRoomScreen from '../screens/guild/MusicRoomScreen';
@@ -424,7 +426,9 @@ export default function AppNavigator() {
       <Stack.Screen name="UserStats" component={UserStatsScreen} options={{ title: 'Platform Stats' }} />
       <Stack.Screen name="BotStore" component={BotStoreScreen} options={{ title: 'Bot Store' }} />
       <Stack.Screen name="SettingsSecurity" component={SettingsSecurityScreen} options={{ title: 'Security' }} />
+      <Stack.Screen name="SettingsServer" component={SettingsServerScreen} options={{ title: 'Server' }} />
       <Stack.Screen name="KeyVerification" component={KeyVerificationScreen} options={{ title: 'Verify Identity' }} />
+      <Stack.Screen name="Federation" component={FederationScreen} options={{ title: 'Federation' }} />
 
       {/* Wave H: Feature Enhancement */}
       <Stack.Screen name="MusicRoom" component={MusicRoomScreen} options={({ route }) => ({ title: `Music - ${route.params.channelName}` })} />

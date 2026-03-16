@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { appLockStore } from '../../lib/appLockStore';
@@ -11,15 +11,50 @@ interface AppLockScreenProps {
 
 export default function AppLockScreen({ onUnlock }: AppLockScreenProps) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
-
-  const tryUnlock = async () => {
-    const success = await appLockStore.authenticate();
-    if (success) onUnlock();
-  };
+  const [attempts, setAttempts] = useState(0);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    tryUnlock();
+    return () => { mountedRef.current = false; };
   }, []);
+
+  const tryUnlock = useCallback(async (isAutoRetry = false) => {
+    setErrorMsg(null);
+    const result = await appLockStore.authenticate();
+
+    if (!mountedRef.current) return;
+
+    if (result.success) {
+      onUnlock();
+      return;
+    }
+
+    setAttempts(prev => prev + 1);
+
+    if (result.userCanceled) {
+      setErrorMsg('Authentication canceled');
+      return;
+    }
+
+    setErrorMsg(result.error || 'Authentication failed');
+
+    // Auto-retry once on non-cancel failure
+    if (!isAutoRetry) {
+      setTimeout(() => {
+        if (mountedRef.current) tryUnlock(true);
+      }, 500);
+    }
+  }, [onUnlock]);
+
+  useEffect(() => {
+    // Small delay to let the screen render before prompting
+    const timer = setTimeout(() => {
+      if (mountedRef.current) tryUnlock();
+    }, 300);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tryUnlock]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -71,9 +106,18 @@ export default function AppLockScreen({ onUnlock }: AppLockScreenProps) {
           <Ionicons name="lock-closed" size={36} color={colors.accentPrimary} />
         </View>
         <Text style={styles.title}>Unlock Gratonite</Text>
-        <Text style={styles.subtitle}>Use biometric authentication to access the app</Text>
-        <TouchableOpacity style={styles.button} onPress={tryUnlock}>
-          <Text style={styles.buttonText}>Try Again</Text>
+        <Text style={styles.subtitle}>
+          {errorMsg
+            ? errorMsg
+            : 'Use biometric authentication to access the app'}
+        </Text>
+        {attempts >= 2 && (
+          <Text style={[styles.subtitle, { fontSize: fontSize.sm, marginTop: -spacing.md }]}>
+            Having trouble? Make sure biometrics are set up in your device settings.
+          </Text>
+        )}
+        <TouchableOpacity style={styles.button} onPress={() => tryUnlock()}>
+          <Text style={styles.buttonText}>{attempts > 0 ? 'Try Again' : 'Unlock'}</Text>
         </TouchableOpacity>
       </View>
     </PatternBackground>
