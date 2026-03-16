@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Headphones, Plus, Users, LogIn, Loader2 } from 'lucide-react';
 import { api } from '../../lib/api';
-import { socket } from '../../lib/socket';
+import { getSocket } from '../../lib/socket';
 
 interface Pod {
   id: string;
@@ -27,7 +27,7 @@ export function EphemeralPods({ guildId, onJoinPod }: EphemeralPodsProps) {
   // Fetch active pods
   const fetchPods = useCallback(async () => {
     try {
-      const res = await api.guilds.getPods(guildId);
+      const res = await api.ephemeralPods.list(guildId);
       setPods(res ?? []);
     } catch {
       // Ignore
@@ -48,9 +48,11 @@ export function EphemeralPods({ guildId, onJoinPod }: EphemeralPodsProps) {
       }
     };
 
-    socket.on('EPHEMERAL_PODS_UPDATE', handlePodUpdate);
+    const s = getSocket();
+    if (!s) return;
+    s.on('EPHEMERAL_PODS_UPDATE', handlePodUpdate);
     return () => {
-      socket.off('EPHEMERAL_PODS_UPDATE', handlePodUpdate);
+      s.off('EPHEMERAL_PODS_UPDATE', handlePodUpdate);
     };
   }, [guildId]);
 
@@ -59,7 +61,7 @@ export function EphemeralPods({ guildId, onJoinPod }: EphemeralPodsProps) {
     setCreating(true);
     try {
       const name = newPodName.trim() || `Chat ${pods.length + 1}`;
-      const res = await api.guilds.createPod(guildId, { name });
+      const res = await api.ephemeralPods.create(guildId, name);
       if (res?.channelId) {
         onJoinPod(res.channelId);
       }

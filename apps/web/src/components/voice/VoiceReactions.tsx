@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { socket } from '../../lib/socket';
+import { getSocket, emitOrQueue } from '../../lib/socket';
 
 interface VoiceReactionsProps {
   channelId: string;
@@ -66,9 +66,11 @@ export function VoiceReactions({ channelId }: VoiceReactionsProps) {
       addFloating(data.emoji, data.username);
     };
 
-    socket.on('VOICE_REACTION', handleReaction);
+    const s = getSocket();
+    if (!s) return;
+    s.on('VOICE_REACTION', handleReaction);
     return () => {
-      socket.off('VOICE_REACTION', handleReaction);
+      s.off('VOICE_REACTION', handleReaction);
     };
   }, [channelId, playSound, addFloating]);
 
@@ -100,7 +102,7 @@ export function VoiceReactions({ channelId }: VoiceReactionsProps) {
       cooldownTimers.current.set(reaction.sound, timer);
 
       // Emit & play locally
-      socket.emit('VOICE_REACTION', {
+      emitOrQueue('VOICE_REACTION', {
         channelId,
         emoji: reaction.emoji,
         sound: reaction.sound,

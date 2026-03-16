@@ -39,7 +39,7 @@ export function ChannelBookmarks({ channelId, canManage }: ChannelBookmarksProps
 
   const fetchBookmarks = useCallback(async () => {
     try {
-      const res = await api.channels.getBookmarks(channelId);
+      const res = await api.channelBookmarks.list(channelId);
       setBookmarks((res ?? []).sort((a: Bookmark, b: Bookmark) => a.position - b.position));
     } catch {
       // Ignore
@@ -56,7 +56,7 @@ export function ChannelBookmarks({ channelId, canManage }: ChannelBookmarksProps
     if (!url) return;
 
     try {
-      await api.channels.addBookmark(channelId, { title, url });
+      await api.channelBookmarks.create(channelId, { title, url });
       setFormTitle('');
       setFormUrl('');
       setShowAdd(false);
@@ -72,7 +72,7 @@ export function ChannelBookmarks({ channelId, canManage }: ChannelBookmarksProps
     if (!url) return;
 
     try {
-      await api.channels.updateBookmark(channelId, id, { title, url });
+      await api.channelBookmarks.update(channelId, id, { title, url });
       setEditingId(null);
       setFormTitle('');
       setFormUrl('');
@@ -84,7 +84,7 @@ export function ChannelBookmarks({ channelId, canManage }: ChannelBookmarksProps
 
   const deleteBookmark = useCallback(async (id: string) => {
     try {
-      await api.channels.deleteBookmark(channelId, id);
+      await api.channelBookmarks.delete(channelId, id);
       setContextMenu(null);
       fetchBookmarks();
     } catch {
@@ -144,7 +144,7 @@ export function ChannelBookmarks({ channelId, canManage }: ChannelBookmarksProps
     // Save new order
     try {
       const order = bookmarks.map((b, i) => ({ id: b.id, position: i }));
-      await api.channels.reorderBookmarks(channelId, order);
+      await api.channelBookmarks.reorder(channelId, order);
     } catch {
       // Ignore
     }

@@ -50,7 +50,7 @@ export function ChannelFollowing({ channelId, guildId, isAnnouncement }: Channel
       setLoading(true);
       try {
         if (isAnnouncement) {
-          const res = await api.getChannelFollowers?.(channelId);
+          const res = await api.channelFollowing.listFollowers(channelId);
           if (!cancelled) setFollowers(Array.isArray(res) ? res : []);
         }
       } catch { /* ignore */ }
@@ -68,8 +68,8 @@ export function ChannelFollowing({ channelId, guildId, isAnnouncement }: Channel
     setSearchLoading(true);
     try {
       const [channels, local] = await Promise.all([
-        api.discoverAnnouncementChannels?.() || [],
-        api.getGuildChannels(guildId),
+        api.channelFollowing.listGuildFollowing(guildId).catch(() => []),
+        api.channels.getGuildChannels(guildId),
       ]);
       setAnnouncementChannels(Array.isArray(channels) ? channels : []);
       setLocalChannels(Array.isArray(local) ? local.map((c: any) => ({ id: c.id, name: c.name })) : []);
@@ -81,7 +81,7 @@ export function ChannelFollowing({ channelId, guildId, isAnnouncement }: Channel
     if (!selectedSource || !selectedDestination) return;
     setFollowing(true);
     try {
-      await api.followChannel?.(selectedSource.id, { webhookChannelId: selectedDestination });
+      await api.channelFollowing.follow(selectedSource.id, { targetChannelId: selectedDestination, targetGuildId: guildId });
       setShowFollowModal(false);
     } catch { /* ignore */ }
     setFollowing(false);

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Move, Maximize2, Minimize2 } from 'lucide-react';
-import { socket } from '../../lib/socket';
+import { getSocket, emitOrQueue } from '../../lib/socket';
 
 interface Participant {
   id: string;
@@ -61,18 +61,20 @@ export function SpatialRoom({ channelId, participants }: SpatialRoomProps) {
       });
     };
 
-    socket.on('SPATIAL_POSITIONS_SYNC', handleSync);
-    socket.on('SPATIAL_POSITION_UPDATE', handleUpdate);
+    const s = getSocket();
+    if (!s) return;
+    s.on('SPATIAL_POSITIONS_SYNC', handleSync);
+    s.on('SPATIAL_POSITION_UPDATE', handleUpdate);
     return () => {
-      socket.off('SPATIAL_POSITIONS_SYNC', handleSync);
-      socket.off('SPATIAL_POSITION_UPDATE', handleUpdate);
+      s.off('SPATIAL_POSITIONS_SYNC', handleSync);
+      s.off('SPATIAL_POSITION_UPDATE', handleUpdate);
     };
   }, [localUserId]);
 
   // Emit local position
   const emitPosition = useCallback(
     (pos: Position) => {
-      socket.emit('SPATIAL_POSITION_UPDATE', { channelId, x: pos.x, y: pos.y });
+      emitOrQueue('SPATIAL_POSITION_UPDATE', { channelId, x: pos.x, y: pos.y });
     },
     [channelId],
   );

@@ -137,17 +137,13 @@ export function VoiceClipButton({ channelId, guildId }: VoiceClipButtonProps) {
 
   const uploadClip = async (blob: Blob, title: string) => {
     try {
-      const formData = new FormData();
-      formData.append('file', blob, `${title}.webm`);
-      const uploadRes = await api.files.upload(formData);
-      const fileUrl = uploadRes?.url ?? uploadRes?.fileUrl;
-      if (!fileUrl) return;
+      const file = new File([blob], `${title}.webm`, { type: 'audio/webm' });
+      const uploadRes = await api.files.upload(file, 'voice-clip');
+      if (!uploadRes?.id) return;
 
-      await api.guilds.createClip(guildId, {
-        channelId,
-        title,
-        fileUrl,
-        duration: Math.floor(blob.size / 6000), // rough estimate
+      await api.messages.send(channelId, {
+        content: `Voice clip: ${title}`,
+        attachmentIds: [uploadRes.id],
       });
     } catch {
       // Upload failed silently

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { socket } from '../../lib/socket';
+import { getSocket, emitOrQueue } from '../../lib/socket';
 
 interface PresenceUser {
   id: string;
@@ -25,7 +25,9 @@ export function ChannelPresence({ channelId }: ChannelPresenceProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   useEffect(() => {
-    socket.emit('CHANNEL_PRESENCE_JOIN', { channelId });
+    const s = getSocket();
+    if (!s) return;
+    emitOrQueue('CHANNEL_PRESENCE_JOIN', { channelId });
 
     const handleUpdate = (data: { channelId: string; viewers: PresenceUser[] }) => {
       if (data.channelId === channelId) {
@@ -33,10 +35,10 @@ export function ChannelPresence({ channelId }: ChannelPresenceProps) {
       }
     };
 
-    socket.on('CHANNEL_PRESENCE_UPDATE', handleUpdate);
+    s.on('CHANNEL_PRESENCE_UPDATE', handleUpdate);
     return () => {
-      socket.emit('CHANNEL_PRESENCE_LEAVE', { channelId });
-      socket.off('CHANNEL_PRESENCE_UPDATE', handleUpdate);
+      emitOrQueue('CHANNEL_PRESENCE_LEAVE', { channelId });
+      s.off('CHANNEL_PRESENCE_UPDATE', handleUpdate);
     };
   }, [channelId]);
 

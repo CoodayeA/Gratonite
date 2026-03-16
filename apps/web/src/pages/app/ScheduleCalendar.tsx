@@ -61,7 +61,7 @@ export default function ScheduleCalendar() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await api.getScheduledMessages();
+        const res = await api.scheduleCalendar.getCalendar();
         if (!cancelled) setMessages(Array.isArray(res) ? res : []);
       } catch {
         if (!cancelled) setMessages([]);
@@ -95,7 +95,7 @@ export default function ScheduleCalendar() {
     if (!editingMessage) return;
     const newScheduledAt = new Date(`${editDate}T${editTime}`).toISOString();
     try {
-      await api.rescheduleMessage?.(editingMessage.id, { scheduledAt: newScheduledAt, content: editContent });
+      await api.scheduleCalendar.reschedule(editingMessage.id, newScheduledAt);
       setMessages((prev) =>
         prev.map((m) => m.id === editingMessage.id ? { ...m, content: editContent, scheduledAt: newScheduledAt } : m)
       );
@@ -105,7 +105,8 @@ export default function ScheduleCalendar() {
 
   const handleDelete = useCallback(async (id: string) => {
     try {
-      await api.deleteScheduledMessage(id);
+      const msg = messages.find((m) => m.id === id);
+      if (msg?.guildId) await api.scheduledMessages.delete(msg.guildId, id);
       setMessages((prev) => prev.filter((m) => m.id !== id));
     } catch { /* ignore */ }
     setEditingMessage(null);
@@ -118,7 +119,7 @@ export default function ScheduleCalendar() {
     targetDate.setHours(orig.getHours(), orig.getMinutes());
     const newScheduledAt = targetDate.toISOString();
     try {
-      await api.rescheduleMessage?.(msgId, { scheduledAt: newScheduledAt });
+      await api.scheduleCalendar.reschedule(msgId, newScheduledAt);
       setMessages((prev) =>
         prev.map((m) => m.id === msgId ? { ...m, scheduledAt: newScheduledAt } : m)
       );
