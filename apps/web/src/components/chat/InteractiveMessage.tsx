@@ -82,7 +82,7 @@ const BUTTON_STYLES: Record<string, React.CSSProperties> = {
   danger: { background: '#ed4245', color: '#fff', border: 'none' },
 };
 
-async function interact(channelId: string, messageId: string, componentId: string, data: unknown) {
+async function interact(channelId: string, messageId: string, componentId: string, data: { action: string; value?: string }) {
   try {
     await api.messageComponents.interact(channelId, messageId, componentId, data);
   } catch {
