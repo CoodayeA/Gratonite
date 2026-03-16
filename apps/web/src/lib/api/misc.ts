@@ -1555,3 +1555,148 @@ export const relayApi = {
   /** Get reputation breakdown. */
   reputation: (relayId: string) => apiFetch(`/relays/reputation/${relayId}`),
 };
+
+// =========================================================================
+// Wave 26: Cutting-edge features
+// =========================================================================
+
+export const spatialRoomsApi = {
+  get: (channelId: string) => apiFetch<any>(`/channels/${channelId}/spatial-room`),
+  update: (channelId: string, data: { name?: string; width?: number; height?: number; backgroundUrl?: string; gridEnabled?: boolean; maxParticipants?: number }) =>
+    apiFetch<any>(`/channels/${channelId}/spatial-room`, { method: 'PATCH', body: JSON.stringify(data) }),
+};
+
+export const channelPresenceApi = {
+  get: (channelId: string) => apiFetch<any[]>(`/channels/${channelId}/presence`),
+};
+
+export const ephemeralPodsApi = {
+  list: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/pods`),
+  create: (guildId: string, name?: string) => apiFetch<any>(`/guilds/${guildId}/pods`, { method: 'POST', body: JSON.stringify({ name }) }),
+  delete: (guildId: string, channelId: string) => apiFetch<void>(`/guilds/${guildId}/pods/${channelId}`, { method: 'DELETE' }),
+};
+
+export const voiceReactionsApi = {
+  presets: () => apiFetch<any[]>('/voice-reactions/presets'),
+};
+
+export const focusSessionsApi = {
+  list: (channelId: string) => apiFetch<any[]>(`/channels/${channelId}/focus-sessions`),
+  get: (channelId: string, sessionId: string) => apiFetch<any>(`/channels/${channelId}/focus-sessions/${sessionId}`),
+  create: (channelId: string, data: { name?: string; workDuration?: number; breakDuration?: number }) =>
+    apiFetch<any>(`/channels/${channelId}/focus-sessions`, { method: 'POST', body: JSON.stringify(data) }),
+  join: (channelId: string, sessionId: string) =>
+    apiFetch<any>(`/channels/${channelId}/focus-sessions/${sessionId}/join`, { method: 'POST' }),
+  leave: (channelId: string, sessionId: string) =>
+    apiFetch<any>(`/channels/${channelId}/focus-sessions/${sessionId}/leave`, { method: 'POST' }),
+  update: (channelId: string, sessionId: string, data: { currentPhase?: string; roundNumber?: number }) =>
+    apiFetch<any>(`/channels/${channelId}/focus-sessions/${sessionId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  end: (channelId: string, sessionId: string) =>
+    apiFetch<void>(`/channels/${channelId}/focus-sessions/${sessionId}`, { method: 'DELETE' }),
+};
+
+export const channelBookmarksApi = {
+  list: (channelId: string) => apiFetch<any[]>(`/channels/${channelId}/bookmarks`),
+  create: (channelId: string, data: { title: string; url?: string; fileId?: string; messageId?: string; type?: string }) =>
+    apiFetch<any>(`/channels/${channelId}/bookmarks`, { method: 'POST', body: JSON.stringify(data) }),
+  update: (channelId: string, bookmarkId: string, data: { title?: string; url?: string; position?: number }) =>
+    apiFetch<any>(`/channels/${channelId}/bookmarks/${bookmarkId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  delete: (channelId: string, bookmarkId: string) =>
+    apiFetch<void>(`/channels/${channelId}/bookmarks/${bookmarkId}`, { method: 'DELETE' }),
+  reorder: (channelId: string, items: Array<{ id: string; position: number }>) =>
+    apiFetch<any>(`/channels/${channelId}/bookmarks/reorder`, { method: 'PATCH', body: JSON.stringify({ items }) }),
+};
+
+export const messageComponentsApi = {
+  interact: (channelId: string, messageId: string, componentId: string, data: { action: string; value?: string }) =>
+    apiFetch<any>(`/channels/${channelId}/messages/${messageId}/components/${componentId}/interact`, { method: 'POST', body: JSON.stringify(data) }),
+};
+
+export const guildDigestGenerateApi = {
+  generateNow: (guildId: string) => apiFetch<any>(`/guilds/${guildId}/digest/generate-now`, { method: 'POST' }),
+};
+
+export const threadDashboardApi = {
+  get: (guildId: string, params?: { sort?: string; channel?: string; limit?: number; offset?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.sort) query.set('sort', params.sort);
+    if (params?.channel) query.set('channel', params.channel);
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.offset) query.set('offset', String(params.offset));
+    const suffix = query.toString() ? `?${query}` : '';
+    return apiFetch<any>(`/guilds/${guildId}/threads/dashboard${suffix}`);
+  },
+};
+
+export const notificationSoundsApi = {
+  list: () => apiFetch<any[]>('/notification-sounds'),
+  upload: (data: { name: string; fileHash: string; duration: number; guildId?: string }) =>
+    apiFetch<any>('/notification-sounds', { method: 'POST', body: JSON.stringify(data) }),
+  delete: (soundId: string) => apiFetch<void>(`/notification-sounds/${soundId}`, { method: 'DELETE' }),
+  getPrefs: () => apiFetch<any[]>('/notification-sounds/prefs'),
+  setPrefs: (data: { guildId?: string; eventType: string; soundId: string | null }) =>
+    apiFetch<any>('/notification-sounds/prefs', { method: 'PUT', body: JSON.stringify(data) }),
+};
+
+export const ambientRoomsApi = {
+  get: (channelId: string) => apiFetch<any>(`/channels/${channelId}/ambient-room`),
+  update: (channelId: string, data: { theme?: string; musicEnabled?: boolean; musicVolume?: number; maxParticipants?: number }) =>
+    apiFetch<any>(`/channels/${channelId}/ambient-room`, { method: 'PATCH', body: JSON.stringify(data) }),
+  join: (channelId: string) => apiFetch<any>(`/channels/${channelId}/ambient-room/join`, { method: 'POST' }),
+  leave: (channelId: string) => apiFetch<any>(`/channels/${channelId}/ambient-room/leave`, { method: 'POST' }),
+  updateStatus: (channelId: string, status: string) =>
+    apiFetch<any>(`/channels/${channelId}/ambient-room/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+};
+
+export const p2pTransferApi = {
+  signal: (data: { targetUserId: string; signal: any; transferId: string; fileName?: string; fileSize?: number }) =>
+    apiFetch<any>('/p2p/signal', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+export const serverStatusApi = {
+  get: (guildId: string) => apiFetch<any>(`/guilds/${guildId}/status`),
+  history: (guildId: string) => apiFetch<any>(`/guilds/${guildId}/status/history`),
+  heartbeat: (guildId: string) => apiFetch<any>(`/guilds/${guildId}/status/heartbeat`, { method: 'POST' }),
+};
+
+export const scheduleCalendarApi = {
+  getCalendar: (start?: string, end?: string) => {
+    const query = new URLSearchParams();
+    if (start) query.set('start', start);
+    if (end) query.set('end', end);
+    const suffix = query.toString() ? `?${query}` : '';
+    return apiFetch<any[]>(`/users/@me/scheduled-messages/calendar${suffix}`);
+  },
+  reschedule: (messageId: string, scheduledAt: string) =>
+    apiFetch<any>(`/users/@me/scheduled-messages/${messageId}/reschedule`, { method: 'PATCH', body: JSON.stringify({ scheduledAt }) }),
+};
+
+export const readingListsApi = {
+  list: (channelId: string, params?: { sort?: string; tag?: string; limit?: number; offset?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.sort) query.set('sort', params.sort);
+    if (params?.tag) query.set('tag', params.tag);
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.offset) query.set('offset', String(params.offset));
+    const suffix = query.toString() ? `?${query}` : '';
+    return apiFetch<any>(`/channels/${channelId}/reading-list${suffix}`);
+  },
+  add: (channelId: string, data: { url: string; title: string; description?: string; tags?: string[] }) =>
+    apiFetch<any>(`/channels/${channelId}/reading-list`, { method: 'POST', body: JSON.stringify(data) }),
+  delete: (channelId: string, itemId: string) =>
+    apiFetch<void>(`/channels/${channelId}/reading-list/${itemId}`, { method: 'DELETE' }),
+  vote: (channelId: string, itemId: string) =>
+    apiFetch<any>(`/channels/${channelId}/reading-list/${itemId}/vote`, { method: 'POST' }),
+  markRead: (channelId: string, itemId: string) =>
+    apiFetch<any>(`/channels/${channelId}/reading-list/${itemId}/read`, { method: 'POST' }),
+  stats: (channelId: string) => apiFetch<any>(`/channels/${channelId}/reading-list/stats`),
+};
+
+export const channelFollowingApi = {
+  follow: (channelId: string, data: { targetChannelId: string; targetGuildId: string }) =>
+    apiFetch<any>(`/channels/${channelId}/followers`, { method: 'POST', body: JSON.stringify(data) }),
+  listFollowers: (channelId: string) => apiFetch<any[]>(`/channels/${channelId}/followers`),
+  unfollow: (channelId: string, followId: string) =>
+    apiFetch<void>(`/channels/${channelId}/followers/${followId}`, { method: 'DELETE' }),
+  listGuildFollowing: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/following`),
+};
