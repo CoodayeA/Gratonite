@@ -13,6 +13,34 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.0',
+    date: 'March 2026',
+    entries: [
+      { type: 'feature', text: 'Proximity Voice Rooms — walk around a 2D space, voice adjusts by distance like Gather.town' },
+      { type: 'feature', text: 'Live Co-Presence — see who else is viewing the same channel with live avatar indicators' },
+      { type: 'feature', text: 'Voice Clips — record and share 5-60s clips from voice channels, or clip the last 30s retroactively' },
+      { type: 'feature', text: 'Ephemeral Voice Pods — instant temporary voice rooms, auto-delete when everyone leaves' },
+      { type: 'feature', text: 'Voice Reactions — tap audio emoji (applause, airhorn, drum roll) during voice calls without unmuting' },
+      { type: 'feature', text: 'Shared Focus Timers — collaborative Pomodoro sessions with synced work/break phases' },
+      { type: 'feature', text: 'Channel Bookmarks Bar — pin links, files, and messages at the top of any channel' },
+      { type: 'feature', text: 'Interactive Messages v2 — buttons, dropdowns, carousels, accordions, and progress bars in messages' },
+      { type: 'feature', text: 'Multi-Account Switching — add multiple accounts and switch instantly without logging out' },
+      { type: 'feature', text: 'Server Digest — auto-generated weekly newsletter with top messages, stats, and highlights' },
+      { type: 'feature', text: 'Screen Recording to Chat — record your screen and post directly as a video message' },
+      { type: 'feature', text: 'Thread Dashboard — birds-eye view of all active threads across a server' },
+      { type: 'feature', text: 'Custom Notification Sounds — upload your own sounds or pick from 10 built-in options per event type' },
+      { type: 'feature', text: 'Ambient Co-Working Spaces — themed rooms (coffee shop, rain, forest) for silent co-working' },
+      { type: 'feature', text: 'P2P File Sharing — send files directly via WebRTC, never touches the server, up to 2GB' },
+      { type: 'feature', text: 'Server Status Page — monitor bot and webhook health with uptime history' },
+      { type: 'feature', text: 'Schedule Calendar — visual calendar of all your scheduled messages across servers' },
+      { type: 'feature', text: 'Shared Reading Lists — curated link collections per channel with upvotes and read tracking' },
+      { type: 'feature', text: 'Reaction Roles Builder — visual drag-and-drop builder, no bot commands needed' },
+      { type: 'feature', text: 'Cross-Server Channel Following — follow announcement channels from other servers' },
+      { type: 'security', text: 'Guild membership verification on all new endpoints' },
+      { type: 'security', text: 'P2P signaling restricted to users who share a guild or DM' },
+    ],
+  },
+  {
     version: '2.1',
     date: 'March 2026',
     entries: [

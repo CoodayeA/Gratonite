@@ -579,7 +579,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
     );
 };
 
-const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSearch, onOpenDMSearch, onOpenCreateGroupDm, userProfile, guildSession }: { isOpen: boolean, onOpenSettings: () => void, onOpenProfile: () => void, onOpenGlobalSearch: () => void, onOpenDMSearch: () => void, onOpenCreateGroupDm: () => void, userProfile: { id?: string, name: string, handle: string, status: string, customStatus: string, avatarStyle: string, avatarFrame: string, nameplateStyle?: 'none' | 'rainbow' | 'fire' | 'ice' | 'gold' | 'glitch', avatarHash?: string | null, badges: string[] }, guildSession: GuildSessionViewState }) => {
+const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSearch, onOpenDMSearch, onOpenCreateGroupDm, onOpenWhatsNew, userProfile, guildSession }: { isOpen: boolean, onOpenSettings: () => void, onOpenProfile: () => void, onOpenGlobalSearch: () => void, onOpenDMSearch: () => void, onOpenCreateGroupDm: () => void, onOpenWhatsNew: () => void, userProfile: { id?: string, name: string, handle: string, status: string, customStatus: string, avatarStyle: string, avatarFrame: string, nameplateStyle?: 'none' | 'rainbow' | 'fire' | 'ice' | 'gold' | 'glitch', avatarHash?: string | null, badges: string[] }, guildSession: GuildSessionViewState }) => {
     const { openMenu } = useContextMenu();
     const { addToast } = useToast();
     const navigate = useNavigate();
@@ -1422,6 +1422,23 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     }}
                 >
                     <Settings size={18} />
+                </button>
+                <button
+                    type="button"
+                    aria-label="What's New"
+                    title="What's New"
+                    onClick={onOpenWhatsNew}
+                    style={{
+                        cursor: 'pointer',
+                        transition: 'color 0.2s',
+                        color: 'var(--text-secondary)',
+                        display: 'flex',
+                        background: 'transparent',
+                        border: 'none',
+                        padding: 0,
+                    }}
+                >
+                    <Zap size={18} />
                 </button>
             </div>
 
@@ -2983,7 +3000,7 @@ export const AppLayout = () => {
     // Show "What's New" modal if user hasn't seen the latest changelog
     useEffect(() => {
         const lastSeen = localStorage.getItem('gratonite:last-seen-changelog');
-        if (lastSeen !== '2.0' && ctxUser.id) {
+        if (lastSeen !== '3.0' && ctxUser.id) {
             setTimeout(() => setShowWhatsNew(true), 2000);
         }
     }, [ctxUser.id]);
@@ -3805,6 +3822,7 @@ export const AppLayout = () => {
                     onOpenGlobalSearch={() => setActiveModal('globalSearch')}
                     onOpenDMSearch={() => setActiveModal('dmSearch')}
                     onOpenCreateGroupDm={() => setActiveModal('createGroupDm')}
+                    onOpenWhatsNew={() => setShowWhatsNew(true)}
                     userProfile={userProfile}
                     guildSession={guildSession}
                 />
