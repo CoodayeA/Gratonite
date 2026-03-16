@@ -84,7 +84,7 @@ const BUTTON_STYLES: Record<string, React.CSSProperties> = {
 
 async function interact(channelId: string, messageId: string, componentId: string, data: unknown) {
   try {
-    await api.channels.interactComponent(channelId, messageId, componentId, data);
+    await api.messageComponents.interact(channelId, messageId, componentId, data);
   } catch {
     // Interaction failed
   }

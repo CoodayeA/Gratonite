@@ -117,8 +117,8 @@ export default function ThreadDashboard({ guildId }: ThreadDashboardProps) {
       setLoading(true);
       try {
         const [threadsRes, channelsRes] = await Promise.all([
-          api.getGuildThreads(guildId),
-          api.getGuildChannels(guildId),
+          api.threadDashboard.get(guildId),
+          api.channels.getGuildChannels(guildId),
         ]);
         if (!cancelled) {
           setThreads(Array.isArray(threadsRes) ? threadsRes : []);

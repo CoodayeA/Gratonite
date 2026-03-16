@@ -83,14 +83,13 @@ export default function ServerStatus({ guildId }: ServerStatusProps) {
   const fetchData = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
     try {
-      const [botsRes, webhooksRes, uptimeRes] = await Promise.all([
-        api.getGuildBots?.(guildId).catch(() => []),
-        api.getGuildWebhooks(guildId).catch(() => []),
-        api.getGuildUptime?.(guildId).catch(() => []),
+      const [statusRes, historyRes] = await Promise.all([
+        api.serverStatus.get(guildId).catch(() => null),
+        api.serverStatus.history(guildId).catch(() => null),
       ]);
-      setBots(Array.isArray(botsRes) ? botsRes : []);
-      setWebhooks(Array.isArray(webhooksRes) ? webhooksRes : []);
-      setUptime(Array.isArray(uptimeRes) ? uptimeRes : generateMockUptime());
+      setBots(Array.isArray(statusRes?.bots) ? statusRes.bots : []);
+      setWebhooks(Array.isArray(statusRes?.webhooks) ? statusRes.webhooks : []);
+      setUptime(Array.isArray(historyRes) ? historyRes : generateMockUptime());
     } catch {
       // keep previous state
     } finally {

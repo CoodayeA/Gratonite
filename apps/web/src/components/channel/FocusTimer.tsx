@@ -11,7 +11,7 @@ import {
   ChevronDown,
   Timer,
 } from 'lucide-react';
-import { socket } from '../../lib/socket';
+import { getSocket, emitOrQueue } from '../../lib/socket';
 
 interface FocusTimerProps {
   channelId: string;
@@ -68,9 +68,11 @@ export function FocusTimer({ channelId }: FocusTimerProps) {
       setLocalTime(data.timeRemaining);
     };
 
-    socket.on('FOCUS_SESSION_UPDATE', handleUpdate);
+    const s = getSocket();
+    if (!s) return;
+    s.on('FOCUS_SESSION_UPDATE', handleUpdate);
     return () => {
-      socket.off('FOCUS_SESSION_UPDATE', handleUpdate);
+      s.off('FOCUS_SESSION_UPDATE', handleUpdate);
     };
   }, [channelId]);
 
@@ -115,7 +117,7 @@ export function FocusTimer({ channelId }: FocusTimerProps) {
   }, [session?.phase]);
 
   const createSession = useCallback(() => {
-    socket.emit('FOCUS_SESSION_CREATE', {
+    emitOrQueue('FOCUS_SESSION_CREATE', {
       channelId,
       workDuration: workMinutes * 60,
       breakDuration: breakMinutes * 60,
@@ -126,22 +128,22 @@ export function FocusTimer({ channelId }: FocusTimerProps) {
 
   const togglePause = useCallback(() => {
     if (!session) return;
-    socket.emit('FOCUS_SESSION_TOGGLE', { channelId, sessionId: session.id });
+    emitOrQueue('FOCUS_SESSION_TOGGLE', { channelId, sessionId: session.id });
   }, [channelId, session]);
 
   const resetSession = useCallback(() => {
     if (!session) return;
-    socket.emit('FOCUS_SESSION_RESET', { channelId, sessionId: session.id });
+    emitOrQueue('FOCUS_SESSION_RESET', { channelId, sessionId: session.id });
   }, [channelId, session]);
 
   const joinSession = useCallback(() => {
     if (!session) return;
-    socket.emit('FOCUS_SESSION_JOIN', { channelId, sessionId: session.id });
+    emitOrQueue('FOCUS_SESSION_JOIN', { channelId, sessionId: session.id });
   }, [channelId, session]);
 
   const leaveSession = useCallback(() => {
     if (!session) return;
-    socket.emit('FOCUS_SESSION_LEAVE', { channelId, sessionId: session.id });
+    emitOrQueue('FOCUS_SESSION_LEAVE', { channelId, sessionId: session.id });
   }, [channelId, session]);
 
   // No active session — show create UI

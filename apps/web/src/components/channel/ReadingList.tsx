@@ -67,7 +67,7 @@ export function ReadingList({ channelId, guildId }: ReadingListProps) {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await api.getReadingList?.(channelId);
+        const res = await api.readingLists.list(channelId);
         if (!cancelled) setItems(Array.isArray(res) ? res : []);
       } catch {
         if (!cancelled) setItems([]);
@@ -110,7 +110,7 @@ export function ReadingList({ channelId, guildId }: ReadingListProps) {
     if (!newUrl.trim()) return;
     setAdding(true);
     try {
-      const res = await api.addToReadingList?.(channelId, { url: newUrl.trim() });
+      const res = await api.readingLists.add(channelId, { url: newUrl.trim(), title: newUrl.trim() });
       if (res) setItems((prev) => [res, ...prev]);
       setNewUrl('');
       setShowAddForm(false);
@@ -127,7 +127,7 @@ export function ReadingList({ channelId, guildId }: ReadingListProps) {
       )
     );
     try {
-      await api.toggleReadingListUpvote?.(channelId, itemId);
+      await api.readingLists.vote(channelId, itemId);
     } catch { /* revert on error could be added */ }
   }, [channelId]);
 
@@ -136,7 +136,7 @@ export function ReadingList({ channelId, guildId }: ReadingListProps) {
       prev.map((item) => item.id === itemId ? { ...item, isRead: !item.isRead } : item)
     );
     try {
-      await api.toggleReadingListRead?.(channelId, itemId);
+      await api.readingLists.markRead(channelId, itemId);
     } catch { /* ignore */ }
   }, [channelId]);
 
