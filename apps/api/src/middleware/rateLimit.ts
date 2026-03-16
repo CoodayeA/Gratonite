@@ -176,12 +176,14 @@ export const authRateLimit = createRateLimiter({
 });
 
 /**
- * apiRateLimit — 60 requests per 60 seconds, keyed by authenticated userId.
+ * apiRateLimit — 200 requests per 60 seconds, keyed by authenticated userId.
  * Apply globally to the API router (after auth middleware resolves userId).
+ * Note: 60 was too low — page load alone can trigger 50+ requests when a user
+ * is in multiple guilds (channels, roles, members, messages per guild).
  */
 export const apiRateLimit = createRateLimiter({
   prefix: 'rl:api',
-  maxRequests: 60,
+  maxRequests: 200,
   windowSeconds: 60,
   keyFn: (req) => req.userId ?? null,
 });
