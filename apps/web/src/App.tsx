@@ -198,6 +198,9 @@ const getStoredAvatarFrame = (userId?: string): 'none' | 'neon' | 'gold' | 'glas
     return null;
 };
 
+const ActivityFeedPage = () => { const nav = useNavigate(); return <Suspense fallback={<LazyFallback />}><ActivityFeed onClose={() => nav('/')} /></Suspense>; };
+const LeaderboardPage = () => { const nav = useNavigate(); return <Suspense fallback={<LazyFallback />}><Leaderboard onClose={() => nav('/')} /></Suspense>; };
+
 const LegacyGuildChannelRedirect = () => {
     const { guildId, channelId } = useParams();
     if (!guildId || !channelId) return <Navigate to="/" replace />;
@@ -4155,8 +4158,8 @@ const appRouter = createBrowserRouter(
                 <Route path="daily-challenges" element={<Suspense fallback={<LazyFallback />}><DailyChallenges /></Suspense>} />
                 <Route path="trading" element={<Suspense fallback={<LazyFallback />}><Trading /></Suspense>} />
                 <Route path="inbox" element={<Suspense fallback={<LazyFallback />}><UnifiedInbox /></Suspense>} />
-                <Route path="activity" element={<Suspense fallback={<LazyFallback />}><ActivityFeed /></Suspense>} />
-                <Route path="leaderboard" element={<Suspense fallback={<LazyFallback />}><Leaderboard /></Suspense>} />
+                <Route path="activity" element={<ActivityFeedPage />} />
+                <Route path="leaderboard" element={<LeaderboardPage />} />
                 <Route path="schedule-calendar" element={<Suspense fallback={<LazyFallback />}><ScheduleCalendar /></Suspense>} />
                 <Route path="gacha" element={<Suspense fallback={<LazyFallback />}><Gacha /></Suspense>} />
                 <Route path="saved" element={<Navigate to="/read-later" replace />} />
