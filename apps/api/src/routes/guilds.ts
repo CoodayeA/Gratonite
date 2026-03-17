@@ -2386,3 +2386,72 @@ guildsRouter.post('/:guildId/import', requireAuth, async (req: Request, res: Res
     handleAppError(res, err);
   }
 });
+
+// ---------------------------------------------------------------------------
+// Member Roles (moved from roles.ts so they mount at /guilds/:guildId/members/:userId/roles)
+// ---------------------------------------------------------------------------
+
+/** GET /api/v1/guilds/:guildId/members/:userId/roles — list a member's roles */
+guildsRouter.get('/:guildId/members/:userId/roles', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId, userId } = req.params as Record<string, string>;
+  try {
+    const [requester] = await db.select({ id: guildMembers.id }).from(guildMembers)
+      .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, req.userId!))).limit(1);
+    if (!requester) { res.status(403).json({ code: 'FORBIDDEN', message: 'Not a guild member' }); return; }
+
+    const userRoles = await db
+      .select({
+        id: roles.id, name: roles.name, color: roles.color,
+        position: roles.position, permissions: roles.permissions,
+        hoist: roles.hoist, mentionable: roles.mentionable,
+      })
+      .from(memberRoles).innerJoin(roles, eq(roles.id, memberRoles.roleId))
+      .where(and(eq(memberRoles.userId, userId), eq(memberRoles.guildId, guildId)))
+      .orderBy(asc(roles.position));
+
+    res.json(userRoles.map(r => ({ ...r, permissions: String(r.permissions) })));
+  } catch (err) {
+    logger.error({ msg: 'GET member roles error', err });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+/** PUT /api/v1/guilds/:guildId/members/:userId/roles/:roleId */
+guildsRouter.put('/:guildId/members/:userId/roles/:roleId', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId, userId, roleId } = req.params as Record<string, string>;
+  try {
+    if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_ROLES))) {
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_ROLES permission' }); return;
+    }
+    const [role] = await db.select({ id: roles.id }).from(roles).where(and(eq(roles.id, roleId), eq(roles.guildId, guildId))).limit(1);
+    if (!role) { res.status(404).json({ code: 'NOT_FOUND', message: 'Role not found' }); return; }
+    const [member] = await db.select({ id: guildMembers.id }).from(guildMembers).where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, userId))).limit(1);
+    if (!member) { res.status(404).json({ code: 'NOT_FOUND', message: 'Member not found' }); return; }
+    await db.insert(memberRoles).values({ userId, roleId, guildId }).onConflictDoNothing();
+    try {
+      getIO().to(`guild:${guildId}`).emit('GUILD_MEMBER_ROLE_ADD', { userId, roleId, guildId });
+    } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'GUILD_MEMBER_ROLE_ADD', err }); }
+    res.json({ code: 'OK' });
+  } catch (err) {
+    logger.error({ msg: 'PUT member role error', err });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+/** DELETE /api/v1/guilds/:guildId/members/:userId/roles/:roleId */
+guildsRouter.delete('/:guildId/members/:userId/roles/:roleId', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId, userId, roleId } = req.params as Record<string, string>;
+  try {
+    if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_ROLES))) {
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_ROLES permission' }); return;
+    }
+    await db.delete(memberRoles).where(and(eq(memberRoles.userId, userId), eq(memberRoles.roleId, roleId), eq(memberRoles.guildId, guildId)));
+    try {
+      getIO().to(`guild:${guildId}`).emit('GUILD_MEMBER_ROLE_REMOVE', { userId, roleId, guildId });
+    } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'GUILD_MEMBER_ROLE_REMOVE', err }); }
+    res.json({ code: 'OK' });
+  } catch (err) {
+    logger.error({ msg: 'DELETE member role error', err });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
