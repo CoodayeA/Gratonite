@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { X, Sparkles, Zap, Shield, Bug } from 'lucide-react';
-import { ModalWrapper } from '../ui/ModalWrapper';
 
 interface ChangelogEntry {
   id: string;
@@ -142,37 +141,35 @@ export default function WhatsNewModal({ onClose }: { onClose: () => void }) {
   }, []);
 
   return (
-    <ModalWrapper isOpen={true}>
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1001 }} onClick={onClose}>
-        <div style={{ width: 500, maxWidth: '95vw', maxHeight: '80vh', overflow: 'auto', padding: 24, background: 'var(--bg-elevated)', borderRadius: 16, border: '1px solid var(--stroke)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Sparkles size={22} style={{ color: '#6366f1' }} />
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>What's New</h2>
-            </div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}><X size={20} /></button>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1001 }} onClick={onClose}>
+      <div style={{ width: 500, maxWidth: '95vw', maxHeight: '80vh', overflow: 'auto', padding: 24, background: 'var(--bg-elevated)', borderRadius: 16, border: '1px solid var(--stroke)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Sparkles size={22} style={{ color: '#6366f1' }} />
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>What's New</h2>
           </div>
-          {CHANGELOG.map(release => (
-            <div key={release.id} style={{ marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
-                <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{release.title}</span>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{release.date}</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {release.entries.map((entry, i) => {
-                  const Icon = TYPE_ICONS[entry.type];
-                  return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'start', gap: 8, padding: '6px 0' }}>
-                      <Icon size={14} style={{ color: TYPE_COLORS[entry.type], marginTop: 2, flexShrink: 0 }} />
-                      <span style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.4 }}>{entry.text}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}><X size={20} /></button>
         </div>
+        {CHANGELOG.map(release => (
+          <div key={release.id} style={{ marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
+              <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{release.title}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{release.date}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {release.entries.map((entry, i) => {
+                const Icon = TYPE_ICONS[entry.type];
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'start', gap: 8, padding: '6px 0' }}>
+                    <Icon size={14} style={{ color: TYPE_COLORS[entry.type], marginTop: 2, flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.4 }}>{entry.text}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
-    </ModalWrapper>
+    </div>
   );
 }

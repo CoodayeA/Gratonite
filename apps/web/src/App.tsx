@@ -64,6 +64,9 @@ const DailyChallenges = lazy(() => import('./pages/app/DailyChallenges'));
 const MiniMode = lazy(() => import('./components/desktop/MiniMode'));
 const VanityProfile = lazy(() => import('./pages/app/VanityProfile'));
 const UnifiedInbox = lazy(() => import('./pages/app/UnifiedInbox'));
+const ActivityFeed = lazy(() => import('./pages/app/ActivityFeed'));
+const Leaderboard = lazy(() => import('./pages/app/Leaderboard'));
+const ScheduleCalendar = lazy(() => import('./pages/app/ScheduleCalendar'));
 
 import InviteAccept from './pages/InviteAccept';
 import { NotFound } from './pages/ErrorStates';
@@ -249,7 +252,11 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
         '/friends', '/discover', '/shop', '/marketplace', '/inventory',
         '/creator-dashboard', '/fame', '/dm',
         '/admin', '/help-center', '/message-requests',
-        '/me', '/saved-messages', '/read-later'
+        '/me', '/saved-messages', '/read-later',
+        '/friend-activity', '/daily-challenges', '/inbox',
+        '/activity', '/leaderboard', '/schedule-calendar',
+        '/gacha', '/trading', '/bot-store', '/bot-builder',
+        '/theme-builder', '/badges', '/saved', '/download',
     ].some(path => location.pathname.startsWith(path));
 
     const activeGuildId = (() => {
@@ -1164,7 +1171,11 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         '/friends', '/discover', '/shop', '/marketplace', '/inventory',
         '/creator-dashboard', '/fame', '/dm',
         '/admin', '/help-center', '/message-requests',
-        '/me', '/saved-messages', '/read-later'
+        '/me', '/saved-messages', '/read-later',
+        '/friend-activity', '/daily-challenges', '/inbox',
+        '/activity', '/leaderboard', '/schedule-calendar',
+        '/gacha', '/trading', '/bot-store', '/bot-builder',
+        '/theme-builder', '/badges', '/saved', '/download',
     ].some(path => location.pathname.startsWith(path));
 
     const [presenceMenuOpen, setPresenceMenuOpen] = useState(false);
@@ -3035,7 +3046,7 @@ export const AppLayout = () => {
     // Show "What's New" modal if user hasn't seen the latest changelog
     useEffect(() => {
         const lastSeen = localStorage.getItem('gratonite:last-seen-changelog');
-        if (lastSeen !== '2026-03-15' && ctxUser.id) {
+        if (lastSeen !== '2026-03-15b' && ctxUser.id) {
             setTimeout(() => setShowWhatsNew(true), 2000);
         }
     }, [ctxUser.id]);
@@ -4144,6 +4155,11 @@ const appRouter = createBrowserRouter(
                 <Route path="daily-challenges" element={<Suspense fallback={<LazyFallback />}><DailyChallenges /></Suspense>} />
                 <Route path="trading" element={<Suspense fallback={<LazyFallback />}><Trading /></Suspense>} />
                 <Route path="inbox" element={<Suspense fallback={<LazyFallback />}><UnifiedInbox /></Suspense>} />
+                <Route path="activity" element={<Suspense fallback={<LazyFallback />}><ActivityFeed /></Suspense>} />
+                <Route path="leaderboard" element={<Suspense fallback={<LazyFallback />}><Leaderboard /></Suspense>} />
+                <Route path="schedule-calendar" element={<Suspense fallback={<LazyFallback />}><ScheduleCalendar /></Suspense>} />
+                <Route path="gacha" element={<Suspense fallback={<LazyFallback />}><Gacha /></Suspense>} />
+                <Route path="saved" element={<Navigate to="/read-later" replace />} />
                 <Route path="admin/team" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminTeam /></Suspense></RequireAdmin>} />
                 <Route path="admin/audit" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminAuditLog /></Suspense></RequireAdmin>} />
                 <Route path="admin/bot-moderation" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminBotModeration /></Suspense></RequireAdmin>} />

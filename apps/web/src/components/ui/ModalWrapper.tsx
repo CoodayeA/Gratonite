@@ -66,7 +66,7 @@ function useFocusTrap(isOpen: boolean) {
         if (isOpen) return;
         const prev = previousFocusRef.current;
         return () => {
-            if (prev && prev instanceof HTMLElement) {
+            if (prev && prev instanceof HTMLElement && prev.isConnected) {
                 prev.focus();
             }
         };
