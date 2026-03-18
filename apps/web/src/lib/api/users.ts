@@ -104,7 +104,7 @@ export const usersApi = {
 
   updateDndSchedule: (data: Record<string, unknown>) =>
     apiFetch<{ enabled: boolean; startTime: string; endTime: string; timezone: string; daysOfWeek: number; allowExceptions: string[] }>('/users/@me/dnd-schedule', {
-      method: 'PATCH',
+      method: 'PUT',
       body: JSON.stringify(data),
     }),
 

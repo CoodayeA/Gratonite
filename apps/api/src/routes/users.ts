@@ -945,6 +945,78 @@ usersRouter.delete('/@me/activity', requireAuth, asyncHandler(async (req: Reques
 }));
 
 // ============================================================
+// Unified Inbox
+// ============================================================
+
+// GET /users/@me/unified-inbox — returns recent notifications as inbox items
+usersRouter.get('/@me/unified-inbox', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const userId = req.userId!;
+  try {
+    const { notifications } = await import('../db/schema/notifications');
+    const rows = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(sql`${notifications.createdAt} desc`)
+      .limit(50);
+    const items = rows.map(n => {
+      const data = (n.data ?? {}) as Record<string, unknown>;
+      return {
+        id: n.id,
+        type: data.type === 'reply' ? 'reply' : data.type === 'unread' ? 'unread' : 'mention',
+        messageId: (data.messageId as string) ?? '',
+        channelId: (data.channelId as string) ?? '',
+        channelName: (data.channelName as string) ?? '',
+        guildId: (data.guildId as string) ?? '',
+        guildName: (data.guildName as string) ?? '',
+        guildIconHash: (data.guildIconHash as string) ?? null,
+        authorId: (data.authorId as string) ?? '',
+        authorName: (data.authorName as string) ?? n.title ?? '',
+        authorAvatarHash: (data.authorAvatarHash as string) ?? null,
+        contentPreview: n.body ?? '',
+        createdAt: n.createdAt.toISOString(),
+        read: n.read,
+      };
+    });
+    res.json(items);
+  } catch (err) {
+    logger.debug({ msg: 'unified-inbox error', err });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /users/@me/unified-inbox/read-all — mark all items as read (must be before :id route)
+usersRouter.post('/@me/unified-inbox/read-all', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const userId = req.userId!;
+  try {
+    const { notifications } = await import('../db/schema/notifications');
+    await db.update(notifications)
+      .set({ read: true })
+      .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
+    res.json({ success: true });
+  } catch (err) {
+    logger.debug({ msg: 'unified-inbox read-all error', err });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /users/@me/unified-inbox/:id/read — mark single item as read
+usersRouter.post('/@me/unified-inbox/:id/read', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const userId = req.userId!;
+  const id = req.params.id as string;
+  try {
+    const { notifications } = await import('../db/schema/notifications');
+    await db.update(notifications)
+      .set({ read: true })
+      .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+    res.json({ success: true });
+  } catch (err) {
+    logger.debug({ msg: 'unified-inbox mark-read error', err });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ============================================================
 // WAVE 3: Stats, Quick Reactions, Status Presets, Coin Gifting
 // ============================================================
 
