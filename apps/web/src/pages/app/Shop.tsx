@@ -204,7 +204,9 @@ const Shop = () => {
             applyEquippedItem(itemType, cfg, userId);
             if (itemType === 'nameplate') {
                 const style = (cfg.nameplateStyle as string) ?? 'none';
-                api.users.updateProfile({ nameplateStyle: style }).catch(() => {});
+                api.users.updateProfile({ nameplateStyle: style }).catch(() => {
+                    addToast({ title: 'Failed to apply nameplate style', variant: 'error' });
+                });
             }
             addToast({ title: 'Equipped!', description: `${selectedItem.name} is now active.`, variant: 'success' });
             closeModal();
@@ -417,7 +419,7 @@ const Shop = () => {
                                                 fontFamily: item.nameplateFont ?? 'var(--font-display)',
                                                 letterSpacing: '0.01em',
                                             }}>
-                                                YourUsername
+                                                {user?.displayName || user?.username || 'You'}
                                             </div>
                                             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Online</div>
                                         </div>
