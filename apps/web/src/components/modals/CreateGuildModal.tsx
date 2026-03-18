@@ -245,14 +245,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                                         textAlign: 'center',
                                         transition: 'all 0.15s',
                                     }}
-                                    onMouseEnter={e => {
-                                        (e.currentTarget as HTMLDivElement).style.background = 'rgba(82, 109, 245, 0.12)';
-                                        (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--accent-primary)';
-                                    }}
-                                    onMouseLeave={e => {
-                                        (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-tertiary)';
-                                        (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--stroke)';
-                                    }}
+                                    className="hover-template-card"
                                 >
                                     <span style={{ fontSize: '22px' }}>{t.emoji}</span>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)', fontSize: '12px' }}>{t.icon}</div>
@@ -269,8 +262,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                                     cursor: 'pointer', display: 'flex', flexDirection: 'column',
                                     alignItems: 'center', gap: '8px', textAlign: 'center', transition: 'all 0.15s',
                                 }}
-                                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--accent-primary)'; }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--stroke)'; }}
+                                className="hover-border-accent-only"
                             >
                                 <span style={{ fontSize: '22px' }}>✨</span>
                                 <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Start from Scratch</span>
@@ -285,8 +277,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                                     cursor: 'pointer', display: 'flex', flexDirection: 'column',
                                     alignItems: 'center', gap: '8px', textAlign: 'center', transition: 'all 0.15s',
                                 }}
-                                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--accent-primary)'; }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--stroke)'; }}
+                                className="hover-border-accent-only"
                             >
                                 <span style={{ fontSize: '22px' }}>📋</span>
                                 <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Use a Template</span>
@@ -312,14 +303,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                                 gap: '12px',
                                 transition: 'all 0.15s',
                             }}
-                            onMouseEnter={e => {
-                                (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--accent-primary)';
-                                (e.currentTarget as HTMLDivElement).style.background = 'linear-gradient(135deg, rgba(99,102,241,0.14), rgba(168,85,247,0.14))';
-                            }}
-                            onMouseLeave={e => {
-                                (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(99,102,241,0.35)';
-                                (e.currentTarget as HTMLDivElement).style.background = 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.08))';
-                            }}
+                            className="hover-self-host"
                         >
                             <Server size={20} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
                             <div>

@@ -951,8 +951,7 @@ const Discover = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
                     {filtered.map(template => (
                         <div key={template.id} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', transition: 'border-color 0.2s' }}
-                            onMouseOver={e => (e.currentTarget.style.borderColor = 'var(--accent-primary)')}
-                            onMouseOut={e => (e.currentTarget.style.borderColor = 'var(--stroke)')}>
+                            className="hover-border-accent">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div>
                                     <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>{template.name}</h3>

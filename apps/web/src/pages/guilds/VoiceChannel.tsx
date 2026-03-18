@@ -581,6 +581,14 @@ const VoiceChannel = () => {
         return () => voiceCtx.registerMuteHandler(null);
     }, [toggleMute]);
 
+    // Register the real LiveKit disconnect with VoiceContext so VoiceBar can tear
+    // down the room even when VoiceChannel is not mounted (user navigated away).
+    // We intentionally do NOT clear the handler on unmount — it must survive
+    // navigation so VoiceBar's disconnect button works while on a text channel.
+    useEffect(() => {
+        voiceCtx.registerDisconnectHandler(disconnect);
+    }, [disconnect]);
+
     // Sync LiveKit isMuted to VoiceContext so VoiceBar icon stays accurate
     useEffect(() => {
         voiceCtx.syncMuted(isMuted);

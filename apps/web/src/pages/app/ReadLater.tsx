@@ -138,8 +138,7 @@ const ReadLater = () => {
                                     display: 'flex', alignItems: 'center', gap: '16px',
                                     transition: 'border-color 0.15s',
                                 }}
-                                onMouseOver={e => e.currentTarget.style.borderColor = 'var(--text-muted)'}
-                                onMouseOut={e => e.currentTarget.style.borderColor = 'var(--stroke)'}
+                                className="hover-border-muted"
                                 >
                                     <div style={{
                                         width: '40px', height: '40px', borderRadius: '10px',

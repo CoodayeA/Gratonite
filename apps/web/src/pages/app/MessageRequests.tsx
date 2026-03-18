@@ -240,8 +240,7 @@ const MessageRequests = () => {
                                     marginBottom: '8px',
                                     transition: 'background 0.15s ease',
                                 }}
-                                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-elevated)'; }}
-                                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-tertiary)'; }}
+                                className="hover-bg-tertiary-to-elevated"
                             >
                                 {/* Avatar */}
                                 <Avatar
@@ -303,8 +302,7 @@ const MessageRequests = () => {
                                             justifyContent: 'center',
                                             transition: 'opacity 0.15s',
                                         }}
-                                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.8'; }}
-                                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+                                        className="hover-opacity-80"
                                     >
                                         <Check size={18} />
                                     </button>
@@ -324,8 +322,7 @@ const MessageRequests = () => {
                                             justifyContent: 'center',
                                             transition: 'opacity 0.15s',
                                         }}
-                                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.8'; }}
-                                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+                                        className="hover-opacity-80"
                                     >
                                         <X size={18} />
                                     </button>
@@ -346,8 +343,7 @@ const MessageRequests = () => {
                                                 justifyContent: 'center',
                                                 transition: 'opacity 0.15s',
                                             }}
-                                            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.8'; }}
-                                            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+                                            className="hover-opacity-80"
                                         >
                                             <Flag size={16} />
                                         </button>
@@ -372,8 +368,7 @@ const MessageRequests = () => {
                                                 justifyContent: 'center',
                                                 transition: 'opacity 0.15s',
                                             }}
-                                            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.8'; }}
-                                            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+                                            className="hover-opacity-80"
                                         >
                                             <Trash2 size={16} />
                                         </button>

@@ -429,8 +429,7 @@ const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) 
                                     borderRadius: 'var(--radius-md)',
                                     cursor: 'pointer',
                                 }}
-                                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
-                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                className="hover-bg-tertiary"
                             >
                                 {emoji}
                             </button>

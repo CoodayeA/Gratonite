@@ -92,8 +92,7 @@ export default function VoiceBar() {
       {/* Left: connection status + channel info */}
       <div
         onClick={handleNavigate}
-        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+        className="hover-bg-white-4"
         style={{
           display: 'flex',
           alignItems: 'center',

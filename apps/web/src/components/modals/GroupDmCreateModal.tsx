@@ -166,8 +166,7 @@ const GroupDmCreateModal = ({ onClose }: Props) => {
                                         background: selected ? 'rgba(212,175,55,0.1)' : 'transparent',
                                         transition: 'background 0.15s',
                                     }}
-                                    onMouseOver={(e) => { if (!selected) e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
-                                    onMouseOut={(e) => { if (!selected) e.currentTarget.style.background = 'transparent'; }}
+                                    className={!selected ? 'hover-bg-tertiary' : ''}
                                 >
                                     <Avatar
                                         userId={friend.id}

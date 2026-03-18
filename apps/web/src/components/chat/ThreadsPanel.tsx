@@ -268,8 +268,7 @@ const ThreadsPanel = ({ channelId, onClose, onThreadSelect }: ThreadsPanelProps)
                                     background: 'var(--bg-primary)', border: '1px solid var(--stroke)',
                                     transition: 'border-color 0.15s',
                                 }}
-                                onMouseOver={e => e.currentTarget.style.borderColor = 'var(--text-muted)'}
-                                onMouseOut={e => e.currentTarget.style.borderColor = 'var(--stroke)'}
+                                className="hover-border-muted"
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                                     {thread.archived ? (

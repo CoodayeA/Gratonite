@@ -2270,8 +2270,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                             color: 'var(--text-secondary)', fontSize: '12px',
                                             transition: 'border-color 0.15s, background 0.15s',
                                         }}
-                                        onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.background = 'rgba(88, 101, 242, 0.05)'; }}
-                                        onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--stroke)'; e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
+                                        className="hover-border-accent-bg"
                                     >
                                         <span style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', flexShrink: 0 }}>
                                             {tmpl.icon}

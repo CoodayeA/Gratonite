@@ -4608,3 +4608,131 @@ textarea:focus-visible,
     background: var(--bg-elevated) !important;
 }
 
+/* Subtle white overlay on hover */
+.hover-bg-white-2 {
+    transition: background 0.2s;
+}
+.hover-bg-white-2:hover {
+    background: rgba(255,255,255,0.02) !important;
+}
+
+/* Border accent + subtle accent bg on hover */
+.hover-border-accent-bg {
+    transition: border-color 0.15s, background 0.15s;
+}
+.hover-border-accent-bg:hover {
+    border-color: var(--accent-primary) !important;
+    background: rgba(88, 101, 242, 0.05) !important;
+}
+
+/* === DOM Mutation Cleanup Wave 3 === */
+
+/* VoiceBar connection info: transparent → white 4% */
+.hover-bg-white-4 {
+    transition: background 0.15s;
+}
+.hover-bg-white-4:hover {
+    background: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Template card: bg-tertiary → accent subtle, border → accent */
+.hover-template-card {
+    transition: all 0.15s;
+}
+.hover-template-card:hover {
+    background: rgba(82, 109, 245, 0.12) !important;
+    border-color: var(--accent-primary) !important;
+}
+
+/* Border only to accent (dashed cards) */
+.hover-border-accent-only {
+    transition: border-color 0.15s;
+}
+.hover-border-accent-only:hover {
+    border-color: var(--accent-primary) !important;
+}
+
+/* Self-host CTA: intensify gradient + border */
+.hover-self-host {
+    transition: all 0.15s;
+}
+.hover-self-host:hover {
+    border-color: var(--accent-primary) !important;
+    background: linear-gradient(135deg, rgba(99,102,241,0.14), rgba(168,85,247,0.14)) !important;
+}
+
+/* Button opacity 0.8 on hover */
+.hover-opacity-80 {
+    transition: opacity 0.15s;
+}
+.hover-opacity-80:hover {
+    opacity: 0.8 !important;
+}
+
+/* bg-tertiary → bg-elevated on hover */
+.hover-bg-tertiary-to-elevated {
+    transition: background 0.15s ease;
+}
+.hover-bg-tertiary-to-elevated:hover {
+    background: var(--bg-elevated) !important;
+}
+
+/* AdminTeam remove button: red tint + border + color */
+.hover-remove-btn {
+    transition: all 0.12s;
+}
+.hover-remove-btn:hover {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border-color: rgba(239, 68, 68, 0.25) !important;
+    color: var(--error) !important;
+}
+
+/* AccountSwitcher add button: transparent → bg-primary */
+.hover-bg-primary {
+    transition: background 0.15s;
+}
+.hover-bg-primary:hover {
+    background: var(--bg-primary) !important;
+}
+
+/* ProfilePet: scale up on hover */
+.hover-scale-up {
+    transition: transform 0.2s;
+}
+.hover-scale-up:hover {
+    transform: scale(1.2) !important;
+}
+
+/* Opacity 0.85 on hover */
+.hover-opacity-85 {
+    transition: opacity 0.15s;
+}
+.hover-opacity-85:hover {
+    opacity: 0.85 !important;
+}
+
+/* bg transparent → bg-secondary AND color text-muted → text-primary */
+.hover-bg-secondary-text-primary {
+    transition: background 0.15s, color 0.15s;
+}
+.hover-bg-secondary-text-primary:hover {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Forward modal: selected item hover (accent 10% → 15%) */
+.hover-forward-selected {
+    transition: background 0.15s;
+}
+.hover-forward-selected:hover {
+    background: rgba(var(--accent-primary-rgb, 99, 102, 241), 0.15) !important;
+}
+
+/* Forward modal: unselected item hover (transparent → bg-tertiary) */
+.hover-forward-unselected {
+    transition: background 0.15s;
+}
+.hover-forward-unselected:hover {
+    background: var(--bg-tertiary) !important;
+}
+

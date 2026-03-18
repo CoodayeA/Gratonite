@@ -559,12 +559,7 @@ export default function AdminTeam() {
                   transition: 'background 0.1s',
                   background: 'transparent',
                 }}
-                onMouseEnter={(e) =>
-                  ((e.currentTarget as HTMLDivElement).style.background = 'var(--hover-overlay)')
-                }
-                onMouseLeave={(e) =>
-                  ((e.currentTarget as HTMLDivElement).style.background = 'transparent')
-                }
+                className="hover-bg-overlay"
               >
                 {/* Member */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -709,14 +704,7 @@ export default function AdminTeam() {
                                 fontWeight: member.role === r ? 600 : 400,
                                 transition: 'background 0.1s',
                               }}
-                              onMouseEnter={(e) =>
-                                ((e.currentTarget as HTMLButtonElement).style.background =
-                                  'var(--hover-overlay)')
-                              }
-                              onMouseLeave={(e) =>
-                                ((e.currentTarget as HTMLButtonElement).style.background =
-                                  member.role === r ? 'var(--active-overlay)' : 'transparent')
-                              }
+                              className="hover-bg-overlay"
                             >
                               <span
                                 style={{
@@ -787,18 +775,7 @@ export default function AdminTeam() {
                         cursor: 'pointer',
                         transition: 'all 0.12s',
                       }}
-                      onMouseEnter={(e) => {
-                        const btn = e.currentTarget as HTMLButtonElement;
-                        btn.style.background = 'rgba(239, 68, 68, 0.1)';
-                        btn.style.borderColor = 'rgba(239, 68, 68, 0.25)';
-                        btn.style.color = 'var(--error)';
-                      }}
-                      onMouseLeave={(e) => {
-                        const btn = e.currentTarget as HTMLButtonElement;
-                        btn.style.background = 'transparent';
-                        btn.style.borderColor = 'transparent';
-                        btn.style.color = 'var(--text-muted)';
-                      }}
+                      className="hover-remove-btn"
                     >
                       <Trash2 size={14} />
                     </button>

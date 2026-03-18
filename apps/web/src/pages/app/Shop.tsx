@@ -812,7 +812,7 @@ const Shop = () => {
                                 ) : selectedItem.type === 'nameplate' ? (
                                     <div style={{ padding: '8px 16px', background: 'var(--bg-primary)', borderRadius: '8px', width: '100%', textAlign: 'center' }}>
                                         <div style={{ fontWeight: 800, fontSize: '18px', background: selectedItem.nameplateGradient, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontFamily: selectedItem.nameplateFont ?? 'var(--font-display)' }}>
-                                            YourUsername
+                                            {user?.name || user?.handle || 'You'}
                                         </div>
                                     </div>
                                 ) : (() => {
