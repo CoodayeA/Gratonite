@@ -9,6 +9,27 @@ import { requireAuth } from '../middleware/auth';
 
 export const achievementsRouter = Router();
 
+// GET /achievements — public list of all achievements (for BadgesGallery)
+achievementsRouter.get('/achievements', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.userId!;
+    const allAchievements = await db.select().from(achievements);
+    const earned = await db.select().from(userAchievements).where(eq(userAchievements.userId, userId));
+    const earnedSet = new Set(earned.map(e => e.achievementId));
+    const result = allAchievements
+      .filter(a => !a.hidden || earnedSet.has(a.id))
+      .map(a => ({
+        ...a,
+        earned: earnedSet.has(a.id),
+        earnedAt: earned.find(e => e.achievementId === a.id)?.earnedAt ?? null,
+      }));
+    res.json(result);
+  } catch (err) {
+    logger.error('[achievements] GET /achievements error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET /users/@me/achievements
 achievementsRouter.get('/users/@me/achievements', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
@@ -77,13 +98,15 @@ export async function checkAchievements(userId: string, event: 'message_sent' | 
         toGrant.map(id => ({ userId, achievementId: id, earnedAt: new Date() }))
       ).onConflictDoNothing();
 
-      // Insert activity events for each earned achievement
+      // Insert activity events for each earned achievement (include human-readable name)
       const { activityEvents } = await import('../db/schema/activity-feed');
+      const allAchievements = await db.select().from(achievements);
+      const achievementMap = new Map(allAchievements.map(a => [a.id, a.name]));
       await db.insert(activityEvents).values(
         toGrant.map(id => ({
           userId,
           type: 'earned_achievement',
-          payload: { achievementId: id },
+          payload: { achievementId: id, achievementName: achievementMap.get(id) ?? id },
         }))
       ).onConflictDoNothing();
     }
