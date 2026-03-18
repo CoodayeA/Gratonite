@@ -183,7 +183,7 @@ const Friends = () => {
     }, [groupContextMenu]);
 
     // Friend suggestions
-    const [suggestions, setSuggestions] = useState<{ id: string; username: string; display_name: string; avatar: string | null; sharedServers: number; mutualFriends: number }[]>([]);
+    const [suggestions, setSuggestions] = useState<{ id: string; username: string; display_name: string; avatar_hash: string | null; sharedServers: number; mutualFriends: number }[]>([]);
     const [suggestionsLoading, setSuggestionsLoading] = useState(false);
     useEffect(() => {
         setSuggestionsLoading(true);
