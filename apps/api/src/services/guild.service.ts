@@ -188,7 +188,7 @@ export class GuildService {
     }
 
     const [membership] = await db
-      .select({ id: guildMembers.id })
+      .select({ id: guildMembers.id, agreedRulesAt: guildMembers.agreedRulesAt })
       .from(guildMembers)
       .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, userId)))
       .limit(1);
@@ -197,7 +197,7 @@ export class GuildService {
       throw new ServiceError('FORBIDDEN', 'You are not a member of this guild');
     }
 
-    return guild;
+    return { ...guild, agreedRulesAt: membership.agreedRulesAt ?? null };
   }
 
   /**

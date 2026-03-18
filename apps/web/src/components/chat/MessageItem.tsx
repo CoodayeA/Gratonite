@@ -81,8 +81,7 @@ const DisappearCountdown = ({ expiresAt }: { expiresAt: string }) => {
             else setRemaining(`${Math.floor(diff / 86400)}d ${Math.floor((diff % 86400) / 3600)}h`);
         };
         tick();
-        const iv = setInterval(tick, diff() < 60 ? 1000 : 60000);
-        function diff() { return Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)); }
+        const iv = setInterval(tick, 1000);
         return () => clearInterval(iv);
     }, [expiresAt]);
     return (
@@ -207,6 +206,7 @@ export const MemoizedMessageItem = memo(({
     const [famGiven, setFamGiven] = useState(false);
     const [showFameSparkle, setShowFameSparkle] = useState(false);
     const [fameLoading, setFameLoading] = useState(false);
+    const fameSparkleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [showReactionPicker, setShowReactionPicker] = useState(false);
     const reactionPickerRef = useRef<HTMLDivElement>(null);
     const avatarRef = useRef<HTMLDivElement>(null);
@@ -226,6 +226,10 @@ export const MemoizedMessageItem = memo(({
     }, [msg.authorId, msg.system]);
     const cancelUserPrefetch = useCallback(() => {
         if (userPrefetchTimer.current) { clearTimeout(userPrefetchTimer.current); userPrefetchTimer.current = null; }
+    }, []);
+
+    useEffect(() => {
+        return () => { if (fameSparkleTimerRef.current) clearTimeout(fameSparkleTimerRef.current); };
     }, []);
 
     // Auto-focus and auto-resize inline edit textarea
@@ -266,7 +270,8 @@ export const MemoizedMessageItem = memo(({
             await api.fame.give(msg.authorId, { messageId: msg.apiId, guildId });
             setFamGiven(true);
             setShowFameSparkle(true);
-            setTimeout(() => setShowFameSparkle(false), 1400);
+            if (fameSparkleTimerRef.current) clearTimeout(fameSparkleTimerRef.current);
+            fameSparkleTimerRef.current = setTimeout(() => { fameSparkleTimerRef.current = null; setShowFameSparkle(false); }, 1400);
         } catch (err: any) {
             const errMsg = err?.message || 'Failed to give FAME';
             addToast?.({ title: errMsg, variant: 'error' });

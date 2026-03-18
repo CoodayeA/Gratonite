@@ -98,6 +98,16 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
         }
     };
 
+    const importIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const importTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (importIntervalRef.current) clearInterval(importIntervalRef.current);
+            if (importTimeoutRef.current) clearTimeout(importTimeoutRef.current);
+        };
+    }, []);
+
     const handleImport = () => {
         setImporting(true);
         let p = 0;
@@ -106,13 +116,16 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
             if (p >= 100) {
                 p = 100;
                 clearInterval(iv);
-                setTimeout(() => {
+                importIntervalRef.current = null;
+                importTimeoutRef.current = setTimeout(() => {
+                    importTimeoutRef.current = null;
                     setImporting(false);
                     setStep('details');
                 }, 400);
             }
             setImportProgress(Math.min(p, 100));
         }, 300);
+        importIntervalRef.current = iv;
     };
 
     const handleCreate = async () => {
