@@ -14,6 +14,22 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-03-18',
+    date: 'March 18, 2026',
+    title: 'Deep Polish Wave 2',
+    entries: [
+      { type: 'security', text: 'Stage sessions now verify channel access — no more unauthorized stage creation' },
+      { type: 'security', text: 'WebRTC signaling rate-limited to prevent flood attacks (60/10s per connection)' },
+      { type: 'fix', text: 'Theme reports and ratings now prevent duplicate submissions per user' },
+      { type: 'improvement', text: 'User profile "More" menu now works — Block, Report, and Copy User ID actions' },
+      { type: 'improvement', text: 'Mute/unmute actions show success and error feedback toasts' },
+      { type: 'fix', text: '"View Full Profile" on friends page now opens the actual profile modal' },
+      { type: 'fix', text: 'Shop nameplate preview shows your real username instead of placeholder' },
+      { type: 'improvement', text: 'Replaced 266 inline hover style mutations with CSS classes across 24 components for smoother transitions' },
+      { type: 'fix', text: 'Error toasts added for note saving, nameplate applying, and other user actions that previously failed silently' },
+    ],
+  },
+  {
     id: '2026-03-15b',
     date: 'March 15, 2026',
     title: 'Batch 3: 25 New Features',
