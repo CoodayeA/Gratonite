@@ -84,12 +84,14 @@ function timeAgo(dateStr: string) {
 export default function ActivityFeed({ onClose }: { onClose: () => void }) {
   const [events, setEvents] = useState<FeedEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const load = () => {
     setLoading(true);
+    setError(false);
     api.get<FeedEvent[]>('/users/@me/feed')
       .then(data => setEvents(Array.isArray(data) ? data : []))
-      .catch(() => setEvents([]))
+      .catch(() => { setEvents([]); setError(true); })
       .finally(() => setLoading(false));
   };
 
@@ -118,6 +120,11 @@ export default function ActivityFeed({ onClose }: { onClose: () => void }) {
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px 16px 16px' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Loading...</div>
+          ) : error ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+              <p style={{ color: 'var(--error)', marginBottom: '8px' }}>Failed to load activity feed.</p>
+              <button onClick={load} style={{ background: 'var(--accent-primary)', color: '#000', border: 'none', borderRadius: '6px', padding: '6px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Retry</button>
+            </div>
           ) : events.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
               <p>No activity yet.</p>

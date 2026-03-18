@@ -6,7 +6,7 @@ export type ContextMenuItem = {
     label: string;
     icon?: LucideIcon;
     color?: string; // e.g. for destructive actions like delete
-    onClick: () => void;
+    onClick?: () => void;
     divider?: boolean; // If true, rendering a divider below this item
 };
 
@@ -112,7 +112,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 if (state.focusedIndex >= 0 && state.focusedIndex < state.items.length) {
-                    state.items[state.focusedIndex].onClick();
+                    state.items[state.focusedIndex].onClick?.();
                     closeMenu();
                 }
             }
@@ -204,7 +204,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
                                     }
                                 }}
                                 onClick={() => {
-                                    item.onClick();
+                                    item.onClick?.();
                                     closeMenu();
                                 }}
                             >

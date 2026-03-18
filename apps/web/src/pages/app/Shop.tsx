@@ -11,6 +11,18 @@ import Avatar from '../../components/ui/Avatar';
 
 type ViewType = 'frames' | 'decorations' | 'effects' | 'nameplates';
 
+type AssetConfig = {
+    nameplateFont?: string;
+    nameplateGradient?: string;
+    nameplateStyle?: string;
+    shape?: string;
+    decorationEmoji?: string;
+    glowColor?: string;
+    frameStyle?: string;
+    effectType?: string;
+    [key: string]: unknown;
+};
+
 type ShopItem = {
     id: string;
     type: 'frame' | 'decoration' | 'effect' | 'nameplate';
@@ -20,7 +32,7 @@ type ShopItem = {
     rarity: 'epic' | 'legendary' | 'rare' | 'uncommon';
     description?: string;
     color?: string;
-    assetConfig?: Record<string, unknown>;
+    assetConfig?: AssetConfig;
     // Nameplate extras
     nameplateFont?: string;
     nameplateGradient?: string;
@@ -120,9 +132,9 @@ const Shop = () => {
                 rarity: rarityMap[item.rarity] ?? 'uncommon',
                 description: item.description ?? '',
                 assetConfig: item.assetConfig ?? {},
-                nameplateFont: (item.assetConfig as any)?.nameplateFont,
-                nameplateGradient: (item.assetConfig as any)?.nameplateGradient ?? (() => {
-                    const style = (item.assetConfig as any)?.nameplateStyle;
+                nameplateFont: item.assetConfig?.nameplateFont,
+                nameplateGradient: item.assetConfig?.nameplateGradient ?? (() => {
+                    const style = item.assetConfig?.nameplateStyle;
                     const gradients: Record<string, string> = {
                         rainbow: 'linear-gradient(90deg, #ff0000, #ff7700, #ffff00, #00ff00, #0000ff, #8b00ff)',
                         fire: 'linear-gradient(90deg, #ff4500, #ff8c00, #ffd700)',
@@ -136,7 +148,7 @@ const Shop = () => {
                     return gradients[style] ?? 'linear-gradient(90deg, var(--accent-blue), var(--accent-purple))';
                 })(),
                 decorationEmoji: (() => {
-                    const shape = (item.assetConfig as any)?.shape as string | undefined;
+                    const shape = item.assetConfig?.shape as string | undefined;
                     if (shape) {
                         const emojiMap: Record<string, string> = {
                             crown: '\u{1F451}', star: '\u2B50', flame: '\u{1F525}', bolt: '\u26A1',
@@ -146,9 +158,9 @@ const Shop = () => {
                         };
                         return emojiMap[shape] ?? '\u2728';
                     }
-                    return (item.assetConfig as any)?.decorationEmoji;
+                    return item.assetConfig?.decorationEmoji;
                 })(),
-                color: item.color ?? (item.assetConfig as any)?.glowColor ?? 'var(--accent-primary)',
+                color: item.color ?? item.assetConfig?.glowColor ?? 'var(--accent-primary)',
             }));
             if (mapped.length > 0) setShopItems(mapped);
             setIsLoading(false);
@@ -483,9 +495,9 @@ const Shop = () => {
                     ) : (
                         filteredItems.map(item => {
                             const cfg = item.assetConfig ?? {};
-                            const frameStyle = (cfg as any)?.frameStyle as string | undefined;
-                            const glowColor = (cfg as any)?.glowColor as string | undefined ?? item.color;
-                            const effectType = (cfg as any)?.effectType as string | undefined;
+                            const frameStyle = (cfg as AssetConfig)?.frameStyle as string | undefined;
+                            const glowColor = (cfg as AssetConfig)?.glowColor as string | undefined ?? item.color;
+                            const effectType = (cfg as AssetConfig)?.effectType as string | undefined;
                             const isFrame = item.type === 'frame';
                             const isEffect = item.type === 'effect';
 
@@ -682,9 +694,9 @@ const Shop = () => {
             {previewItem && (() => {
                 const previewColor = previewItem.color ?? 'var(--accent-primary)';
                 const cfg = previewItem.assetConfig ?? {};
-                const frameStyle = (cfg as any)?.frameStyle as string | undefined;
-                const glowColor = (cfg as any)?.glowColor as string | undefined ?? previewColor;
-                const effectType = (cfg as any)?.effectType as string | undefined;
+                const frameStyle = (cfg as AssetConfig)?.frameStyle as string | undefined;
+                const glowColor = (cfg as AssetConfig)?.glowColor as string | undefined ?? previewColor;
+                const effectType = (cfg as AssetConfig)?.effectType as string | undefined;
 
                 const getFrameCSS = (): React.CSSProperties => {
                     switch (frameStyle) {
@@ -785,8 +797,8 @@ const Shop = () => {
                             <div style={{ width: '120px', height: '120px', margin: '0 auto 16px', background: 'var(--bg-tertiary)', borderRadius: '16px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 {selectedItem.type === 'frame' ? (() => {
                                     const cfg = selectedItem.assetConfig ?? {};
-                                    const fs = (cfg as any)?.frameStyle as string | undefined;
-                                    const gc = (cfg as any)?.glowColor as string | undefined ?? selectedItem.color;
+                                    const fs = (cfg as AssetConfig)?.frameStyle as string | undefined;
+                                    const gc = (cfg as AssetConfig)?.glowColor as string | undefined ?? selectedItem.color;
                                     const modalFrameCSS: React.CSSProperties = (() => {
                                         switch (fs) {
                                             case 'neon': return { border: `4px solid ${gc}`, boxShadow: `0 0 16px ${gc}, 0 0 32px ${gc}60` };
@@ -817,8 +829,8 @@ const Shop = () => {
                                     </div>
                                 ) : (() => {
                                     const cfg = selectedItem.assetConfig ?? {};
-                                    const et = (cfg as any)?.effectType as string | undefined;
-                                    const gc = (cfg as any)?.glowColor as string | undefined ?? selectedItem.color;
+                                    const et = (cfg as AssetConfig)?.effectType as string | undefined;
+                                    const gc = (cfg as AssetConfig)?.glowColor as string | undefined ?? selectedItem.color;
                                     return (
                                     <div style={{ width: '90%', height: '90%', background: 'var(--bg-primary)', borderRadius: '8px', overflow: 'hidden', position: 'relative' }}>
                                         {et === 'gradient-pulse' && <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${gc}, transparent, ${gc})`, backgroundSize: '200% 200%', animation: 'shop-gradient-pulse 3s ease infinite', opacity: 0.7 }} />}

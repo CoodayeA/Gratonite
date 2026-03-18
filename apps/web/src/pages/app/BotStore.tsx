@@ -82,7 +82,8 @@ const BotStore = () => {
 
   const loadListings = async () => {
     const res = await api.botStore.list({ limit: 100 });
-    const items: any[] = Array.isArray(res) ? res : (res as any).items ?? [];
+    const raw = res as unknown as { items?: unknown[] } | unknown[];
+    const items: any[] = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' && 'items' in raw ? (raw.items ?? []) : []) as any[];
 
     const mapped: BotListing[] = items.flatMap((item: any) => {
       const id = typeof item.id === 'string' && item.id.trim() ? item.id : null;
@@ -115,7 +116,7 @@ const BotStore = () => {
       try {
         const [_, guilds] = await Promise.all([
           loadListings(),
-          api.guilds.getMine().catch(() => [] as any[]),
+          api.guilds.getMine().catch(() => [] as Array<{ id: string; name: string }>),
         ]);
 
         if (!active) return;
@@ -144,7 +145,8 @@ const BotStore = () => {
     setLoadingReviews(true);
     try {
       const res = await api.botStore.reviews(listingId, 50, 0);
-      const items: any[] = Array.isArray(res) ? res : (res as any).items ?? [];
+      const rawReviews = res as unknown as { items?: unknown[] } | unknown[];
+      const items: any[] = (Array.isArray(rawReviews) ? rawReviews : (rawReviews && typeof rawReviews === 'object' && 'items' in rawReviews ? (rawReviews.items ?? []) : [])) as any[];
       setReviews(items.flatMap((r: any) => {
         const id = typeof r.id === 'string' && r.id.trim() ? r.id : null;
         if (!id) return [];
@@ -223,13 +225,13 @@ const BotStore = () => {
       setReviewText('');
       setReviewRating(5);
       await Promise.all([loadReviews(selectedBot.id), loadListings()]);
-      const refreshed = await api.botStore.get(selectedBot.id).catch(() => null as any);
+      const refreshed = await api.botStore.get(selectedBot.id).catch(() => null) as Record<string, unknown> | null;
       if (refreshed) {
         setSelectedBot((prev) => prev ? {
           ...prev,
-          rating: Number((refreshed as any).rating ?? prev.rating),
-          reviews: Number((refreshed as any).reviewCount ?? prev.reviews),
-          installs: Number((refreshed as any).installCount ?? prev.installs),
+          rating: Number(refreshed.rating ?? prev.rating),
+          reviews: Number(refreshed.reviewCount ?? prev.reviews),
+          installs: Number(refreshed.installCount ?? prev.installs),
         } : prev);
       }
       addToast({ title: 'Review submitted', variant: 'success' });

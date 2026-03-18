@@ -112,6 +112,7 @@ const VIEW_CHANNEL_BIT = 1n << 8n;
 function CurrencyPanel({ guildId, addToast }: { guildId: string; addToast: (t: { title: string; variant: 'success' | 'error' | 'info' | 'achievement' | 'undo' }) => void }) {
     const [currencyEnabled, setCurrencyEnabled] = useState(false);
     const [currencyName, setCurrencyName] = useState('');
+    const [currencyNameTouched, setCurrencyNameTouched] = useState(false);
     const [currencyEmoji, setCurrencyEmoji] = useState('\u{1F4B0}');
     const [currencyEarnMsg, setCurrencyEarnMsg] = useState(1);
     const [currencyEarnReact, setCurrencyEarnReact] = useState(1);
@@ -191,10 +192,14 @@ function CurrencyPanel({ guildId, addToast }: { guildId: string; addToast: (t: {
                             type="text"
                             value={currencyName}
                             onChange={e => setCurrencyName(e.target.value)}
+                            onBlur={() => setCurrencyNameTouched(true)}
                             placeholder="e.g. Server Coins"
                             maxLength={50}
-                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${currencyNameTouched && !currencyName.trim() ? 'var(--error)' : 'var(--stroke)'}`, background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
                         />
+                        {currencyNameTouched && !currencyName.trim() && (
+                            <div style={{ fontSize: '12px', color: 'var(--error)', marginTop: '4px' }}>Currency name is required</div>
+                        )}
                     </div>
                     <div style={{ width: '80px' }}>
                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Emoji</label>
@@ -1510,7 +1515,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                 </div>
 
                 {/* Right Panel */}
-                <div className="settings-content-panel" style={{ flex: 1, padding: '32px 48px', overflowY: 'auto', position: 'relative' }}>
+                <div className="settings-content-panel" style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', position: 'relative' }}>
                     <button className="settings-close-btn" onClick={onClose}
                         onMouseEnter={() => setHoveredBtn('close')} onMouseLeave={() => setHoveredBtn(null)}
                         style={{ position: 'absolute', top: 24, right: 24, background: 'none', border: 'none', color: hoveredBtn === 'close' ? 'var(--text-primary)' : 'var(--text-muted)', cursor: 'pointer' }}>
@@ -4155,8 +4160,12 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
 
         {/* Confirmation Dialog for destructive actions */}
         {confirmDialog && (
-            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}
+            <div
+                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}
                 onClick={() => setConfirmDialog(null)}
+                onKeyDown={e => { if (e.key === 'Escape') setConfirmDialog(null); }}
+                tabIndex={-1}
+                ref={el => el?.focus()}
             >
                 <div style={{ background: 'var(--bg-secondary)', borderRadius: '12px', padding: '24px', width: '400px', maxWidth: '90vw', border: '1px solid var(--stroke)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
                     onClick={e => e.stopPropagation()}

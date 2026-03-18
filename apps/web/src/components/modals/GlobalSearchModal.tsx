@@ -251,20 +251,20 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                     </div>
                 )}
                 {(!isMobile || filtersExpanded) && (
-                    <div style={{ display: 'flex', gap: 8, padding: '8px 16px', flexWrap: 'wrap', borderBottom: '1px solid var(--stroke)', background: 'var(--bg-elevated)' }}>
-                        <input placeholder="from:user" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} style={{ flex: '1 1 100px', minWidth: 80, padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} />
-                        <input placeholder="in:channel" value={filterInChannel} onChange={e => setFilterInChannel(e.target.value)} style={{ flex: '1 1 100px', minWidth: 80, padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} />
-                        <input type="date" value={filterAfter} onChange={e => setFilterAfter(e.target.value)} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} title="After date" />
-                        <input type="date" value={filterBefore} onChange={e => setFilterBefore(e.target.value)} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} title="Before date" />
-                        <select value={filterHas} onChange={e => setFilterHas(e.target.value)} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }}>
+                    <div style={{ display: 'flex', gap: 8, padding: '8px 16px', flexWrap: 'wrap', borderBottom: '1px solid var(--stroke)', background: 'var(--bg-elevated)', opacity: searching ? 0.5 : 1, pointerEvents: searching ? 'none' : 'auto', transition: 'opacity 0.2s' }}>
+                        <input placeholder="from:user" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} disabled={searching} style={{ flex: '1 1 100px', minWidth: 80, padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} />
+                        <input placeholder="in:channel" value={filterInChannel} onChange={e => setFilterInChannel(e.target.value)} disabled={searching} style={{ flex: '1 1 100px', minWidth: 80, padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} />
+                        <input type="date" value={filterAfter} onChange={e => setFilterAfter(e.target.value)} disabled={searching} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} title="After date" />
+                        <input type="date" value={filterBefore} onChange={e => setFilterBefore(e.target.value)} disabled={searching} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }} title="Before date" />
+                        <select value={filterHas} onChange={e => setFilterHas(e.target.value)} disabled={searching} style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12 }}>
                             <option value="">has:...</option>
                             <option value="file">file</option>
                             <option value="image">image</option>
                             <option value="embed">embed</option>
                             <option value="link">link</option>
                         </select>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: filterMentionsMe ? 'rgba(88,101,242,0.15)' : 'var(--bg-primary)', cursor: 'pointer', fontSize: 12, color: filterMentionsMe ? 'var(--accent-primary)' : 'var(--text-primary)', fontWeight: filterMentionsMe ? 600 : 400, whiteSpace: 'nowrap' }}>
-                            <input type="checkbox" checked={filterMentionsMe} onChange={e => setFilterMentionsMe(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--stroke)', background: filterMentionsMe ? 'rgba(88,101,242,0.15)' : 'var(--bg-primary)', cursor: searching ? 'not-allowed' : 'pointer', fontSize: 12, color: filterMentionsMe ? 'var(--accent-primary)' : 'var(--text-primary)', fontWeight: filterMentionsMe ? 600 : 400, whiteSpace: 'nowrap' }}>
+                            <input type="checkbox" checked={filterMentionsMe} onChange={e => setFilterMentionsMe(e.target.checked)} disabled={searching} style={{ accentColor: 'var(--accent-primary)' }} />
                             @mentions me
                         </label>
                     </div>
