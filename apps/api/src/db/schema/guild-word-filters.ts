@@ -8,6 +8,7 @@ export const guildWordFilters = pgTable('guild_word_filters', {
   words: text('words').array().notNull().default(sql`'{}'::text[]`),
   action: text('action').notNull().default('block'), // 'block'|'delete'|'warn'
   exemptRoles: uuid('exempt_roles').array().notNull().default(sql`'{}'::uuid[]`),
+  regexPatterns: text('regex_patterns').array().notNull().default(sql`'{}'::text[]`),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
