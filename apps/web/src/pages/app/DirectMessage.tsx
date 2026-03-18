@@ -1534,13 +1534,18 @@ const DirectMessage = () => {
         return members;
     }, [isGroupDm, groupParticipants, currentUserId, currentUserName, recipientId, userName, profileData?.displayName]);
 
+    const dmCursorPosRef = useRef(0);
+
     const handleDmInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = e.target.value;
+        const cursor = e.target.selectionStart ?? val.length;
+        dmCursorPosRef.current = cursor;
         setInputValue(val);
         if (val.trim().length > 0) sendTypingIndicator();
 
         if (isGroupDm) {
-            const mentionMatch = val.match(/@([a-zA-Z0-9_]*)$/);
+            const beforeCursor = val.slice(0, cursor);
+            const mentionMatch = beforeCursor.match(/@([a-zA-Z0-9_]*)$/);
             if (mentionMatch) {
                 setMentionSearch(mentionMatch[1]);
                 setMentionIndex(0);
@@ -1559,8 +1564,18 @@ const DirectMessage = () => {
             displayToken = `@${username}#${userId.slice(-4)}`;
         }
         dmMentionsMapRef.current.set(displayToken, `<@${userId}>`);
-        const val = inputValue.replace(/@([a-zA-Z0-9_]*)$/, `${displayToken} `);
-        setInputValue(val);
+        const cursor = dmCursorPosRef.current;
+        const beforeCursor = inputValue.slice(0, cursor);
+        const afterCursor = inputValue.slice(cursor);
+        const replaced = beforeCursor.replace(/@([a-zA-Z0-9_]*)$/, `${displayToken} `);
+        const newVal = replaced + afterCursor;
+        setInputValue(newVal);
+        const newCursor = replaced.length;
+        dmCursorPosRef.current = newCursor;
+        setTimeout(() => {
+            const ta = document.querySelector('.chat-input') as HTMLTextAreaElement | null;
+            if (ta) { ta.selectionStart = ta.selectionEnd = newCursor; }
+        }, 0);
         setMentionSearch(null);
     };
 
