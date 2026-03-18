@@ -49,7 +49,7 @@ const TIMEOUT_DURATIONS = [
     { label: '28 days', seconds: 2419200 },
 ];
 
-const MemberOptionsModal = ({ onClose, guildId, guildName }: { onClose: () => void; guildId: string; guildName: string }) => {
+const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: () => void; guildId: string; guildName: string; userId?: string }) => {
     const { addToast } = useToast();
     const navigate = useNavigate();
 
@@ -90,7 +90,8 @@ const MemberOptionsModal = ({ onClose, guildId, guildName }: { onClose: () => vo
         if (!guildId) return;
         // Check if current user can moderate (owner or has roles)
         api.guilds.get(guildId).then((guild: any) => {
-            const me = localStorage.getItem('userId') || '';
+            const me = userId || '';
+            if (!me) return;
             if (guild.ownerId === me) {
                 setCanModerate(true);
                 return;
@@ -117,7 +118,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName }: { onClose: () => vo
                 timeoutUntil: mem.timeoutUntil || null,
             })));
         }).catch(() => {});
-    }, [guildId]);
+    }, [guildId, userId]);
 
     const handleTimeout = async (targetUserId: string, durationSeconds: number) => {
         setTimeoutApplying(true);
