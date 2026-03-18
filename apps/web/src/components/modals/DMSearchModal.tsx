@@ -11,6 +11,7 @@ type Friend = {
     name: string;
     handle: string;
     status: string;
+    avatarHash?: string | null;
 };
 
 const DMSearchModal = ({ onClose }: { onClose: () => void }) => {
@@ -43,6 +44,7 @@ const DMSearchModal = ({ onClose }: { onClose: () => void }) => {
                     name: r.displayName || r.username || 'User',
                     handle: r.username || r.displayName || '',
                     status: r.presence || 'offline',
+                    avatarHash: r.avatarHash ?? null,
                 }));
                 setFriends(mapped);
             })
@@ -127,7 +129,7 @@ const DMSearchModal = ({ onClose }: { onClose: () => void }) => {
                                     background: hoveredUserId === user.id ? 'var(--bg-tertiary)' : 'transparent'
                                 }}
                             >
-                                <Avatar userId={user.id} displayName={user.name} size={40} />
+                                <Avatar userId={user.id} displayName={user.name} avatarHash={user.avatarHash} size={40} />
                                 <div style={{ flex: 1 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <div style={{ fontWeight: 600, fontSize: '15px' }}>{user.name}</div>

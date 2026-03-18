@@ -30,18 +30,21 @@ export default function Leaderboard({ guildId, onClose }: Props) {
   const [metric, setMetric] = useState<Metric>('messages');
   const [period, setPeriod] = useState<Period>('week');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [tab, setTab] = useState<'guild' | 'global'>('guild');
 
   useEffect(() => {
     setLoading(true);
+    setError(false);
     const url = tab === 'guild' && guildId
       ? `/guilds/${guildId}/leaderboard?metric=${metric}&period=${period}`
       : `/leaderboard/global?metric=${metric}`;
     api.get<LeaderboardEntry[]>(url)
       .then(data => setEntries(Array.isArray(data) ? data : []))
-      .catch(() => setEntries([]))
+      .catch(() => { setEntries([]); setError(true); })
       .finally(() => setLoading(false));
-  }, [guildId, metric, period, tab]);
+  }, [guildId, metric, period, tab, retryCount]);
 
   const metricLabel = (e: LeaderboardEntry) => {
     if (metric === 'level') return `Level ${e.level ?? 1}`;
@@ -111,6 +114,11 @@ export default function Leaderboard({ guildId, onClose }: Props) {
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Loading...</div>
+          ) : error ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+              <div style={{ marginBottom: '8px' }}>Failed to load leaderboard</div>
+              <button onClick={() => { setError(false); setRetryCount(c => c + 1); }} style={{ background: 'var(--accent-primary)', color: '#000', border: 'none', borderRadius: '6px', padding: '6px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Retry</button>
+            </div>
           ) : entries.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>No data yet</div>
           ) : entries.map((entry, i) => (

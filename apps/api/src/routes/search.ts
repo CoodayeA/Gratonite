@@ -29,13 +29,12 @@ searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request,
   const escaped = q.replace(/[%_\\]/g, '\\$&');
   const pattern = `%${escaped}%`;
 
-  // Full-text search: use tsvector if available, fallback to ILIKE
-  const tsQuery = q.replace(/[&|!:*()'"]/g, ' ').trim().split(/\s+/).filter(Boolean).join(' & ');
-  const useFts = tsQuery.length > 0;
+  // Full-text search: use plainto_tsquery (safely handles all input) with ILIKE fallback
+  const useFts = q.trim().length > 0;
 
   // Build conditions — prefer ts_rank for relevance if FTS is viable
   const conditions = useFts
-    ? [sql`${messages.content} IS NOT NULL AND (search_vector @@ to_tsquery('english', ${tsQuery}) OR ${messages.content} ILIKE ${pattern})`]
+    ? [sql`${messages.content} IS NOT NULL AND (search_vector @@ plainto_tsquery('english', ${q}) OR ${messages.content} ILIKE ${pattern})`]
     : [sql`${messages.content} ILIKE ${pattern}`];
 
   // mentionsMe filter: messages that contain @userId or @everyone/@here

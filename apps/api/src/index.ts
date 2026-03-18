@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import crypto from 'crypto';
 import express from 'express';
 import { logger } from './lib/logger';
 import http from 'http';
@@ -317,11 +318,22 @@ createBullBoard({
   serverAdapter: bullBoardAdapter,
 });
 
-// Simple auth gate — only allow if Authorization header matches JWT_SECRET
-// (good enough for internal admin; replace with proper admin auth later).
+// Auth gate for Bull Board admin dashboard.
 app.use('/admin/jobs', (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const token = (req.headers.authorization || '').replace('Bearer ', '');
-  if (token !== process.env.JWT_SECRET) {
+  const expected = process.env.BULLBOARD_ADMIN_TOKEN || process.env.JWT_SECRET;
+  if (!expected || !token) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  try {
+    const tokenBuf = Buffer.from(token);
+    const expectedBuf = Buffer.from(expected);
+    if (tokenBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(tokenBuf, expectedBuf)) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+  } catch {
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }

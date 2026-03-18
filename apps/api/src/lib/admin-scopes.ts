@@ -51,18 +51,7 @@ export async function hasAdminScope(userId: string, scope: AdminScope): Promise<
     )
     .limit(1);
 
-  if (scopeMatch) {
-    return true;
-  }
-
-  // Backward-compatible fallback for legacy admins that predate scoped rows.
-  const [hasAnyScope] = await db
-    .select({ id: adminUserScopes.id })
-    .from(adminUserScopes)
-    .where(eq(adminUserScopes.userId, userId))
-    .limit(1);
-
-  return !hasAnyScope;
+  return !!scopeMatch;
 }
 
 export async function grantAdminScopes(userId: string, scopes: AdminScope[], grantedBy?: string): Promise<void> {
