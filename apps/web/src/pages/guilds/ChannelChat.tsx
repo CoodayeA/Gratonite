@@ -2219,8 +2219,12 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         }
     };
 
+    const cursorPosRef = useRef(0);
+
     const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = e.target.value;
+        const cursor = e.target.selectionStart ?? val.length;
+        cursorPosRef.current = cursor;
         setInputValue(val);
 
         // Debounced draft auto-save (2s)
@@ -2247,8 +2251,11 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         // Notify server that we're typing
         if (val.trim().length > 0) sendTypingIndicator();
 
+        // Use text before cursor for autocomplete detection
+        const beforeCursor = val.slice(0, cursor);
+
         // Slash command detection: starts with "/" and no spaces before cursor
-        const slashMatch = val.match(/^\/([a-zA-Z0-9_]*)$/);
+        const slashMatch = beforeCursor.match(/^\/([a-zA-Z0-9_]*)$/);
         if (slashMatch) {
             setSlashSearch(slashMatch[1]);
             setSlashIndex(0);
@@ -2260,9 +2267,9 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             setSlashSearch(null);
         }
 
-        const mentionMatch = val.match(/@([a-zA-Z0-9_]*)$/);
-        const channelMatch = val.match(/#([a-zA-Z0-9_-]*)$/);
-        const emojiMatch = val.match(/(?<!\\):([a-zA-Z0-9_]{1,})$/); // at least 1 char for autocomplete
+        const mentionMatch = beforeCursor.match(/@([a-zA-Z0-9_]*)$/);
+        const channelMatch = beforeCursor.match(/#([a-zA-Z0-9_-]*)$/);
+        const emojiMatch = beforeCursor.match(/(?<!\\):([a-zA-Z0-9_]{1,})$/); // at least 1 char for autocomplete
 
         if (mentionMatch) {
             setMentionSearch(mentionMatch[1]);
@@ -2296,8 +2303,20 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             displayToken = `@${username}#${userId.slice(-4)}`;
         }
         mentionsMapRef.current.set(displayToken, `<@${userId}>`);
-        const val = inputValue.replace(/@([a-zA-Z0-9_]*)$/, `${displayToken} `);
-        setInputValue(val);
+        // Replace the @search text at cursor position
+        const cursor = cursorPosRef.current;
+        const beforeCursor = inputValue.slice(0, cursor);
+        const afterCursor = inputValue.slice(cursor);
+        const replaced = beforeCursor.replace(/@([a-zA-Z0-9_]*)$/, `${displayToken} `);
+        const newVal = replaced + afterCursor;
+        setInputValue(newVal);
+        // Update cursor position after insertion
+        const newCursor = replaced.length;
+        cursorPosRef.current = newCursor;
+        setTimeout(() => {
+            const ta = document.querySelector('.chat-input') as HTMLTextAreaElement | null;
+            if (ta) { ta.selectionStart = ta.selectionEnd = newCursor; }
+        }, 0);
         setMentionSearch(null);
     };
 
@@ -2307,8 +2326,19 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         const channelName = channel?.name || chId;
         const displayToken = `#${channelName}`;
         mentionsMapRef.current.set(displayToken, `<#${chId}>`);
-        const val = inputValue.replace(/#([a-zA-Z0-9_-]*)$/, `${displayToken} `);
-        setInputValue(val);
+        // Replace the #search text at cursor position
+        const cursor = cursorPosRef.current;
+        const beforeCursor = inputValue.slice(0, cursor);
+        const afterCursor = inputValue.slice(cursor);
+        const replaced = beforeCursor.replace(/#([a-zA-Z0-9_-]*)$/, `${displayToken} `);
+        const newVal = replaced + afterCursor;
+        setInputValue(newVal);
+        const newCursor = replaced.length;
+        cursorPosRef.current = newCursor;
+        setTimeout(() => {
+            const ta = document.querySelector('.chat-input') as HTMLTextAreaElement | null;
+            if (ta) { ta.selectionStart = ta.selectionEnd = newCursor; }
+        }, 0);
         setChannelSearch(null);
     };
 
