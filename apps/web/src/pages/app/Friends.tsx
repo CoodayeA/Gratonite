@@ -599,7 +599,7 @@ const Friends = () => {
             {friends.map(friend => (
                 <div
                     key={friend.id}
-                    className="friend-row"
+                    className="friend-row hover-bg-tertiary"
                     onClick={(e) => handleFriendRowClick(friend, e)}
                     style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -607,7 +607,6 @@ const Friends = () => {
                         transition: 'background 0.2s', borderTop: '1px solid transparent',
                         background: selectedFriend?.id === friend.id ? 'var(--bg-tertiary)' : 'transparent',
                     }}
-                    className="hover-bg-tertiary"
                 >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <Avatar
@@ -769,7 +768,7 @@ const Friends = () => {
                                         draggable
                                         onDragStart={() => setDraggedFriendId(friend.id)}
                                         onDragEnd={() => { setDraggedFriendId(null); setDragOverGroupId(null); }}
-                                        className="friend-row"
+                                        className="friend-row hover-bg-tertiary"
                                         onClick={(e) => handleFriendRowClick(friend, e)}
                                         style={{
                                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -778,7 +777,6 @@ const Friends = () => {
                                             background: selectedFriend?.id === friend.id ? 'var(--bg-tertiary)' : draggedFriendId === friend.id ? 'var(--bg-elevated)' : 'transparent',
                                             opacity: draggedFriendId === friend.id ? 0.5 : 1,
                                         }}
-                                        className="hover-bg-tertiary"
                                     >
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                             <Avatar userId={friend.id} displayName={friend.displayName} size={40} status={friend.status} statusRingColor="var(--bg-primary)" avatarHash={friend.avatarHash} />
@@ -1067,11 +1065,11 @@ const Friends = () => {
                             </h3>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                 {requests.filter(r => r.username.includes(searchQuery) || r.displayName.includes(searchQuery)).map(req => (
-                                    <div key={req.id} className="friend-row" style={{
+                                    <div key={req.id} className="friend-row hover-bg-tertiary" style={{
                                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                         padding: '12px 16px', borderRadius: '8px', cursor: 'pointer',
                                         transition: 'background 0.2s'
-                                    }} className="hover-bg-tertiary">
+                                    }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                             <Avatar
                                                 userId={req.id}
