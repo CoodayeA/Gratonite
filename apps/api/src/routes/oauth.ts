@@ -188,6 +188,12 @@ oauthRouter.post('/token', async (req: Request, res: Response): Promise<void> =>
       res.status(400).json({ code: 'INVALID_GRANT', message: 'Invalid refresh token' }); return;
     }
 
+    // Check refresh token expiry
+    if (token.expiresAt && token.expiresAt < new Date()) {
+      await db.delete(oauthTokens).where(eq(oauthTokens.id, token.id));
+      res.status(400).json({ code: 'TOKEN_EXPIRED', message: 'Refresh token expired' }); return;
+    }
+
     // Rotate tokens
     const newAccessToken = crypto.randomBytes(32).toString('hex');
     const newRefreshToken = crypto.randomBytes(32).toString('hex');

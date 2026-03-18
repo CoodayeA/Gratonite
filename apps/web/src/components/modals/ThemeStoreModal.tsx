@@ -128,7 +128,6 @@ export default function ThemeStoreModal({ onClose, preSelectedThemeId }: ThemeSt
         if (found) setSelectedTheme(found);
       }
     } catch (err) {
-      console.error('Failed to fetch themes:', err);
       toast.addToast({ title: 'Failed to load theme store', variant: 'error' });
     } finally {
       setLoading(false);

@@ -97,14 +97,17 @@ const ForwardModal = ({ message, onClose, onForward }: ForwardModalProps) => {
 
     const isSelected = (id: string) => selected.some(s => s.id === id);
 
-    const handleForward = () => {
+    const handleForward = async () => {
         if (selected.length === 0) return;
-        // Send the forwarded message to each destination via API
         const prefix = note.trim() ? `${note.trim()}\n\n` : '';
         const forwardContent = `${prefix}> **Forwarded from ${message.author}**\n> ${(message.content || '').split('\n').join('\n> ')}`;
-        for (const dest of selected) {
-            api.messages.send(dest.id, { content: forwardContent }).catch(() => { addToast({ title: 'Failed to forward message', variant: 'error' }); });
-        }
+        const results = await Promise.allSettled(
+            selected.map(dest => api.messages.send(dest.id, { content: forwardContent }))
+        );
+        const succeeded = results.filter(r => r.status === 'fulfilled').length;
+        const failed = results.filter(r => r.status === 'rejected').length;
+        if (succeeded > 0) addToast({ title: `Message forwarded to ${succeeded} destination${succeeded > 1 ? 's' : ''}`, variant: 'success' });
+        if (failed > 0) addToast({ title: `Failed to forward to ${failed} destination${failed > 1 ? 's' : ''}`, variant: 'error' });
         onForward(selected, note);
     };
 

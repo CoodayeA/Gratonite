@@ -86,7 +86,7 @@ export function MessageComponents({ components, channelId, messageId }: Props) {
     try {
       await api.post(`/channels/${channelId}/messages/${messageId}/components/${encodeURIComponent(button.customId)}/interactions`, {});
     } catch (err) {
-      console.error('Component interaction failed:', err);
+      // interaction failed — silently handled
     } finally {
       setLoading(null);
     }
@@ -97,7 +97,7 @@ export function MessageComponents({ components, channelId, messageId }: Props) {
     try {
       await api.post(`/channels/${channelId}/messages/${messageId}/components/${encodeURIComponent(customId)}/interactions`, { values });
     } catch (err) {
-      console.error('Select interaction failed:', err);
+      // interaction failed — silently handled
     } finally {
       setLoading(null);
     }

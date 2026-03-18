@@ -59,6 +59,9 @@ wordFilterRouter.put('/', requireAuth, async (req: Request, res: Response): Prom
   // Validate regex patterns (item 92)
   const sanitizedRegex: string[] = [];
   if (Array.isArray(regexPatterns)) {
+    if (regexPatterns.length > 100) {
+      res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Too many regex patterns (max 100)' }); return;
+    }
     for (const pat of regexPatterns) {
       try {
         new RegExp(pat); // validate

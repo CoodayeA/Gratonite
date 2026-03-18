@@ -665,7 +665,7 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
             {activeTab === 'emoji' && !search && (
                 <div style={{ height: '36px', borderTop: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', padding: '0 8px', gap: '2px', overflowX: 'auto' }}>
                     {serverEmojis.length > 0 && (
-                        <button onClick={() => scrollToCategory('server')} style={{ width: '30px', height: '28px', background: activeCategory === 'server' ? 'var(--bg-elevated)' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: activeCategory === 'server' ? 'var(--text-primary)' : 'var(--text-muted)', transition: 'all 0.1s' }}
+                        <button onClick={() => scrollToCategory('server')} style={{ width: '36px', height: '36px', background: activeCategory === 'server' ? 'var(--bg-elevated)' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: activeCategory === 'server' ? 'var(--text-primary)' : 'var(--text-muted)', transition: 'all 0.1s' }}
                             onMouseOver={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
                             onMouseOut={e => { if (activeCategory !== 'server') e.currentTarget.style.background = 'transparent'; }}
                         >
@@ -673,7 +673,7 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                         </button>
                     )}
                     {categories.filter(c => c.id !== 'recent' || c.emojis.length > 0).map(cat => (
-                        <button key={cat.id} onClick={() => scrollToCategory(cat.id)} style={{ width: '30px', height: '28px', background: activeCategory === cat.id ? 'var(--bg-elevated)' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: activeCategory === cat.id ? 'var(--text-primary)' : 'var(--text-muted)', transition: 'all 0.1s' }}
+                        <button key={cat.id} onClick={() => scrollToCategory(cat.id)} style={{ width: '36px', height: '36px', background: activeCategory === cat.id ? 'var(--bg-elevated)' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: activeCategory === cat.id ? 'var(--text-primary)' : 'var(--text-muted)', transition: 'all 0.1s' }}
                             onMouseOver={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
                             onMouseOut={e => { if (activeCategory !== cat.id) e.currentTarget.style.background = 'transparent'; }}
                         >

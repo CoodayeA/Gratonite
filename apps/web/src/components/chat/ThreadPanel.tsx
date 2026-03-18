@@ -227,7 +227,6 @@ const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) 
             setInputValue('');
             setShowEmojiPicker(false);
         } catch (err: any) {
-            console.error('Failed to send thread reply:', err);
             // Surface the error to the user
             const detail = err?.message || err?.code || 'Unknown error';
             addToast({ title: 'Failed to send thread reply', description: detail, variant: 'error' });

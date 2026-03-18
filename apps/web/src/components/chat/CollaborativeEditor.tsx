@@ -85,7 +85,6 @@ export default function CollaborativeEditor({ channelId, channelName }: Collabor
         setLastSaved(new Date(doc.updatedAt));
         setLoaded(true);
       } catch (err) {
-        console.error('[CollaborativeEditor] Failed to load document:', err);
         setLoaded(true);
       }
     }
@@ -167,7 +166,7 @@ export default function CollaborativeEditor({ channelId, channelName }: Collabor
       });
       setLastSaved(new Date());
     } catch (err) {
-      console.error('[CollaborativeEditor] Save failed:', err);
+      // save failed — will retry on next autosave
     } finally {
       setSaving(false);
     }

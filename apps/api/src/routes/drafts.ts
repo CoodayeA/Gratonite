@@ -12,7 +12,8 @@ draftsRouter.get('/users/@me/drafts', requireAuth, async (req: Request, res: Res
   try {
     const drafts = await db.select()
       .from(messageDrafts)
-      .where(eq(messageDrafts.userId, req.userId!));
+      .where(eq(messageDrafts.userId, req.userId!))
+      .limit(200);
     res.json(drafts);
   } catch (err) {
     logger.error('[drafts] GET all error:', err);
