@@ -325,8 +325,7 @@ const ChannelNotesPanel = ({ channelId, onClose }: ChannelNotesPanelProps) => {
                                 borderBottom: '1px solid var(--stroke)',
                                 transition: 'background 0.15s',
                             }}
-                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
-                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                            className="hover-bg-tertiary"
                         >
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>

@@ -321,8 +321,7 @@ const CreatorDashboard = () => {
                             <div
                                 key={sub.id}
                                 style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 140px', gap: '16px', padding: '16px 24px', borderBottom: idx === submissions.length - 1 ? 'none' : '1px solid var(--stroke)', alignItems: 'center', transition: 'background 0.2s' }}
-                                onMouseOver={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
-                                onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+                                className="hover-bg-white-2"
                             >
                                 <div>
                                     <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '2px' }}>{sub.name}</div>

@@ -117,6 +117,8 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
   const roomRef = useRef<Room | null>(null);
   // Monotonic connect attempt id to ignore stale async callbacks/errors.
   const connectAttemptRef = useRef(0);
+  // True when the user explicitly clicked disconnect (vs component unmounting due to navigation)
+  const intentionalDisconnectRef = useRef(false);
 
   // Connection state
   const [isConnected, setIsConnected] = useState(false);
@@ -298,6 +300,10 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
       return;
     }
 
+    // Reset the intentional disconnect flag so navigation-triggered unmounts
+    // won't tear down this fresh connection.
+    intentionalDisconnectRef.current = false;
+
     if (!channelId) {
       const unresolvedMessage = 'Call channel unavailable. Re-open the conversation and retry.';
       setConnectionError(unresolvedMessage);
@@ -467,6 +473,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
 
   // Disconnect from room
   const disconnect = useCallback(async () => {
+    intentionalDisconnectRef.current = true;
     // Invalidate any in-flight connect attempt callbacks.
     connectAttemptRef.current += 1;
     const room = roomRef.current;
@@ -745,12 +752,19 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
 
   useEffect(() => {
     return () => {
-      connectAttemptRef.current += 1;
-      api.voice.leave().catch(() => {});
-      const room = roomRef.current;
-      if (room) {
-        room.disconnect();
-        roomRef.current = null;
+      // Only tear down the LiveKit room if the user explicitly disconnected
+      // (e.g. clicked "Leave Voice"). When the component unmounts because of
+      // navigation to a text channel, we keep the room alive so VoiceBar
+      // stays connected and re-mounting VoiceChannel can resume seamlessly.
+      if (intentionalDisconnectRef.current) {
+        connectAttemptRef.current += 1;
+        api.voice.leave().catch(() => {});
+        const room = roomRef.current;
+        if (room) {
+          room.disconnect();
+          roomRef.current = null;
+        }
+        intentionalDisconnectRef.current = false;
       }
     };
   }, []);

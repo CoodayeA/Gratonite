@@ -474,8 +474,7 @@ const ForumChannel = () => {
                                     borderRadius: '12px', padding: '16px 24px', display: 'flex', gap: '24px',
                                     cursor: 'pointer', transition: 'border-color 0.2s, background 0.2s',
                                 }}
-                                onMouseOver={e => e.currentTarget.style.borderColor = 'var(--text-muted)'}
-                                onMouseOut={e => e.currentTarget.style.borderColor = 'var(--stroke)'}
+                                className="hover-border-muted"
                             >
                                 <div style={{ flex: 1 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>

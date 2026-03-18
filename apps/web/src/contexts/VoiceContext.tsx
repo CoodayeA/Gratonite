@@ -32,6 +32,8 @@ interface VoiceContextValue extends VoiceState {
   setParticipantCount: (count: number) => void;
   /** Called by VoiceChannel to register the real LiveKit mute handler */
   registerMuteHandler: (fn: (() => Promise<void>) | null) => void;
+  /** Called by VoiceChannel to register the real LiveKit disconnect handler */
+  registerDisconnectHandler: (fn: (() => Promise<void>) | null) => void;
   /** Called by VoiceChannel to push the authoritative isMuted value into context */
   syncMuted: (muted: boolean) => void;
 }
@@ -55,9 +57,15 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
   // Ref to the real LiveKit toggleMute, registered by VoiceChannel on mount
   const liveKitToggleMuteRef = useRef<(() => Promise<void>) | null>(null);
+  // Ref to the real LiveKit disconnect, registered by VoiceChannel on mount
+  const liveKitDisconnectRef = useRef<(() => Promise<void>) | null>(null);
 
   const registerMuteHandler = useCallback((fn: (() => Promise<void>) | null) => {
     liveKitToggleMuteRef.current = fn;
+  }, []);
+
+  const registerDisconnectHandler = useCallback((fn: (() => Promise<void>) | null) => {
+    liveKitDisconnectRef.current = fn;
   }, []);
 
   const syncMuted = useCallback((muted: boolean) => {
@@ -79,7 +87,13 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const leaveVoice = useCallback(() => {
+    // If a LiveKit disconnect handler is registered, call it to properly tear
+    // down the WebRTC room (sets the intentional-disconnect flag in useLiveKit).
+    if (liveKitDisconnectRef.current) {
+      liveKitDisconnectRef.current().catch(() => {});
+    }
     liveKitToggleMuteRef.current = null;
+    liveKitDisconnectRef.current = null;
     setState(defaultState);
   }, []);
 
@@ -104,7 +118,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <VoiceContext.Provider value={{ ...state, joinVoice, leaveVoice, toggleMute, toggleDeafen, setParticipantCount, registerMuteHandler, syncMuted }}>
+    <VoiceContext.Provider value={{ ...state, joinVoice, leaveVoice, toggleMute, toggleDeafen, setParticipantCount, registerMuteHandler, registerDisconnectHandler, syncMuted }}>
       {children}
     </VoiceContext.Provider>
   );

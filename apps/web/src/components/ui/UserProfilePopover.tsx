@@ -640,8 +640,7 @@ const UserProfilePopover = ({
                                                 fontSize: '13px', fontWeight: 500, cursor: 'pointer',
                                                 textAlign: 'left',
                                             }}
-                                            onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-overlay)'; }}
-                                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                                            className="hover-bg-overlay"
                                         >
                                             {item.icon} {item.label}
                                         </button>

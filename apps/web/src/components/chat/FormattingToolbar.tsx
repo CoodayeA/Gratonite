@@ -58,8 +58,7 @@ export function FormattingToolbar({ textareaSelector, onInputChange, getValue }:
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             transition: 'all 0.15s',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-secondary)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                        className="hover-bg-secondary-text-primary"
                     >
                         <btn.icon size={14} />
                     </button>

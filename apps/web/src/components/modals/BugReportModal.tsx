@@ -109,7 +109,7 @@ const BugReportModal = ({ onClose }: { onClose: () => void }) => {
 
                             <div className="form-group">
                                 <label>Attachments</label>
-                                <div style={{ border: '1px dashed var(--stroke)', borderRadius: '8px', padding: '24px', textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', cursor: 'pointer', transition: 'border-color 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }} onMouseOver={e => e.currentTarget.style.borderColor = 'var(--text-muted)'} onMouseOut={e => e.currentTarget.style.borderColor = 'var(--stroke)'}>
+                                <div className="hover-border-muted" style={{ border: '1px dashed var(--stroke)', borderRadius: '8px', padding: '24px', textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', cursor: 'pointer', transition: 'border-color 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                                     <Upload size={20} />
                                     <div style={{ fontSize: '13px' }}>Click or drag a screenshot here</div>
                                 </div>

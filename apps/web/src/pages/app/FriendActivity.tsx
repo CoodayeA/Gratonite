@@ -216,8 +216,7 @@ const FriendActivity = () => {
                     display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px',
                     borderRadius: '8px', cursor: 'pointer', transition: 'background 0.15s',
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  className="hover-bg-tertiary"
                 >
                   <Avatar userId={friend.id} avatarHash={friend.avatarHash} displayName={friend.displayName} size={32} status={friend.status} />
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -307,8 +306,7 @@ const FriendActivity = () => {
                     cursor: isClickable ? 'pointer' : 'default',
                     transition: 'background 0.15s',
                   }}
-                  onMouseEnter={e => { if (isClickable) (e.currentTarget as HTMLElement).style.background = 'var(--bg-tertiary)'; }}
-                  onMouseLeave={e => { if (isClickable) (e.currentTarget as HTMLElement).style.background = 'var(--bg-elevated)'; }}
+                  className={isClickable ? 'hover-bg-tertiary' : ''}
                 >
                   <Avatar userId={event.userId} avatarHash={event.avatarHash} displayName={event.displayName} size={36} />
                   <div style={{ flex: 1, minWidth: 0 }}>

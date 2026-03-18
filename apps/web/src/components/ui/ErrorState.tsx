@@ -127,8 +127,7 @@ export const ErrorState = ({
                         gap: '8px',
                         transition: 'opacity 0.15s',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
-                    onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+                    className="hover-opacity-85"
                 >
                     <RefreshCw size={16} />
                     {retryLabel}

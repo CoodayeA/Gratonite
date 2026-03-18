@@ -282,8 +282,7 @@ export function AccountSwitcher() {
             {/* Add Account */}
             <button
               onClick={addAccount}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-primary)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              className="hover-bg-primary"
               style={{
                 display: 'flex',
                 alignItems: 'center',

@@ -817,8 +817,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                             aspectRatio: '1',
                                                         }}
-                                                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.background = 'var(--bg-secondary)'; }}
-                                                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
+                                                        className="hover-sticker-item"
                                                         title={sticker.name}
                                                     >
                                                         <img src={sticker.url} alt={sticker.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />

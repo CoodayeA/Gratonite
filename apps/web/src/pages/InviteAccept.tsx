@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Users, LogIn, AlertCircle, ArrowLeft } from 'lucide-react';
 import { api, getAccessToken } from '../lib/api';
 import { getDeterministicGradient } from '../utils/colors';
+import { useToast } from '../components/ui/ToastManager';
 
 interface InviteGuild {
     id: string;
@@ -180,6 +181,7 @@ function ErrorState({ message, onBack }: { message: string; onBack: () => void }
     const [appealText, setAppealText] = useState('');
     const [appealSent, setAppealSent] = useState(false);
     const [appealSending, setAppealSending] = useState(false);
+    const { addToast } = useToast();
 
     const handleAppeal = async () => {
         if (!appealText.trim()) return;
@@ -193,7 +195,7 @@ function ErrorState({ message, onBack }: { message: string; onBack: () => void }
             }
             setAppealSent(true);
         } catch {
-            // silently fail
+            addToast({ title: 'Failed to submit ban appeal', description: 'Please try again.', variant: 'error' });
         } finally {
             setAppealSending(false);
         }

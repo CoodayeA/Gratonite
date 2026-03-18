@@ -109,6 +109,200 @@ const accentColors = [
 
 const VIEW_CHANNEL_BIT = 1n << 8n;
 
+function CurrencyPanel({ guildId, addToast }: { guildId: string; addToast: (t: { title: string; variant: string }) => void }) {
+    const [currencyEnabled, setCurrencyEnabled] = useState(false);
+    const [currencyName, setCurrencyName] = useState('');
+    const [currencyEmoji, setCurrencyEmoji] = useState('\u{1F4B0}');
+    const [currencyEarnMsg, setCurrencyEarnMsg] = useState(1);
+    const [currencyEarnReact, setCurrencyEarnReact] = useState(1);
+    const [currencyEarnVoice, setCurrencyEarnVoice] = useState(2);
+    const [currencySaving, setCurrencySaving] = useState(false);
+    const [currencyLeaderboard, setCurrencyLeaderboard] = useState<Array<{ userId: string; balance: number; lifetimeEarned: number }>>([]);
+
+    useEffect(() => {
+        api.get<any>(`/guilds/${guildId}/currency`).then((data: any) => {
+            if (data.enabled) {
+                setCurrencyEnabled(true);
+                setCurrencyName(data.currency?.name ?? '');
+                setCurrencyEmoji(data.currency?.emoji ?? '\u{1F4B0}');
+                setCurrencyEarnMsg(data.currency?.earnPerMessage ?? 1);
+                setCurrencyEarnReact(data.currency?.earnPerReaction ?? 1);
+                setCurrencyEarnVoice(data.currency?.earnPerVoiceMinute ?? 2);
+            } else {
+                setCurrencyEnabled(false);
+            }
+        }).catch(() => {});
+        api.get<any>(`/guilds/${guildId}/currency/leaderboard`).then((data: any) => {
+            if (Array.isArray(data)) setCurrencyLeaderboard(data);
+        }).catch(() => {});
+    }, [guildId]);
+
+    const saveCurrency = async () => {
+        if (!currencyName.trim()) {
+            addToast({ title: 'Currency name required', variant: 'error' });
+            return;
+        }
+        setCurrencySaving(true);
+        try {
+            await api.post(`/guilds/${guildId}/currency`, {
+                name: currencyName.trim(),
+                emoji: currencyEmoji,
+                earnPerMessage: currencyEarnMsg,
+                earnPerReaction: currencyEarnReact,
+                earnPerVoiceMinute: currencyEarnVoice,
+            });
+            setCurrencyEnabled(true);
+            addToast({ title: 'Server currency saved', variant: 'success' });
+        } catch {
+            addToast({ title: 'Failed to save currency', variant: 'error' });
+        } finally {
+            setCurrencySaving(false);
+        }
+    };
+
+    const deleteCurrency = async () => {
+        setCurrencySaving(true);
+        try {
+            await api.delete(`/guilds/${guildId}/currency`);
+            setCurrencyEnabled(false);
+            setCurrencyName('');
+            setCurrencyEmoji('\u{1F4B0}');
+            setCurrencyLeaderboard([]);
+            addToast({ title: 'Server currency disabled', variant: 'success' });
+        } catch {
+            addToast({ title: 'Failed to disable currency', variant: 'error' });
+        } finally {
+            setCurrencySaving(false);
+        }
+    };
+
+    return (
+        <>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Currency</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
+                Create a custom currency for your server. Members earn it by participating and can compete on the leaderboard.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
+                    <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Currency Name</label>
+                        <input
+                            type="text"
+                            value={currencyName}
+                            onChange={e => setCurrencyName(e.target.value)}
+                            placeholder="e.g. Server Coins"
+                            maxLength={50}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
+                        />
+                    </div>
+                    <div style={{ width: '80px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Emoji</label>
+                        <input
+                            type="text"
+                            value={currencyEmoji}
+                            onChange={e => setCurrencyEmoji(e.target.value.slice(0, 4))}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '18px', textAlign: 'center', outline: 'none' }}
+                        />
+                    </div>
+                </div>
+
+                <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', padding: '16px', border: '1px solid var(--stroke)' }}>
+                    <h4 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px', color: 'var(--text-primary)' }}>Earning Rules</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {[
+                            { label: 'Per Message', value: currencyEarnMsg, setter: setCurrencyEarnMsg },
+                            { label: 'Per Reaction', value: currencyEarnReact, setter: setCurrencyEarnReact },
+                            { label: 'Per Voice Minute', value: currencyEarnVoice, setter: setCurrencyEarnVoice },
+                        ].map(({ label, value, setter }) => (
+                            <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{label}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={100}
+                                        value={value}
+                                        onChange={e => setter(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
+                                        style={{ width: '60px', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', textAlign: 'center', outline: 'none' }}
+                                    />
+                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{currencyEmoji}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                        onClick={saveCurrency}
+                        disabled={currencySaving || !currencyName.trim()}
+                        style={{
+                            flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
+                            background: 'var(--accent-primary)', color: '#000', fontWeight: 700,
+                            cursor: currencySaving ? 'wait' : 'pointer', opacity: !currencyName.trim() ? 0.5 : 1,
+                        }}
+                    >
+                        {currencySaving ? 'Saving...' : currencyEnabled ? 'Update Currency' : 'Enable Currency'}
+                    </button>
+                    {currencyEnabled && (
+                        <button
+                            onClick={deleteCurrency}
+                            disabled={currencySaving}
+                            style={{
+                                padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--error)',
+                                background: 'transparent', color: 'var(--error)', fontWeight: 600,
+                                cursor: currencySaving ? 'wait' : 'pointer',
+                            }}
+                        >
+                            Disable
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {currencyEnabled && currencyLeaderboard.length > 0 && (
+                <div style={{ marginTop: '24px' }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '12px' }}>Leaderboard</h3>
+                    <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
+                        {currencyLeaderboard.map((entry, i) => (
+                            <div key={entry.userId} style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                padding: '10px 16px',
+                                borderBottom: i < currencyLeaderboard.length - 1 ? '1px solid var(--stroke)' : 'none',
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <span style={{
+                                        width: '24px', height: '24px', borderRadius: '50%',
+                                        background: i === 0 ? '#ffd700' : i === 1 ? '#c0c0c0' : i === 2 ? '#cd7f32' : 'var(--bg-primary)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: '11px', fontWeight: 700, color: i < 3 ? '#111' : 'var(--text-muted)',
+                                    }}>
+                                        {i + 1}
+                                    </span>
+                                    <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>
+                                        {entry.userId.slice(0, 8)}...
+                                    </span>
+                                </div>
+                                <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-primary)' }}>
+                                    {entry.balance.toLocaleString()} {currencyEmoji}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {currencyEnabled && currencyLeaderboard.length === 0 && (
+                <div style={{ marginTop: '24px', textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                    <p style={{ fontWeight: 600, marginBottom: '4px' }}>No balances yet</p>
+                    <p style={{ fontSize: '13px' }}>Members will start earning {currencyEmoji} {currencyName} as they chat and participate.</p>
+                </div>
+            )}
+        </>
+    );
+}
+
 const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId?: string | null }) => {
     const { addToast } = useToast();
     const { user: currentUser } = useUser();
@@ -828,16 +1022,6 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [boostCount, setBoostCount] = useState(0);
     const [boostTier, setBoostTier] = useState(0);
 
-    // Server currency state
-    const [currencyEnabled, setCurrencyEnabled] = useState(false);
-    const [currencyName, setCurrencyName] = useState('');
-    const [currencyEmoji, setCurrencyEmoji] = useState('💰');
-    const [currencyEarnMsg, setCurrencyEarnMsg] = useState(1);
-    const [currencyEarnReact, setCurrencyEarnReact] = useState(1);
-    const [currencyEarnVoice, setCurrencyEarnVoice] = useState(2);
-    const [currencySaving, setCurrencySaving] = useState(false);
-    const [currencyLeaderboard, setCurrencyLeaderboard] = useState<Array<{ userId: string; balance: number; lifetimeEarned: number }>>([]);
-
     // Welcome screen builder state
     type WelcomeBlockType = 'message' | 'channels' | 'rules' | 'links';
     interface WelcomeBlock {
@@ -1311,9 +1495,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                     <button onClick={onClose} style={{ marginRight: 'auto', padding: '6px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '16px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600 }}>
                         <X size={14} /> Close
                     </button>
-                    {(['overview', 'channels', 'roles', 'members', 'invites', 'templates', 'import', 'emojis', 'branding', 'webhooks', 'bots', 'automod', 'wordfilter', 'spam', 'bans', 'audit', 'modqueue', 'security', 'insights', 'onboarding', 'welcome', 'soundboard', 'backups', 'highlights'] as const).map(tab => (
+                    {(['overview', 'channels', 'roles', 'members', 'invites', 'templates', 'import', 'emojis', 'stickers', 'branding', 'webhooks', 'bots', 'automod', 'wordfilter', 'spam', 'bans', 'audit', 'modqueue', 'security', 'insights', 'onboarding', 'rules', 'discovery', 'welcome', 'boosts', 'currency', 'soundboard', 'backups', 'highlights'] as const).map(tab => (
                         <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>
-                            {tab === 'emojis' ? 'Emojis' : tab === 'branding' ? 'Brand' : tab === 'webhooks' ? 'Webhooks' : tab === 'bots' ? 'Bots' : tab === 'automod' ? 'AutoMod' : tab === 'wordfilter' ? 'Word Filter' : tab === 'audit' ? 'Audit Log' : tab === 'welcome' ? 'Welcome' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            {tab === 'emojis' ? 'Emojis' : tab === 'stickers' ? 'Stickers' : tab === 'branding' ? 'Brand' : tab === 'webhooks' ? 'Webhooks' : tab === 'bots' ? 'Bots' : tab === 'automod' ? 'AutoMod' : tab === 'wordfilter' ? 'Word Filter' : tab === 'audit' ? 'Audit Log' : tab === 'welcome' ? 'Welcome' : tab === 'rules' ? 'Server Rules' : tab === 'discovery' ? 'Discovery' : tab === 'boosts' ? 'Boosts' : tab === 'currency' ? 'Currency' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                         </button>
                     ))}
                 </div>
@@ -3738,194 +3922,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                         );
                     })()}
 
-                    {activeTab === 'currency' && (() => {
-                        const loadCurrency = () => {
-                            if (!guildId) return;
-                            api.get<any>(`/guilds/${guildId}/currency`).then((data: any) => {
-                                if (data.enabled) {
-                                    setCurrencyEnabled(true);
-                                    setCurrencyName(data.currency?.name ?? '');
-                                    setCurrencyEmoji(data.currency?.emoji ?? '💰');
-                                    setCurrencyEarnMsg(data.currency?.earnPerMessage ?? 1);
-                                    setCurrencyEarnReact(data.currency?.earnPerReaction ?? 1);
-                                    setCurrencyEarnVoice(data.currency?.earnPerVoiceMinute ?? 2);
-                                } else {
-                                    setCurrencyEnabled(false);
-                                }
-                            }).catch(() => {});
-                            api.get<any>(`/guilds/${guildId}/currency/leaderboard`).then((data: any) => {
-                                if (Array.isArray(data)) setCurrencyLeaderboard(data);
-                            }).catch(() => {});
-                        };
-                        // eslint-disable-next-line react-hooks/rules-of-hooks
-                        useEffect(() => { loadCurrency(); }, [guildId]);
-
-                        const saveCurrency = async () => {
-                            if (!guildId || !currencyName.trim()) {
-                                addToast({ title: 'Currency name required', variant: 'error' });
-                                return;
-                            }
-                            setCurrencySaving(true);
-                            try {
-                                await api.post(`/guilds/${guildId}/currency`, {
-                                    name: currencyName.trim(),
-                                    emoji: currencyEmoji,
-                                    earnPerMessage: currencyEarnMsg,
-                                    earnPerReaction: currencyEarnReact,
-                                    earnPerVoiceMinute: currencyEarnVoice,
-                                });
-                                setCurrencyEnabled(true);
-                                addToast({ title: 'Server currency saved', variant: 'success' });
-                            } catch {
-                                addToast({ title: 'Failed to save currency', variant: 'error' });
-                            } finally {
-                                setCurrencySaving(false);
-                            }
-                        };
-
-                        const deleteCurrency = async () => {
-                            if (!guildId) return;
-                            setCurrencySaving(true);
-                            try {
-                                await api.delete(`/guilds/${guildId}/currency`);
-                                setCurrencyEnabled(false);
-                                setCurrencyName('');
-                                setCurrencyEmoji('💰');
-                                setCurrencyLeaderboard([]);
-                                addToast({ title: 'Server currency disabled', variant: 'success' });
-                            } catch {
-                                addToast({ title: 'Failed to disable currency', variant: 'error' });
-                            } finally {
-                                setCurrencySaving(false);
-                            }
-                        };
-
-                        return (
-                            <>
-                                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Currency</h2>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
-                                    Create a custom currency for your server. Members earn it by participating and can compete on the leaderboard.
-                                </p>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Currency Name</label>
-                                            <input
-                                                type="text"
-                                                value={currencyName}
-                                                onChange={e => setCurrencyName(e.target.value)}
-                                                placeholder="e.g. Server Coins"
-                                                maxLength={50}
-                                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
-                                            />
-                                        </div>
-                                        <div style={{ width: '80px' }}>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Emoji</label>
-                                            <input
-                                                type="text"
-                                                value={currencyEmoji}
-                                                onChange={e => setCurrencyEmoji(e.target.value.slice(0, 4))}
-                                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '18px', textAlign: 'center', outline: 'none' }}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', padding: '16px', border: '1px solid var(--stroke)' }}>
-                                        <h4 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px', color: 'var(--text-primary)' }}>Earning Rules</h4>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                            {[
-                                                { label: 'Per Message', value: currencyEarnMsg, setter: setCurrencyEarnMsg },
-                                                { label: 'Per Reaction', value: currencyEarnReact, setter: setCurrencyEarnReact },
-                                                { label: 'Per Voice Minute', value: currencyEarnVoice, setter: setCurrencyEarnVoice },
-                                            ].map(({ label, value, setter }) => (
-                                                <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{label}</span>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <input
-                                                            type="number"
-                                                            min={0}
-                                                            max={100}
-                                                            value={value}
-                                                            onChange={e => setter(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
-                                                            style={{ width: '60px', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', textAlign: 'center', outline: 'none' }}
-                                                        />
-                                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{currencyEmoji}</span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        <button
-                                            onClick={saveCurrency}
-                                            disabled={currencySaving || !currencyName.trim()}
-                                            style={{
-                                                flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
-                                                background: 'var(--accent-primary)', color: '#000', fontWeight: 700,
-                                                cursor: currencySaving ? 'wait' : 'pointer', opacity: !currencyName.trim() ? 0.5 : 1,
-                                            }}
-                                        >
-                                            {currencySaving ? 'Saving...' : currencyEnabled ? 'Update Currency' : 'Enable Currency'}
-                                        </button>
-                                        {currencyEnabled && (
-                                            <button
-                                                onClick={deleteCurrency}
-                                                disabled={currencySaving}
-                                                style={{
-                                                    padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--error)',
-                                                    background: 'transparent', color: 'var(--error)', fontWeight: 600,
-                                                    cursor: currencySaving ? 'wait' : 'pointer',
-                                                }}
-                                            >
-                                                Disable
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {currencyEnabled && currencyLeaderboard.length > 0 && (
-                                    <div style={{ marginTop: '24px' }}>
-                                        <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '12px' }}>Leaderboard</h3>
-                                        <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
-                                            {currencyLeaderboard.map((entry, i) => (
-                                                <div key={entry.userId} style={{
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                    padding: '10px 16px',
-                                                    borderBottom: i < currencyLeaderboard.length - 1 ? '1px solid var(--stroke)' : 'none',
-                                                }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                        <span style={{
-                                                            width: '24px', height: '24px', borderRadius: '50%',
-                                                            background: i === 0 ? '#ffd700' : i === 1 ? '#c0c0c0' : i === 2 ? '#cd7f32' : 'var(--bg-primary)',
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                            fontSize: '11px', fontWeight: 700, color: i < 3 ? '#111' : 'var(--text-muted)',
-                                                        }}>
-                                                            {i + 1}
-                                                        </span>
-                                                        <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>
-                                                            {entry.userId.slice(0, 8)}...
-                                                        </span>
-                                                    </div>
-                                                    <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-primary)' }}>
-                                                        {entry.balance.toLocaleString()} {currencyEmoji}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {currencyEnabled && currencyLeaderboard.length === 0 && (
-                                    <div style={{ marginTop: '24px', textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                                        <p style={{ fontWeight: 600, marginBottom: '4px' }}>No balances yet</p>
-                                        <p style={{ fontSize: '13px' }}>Members will start earning {currencyEmoji} {currencyName} as they chat and participate.</p>
-                                    </div>
-                                )}
-                            </>
-                        );
-                    })()}
+                    {activeTab === 'currency' && guildId && <CurrencyPanel guildId={guildId} addToast={addToast} />}
 
                     {activeTab === 'welcome' && (() => {
                         const BLOCK_META: Record<WelcomeBlockType, { label: string; icon: React.ReactNode; desc: string }> = {

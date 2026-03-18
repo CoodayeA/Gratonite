@@ -101,8 +101,7 @@ export function ChannelWelcomeCard({ channelId, channelName, topic }: Props) {
                     color: 'white', fontSize: '12px', fontWeight: 600,
                     cursor: 'pointer', transition: 'opacity 0.15s',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
-                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                className="hover-opacity-dim"
             >
                 Got it
             </button>

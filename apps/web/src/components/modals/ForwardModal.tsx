@@ -215,8 +215,7 @@ const ForwardModal = ({ message, onClose, onForward }: ForwardModalProps) => {
                                     background: isSelected(dest.id) ? 'rgba(var(--accent-primary-rgb, 99, 102, 241), 0.1)' : 'transparent',
                                     opacity: selected.length >= 5 && !isSelected(dest.id) ? 0.4 : 1,
                                 }}
-                                onMouseEnter={e => { if (!(selected.length >= 5 && !isSelected(dest.id))) e.currentTarget.style.background = isSelected(dest.id) ? 'rgba(var(--accent-primary-rgb, 99, 102, 241), 0.15)' : 'var(--bg-tertiary)'; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = isSelected(dest.id) ? 'rgba(var(--accent-primary-rgb, 99, 102, 241), 0.1)' : 'transparent'; }}
+                                className={selected.length >= 5 && !isSelected(dest.id) ? '' : isSelected(dest.id) ? 'hover-forward-selected' : 'hover-forward-unselected'}
                             >
                                 {dest.type === 'channel' ? (
                                     <div style={{

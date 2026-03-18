@@ -168,8 +168,7 @@ export default function ProfilePet({ userId, messageCount = 0, compact = false, 
             fontSize: '28px', cursor: 'pointer', position: 'relative',
             transition: 'transform 0.2s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.2)'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+          className="hover-scale-up"
         >
           {emoji}
           {showHeart && (
