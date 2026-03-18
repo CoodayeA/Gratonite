@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { getSocket } from '../../lib/socket';
 import { useNavigate } from 'react-router-dom';
 import { Search, UserPlus, MoreVertical, MessageSquare, X, UserMinus, VolumeX, Flag, Phone, Video, User, Gamepad2, Headphones, Eye, ChevronDown, ChevronRight, FolderPlus, Pencil, Trash2, Palette } from 'lucide-react';
@@ -10,6 +10,8 @@ import Avatar from '../../components/ui/Avatar';
 import { SkeletonFriendList } from '../../components/ui/SkeletonLoader';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
+
+const UserProfileModal = lazy(() => import('../../components/modals/UserProfileModal'));
 
 function ReferralCard() {
     const [refData, setRefData] = useState<{ code: string; referralLink: string; count: number } | null>(null);
@@ -70,6 +72,7 @@ const Friends = () => {
     const [moreMenuId, setMoreMenuId] = useState<string | null>(null);
     const [addFriendInput, setAddFriendInput] = useState('');
     const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
+    const [profileUser, setProfileUser] = useState<Friend | null>(null);
     const detailPanelRef = useRef<HTMLDivElement>(null);
 
     // Real data from API
@@ -418,8 +421,7 @@ const Friends = () => {
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             transition: 'all 0.15s',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                        className="hover-bg-tertiary-text-primary"
                     >
                         <X size={16} />
                     </button>
@@ -476,8 +478,7 @@ const Friends = () => {
                             color: 'var(--text-secondary)', cursor: 'pointer',
                             transition: 'all 0.15s', fontSize: '11px', fontWeight: 500,
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                        className="friend-action-btn"
                     >
                         <MessageSquare size={20} />
                         Message
@@ -499,8 +500,7 @@ const Friends = () => {
                             color: 'var(--text-secondary)', cursor: 'pointer',
                             transition: 'all 0.15s', fontSize: '11px', fontWeight: 500,
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                        className="friend-action-btn"
                     >
                         <Phone size={20} />
                         Voice Call
@@ -522,8 +522,7 @@ const Friends = () => {
                             color: 'var(--text-secondary)', cursor: 'pointer',
                             transition: 'all 0.15s', fontSize: '11px', fontWeight: 500,
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                        className="friend-action-btn"
                     >
                         <Video size={20} />
                         Video Call
@@ -537,7 +536,7 @@ const Friends = () => {
                 <div style={{ padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <button
                         onClick={() => {
-                            addToast({ title: 'Profile', description: `Opening profile for ${selectedFriend.displayName}`, variant: 'info' });
+                            setProfileUser(selectedFriend);
                         }}
                         style={{
                             display: 'flex', alignItems: 'center', gap: '10px',
@@ -547,8 +546,7 @@ const Friends = () => {
                             transition: 'all 0.15s', fontSize: '14px', fontWeight: 500,
                             width: '100%', textAlign: 'left',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                        className="hover-bg-tertiary-text-primary"
                     >
                         <User size={16} />
                         View Full Profile
@@ -567,8 +565,7 @@ const Friends = () => {
                             transition: 'all 0.15s', fontSize: '14px', fontWeight: 500,
                             width: '100%', textAlign: 'left',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                        className="hover-bg-tertiary-text-primary"
                     >
                         <Flag size={16} />
                         Block User
@@ -587,8 +584,7 @@ const Friends = () => {
                             transition: 'all 0.15s', fontSize: '14px', fontWeight: 500,
                             width: '100%', textAlign: 'left',
                         }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        className="hover-bg-tertiary"
                     >
                         <UserMinus size={16} />
                         Remove Friend
@@ -611,8 +607,7 @@ const Friends = () => {
                         transition: 'background 0.2s', borderTop: '1px solid transparent',
                         background: selectedFriend?.id === friend.id ? 'var(--bg-tertiary)' : 'transparent',
                     }}
-                    onMouseOver={e => { if (selectedFriend?.id !== friend.id) e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
-                    onMouseOut={e => { if (selectedFriend?.id !== friend.id) e.currentTarget.style.background = 'transparent'; }}
+                    className="hover-bg-tertiary"
                 >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <Avatar
@@ -674,13 +669,13 @@ const Friends = () => {
                         </button>
                         {moreMenuId === friend.id && (
                             <div style={{ position: 'absolute', top: '42px', right: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '4px', minWidth: '160px', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
-                                <div onClick={() => { setMoreMenuId(null); handleRemoveFriend(friend.id, friend.displayName); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                                <div onClick={() => { setMoreMenuId(null); handleRemoveFriend(friend.id, friend.displayName); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }} className="hover-bg-tertiary">
                                     <UserMinus size={14} /> Remove Friend
                                 </div>
-                                <div onClick={() => { setMoreMenuId(null); addToast({ title: 'User Muted', description: `${friend.displayName} has been muted.`, variant: 'info' }); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                                <div onClick={() => { setMoreMenuId(null); addToast({ title: 'User Muted', description: `${friend.displayName} has been muted.`, variant: 'info' }); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }} className="hover-bg-tertiary">
                                     <VolumeX size={14} /> Mute
                                 </div>
-                                <div onClick={() => { setMoreMenuId(null); addToast({ title: 'User Reported', description: `Report filed for ${friend.displayName}.`, variant: 'info' }); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--error)', transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                                <div onClick={() => { setMoreMenuId(null); addToast({ title: 'User Reported', description: `Report filed for ${friend.displayName}.`, variant: 'info' }); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--error)', transition: 'background 0.15s' }} className="hover-bg-tertiary">
                                     <Flag size={14} /> Report
                                 </div>
                             </div>
@@ -783,8 +778,7 @@ const Friends = () => {
                                             background: selectedFriend?.id === friend.id ? 'var(--bg-tertiary)' : draggedFriendId === friend.id ? 'var(--bg-elevated)' : 'transparent',
                                             opacity: draggedFriendId === friend.id ? 0.5 : 1,
                                         }}
-                                        onMouseOver={e => { if (selectedFriend?.id !== friend.id) e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
-                                        onMouseOut={e => { if (selectedFriend?.id !== friend.id && draggedFriendId !== friend.id) e.currentTarget.style.background = 'transparent'; }}
+                                        className="hover-bg-tertiary"
                                     >
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                             <Avatar userId={friend.id} displayName={friend.displayName} size={40} status={friend.status} statusRingColor="var(--bg-primary)" avatarHash={friend.avatarHash} />
@@ -815,7 +809,7 @@ const Friends = () => {
                                                             {friendGroups.map(g => (
                                                                 <div key={g.id} onClick={() => { setMoreMenuId(null); handleDropFriendOnGroup(friend.id, g.id); }}
                                                                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }}
-                                                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                                    className="hover-bg-tertiary">
                                                                     <div style={{ width: 10, height: 10, borderRadius: '50%', background: g.color }} /> {g.name}
                                                                     {g.friendIds.includes(friend.id) && <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-muted)' }}>current</span>}
                                                                 </div>
@@ -823,17 +817,17 @@ const Friends = () => {
                                                             {groupedFriendIds.has(friend.id) && (
                                                                 <div onClick={() => { setMoreMenuId(null); handleDropFriendOnGroup(friend.id, '__ungrouped__'); }}
                                                                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }}
-                                                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                                    className="hover-bg-tertiary">
                                                                     <X size={12} /> Remove from group
                                                                 </div>
                                                             )}
                                                             <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />
                                                         </>
                                                     )}
-                                                    <div onClick={() => { setMoreMenuId(null); handleRemoveFriend(friend.id, friend.displayName); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                                                    <div onClick={() => { setMoreMenuId(null); handleRemoveFriend(friend.id, friend.displayName); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }} className="hover-bg-tertiary">
                                                         <UserMinus size={14} /> Remove Friend
                                                     </div>
-                                                    <div onClick={() => { setMoreMenuId(null); addToast({ title: 'User Muted', description: `${friend.displayName} has been muted.`, variant: 'info' }); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                                                    <div onClick={() => { setMoreMenuId(null); addToast({ title: 'User Muted', description: `${friend.displayName} has been muted.`, variant: 'info' }); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }} className="hover-bg-tertiary">
                                                         <VolumeX size={14} /> Mute
                                                     </div>
                                                 </div>
@@ -854,8 +848,7 @@ const Friends = () => {
                                     <button
                                         onClick={() => setShowCreateGroup(true)}
                                         style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '12px', fontWeight: 600, padding: '4px 8px', borderRadius: '4px', transition: 'all 0.15s' }}
-                                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
-                                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                                        className="hover-bg-tertiary-text-primary"
                                     >
                                         <FolderPlus size={14} /> New Group
                                     </button>
@@ -902,8 +895,7 @@ const Friends = () => {
                                                     border: isDragOver ? '1px dashed var(--accent-primary)' : '1px solid transparent',
                                                 }}
                                                 onClick={() => toggleGroupCollapse(group.id)}
-                                                onMouseEnter={e => { if (!isDragOver) e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
-                                                onMouseLeave={e => { if (!isDragOver) e.currentTarget.style.background = 'transparent'; }}
+                                                className="hover-bg-tertiary"
                                             >
                                                 {isCollapsed ? <ChevronRight size={14} color="var(--text-muted)" /> : <ChevronDown size={14} color="var(--text-muted)" />}
                                                 <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: group.color, flexShrink: 0 }} />
@@ -937,7 +929,7 @@ const Friends = () => {
                                                 }}>
                                                     <div onClick={() => { setGroupContextMenu(null); setEditingGroupId(group.id); setEditingGroupName(group.name); }}
                                                         style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)' }}
-                                                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                        className="hover-bg-tertiary">
                                                         <Pencil size={14} /> Rename
                                                     </div>
                                                     {/* Color picker */}
@@ -953,7 +945,7 @@ const Friends = () => {
                                                     <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />
                                                     <div onClick={() => { setGroupContextMenu(null); handleDeleteGroup(group.id); }}
                                                         style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--error)' }}
-                                                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                        className="hover-bg-tertiary">
                                                         <Trash2 size={14} /> Delete Group
                                                     </div>
                                                 </div>
@@ -1021,7 +1013,7 @@ const Friends = () => {
                                                     background: 'var(--bg-tertiary)', borderRadius: '12px', padding: '16px',
                                                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
                                                     border: '1px solid var(--stroke)', transition: 'border-color 0.2s',
-                                                }} onMouseOver={e => (e.currentTarget.style.borderColor = 'var(--accent-primary)')} onMouseOut={e => (e.currentTarget.style.borderColor = 'var(--stroke)')}>
+                                                }} className="hover-border-accent">
                                                     <Avatar userId={s.id} avatarHash={s.avatar_hash} displayName={s.display_name || s.username} size={48} />
                                                     <div style={{ textAlign: 'center' }}>
                                                         <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{s.display_name || s.username}</div>
@@ -1079,7 +1071,7 @@ const Friends = () => {
                                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                         padding: '12px 16px', borderRadius: '8px', cursor: 'pointer',
                                         transition: 'background 0.2s'
-                                    }} onMouseOver={e => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                                    }} className="hover-bg-tertiary">
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                             <Avatar
                                                 userId={req.id}
@@ -1267,6 +1259,20 @@ const Friends = () => {
                     }
                 `}
             </style>
+
+            {profileUser && (
+                <Suspense fallback={null}>
+                    <UserProfileModal
+                        onClose={() => setProfileUser(null)}
+                        userProfile={{
+                            id: profileUser.id,
+                            username: profileUser.username,
+                            displayName: profileUser.displayName,
+                            avatarHash: profileUser.avatarHash ?? null,
+                        }}
+                    />
+                </Suspense>
+            )}
         </div>
     );
 };

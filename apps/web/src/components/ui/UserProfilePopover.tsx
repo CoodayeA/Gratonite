@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, UserPlus, MoreHorizontal, Gamepad2, Headphones, Eye, Star, Clock, Music, Cake, Link2, Shield, Code, Tv, Play, VolumeX } from 'lucide-react';
+import { MessageSquare, UserPlus, MoreHorizontal, Gamepad2, Headphones, Eye, Star, Clock, Music, Cake, Link2, Shield, Code, Tv, Play, VolumeX, ShieldOff, Flag, Copy } from 'lucide-react';
 import { api, API_BASE } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
 import { useUser } from '../../contexts/UserContext';
+import { useToast } from './ToastManager';
 import Avatar from './Avatar';
 import { ReputationBadge } from './ReputationBadge';
 
@@ -98,7 +99,9 @@ const UserProfilePopover = ({
     const [noteLoaded, setNoteLoaded] = useState(false);
     const [fameStats, setFameStats] = useState<{ fameReceived: number; fameGiven: number } | null>(null);
     const [connections, setConnections] = useState<ConnectionData[]>([]);
+    const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
     const { user: currentUser } = useUser();
+    const { addToast } = useToast();
     const isOwnProfile = user.id === currentUser?.id;
 
     const readCanvasEffect = () => isOwnProfile
@@ -189,7 +192,9 @@ const UserProfilePopover = ({
 
     const saveNote = async () => {
         if (!user.id) return;
-        await api.users.saveNote(user.id, note).catch(() => {});
+        await api.users.saveNote(user.id, note).catch(() => {
+            addToast({ title: 'Failed to save note', variant: 'error' });
+        });
     };
 
     // Activity elapsed time
@@ -552,9 +557,11 @@ const UserProfilePopover = ({
                         <button
                             onClick={() => {
                                 api.mutes.mute(user.id).then(() => {
-                                    // visual feedback — brief color flash
                                     setHovered(null);
-                                }).catch(() => {});
+                                    addToast({ title: 'User muted', description: `${displayName} has been muted`, variant: 'info' });
+                                }).catch(() => {
+                                    addToast({ title: 'Failed to mute', variant: 'error' });
+                                });
                             }}
                             onMouseEnter={() => setHovered('mute')}
                             onMouseLeave={() => setHovered(null)}
@@ -568,18 +575,80 @@ const UserProfilePopover = ({
                         >
                             <VolumeX size={14} />
                         </button>
-                        <button
-                            onMouseEnter={() => setHovered('more')}
-                            onMouseLeave={() => setHovered(null)}
-                            style={{
-                                width: '32px', height: '32px', borderRadius: '6px', border: '1px solid var(--stroke)',
-                                background: hovered === 'more' ? 'var(--hover-overlay)' : 'transparent',
-                                color: 'var(--text-primary)', cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}
-                        >
-                            <MoreHorizontal size={14} />
-                        </button>
+                        <div style={{ position: 'relative' }}>
+                            <button
+                                onClick={() => setMoreDropdownOpen(v => !v)}
+                                onMouseEnter={() => setHovered('more')}
+                                onMouseLeave={() => setHovered(null)}
+                                style={{
+                                    width: '32px', height: '32px', borderRadius: '6px', border: '1px solid var(--stroke)',
+                                    background: hovered === 'more' || moreDropdownOpen ? 'var(--hover-overlay)' : 'transparent',
+                                    color: 'var(--text-primary)', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}
+                            >
+                                <MoreHorizontal size={14} />
+                            </button>
+                            {moreDropdownOpen && (
+                                <div style={{
+                                    position: 'absolute', bottom: '36px', right: 0, width: '160px',
+                                    background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+                                    borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                                    padding: '4px', zIndex: 10,
+                                }}>
+                                    {[
+                                        {
+                                            label: 'Block User', icon: <ShieldOff size={14} />, color: '#ef4444',
+                                            action: async () => {
+                                                try {
+                                                    await api.relationships.block(user.id);
+                                                    addToast({ title: 'User blocked', description: `${displayName} has been blocked`, variant: 'info' });
+                                                    onClose();
+                                                } catch {
+                                                    addToast({ title: 'Failed to block user', variant: 'error' });
+                                                }
+                                            },
+                                        },
+                                        {
+                                            label: 'Report User', icon: <Flag size={14} />, color: '#ef4444',
+                                            action: async () => {
+                                                try {
+                                                    await api.reports.submit({ targetType: 'user', targetId: user.id, reason: 'User reported' });
+                                                    addToast({ title: 'Report submitted', description: 'Thank you for your report', variant: 'info' });
+                                                } catch {
+                                                    addToast({ title: 'Failed to submit report', variant: 'error' });
+                                                }
+                                                setMoreDropdownOpen(false);
+                                            },
+                                        },
+                                        {
+                                            label: 'Copy User ID', icon: <Copy size={14} />, color: 'var(--text-secondary)',
+                                            action: () => {
+                                                navigator.clipboard.writeText(user.id);
+                                                addToast({ title: 'Copied!', description: 'User ID copied to clipboard', variant: 'info' });
+                                                setMoreDropdownOpen(false);
+                                            },
+                                        },
+                                    ].map(item => (
+                                        <button
+                                            key={item.label}
+                                            onClick={item.action}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+                                                padding: '8px 10px', border: 'none', borderRadius: '4px',
+                                                background: 'transparent', color: item.color,
+                                                fontSize: '13px', fontWeight: 500, cursor: 'pointer',
+                                                textAlign: 'left',
+                                            }}
+                                            onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-overlay)'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                                        >
+                                            {item.icon} {item.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
