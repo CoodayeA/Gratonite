@@ -7,6 +7,7 @@ const SettingsFeedbackTab = ({ addToast }: SettingsTabProps) => {
   const [feedbackCategory, setFeedbackCategory] = useState('general');
   const [feedbackBody, setFeedbackBody] = useState('');
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   return (
     <>
@@ -35,11 +36,12 @@ const SettingsFeedbackTab = ({ addToast }: SettingsTabProps) => {
                 { id: 'feature', label: 'Feature Request' },
                 { id: 'ux', label: 'UX Issue' },
               ].map(cat => (
-                <button key={cat.id} onClick={() => setFeedbackCategory(cat.id)} style={{
-                  padding: '10px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
+                <button key={cat.id} onClick={() => setFeedbackCategory(cat.id)} disabled={saving} style={{
+                  padding: '10px', borderRadius: '8px', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: 600,
                   background: feedbackCategory === cat.id ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
                   color: feedbackCategory === cat.id ? '#000' : 'var(--text-secondary)',
                   border: `1px solid ${feedbackCategory === cat.id ? 'var(--accent-primary)' : 'var(--stroke)'}`,
+                  opacity: saving ? 0.6 : 1,
                 }}>{cat.label}</button>
               ))}
             </div>
@@ -52,14 +54,16 @@ const SettingsFeedbackTab = ({ addToast }: SettingsTabProps) => {
               onChange={e => setFeedbackBody(e.target.value)}
               placeholder="Describe your feedback, bug, or suggestion in detail..."
               maxLength={2000}
-              style={{ width: '100%', height: '140px', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', resize: 'none', fontFamily: 'inherit' }}
+              disabled={saving}
+              style={{ width: '100%', height: '140px', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', resize: 'none', fontFamily: 'inherit', opacity: saving ? 0.6 : 1 }}
             />
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', textAlign: 'right' }}>{feedbackBody.length}/2000</div>
           </div>
 
           <button
             onClick={async () => {
-              if (!feedbackBody.trim()) return;
+              if (!feedbackBody.trim() || saving) return;
+              setSaving(true);
               try {
                 await api.bugReports.create({
                   title: feedbackCategory === 'bug' ? 'Bug Report' : feedbackCategory === 'feature' ? 'Feature Request' : feedbackCategory === 'ux' ? 'UX Issue' : 'General Feedback',
@@ -75,17 +79,19 @@ const SettingsFeedbackTab = ({ addToast }: SettingsTabProps) => {
                 addToast({ title: 'Feedback Sent', description: 'Your feedback has been submitted. Thank you!', variant: 'success' });
               } catch {
                 addToast({ title: 'Error', description: 'Failed to submit feedback. Please try again.', variant: 'error' });
+              } finally {
+                setSaving(false);
               }
             }}
-            disabled={!feedbackBody.trim()}
+            disabled={!feedbackBody.trim() || saving}
             style={{
-              padding: '12px 24px', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '14px', cursor: feedbackBody.trim() ? 'pointer' : 'not-allowed',
-              background: feedbackBody.trim() ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-              color: feedbackBody.trim() ? '#000' : 'var(--text-muted)',
+              padding: '12px 24px', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '14px', cursor: (feedbackBody.trim() && !saving) ? 'pointer' : 'not-allowed',
+              background: (feedbackBody.trim() && !saving) ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+              color: (feedbackBody.trim() && !saving) ? '#000' : 'var(--text-muted)',
               alignSelf: 'flex-start',
             }}
           >
-            Submit Feedback
+            {saving ? 'Submitting...' : 'Submit Feedback'}
           </button>
         </div>
       )}

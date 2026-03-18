@@ -112,6 +112,7 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const startRef = useRef(Date.now());
     const remainingRef = useRef(0);
+    const remainingForTransitionRef = useRef(toastDuration);
 
     const toastDuration = toast.duration || (toast.variant === 'achievement' ? 6000 : toast.variant === 'undo' ? 5000 : 4000);
 
@@ -161,10 +162,13 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
         hoveredRef.current = false;
         setIsHovered(false);
         if (remainingRef.current > 0) {
-            startTimer(remainingRef.current);
-            // Resume progress bar from current position
-            const fraction = remainingRef.current / toastDuration;
+            const remaining = remainingRef.current;
+            startTimer(remaining);
+            // Resume progress bar from current position using remaining time for transition
+            const fraction = remaining / toastDuration;
             setProgress(fraction * 100);
+            // Store remaining for transition duration
+            remainingForTransitionRef.current = remaining;
             requestAnimationFrame(() => { requestAnimationFrame(() => { setProgress(0); }); });
         }
     }, [startTimer, toastDuration]);
@@ -330,7 +334,7 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
                     background: iconColor,
                     borderRadius: 'inherit',
                     width: progress + '%',
-                    transition: isHovered ? 'none' : `width ${isHovered ? 0 : toastDuration}ms linear`,
+                    transition: isHovered ? 'none' : `width ${remainingForTransitionRef.current}ms linear`,
                     transformOrigin: 'left',
                 }} />
             </div>

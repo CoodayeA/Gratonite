@@ -921,9 +921,13 @@ const VoiceChannel = () => {
                             {stageSession.hostId === userProfile?.id && (
                                 <>
                                     <button onClick={handleEndStage} style={{
-                                        marginLeft: 'auto', padding: '4px 12px', borderRadius: 'var(--radius-sm)',
+                                        marginLeft: 'auto', padding: '6px 14px', borderRadius: 'var(--radius-sm)',
                                         background: 'var(--error)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
-                                    }}>End Stage</button>
+                                        transition: 'background 0.15s, opacity 0.15s',
+                                    }}
+                                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.85'; }}
+                                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+                                    >End Stage</button>
                                     {raisedHands.length > 0 && (
                                         <span style={{ color: 'var(--warning)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <Hand size={14} />
@@ -947,9 +951,13 @@ const VoiceChannel = () => {
                         <>
                             <span style={{ color: 'var(--text-muted)', fontSize: '14px' }}>No active stage</span>
                             <button onClick={handleStartStage} style={{
-                                marginLeft: 'auto', padding: '4px 12px', borderRadius: 'var(--radius-sm)',
-                                background: 'var(--accent-primary)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
-                            }}>Start Stage</button>
+                                marginLeft: 'auto', padding: '8px 16px', borderRadius: 'var(--radius-sm)',
+                                background: 'var(--accent-primary)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 700,
+                                transition: 'background 0.15s, opacity 0.15s', boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                            }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.85'; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+                            >Start Stage</button>
                         </>
                     )}
                 </div>

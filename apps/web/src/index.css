@@ -670,7 +670,7 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 12px;
+    padding: 8px 12px;
     border-radius: var(--radius-sm);
     color: var(--text-secondary);
     cursor: pointer;
@@ -1090,7 +1090,7 @@ p {
     -webkit-backdrop-filter: var(--panel-blur);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--radius-lg);
-    padding: 12px 16px;
+    padding: 8px 16px;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -2091,7 +2091,7 @@ a {
 .channel-item {
     transition: background 0.15s ease, transform 0.15s ease, color 0.15s ease;
 }
-.channel-item:hover { transform: translateX(2px); }
+.channel-item:hover { transform: translateX(2px); background: var(--bg-hover, rgba(255,255,255,0.06)); }
 
 /* Interactive card surface — ripple-ready */
 .interactive-surface {
@@ -4227,8 +4227,8 @@ textarea:focus-visible,
   color: white;
 }
 .context-menu-item[data-destructive]:hover {
-  background: transparent;
-  color: inherit;
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--error);
 }
 
 .notif-item {
@@ -4734,5 +4734,39 @@ textarea:focus-visible,
 }
 .hover-forward-unselected:hover {
     background: var(--bg-tertiary) !important;
+}
+
+/* C1: Standardized button padding classes */
+.btn-primary {
+    padding: 8px 16px;
+    background: var(--accent-primary);
+    color: #000;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+}
+.btn-primary:hover {
+    opacity: 0.9;
+}
+.btn-primary:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+.btn-secondary {
+    padding: 6px 12px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-secondary:hover {
+    background: var(--bg-hover, rgba(255,255,255,0.06));
 }
 
