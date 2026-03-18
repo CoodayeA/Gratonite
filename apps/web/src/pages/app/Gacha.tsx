@@ -458,8 +458,8 @@ const Gacha = () => {
                 setOwnedIds(owned);
                 setManifestLoaded(true);
             })
-            .catch(err => {
-                console.error('Failed to load gacha manifest:', err);
+            .catch(() => {
+                addToast({ title: 'Failed to load gacha manifest', variant: 'error' });
             });
 
         // Also load server-side collectible cards

@@ -119,6 +119,7 @@ const FriendActivity = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState<FeedEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
@@ -145,7 +146,7 @@ const FriendActivity = () => {
       setHasMore(items.length >= 30);
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
-      if (!append) setEvents([]);
+      if (!append) { setEvents([]); setLoadError('Could not load activity feed. Please try again.'); }
     }
     if (append) setLoadingMore(false); else setLoading(false);
   }, [filter]);
@@ -153,6 +154,7 @@ const FriendActivity = () => {
   useEffect(() => {
     setEvents([]);
     setHasMore(true);
+    setLoadError(null);
     load();
   }, [load]);
 
@@ -289,6 +291,13 @@ const FriendActivity = () => {
           <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
             <Loader2 size={24} className="spin" style={{ marginBottom: '8px' }} />
             <p>Loading activity...</p>
+          </div>
+        ) : loadError ? (
+          <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
+            <Activity size={48} style={{ marginBottom: '12px', opacity: 0.3, color: 'var(--error)' }} />
+            <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--error)' }}>Failed to Load</p>
+            <p style={{ fontSize: '13px', marginBottom: '16px' }}>{loadError}</p>
+            <button onClick={() => load()} style={{ padding: '8px 20px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>Retry</button>
           </div>
         ) : events.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>

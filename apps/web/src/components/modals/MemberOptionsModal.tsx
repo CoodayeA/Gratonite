@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Link2, Bell, BellOff, User, EyeOff, LogOut, Check, Copy, Clock, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
@@ -52,6 +52,8 @@ const TIMEOUT_DURATIONS = [
 const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: () => void; guildId: string; guildName: string; userId?: string }) => {
     const { addToast } = useToast();
     const navigate = useNavigate();
+    const mountedRef = useRef(true);
+    useEffect(() => { return () => { mountedRef.current = false; }; }, []);
 
     const muteKey = `gratonite:muted:${guildId}`;
     const hideMutedKey = `gratonite:hide-muted-channels:${guildId}`;
@@ -82,7 +84,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
     useEffect(() => {
         if (!guildId) return;
         api.profiles.getMemberProfile(guildId, '@me')
-            .then((p: any) => { if (p?.nickname) setNickname(p.nickname); })
+            .then((p: any) => { if (mountedRef.current && p?.nickname) setNickname(p.nickname); })
             .catch(() => {});
     }, [guildId]);
 
@@ -93,10 +95,11 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
             const me = userId || '';
             if (!me) return;
             if (guild.ownerId === me) {
-                setCanModerate(true);
+                if (mountedRef.current) setCanModerate(true);
                 return;
             }
             api.guilds.getMemberRoles(guildId, me).then((roles: any[]) => {
+                if (!mountedRef.current) return;
                 const ADMINISTRATOR = 1n << 0n;
                 const MANAGE_ROLES = 1n << 3n;
                 const KICK_MEMBERS = 1n << 4n;
@@ -109,6 +112,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
 
         // Fetch members for timeout target selection
         api.guilds.getMembers(guildId).then((m: any[]) => {
+            if (!mountedRef.current) return;
             setMembers(m.map((mem: any) => ({
                 id: mem.id,
                 userId: mem.userId,
@@ -143,6 +147,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
         if (!guildId || !canModerate || members.length === 0) return;
         members.forEach(m => {
             api.guilds.getMemberWarnings?.(guildId, m.userId)?.then((warnings: any[]) => {
+                if (!mountedRef.current) return;
                 setWarningCounts(prev => ({ ...prev, [m.userId]: Array.isArray(warnings) ? warnings.length : 0 }));
             }).catch(() => {});
         });

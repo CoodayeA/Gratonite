@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Download, Clock, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useToast } from '../../components/ui/ToastManager';
 
 interface ExportRecord {
   id: string;
@@ -11,6 +12,7 @@ interface ExportRecord {
 }
 
 export default function DataExport() {
+  const { addToast } = useToast();
   const [exports, setExports] = useState<ExportRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
@@ -19,7 +21,9 @@ export default function DataExport() {
     try {
       const data = await api.users.getDataExports();
       setExports(Array.isArray(data) ? data : []);
-    } catch { /* ignore */ }
+    } catch {
+      addToast({ title: 'Failed to load data exports', variant: 'error' });
+    }
     setLoading(false);
   };
 
@@ -30,7 +34,9 @@ export default function DataExport() {
     try {
       await api.users.requestDataExport();
       await fetchExports();
-    } catch { /* ignore */ }
+    } catch {
+      addToast({ title: 'Failed to request data export', variant: 'error' });
+    }
     setRequesting(false);
   };
 

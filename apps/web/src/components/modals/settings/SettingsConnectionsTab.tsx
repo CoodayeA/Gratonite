@@ -99,7 +99,7 @@ const SettingsConnectionsTab = ({ addToast }: SettingsTabProps) => {
           const autoUrl = hasUsername ? `${PROVIDER_URL_TEMPLATES[provider]}${connectionUsernames[provider].trim()}` : '';
           const displayUrl = connectionProfileUrls[provider] || autoUrl;
           return (
-            <div key={provider} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px' }}>
+            <div key={provider} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', opacity: connectionRemoving === provider ? 0.5 : 1, transition: 'opacity 0.2s', pointerEvents: connectionRemoving === provider ? 'none' : 'auto' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                 <Link2 size={16} color="var(--accent-primary)" />
                 <span style={{ fontWeight: 600, fontSize: '14px' }}>{PROVIDER_LABELS[provider]}</span>

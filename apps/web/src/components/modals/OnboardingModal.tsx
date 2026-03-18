@@ -4,8 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../ui/ThemeProvider';
 import { api } from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
+import { useToast } from '../ui/ToastManager';
 
 const OnboardingModal = ({ onClose }: { onClose: () => void }) => {
+    const { addToast } = useToast();
     const [step, setStep] = useState(1);
     const [bio, setBio] = useState('');
     const [displayName, setDisplayName] = useState('');
@@ -82,12 +84,8 @@ const OnboardingModal = ({ onClose }: { onClose: () => void }) => {
             onClose();
             navigate('/');
         } catch {
-            // If save fails, still close and mark locally so modal doesn't
-            // re-trigger in this session. On next reload the API will be
-            // checked again.
-            updateUser({ onboardingCompleted: true });
-            onClose();
-            navigate('/');
+            // If save fails, show error toast and keep modal open so user can retry
+            addToast({ title: 'Failed to save profile', description: 'Please try again.', variant: 'error' });
         } finally {
             setSaving(false);
         }

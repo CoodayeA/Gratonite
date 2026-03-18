@@ -78,7 +78,7 @@ export const SkeletonChannelGroup = ({ channels = 3 }: { channels?: number }) =>
             <Skeleton variant="text" width={randomBetween(70, 120)} height={10} />
         </div>
         {Array.from({ length: channels }).map((_, i) => (
-            <SkeletonChannelItem key={i} />
+            <SkeletonChannelItem key={`skeleton-channel-${i}`} />
         ))}
     </div>
 );
@@ -105,7 +105,7 @@ export const SkeletonMemberList = ({ count = 8 }: { count?: number }) => (
             <Skeleton variant="text" width={90} height={10} />
         </div>
         {Array.from({ length: count }).map((_, i) => (
-            <SkeletonMemberItem key={i} />
+            <SkeletonMemberItem key={`skeleton-member-${i}`} />
         ))}
     </div>
 );
@@ -129,7 +129,7 @@ export const SkeletonDmItem = () => (
 export const SkeletonDmList = ({ count = 5 }: { count?: number }) => (
     <div style={{ padding: '4px 0' }}>
         {Array.from({ length: count }).map((_, i) => (
-            <SkeletonDmItem key={i} />
+            <SkeletonDmItem key={`skeleton-dm-${i}`} />
         ))}
     </div>
 );
@@ -162,7 +162,7 @@ export const SkeletonFriendList = ({ count = 5 }: { count?: number }) => (
             <Skeleton variant="text" width={120} height={10} style={{ marginBottom: '8px' }} />
         </div>
         {Array.from({ length: count }).map((_, i) => (
-            <SkeletonFriendItem key={i} />
+            <SkeletonFriendItem key={`skeleton-friend-${i}`} />
         ))}
     </div>
 );
@@ -194,7 +194,7 @@ export const SkeletonProfile = () => (
 export const SkeletonShopGrid = ({ count = 8 }: { count?: number }) => (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
         {Array.from({ length: count }).map((_, i) => (
-            <div key={i} style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--stroke)' }}>
+            <div key={`skeleton-shop-${i}`} style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--stroke)' }}>
                 <Skeleton variant="rect" width="100%" height={160} style={{ borderRadius: 0 }} />
                 <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <Skeleton variant="text" width={randomBetween(100, 180)} height={16} />
@@ -214,7 +214,7 @@ export const SkeletonSettingsPanel = () => (
     <div style={{ display: 'flex', gap: '24px', padding: '24px' }}>
         <div style={{ width: '200px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} variant="text" width={randomBetween(100, 180)} height={32} style={{ borderRadius: '6px' }} />
+                <Skeleton key={`skeleton-setting-${i}`} variant="text" width={randomBetween(100, 180)} height={32} style={{ borderRadius: '6px' }} />
             ))}
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>

@@ -486,6 +486,17 @@ const DirectMessage = () => {
     const typingTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
     const lastTypingSentRef = useRef(0);
 
+    // Mentions display map: maps display token (@username) to wire format (<@userId>)
+    const dmMentionsMapRef = useRef<Map<string, string>>(new Map());
+
+    const resolveDmWireContent = useCallback((text: string) => {
+        let result = text;
+        dmMentionsMapRef.current.forEach((wire, display) => {
+            result = result.split(display).join(wire);
+        });
+        return result;
+    }, []);
+
     // Listen for remote typing events
     useEffect(() => {
         if (!dmChannelId) return;
@@ -1541,7 +1552,14 @@ const DirectMessage = () => {
 
     const insertDmMention = (userId: string) => {
         if (mentionSearch === null) return;
-        const val = inputValue.replace(/@([a-zA-Z0-9_]*)$/, `<@${userId}> `);
+        const member = dmMembersForMentions.find(m => m.id === userId) || filteredMentionUsers.find(u => u.id === userId);
+        const username = member?.username || userId;
+        let displayToken = `@${username}`;
+        if (dmMentionsMapRef.current.has(displayToken) && dmMentionsMapRef.current.get(displayToken) !== `<@${userId}>`) {
+            displayToken = `@${username}#${userId.slice(-4)}`;
+        }
+        dmMentionsMapRef.current.set(displayToken, `<@${userId}>`);
+        const val = inputValue.replace(/@([a-zA-Z0-9_]*)$/, `${displayToken} `);
         setInputValue(val);
         setMentionSearch(null);
     };
@@ -1640,8 +1658,9 @@ const DirectMessage = () => {
             addToast({ title: `Rate limited. Wait ${rateLimitRemaining}s`, variant: 'error' });
             return;
         }
-        if (inputValue.length > 2000) {
-            addToast({ title: `Message too long (${inputValue.length}/2000)`, variant: 'error' });
+        const dmWireContent = resolveDmWireContent(inputValue);
+        if (dmWireContent.length > 2000) {
+            addToast({ title: `Message too long (${dmWireContent.length}/2000)`, variant: 'error' });
             return;
         }
 
@@ -1666,7 +1685,7 @@ const DirectMessage = () => {
             }
         }
 
-        const content = inputValue.trim();
+        const content = resolveDmWireContent(inputValue).trim();
         const attachmentIds = uploadedFiles.map(f => f.id);
 
         if (content || attachmentIds.length > 0) {
@@ -1752,6 +1771,7 @@ const DirectMessage = () => {
         // Cleanup preview URLs
         dmAttachedFiles.forEach(f => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl); });
         setInputValue('');
+        dmMentionsMapRef.current.clear();
         setDmAttachedFiles([]);
     };
 
@@ -2849,11 +2869,11 @@ const DirectMessage = () => {
                                         }
                                     }}
                                 />
-                                {inputValue.length > 1800 && (
-                                    <span style={{ fontSize: '11px', fontWeight: 600, color: inputValue.length > 2000 ? 'var(--error)' : 'var(--warning)', flexShrink: 0, padding: '0 4px' }}>
-                                        {inputValue.length}/2000
+                                {(() => { const wireLen = resolveDmWireContent(inputValue).length; return wireLen > 1800 ? (
+                                    <span style={{ fontSize: '11px', fontWeight: 600, color: wireLen > 2000 ? 'var(--error)' : 'var(--warning)', flexShrink: 0, padding: '0 4px' }}>
+                                        {wireLen}/2000
                                     </span>
-                                )}
+                                ) : null; })()}
                                 <button className={`input-icon-btn ${isEmojiPickerOpen ? 'primary' : ''}`} title="Select Emoji" onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}>
                                     <Smile size={20} />
                                 </button>

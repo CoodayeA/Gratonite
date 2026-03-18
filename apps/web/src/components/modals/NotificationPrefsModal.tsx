@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api, API_BASE } from '../../lib/api';
+import { useToast } from '../ui/ToastManager';
 
 type NotifLevel = 'all' | 'mentions' | 'nothing';
 interface MuteDuration { label: string; minutes: number | null; }
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export function NotificationPrefsModal({ type, id, name, onClose }: Props) {
+  const { addToast } = useToast();
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handler);
@@ -42,7 +44,7 @@ export function NotificationPrefsModal({ type, id, name, onClose }: Props) {
           setMuted(true);
         }
       }
-    }).catch(() => {});
+    }).catch(() => { addToast({ title: 'Failed to load notification preferences', variant: 'error' }); });
   }, [settingKey]);
 
   async function save() {
