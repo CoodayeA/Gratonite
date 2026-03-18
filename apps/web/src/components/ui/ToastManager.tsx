@@ -112,9 +112,8 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const startRef = useRef(Date.now());
     const remainingRef = useRef(0);
-    const remainingForTransitionRef = useRef(toastDuration);
-
     const toastDuration = toast.duration || (toast.variant === 'achievement' ? 6000 : toast.variant === 'undo' ? 5000 : 4000);
+    const remainingForTransitionRef = useRef(toastDuration);
 
     const handleRemove = useCallback(() => {
         if (exiting) return;
