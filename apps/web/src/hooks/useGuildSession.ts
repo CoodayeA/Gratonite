@@ -15,6 +15,7 @@ export type GuildSessionInfo = {
   createdAt: string;
   rulesText?: string | null;
   requireRulesAgreement?: boolean;
+  agreedRulesAt?: string | null;
 };
 
 export type GuildSessionChannel = {
@@ -127,6 +128,7 @@ export function useGuildSession(args: UseGuildSessionArgs) {
         createdAt: (guild as { createdAt?: string }).createdAt ?? new Date().toISOString(),
         rulesText: (guild as any).rulesText ?? null,
         requireRulesAgreement: !!(guild as any).requireRulesAgreement,
+        agreedRulesAt: (guild as any).agreedRulesAt ?? null,
       });
       setChannels((guildChannels as GuildSessionChannel[]) ?? []);
       setErrorCode(null);

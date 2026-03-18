@@ -1034,7 +1034,8 @@ messagesRouter.get('/scheduled', requireAuth, async (req: Request, res: Response
         isNull(scheduledMessages.sentAt),
         isNull(scheduledMessages.cancelledAt),
       ))
-      .orderBy(scheduledMessages.scheduledAt);
+      .orderBy(scheduledMessages.scheduledAt)
+      .limit(100);
     res.json(rows);
   } catch (err) {
     handleAppError(res, err, 'messages');

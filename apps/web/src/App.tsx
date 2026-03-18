@@ -831,7 +831,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     // Show rules gate if guild requires rules agreement
     useEffect(() => {
         if (!activeGuildId || !guildInfo) { setShowRulesGate(false); return; }
-        if ((guildInfo as any).requireRulesAgreement && (guildInfo as any).rulesText && !rulesAgreedGuilds.has(activeGuildId)) {
+        if ((guildInfo as any).requireRulesAgreement && (guildInfo as any).rulesText && !(guildInfo as any).agreedRulesAt && !rulesAgreedGuilds.has(activeGuildId)) {
             setShowRulesGate(true);
         } else {
             setShowRulesGate(false);
@@ -3022,7 +3022,7 @@ export const AppLayout = () => {
     // Show rules gate when entering a guild that requires rules agreement
     useEffect(() => {
         if (!activeGuildId || !guildInfo) { setShowRulesGate(false); return; }
-        if ((guildInfo as any).requireRulesAgreement && (guildInfo as any).rulesText && !rulesAgreedGuilds.has(activeGuildId)) {
+        if ((guildInfo as any).requireRulesAgreement && (guildInfo as any).rulesText && !(guildInfo as any).agreedRulesAt && !rulesAgreedGuilds.has(activeGuildId)) {
             setShowRulesGate(true);
         } else {
             setShowRulesGate(false);
