@@ -2144,6 +2144,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             mediaAspectRatio: 16 / 9
         }]);
         setIsEmojiPickerOpen(false);
+        setReactionTargetMessageApiId(null);
         if (channelId) {
             api.messages.send(channelId, { content: url } as any).then((sent: any) => {
                 if (sent?.id) {
@@ -2170,6 +2171,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             attachments: [{ id: sticker.id, url: sticker.url, filename: sticker.name, size: 0, mimeType: 'image/png', type: 'sticker' } as any],
         }]);
         setIsEmojiPickerOpen(false);
+        setReactionTargetMessageApiId(null);
         if (channelId) {
             api.messages.send(channelId, { content: ' ', stickerId: sticker.id } as any).then((sent: any) => {
                 if (sent?.id) {
@@ -3754,7 +3756,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                         <span className="shortcut-hint" style={{ position: 'absolute', bottom: '-14px', left: '50%', transform: 'translateX(-50%)', fontSize: '9px', color: 'var(--text-muted)', opacity: 0.4, whiteSpace: 'nowrap', pointerEvents: 'none', fontWeight: 500 }}>Ctrl+E</span>
                                     </button>
                                     {/* Feature 19: Sticker Picker Button */}
-                                    <button className={`input-icon-btn ${stickerPickerOpen ? 'primary' : ''}`} title="Sticker Picker" onClick={() => { setStickerPickerOpen(!stickerPickerOpen); setIsEmojiPickerOpen(false); }}>
+                                    <button className={`input-icon-btn ${stickerPickerOpen ? 'primary' : ''}`} title="Sticker Picker" onClick={() => { setStickerPickerOpen(!stickerPickerOpen); setIsEmojiPickerOpen(false); setReactionTargetMessageApiId(null); }}>
                                         <Square size={18} />
                                     </button>
                                     <button className="input-icon-btn" title="Create Poll" onClick={() => setShowPollCreator(!showPollCreator)}>
