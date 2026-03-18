@@ -70,29 +70,20 @@ const StoreModal = ({ open, onClose }: StoreModalProps) => {
     setPurchasing(productId);
     setPurchaseSuccess(null);
     try {
-      const res = await fetch('/api/v1/payments/create-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${(api as any)._token || ''}` },
-        credentials: 'include',
-        body: JSON.stringify({ product: productId }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (data.code === 'STRIPE_NOT_CONFIGURED') {
-          addToast({ title: 'Payments unavailable', description: 'Payment processing is not yet configured on this server.', variant: 'info' });
-        } else {
-          addToast({ title: 'Purchase failed', description: data.message || 'Something went wrong.', variant: 'error' });
-        }
-        return;
-      }
+      const data = await api.post<{ clientSecret?: string; code?: string; message?: string }>('/payments/create-intent', { product: productId });
 
       // In production with Stripe Elements, we'd confirm the payment here.
       // For now, show success since the intent was created.
       setPurchaseSuccess(productId);
       addToast({ title: 'Payment initiated', description: 'Your payment is being processed. Complete it in the payment form.', variant: 'info' });
-    } catch {
-      addToast({ title: 'Network error', description: 'Could not reach the payment server.', variant: 'error' });
+    } catch (err: any) {
+      const code = err?.body?.code ?? err?.code;
+      const message = err?.body?.message ?? err?.message;
+      if (code === 'STRIPE_NOT_CONFIGURED') {
+        addToast({ title: 'Payments unavailable', description: 'Payment processing is not yet configured on this server.', variant: 'info' });
+      } else {
+        addToast({ title: 'Purchase failed', description: message || 'Could not reach the payment server.', variant: 'error' });
+      }
     } finally {
       setPurchasing(null);
     }

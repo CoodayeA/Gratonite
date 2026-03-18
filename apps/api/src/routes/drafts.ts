@@ -3,7 +3,26 @@ import { logger } from '../lib/logger';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../db/index';
 import { messageDrafts } from '../db/schema/message-drafts';
+import { channels, dmChannelMembers } from '../db/schema/channels';
+import { guildMembers } from '../db/schema/guilds';
 import { requireAuth } from '../middleware/auth';
+
+// SECURITY: verify user has access to a channel before allowing draft operations
+async function verifyChannelAccess(channelId: string, userId: string): Promise<boolean> {
+  const [channel] = await db.select().from(channels).where(eq(channels.id, channelId)).limit(1);
+  if (!channel) return false;
+  if (channel.type === 'DM' || channel.type === 'GROUP_DM') {
+    const [membership] = await db.select({ id: dmChannelMembers.id }).from(dmChannelMembers)
+      .where(and(eq(dmChannelMembers.channelId, channelId), eq(dmChannelMembers.userId, userId))).limit(1);
+    return !!membership;
+  }
+  if (channel.guildId) {
+    const [gm] = await db.select({ id: guildMembers.id }).from(guildMembers)
+      .where(and(eq(guildMembers.guildId, channel.guildId), eq(guildMembers.userId, userId))).limit(1);
+    return !!gm;
+  }
+  return false;
+}
 
 export const draftsRouter = Router({ mergeParams: true });
 
@@ -25,6 +44,13 @@ draftsRouter.get('/users/@me/drafts', requireAuth, async (req: Request, res: Res
 draftsRouter.get('/channels/:channelId/draft', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const channelId = req.params.channelId as string;
+
+    // SECURITY: verify channel access
+    if (!await verifyChannelAccess(channelId, req.userId!)) {
+      res.status(403).json({ code: 'FORBIDDEN', message: 'No access to this channel' });
+      return;
+    }
+
     const [draft] = await db.select()
       .from(messageDrafts)
       .where(and(eq(messageDrafts.userId, req.userId!), eq(messageDrafts.channelId, channelId)))
@@ -45,6 +71,13 @@ draftsRouter.put('/channels/:channelId/draft', requireAuth, async (req: Request,
       res.status(400).json({ code: 'VALIDATION_ERROR', message: 'content is required' });
       return;
     }
+
+    // SECURITY: verify channel access before upserting draft
+    if (!await verifyChannelAccess(channelId, req.userId!)) {
+      res.status(403).json({ code: 'FORBIDDEN', message: 'No access to this channel' });
+      return;
+    }
+
     const [draft] = await db.insert(messageDrafts)
       .values({ userId: req.userId! as string, channelId, content })
       .onConflictDoUpdate({
@@ -63,6 +96,13 @@ draftsRouter.put('/channels/:channelId/draft', requireAuth, async (req: Request,
 draftsRouter.delete('/channels/:channelId/draft', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const channelId = req.params.channelId as string;
+
+    // SECURITY: verify channel access before deleting draft
+    if (!await verifyChannelAccess(channelId, req.userId!)) {
+      res.status(403).json({ code: 'FORBIDDEN', message: 'No access to this channel' });
+      return;
+    }
+
     await db.delete(messageDrafts)
       .where(and(eq(messageDrafts.userId, req.userId!), eq(messageDrafts.channelId, channelId)));
     res.json({ ok: true });

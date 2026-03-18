@@ -5,10 +5,30 @@ import { db } from '../db/index';
 import { messageBookmarks } from '../db/schema/message-bookmarks';
 import { bookmarkFolders } from '../db/schema/bookmark-folders';
 import { messages } from '../db/schema/messages';
-import { channels } from '../db/schema/channels';
-import { guilds } from '../db/schema/guilds';
+import { channels, dmChannelMembers } from '../db/schema/channels';
+import { guilds, guildMembers } from '../db/schema/guilds';
 import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
+
+// SECURITY: verify user has access to the channel containing a message
+async function verifyMessageAccess(messageId: string, userId: string): Promise<boolean> {
+  const [msg] = await db.select({ channelId: messages.channelId }).from(messages)
+    .where(eq(messages.id, messageId)).limit(1);
+  if (!msg) return false;
+  const [channel] = await db.select().from(channels).where(eq(channels.id, msg.channelId)).limit(1);
+  if (!channel) return false;
+  if (channel.type === 'DM' || channel.type === 'GROUP_DM') {
+    const [membership] = await db.select({ id: dmChannelMembers.id }).from(dmChannelMembers)
+      .where(and(eq(dmChannelMembers.channelId, msg.channelId), eq(dmChannelMembers.userId, userId))).limit(1);
+    return !!membership;
+  }
+  if (channel.guildId) {
+    const [gm] = await db.select({ id: guildMembers.id }).from(guildMembers)
+      .where(and(eq(guildMembers.guildId, channel.guildId), eq(guildMembers.userId, userId))).limit(1);
+    return !!gm;
+  }
+  return false;
+}
 
 export const bookmarksRouter = Router();
 
@@ -67,6 +87,13 @@ bookmarksRouter.post('/users/@me/bookmarks', requireAuth, async (req: Request, r
       res.status(400).json({ code: 'VALIDATION_ERROR', message: 'messageId is required' });
       return;
     }
+
+    // SECURITY: verify user can access the message's channel before bookmarking
+    if (!await verifyMessageAccess(messageId, req.userId!)) {
+      res.status(403).json({ code: 'FORBIDDEN', message: 'No access to this message' });
+      return;
+    }
+
     const [bookmark] = await db.insert(messageBookmarks)
       .values({ userId: req.userId!, messageId, note: note || null, folderId: folderId || null })
       .onConflictDoNothing()

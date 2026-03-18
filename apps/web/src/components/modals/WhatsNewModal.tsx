@@ -14,6 +14,17 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-03-18b',
+    date: 'March 18, 2026',
+    title: 'Wave 4: Hardening & Accessibility',
+    entries: [
+      { type: 'improvement', text: 'Confirmation dialogs on destructive actions — prevent accidental deletes and kicks' },
+      { type: 'security', text: 'Security hardening across API calls — removed raw fetch usage and private token access' },
+      { type: 'improvement', text: 'Improved error feedback — actions that previously failed silently now show clear error toasts' },
+      { type: 'improvement', text: 'Accessibility labels added to settings buttons and interactive controls' },
+    ],
+  },
+  {
     id: '2026-03-18',
     date: 'March 18, 2026',
     title: 'Deep Polish Wave 2',

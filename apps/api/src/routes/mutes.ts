@@ -15,6 +15,8 @@ const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => P
 
 // GET /users/@me/mutes
 mutesRouter.get('/@me/mutes', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const limit = Math.min(parseInt(req.query.limit as string) || 200, 200);
+
   const rows = await db
     .select({
       mutedUserId: userMutes.mutedUserId,
@@ -25,7 +27,8 @@ mutesRouter.get('/@me/mutes', requireAuth, asyncHandler(async (req: Request, res
     })
     .from(userMutes)
     .innerJoin(users, eq(users.id, userMutes.mutedUserId))
-    .where(eq(userMutes.userId, req.userId!));
+    .where(eq(userMutes.userId, req.userId!))
+    .limit(limit);
 
   res.json(rows);
 }));
@@ -50,6 +53,11 @@ mutesRouter.put('/@me/mutes/:userId', requireAuth, asyncHandler(async (req: Requ
 // DELETE /users/@me/mutes/:userId
 mutesRouter.delete('/@me/mutes/:userId', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const targetId = req.params.userId as string;
+
+  if (targetId === req.userId!) {
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'You cannot unmute yourself' });
+    return;
+  }
 
   await db.delete(userMutes).where(
     and(eq(userMutes.userId, req.userId!), eq(userMutes.mutedUserId, targetId))

@@ -52,7 +52,7 @@ const ParticipantVideo = ({ track, showPiP }: { track: any; showPiP?: boolean })
             } else {
                 await videoRef.current.requestPictureInPicture();
             }
-        } catch (e) { console.warn('PiP not supported', e); }
+        } catch { /* PiP not supported */ }
     };
 
     return (
