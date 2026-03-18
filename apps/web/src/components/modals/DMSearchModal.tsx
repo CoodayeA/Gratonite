@@ -70,13 +70,10 @@ const DMSearchModal = ({ onClose }: { onClose: () => void }) => {
     };
 
     return (
-        <div role="dialog" aria-modal="true" aria-label="Search direct messages" style={{
-            position: 'fixed', inset: 0, zIndex: 9999,
+        <div className="modal-backdrop" style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-            animation: 'fadeIn 0.2s ease-out'
-        }}>
-            <div style={{
+        }} onClick={onClose}>
+            <div role="dialog" aria-modal="true" aria-label="Search direct messages" onClick={e => e.stopPropagation()} style={{
                 width: 'min(480px, 95vw)', padding: 0, position: 'relative', overflow: 'hidden',
                 background: 'var(--bg-elevated)', border: '3px solid #000000',
                 boxShadow: '8px 8px 0 #000000', borderRadius: '0px',

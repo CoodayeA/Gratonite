@@ -38,6 +38,53 @@
     --tracking-normal: 0;
     --tracking-wide: 0.025em;
     --tracking-widest: 0.05em;
+
+    /* Z-index scale */
+    --z-grain: 1;
+    --z-sidebar-resize: 20;
+    --z-dropdown: 100;
+    --z-tooltip: 200;
+    --z-popover: 300;
+    --z-modal-backdrop: 900;
+    --z-modal: 1000;
+    --z-modal-nested: 1100;
+    --z-toast: 2000;
+    --z-context-menu: 2100;
+}
+
+/* ------------------------
+   MODAL SYSTEM
+   ------------------------ */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: var(--z-modal-backdrop);
+}
+
+.modal-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    min-height: 36px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.modal-close-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+/* Button transition defaults */
+button, [role="button"] {
+    transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
 }
 
 /* ------------------------
@@ -1368,7 +1415,7 @@ html .main-view.has-custom-bg .input-area {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: var(--z-modal);
     animation: modalOverlayIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
     contain: layout style paint;
 }
@@ -2067,7 +2114,7 @@ a {
     position: fixed;
     font-size: 24px;
     pointer-events: none;
-    z-index: 9000;
+    z-index: var(--z-modal-backdrop);
     animation: emojiRain linear forwards;
     user-select: none;
 }
@@ -2383,7 +2430,7 @@ a {
     position: fixed;
     bottom: 80px;
     right: 24px;
-    z-index: 9999;
+    z-index: var(--z-toast);
     animation: achievementSlide 4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     pointer-events: none;
 }
@@ -2408,7 +2455,7 @@ a {
     height: 8px;
     border-radius: 2px;
     pointer-events: none;
-    z-index: 9999;
+    z-index: var(--z-toast);
     animation: confetti-fall linear forwards;
 }
 
@@ -3333,7 +3380,7 @@ body.electron-mac .sidebar-header {
   width: 1px;
   height: 1px;
   overflow: hidden;
-  z-index: 9999;
+  z-index: var(--z-toast);
 }
 .skip-link:focus {
   position: fixed;
@@ -3348,7 +3395,7 @@ body.electron-mac .sidebar-header {
   font-weight: 600;
   border-radius: 8px;
   text-decoration: none;
-  z-index: 99999;
+  z-index: var(--z-context-menu);
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
@@ -3769,7 +3816,7 @@ html.low-data-mode .bg-orbs .orb {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 10000;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3889,7 +3936,7 @@ html.low-data-mode .bg-orbs .orb {
     right: 0;
     height: env(safe-area-inset-top, 0px);
     background: var(--bg-primary);
-    z-index: 10001;
+    z-index: var(--z-modal-nested);
     pointer-events: none;
   }
 
@@ -4099,7 +4146,7 @@ textarea:focus-visible,
   font-size: 16px;
   font-weight: 600;
   border-radius: 8px;
-  z-index: 10000;
+  z-index: var(--z-modal);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   text-decoration: none;
   outline: 3px solid white;
@@ -4127,6 +4174,113 @@ textarea:focus-visible,
   color: var(--accent-primary);
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
+}
+
+/* ── Hover utility classes (replaces DOM style mutations) ── */
+.toast-undo-btn {
+  background: rgba(245,158,11,0.2);
+  border: 1px solid rgba(245,158,11,0.4);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--warning, #f59e0b);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.toast-undo-btn:hover {
+  background: rgba(245,158,11,0.35);
+}
+
+.toast-dismiss-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.toast-dismiss-btn:hover {
+  color: var(--text-primary);
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-weight: 500;
+}
+.context-menu-item:hover {
+  background: var(--accent-primary);
+  color: white;
+}
+.context-menu-item[data-destructive]:hover {
+  background: transparent;
+  color: inherit;
+}
+
+.notif-item {
+  transition: background 0.2s, transform 0.2s;
+}
+.notif-item:hover {
+  background: var(--bg-tertiary) !important;
+}
+
+.daily-claim-btn {
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+}
+.daily-claim-btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.15);
+}
+
+.thread-reply-btn {
+  transition: background 0.15s;
+}
+.thread-reply-btn:hover {
+  background: rgba(var(--accent-primary-rgb, 99,102,241), 0.15) !important;
+}
+
+.reaction-picker-btn {
+  transition: all 0.15s;
+}
+.reaction-picker-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+.search-result-item {
+  transition: background 0.15s;
+}
+.search-result-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.sidebar-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  z-index: 20;
+  transition: background 0.15s;
+}
+.sidebar-resize-handle:hover {
+  background: var(--accent-primary);
+  opacity: 0.5;
 }
 
 /* ── Performance: Reduced motion preferences ── */

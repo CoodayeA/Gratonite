@@ -253,7 +253,7 @@ export const TopBarActions = () => {
                                 }} style={{
                                     padding: '10px 12px', borderRadius: '8px', cursor: 'pointer',
                                     transition: 'background 0.15s', display: 'flex', alignItems: 'center', gap: '12px'
-                                }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                                }} className="search-result-item">
                                     {r.type === 'user' ? (
                                         <Avatar userId={r.targetUserId || r.id} displayName={r.title} avatarHash={r.avatarHash} size={32} />
                                     ) : (
@@ -323,8 +323,7 @@ export const TopBarActions = () => {
                                     transition: 'background 0.2s, transform 0.2s',
                                     background: n.unread ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
                                 }}
-                                onMouseOver={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
-                                onMouseOut={e => (e.currentTarget.style.background = n.unread ? 'rgba(59, 130, 246, 0.05)' : 'transparent')}
+                                className="notif-item"
                             >
                                 {n.unread && <div style={{ position: 'absolute', left: '0', top: '50%', transform: 'translateY(-50%)', width: '3px', height: '16px', background: 'var(--accent-blue)', borderRadius: '0 4px 4px 0' }}></div>}
                                 <div style={{ fontSize: '13px', color: n.unread ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: n.unread ? 600 : 400, marginLeft: '8px' }}>{n.text}</div>

@@ -341,8 +341,9 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
     );
 
     return (
-        <div className="modal-overlay" onClick={onClose} style={{ alignItems: 'flex-start', justifyContent: 'flex-end', padding: '24px' }}>
+        <div className="modal-backdrop" onClick={onClose} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', padding: '24px' }}>
             <div
+                role="dialog" aria-modal="true"
                 className="notification-panel"
                 onClick={e => e.stopPropagation()}
                 style={{

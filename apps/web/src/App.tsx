@@ -481,8 +481,8 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                 />
             )}
             {ratingGuild && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }} onClick={() => setRatingGuild(null)}>
-                    <div style={{ width: '360px', background: 'var(--bg-elevated)', borderRadius: '16px', padding: '24px', border: '1px solid var(--stroke)', boxShadow: '0 24px 48px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+                <div className="modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setRatingGuild(null)}>
+                    <div role="dialog" aria-modal="true" style={{ width: '360px', background: 'var(--bg-elevated)', borderRadius: '16px', padding: '24px', border: '1px solid var(--stroke)', boxShadow: '0 24px 48px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <h3 style={{ fontSize: '18px', fontWeight: 700 }}>Rate {ratingGuild.name}</h3>
                             <button onClick={() => setRatingGuild(null)} aria-label="Close rating dialog" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}><X size={18} /></button>
@@ -509,7 +509,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                                     addToast({ title: 'Failed to submit rating', variant: 'error' });
                                 }).finally(() => setRatingSubmitting(false));
                             }}
-                            style={{ width: '100%', padding: '12px', borderRadius: '10px', background: ratingValue > 0 ? 'var(--accent-primary)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: ratingValue > 0 ? '#111' : 'var(--text-muted)', cursor: ratingValue > 0 ? 'pointer' : 'default', fontWeight: 700, fontSize: '14px', transition: 'background 0.2s' }}
+                            style={{ width: '100%', padding: '12px', borderRadius: '10px', background: ratingValue > 0 ? 'var(--accent-primary)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: ratingValue > 0 ? '#111' : 'var(--text-muted)', cursor: (ratingValue === 0 || ratingSubmitting) ? 'not-allowed' : 'pointer', opacity: ratingSubmitting ? 0.5 : 1, fontWeight: 700, fontSize: '14px', transition: 'background 0.2s' }}
                         >
                             {ratingSubmitting ? 'Submitting...' : ratingValue > 0 ? `Submit ${ratingValue} Star${ratingValue > 1 ? 's' : ''}` : 'Select a rating'}
                         </button>
@@ -521,8 +521,8 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                 const currentGuildTheme = getGuildTheme(themePickerGuild.id) || '';
                 const isSelected = (id: string) => currentGuildTheme === id || (!currentGuildTheme && id === '');
                 return (
-                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }} onClick={() => setThemePickerGuild(null)}>
-                        <div style={{ width: '440px', maxHeight: '80vh', background: 'var(--bg-elevated)', borderRadius: '16px', padding: '24px', border: '1px solid var(--stroke)', boxShadow: '0 24px 48px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+                    <div className="modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setThemePickerGuild(null)}>
+                        <div role="dialog" aria-modal="true" style={{ width: '440px', maxHeight: '80vh', background: 'var(--bg-elevated)', borderRadius: '16px', padding: '24px', border: '1px solid var(--stroke)', boxShadow: '0 24px 48px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                                 <div>
                                     <h3 style={{ fontSize: '18px', fontWeight: 700 }}>Portal Theme</h3>
@@ -1732,7 +1732,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                                         </div>
                                                     </div>
                                                     {gdmMentions > 0 && !gdmActive && (
-                                                        <span style={{ background: '#ed4245', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px', flexShrink: 0 }}>{gdmMentions}</span>
+                                                        <span style={{ background: 'var(--error, #ed4245)', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px', flexShrink: 0 }}>{gdmMentions}</span>
                                                     )}
                                                     {gdmHasUnread && gdmMentions === 0 && (
                                                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-primary)', flexShrink: 0 }} />
@@ -1803,7 +1803,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                                     <span style={{ fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: dmUnreadFlag ? 600 : undefined, color: dmUnreadFlag ? 'var(--text-primary)' : undefined }}>{displayName}</span>
                                                 </div>
                                                 {dmMentionCount > 0 && !dmActive && (
-                                                    <span style={{ background: '#ed4245', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px', flexShrink: 0 }}>{dmMentionCount}</span>
+                                                    <span style={{ background: 'var(--error, #ed4245)', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px', flexShrink: 0 }}>{dmMentionCount}</span>
                                                 )}
                                                 {dmUnreadFlag && dmMentionCount === 0 && (
                                                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-primary)', flexShrink: 0 }} />
@@ -1829,13 +1829,8 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         <nav ref={sidebarRef} className={`channel-sidebar glass-panel ${isOpen ? 'open' : ''}`} aria-label="Channel navigation" style={{ width: `${sidebarWidth}px` }}>
             {/* Resize handle */}
             <div
+                className="sidebar-resize-handle"
                 onMouseDown={(e) => { e.preventDefault(); resizingRef.current = true; document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none'; }}
-                style={{
-                    position: 'absolute', top: 0, right: -2, bottom: 0, width: 5, cursor: 'col-resize', zIndex: 20,
-                    background: 'transparent', transition: 'background 0.15s',
-                }}
-                onMouseEnter={(e) => { (e.target as HTMLElement).style.background = 'var(--accent-primary)'; }}
-                onMouseLeave={(e) => { if (!resizingRef.current) (e.target as HTMLElement).style.background = 'transparent'; }}
                 title="Drag to resize sidebar"
             />
             <header className="sidebar-header" style={{ cursor: 'pointer' }}>
@@ -2051,7 +2046,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                             {isMuted && <BellOff size={12} style={{ flexShrink: 0, opacity: 0.5, color: 'var(--text-muted)' }} />}
                                         </div>
                                         {mentions > 0 && !isActive && (
-                                            <span style={{ background: '#ed4245', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px', flexShrink: 0 }}>
+                                            <span style={{ background: 'var(--error, #ed4245)', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px', flexShrink: 0 }}>
                                                 {mentions}
                                             </span>
                                         )}
@@ -2778,7 +2773,7 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile, isMobileOpen, onCloseMo
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
                     background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    zIndex: 10000,
+                    zIndex: 1000,
                 }} onClick={() => { setBanDialog(null); setBanReason(''); setBanDuration(0); }}>
                     <div style={{
                         width: '440px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg, 12px)',
@@ -2858,8 +2853,8 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile, isMobileOpen, onCloseMo
                                 disabled={banSubmitting}
                                 style={{
                                     padding: '10px 20px', borderRadius: '8px', border: 'none',
-                                    background: '#ED4245', color: 'white',
-                                    fontSize: '14px', fontWeight: 600, cursor: banSubmitting ? 'default' : 'pointer',
+                                    background: 'var(--error, #ED4245)', color: 'white',
+                                    fontSize: '14px', fontWeight: 600, cursor: banSubmitting ? 'not-allowed' : 'pointer',
                                     opacity: banSubmitting ? 0.6 : 1,
                                 }}
                             >{banSubmitting ? 'Banning...' : (banDuration ? 'Temp Ban' : 'Ban')}</button>
@@ -4034,7 +4029,7 @@ export const AppLayout = () => {
 
             {/* Server Rules Gate */}
             {showRulesGate && activeGuildId && guildInfo && (
-                <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
                     <div style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', maxWidth: '520px', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                         <div style={{ padding: '24px 24px 0', textAlign: 'center' }}>
                             <ShieldAlert size={36} style={{ color: 'var(--accent-primary)', marginBottom: '12px' }} />

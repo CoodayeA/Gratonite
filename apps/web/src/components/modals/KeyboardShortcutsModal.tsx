@@ -85,8 +85,9 @@ const KeyboardShortcutsModal = ({ onClose }: { onClose: () => void }) => {
     const categories = Array.from(new Set(DEFAULT_KEYBINDINGS.map(b => b.category)));
 
     return (
-        <div className="modal-overlay" onClick={onClose} style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <div className="modal-backdrop" onClick={onClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div
+                role="dialog" aria-modal="true"
                 className="glass-panel"
                 onClick={e => e.stopPropagation()}
                 style={{

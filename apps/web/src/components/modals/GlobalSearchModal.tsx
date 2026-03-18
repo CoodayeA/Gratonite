@@ -167,8 +167,9 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
     const msgs = results.filter(r => r.type === 'message');
 
     return (
-        <div className="modal-overlay" onClick={onClose} style={{ alignItems: 'flex-start', paddingTop: isMobile ? '0' : '15vh' }}>
+        <div className="modal-backdrop" onClick={onClose} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: isMobile ? '0' : '15vh' }}>
             <div
+                role="dialog" aria-modal="true"
                 className="glass-panel"
                 onClick={e => e.stopPropagation()}
                 style={{

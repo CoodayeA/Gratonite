@@ -543,7 +543,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                     <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '12px', padding: '0 8px' }}>
                         <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--error)', animation: 'pulse 1.5s infinite', flexShrink: 0 }}></div>
                         <span style={{ color: 'var(--error)', fontWeight: 600, fontFamily: 'var(--font-mono)', flexShrink: 0 }}>{formatTime(recordingTime)}</span>
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '2px', height: '24px', opacity: 0.5 }}>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '2px', height: '24px', opacity: 0.8 }}>
                             {WAVEFORM_HEIGHTS.map((h, i) => (
                                 <div key={i} style={{ width: '4px', height: `${h}px`, background: 'var(--error)', borderRadius: '2px', animation: `pulse ${0.7 + i * 0.1}s infinite alternate` }} />
                             ))}
@@ -653,11 +653,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
                         >
                             <Eye size={18} />
                         </button>
-                        {inputValue.trim().length === 0 && (
-                            <>
+                        <div style={{ display: inputValue.trim().length === 0 ? 'contents' : 'none' }}>
                                 <button className={`input-icon-btn ${isEmojiPickerOpen ? 'primary' : ''}`} title="Select Emoji" aria-label="Open emoji picker" onClick={() => { setIsEmojiPickerOpen(!isEmojiPickerOpen); setStickerPickerOpen(false); }} style={{ position: 'relative' }}>
                                     <Smile size={20} />
-                                    <span className="shortcut-hint" style={{ position: 'absolute', bottom: '-14px', left: '50%', transform: 'translateX(-50%)', fontSize: '9px', color: 'var(--text-muted)', opacity: 0.4, whiteSpace: 'nowrap', pointerEvents: 'none', fontWeight: 500 }}>Ctrl+E</span>
+                                    <span className="shortcut-hint" style={{ position: 'absolute', bottom: '-14px', left: '50%', transform: 'translateX(-50%)', fontSize: '9px', color: 'var(--text-muted)', opacity: 0.6, whiteSpace: 'nowrap', pointerEvents: 'none', fontWeight: 500 }}>Ctrl+E</span>
                                 </button>
                                 {/* Sticker Picker Button */}
                                 <button className={`input-icon-btn ${stickerPickerOpen ? 'primary' : ''}`} title="Sticker Picker" aria-label="Open sticker picker" aria-pressed={stickerPickerOpen} onClick={() => { setStickerPickerOpen(!stickerPickerOpen); setIsEmojiPickerOpen(false); }}>
@@ -669,10 +668,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
                                 <button className={`input-icon-btn ${soundboardOpen ? 'primary' : ''}`} title="Soundboard" aria-label="Open soundboard" aria-pressed={soundboardOpen} onClick={() => setSoundboardOpen(!soundboardOpen)}>
                                     <Volume2 size={20} />
                                 </button>
-                            </>
-                        )}
-                        {inputValue.trim().length > 0 && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', visibility: inputValue.trim().length > 0 ? 'visible' : 'hidden', position: inputValue.trim().length > 0 ? 'static' as const : 'absolute' as const }}>
                                 <button
                                     className="input-icon-btn"
                                     title="Schedule Message"
@@ -686,14 +683,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
                                     className="input-icon-btn primary"
                                     aria-label={rateLimitRemaining > 0 ? `Rate limited, wait ${rateLimitRemaining}s` : 'Send message'}
                                     onClick={handleSendMessage}
-                                    disabled={rateLimitRemaining > 0}
+                                    disabled={rateLimitRemaining > 0 || inputValue.trim().length === 0}
                                     style={{ position: 'relative', opacity: rateLimitRemaining > 0 ? 0.5 : 1, cursor: rateLimitRemaining > 0 ? 'not-allowed' : undefined }}
                                 >
                                     {rateLimitRemaining > 0 ? <span style={{ fontSize: '12px', fontWeight: 700 }}>{rateLimitRemaining}s</span> : <Send size={18} />}
-                                    <span className="shortcut-hint" style={{ position: 'absolute', bottom: '-14px', left: '50%', transform: 'translateX(-50%)', fontSize: '9px', color: 'var(--text-muted)', opacity: 0.4, whiteSpace: 'nowrap', pointerEvents: 'none', fontWeight: 500 }}>Enter</span>
+                                    <span className="shortcut-hint" style={{ position: 'absolute', bottom: '-14px', left: '50%', transform: 'translateX(-50%)', fontSize: '9px', color: 'var(--text-muted)', opacity: 0.6, whiteSpace: 'nowrap', pointerEvents: 'none', fontWeight: 500 }}>Enter</span>
                                 </button>
-                            </div>
-                        )}
+                        </div>
                     </>
                 )}
 

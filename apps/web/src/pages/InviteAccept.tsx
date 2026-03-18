@@ -253,7 +253,7 @@ function ErrorState({ message, onBack }: { message: string; onBack: () => void }
                     <button
                         onClick={handleAppeal}
                         disabled={appealSending || !appealText.trim()}
-                        style={{ marginTop: '8px', padding: '8px 20px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 600, fontSize: '13px', cursor: appealSending ? 'default' : 'pointer', opacity: appealSending ? 0.6 : 1 }}
+                        style={{ marginTop: '8px', padding: '8px 20px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 600, fontSize: '13px', cursor: (appealSending || !appealText.trim()) ? 'not-allowed' : 'pointer', opacity: (appealSending || !appealText.trim()) ? 0.5 : 1 }}
                     >
                         {appealSending ? 'Sending...' : 'Submit Appeal'}
                     </button>

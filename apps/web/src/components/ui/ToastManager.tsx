@@ -74,7 +74,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '12px',
-                    zIndex: 99998,
+                    zIndex: 2000,
                     perspective: '1000px',
                     pointerEvents: 'none',
                 }}
@@ -292,19 +292,7 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
                     {isUndo && toast.onUndo && (
                         <button
                             onClick={handleUndo}
-                            style={{
-                                background: 'rgba(245,158,11,0.2)',
-                                border: '1px solid rgba(245,158,11,0.4)',
-                                borderRadius: '6px',
-                                padding: '3px 10px',
-                                fontSize: '12px',
-                                fontWeight: 700,
-                                color: 'var(--warning, #f59e0b)',
-                                cursor: 'pointer',
-                                flexShrink: 0,
-                            }}
-                            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.35)'; }}
-                            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.2)'; }}
+                            className="toast-undo-btn"
                         >
                             Undo
                         </button>
@@ -319,19 +307,10 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
             <button
                 aria-label="Dismiss notification"
                 onClick={(e) => { e.stopPropagation(); handleRemove(); }}
+                className="toast-dismiss-btn"
                 style={{
-                    background: 'transparent',
-                    border: 'none',
                     color: isAchievement ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '4px'
                 }}
-                onMouseOver={(e) => e.currentTarget.style.color = isAchievement ? 'white' : 'var(--text-primary)'}
-                onMouseOut={(e) => e.currentTarget.style.color = isAchievement ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)'}
             >
                 <X size={16} />
             </button>

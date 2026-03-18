@@ -19,6 +19,12 @@ type Props = {
 const GroupDmCreateModal = ({ onClose }: Props) => {
     const navigate = useNavigate();
     const { addToast } = useToast();
+
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', handler);
+        return () => document.removeEventListener('keydown', handler);
+    }, [onClose]);
     const [friends, setFriends] = useState<Friend[]>([]);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [groupName, setGroupName] = useState('');
@@ -86,12 +92,10 @@ const GroupDmCreateModal = ({ onClose }: Props) => {
     });
 
     return (
-        <div role="dialog" aria-modal="true" aria-label="Create group message" style={{
-            position: 'fixed', inset: 0, zIndex: 1000,
+        <div className="modal-backdrop" style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(0,0,0,0.6)',
         }} onClick={onClose}>
-            <div style={{
+            <div role="dialog" aria-modal="true" aria-label="Create group message" style={{
                 background: 'var(--bg-elevated)', borderRadius: '12px',
                 width: 'min(440px, 95vw)', maxHeight: '560px', display: 'flex', flexDirection: 'column',
                 boxShadow: '0 16px 48px rgba(0,0,0,0.4)',

@@ -149,7 +149,7 @@ const CodeFilePreview = ({ url, filename, sizeStr }: { url: string; filename: st
                 <pre style={{ margin: 0, padding: '10px 12px', fontSize: '12px', lineHeight: '1.5', fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-primary)', overflowX: 'auto', maxHeight: '350px', overflowY: 'auto', whiteSpace: 'pre' }}>
                     <code>{displayLines.map((line, i) => (
                         <div key={i} style={{ display: 'flex' }}>
-                            <span style={{ color: 'var(--text-muted)', minWidth: '3ch', textAlign: 'right', marginRight: '12px', userSelect: 'none', flexShrink: 0, opacity: 0.5 }}>{i + 1}</span>
+                            <span style={{ color: 'var(--text-muted)', minWidth: '3ch', textAlign: 'right', marginRight: '12px', userSelect: 'none', flexShrink: 0, opacity: 0.6 }}>{i + 1}</span>
                             <span>{line}</span>
                         </div>
                     ))}</code>
@@ -356,7 +356,7 @@ export const MemoizedMessageItem = memo(({
                             <span style={{
                                 position: 'absolute', right: '0', top: '2px',
                                 fontSize: '10px', color: 'var(--text-muted)',
-                                opacity: isHovered ? 1 : 0,
+                                opacity: isHovered ? 1 : 0.4,
                                 transition: 'opacity 0.2s'
                             }}>
                                 {msg.time.split(' ')[0]}
@@ -666,7 +666,7 @@ export const MemoizedMessageItem = memo(({
                                                     </div>
                                                     <a href={displayUrl} download={displayName} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', fontSize: '12px', textDecoration: 'none', flexShrink: 0, fontWeight: 500 }}>Open</a>
                                                 </div>
-                                                <iframe src={displayUrl} style={{ width: '100%', height: '400px', border: 'none', background: 'white' }} title={displayName} />
+                                                <iframe src={displayUrl} style={{ width: '100%', height: '400px', border: 'none', background: 'var(--bg-primary)' }} title={displayName} />
                                             </div>
                                         );
                                     }
@@ -775,8 +775,7 @@ export const MemoizedMessageItem = memo(({
                                     transition: 'background 0.15s',
                                 }}
                                 onClick={() => setActiveThreadMessage?.(msg)}
-                                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(var(--accent-primary-rgb, 99,102,241), 0.15)')}
-                                onMouseLeave={e => (e.currentTarget.style.background = (msg.threadReplyCount ?? 0) >= 3 ? 'rgba(var(--accent-primary-rgb, 99,102,241), 0.08)' : 'transparent')}
+                                className="thread-reply-btn"
                             >
                                 <MessageSquare size={12} />
                                 {(msg.threadReplyCount ?? 0) >= 3
@@ -794,7 +793,7 @@ export const MemoizedMessageItem = memo(({
                             qEmoji === '\u{1F44F}' ? (
                                 <SlowClapReaction key={qEmoji} onClap={() => { onReaction?.(msg.apiId, qEmoji, false); setShowReactionPicker(false); }} />
                             ) : (
-                                <button key={qEmoji} onClick={() => { onReaction?.(msg.apiId, qEmoji, false); setShowReactionPicker(false); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px 6px', borderRadius: '8px', transition: 'all 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                                <button key={qEmoji} onClick={() => { onReaction?.(msg.apiId, qEmoji, false); setShowReactionPicker(false); }} className="reaction-picker-btn" style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px 6px', borderRadius: '8px' }}>
                                     {qEmoji}
                                 </button>
                             )

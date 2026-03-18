@@ -117,15 +117,13 @@ const ForwardModal = ({ message, onClose, onForward }: ForwardModalProps) => {
 
     return (
         <div
+            className="modal-backdrop"
             onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
             style={{
-                position: 'fixed', inset: 0, zIndex: 9999,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-                animation: 'fadeIn 0.2s ease-out'
             }}
         >
-            <div style={{
+            <div role="dialog" aria-modal="true" style={{
                 width: 'min(520px, 95vw)', position: 'relative', overflow: 'hidden',
                 background: 'var(--bg-elevated)', border: '3px solid #000000',
                 boxShadow: '8px 8px 0 #000000', borderRadius: '0px',

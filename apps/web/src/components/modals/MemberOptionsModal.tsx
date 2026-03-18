@@ -218,8 +218,8 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
     };
 
     return (
-        <div className="modal-overlay">
-            <div className="login-box glass-panel" style={{ width: '480px', padding: '32px', position: 'relative' }}>
+        <div className="modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
+            <div role="dialog" aria-modal="true" className="login-box glass-panel" style={{ width: '480px', padding: '32px', position: 'relative' }} onClick={e => e.stopPropagation()}>
                 <button onClick={onClose} style={{ position: 'absolute', top: 24, right: 24, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                     <X size={24} />
                 </button>

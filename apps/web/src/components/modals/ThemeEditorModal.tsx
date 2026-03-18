@@ -121,6 +121,12 @@ export default function ThemeEditorModal({ onClose, editingThemeId }: ThemeEdito
   const { setTheme, colorMode } = useTheme();
   const toast = useToast();
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
+
   // Theme metadata
   const [themeName, setThemeName] = useState('My Custom Theme');
   const [themeDescription, setThemeDescription] = useState('');
@@ -265,16 +271,12 @@ export default function ThemeEditorModal({ onClose, editingThemeId }: ThemeEdito
   ] as const;
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 10000,
+    <div className="modal-backdrop" style={{
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'rgba(0,0,0,0.7)',
     }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{
+      <div role="dialog" aria-modal="true" style={{
         background: 'var(--bg-primary)',
         borderRadius: '16px',
         width: '90vw',

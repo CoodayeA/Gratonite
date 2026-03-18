@@ -19,6 +19,11 @@ interface Props {
 }
 
 export function NotificationPrefsModal({ type, id, name, onClose }: Props) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
   const settingKey = `notif:${type}:${id}`;
   const [level, setLevel] = useState<NotifLevel>('all');
   const [muted, setMuted] = useState(false);
@@ -63,8 +68,8 @@ export function NotificationPrefsModal({ type, id, name, onClose }: Props) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content notif-prefs-modal" onClick={e => e.stopPropagation()}>
+    <div className="modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
+      <div role="dialog" aria-modal="true" className="modal-content notif-prefs-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Notification Settings</h3>
           <span className="modal-subtitle">{name}</span>
