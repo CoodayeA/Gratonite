@@ -317,12 +317,11 @@ export function EmbedCard({ embed }: Props) {
             </span>
           </div>
           {embed.title && (
-            <a href={embed.url} target="_blank" rel="noopener noreferrer" className="embed-title" style={{
+            <a href={embed.url} target="_blank" rel="noopener noreferrer" className="embed-title hover-underline" style={{
               display: 'block', fontSize: '14px', fontWeight: 600,
               color: 'var(--accent-primary)', textDecoration: 'none',
               marginBottom: '4px', lineHeight: '1.3',
-            }}
-              className="hover-underline">
+            }}>
               {embed.title}
             </a>
           )}

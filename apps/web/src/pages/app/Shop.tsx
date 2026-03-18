@@ -419,7 +419,7 @@ const Shop = () => {
                                                 fontFamily: item.nameplateFont ?? 'var(--font-display)',
                                                 letterSpacing: '0.01em',
                                             }}>
-                                                {user?.displayName || user?.username || 'You'}
+                                                {user?.name || user?.handle || 'You'}
                                             </div>
                                             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Online</div>
                                         </div>

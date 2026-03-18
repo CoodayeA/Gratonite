@@ -260,9 +260,8 @@ const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, cust
                     <button
                         key={p}
                         onClick={() => { onChangePresence(p); onClose(); }}
-                        className="menu-item"
+                        className="menu-item hover-text-primary"
                         style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', background: 'transparent', border: 'none', width: '100%', textAlign: 'left', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}
-                        className="hover-text-primary"
                     >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: PRESENCE_COLORS[p] }}></div>
@@ -274,8 +273,7 @@ const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, cust
 
                 <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }}></div>
 
-                <button onClick={() => { onClose(); onOpenProfile(); }} className="menu-item" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', background: 'transparent', border: 'none', width: '100%', textAlign: 'left', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}
-                    className="hover-text-primary">
+                <button onClick={() => { onClose(); onOpenProfile(); }} className="menu-item hover-text-primary" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', background: 'transparent', border: 'none', width: '100%', textAlign: 'left', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}>
                     <User size={16} />
                     <span style={{ fontSize: '14px' }}>Profile Settings</span>
                 </button>
@@ -288,9 +286,8 @@ const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, cust
                     <button
                         key={t}
                         onClick={() => { setTheme(t); }}
-                        className="menu-item"
+                        className="menu-item hover-text-primary"
                         style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', background: 'transparent', border: 'none', width: '100%', textAlign: 'left', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}
-                        className="hover-text-primary"
                     >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <Paintbrush size={14} />
@@ -302,8 +299,7 @@ const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, cust
 
                 <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }}></div>
 
-                <button onClick={() => { onClose(); onLogout(); }} className="menu-item" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', background: 'transparent', border: 'none', width: '100%', textAlign: 'left', borderRadius: 'var(--radius-sm)', color: '#ef4444' }}
-                    className="hover-bg-error-subtle">
+                <button onClick={() => { onClose(); onLogout(); }} className="menu-item hover-bg-error-subtle" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', background: 'transparent', border: 'none', width: '100%', textAlign: 'left', borderRadius: 'var(--radius-sm)', color: '#ef4444' }}>
                     <LogOut size={16} />
                     <span style={{ fontSize: '14px' }}>Log Out</span>
                 </button>
