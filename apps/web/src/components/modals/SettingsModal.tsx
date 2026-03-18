@@ -387,7 +387,7 @@ const SettingsModal = ({
                 setEmailDms((emailNotifs.dms as boolean) ?? false);
                 setEmailFrequency((emailNotifs.frequency as 'instant' | 'daily' | 'never') ?? 'never');
             }
-        }).catch(e => console.error('Failed to load settings:', e));
+        }).catch(() => addToast({ title: 'Failed to load settings', variant: 'error' }));
     }, []);
 
     const { user: ctxUser, updateUser, refetchUser } = useUser();
@@ -449,7 +449,7 @@ const SettingsModal = ({
                 const cfg = (equippedNameplate.assetConfig ?? {}) as Record<string, unknown>;
                 setWardrobePreviewNameplate((cfg.nameplateStyle as string) ?? 'none');
             }
-        }).catch(e => console.error('Failed to load wardrobe:', e)).finally(() => setWardrobeLoading(false));
+        }).catch(() => addToast({ title: 'Failed to load wardrobe', variant: 'error' })).finally(() => setWardrobeLoading(false));
     }, [activeTab]);
 
 

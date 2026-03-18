@@ -419,6 +419,11 @@ export function initSocket(io: SocketIOServer): void {
     socket.on('STAGE_SPEAKER_ADD', async (data: { channelId: string; sessionId: string; userId: string }) => {
       if (!data?.channelId || !data?.sessionId || !data?.userId) return;
       try {
+        // Verify the requesting user is the session host
+        const [session] = await db.select({ hostId: stageSessions.hostId })
+          .from(stageSessions).where(eq(stageSessions.id, data.sessionId)).limit(1);
+        if (!session || session.hostId !== userId) return;
+
         await db
           .insert(stageSpeakers)
           .values({
@@ -445,6 +450,11 @@ export function initSocket(io: SocketIOServer): void {
     socket.on('STAGE_SPEAKER_REMOVE', async (data: { channelId: string; sessionId: string; userId: string }) => {
       if (!data?.channelId || !data?.sessionId || !data?.userId) return;
       try {
+        // Verify the requesting user is the session host
+        const [session] = await db.select({ hostId: stageSessions.hostId })
+          .from(stageSessions).where(eq(stageSessions.id, data.sessionId)).limit(1);
+        if (!session || session.hostId !== userId) return;
+
         await db
           .delete(stageSpeakers)
           .where(

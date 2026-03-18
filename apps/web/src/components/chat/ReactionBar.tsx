@@ -16,7 +16,7 @@ export const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApi
                 if (Array.isArray(data) && data.length > 0) {
                     setTooltip({ users: data.slice(0, 5), total: count });
                 }
-            }).catch((err) => { console.error('Failed to fetch reaction users:', err); });
+            }).catch(() => {});
         }, 300);
     };
 

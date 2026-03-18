@@ -77,7 +77,7 @@ const DMSearchModal = ({ onClose }: { onClose: () => void }) => {
             animation: 'fadeIn 0.2s ease-out'
         }}>
             <div style={{
-                width: '480px', padding: 0, position: 'relative', overflow: 'hidden',
+                width: 'min(480px, 95vw)', padding: 0, position: 'relative', overflow: 'hidden',
                 background: 'var(--bg-elevated)', border: '3px solid #000000',
                 boxShadow: '8px 8px 0 #000000', borderRadius: '0px',
                 animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
