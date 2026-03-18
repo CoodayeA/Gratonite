@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Activity, Users, Star, Zap, Gift, ArrowLeft, RefreshCw, Loader2, Gamepad2, Headphones, Eye, Circle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
@@ -123,14 +123,19 @@ const FriendActivity = () => {
   const [hasMore, setHasMore] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
   const [friendPresences, setFriendPresences] = useState<FriendPresence[]>([]);
+  const abortRef = useRef<AbortController>();
 
   const load = useCallback(async (append = false, before?: string) => {
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+    const signal = abortRef.current.signal;
     if (append) setLoadingMore(true); else setLoading(true);
     try {
       const params: any = { limit: 30 };
       if (filter !== 'all') params.type = filter;
       if (before) params.before = before;
       const data = await api.activityFeed.list(params);
+      if (signal.aborted) return;
       const items = Array.isArray(data) ? data : [];
       if (append) {
         setEvents(prev => [...prev, ...items]);
@@ -138,7 +143,8 @@ const FriendActivity = () => {
         setEvents(items);
       }
       setHasMore(items.length >= 30);
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       if (!append) setEvents([]);
     }
     if (append) setLoadingMore(false); else setLoading(false);

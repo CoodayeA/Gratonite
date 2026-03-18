@@ -33,6 +33,7 @@ const MessageRequests = () => {
             setRequests(Array.isArray(messageRequestList) ? messageRequestList : []);
         } catch {
             setRequests([]);
+            addToast({ title: 'Failed to load message requests', variant: 'error' });
         }
         setLoading(false);
     }, []);

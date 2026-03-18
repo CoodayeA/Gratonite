@@ -1,17 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Trophy, TrendingUp, TrendingDown, Minus, Crown, MessageSquare, Zap, Star, Users, Settings2, ChevronDown } from 'lucide-react';
+import { Trophy, TrendingUp, TrendingDown, Minus, Crown, Zap, Star, Settings2, ChevronDown } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { api } from '../../lib/api';
 
-type Metric = 'xp' | 'messages' | 'fame' | 'invites' | 'events';
+type Metric = 'xp' | 'fame';
 type Timeframe = 'weekly' | 'monthly' | 'alltime';
 
 const METRICS: { key: Metric; label: string; icon: React.ReactNode; unit: string }[] = [
     { key: 'xp', label: 'Experience', icon: <Zap size={14} />, unit: 'XP' },
-    { key: 'messages', label: 'Messages Sent', icon: <MessageSquare size={14} />, unit: 'msgs' },
     { key: 'fame', label: 'FAME Score', icon: <Star size={14} />, unit: 'FAME' },
-    { key: 'invites', label: 'Invites', icon: <Users size={14} />, unit: 'inv' },
-    { key: 'events', label: 'Events Attended', icon: <Trophy size={14} />, unit: 'events' },
 ];
 
 const TIMEFRAMES: { key: Timeframe; label: string }[] = [
@@ -68,10 +65,7 @@ const Leaderboard = () => {
                 change: 'same' as const,
                 scores: {
                     xp: { weekly: entry.fameReceived, monthly: entry.fameReceived, alltime: entry.fameReceived },
-                    messages: { weekly: 0, monthly: 0, alltime: 0 },
                     fame: { weekly: entry.fameReceived, monthly: entry.fameReceived, alltime: entry.fameReceived },
-                    invites: { weekly: 0, monthly: 0, alltime: 0 },
-                    events: { weekly: 0, monthly: 0, alltime: 0 },
                 },
                 roles: [],
                 isCurrentUser: false,

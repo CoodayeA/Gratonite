@@ -209,6 +209,55 @@ rolesRouter.post('/', requireAuth, validate(createRoleSchema), async (req: Reque
   res.status(201).json({ ...created, permissions: created.permissions.toString() });
 });
 
+/** PATCH /api/v1/guilds/:guildId/roles/positions — Batch reorder roles */
+const batchRolePositionsSchema = z.object({
+  positions: z.array(
+    z.object({
+      id: z.string(),
+      position: z.number().int().min(0),
+    }),
+  ),
+});
+
+rolesRouter.patch('/positions', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { guildId } = req.params as Record<string, string>;
+
+    if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_ROLES))) {
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_ROLES permission' }); return;
+    }
+
+    const parsed = batchRolePositionsSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ code: 'VALIDATION_ERROR', message: parsed.error.message }); return;
+    }
+
+    const { positions } = parsed.data;
+
+    // Update each role's position (only roles belonging to this guild)
+    for (const item of positions) {
+      await db.update(roles)
+        .set({ position: item.position })
+        .where(and(eq(roles.id, item.id), eq(roles.guildId, guildId)));
+    }
+
+    // Emit updated roles list to guild members
+    try {
+      const updatedRoles = await db
+        .select()
+        .from(roles)
+        .where(eq(roles.guildId, guildId))
+        .orderBy(asc(roles.position));
+      getIO().to(`guild:${guildId}`).emit('GUILD_ROLES_UPDATE', updatedRoles.map(r => ({ ...r, permissions: r.permissions.toString() })));
+    } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'GUILD_ROLES_UPDATE', err }); }
+
+    res.status(200).json({ code: 'OK', message: 'Positions updated' });
+  } catch (err) {
+    console.error('[roles] PATCH /positions error:', err);
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
 const patchRoleSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),

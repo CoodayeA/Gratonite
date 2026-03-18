@@ -83,8 +83,10 @@ const ReadLater = () => {
     const handleNavigate = useCallback((item: ReadLaterItem) => {
         if (item.guildId && item.channelId) {
             navigate(`/guild/${item.guildId}/channel/${item.channelId}`);
+        } else {
+            addToast({ title: 'Cannot navigate', description: 'Channel no longer available', variant: 'error' });
         }
-    }, [navigate]);
+    }, [navigate, addToast]);
 
     const totalUnread = items.reduce((acc, item) => acc + item.unreadCount, 0);
 

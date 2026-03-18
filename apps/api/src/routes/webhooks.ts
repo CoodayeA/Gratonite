@@ -131,6 +131,12 @@ webhooksRouter.get(
         return;
       }
 
+      // Require MANAGE_WEBHOOKS permission to list webhooks
+      if (!(await hasPermission(userId, guildId, Permissions.MANAGE_WEBHOOKS))) {
+        res.status(403).json({ error: 'Missing MANAGE_WEBHOOKS permission' });
+        return;
+      }
+
       const allWebhooks = await db
         .select()
         .from(webhooks)

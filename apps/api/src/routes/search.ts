@@ -46,15 +46,17 @@ searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request,
   if (authorId) conditions.push(eq(messages.authorId, authorId));
   if (before) {
     const beforeDate = new Date(before);
-    if (!isNaN(beforeDate.getTime())) {
-      conditions.push(lt(messages.createdAt, beforeDate));
+    if (isNaN(beforeDate.getTime())) {
+      res.status(400).json({ error: 'Invalid before date' }); return;
     }
+    conditions.push(lt(messages.createdAt, beforeDate));
   }
   if (after) {
     const afterDate = new Date(after);
-    if (!isNaN(afterDate.getTime())) {
-      conditions.push(gt(messages.createdAt, afterDate));
+    if (isNaN(afterDate.getTime())) {
+      res.status(400).json({ error: 'Invalid after date' }); return;
     }
+    conditions.push(gt(messages.createdAt, afterDate));
   }
   if (has === 'file' || has === 'image') {
     conditions.push(sql`jsonb_array_length(COALESCE(${messages.attachments}, '[]'::jsonb)) > 0`);

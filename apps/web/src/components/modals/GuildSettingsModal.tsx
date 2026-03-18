@@ -131,7 +131,7 @@ function CurrencyPanel({ guildId, addToast }: { guildId: string; addToast: (t: {
             } else {
                 setCurrencyEnabled(false);
             }
-        }).catch(() => {});
+        }).catch(() => { addToast({ title: 'Failed to load currency settings', variant: 'error' }); });
         api.get<any>(`/guilds/${guildId}/currency/leaderboard`).then((data: any) => {
             if (Array.isArray(data)) setCurrencyLeaderboard(data);
         }).catch(() => {});
@@ -328,6 +328,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [rolesSaving, setRolesSaving] = useState(false);
     const [deletingGuild, setDeletingGuild] = useState(false);
 
+    // Confirmation dialog state for destructive actions
+    const [confirmDialog, setConfirmDialog] = useState<{title: string; description: string; onConfirm: () => void} | null>(null);
+
     // Channels tab state
     const [channelsList, setChannelsList] = useState<Array<{ id: string; name: string; type: string; parentId: string | null; position: number; topic: string | null; restricted?: boolean }>>([]);
     const [channelsLoading, setChannelsLoading] = useState(false);
@@ -386,7 +389,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             if (g.memberScreeningEnabled) setMemberScreeningEnabled(true);
             if (g.boostCount != null) setBoostCount(g.boostCount);
             if (g.boostTier != null) setBoostTier(g.boostTier);
-        }).catch(() => {});
+        }).catch(() => { addToast({ title: 'Failed to load boost stats', variant: 'error' }); });
     }, [guildId]);
 
     useEffect(() => {
@@ -927,7 +930,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                 categoryId: e.categoryId || null,
             })));
         }).catch(() => { addToast({ title: 'Failed to load server emojis', variant: 'error' }); });
-        api.guilds.getEmojiCategories(guildId).then(setEmojiCategories).catch(() => {});
+        api.guilds.getEmojiCategories(guildId).then(setEmojiCategories).catch(() => { addToast({ title: 'Failed to load emoji categories', variant: 'error' }); });
     }, [guildId]);
 
     const validateEmojiFile = (file: File): string | null => {
@@ -1199,7 +1202,10 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                 actions: [{ order: 0, type: actionType }],
             });
         } catch {
-            // revert silently
+            addToast({ title: 'Failed to save automod rule', variant: 'error' });
+            setAutomodRules(prev => prev.map(r =>
+                r.id === ruleId ? { ...r, name: rule.name, action: rule.action, keywords: rule.keywords, desc: rule.desc } : r
+            ));
         }
     };
 
@@ -1400,6 +1406,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     });
 
     return (
+        <>
         <div className="modal-backdrop" onClick={onClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div role="dialog" aria-modal="true" onClick={e => e.stopPropagation()} style={{ width: 'min(900px, 95vw)', height: 'min(650px, 90vh)', display: 'flex', background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
                 {/* Left Sidebar */}
@@ -2004,7 +2011,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                 {ch.type === 'GUILD_VOICE' ? <Mic size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : <Hash size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
                                                 {ch.restricted ? <Lock size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : null}
                                                 <span style={{ flex: 1, fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>{ch.name}</span>
-                                                <button onClick={() => handleDeleteChannel(ch.id)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Trash2 size={14} /></button>
+                                                <button onClick={() => setConfirmDialog({ title: 'Delete Channel', description: `Are you sure you want to delete #${ch.name}? This cannot be undone.`, onConfirm: () => handleDeleteChannel(ch.id) })} aria-label="Delete channel" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Trash2 size={14} /></button>
                                             </div>
                                         ))}
 
@@ -2045,9 +2052,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                         ) : (
                                                             <span style={{ flex: 1, fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{cat.name}</span>
                                                         )}
-                                                        <button onClick={() => { setEditingCategoryId(cat.id); setEditingCategoryName(cat.name); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Edit2 size={12} /></button>
-                                                        <button onClick={() => setShowCreateChannelInSettings({ parentId: cat.id })} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Plus size={12} /></button>
-                                                        <button onClick={() => handleDeleteChannel(cat.id)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Trash2 size={12} /></button>
+                                                        <button onClick={() => { setEditingCategoryId(cat.id); setEditingCategoryName(cat.name); }} aria-label="Edit category" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Edit2 size={12} /></button>
+                                                        <button onClick={() => setShowCreateChannelInSettings({ parentId: cat.id })} aria-label="Add channel" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Plus size={12} /></button>
+                                                        <button onClick={() => setConfirmDialog({ title: 'Delete Category', description: `Are you sure you want to delete "${cat.name}" and all its channels? This cannot be undone.`, onConfirm: () => handleDeleteChannel(cat.id) })} aria-label="Delete channel" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Trash2 size={12} /></button>
                                                     </div>
                                                     <div style={{ paddingLeft: '24px', display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
                                                         {children.map(ch => (
@@ -2070,7 +2077,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                                 {ch.type === 'GUILD_VOICE' ? <Mic size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : <Hash size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
                                                                 {ch.restricted ? <Lock size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : null}
                                                                 <span style={{ flex: 1, fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>{ch.name}</span>
-                                                                <button onClick={() => handleDeleteChannel(ch.id)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Trash2 size={14} /></button>
+                                                                <button onClick={() => setConfirmDialog({ title: 'Delete Channel', description: `Are you sure you want to delete #${ch.name}? This cannot be undone.`, onConfirm: () => handleDeleteChannel(ch.id) })} aria-label="Delete channel" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Trash2 size={14} /></button>
                                                             </div>
                                                         ))}
                                                         {children.length === 0 && (
@@ -2134,6 +2141,14 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                             if (dragIdx !== -1 && dropIdx !== -1) {
                                                                 const [moved] = newRoles.splice(dragIdx, 1);
                                                                 newRoles.splice(dropIdx, 0, moved);
+                                                            }
+                                                            // Persist new role order to server
+                                                            if (guildId) {
+                                                                const positions = newRoles.map((r, i) => ({ id: r.id, position: newRoles.length - i }));
+                                                                api.patch(`/guilds/${guildId}/roles/positions`, { positions }).catch(() => {
+                                                                    addToast({ title: 'Failed to save role order', variant: 'error' });
+                                                                    fetchRoles();
+                                                                });
                                                             }
                                                             return newRoles;
                                                         });
@@ -2992,7 +3007,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                     <Clock size={12} /> {ban.bannedAt}
                                                 </span>
                                                 <button
-                                                    onClick={() => handleUnban(ban.userId)}
+                                                    onClick={() => setConfirmDialog({ title: 'Unban Member', description: `Are you sure you want to unban ${ban.displayName}? They will be able to rejoin the server.`, onConfirm: () => handleUnban(ban.userId) })}
                                                     onMouseEnter={() => setHoveredBtn(`unban-${ban.userId}`)}
                                                     onMouseLeave={() => setHoveredBtn(`ban-${ban.userId}`)}
                                                     style={{
@@ -3169,13 +3184,13 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                 >{cat.name}</span>
                                             )}
                                             <button
-                                                onClick={async () => {
+                                                onClick={() => setConfirmDialog({ title: 'Delete Emoji Category', description: `Are you sure you want to delete the "${cat.name}" category? Emojis in this category will become uncategorized.`, onConfirm: async () => {
                                                     if (!guildId) return;
                                                     await api.guilds.deleteEmojiCategory(guildId, cat.id);
                                                     setEmojiCategories(prev => prev.filter(c => c.id !== cat.id));
                                                     setCustomEmojis(prev => prev.map(e => e.categoryId === cat.id ? { ...e, categoryId: null } : e));
                                                     addToast({ title: `Category "${cat.name}" deleted`, variant: 'success' });
-                                                }}
+                                                } })}
                                                 style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0', display: 'flex' }}
                                                 title="Delete category"
                                             >
@@ -3279,7 +3294,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                 </select>
                                             )}
                                             {hoveredBtn === `emoji-${emoji.name}` && (
-                                                <button onClick={() => handleDeleteEmoji(emoji.id, emoji.name)}
+                                                <button onClick={() => setConfirmDialog({ title: 'Delete Emoji', description: `Are you sure you want to delete :${emoji.name}:? This cannot be undone.`, onConfirm: () => handleDeleteEmoji(emoji.id, emoji.name) })}
+                                                    aria-label="Delete emoji"
                                                     style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(237,66,69,0.85)', border: 'none', borderRadius: '4px', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }}>
                                                     <X size={10} />
                                                 </button>
@@ -3354,18 +3370,21 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                         <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: wh.avatar, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                             <Link2 size={20} color="white" />
                                         </div>
-                                        <div style={{ flex: 1 }}>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>{wh.name}</div>
                                             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Posts to {wh.channel} &middot; Created {wh.createdAt}</div>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{`${API_BASE}/webhooks/${wh.id}/${'•'.repeat(12)}`}</div>
                                         </div>
                                         <div style={{ display: 'flex', gap: '8px' }}>
                                             <button onClick={() => { const apiHost = API_BASE; const url = `${apiHost}/webhooks/${wh.id}/${wh.token}`; navigator.clipboard.writeText(url).catch(() => {}); setCopiedWebhookId(wh.id); setTimeout(() => setCopiedWebhookId(null), 2000); }}
                                                 title="Copy Webhook URL"
+                                                aria-label="Copy webhook URL"
                                                 style={{ padding: '8px', borderRadius: '6px', background: copiedWebhookId === wh.id ? 'rgba(16,185,129,0.15)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: copiedWebhookId === wh.id ? 'var(--success)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
                                                 {copiedWebhookId === wh.id ? <Check size={16} /> : <Copy size={16} />}
                                             </button>
                                             <button onClick={() => { addToast({ title: 'Token Regeneration', description: 'Webhook tokens are managed by the server. Delete and recreate the webhook to get a new token.', variant: 'info' }); }}
                                                 title="Regenerate Token"
+                                                aria-label="Regenerate token"
                                                 style={{ padding: '8px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
                                                 <RefreshCw size={16} />
                                             </button>
@@ -3378,11 +3397,13 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                 } catch { setDeliveryLogs([]); setViewDeliveriesId(wh.id); }
                                             }}
                                                 title="View Delivery Logs"
+                                                aria-label="View delivery logs"
                                                 style={{ padding: '8px', borderRadius: '6px', background: viewDeliveriesId === wh.id ? 'color-mix(in srgb, var(--accent-primary) 15%, transparent)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: viewDeliveriesId === wh.id ? 'var(--accent-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
                                                 <Activity size={16} />
                                             </button>
-                                            <button onClick={async () => { try { await api.webhooks.delete(wh.id); } catch {} setWebhooksList(prev => prev.filter(w => w.id !== wh.id)); addAuditEntry('Webhook Deleted', actorName, wh.name, 'settings'); }}
+                                            <button onClick={() => setConfirmDialog({ title: 'Delete Webhook', description: `Are you sure you want to delete the webhook "${wh.name}"? Any integrations using this webhook will stop working.`, onConfirm: async () => { try { await api.webhooks.delete(wh.id); } catch {} setWebhooksList(prev => prev.filter(w => w.id !== wh.id)); addAuditEntry('Webhook Deleted', actorName, wh.name, 'settings'); } })}
                                                 title="Delete Webhook"
+                                                aria-label="Delete webhook"
                                                 style={{ padding: '8px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: 'var(--error)', display: 'flex', alignItems: 'center' }}>
                                                 <Trash2 size={16} />
                                             </button>
@@ -3674,14 +3695,14 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                     style={{ padding: '6px 16px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
                                                 >Sync</button>
                                                 <button
-                                                    onClick={async () => {
+                                                    onClick={() => setConfirmDialog({ title: 'Delete Template', description: `Are you sure you want to delete the template "${tmpl.name}"? This cannot be undone.`, onConfirm: async () => {
                                                         if (!guildId) return;
                                                         try {
                                                             await api.guilds.deleteTemplate(guildId, tmpl.code);
                                                             setTemplates(prev => prev.filter(t => t.code !== tmpl.code));
                                                             addToast({ title: 'Template deleted', variant: 'success' });
                                                         } catch { addToast({ title: 'Failed to delete', variant: 'error' }); }
-                                                    }}
+                                                    } })}
                                                     style={{ padding: '6px 16px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--error)', color: 'var(--error)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
                                                 >Delete</button>
                                             </div>
@@ -4131,6 +4152,31 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                 </div>
             </div>
         </div>
+
+        {/* Confirmation Dialog for destructive actions */}
+        {confirmDialog && (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}
+                onClick={() => setConfirmDialog(null)}
+            >
+                <div style={{ background: 'var(--bg-secondary)', borderRadius: '12px', padding: '24px', width: '400px', maxWidth: '90vw', border: '1px solid var(--stroke)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
+                    onClick={e => e.stopPropagation()}
+                >
+                    <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>{confirmDialog.title}</h3>
+                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.5 }}>{confirmDialog.description}</p>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                        <button
+                            onClick={() => setConfirmDialog(null)}
+                            style={{ padding: '8px 16px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}
+                        >Cancel</button>
+                        <button
+                            onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
+                            style={{ padding: '8px 16px', borderRadius: '6px', background: 'var(--error)', border: 'none', color: 'white', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}
+                        >Confirm</button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 };
 
@@ -4423,7 +4469,7 @@ function GuildStickersPanel({ guildId, addToast }: { guildId: string; addToast: 
     const [newDesc, setNewDesc] = useState('');
 
     useEffect(() => {
-        api.stickers.getGuildStickers(guildId).then(data => setStickers(Array.isArray(data) ? data : [])).catch(() => {}).finally(() => setLoading(false));
+        api.stickers.getGuildStickers(guildId).then(data => setStickers(Array.isArray(data) ? data : [])).catch(() => { addToast({ title: 'Failed to load stickers', variant: 'error' }); }).finally(() => setLoading(false));
     }, [guildId]);
 
     const handleCreate = async () => {

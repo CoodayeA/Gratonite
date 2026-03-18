@@ -69,6 +69,7 @@ const CreatorDashboard = () => {
         api.cosmetics.listMine()
             .then((data: any[]) => setSubmissions((Array.isArray(data) ? data : []).map(mapApiCosmetic)))
             .catch(err => {
+                setSubmissions([]);
                 setError(err.message ?? 'Failed to load submissions.');
                 addToast({ title: 'Error', description: err.message ?? 'Failed to load submissions.', variant: 'error' });
             })

@@ -86,7 +86,7 @@ const SettingsSoundTab = ({ addToast }: Props) => {
   }, []);
 
   // Load email notification settings
-  useState(() => {
+  useEffect(() => {
     api.users.getSettings().then((settings: Record<string, unknown>) => {
       const emailNotifs = settings?.emailNotifications as Record<string, unknown> | undefined;
       if (emailNotifs) {
@@ -95,7 +95,7 @@ const SettingsSoundTab = ({ addToast }: Props) => {
         setEmailFrequency((emailNotifs.frequency as 'instant' | 'daily' | 'never') ?? 'never');
       }
     }).catch(() => {});
-  });
+  }, []);
 
   return (
     <>
