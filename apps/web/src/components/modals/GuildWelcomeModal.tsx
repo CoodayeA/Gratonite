@@ -38,6 +38,12 @@ const GuildWelcomeModal = ({
 }: GuildWelcomeModalProps) => {
     const navigate = useNavigate();
     const { addToast } = useToast();
+
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', handler);
+        return () => document.removeEventListener('keydown', handler);
+    }, [onClose]);
     const [completing, setCompleting] = useState(false);
     const [dontShowAgain, setDontShowAgain] = useState(false);
     const [blocks, setBlocks] = useState<WelcomeBlock[]>([]);
@@ -110,11 +116,12 @@ const GuildWelcomeModal = ({
 
     return (
         <div
-            className="modal-overlay"
+            className="modal-backdrop"
             onClick={onClose}
-            style={{ zIndex: 500 }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
             <div
+                role="dialog" aria-modal="true"
                 onClick={e => e.stopPropagation()}
                 style={{
                     width: 'min(480px, 95vw)',

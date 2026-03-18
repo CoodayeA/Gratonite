@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, CreditCard, Gem, Zap, Crown, Loader2, CheckCircle } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../components/ui/ToastManager';
@@ -57,6 +57,13 @@ const StoreModal = ({ open, onClose }: StoreModalProps) => {
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   const handleBuy = async (productId: string) => {
@@ -92,12 +99,11 @@ const StoreModal = ({ open, onClose }: StoreModalProps) => {
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 1000,
+    <div className="modal-backdrop" style={{
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
     }} onClick={onClose}>
       <div
+        role="dialog" aria-modal="true"
         style={{
           background: 'var(--bg-secondary)', borderRadius: 'var(--radius-lg)',
           border: '1px solid var(--stroke)', width: '600px', maxWidth: '90vw',

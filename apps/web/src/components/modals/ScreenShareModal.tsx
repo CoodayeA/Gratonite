@@ -234,8 +234,8 @@ const ScreenShareModal = ({
     if (!isOpen) return null;
 
     return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isFullScreen ? '0px' : '24px', background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)' }}>
-            <div style={{
+        <div className="modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isFullScreen ? '0px' : '24px' }}>
+            <div role="dialog" aria-modal="true" style={{
                 width: '100%',
                 maxWidth: isFullScreen ? '100vw' : '900px',
                 height: isFullScreen ? '100vh' : '80vh',

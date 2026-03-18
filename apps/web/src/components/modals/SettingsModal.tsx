@@ -721,8 +721,8 @@ const SettingsModal = ({
 
     return (
         <>
-            <div className="modal-overlay" onClick={onClose} style={{ background: 'rgba(0, 0, 0, 0.6)' }}>
-                <div className="settings-modal flex-row glass-panel" onClick={e => e.stopPropagation()} style={{ width: 'min(960px, 95vw)', height: 'min(680px, 90vh)', padding: 0, overflow: 'hidden' }}>
+            <div className="modal-backdrop" onClick={onClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div role="dialog" aria-modal="true" className="settings-modal flex-row glass-panel" onClick={e => e.stopPropagation()} style={{ width: 'min(960px, 95vw)', height: 'min(680px, 90vh)', padding: 0, overflow: 'hidden' }}>
                     {/* Left Sidebar */}
                     <div className="settings-sidebar" style={{ width: '220px', background: 'var(--bg-elevated)', padding: '16px 16px 32px', borderRight: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
                         {/* Search */}

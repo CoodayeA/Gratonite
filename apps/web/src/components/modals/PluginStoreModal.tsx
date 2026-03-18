@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { X, Download, Trash2, ToggleLeft, ToggleRight, Package, Shield } from 'lucide-react';
 import { ModalWrapper } from '../ui/ModalWrapper';
 import { BUILTIN_PLUGINS } from '../../plugins/builtinPlugins';
@@ -18,6 +18,12 @@ interface Props {
 export default function PluginStoreModal({ onClose, installedPlugins: propPlugins, onInstall: propInstall, onUninstall: propUninstall, onToggle: propToggle }: Props) {
     const { plugins: sdkPlugins, installPlugin: sdkInstall, uninstallPlugin: sdkUninstall, togglePlugin: sdkToggle } = usePluginHost();
     const [activeTab, setActiveTab] = useState<'browse' | 'installed'>('browse');
+
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', handler);
+        return () => document.removeEventListener('keydown', handler);
+    }, [onClose]);
     const [selectedPlugin, setSelectedPlugin] = useState<PluginManifest | null>(null);
 
     // Use SDK-managed plugins, falling back to legacy props for backward compat
@@ -45,8 +51,8 @@ export default function PluginStoreModal({ onClose, installedPlugins: propPlugin
 
     return (
         <ModalWrapper isOpen={true}>
-            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1001 }} onClick={onClose}>
-                <div style={{ width: 640, maxWidth: '95vw', maxHeight: '80vh', overflow: 'hidden', background: 'var(--bg-elevated)', borderRadius: 16, border: '1px solid var(--stroke)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
+                <div role="dialog" aria-modal="true" style={{ width: 640, maxWidth: '95vw', maxHeight: '80vh', overflow: 'hidden', background: 'var(--bg-elevated)', borderRadius: 16, border: '1px solid var(--stroke)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
                     {/* Header */}
                     <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--stroke)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

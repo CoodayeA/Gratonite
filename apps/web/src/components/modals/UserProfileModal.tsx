@@ -328,8 +328,9 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
 
     return (
         <>
-        <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-backdrop" onClick={onClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div
+                role="dialog" aria-modal="true"
                 className="profile-modal"
                 onClick={e => e.stopPropagation()}
                 style={{ width: '400px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', position: 'relative' }}

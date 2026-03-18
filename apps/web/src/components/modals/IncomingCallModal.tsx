@@ -24,6 +24,12 @@ export default function IncomingCallModal({
   onDecline,
 }: IncomingCallProps) {
   const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onDecline(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onDecline]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const ringIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -51,20 +57,12 @@ export default function IncomingCallModal({
   }, [elapsed, onDecline]);
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 10000,
+    <div className="modal-backdrop" style={{
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'rgba(0, 0, 0, 0.7)',
-      backdropFilter: 'blur(8px)',
     }}>
-      <div style={{
+      <div role="dialog" aria-modal="true" style={{
         background: 'var(--bg-secondary, #1e1f22)',
         borderRadius: 16,
         padding: '40px 48px',

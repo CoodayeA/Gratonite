@@ -113,7 +113,7 @@ const DailyCheckIn = ({ onBalanceUpdate }: DailyCheckInProps) => {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
             }}>
-                {claimed ? <Check size={24} style={{ color: '#10b981' }} /> : <Gift size={24} color="#111" />}
+                {claimed ? <Check size={24} style={{ color: 'var(--success, #10b981)' }} /> : <Gift size={24} color="#111" />}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: '15px', fontFamily: 'var(--font-display)', marginBottom: '2px' }}>
@@ -128,7 +128,7 @@ const DailyCheckIn = ({ onBalanceUpdate }: DailyCheckInProps) => {
                         ) : 'Ready to claim again!'
                     ) : (
                         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Sparkles size={12} style={{ color: '#f59e0b' }} /> Claim 100 Gratonites
+                            <Sparkles size={12} style={{ color: 'var(--accent-primary, #f59e0b)' }} /> Claim 100 Gratonites
                         </span>
                     )}
                 </div>
@@ -138,6 +138,7 @@ const DailyCheckIn = ({ onBalanceUpdate }: DailyCheckInProps) => {
                     onClick={handleClaim}
                     disabled={claiming}
                     aria-label="Claim daily reward"
+                    className="daily-claim-btn"
                     style={{
                         padding: '10px 20px',
                         borderRadius: '10px',
@@ -149,19 +150,7 @@ const DailyCheckIn = ({ onBalanceUpdate }: DailyCheckInProps) => {
                         cursor: claiming ? 'wait' : 'pointer',
                         opacity: claiming ? 0.7 : 1,
                         display: 'flex', alignItems: 'center', gap: '6px',
-                        boxShadow: '2px 2px 0 rgba(0,0,0,0.1)',
-                        transition: 'transform 0.15s, box-shadow 0.15s',
                         flexShrink: 0,
-                    }}
-                    onMouseOver={(e) => {
-                        if (!claiming) {
-                            e.currentTarget.style.transform = 'translate(-1px, -1px)';
-                            e.currentTarget.style.boxShadow = '3px 3px 0 rgba(0,0,0,0.15)';
-                        }
-                    }}
-                    onMouseOut={(e) => {
-                        e.currentTarget.style.transform = 'none';
-                        e.currentTarget.style.boxShadow = '2px 2px 0 rgba(0,0,0,0.1)';
                     }}
                 >
                     <Gift size={14} /> Claim
@@ -175,7 +164,7 @@ const DailyCheckIn = ({ onBalanceUpdate }: DailyCheckInProps) => {
                     borderRadius: '10px',
                     border: '1px solid var(--stroke)',
                     background: 'var(--bg-elevated)',
-                    color: '#f59e0b',
+                    color: 'var(--accent-primary, #f59e0b)',
                     cursor: 'pointer',
                     display: 'flex', alignItems: 'center',
                     flexShrink: 0,

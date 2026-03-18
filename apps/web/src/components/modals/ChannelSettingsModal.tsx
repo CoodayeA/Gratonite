@@ -59,6 +59,12 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
     const { addToast } = useToast();
     const [activeTab, setActiveTab] = useState<'overview' | 'permissions'>('overview');
 
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', handler);
+        return () => document.removeEventListener('keydown', handler);
+    }, [onClose]);
+
     // Overview state
     const [name, setName] = useState(channelName);
     const [topic, setTopic] = useState(channelTopic || '');
@@ -198,10 +204,12 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
 
     return (
         <div
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+            className="modal-backdrop"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             onClick={onClose}
         >
             <div
+                role="dialog" aria-modal="true"
                 onClick={e => e.stopPropagation()}
                 style={{
                     background: 'var(--bg-elevated)',

@@ -140,7 +140,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
                             position: 'fixed',
                             inset: 0,
                             background: 'rgba(0,0,0,0.5)',
-                            zIndex: 99998,
+                            zIndex: 2100,
                         }}
                     />
                 )}
@@ -151,7 +151,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
                         position: 'fixed',
                         top: isTouchDevice ? undefined : state.y,
                         left: isTouchDevice ? undefined : state.x,
-                        zIndex: 99999,
+                        zIndex: 2100,
                         background: 'var(--bg-elevated)',
                         border: '1px solid var(--stroke)',
                         borderRadius: isTouchDevice ? '16px 16px 0 0' : 'var(--radius-md)',
@@ -182,34 +182,26 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
                             <button
                                 role="menuitem"
                                 aria-label={item.label}
+                                className="context-menu-item"
+                                {...(item.color ? { 'data-destructive': '' } : {})}
                                 style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '12px',
-                                    width: '100%',
                                     padding: isTouchDevice ? '12px 16px' : '8px 12px',
                                     minHeight: isTouchDevice ? '48px' : undefined,
-                                    background: 'transparent',
-                                    border: 'none',
-                                    borderRadius: '6px',
                                     color: item.color || 'var(--text-primary)',
-                                    cursor: 'pointer',
-                                    transition: 'background 0.1s, color 0.1s',
-                                    textAlign: 'left',
-                                    fontFamily: 'var(--font-sans)',
                                     fontSize: isTouchDevice ? '16px' : '14px',
-                                    fontWeight: 500,
                                     outline: state.focusedIndex === idx ? '2px solid var(--accent-primary)' : 'none',
-                                    outlineOffset: '-2px'
+                                    outlineOffset: '-2px',
                                 }}
-                                onMouseEnter={() => setState(prev => ({ ...prev, focusedIndex: idx }))}
-                                onMouseOver={(e) => {
-                                    e.currentTarget.style.background = item.color ? `color-mix(in srgb, ${item.color} 15%, transparent)` : 'var(--accent-primary)';
-                                    if (!item.color) e.currentTarget.style.color = 'white';
+                                onMouseEnter={(e) => {
+                                    setState(prev => ({ ...prev, focusedIndex: idx }));
+                                    if (item.color) {
+                                        e.currentTarget.style.background = `color-mix(in srgb, ${item.color} 15%, transparent)`;
+                                    }
                                 }}
-                                onMouseOut={(e) => {
-                                    e.currentTarget.style.background = 'transparent';
-                                    if (!item.color) e.currentTarget.style.color = 'var(--text-primary)';
+                                onMouseLeave={(e) => {
+                                    if (item.color) {
+                                        e.currentTarget.style.background = 'transparent';
+                                    }
                                 }}
                                 onClick={() => {
                                     item.onClick();
