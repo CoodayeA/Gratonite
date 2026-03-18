@@ -311,6 +311,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     const [pollDuration, setPollDuration] = useState<number | null>(null); // minutes; null = no expiry
     const [pollMultiselect, setPollMultiselect] = useState(false);
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+    const [reactionTargetMessageApiId, setReactionTargetMessageApiId] = useState<string | null>(null);
     const [emojiSearch, setEmojiSearch] = useState<string | null>(null);
     const [emojiIndex, setEmojiIndex] = useState(0);
 
@@ -726,13 +727,14 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 setCanManageChannel(true);
                 return;
             }
-            // For non-owners, check if any role grants MANAGE_CHANNELS or ADMINISTRATOR
+            // For non-owners, check if any role grants MANAGE_CHANNELS, MANAGE_MESSAGES, or ADMINISTRATOR
             api.guilds.getMemberRoles(guildId, currentUserId).then((roles: any[]) => {
                 const ADMINISTRATOR = 1n << 0n;
                 const MANAGE_CHANNELS = 1n << 2n;
+                const MANAGE_MESSAGES = 1n << 6n;
                 const hasPermission = roles?.some((r: any) => {
                     const perms = BigInt(r.permissions || '0');
-                    return (perms & ADMINISTRATOR) !== 0n || (perms & MANAGE_CHANNELS) !== 0n;
+                    return (perms & ADMINISTRATOR) !== 0n || (perms & MANAGE_CHANNELS) !== 0n || (perms & MANAGE_MESSAGES) !== 0n;
                 });
                 setCanManageChannel(!!hasPermission);
             }).catch(() => setCanManageChannel(false));
@@ -749,7 +751,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     setEditContent(msg.content);
                 }
             }] : []),
-            { id: 'react', label: 'Add Reaction', icon: Smile, onClick: () => setIsEmojiPickerOpen(true) },
+            { id: 'react', label: 'Add Reaction', icon: Smile, onClick: () => { setReactionTargetMessageApiId(msg.apiId || null); setIsEmojiPickerOpen(true); } },
             { id: 'forward', label: 'Forward Message', icon: Share2, onClick: () => setForwardingMessage(msg) },
             { id: 'thread', label: 'Create Thread', icon: MessageSquare, onClick: () => setActiveThreadMessage(msg) },
             {
@@ -1217,6 +1219,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     id: s.id,
                     username: s.username,
                     displayName: s.displayName,
+                    avatar: s.avatarHash || undefined,
                 })));
             }).catch(() => { addToast({ title: 'Failed to load member list', variant: 'error' }); });
         } else {
@@ -1427,6 +1430,20 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
 
         const unsubCreate = onMessageCreate(async (data: MessageCreatePayload) => {
             if (data.channelId !== channelId) return;
+            // Clear typing indicator for the user who sent a message
+            if (data.authorId) {
+                setTypingUsers(prev => {
+                    if (!prev.has(data.authorId)) return prev;
+                    const next = new Map(prev);
+                    next.delete(data.authorId);
+                    return next;
+                });
+                const existingTimer = typingTimersRef.current.get(data.authorId);
+                if (existingTimer) {
+                    clearTimeout(existingTimer);
+                    typingTimersRef.current.delete(data.authorId);
+                }
+            }
             // Don't duplicate messages we sent optimistically
             if (data.authorId === currentUserId) return;
             const authorInfo = userCacheRef.current.get(data.authorId);
@@ -1836,7 +1853,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
 
         result = result.replace(/(?<!\\):([a-zA-Z0-9_]+):/g, (match, name) => {
             const found = allEmojis.find(e => e.name === name);
-            if (found) return found.isCustom ? `:${found.name}:` : found.emoji;
+            if (found) return found.isCustom && found.url ? `custom:${found.name}:${found.url}` : found.isCustom ? `:${found.name}:` : found.emoji;
             return match;
         });
         result = result.replace(/\\:([a-zA-Z0-9_]+):/g, ':$1:');
@@ -3571,6 +3588,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                 >
                                     <Avatar
                                         userId={user.id}
+                                        avatarHash={(user as any).avatar || undefined}
                                         displayName={user.displayName || user.username}
                                         size={28}
                                     />
@@ -3731,7 +3749,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                             </button>
                             {inputValue.trim().length === 0 && (
                                 <>
-                                    <button className={`input-icon-btn ${isEmojiPickerOpen ? 'primary' : ''}`} title="Select Emoji" aria-label="Open emoji picker" onClick={() => { setIsEmojiPickerOpen(!isEmojiPickerOpen); setStickerPickerOpen(false); }} style={{ position: 'relative' }}>
+                                    <button className={`input-icon-btn ${isEmojiPickerOpen ? 'primary' : ''}`} title="Select Emoji" aria-label="Open emoji picker" onClick={() => { setIsEmojiPickerOpen(!isEmojiPickerOpen); setStickerPickerOpen(false); if (isEmojiPickerOpen) setReactionTargetMessageApiId(null); }} style={{ position: 'relative' }}>
                                         <Smile size={20} />
                                         <span className="shortcut-hint" style={{ position: 'absolute', bottom: '-14px', left: '50%', transform: 'translateX(-50%)', fontSize: '9px', color: 'var(--text-muted)', opacity: 0.4, whiteSpace: 'nowrap', pointerEvents: 'none', fontWeight: 500 }}>Ctrl+E</span>
                                     </button>
@@ -3827,6 +3845,12 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     {isEmojiPickerOpen && (
                         <EmojiPicker
                             onSelectEmoji={(emoji) => {
+                                if (reactionTargetMessageApiId) {
+                                    handleReaction(reactionTargetMessageApiId, emoji, false);
+                                    setReactionTargetMessageApiId(null);
+                                    setIsEmojiPickerOpen(false);
+                                    return;
+                                }
                                 setInputValue(prev => prev + emoji);
                             }}
                             onSendGif={handleSendGif}
