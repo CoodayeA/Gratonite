@@ -28,6 +28,7 @@ const CodeBlock = ({ code, lang, idx }: { code: string; lang: string; idx: numbe
             {lang && <div className="code-block-lang">{lang}</div>}
             <button
                 onClick={handleCopy}
+                className={copied ? '' : 'hover-bg-secondary-to-tertiary'}
                 style={{
                     position: 'absolute', top: lang ? '28px' : '6px', right: '6px',
                     background: copied ? 'var(--accent-primary)' : 'var(--bg-secondary)',
@@ -37,8 +38,6 @@ const CodeBlock = ({ code, lang, idx }: { code: string; lang: string; idx: numbe
                     cursor: 'pointer', transition: 'all 0.15s',
                     zIndex: 1,
                 }}
-                onMouseEnter={e => { if (!copied) e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
-                onMouseLeave={e => { if (!copied) e.currentTarget.style.background = 'var(--bg-secondary)'; }}
             >
                 {copied ? 'Copied!' : 'Copy'}
             </button>
@@ -306,8 +305,7 @@ function renderInline(text: string, ctx: InlineCtx, depth = 0): React.ReactNode[
                 parts.push(
                     <a key={`${kp}-mlink-${match.index}`} href={match[2]} target="_blank" rel="noopener noreferrer"
                         style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}
-                        onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'}
-                        onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}
+                        className="hover-underline"
                     >{match[1]}</a>
                 );
                 lastIndex = match.index + match[0].length;
@@ -476,9 +474,7 @@ function renderLeaf(text: string, ctx: InlineCtx, depth: number): React.ReactNod
             if (IMAGE_URL_REGEX.test(part)) {
                 result.push(
                     <span key={`${kp}-imgurl-${i}`}>
-                        <a href={part} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none', fontSize: '13px', wordBreak: 'break-all' }}
-                            onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'}
-                            onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}
+                        <a href={part} target="_blank" rel="noopener noreferrer" className="hover-underline" style={{ color: 'var(--accent-primary)', textDecoration: 'none', fontSize: '13px', wordBreak: 'break-all' }}
                         >{part}</a>
                         <div style={{ maxWidth: 'min(400px, 100%)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', cursor: 'pointer', marginTop: '4px', marginBottom: '4px' }}>
                             <img src={part} alt="Embedded image" loading="lazy" style={{ width: '100%', display: 'block', objectFit: 'cover', maxHeight: '350px' }} onClick={() => window.open(part, '_blank')} />
@@ -489,8 +485,7 @@ function renderLeaf(text: string, ctx: InlineCtx, depth: number): React.ReactNod
                 result.push(
                     <a key={`${kp}-url-${i}`} href={part} target="_blank" rel="noopener noreferrer"
                         style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}
-                        onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'}
-                        onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}
+                        className="hover-underline"
                     >{part}</a>
                 );
             }

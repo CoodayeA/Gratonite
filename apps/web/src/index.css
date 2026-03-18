@@ -4301,3 +4301,310 @@ textarea:focus-visible,
   }
 }
 
+/* ========================
+   HOVER UTILITY CLASSES
+   (DOM style mutation cleanup)
+   ======================== */
+
+/* Generic: bg transparent → bg-tertiary on hover */
+.hover-bg-tertiary {
+    transition: background 0.15s;
+}
+.hover-bg-tertiary:hover {
+    background: var(--bg-tertiary) !important;
+}
+
+/* Generic: bg transparent → bg-tertiary AND color text-secondary → text-primary */
+.hover-bg-tertiary-text-primary {
+    transition: background 0.15s, color 0.15s;
+}
+.hover-bg-tertiary-text-primary:hover {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Generic: bg bg-tertiary → bg-elevated AND color text-secondary → text-primary */
+.hover-bg-elevated-text-primary {
+    transition: background 0.15s, color 0.15s;
+}
+.hover-bg-elevated-text-primary:hover {
+    background: var(--bg-elevated) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Generic: color text-secondary → text-primary (no bg change) */
+.hover-text-primary {
+    transition: color 0.15s;
+}
+.hover-text-primary:hover {
+    color: var(--text-primary) !important;
+}
+
+/* Hover text-primary only when not active (data-active suppresses hover) */
+.hover-text-primary-inactive {
+    transition: color 0.15s;
+}
+.hover-text-primary-inactive:not([data-active="true"]):hover {
+    color: var(--text-primary) !important;
+}
+
+/* Emoji grid item: bg-tertiary + scale up */
+.emoji-grid-item {
+    transition: background 0.1s, transform 0.1s;
+}
+.emoji-grid-item:hover {
+    background: var(--bg-tertiary) !important;
+    transform: scale(1.15);
+}
+
+/* Emoji category jump bar button */
+.emoji-cat-btn {
+    transition: all 0.1s;
+}
+.emoji-cat-btn:hover {
+    background: var(--bg-elevated) !important;
+}
+
+/* GIF grid item: opacity + scale down */
+.gif-grid-item {
+    transition: opacity 0.15s, transform 0.15s;
+}
+.gif-grid-item:hover {
+    opacity: 0.8;
+    transform: scale(0.97);
+}
+
+/* Download card: border-color → accent-primary */
+.hover-border-accent {
+    transition: border-color 0.15s;
+}
+.hover-border-accent:hover {
+    border-color: var(--accent-primary) !important;
+}
+
+/* Bot card: border-color → accent-primary with alpha */
+.hover-border-accent-subtle {
+    transition: border-color 0.15s ease;
+}
+.hover-border-accent-subtle:hover {
+    border-color: rgba(99, 102, 241, 0.27) !important;
+}
+
+/* Admin bot approve button */
+.hover-approve-btn {
+    transition: background 0.15s;
+}
+.hover-approve-btn:hover {
+    background: rgba(16, 185, 129, 0.22) !important;
+}
+
+/* Admin bot reject button */
+.hover-reject-btn {
+    transition: background 0.15s;
+}
+.hover-reject-btn:hover {
+    background: rgba(239, 68, 68, 0.20) !important;
+}
+
+/* Link hover: text-decoration underline */
+.hover-underline {
+    text-decoration: none;
+}
+.hover-underline:hover {
+    text-decoration: underline !important;
+}
+
+/* Dismiss button: opacity 0.6 → 1 */
+.hover-opacity-full {
+    transition: opacity 0.15s;
+}
+.hover-opacity-full:hover {
+    opacity: 1 !important;
+}
+
+/* Code copy button: bg-secondary → bg-tertiary */
+.hover-bg-secondary-to-tertiary {
+    transition: all 0.15s;
+}
+.hover-bg-secondary-to-tertiary:hover {
+    background: var(--bg-tertiary) !important;
+}
+
+/* Input focus: border-color → accent-primary */
+.focus-border-accent:focus {
+    border-color: var(--accent-primary) !important;
+}
+
+/* Input focus: border-color → error */
+.focus-border-error:focus {
+    border-color: var(--error) !important;
+}
+
+/* Presence menu logout: bg → red tint */
+.hover-bg-error-subtle {
+    transition: background 0.15s;
+}
+.hover-bg-error-subtle:hover {
+    background: rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Thread indicator hover */
+.hover-thread-indicator {
+    transition: background 0.15s;
+}
+.hover-thread-indicator:hover {
+    background: rgba(var(--accent-primary-rgb, 99, 102, 241), 0.12) !important;
+}
+
+/* Voice channel control: bg transparent → accent-primary */
+.hover-bg-accent {
+    transition: background 0.15s;
+}
+.hover-bg-accent:hover {
+    background: var(--accent-primary) !important;
+}
+
+/* Voice overlay btn: opacity 0.8 → 1 */
+.hover-opacity-08-to-1 {
+    transition: opacity 0.15s;
+}
+.hover-opacity-08-to-1:hover {
+    opacity: 1 !important;
+}
+
+/* Delete pin button: color text-muted → error */
+.hover-text-error {
+    transition: color 0.15s;
+}
+.hover-text-error:hover {
+    color: var(--error) !important;
+}
+
+/* Sticker grid item hover: border-color + bg */
+.hover-sticker-item {
+    transition: border-color 0.15s, background 0.15s;
+}
+.hover-sticker-item:hover {
+    border-color: var(--accent-primary) !important;
+    background: var(--bg-secondary) !important;
+}
+
+/* Friend action btn: bg bg-tertiary → bg-elevated, color text-secondary → text-primary */
+.friend-action-btn {
+    transition: all 0.15s;
+}
+.friend-action-btn:hover {
+    background: var(--bg-elevated) !important;
+    color: var(--text-primary) !important;
+}
+
+/* === DOM Mutation Cleanup Wave 2 — Second Half === */
+
+/* Call buttons: scale up + dim on hover */
+.hover-scale-pop {
+    transition: transform 0.15s, opacity 0.15s;
+}
+.hover-scale-pop:hover {
+    transform: scale(1.1);
+    opacity: 0.9;
+}
+
+/* Generic: hover bg secondary (transparent → bg-secondary) */
+.hover-bg-secondary {
+    transition: background 0.12s;
+}
+.hover-bg-secondary:hover {
+    background: var(--bg-secondary) !important;
+}
+
+/* Generic: hover bg elevated */
+.hover-bg-elevated {
+    transition: background 0.15s;
+}
+.hover-bg-elevated:hover {
+    background: var(--bg-elevated) !important;
+}
+
+/* Generic: hover bg overlay */
+.hover-bg-overlay {
+    transition: background 0.15s;
+}
+.hover-bg-overlay:hover {
+    background: var(--hover-overlay) !important;
+}
+
+/* Border + text to accent on hover */
+.hover-border-text-accent {
+    transition: all 0.15s;
+}
+.hover-border-text-accent:hover {
+    border-color: var(--accent-primary) !important;
+    color: var(--accent-primary) !important;
+}
+
+/* Border color to text-muted on hover */
+.hover-border-muted {
+    transition: border-color 0.15s;
+}
+.hover-border-muted:hover {
+    border-color: var(--text-muted) !important;
+}
+
+/* Close icon: hover red */
+.hover-color-error {
+    transition: color 0.2s;
+}
+.hover-color-error:hover {
+    color: #ef4444 !important;
+}
+
+/* Stop button: darker red on hover */
+.hover-stop-red {
+    transition: background 0.2s;
+}
+.hover-stop-red:hover {
+    background: #dc2626 !important;
+}
+
+/* Split view close: error background + white text */
+.hover-close-error {
+    transition: all 0.15s;
+}
+.hover-close-error:hover {
+    background: var(--error, #ef4444) !important;
+    color: white !important;
+}
+
+/* Divider: accent on hover */
+.hover-accent-divider {
+    transition: background 0.15s;
+}
+.hover-accent-divider:hover {
+    background: var(--accent-primary) !important;
+}
+
+/* Screen recorder btn: text primary + bg secondary on hover */
+.hover-recorder-btn {
+    transition: color 0.15s, background 0.15s;
+}
+.hover-recorder-btn:hover {
+    color: var(--text-primary) !important;
+    background: var(--bg-secondary) !important;
+}
+
+/* Hover opacity dim */
+.hover-opacity-dim {
+    transition: opacity 0.15s;
+}
+.hover-opacity-dim:hover {
+    opacity: 0.9;
+}
+
+/* Notification item: hover to elevated bg */
+.hover-notif-item {
+    transition: background 0.2s;
+}
+.hover-notif-item:hover {
+    background: var(--bg-elevated) !important;
+}
+

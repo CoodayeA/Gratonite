@@ -124,8 +124,7 @@ export function EmbedCard({ embed }: Props) {
           </div>
           {embed.title && (
             <a href={embed.url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: 'var(--accent-primary)', textDecoration: 'none', lineHeight: '1.3' }}
-              onMouseOver={e => (e.currentTarget.style.textDecoration = 'underline')}
-              onMouseOut={e => (e.currentTarget.style.textDecoration = 'none')}>
+              className="hover-underline">
               {embed.title}
             </a>
           )}
@@ -273,8 +272,7 @@ export function EmbedCard({ embed }: Props) {
           </div>
           {embed.title && (
             <a href={embed.url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', textDecoration: 'none', lineHeight: '1.3', marginBottom: '4px' }}
-              onMouseOver={e => (e.currentTarget.style.textDecoration = 'underline')}
-              onMouseOut={e => (e.currentTarget.style.textDecoration = 'none')}>
+              className="hover-underline">
               {embed.title}
             </a>
           )}
@@ -324,8 +322,7 @@ export function EmbedCard({ embed }: Props) {
               color: 'var(--accent-primary)', textDecoration: 'none',
               marginBottom: '4px', lineHeight: '1.3',
             }}
-              onMouseOver={e => (e.currentTarget.style.textDecoration = 'underline')}
-              onMouseOut={e => (e.currentTarget.style.textDecoration = 'none')}>
+              className="hover-underline">
               {embed.title}
             </a>
           )}
@@ -364,8 +361,7 @@ function DismissButton({ onDismiss }: { onDismiss: () => void }) {
         cursor: 'pointer', color: 'white', fontSize: '14px',
         opacity: 0.6, transition: 'opacity 0.15s',
       }}
-      onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-      onMouseLeave={e => (e.currentTarget.style.opacity = '0.6')}
+      className="hover-opacity-full"
     >
       &times;
     </button>

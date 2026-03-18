@@ -174,8 +174,7 @@ const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, cust
                                     {STATUS_EMOJIS.map(em => (
                                         <button key={em} type="button" onClick={() => { setStatusEmoji(em); setShowEmojiGrid(false); }}
                                             style={{ width: '32px', height: '32px', fontSize: '18px', background: 'transparent', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                            onMouseOver={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                                            onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                                            className="hover-bg-tertiary"
                                         >{em}</button>
                                     ))}
                                 </div>
@@ -263,8 +262,7 @@ const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, cust
                         onClick={() => { onChangePresence(p); onClose(); }}
                         className="menu-item"
                         style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', background: 'transparent', border: 'none', width: '100%', textAlign: 'left', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}
-                        onMouseOver={e => e.currentTarget.style.color = 'var(--text-primary)'}
-                        onMouseOut={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                        className="hover-text-primary"
                     >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: PRESENCE_COLORS[p] }}></div>
@@ -277,8 +275,7 @@ const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, cust
                 <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }}></div>
 
                 <button onClick={() => { onClose(); onOpenProfile(); }} className="menu-item" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', background: 'transparent', border: 'none', width: '100%', textAlign: 'left', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}
-                    onMouseOver={e => e.currentTarget.style.color = 'var(--text-primary)'}
-                    onMouseOut={e => e.currentTarget.style.color = 'var(--text-secondary)'}>
+                    className="hover-text-primary">
                     <User size={16} />
                     <span style={{ fontSize: '14px' }}>Profile Settings</span>
                 </button>
@@ -293,8 +290,7 @@ const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, cust
                         onClick={() => { setTheme(t); }}
                         className="menu-item"
                         style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', background: 'transparent', border: 'none', width: '100%', textAlign: 'left', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}
-                        onMouseOver={e => e.currentTarget.style.color = 'var(--text-primary)'}
-                        onMouseOut={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                        className="hover-text-primary"
                     >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <Paintbrush size={14} />
@@ -307,8 +303,7 @@ const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, cust
                 <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }}></div>
 
                 <button onClick={() => { onClose(); onLogout(); }} className="menu-item" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', background: 'transparent', border: 'none', width: '100%', textAlign: 'left', borderRadius: 'var(--radius-sm)', color: '#ef4444' }}
-                    onMouseOver={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.1)')}
-                    onMouseOut={e => (e.currentTarget.style.background = 'transparent')}>
+                    className="hover-bg-error-subtle">
                     <LogOut size={16} />
                     <span style={{ fontSize: '14px' }}>Log Out</span>
                 </button>

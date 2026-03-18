@@ -171,14 +171,7 @@ export function ScreenRecorder({ channelId, onRecordingComplete }: ScreenRecorde
                 color: 'var(--text-muted)',
                 transition: 'color 0.15s, background 0.15s',
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--text-primary)';
-                e.currentTarget.style.background = 'var(--bg-secondary)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--text-muted)';
-                e.currentTarget.style.background = 'none';
-              }}
+              className="hover-recorder-btn"
             >
               <Monitor size={18} />
             </button>

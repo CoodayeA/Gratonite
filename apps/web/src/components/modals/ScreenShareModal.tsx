@@ -276,7 +276,7 @@ const ScreenShareModal = ({
                                 {isFullScreen ? <Minimize size={18} /> : <Maximize size={18} />}
                             </div>
                         )}
-                        <X size={20} style={{ cursor: 'pointer', transition: 'color 0.2s' }} onClick={handleStop} onMouseOver={e => e.currentTarget.style.color = '#ef4444'} onMouseOut={e => e.currentTarget.style.color = 'var(--text-secondary)'} />
+                        <X size={20} className="hover-color-error" style={{ cursor: 'pointer', transition: 'color 0.2s' }} onClick={handleStop} />
                     </div>
                 </div>
 
@@ -446,8 +446,7 @@ const ScreenShareModal = ({
                                         margin: '0 auto',
                                         transition: 'all 0.2s',
                                     }}
-                                    onMouseOver={e => { if (!isDesktop || selectedSourceId) e.currentTarget.style.opacity = '0.9'; }}
-                                    onMouseOut={e => e.currentTarget.style.opacity = '1'}
+                                    className={(!isDesktop || selectedSourceId) ? 'hover-opacity-dim' : ''}
                                 >
                                     <MonitorUp size={18} />
                                     Start Sharing
@@ -599,8 +598,7 @@ const ScreenShareModal = ({
                                 background: '#ef4444', border: 'none', color: 'white', fontWeight: 600,
                                 cursor: 'pointer', marginLeft: '16px', display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s'
                             }}
-                            onMouseOver={e => e.currentTarget.style.background = '#dc2626'}
-                            onMouseOut={e => e.currentTarget.style.background = '#ef4444'}
+                            className="hover-stop-red"
                             onClick={handleStop}
                         >
                             <MonitorUp size={18} />

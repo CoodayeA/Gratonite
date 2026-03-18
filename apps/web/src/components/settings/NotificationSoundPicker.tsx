@@ -125,8 +125,7 @@ export function NotificationSoundPicker({ eventType, currentSoundId, guildId, on
           background: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
           transition: 'background 0.12s',
         }}
-        onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--bg-secondary)'; }}
-        onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
+        className={!isSelected ? 'hover-bg-secondary' : ''}
         onClick={() => handleSelect(sound.id)}
       >
         <button
@@ -213,8 +212,7 @@ export function NotificationSoundPicker({ eventType, currentSoundId, guildId, on
                 cursor: 'pointer',
                 background: !currentSoundId ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
               }}
-              onMouseEnter={(e) => { if (currentSoundId) e.currentTarget.style.background = 'var(--bg-secondary)'; }}
-              onMouseLeave={(e) => { if (currentSoundId) e.currentTarget.style.background = 'transparent'; }}
+              className={currentSoundId ? 'hover-bg-secondary' : ''}
             >
               <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Volume2 size={14} style={{ color: 'var(--text-muted)' }} />
@@ -260,8 +258,7 @@ export function NotificationSoundPicker({ eventType, currentSoundId, guildId, on
                 fontSize: '13px',
                 color: 'var(--accent-primary)',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-secondary)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              className="hover-bg-secondary"
             >
               <Upload size={14} />
               Upload Custom Sound

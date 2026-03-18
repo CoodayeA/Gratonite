@@ -309,7 +309,7 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
     };
 
     const renderNotification = (notif: Notification) => (
-        <div key={notif.id} onClick={() => handleNotificationClick(notif)} style={{ padding: '12px 24px', borderBottom: '1px solid var(--stroke)', display: 'flex', gap: '12px', background: notif.read ? 'transparent' : 'rgba(82, 109, 245, 0.05)', cursor: 'pointer', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = 'var(--bg-elevated)'} onMouseOut={e => e.currentTarget.style.background = notif.read ? 'transparent' : 'rgba(82, 109, 245, 0.05)'}>
+        <div key={notif.id} onClick={() => handleNotificationClick(notif)} className="hover-notif-item" style={{ padding: '12px 24px', borderBottom: '1px solid var(--stroke)', display: 'flex', gap: '12px', background: notif.read ? 'transparent' : 'rgba(82, 109, 245, 0.05)', cursor: 'pointer', transition: 'background 0.2s' }}>
             <div style={{ position: 'relative' }}>
                 <Avatar userId={notif.userId || notif.id} displayName={notif.user} size={36} />
                 {!notif.read && <div style={{ position: 'absolute', top: -2, right: -2, width: '10px', height: '10px', borderRadius: '50%', background: 'var(--accent-blue)', border: '2px solid var(--bg-primary)' }} />}
@@ -334,7 +334,7 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
                 )}
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{notif.date}</div>
             </div>
-            <button onClick={(e) => dismissNotification(notif.id, e)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px', alignSelf: 'flex-start', flexShrink: 0, transition: 'color 0.2s' }} onMouseOver={e => (e.currentTarget.style.color = 'var(--text-primary)')} onMouseOut={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
+            <button onClick={(e) => dismissNotification(notif.id, e)} className="hover-text-primary" style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px', alignSelf: 'flex-start', flexShrink: 0, transition: 'color 0.2s' }}>
                 <X size={16} />
             </button>
         </div>
@@ -479,8 +479,7 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
                                                         background: item.unreadCount > 0 ? 'rgba(82, 109, 245, 0.05)' : 'transparent',
                                                         cursor: 'pointer', transition: 'background 0.2s',
                                                     }}
-                                                    onMouseOver={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
-                                                    onMouseOut={e => e.currentTarget.style.background = item.unreadCount > 0 ? 'rgba(82, 109, 245, 0.05)' : 'transparent'}
+                                                    className="hover-notif-item"
                                                 >
                                                     <div style={{
                                                         width: '36px', height: '36px', borderRadius: '50%',

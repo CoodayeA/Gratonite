@@ -118,8 +118,7 @@ export default function IncomingCallModal({
               justifyContent: 'center',
               transition: 'transform 0.15s, opacity 0.15s',
             }}
-            onMouseOver={e => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.opacity = '0.9'; }}
-            onMouseOut={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.opacity = '1'; }}
+            className="hover-scale-pop"
             aria-label="Decline call"
           >
             <PhoneOff size={24} />
@@ -140,8 +139,7 @@ export default function IncomingCallModal({
               justifyContent: 'center',
               transition: 'transform 0.15s, opacity 0.15s',
             }}
-            onMouseOver={e => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.opacity = '0.9'; }}
-            onMouseOut={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.opacity = '1'; }}
+            className="hover-scale-pop"
             aria-label="Answer with audio"
           >
             <Phone size={24} />
@@ -162,8 +160,7 @@ export default function IncomingCallModal({
               justifyContent: 'center',
               transition: 'transform 0.15s, opacity 0.15s',
             }}
-            onMouseOver={e => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.opacity = '0.9'; }}
-            onMouseOut={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.opacity = '1'; }}
+            className="hover-scale-pop"
             aria-label="Answer with video"
           >
             <Video size={24} />

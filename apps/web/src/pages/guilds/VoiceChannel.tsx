@@ -881,16 +881,14 @@ const VoiceChannel = () => {
                 <div style={{ flex: 1 }}></div>
                 <div className="unified-top-actions" style={{ display: 'flex', gap: '16px', color: 'var(--text-secondary)', alignItems: 'center' }}>
                     <div style={{ position: 'relative' }}>
-                        <MessageSquare size={20} className="hover-lift" style={{ cursor: 'pointer', transition: 'color 0.2s', color: chatOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
+                        <MessageSquare size={20} className="hover-lift hover-text-primary-inactive" data-active={chatOpen ? "true" : undefined} style={{ cursor: 'pointer', transition: 'color 0.2s', color: chatOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
                             onClick={() => { setChatOpen(!chatOpen); setChatPreviewMessages([]); }}
-                            onMouseOver={e => e.currentTarget.style.color = 'var(--accent-primary)'}
-                            onMouseOut={e => { if (!chatOpen) e.currentTarget.style.color = 'var(--text-secondary)'; }}
                         />
                         {chatPreviewMessages.length > 0 && !chatOpen && (
                             <div style={{ position: 'absolute', top: '-4px', right: '-4px', width: '10px', height: '10px', borderRadius: '50%', background: 'var(--error)', border: '2px solid var(--bg-app)' }} />
                         )}
                     </div>
-                    <Users size={20} className="hover-lift" style={{ cursor: 'pointer', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = 'var(--text-secondary)'} />
+                    <Users size={20} className="hover-lift hover-text-primary" style={{ cursor: 'pointer', transition: 'color 0.2s' }} />
                     <TopBarActions />
                 </div>
             </header>
@@ -1136,8 +1134,7 @@ const VoiceChannel = () => {
                                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     backdropFilter: 'blur(4px)', opacity: 0.8, transition: 'opacity 0.15s',
                                 }}
-                                onMouseEnter={e => { e.currentTarget.style.opacity = '1'; }}
-                                onMouseLeave={e => { e.currentTarget.style.opacity = '0.8'; }}
+                                className="hover-opacity-08-to-1"
                             >
                                 <Pin size={14} />
                             </button>
@@ -1893,8 +1890,7 @@ const VoiceChannel = () => {
                                 cursor: 'col-resize', zIndex: 20,
                                 background: 'transparent', transition: 'background 0.15s',
                             }}
-                            onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-primary)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                            className="hover-bg-accent"
                         />
                     )}
                     {/* Chat Header */}

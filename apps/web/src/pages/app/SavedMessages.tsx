@@ -248,8 +248,7 @@ export default function SavedMessages() {
                                             background: 'transparent', color: 'var(--text-secondary)',
                                             display: 'flex', alignItems: 'center', gap: '6px',
                                         }}
-                                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
-                                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                        className="hover-bg-tertiary"
                                     >
                                         <Edit2 size={12} /> Rename
                                     </button>
@@ -261,8 +260,7 @@ export default function SavedMessages() {
                                             background: 'transparent', color: 'var(--error)',
                                             display: 'flex', alignItems: 'center', gap: '6px',
                                         }}
-                                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
-                                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                        className="hover-bg-tertiary"
                                     >
                                         <Trash2 size={12} /> Delete
                                     </button>
@@ -434,8 +432,7 @@ export default function SavedMessages() {
                                                                 color: 'var(--text-secondary)',
                                                                 display: 'flex', alignItems: 'center', gap: '6px',
                                                             }}
-                                                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
-                                                            onMouseLeave={e => (e.currentTarget.style.background = !b.folderId ? 'var(--bg-tertiary)' : 'transparent')}
+                                                            className="hover-bg-tertiary"
                                                         >
                                                             <FolderOpen size={12} /> Uncategorized
                                                         </button>
@@ -450,8 +447,7 @@ export default function SavedMessages() {
                                                                     color: 'var(--text-secondary)',
                                                                     display: 'flex', alignItems: 'center', gap: '6px',
                                                                 }}
-                                                                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
-                                                                onMouseLeave={e => (e.currentTarget.style.background = b.folderId === f.id ? 'var(--bg-tertiary)' : 'transparent')}
+                                                                className="hover-bg-tertiary"
                                                             >
                                                                 <Folder size={12} style={{ color: f.color }} /> {f.name}
                                                             </button>

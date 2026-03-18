@@ -324,8 +324,7 @@ export default function AdminBotModeration() {
                 outline: 'none',
                 boxSizing: 'border-box',
               }}
-              onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent-primary)')}
-              onBlur={e => (e.currentTarget.style.borderColor = 'var(--stroke)')}
+              className="focus-border-accent"
             />
           </div>
         </div>
@@ -359,8 +358,7 @@ export default function AdminBotModeration() {
                 boxShadow: 'var(--shadow-panel)',
                 transition: 'border-color 0.15s ease',
               }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent-primary)44')}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--stroke)')}
+                className="hover-border-accent-subtle"
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
                   {/* Avatar */}
@@ -455,8 +453,7 @@ export default function AdminBotModeration() {
                             boxSizing: 'border-box',
                             fontFamily: 'inherit',
                           }}
-                          onFocus={e => (e.currentTarget.style.borderColor = 'var(--error)')}
-                          onBlur={e => (e.currentTarget.style.borderColor = 'var(--stroke)')}
+                          className="focus-border-error"
                         />
                         <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
                           <button
@@ -516,14 +513,7 @@ export default function AdminBotModeration() {
                         cursor: 'pointer',
                         whiteSpace: 'nowrap',
                       }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.background = 'var(--bg-elevated)';
-                        e.currentTarget.style.color = 'var(--text-primary)';
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.background = 'var(--bg-tertiary)';
-                        e.currentTarget.style.color = 'var(--text-secondary)';
-                      }}
+                      className="hover-bg-elevated-text-primary"
                     >
                       <Eye size={13} />
                       View Details
@@ -547,12 +537,7 @@ export default function AdminBotModeration() {
                             cursor: 'pointer',
                             whiteSpace: 'nowrap',
                           }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.background = 'rgba(16,185,129,0.22)';
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.background = 'rgba(16,185,129,0.12)';
-                          }}
+                          className="hover-approve-btn"
                         >
                           <CheckCircle2 size={13} />
                           Approve
@@ -573,12 +558,7 @@ export default function AdminBotModeration() {
                             cursor: 'pointer',
                             whiteSpace: 'nowrap',
                           }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.background = 'rgba(239,68,68,0.20)';
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.background = 'rgba(239,68,68,0.10)';
-                          }}
+                          className="hover-reject-btn"
                         >
                           <XCircle size={13} />
                           Reject

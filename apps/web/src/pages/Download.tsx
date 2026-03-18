@@ -75,8 +75,7 @@ export default function Download() {
                                 cursor: 'pointer',
                                 transition: 'border-color 0.15s',
                             }}
-                                onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent-primary)')}
-                                onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--stroke)')}
+                                className="hover-border-accent"
                             >
                                 <div style={{
                                     width: '48px',
@@ -127,8 +126,7 @@ export default function Download() {
                                 cursor: 'pointer',
                                 transition: 'border-color 0.15s',
                             }}
-                                onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent-primary)')}
-                                onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--stroke)')}
+                                className="hover-border-accent"
                             >
                                 <div style={{
                                     width: '48px',
@@ -179,8 +177,7 @@ export default function Download() {
                                 cursor: 'pointer',
                                 transition: 'border-color 0.15s',
                             }}
-                                onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent-primary)')}
-                                onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--stroke)')}
+                                className="hover-border-accent"
                             >
                                 <div style={{
                                     width: '48px',
@@ -231,8 +228,7 @@ export default function Download() {
                                 cursor: 'pointer',
                                 transition: 'border-color 0.15s',
                             }}
-                                onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent-primary)')}
-                                onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--stroke)')}
+                                className="hover-border-accent"
                             >
                                 <div style={{
                                     width: '48px',
