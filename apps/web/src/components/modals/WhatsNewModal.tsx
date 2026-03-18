@@ -14,6 +14,30 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-03-18e',
+    date: 'March 18, 2026',
+    title: 'Auth Redesign & Desktop Polish B',
+    entries: [
+      { type: 'feature', text: 'Auth screen redesign — beautiful new login and register pages with pattern backgrounds, floating stars, mascot logo, pill badges, rainbow strip, and stagger animations' },
+      { type: 'improvement', text: 'Desktop splash screen — branded loading screen replaces blank window on startup' },
+      { type: 'improvement', text: 'Desktop error recovery — friendly retry page shown when the app fails to load instead of a white screen' },
+      { type: 'feature', text: 'OS accent color sync — desktop app picks up your system accent color automatically' },
+      { type: 'feature', text: 'Taskbar upload progress — file uploads show progress on the Windows taskbar icon' },
+    ],
+  },
+  {
+    id: '2026-03-18d',
+    date: 'March 18, 2026',
+    title: 'Desktop App Polish',
+    entries: [
+      { type: 'fix', text: 'Windows: window is now draggable — guild rail top area acts as drag handle' },
+      { type: 'fix', text: 'Eliminated theme/color flash on desktop startup — background matches instantly' },
+      { type: 'improvement', text: 'Windows title bar overlay color now syncs when you change themes' },
+      { type: 'improvement', text: 'Loading state shows subtle "G" watermark while app initializes' },
+      { type: 'fix', text: 'Ctrl+R no longer accidentally reloads the desktop app in production' },
+    ],
+  },
+  {
     id: '2026-03-18c',
     date: 'March 2026',
     title: 'Wave 5: Deep Polish',

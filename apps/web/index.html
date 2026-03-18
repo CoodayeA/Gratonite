@@ -1,7 +1,16 @@
 <!doctype html>
-<html lang="en" data-theme="neobrutalism">
+<html lang="en" data-theme="default">
 
 <head>
+  <script>
+    (function(){
+      var t=localStorage.getItem('gratonite_theme')||'default';
+      document.documentElement.setAttribute('data-theme',t);
+      var m=localStorage.getItem('gratonite_color_mode')||
+        (window.matchMedia&&window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark');
+      document.documentElement.setAttribute('data-color-mode',m);
+    })();
+  </script>
   <script type="module">
     if (import.meta.env.DEV) {
       import("react-grab");

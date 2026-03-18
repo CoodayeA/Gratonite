@@ -24,13 +24,6 @@
     background: var(--bg-app) !important;
 }
 
-[data-theme="neobrutalism"] .bg-orbs {
-    background: var(--bg-app) !important;
-}
-
-[data-theme="neobrutalism"] .orb {
-    display: none !important;
-}
 
 [data-theme="neobrutalism"] .app-container {
     background: var(--bg-app) !important;

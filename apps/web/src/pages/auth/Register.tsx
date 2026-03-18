@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { Eye, EyeOff, X } from 'lucide-react';
+import { Eye, EyeOff, User, Mail, Lock, X } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { api } from '../../lib/api';
 
@@ -65,10 +65,8 @@ const Register = () => {
     const passwordStrength = getPasswordStrength(password);
 
     const handleRegister = async () => {
-        // Mark all fields as touched so errors show
         setTouched({ email: true, username: true, password: true });
 
-        // Client-side validation — return early if any field is invalid
         if (!email.trim() || !isValidEmail(email.trim())) return;
         if (!username.trim() || !isValidUsername(username.trim())) return;
         if (!password || password.length < 8) return;
@@ -99,84 +97,122 @@ const Register = () => {
 
     return (
         <div className="auth-card">
-            <h1 className="auth-heading">Create Account</h1>
-            <p className="auth-subtext">Join the Gratonite community</p>
+            {/* Mascot */}
+            <div className="auth-mascot auth-anim-1">
+                <div className="auth-mascot-glow" />
+                <img src="/splash-icon.png" alt="Gratonite" />
+            </div>
 
-            <label className="auth-label">Email</label>
-            <input
-                type="email"
-                className="auth-input"
-                placeholder="Enter your email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                onBlur={() => markTouched('email')}
-                style={touched.email && emailError ? { borderColor: 'var(--danger, #ef4444)' } : undefined}
-            />
-            {touched.email && emailError && (
-                <p style={{ color: 'var(--danger, #ef4444)', fontSize: '12px', margin: '4px 0 0 0' }}>{emailError}</p>
-            )}
+            {/* Heading */}
+            <h1 className="auth-heading auth-anim-2">
+                {'JOIN THE\n'}
+                <span className="auth-heading-accent">COMMUNITY.</span>
+            </h1>
+            <p className="auth-subtext auth-anim-2">Create your account and start chatting</p>
 
-            <label className="auth-label">Username</label>
-            <input
-                type="text"
-                className="auth-input"
-                placeholder="Choose a username"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-                onBlur={() => markTouched('username')}
-                style={touched.username && usernameError ? { borderColor: 'var(--danger, #ef4444)' } : undefined}
-            />
-            {touched.username && usernameError && (
-                <p style={{ color: 'var(--danger, #ef4444)', fontSize: '12px', margin: '4px 0 0 0' }}>{usernameError}</p>
-            )}
+            {/* Pills */}
+            <div className="auth-pill-row auth-anim-3">
+                <span className="auth-pill">No Ads</span>
+                <span className="auth-pill auth-pill--highlight">Built by Friends</span>
+                <span className="auth-pill">Your Rules</span>
+            </div>
 
-            <label className="auth-label">Password</label>
-            <div style={{ position: 'relative' }}>
-                <input
-                    type={showPw ? "text" : "password"}
-                    className="auth-input"
-                    placeholder="Create a strong password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    onBlur={() => markTouched('password')}
-                    onKeyDown={e => { if (e.key === 'Enter') handleRegister(); }}
-                    style={touched.password && passwordError ? { borderColor: 'var(--danger, #ef4444)' } : undefined}
-                />
+            {/* Form */}
+            <form onSubmit={e => { e.preventDefault(); handleRegister(); }} className="auth-form auth-anim-4">
+                <div className="auth-input-group">
+                    <User size={18} className="auth-input-icon" />
+                    <input
+                        type="text"
+                        placeholder="Username"
+                        value={username}
+                        onChange={e => setUsername(e.target.value)}
+                        onBlur={() => markTouched('username')}
+                        required
+                        style={touched.username && usernameError ? { borderColor: 'var(--danger, #ef4444)' } : undefined}
+                    />
+                </div>
+                {touched.username && usernameError && (
+                    <p style={{ color: 'var(--danger, #ef4444)', fontSize: '12px', margin: '-8px 0 8px 0' }}>{usernameError}</p>
+                )}
+
+                <div className="auth-input-group">
+                    <Mail size={18} className="auth-input-icon" />
+                    <input
+                        type="email"
+                        placeholder="Email"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        onBlur={() => markTouched('email')}
+                        required
+                        style={touched.email && emailError ? { borderColor: 'var(--danger, #ef4444)' } : undefined}
+                    />
+                </div>
+                {touched.email && emailError && (
+                    <p style={{ color: 'var(--danger, #ef4444)', fontSize: '12px', margin: '-8px 0 8px 0' }}>{emailError}</p>
+                )}
+
+                <div className="auth-input-group">
+                    <Lock size={18} className="auth-input-icon" />
+                    <input
+                        type={showPw ? "text" : "password"}
+                        placeholder="Password"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        onBlur={() => markTouched('password')}
+                        onKeyDown={e => { if (e.key === 'Enter') handleRegister(); }}
+                        required
+                        style={touched.password && passwordError ? { borderColor: 'var(--danger, #ef4444)' } : undefined}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowPw(!showPw)}
+                        style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                    >
+                        {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                </div>
+                {touched.password && passwordError && (
+                    <p style={{ color: 'var(--danger, #ef4444)', fontSize: '12px', margin: '-8px 0 8px 0' }}>{passwordError}</p>
+                )}
+                {password.length >= 8 && passwordStrength.label && (
+                    <p style={{ color: passwordStrength.color, fontSize: '12px', margin: '-8px 0 8px 0', fontWeight: 500 }}>
+                        Strength: {passwordStrength.label}
+                    </p>
+                )}
+
+                {/* Terms checkbox */}
+                <div className="auth-checkbox-wrapper">
+                    <input type="checkbox" id="terms" checked={agreed} onChange={e => setAgreed(e.target.checked)} />
+                    <label htmlFor="terms">
+                        I agree to the <span onClick={(e) => { e.preventDefault(); setActiveModal('terms'); }} className="auth-link" style={{ cursor: 'pointer' }}>Terms of Service</span> and <span onClick={(e) => { e.preventDefault(); setActiveModal('privacy'); }} className="auth-link" style={{ cursor: 'pointer' }}>Privacy Policy</span>
+                    </label>
+                </div>
+
                 <button
-                    onClick={() => setShowPw(!showPw)}
-                    style={{ position: 'absolute', right: 16, top: 12, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                    type="submit"
+                    className="auth-button"
+                    disabled={!canSubmit}
+                    style={{ opacity: canSubmit ? 1 : 0.5 }}
                 >
-                    {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {loading ? 'Creating account...' : 'Create Account'}
                 </button>
-            </div>
-            {touched.password && passwordError && (
-                <p style={{ color: 'var(--danger, #ef4444)', fontSize: '12px', margin: '4px 0 0 0' }}>{passwordError}</p>
-            )}
-            {password.length >= 8 && passwordStrength.label && (
-                <p style={{ color: passwordStrength.color, fontSize: '12px', margin: '4px 0 0 0', fontWeight: 500 }}>
-                    Strength: {passwordStrength.label}
-                </p>
-            )}
+            </form>
 
-            <div className="auth-checkbox-wrapper">
-                <input type="checkbox" id="terms" checked={agreed} onChange={e => setAgreed(e.target.checked)} />
-                <label htmlFor="terms">
-                    I agree to the <span onClick={(e) => { e.preventDefault(); setActiveModal('terms'); }} className="auth-link" style={{ cursor: 'pointer' }}>Terms of Service</span> and <span onClick={(e) => { e.preventDefault(); setActiveModal('privacy'); }} className="auth-link" style={{ cursor: 'pointer' }}>Privacy Policy</span>
-                </label>
+            {/* Rainbow strip */}
+            <div className="auth-rainbow-strip auth-anim-5">
+                <span style={{ background: '#6c63ff' }} />
+                <span style={{ background: '#f59e0b' }} />
+                <span style={{ background: '#ef4444' }} />
+                <span style={{ background: '#22c55e' }} />
+                <span style={{ background: '#3b82f6' }} />
+                <span style={{ background: '#8b5cf6' }} />
             </div>
 
-            <button
-                className="auth-button"
-                onClick={handleRegister}
-                disabled={!canSubmit}
-                style={{ opacity: canSubmit ? 1 : 0.5 }}
-            >
-                {loading ? 'Creating Account...' : 'Create Account'}
-            </button>
-
-            <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '14px', color: 'var(--text-secondary)' }}>
-                Already have an account? <Link to="/login" className="auth-link">Sign in</Link>
-            </div>
+            {/* Sign in link */}
+            <p className="auth-anim-6" style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+                Already have an account?{' '}
+                <Link to="/login" style={{ color: 'var(--accent-primary)' }}>Sign in</Link>
+            </p>
 
             {/* Terms / Privacy Modal */}
             {activeModal && (
