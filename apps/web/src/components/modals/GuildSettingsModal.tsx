@@ -109,7 +109,7 @@ const accentColors = [
 
 const VIEW_CHANNEL_BIT = 1n << 8n;
 
-function CurrencyPanel({ guildId, addToast }: { guildId: string; addToast: (t: { title: string; variant: string }) => void }) {
+function CurrencyPanel({ guildId, addToast }: { guildId: string; addToast: (t: { title: string; variant: 'success' | 'error' | 'info' | 'achievement' | 'undo' }) => void }) {
     const [currencyEnabled, setCurrencyEnabled] = useState(false);
     const [currencyName, setCurrencyName] = useState('');
     const [currencyEmoji, setCurrencyEmoji] = useState('\u{1F4B0}');
