@@ -16,6 +16,7 @@ type SearchResult = {
     subtitle: string;
     route: string;
     targetUserId?: string;
+    avatarHash?: string | null;
 };
 
 export const TopBarActions = () => {
@@ -82,6 +83,7 @@ export const TopBarActions = () => {
                         subtitle: `@${u.username}`,
                         route: '',
                         targetUserId: u.id,
+                        avatarHash: u.avatarHash || null,
                     });
                 }
 
@@ -253,7 +255,7 @@ export const TopBarActions = () => {
                                     transition: 'background 0.15s', display: 'flex', alignItems: 'center', gap: '12px'
                                 }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                                     {r.type === 'user' ? (
-                                        <Avatar userId={r.targetUserId || r.id} displayName={r.title} size={32} />
+                                        <Avatar userId={r.targetUserId || r.id} displayName={r.title} avatarHash={r.avatarHash} size={32} />
                                     ) : (
                                         <div style={{
                                             width: '32px', height: '32px', borderRadius: '8px',

@@ -1022,7 +1022,7 @@ const Friends = () => {
                                                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
                                                     border: '1px solid var(--stroke)', transition: 'border-color 0.2s',
                                                 }} onMouseOver={e => (e.currentTarget.style.borderColor = 'var(--accent-primary)')} onMouseOut={e => (e.currentTarget.style.borderColor = 'var(--stroke)')}>
-                                                    <Avatar userId={s.id} avatarHash={s.avatar} displayName={s.display_name || s.username} size={48} />
+                                                    <Avatar userId={s.id} avatarHash={s.avatar_hash} displayName={s.display_name || s.username} size={48} />
                                                     <div style={{ textAlign: 'center' }}>
                                                         <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{s.display_name || s.username}</div>
                                                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>

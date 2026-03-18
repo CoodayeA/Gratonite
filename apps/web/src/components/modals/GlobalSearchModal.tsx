@@ -14,6 +14,7 @@ type SearchResult = {
     subtitle: string;
     route: string;
     targetUserId?: string;
+    avatarHash?: string | null;
 };
 
 /** Parse inline search operators from the query string */
@@ -59,6 +60,8 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
     const [filterInChannel, setFilterInChannel] = useState('');
     const [filterMentionsMe, setFilterMentionsMe] = useState(false);
     const [filtersExpanded, setFiltersExpanded] = useState(false);
+    const [searchError, setSearchError] = useState(false);
+    const [retryCount, setRetryCount] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
     const navigate = useNavigate();
     const isMobile = useIsMobile();
@@ -94,6 +97,7 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
             return;
         }
         setSearching(true);
+        setSearchError(false);
         let cancelled = false;
         (async () => {
             try {
@@ -121,6 +125,7 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                         subtitle: `@${u.username}`,
                         route: '',
                         targetUserId: u.id,
+                        avatarHash: u.avatarHash || null,
                     });
                 }
                 for (const m of ((messages as Record<string, unknown>).results ?? []) as Array<Record<string, string>>) {
@@ -136,13 +141,13 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                 }
                 setResults(combined);
             } catch {
-                if (!cancelled) setResults([]);
+                if (!cancelled) { setResults([]); setSearchError(true); }
             } finally {
                 if (!cancelled) setSearching(false);
             }
         })();
         return () => { cancelled = true; };
-    }, [debouncedQuery, effectiveText, effectiveFrom, effectiveInChannel, effectiveBefore, effectiveAfter, effectiveHas, filterMentionsMe]);
+    }, [debouncedQuery, effectiveText, effectiveFrom, effectiveInChannel, effectiveBefore, effectiveAfter, effectiveHas, filterMentionsMe, retryCount]);
 
     const handleResultClick = async (result: SearchResult) => {
         try {
@@ -275,9 +280,14 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                             <Loader size={24} style={{ opacity: 0.5, animation: 'spin 1s linear infinite' }} />
                             <div>Searching...</div>
                         </div>
+                    ) : searchError ? (
+                        <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+                            <div style={{ marginBottom: '8px' }}>Search failed. Please try again.</div>
+                            <button onClick={() => { setSearchError(false); setRetryCount(c => c + 1); }} style={{ background: 'var(--accent-primary)', color: '#000', border: 'none', borderRadius: '6px', padding: '6px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Retry</button>
+                        </div>
                     ) : results.length === 0 ? (
                         <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
-                            No results found for "{query}"
+                            No results found for &quot;{query}&quot;
                         </div>
                     ) : (
                         <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -287,7 +297,7 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                                     {users.map(u => (
                                         <div key={u.id} className="channel-item" onClick={() => handleResultClick(u)} style={{ cursor: 'pointer' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <Avatar userId={u.id} displayName={u.title} size={24} />
+                                                <Avatar userId={u.id} displayName={u.title} avatarHash={u.avatarHash} size={24} />
                                                 <div>
                                                     <div style={{ fontSize: '14px', fontWeight: 500, color: 'white' }}>{u.title}</div>
                                                     <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{u.subtitle}</div>
