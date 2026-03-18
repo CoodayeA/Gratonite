@@ -16,9 +16,9 @@
 
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { eq, and, desc, or, ilike, sql } from 'drizzle-orm';
+import { eq, and, desc, or, ilike, sql, avg, count } from 'drizzle-orm';
 import { db } from '../db/index';
-import { themes } from '../db/schema/themes';
+import { themes, themeReports, themeRatings } from '../db/schema/themes';
 import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
@@ -389,11 +389,26 @@ themesRouter.post('/themes/:id/report', requireAuth, themeReportRateLimit, async
     return;
   }
 
-  // TODO: Without a theme_reports junction table, duplicate reports from the same user
-  // cannot be prevented server-side. Consider adding a theme_reports table to track
-  // per-user reports and prevent abuse.
+  // Check for existing report from this user
+  const [existingReport] = await db.select({ id: themeReports.id })
+    .from(themeReports)
+    .where(and(eq(themeReports.themeId, id), eq(themeReports.userId, req.userId!)))
+    .limit(1);
 
-  // Atomic increment to avoid read-modify-write race condition
+  if (existingReport) {
+    res.status(409).json({ code: 'ALREADY_REPORTED', message: 'You have already reported this theme' });
+    return;
+  }
+
+  const { reason } = req.body ?? {};
+
+  // Insert report row and increment the denormalized count atomically
+  await db.insert(themeReports).values({
+    themeId: id,
+    userId: req.userId!,
+    reason: typeof reason === 'string' ? reason : null,
+  });
+
   await db.update(themes)
     .set({ reportCount: sql`${themes.reportCount} + 1`, updatedAt: new Date() })
     .where(eq(themes.id, id));
@@ -426,15 +441,36 @@ themesRouter.post('/themes/:id/rate', requireAuth, async (req: Request, res: Res
     return;
   }
 
-  // TODO: Without a theme_ratings junction table, duplicate ratings from the same user
-  // cannot be prevented server-side. Consider adding a theme_ratings table to track
-  // per-user ratings and enforce one-rating-per-user.
+  // Upsert: insert new rating or update existing one
+  const [existingRating] = await db.select({ id: themeRatings.id })
+    .from(themeRatings)
+    .where(and(eq(themeRatings.themeId, id), eq(themeRatings.userId, req.userId!)))
+    .limit(1);
 
-  // Atomic running average update to avoid read-modify-write race condition
+  if (existingRating) {
+    await db.update(themeRatings)
+      .set({ rating: newRating, updatedAt: new Date() })
+      .where(eq(themeRatings.id, existingRating.id));
+  } else {
+    await db.insert(themeRatings).values({
+      themeId: id,
+      userId: req.userId!,
+      rating: newRating,
+    });
+  }
+
+  // Recalculate average from the junction table (source of truth)
+  const [stats] = await db.select({
+    avgRating: avg(themeRatings.rating),
+    totalReviews: count(themeRatings.id),
+  })
+    .from(themeRatings)
+    .where(eq(themeRatings.themeId, id));
+
   const [updated] = await db.update(themes)
     .set({
-      rating: sql`(${themes.rating} * ${themes.reviewCount} + ${newRating}) / (${themes.reviewCount} + 1)`,
-      reviewCount: sql`${themes.reviewCount} + 1`,
+      rating: stats.avgRating ?? '0',
+      reviewCount: stats.totalReviews,
       updatedAt: new Date(),
     })
     .where(eq(themes.id, id))
