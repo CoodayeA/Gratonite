@@ -132,6 +132,32 @@ export function initSocket(io: SocketIOServer): void {
   });
 
   // ---------------------------------------------------------------------------
+  // P2P signal rate limiter (max 60 signals per 10s per socket)
+  // ---------------------------------------------------------------------------
+  const P2P_RATE_WINDOW_MS = 10_000;
+  const P2P_RATE_MAX = 60;
+  const p2pSignalTimestamps = new Map<string, number[]>();
+
+  function checkP2PRate(socketId: string): boolean {
+    const now = Date.now();
+    let timestamps = p2pSignalTimestamps.get(socketId);
+    if (!timestamps) {
+      timestamps = [];
+      p2pSignalTimestamps.set(socketId, timestamps);
+    }
+    // Remove timestamps outside the window
+    const cutoff = now - P2P_RATE_WINDOW_MS;
+    while (timestamps.length > 0 && timestamps[0] < cutoff) {
+      timestamps.shift();
+    }
+    if (timestamps.length >= P2P_RATE_MAX) {
+      return false;
+    }
+    timestamps.push(now);
+    return true;
+  }
+
+  // ---------------------------------------------------------------------------
   // Connection handler
   // ---------------------------------------------------------------------------
 
@@ -354,6 +380,33 @@ export function initSocket(io: SocketIOServer): void {
     socket.on('STAGE_START', async (data: { channelId: string; topic?: string }) => {
       if (!data?.channelId) return;
       try {
+        // Verify the user can access this channel
+        const [stageChannel] = await db
+          .select({ id: channels.id, guildId: channels.guildId })
+          .from(channels)
+          .where(eq(channels.id, data.channelId))
+          .limit(1);
+
+        if (!stageChannel) return;
+
+        if (stageChannel.guildId) {
+          // Guild channel — verify membership
+          const [membership] = await db
+            .select({ id: guildMembers.id })
+            .from(guildMembers)
+            .where(and(eq(guildMembers.guildId, stageChannel.guildId), eq(guildMembers.userId, userId)))
+            .limit(1);
+          if (!membership) return;
+        } else {
+          // DM channel — verify participation
+          const [participation] = await db
+            .select({ id: dmChannelMembers.id })
+            .from(dmChannelMembers)
+            .where(and(eq(dmChannelMembers.channelId, data.channelId), eq(dmChannelMembers.userId, userId)))
+            .limit(1);
+          if (!participation) return;
+        }
+
         // End any existing active session
         const [existing] = await db
           .select({ id: stageSessions.id })
@@ -728,6 +781,7 @@ export function initSocket(io: SocketIOServer): void {
     // -------------------------------------------------------------------------
     socket.on('P2P_SIGNAL', (data: { targetUserId: string; signal: any; transferId: string; fileName?: string; fileSize?: number }) => {
       if (!data?.targetUserId || !data?.signal || !data?.transferId) return;
+      if (!checkP2PRate(socket.id)) return;
       io.to(`user:${data.targetUserId}`).emit('P2P_SIGNAL', {
         fromUserId: userId,
         signal: data.signal,
@@ -843,6 +897,8 @@ export function initSocket(io: SocketIOServer): void {
         }
       }
       joinedDocChannels.clear();
+      // Clean up P2P rate limiter state
+      p2pSignalTimestamps.delete(socket.id);
       activeWebSocketConnections.dec();
       // Clean up spatial positions for this user
       for (const [channelId, posMap] of spatialPositions) {

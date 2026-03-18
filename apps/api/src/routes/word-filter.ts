@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '../db/index';
 import { guildWordFilters } from '../db/schema/guild-word-filters';
 import { Permissions } from '../db/schema/roles';
@@ -79,6 +79,7 @@ wordFilterRouter.put('/', requireAuth, async (req: Request, res: Response): Prom
       words: sanitizedWords,
       action,
       exemptRoles: sanitizedExemptRoles,
+      regexPatterns: sanitizedRegex,
     })
     .onConflictDoUpdate({
       target: guildWordFilters.guildId,
@@ -86,17 +87,13 @@ wordFilterRouter.put('/', requireAuth, async (req: Request, res: Response): Prom
         words: sanitizedWords,
         action,
         exemptRoles: sanitizedExemptRoles,
+        regexPatterns: sanitizedRegex,
         updatedAt: new Date(),
       },
     })
     .returning();
 
-  // Store regex patterns in the column (added by migration)
-  if (sanitizedRegex.length > 0) {
-    await db.execute(sql`UPDATE guild_word_filters SET regex_patterns = ${sanitizedRegex} WHERE guild_id = ${guildId}`);
-  }
-
-  res.json({ ...upserted, regexPatterns: sanitizedRegex });
+  res.json(upserted);
 });
 
 /** POST /api/v1/guilds/:guildId/word-filter/test — Test a regex pattern against sample text (item 92) */
