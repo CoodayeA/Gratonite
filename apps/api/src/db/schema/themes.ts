@@ -12,6 +12,7 @@ import {
   timestamp,
   jsonb,
   numeric,
+  unique,
 } from 'drizzle-orm/pg-core';
 import { users } from './users';
 
@@ -39,3 +40,54 @@ export const themes = pgTable('themes', {
 
 export type Theme = typeof themes.$inferSelect;
 export type NewTheme = typeof themes.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// theme_reports — one report per user per theme
+// ---------------------------------------------------------------------------
+
+export const themeReports = pgTable(
+  'theme_reports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    themeId: uuid('theme_id')
+      .notNull()
+      .references(() => themes.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    reason: text('reason'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('theme_reports_theme_id_user_id_key').on(table.themeId, table.userId),
+  ],
+);
+
+export type ThemeReport = typeof themeReports.$inferSelect;
+export type NewThemeReport = typeof themeReports.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// theme_ratings — one rating per user per theme
+// ---------------------------------------------------------------------------
+
+export const themeRatings = pgTable(
+  'theme_ratings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    themeId: uuid('theme_id')
+      .notNull()
+      .references(() => themes.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    rating: integer('rating').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('theme_ratings_theme_id_user_id_key').on(table.themeId, table.userId),
+  ],
+);
+
+export type ThemeRating = typeof themeRatings.$inferSelect;
+export type NewThemeRating = typeof themeRatings.$inferInsert;
