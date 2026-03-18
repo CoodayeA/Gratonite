@@ -29,15 +29,17 @@ export default function AdminPortals() {
   const { addToast } = useToast();
   const [items, setItems] = useState<PortalItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [updating, setUpdating] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
 
   const fetchPortals = () => {
     setLoading(true);
+    setLoadError(null);
     api.adminPortals.list()
       .then(res => setItems(res.items))
-      .catch(() => addToast({ title: 'Failed to load portals', variant: 'error' }))
+      .catch(() => { setLoadError('Could not fetch portals. Please try again.'); addToast({ title: 'Failed to load portals', variant: 'error' }); })
       .finally(() => setLoading(false));
   };
 
@@ -119,6 +121,11 @@ export default function AdminPortals() {
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>Loading portals...</div>
+      ) : loadError ? (
+        <div style={{ textAlign: 'center', padding: '48px 0' }}>
+          <p style={{ color: 'var(--error)', marginBottom: '16px', fontWeight: 600 }}>{loadError}</p>
+          <button onClick={fetchPortals} style={{ padding: '8px 20px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>Retry</button>
+        </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>
           {search ? 'No portals match your search' : 'No discoverable portals found'}

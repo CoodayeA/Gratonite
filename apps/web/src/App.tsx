@@ -288,7 +288,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                     addToast({ title: `${guild.name} muted`, variant: 'info' });
                 }).catch(() => addToast({ title: 'Failed to mute portal', variant: 'error' }));
             }},
-            { divider: true, id: 'div1', label: '', onClick: () => {} },
+            { divider: true, id: 'div1', label: '' },
             ...(isOwner ? [{ id: 'server-settings', label: 'Portal Settings', icon: Settings, onClick: () => { navigate(`/guild/${guild.id}`); onOpenGuildSettings(); } }] : []),
             { id: 'invite', label: 'Invite People', icon: Link2, onClick: () => {
                 api.invites.create(guild.id, {}).then((invite) => {
@@ -310,7 +310,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                 api.guilds.getRating(guild.id).then((data) => {
                     setRatingInfo({ avg: data.averageRating, total: data.totalRatings });
                     if (data.userRating) setRatingValue(data.userRating);
-                }).catch(() => {});
+                }).catch(() => { addToast({ title: 'Failed to load portal rating', variant: 'error' }); });
             }},
             { id: 'activity-toggle', label: activityEnabled ? 'Disable Activity Status' : 'Enable Activity Status', icon: Activity, onClick: () => {
                 const newOverrides = { ...overrides, [guild.id]: !activityEnabled };
@@ -319,13 +319,13 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
             }},
             { id: 'privacy-settings', label: 'Privacy Settings', icon: ShieldIcon, onClick: () => onOpenSettings() },
             { id: 'guild-theme', label: 'Set Portal Theme', icon: Paintbrush, onClick: () => setThemePickerGuild({ id: guild.id, name: guild.name }) },
-            { divider: true, id: 'div2', label: '', onClick: () => {} },
+            { divider: true, id: 'div2', label: '' },
             { id: 'copy-id', label: 'Copy Portal ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(guild.id).catch(() => {}); addToast({ title: 'Portal ID copied', variant: 'info' }); } },
             { id: 'create-folder', label: 'Create Folder', icon: FolderIcon, onClick: () => {
                 const folderId = `folder-${Date.now()}`;
                 const newFolder = { id: folderId, name: 'New Folder', color: '#526df5', guildIds: [guild.id], collapsed: false };
                 setGuildFolders(prev => [...prev, newFolder]);
-                api.users.createGuildFolder({ name: 'New Folder', color: '#526df5', guildIds: [guild.id] }).catch(() => {});
+                api.users.createGuildFolder({ name: 'New Folder', color: '#526df5', guildIds: [guild.id] }).catch(() => { addToast({ title: 'Failed to create folder', variant: 'error' }); });
                 addToast({ title: 'Folder created', variant: 'success' });
             }},
             { id: 'leave', label: 'Leave Portal', icon: LogOut, color: 'var(--error)', onClick: () => {
@@ -1051,7 +1051,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 allCats.forEach(c => { newCollapsed[c.id] = false; });
                 setCollapsed(newCollapsed);
             }},
-            { divider: true, id: 'div1', label: '', onClick: () => {} },
+            { divider: true, id: 'div1', label: '' },
             ...(canManageChannels ? [
                 { id: 'edit', label: 'Edit Category', icon: Settings, onClick: () => {
                     const newName = prompt('Rename category:', category.name);
@@ -1069,7 +1069,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
             ] : []),
             { id: 'copy-id', label: 'Copy Category ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(category.id).catch(() => {}); addToast({ title: 'Category ID copied', variant: 'info' }); } },
             ...(canManageChannels ? [
-                { divider: true, id: 'div2', label: '', onClick: () => {} },
+                { divider: true, id: 'div2', label: '' },
                 { id: 'delete', label: 'Delete Category', icon: Trash2, color: 'var(--error)', onClick: () => {
                     if (!confirm(`Delete category "${category.name}"? Channels inside will become uncategorized.`)) return;
                     api.channels.delete(category.id).then(() => {
@@ -1089,18 +1089,18 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         const isFav = favoriteChannelIds.has(channel.id);
         openMenu(e, [
             { id: 'mark-read', label: 'Mark as Read', icon: Circle, onClick: () => {
-                api.messages.ack(channel.id).catch(() => {});
+                api.messages.ack(channel.id).catch(() => { addToast({ title: 'Failed to mark channel as read', variant: 'error' }); });
                 markReadStore(channel.id);
                 addToast({ title: 'Channel Marked as Read', variant: 'info' });
             }},
             { id: 'favorite', label: isFav ? 'Remove from Favorites' : 'Add to Favorites', icon: Star, onClick: () => {
                 if (isFav) {
                     setFavoriteChannelIds(prev => { const next = new Set(prev); next.delete(channel.id); return next; });
-                    api.users.removeFavorite(channel.id).catch(() => {});
+                    api.users.removeFavorite(channel.id).catch(() => { addToast({ title: 'Failed to update favorites', variant: 'error' }); });
                     addToast({ title: `Removed #${channel.name} from favorites`, variant: 'info' });
                 } else {
                     setFavoriteChannelIds(prev => new Set(prev).add(channel.id));
-                    api.users.addFavorite(channel.id).catch(() => {});
+                    api.users.addFavorite(channel.id).catch(() => { addToast({ title: 'Failed to update favorites', variant: 'error' }); });
                     addToast({ title: `Added #${channel.name} to favorites`, variant: 'success' });
                 }
             }},
@@ -1109,7 +1109,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     addToast({ title: 'Channel Muted', variant: 'info' });
                 }).catch(() => addToast({ title: 'Failed to mute channel', variant: 'error' }));
             }},
-            { divider: true, id: 'div1', label: '', onClick: () => {} },
+            { divider: true, id: 'div1', label: '' },
             { id: 'edit', label: 'Edit Channel', icon: Settings, onClick: () => {
                 api.channels.get(channel.id).then((ch: any) => {
                     setChannelSettingsOpen({ id: channel.id, name: ch.name, topic: ch.topic || '', rateLimitPerUser: ch.rateLimitPerUser || 0, isNsfw: ch.isNsfw || false, channelType: ch.type, userLimit: ch.userLimit || 0 });
@@ -1131,7 +1131,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     setChannelSettingsOpen({ id: channel.id, name: ch.name, topic: ch.topic || '', rateLimitPerUser: ch.rateLimitPerUser || 0, isNsfw: ch.isNsfw || false, channelType: ch.type, userLimit: ch.userLimit || 0 });
                 }).catch(() => setChannelSettingsOpen({ id: channel.id, name: channel.name }));
             }},
-            { divider: true, id: 'div2', label: '', onClick: () => {} },
+            { divider: true, id: 'div2', label: '' },
             { id: 'copy-link', label: 'Copy Channel Link', icon: Link2, onClick: () => {
                 const link = `${window.location.origin}/app/guild/${activeGuildId}/channel/${channel.id}`;
                 navigator.clipboard.writeText(link).catch(() => {});
@@ -1157,7 +1157,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 }).catch(() => addToast({ title: 'Failed to make channel private', variant: 'error' }));
             }},
             { id: 'settings', label: 'Notification Settings', icon: Bell, onClick: () => setNotifPrefs({ type: 'channel', id: channel.id, name: channel.name }) },
-            { divider: true, id: 'div3', label: '', onClick: () => {} },
+            { divider: true, id: 'div3', label: '' },
             { id: 'delete', label: 'Delete Channel', icon: Trash2, color: 'var(--error)', onClick: () => {
                 api.channels.delete(channel.id).then(() => {
                     setGuildChannels((prev: any[]) => prev.filter((c: any) => c.id !== channel.id));
@@ -1272,13 +1272,25 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
 
     const handleChannelDragOver = useCallback((e: React.DragEvent, targetChannelId: string) => {
         if (!canManageChannels || !dragChannelId || targetChannelId === dragChannelId) return;
+        // Check if dragging across categories — show not-allowed cursor
+        const draggedChannel = guildChannels.find(c => c.id === dragChannelId);
+        const targetChannel = guildChannels.find(c => c.id === targetChannelId);
+        if (draggedChannel && targetChannel && draggedChannel.parentId !== targetChannel.parentId) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'none';
+            (e.currentTarget as HTMLElement).style.cursor = 'not-allowed';
+            setDragOverChannelId(null);
+            setDragOverPosition(null);
+            return;
+        }
+        (e.currentTarget as HTMLElement).style.cursor = '';
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         const midY = rect.top + rect.height / 2;
         setDragOverChannelId(targetChannelId);
         setDragOverPosition(e.clientY < midY ? 'above' : 'below');
-    }, [canManageChannels, dragChannelId]);
+    }, [canManageChannels, dragChannelId, guildChannels]);
 
     const handleChannelDragLeave = useCallback(() => {
         setDragOverChannelId(null);
@@ -1303,7 +1315,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         if (!draggedChannel || !targetChannel) { handleChannelDragEnd(); return; }
 
         // Only allow reorder within the same parent category
-        if (draggedChannel.parentId !== targetChannel.parentId) { handleChannelDragEnd(); return; }
+        if (draggedChannel.parentId !== targetChannel.parentId) { handleChannelDragEnd(); addToast({ title: 'Cannot move channels between categories', variant: 'error' }); return; }
 
         // Build the sibling list (same parentId, excluding categories)
         const isCategoryType = (type: string) => type === 'category' || type === 'GUILD_CATEGORY';
@@ -1504,15 +1516,37 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         margin: '8px 12px', padding: '12px', background: 'var(--bg-tertiary)',
                         borderRadius: '8px', border: '1px solid var(--stroke)',
                     }}>
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Sidebar Sections</div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Sidebar Sections</div>
+                            <button
+                                onClick={() => {
+                                    const defaultLayout = { order: ['nav' as SidebarSection, 'dm' as SidebarSection, 'voice' as SidebarSection], hidden: [] as SidebarSection[] };
+                                    setSidebarLayout(defaultLayout);
+                                    localStorage.setItem(SIDEBAR_LAYOUT_KEY, JSON.stringify(defaultLayout));
+                                }}
+                                style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '11px', padding: 0, fontWeight: 500 }}
+                            >
+                                Reset to default
+                            </button>
+                        </div>
                         {sidebarLayout.order.map((section, idx) => {
                             const labels: Record<string, string> = { nav: 'Navigation', dm: 'Direct Messages', voice: 'Voice' };
                             const isHidden = sidebarLayout.hidden.includes(section);
                             return (
-                                <div key={section} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0' }}>
+                                <div key={section} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 4px', borderRadius: '6px', transition: 'background 0.15s' }}
+                                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-elevated)'; }}
+                                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                                >
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '14px', cursor: 'grab', userSelect: 'none', lineHeight: 1, padding: '2px' }} title="Drag to reorder">{'\u2807'}</span>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                        <button onClick={() => moveSidebarSection(section, 'up')} disabled={idx === 0} style={{ background: 'none', border: 'none', color: idx === 0 ? 'var(--stroke)' : 'var(--text-muted)', cursor: idx === 0 ? 'default' : 'pointer', padding: 0, lineHeight: 1, fontSize: '10px' }}>&#9650;</button>
-                                        <button onClick={() => moveSidebarSection(section, 'down')} disabled={idx === sidebarLayout.order.length - 1} style={{ background: 'none', border: 'none', color: idx === sidebarLayout.order.length - 1 ? 'var(--stroke)' : 'var(--text-muted)', cursor: idx === sidebarLayout.order.length - 1 ? 'default' : 'pointer', padding: 0, lineHeight: 1, fontSize: '10px' }}>&#9660;</button>
+                                        <button onClick={() => moveSidebarSection(section, 'up')} disabled={idx === 0} style={{ background: 'none', border: 'none', color: idx === 0 ? 'var(--stroke)' : 'var(--text-muted)', cursor: idx === 0 ? 'not-allowed' : 'pointer', opacity: idx === 0 ? 0.5 : 1, padding: '6px 8px', lineHeight: 1, fontSize: '16px', borderRadius: '4px', transition: 'color 0.15s, background 0.15s', minWidth: '28px', minHeight: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                            onMouseEnter={(e) => { if (idx !== 0) (e.currentTarget as HTMLElement).style.background = 'var(--bg-tertiary)'; }}
+                                            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                                        >&#9650;</button>
+                                        <button onClick={() => moveSidebarSection(section, 'down')} disabled={idx === sidebarLayout.order.length - 1} style={{ background: 'none', border: 'none', color: idx === sidebarLayout.order.length - 1 ? 'var(--stroke)' : 'var(--text-muted)', cursor: idx === sidebarLayout.order.length - 1 ? 'not-allowed' : 'pointer', opacity: idx === sidebarLayout.order.length - 1 ? 0.5 : 1, padding: '6px 8px', lineHeight: 1, fontSize: '16px', borderRadius: '4px', transition: 'color 0.15s, background 0.15s', minWidth: '28px', minHeight: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                            onMouseEnter={(e) => { if (idx !== sidebarLayout.order.length - 1) (e.currentTarget as HTMLElement).style.background = 'var(--bg-tertiary)'; }}
+                                            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                                        >&#9660;</button>
                                     </div>
                                     <span style={{ flex: 1, fontSize: '13px', color: isHidden ? 'var(--text-muted)' : 'var(--text-primary)', fontWeight: 500, opacity: isHidden ? 0.5 : 1 }}>{labels[section]}</span>
                                     <button
@@ -1533,8 +1567,13 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         })}
                     </div>
                 )}
-                <div className="channel-list" style={{ paddingTop: showSidebarCustomize ? '0' : '16px' }} onClick={(e) => { if ((e.target as HTMLElement).closest('.channel-item')) playSound('click'); }}>
-                    {sidebarLayout.hidden.includes('nav') ? null : (<>
+                {/* Order-driven sidebar section rendering */}
+                {sidebarLayout.order.map((section, sectionIdx) => {
+                    if (sidebarLayout.hidden.includes(section)) return null;
+                    switch (section) {
+                        case 'nav':
+                            return (
+                <div key="nav" className="channel-list" style={{ paddingTop: sectionIdx === 0 && !showSidebarCustomize ? '16px' : '0' }} onClick={(e) => { if ((e.target as HTMLElement).closest('.channel-item')) playSound('click'); }}>
                     <Link to="/" style={{ textDecoration: 'none' }}>
                         <div className={`channel-item ${location.pathname === '/' ? 'active' : ''}`}>
                             <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1607,11 +1646,11 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                             <span style={{ fontSize: '15px' }}>Inventory</span>
                         </div>
                     </Link>
-                    </>)}
                 </div>
-
-                {!sidebarLayout.hidden.includes('dm') && (
-                <div className="channel-list" style={{ marginTop: '16px' }} role="listbox" aria-label="Direct Messages" onKeyDown={(e) => {
+                            );
+                        case 'dm':
+                            return (
+                <div key="dm" className="channel-list" style={{ marginTop: '16px' }} role="listbox" aria-label="Direct Messages" onKeyDown={(e) => {
                     const container = e.currentTarget;
                     const items = Array.from(container.querySelectorAll<HTMLElement>('.channel-item[tabindex], .channel-item a'));
                     const focused = document.activeElement as HTMLElement;
@@ -1710,7 +1749,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                                 openMenu(e, [
                                                     { id: 'mark-read', label: 'Mark as Read', icon: Check, onClick: () => { api.messages.ack(dm.id).catch(() => {}); markReadStore(dm.id); addToast({ title: 'Marked as read', variant: 'info' }); }},
                                                     { id: 'mute', label: 'Mute Conversation', icon: Volume1, onClick: () => { api.channels.setNotificationPrefs(dm.id, { level: 'none' }).then(() => addToast({ title: 'Conversation muted', variant: 'info' })).catch(() => addToast({ title: 'Failed to mute', variant: 'error' })); }},
-                                                    { divider: true, id: 'div1', label: '', onClick: () => {} },
+                                                    { divider: true, id: 'div1', label: '' },
                                                     { id: 'copy-id', label: 'Copy Channel ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(dm.id).catch(() => {}); addToast({ title: 'Channel ID copied', variant: 'info' }); }},
                                                     { id: 'close', label: 'Close DM', icon: X, color: 'var(--error)', onClick: () => { setDmChannels(prev => prev.filter((d: any) => d.id !== dm.id)); addToast({ title: 'Conversation closed', variant: 'info' }); }},
                                                 ]);
@@ -1766,7 +1805,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                             openMenu(e, [
                                                 { id: 'mark-read', label: 'Mark as Read', icon: Check, onClick: () => { api.messages.ack(dm.id).catch(() => {}); markReadStore(dm.id); addToast({ title: 'Marked as read', variant: 'info' }); }},
                                                 { id: 'mute', label: 'Mute Conversation', icon: Volume1, onClick: () => { api.channels.setNotificationPrefs(dm.id, { level: 'none' }).then(() => addToast({ title: 'Conversation muted', variant: 'info' })).catch(() => addToast({ title: 'Failed to mute', variant: 'error' })); }},
-                                                { divider: true, id: 'div1', label: '', onClick: () => {} },
+                                                { divider: true, id: 'div1', label: '' },
                                                 { id: 'copy-id', label: 'Copy Channel ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(dm.id).catch(() => {}); addToast({ title: 'Channel ID copied', variant: 'info' }); }},
                                                 { id: 'close', label: 'Close DM', icon: X, color: 'var(--error)', onClick: () => { setDmChannels(prev => prev.filter((d: any) => d.id !== dm.id)); addToast({ title: 'Conversation closed', variant: 'info' }); }},
                                             ]);
@@ -1818,7 +1857,13 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         </>
                     )}
                 </div>
-                )}
+                            );
+                        case 'voice':
+                            return null; // Voice section placeholder — no standalone voice section in DM sidebar yet
+                        default:
+                            return null;
+                    }
+                })}
 
                 <UserPanel />
             </nav>
@@ -2579,7 +2624,7 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile, isMobileOpen, onCloseMo
             { id: 'dm', label: 'Send DM', icon: MessageSquare, onClick: () => {
                 api.relationships.openDm(member.userId).then((dm: any) => navigate(`/dm/${dm.id}`)).catch(() => addToast({ title: 'Failed to open DM', variant: 'error' }));
             }},
-            { divider: true, id: 'div-m1', label: '', onClick: () => {} },
+            { divider: true, id: 'div-m1', label: '' },
             { id: 'mute', label: 'Mute User', icon: BellOff, onClick: () => {
                 fetch(`${API_BASE}/users/@me/mutes`, {
                     method: 'POST',
@@ -2592,7 +2637,7 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile, isMobileOpen, onCloseMo
             }},
             { id: 'copy-id', label: 'Copy User ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(member.userId); addToast({ title: 'Copied to clipboard', variant: 'info' }); }},
             ...(guildId ? [
-                { divider: true, id: 'div-m2', label: '', onClick: () => {} },
+                { divider: true, id: 'div-m2', label: '' },
                 { id: 'kick', label: 'Kick Member', icon: ShieldAlert, color: '#FFA500', onClick: () => {
                     if (!confirm(`Kick ${name} from this server?`)) return;
                     api.guilds.kickMember(guildId, member.userId).then(() => addToast({ title: `${name} was kicked`, variant: 'success' })).catch(() => addToast({ title: 'Failed to kick member', variant: 'error' }));

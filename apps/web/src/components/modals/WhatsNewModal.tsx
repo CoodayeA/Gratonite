@@ -14,6 +14,18 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-03-18c',
+    date: 'March 2026',
+    title: 'Wave 5: Deep Polish',
+    entries: [
+      { type: 'feature', text: '@Mentions now display usernames — typing @ and selecting a user shows @username in the input instead of raw IDs' },
+      { type: 'fix', text: 'Sidebar customization actually works — reordering sidebar sections (Navigation, DMs, Voice) now visually takes effect' },
+      { type: 'improvement', text: '40+ UI/UX improvements — better button states, loading indicators, error feedback, hover effects, and mobile padding' },
+      { type: 'improvement', text: 'Better error feedback — silent failures now show user-friendly error toasts across the app' },
+      { type: 'fix', text: 'Fixed stale state in Gacha, calendar color caching, and improved error handling throughout' },
+    ],
+  },
+  {
     id: '2026-03-18b',
     date: 'March 18, 2026',
     title: 'Wave 4: Hardening & Accessibility',

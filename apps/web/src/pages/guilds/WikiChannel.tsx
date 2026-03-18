@@ -190,7 +190,7 @@ const WikiChannel = () => {
             <main className={`main-view ${hasCustomBg ? 'has-custom-bg' : ''}`} style={{ alignItems: 'center', justifyContent: 'center' }}>
                 <p style={{ color: 'var(--error)', fontSize: '15px' }}>{error}</p>
                 <button
-                    onClick={() => { setError(null); setLoading(true); api.wiki.listPages(channelId!).then(setPages).catch((err) => { console.error('Failed to reload wiki pages:', err); }).finally(() => setLoading(false)); }}
+                    onClick={() => { setError(null); setLoading(true); api.wiki.listPages(channelId!).then(setPages).catch(() => { setError('Failed to reload wiki pages'); }).finally(() => setLoading(false)); }}
                     className="auth-button"
                     style={{ marginTop: '16px', width: 'auto', padding: '0 24px', height: '36px' }}
                 >

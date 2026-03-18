@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, Clock, Globe, Edit2, X, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../lib/api';
@@ -53,7 +53,8 @@ export default function ScheduleCalendar() {
   const [editTime, setEditTime] = useState('');
   const [dragTarget, setDragTarget] = useState<string | null>(null);
 
-  const guildColorMap = useMemo(() => new Map<string, number>(), []);
+  const guildColorMapRef = useRef(new Map<string, number>());
+  const guildColorMap = guildColorMapRef.current;
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   useEffect(() => {

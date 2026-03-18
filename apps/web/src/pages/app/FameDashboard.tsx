@@ -167,8 +167,8 @@ const UserDetailPane = ({
                     </div>
                     {user.badges.length > 0 && (
                         <div style={{ display: 'flex', gap: '6px', fontSize: '18px', marginTop: '4px' }}>
-                            {user.badges.map((badge, i) => (
-                                <span key={i}>{badge}</span>
+                            {user.badges.map((badge) => (
+                                <span key={badge}>{badge}</span>
                             ))}
                         </div>
                     )}
@@ -353,6 +353,7 @@ const FameDashboard = () => {
     const [serverRatings, setServerRatings] = useState<ServerRating[]>([]);
     const [currentUserId, setCurrentUserId] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [myFameStats, setMyFameStats] = useState<{ fameReceived: number; fameGiven: number } | null>(null);
     const [myGuildId, setMyGuildId] = useState<string | null>(null);
     const [brokenServerIcons, setBrokenServerIcons] = useState<Set<number>>(new Set());
@@ -383,12 +384,13 @@ const FameDashboard = () => {
             // Fetch user's guilds for fame giving context
             api.guilds.getMine().then(guilds => {
                 if (guilds.length > 0) setMyGuildId(guilds[0].id);
-            }).catch(e => console.error('Failed to load guilds:', e));
+            }).catch(() => {});
         }).catch(() => {
             addToast({ title: 'Failed to load user data', description: 'Could not fetch your profile.', variant: 'error' });
         }),
         // Fetch leaderboard
         fetchLeaderboard().catch(() => {
+            setLoadError('Could not fetch the FAME leaderboard.');
             addToast({ title: 'Failed to load leaderboard', description: 'Could not fetch the FAME leaderboard.', variant: 'error' });
         }),
         // Fetch discoverable guilds for server ratings
@@ -446,7 +448,7 @@ const FameDashboard = () => {
         if (!currentUserId) return;
         api.fame.getStats(currentUserId).then(stats => {
             setMyFameStats(stats);
-        }).catch(e => console.error('Failed to load fame stats:', e));
+        }).catch(() => {});
     }, [currentUserId]);
 
     useEffect(() => {
@@ -455,7 +457,7 @@ const FameDashboard = () => {
             setFameToday(r.remaining);
             const today = new Date().toISOString().slice(0, 10);
             localStorage.setItem('gratonite-fame-tokens', JSON.stringify({ date: today, used: r.used }));
-        }).catch(e => console.error('Failed to load remaining fame:', e));
+        }).catch(() => {});
     }, [currentUserId]);
 
     // Mark current user once both data are available
@@ -635,6 +637,18 @@ const FameDashboard = () => {
                     <div className="skeleton-pulse" style={{ width: '100%', height: 120, borderRadius: 8, marginBottom: 12 }} />
                     <div className="skeleton-pulse" style={{ width: '100%', height: 120, borderRadius: 8, marginBottom: 12 }} />
                     <div className="skeleton-pulse" style={{ width: '80%', height: 120, borderRadius: 8 }} />
+                </div>
+            ) : loadError ? (
+                <div style={{ padding: '48px 24px', maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
+                    <Info size={48} style={{ color: 'var(--error)', marginBottom: '16px', opacity: 0.6 }} />
+                    <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>Failed to Load FAME Dashboard</h2>
+                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px' }}>{loadError}</p>
+                    <button
+                        onClick={() => { setLoadError(null); setIsLoading(true); fetchLeaderboard().catch(() => setLoadError('Could not fetch the FAME leaderboard.')).finally(() => setIsLoading(false)); }}
+                        style={{ padding: '10px 24px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
+                    >
+                        Retry
+                    </button>
                 </div>
             ) : (
             <div className="content-padding" style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 24px' }}>

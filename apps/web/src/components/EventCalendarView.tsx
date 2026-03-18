@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Clock, MapPin } from 'lucide-react';
 
 interface ScheduledEvent {
@@ -80,7 +80,15 @@ export function EventCalendarView({ events, onEventClick, onDateClick }: Props) 
     const [currentDate, setCurrentDate] = useState(new Date());
     const [hoveredEvent, setHoveredEvent] = useState<string | null>(null);
 
-    const today = useMemo(() => new Date(), []);
+    const [today, setToday] = useState(() => new Date());
+
+    // Update `today` at midnight so the highlight stays correct
+    useEffect(() => {
+        const now = new Date();
+        const msUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() - now.getTime();
+        const timer = setTimeout(() => setToday(new Date()), msUntilMidnight);
+        return () => clearTimeout(timer);
+    }, [today]);
 
     const eventsByDate = useMemo(() => {
         const map = new Map<string, ScheduledEvent[]>();

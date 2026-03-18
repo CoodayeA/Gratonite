@@ -31,7 +31,7 @@ export default function TaskBoard({ channelId }: { channelId: string }) {
     })
       .then(r => r.json())
       .then(setTasks)
-      .catch((err) => { console.error('Failed to fetch tasks:', err); });
+      .catch(() => {});
   }, [channelId]);
 
   const addTask = async (status: string) => {

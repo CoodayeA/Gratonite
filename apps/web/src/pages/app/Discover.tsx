@@ -387,7 +387,8 @@ const Discover = () => {
     useEffect(() => {
         Promise.allSettled([
         api.botStore.list({ limit: 20 }).then(res => {
-            const items: any[] = Array.isArray(res) ? res : (res as any).items ?? [];
+            const raw = res as unknown as { items?: unknown[] } | unknown[];
+            const items: unknown[] = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' && 'items' in raw ? (raw.items ?? []) : []);
             setDiscoverBots(items);
         }).catch(() => {
             addToast({ title: 'Failed to load bots', description: 'Could not fetch bot listings.', variant: 'error' });
@@ -455,7 +456,7 @@ const Discover = () => {
                     online: 0,
                     tags: g.tags ?? [],
                     category: g.category ?? null,
-                    verified: Boolean((g as any).verified),
+                    verified: Boolean('verified' in g ? g.verified : false),
                     featured: Boolean(g.featured),
                     isPinned: Boolean(g.isPinned),
                     isPublic: g.isPublic !== false,
@@ -741,7 +742,7 @@ const Discover = () => {
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <select
                         value={sortOption}
-                        onChange={e => setSortOption(e.target.value as any)}
+                        onChange={e => setSortOption(e.target.value as 'members' | 'activity' | 'trending' | 'rating')}
                         style={{ padding: '6px 10px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '12px', cursor: 'pointer', outline: 'none' }}
                     >
                         <option value="members">Most Members</option>
