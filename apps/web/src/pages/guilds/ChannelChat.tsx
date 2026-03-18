@@ -305,6 +305,17 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     const [hasDraft, setHasDraft] = useState(false);
     const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Mentions display map: maps display token (@username) to wire format (<@userId>)
+    const mentionsMapRef = useRef<Map<string, string>>(new Map());
+
+    const resolveWireContent = useCallback((text: string) => {
+        let result = text;
+        mentionsMapRef.current.forEach((wire, display) => {
+            result = result.split(display).join(wire);
+        });
+        return result;
+    }, []);
+
     const [showPollCreator, setShowPollCreator] = useState(false);
     const [pollQuestion, setPollQuestion] = useState('');
     const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
@@ -1114,23 +1125,45 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     // Load draft and scheduled messages when channel changes
     useEffect(() => {
         if (!channelId) return;
+        mentionsMapRef.current.clear();
         // Load draft
         fetch(`${API_BASE}/channels/${channelId}/draft`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
         }).then(r => r.ok ? r.json() : null).then(draft => {
             if (draft?.content) {
-                setInputValue(draft.content);
+                // Convert wire-format mentions (<@userId>) back to display tokens (@username)
+                mentionsMapRef.current.clear();
+                let displayContent = draft.content as string;
+                displayContent = displayContent.replace(/<@([a-zA-Z0-9_-]+)>/g, (match, uid) => {
+                    const member = guildMembers.find(m => m.id === uid);
+                    if (member) {
+                        const displayToken = `@${member.username}`;
+                        mentionsMapRef.current.set(displayToken, `<@${uid}>`);
+                        return displayToken;
+                    }
+                    return match;
+                });
+                displayContent = displayContent.replace(/<#([a-zA-Z0-9_-]+)>/g, (match, cid) => {
+                    const ch = guildChannelsList.find(c => c.id === cid);
+                    if (ch) {
+                        const displayToken = `#${ch.name}`;
+                        mentionsMapRef.current.set(displayToken, `<#${cid}>`);
+                        return displayToken;
+                    }
+                    return match;
+                });
+                setInputValue(displayContent);
                 setHasDraft(true);
             } else {
                 setHasDraft(false);
             }
-        }).catch((err) => { console.error('Failed to load draft:', err); });
+        }).catch(() => {});
         // Load scheduled messages
         fetch(`${API_BASE}/channels/${channelId}/messages/scheduled`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
         }).then(r => r.ok ? r.json() : []).then(data => {
             setScheduledMessages(Array.isArray(data) ? data : []);
-        }).catch((err) => { console.error('Failed to load scheduled messages:', err); });
+        }).catch(() => {});
         // Load channel notification prefs
         api.channelNotifPrefs.get(channelId).then(data => {
             setChannelNotifLevel(data?.level || 'default');
@@ -1232,7 +1265,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         if (!guildId) { setGuildChannelsList([]); return; }
         api.channels.getGuildChannels(guildId).then((channels: any[]) => {
             setGuildChannelsList(channels.map((c: any) => ({ id: c.id, name: c.name, type: c.type })));
-        }).catch((err) => { console.error('Failed to load guild channels:', err); });
+        }).catch(() => {});
     }, [guildId]);
 
     // Fetch slash commands for this guild
@@ -1242,7 +1275,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             if (Array.isArray(cmds)) {
                 setGuildCommands(cmds.map((c: any) => ({ id: c.id, name: c.name, description: c.description || '', options: c.options })));
             }
-        }).catch((err) => { console.error('Failed to load guild commands:', err); });
+        }).catch(() => {});
     }, [guildId]);
 
     // Feature 19: Fetch guild stickers
@@ -1259,7 +1292,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     packName: s.packName || 'Stickers',
                 })).filter((s: any) => s.url));
             }
-        }).catch((err) => { console.error('Failed to load stickers:', err); });
+        }).catch(() => {});
     }, [guildId]);
 
     // Fetch guild custom emojis for :name: rendering in messages
@@ -1270,7 +1303,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 name: e.name,
                 url: e.imageHash ? `${API_BASE}/files/${e.imageHash}` : '',
             })).filter((e: { name: string; url: string }) => e.url));
-        }).catch((err) => { console.error('Failed to load custom emojis:', err); });
+        }).catch(() => {});
     }, [guildId]);
 
     const STANDARD_EMOJIS = [
@@ -1863,8 +1896,9 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     const handleSendMessage = async () => {
         if (inputValue.trim() === '' && chatAttachedFiles.length === 0) return;
         if (!channelId) return;
-        if (inputValue.length > 2000) {
-            addToast({ title: `Message too long (${inputValue.length}/2000)`, variant: 'error' });
+        const wireContent = resolveWireContent(inputValue);
+        if (wireContent.length > 2000) {
+            addToast({ title: `Message too long (${wireContent.length}/2000)`, variant: 'error' });
             return;
         }
         if (slowRemaining > 0) {
@@ -1903,7 +1937,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         playSound('messageSend');
         haptic.messageSent();
 
-        const processedContent = processEmojis(inputValue);
+        const processedContent = processEmojis(wireContent);
 
         // Upload attached files — encrypt if channel has E2E enabled
         let attachmentIds: string[] = [];
@@ -2001,6 +2035,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         });
 
         setInputValue('');
+        mentionsMapRef.current.clear();
         chatAttachedFiles.forEach(f => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl); });
         setChatAttachedFiles([]);
         setReplyingTo(null);
@@ -2197,7 +2232,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     fetch(`${API_BASE}/channels/${channelId}/draft`, {
                         method: 'PUT',
                         headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ content: val }),
+                        body: JSON.stringify({ content: resolveWireContent(val) }),
                     }).catch(() => {});
                 }, 2000);
             } else {
@@ -2253,14 +2288,26 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
 
     const insertMention = (userId: string) => {
         if (mentionSearch === null) return;
-        const val = inputValue.replace(/@([a-zA-Z0-9_]*)$/, `<@${userId}> `);
+        const member = guildMembers.find(m => m.id === userId);
+        const username = member?.username || userId;
+        // Handle duplicate usernames by appending a suffix
+        let displayToken = `@${username}`;
+        if (mentionsMapRef.current.has(displayToken) && mentionsMapRef.current.get(displayToken) !== `<@${userId}>`) {
+            displayToken = `@${username}#${userId.slice(-4)}`;
+        }
+        mentionsMapRef.current.set(displayToken, `<@${userId}>`);
+        const val = inputValue.replace(/@([a-zA-Z0-9_]*)$/, `${displayToken} `);
         setInputValue(val);
         setMentionSearch(null);
     };
 
     const insertChannelMention = (chId: string) => {
         if (channelSearch === null) return;
-        const val = inputValue.replace(/#([a-zA-Z0-9_-]*)$/, `<#${chId}> `);
+        const channel = guildChannelsList.find(c => c.id === chId);
+        const channelName = channel?.name || chId;
+        const displayToken = `#${channelName}`;
+        mentionsMapRef.current.set(displayToken, `<#${chId}>`);
+        const val = inputValue.replace(/#([a-zA-Z0-9_-]*)$/, `${displayToken} `);
         setInputValue(val);
         setChannelSearch(null);
     };
@@ -2281,7 +2328,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         setInputValue(`/${cmd.name} `);
         if (!cmd.options || cmd.options.length === 0) {
             api.post(`/channels/${channelId}/interactions`, { commandId: cmd.id, options: {} })
-              .catch((err: any) => { console.error('Failed to execute command:', err); addToast({ title: 'Failed to execute command', variant: 'error' }); });
+              .catch(() => { addToast({ title: 'Failed to execute command', variant: 'error' }); });
             setInputValue('');
         }
     };
@@ -3715,11 +3762,11 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                     }
                                 }}
                             />
-                            {!editingMessage && inputValue.length > 1800 && (
-                                <span style={{ fontSize: '11px', fontWeight: 600, color: inputValue.length > 2000 ? 'var(--error)' : 'var(--warning)', flexShrink: 0, padding: '0 4px' }}>
-                                    {inputValue.length}/2000
+                            {(() => { const wireLen = resolveWireContent(inputValue).length; return !editingMessage && wireLen > 1800 ? (
+                                <span style={{ fontSize: '11px', fontWeight: 600, color: wireLen > 2000 ? 'var(--error)' : 'var(--warning)', flexShrink: 0, padding: '0 4px' }}>
+                                    {wireLen}/2000
                                 </span>
-                            )}
+                            ) : null; })()}
                             <button className="input-icon-btn" title="Record Voice Note" aria-label="Record voice note" onClick={startRecording}>
                                 <Mic size={20} />
                             </button>
@@ -3966,7 +4013,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                     return;
                                 }
                                 const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
-                                const processedContent = processEmojis(inputValue);
+                                const processedContent = processEmojis(resolveWireContent(inputValue));
                                 fetch(`${API_BASE}/channels/${channelId}/messages`, {
                                     method: 'POST',
                                     headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}`, 'Content-Type': 'application/json' },
@@ -3983,6 +4030,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                 }).catch(() => addToast({ title: 'Failed to schedule', variant: 'error' }));
                                 setIsScheduleOpen(false);
                                 setInputValue('');
+                                mentionsMapRef.current.clear();
                                 setScheduleDate('');
                                 setScheduleTime('');
                                 setHasDraft(false);
