@@ -139,13 +139,12 @@ export function JumpToDatePicker({ onSelect, onClose, loading }: Props) {
             }}>
                 <button
                     onClick={prevMonth}
+                    className="hover-bg-tertiary"
                     style={{
                         background: 'none', border: 'none', cursor: 'pointer',
                         color: 'var(--text-secondary)', padding: '4px',
                         borderRadius: '4px', display: 'flex',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                 >
                     <ChevronLeft size={16} />
                 </button>
@@ -161,8 +160,7 @@ export function JumpToDatePicker({ onSelect, onClose, loading }: Props) {
                         padding: '4px', borderRadius: '4px', display: 'flex',
                         opacity: canGoNext ? 1 : 0.4,
                     }}
-                    onMouseEnter={e => canGoNext && (e.currentTarget.style.background = 'var(--bg-tertiary)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                    className={canGoNext ? 'hover-bg-tertiary' : ''}
                 >
                     <ChevronRight size={16} />
                 </button>
@@ -193,6 +191,7 @@ export function JumpToDatePicker({ onSelect, onClose, loading }: Props) {
                     <div
                         key={i}
                         onClick={() => day && !isFuture(day) && handleSelect(day)}
+                        className={day && !isFuture(day) ? 'hover-bg-tertiary' : ''}
                         style={{
                             textAlign: 'center',
                             padding: '6px 0',
@@ -208,16 +207,6 @@ export function JumpToDatePicker({ onSelect, onClose, loading }: Props) {
                             opacity: !day ? 0 : isFuture(day) ? 0.3 : 1,
                             background: day && isToday(day) ? 'rgba(var(--accent-primary-rgb, 139,92,246), 0.1)' : 'transparent',
                             position: 'relative',
-                        }}
-                        onMouseEnter={e => {
-                            if (day && !isFuture(day)) e.currentTarget.style.background = 'var(--bg-tertiary)';
-                        }}
-                        onMouseLeave={e => {
-                            if (day && !isFuture(day)) {
-                                e.currentTarget.style.background = isToday(day)
-                                    ? 'rgba(var(--accent-primary-rgb, 139,92,246), 0.1)'
-                                    : 'transparent';
-                            }
                         }}
                     >
                         {day || ''}

@@ -407,8 +407,7 @@ export function ChannelBookmarks({ channelId, canManage }: ChannelBookmarksProps
               fontSize: 13,
               cursor: 'pointer',
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            className="hover-bg-secondary"
           >
             <Pencil size={14} /> Edit
           </button>
@@ -427,8 +426,7 @@ export function ChannelBookmarks({ channelId, canManage }: ChannelBookmarksProps
               fontSize: 13,
               cursor: 'pointer',
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            className="hover-bg-secondary"
           >
             <Trash2 size={14} /> Delete
           </button>

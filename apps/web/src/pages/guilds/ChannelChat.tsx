@@ -3278,8 +3278,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                             if (localMsg) { setHighlightedMessageId(localMsg.id); setTimeout(() => setHighlightedMessageId(null), 2500); }
                                         }
                                     }}
-                                    onMouseOver={e => e.currentTarget.style.borderColor = 'var(--accent-primary)'}
-                                    onMouseOut={e => e.currentTarget.style.borderColor = 'var(--stroke)'}
+                                    className="hover-border-accent"
                                     >
                                         {pin.attachments?.[0]?.url && (
                                             <div style={{ width: '100%', height: '80px', borderRadius: '6px', background: 'var(--bg-tertiary)', marginBottom: '8px', overflow: 'hidden' }}>
@@ -3346,8 +3345,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                             color: 'var(--text-muted)', fontSize: '12px', padding: '4px 8px',
                                             borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px'
                                         }}
-                                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--error)')}
-                                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                                        className="hover-text-error"
                                         >
                                             <X size={12} /> Unpin
                                         </button>
@@ -3923,8 +3921,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                                 aspectRatio: '1',
                                                             }}
-                                                            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.background = 'var(--bg-secondary)'; }}
-                                                            onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
+                                                            className="hover-sticker-item"
                                                             title={sticker.name}
                                                         >
                                                             <img src={sticker.url} alt={sticker.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />

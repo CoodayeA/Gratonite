@@ -151,8 +151,7 @@ const UnifiedInbox = () => {
                             color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600,
                             transition: 'all 0.15s',
                         }}
-                        onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.color = 'var(--accent-primary)'; }}
-                        onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--stroke)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                        className="hover-border-text-accent"
                     >
                         <CheckCheck size={14} />
                         Mark all read
@@ -249,8 +248,7 @@ const UnifiedInbox = () => {
                                                     cursor: 'pointer', transition: 'border-color 0.15s',
                                                     opacity: item.read ? 0.6 : 1,
                                                 }}
-                                                onMouseOver={e => e.currentTarget.style.borderColor = 'var(--text-muted)'}
-                                                onMouseOut={e => e.currentTarget.style.borderColor = 'var(--stroke)'}
+                                                className="hover-border-muted"
                                                 onClick={() => handleJumpToMessage(item)}
                                             >
                                                 {/* Type indicator */}
@@ -299,8 +297,7 @@ const UnifiedInbox = () => {
                                                                 display: 'flex', alignItems: 'center', gap: '4px',
                                                                 fontSize: '11px', transition: 'all 0.15s',
                                                             }}
-                                                            onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.color = 'var(--accent-primary)'; }}
-                                                            onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--stroke)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                                                            className="hover-border-text-accent"
                                                         >
                                                             <CheckCheck size={12} />
                                                         </button>

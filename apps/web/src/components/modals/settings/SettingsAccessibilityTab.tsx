@@ -143,8 +143,7 @@ const SettingsAccessibilityTab = ({ addToast }: Props) => {
             playSound('click');
           }}
           style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '10px 16px', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '14px', fontWeight: 500 }}
-          onMouseOver={(e) => { e.currentTarget.style.background = 'var(--bg-elevated)'; }}
-          onMouseOut={(e) => { e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
+          className="hover-bg-elevated"
         >
           <Download size={16} /> Export Theme
         </button>
@@ -185,8 +184,7 @@ const SettingsAccessibilityTab = ({ addToast }: Props) => {
             input.click();
           }}
           style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '10px 16px', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '14px', fontWeight: 500 }}
-          onMouseOver={(e) => { e.currentTarget.style.background = 'var(--bg-elevated)'; }}
-          onMouseOut={(e) => { e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
+          className="hover-bg-elevated"
         >
           <Upload size={16} /> Import Theme
         </button>

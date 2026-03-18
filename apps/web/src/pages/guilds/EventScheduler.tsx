@@ -98,29 +98,21 @@ const EventOptionsMenu = ({ event, guildId, onClose, onDeleted }: { event: Sched
 
     return (
         <div ref={menuRef} style={{ position: 'absolute', bottom: '44px', right: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '10px', padding: '4px', zIndex: 100, minWidth: '180px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
-            <button onClick={handleShare} style={btnBase}
-                onMouseOver={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-                onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+            <button onClick={handleShare} style={btnBase} className="hover-bg-tertiary-text-primary"
             >
                 <Share2 size={15} /> Share Event
             </button>
-            <button onClick={handleCopyLink} style={btnBase}
-                onMouseOver={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-                onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+            <button onClick={handleCopyLink} style={btnBase} className="hover-bg-tertiary-text-primary"
             >
                 <Link size={15} /> Copy Link
             </button>
             <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />
-            <button onClick={handleDelete} style={{ ...btnBase, color: 'var(--error)' }}
-                onMouseOver={e => { e.currentTarget.style.background = 'rgba(255,80,80,0.1)'; }}
-                onMouseOut={e => { e.currentTarget.style.background = 'transparent'; }}
+            <button onClick={handleDelete} style={{ ...btnBase, color: 'var(--error)' }} className="hover-bg-error-subtle"
             >
                 <Trash2 size={15} /> Delete Event
             </button>
             <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />
-            <button onClick={onClose} style={{ ...btnBase, color: 'var(--text-muted)' }}
-                onMouseOver={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-                onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+            <button onClick={onClose} style={{ ...btnBase, color: 'var(--text-muted)' }} className="hover-bg-tertiary-text-primary"
             >
                 <X size={15} /> Close
             </button>

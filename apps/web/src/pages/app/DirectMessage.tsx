@@ -1891,13 +1891,13 @@ const DirectMessage = () => {
 
                     <div style={{ display: 'flex', gap: '16px', color: 'var(--text-secondary)', alignItems: 'center' }}>
                         <input type="file" ref={bgInputRef} accept="image/*,video/mp4,video/webm,image/gif" onChange={handleUploadBg} style={{ display: 'none' }} />
-                        <ImageIcon size={20} style={{ cursor: 'pointer', transition: 'color 0.2s' }} onClick={() => bgInputRef.current?.click()} onMouseOver={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = 'var(--text-secondary)'} />
+                        <ImageIcon size={20} className="hover-text-primary" style={{ cursor: 'pointer', transition: 'color 0.2s' }} onClick={() => bgInputRef.current?.click()} />
                         {hasCustomBg && <X size={18} style={{ cursor: 'pointer', color: 'var(--error)', transition: 'opacity 0.2s' }} onClick={() => setBgMedia(null)} />}
 
                         {!isConnected && !isConnecting && !isRinging && (
                             <>
-                                <Phone size={20} style={{ cursor: 'pointer', transition: 'color 0.2s' }} onClick={() => handleStartCall(false)} onMouseOver={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = 'var(--text-secondary)'} />
-                                <Video size={20} style={{ cursor: 'pointer', transition: 'color 0.2s' }} onClick={() => handleStartCall(true)} onMouseOver={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = 'var(--text-secondary)'} />
+                                <Phone size={20} className="hover-text-primary" style={{ cursor: 'pointer', transition: 'color 0.2s' }} onClick={() => handleStartCall(false)} />
+                                <Video size={20} className="hover-text-primary" style={{ cursor: 'pointer', transition: 'color 0.2s' }} onClick={() => handleStartCall(true)} />
                             </>
                         )}
                         {isRinging && (
@@ -1911,7 +1911,7 @@ const DirectMessage = () => {
                         )}
 
                         {isGroupDm && (
-                            <Users size={20} style={{ cursor: 'pointer', transition: 'color 0.2s', color: memberPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }} onClick={() => setMemberPanelOpen(!memberPanelOpen)} onMouseOver={e => e.currentTarget.style.color = memberPanelOpen ? 'var(--accent-primary)' : 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = memberPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
+                            <Users size={20} className="hover-text-primary-inactive" data-active={memberPanelOpen ? "true" : undefined} style={{ cursor: 'pointer', transition: 'color 0.2s', color: memberPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }} onClick={() => setMemberPanelOpen(!memberPanelOpen)} />
                         )}
 
                         {/* Disappear Timer (A2) */}
@@ -1939,7 +1939,7 @@ const DirectMessage = () => {
                             )}
                         </div>
                         {/* E2E lock toggle is next to username, not here */}
-                        <Info size={20} style={{ cursor: 'pointer', transition: 'color 0.2s', color: infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }} onClick={() => { setInfoPanelOpen(!infoPanelOpen); if (isGroupDm) setMemberPanelOpen(false); }} onMouseOver={e => e.currentTarget.style.color = infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-primary)'} onMouseOut={e => e.currentTarget.style.color = infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
+                        <Info size={20} className="hover-text-primary-inactive" data-active={infoPanelOpen ? "true" : undefined} style={{ cursor: 'pointer', transition: 'color 0.2s', color: infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }} onClick={() => { setInfoPanelOpen(!infoPanelOpen); if (isGroupDm) setMemberPanelOpen(false); }} />
                     </div>
                 </header>
 
@@ -2680,8 +2680,7 @@ const DirectMessage = () => {
                                                     background: (msg.threadReplyCount ?? 0) >= 3 ? 'rgba(var(--accent-primary-rgb, 99,102,241), 0.08)' : 'transparent',
                                                 }}
                                                 onClick={() => setActiveThreadMessage(msg)}
-                                                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(var(--accent-primary-rgb, 99,102,241), 0.12)')}
-                                                onMouseLeave={e => (e.currentTarget.style.background = (msg.threadReplyCount ?? 0) >= 3 ? 'rgba(var(--accent-primary-rgb, 99,102,241), 0.08)' : 'transparent')}
+                                                className="hover-thread-indicator"
                                             >
                                                 <MessageSquare size={14} style={{ color: 'var(--accent-primary)' }} />
                                                 <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--accent-primary)' }}>
@@ -2696,7 +2695,7 @@ const DirectMessage = () => {
                                     {reactionPickerMessageId === msg.id && (
                                         <div ref={reactionPickerRef} style={{ position: 'absolute', top: '-44px', right: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '20px', padding: '4px 8px', display: 'flex', gap: '2px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 30 }}>
                                             {quickReactions.map(emoji => (
-                                                <button key={emoji} onClick={() => handleReaction(msg.apiId, emoji, false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px 6px', borderRadius: '8px', transition: 'all 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                                                <button key={emoji} onClick={() => handleReaction(msg.apiId, emoji, false)} className="hover-bg-tertiary" style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px 6px', borderRadius: '8px', transition: 'all 0.15s' }}>
                                                     {emoji}
                                                 </button>
                                             ))}
@@ -2705,9 +2704,9 @@ const DirectMessage = () => {
                                     {/* Hover actions */}
                                     {hoveredMessageId === msg.id && !msg.system && (
                                         <div style={{ position: 'absolute', top: '-12px', right: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', padding: '4px', display: 'flex', gap: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', zIndex: 10 }}>
-                                            <button onClick={() => setReactionPickerMessageId(reactionPickerMessageId === msg.id ? null : msg.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')} title="Add Reaction"><Smile size={16} /></button>
-                                            <button onClick={() => setActiveThreadMessage(msg)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')} title="Create Thread"><MessageSquare size={16} /></button>
-                                            <button onClick={() => { if (msg.content) navigator.clipboard.writeText(msg.content); addToast({ title: 'Copied', variant: 'info' }); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')} title="Copy Text"><Copy size={16} /></button>
+                                            <button onClick={() => setReactionPickerMessageId(reactionPickerMessageId === msg.id ? null : msg.id)} className="hover-bg-tertiary" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} title="Add Reaction"><Smile size={16} /></button>
+                                            <button onClick={() => setActiveThreadMessage(msg)} className="hover-bg-tertiary" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} title="Create Thread"><MessageSquare size={16} /></button>
+                                            <button onClick={() => { if (msg.content) navigator.clipboard.writeText(msg.content); addToast({ title: 'Copied', variant: 'info' }); }} className="hover-bg-tertiary" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} title="Copy Text"><Copy size={16} /></button>
                                         </div>
                                     )}
                                 </div>
@@ -2926,7 +2925,7 @@ const DirectMessage = () => {
 
                         <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
                             {groupParticipants.map((p) => (
-                                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', borderRadius: '8px' }} onMouseOver={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>
+                                <div key={p.id} className="hover-bg-tertiary" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', borderRadius: '8px' }}>
                                     <Avatar userId={p.id} avatarHash={p.avatarHash} displayName={p.displayName || p.username} size={32} />
                                     <div style={{ flex: 1, overflow: 'hidden' }}>
                                         <div style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>

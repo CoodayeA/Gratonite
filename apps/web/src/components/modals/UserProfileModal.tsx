@@ -685,8 +685,7 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                                             background: 'transparent', cursor: 'pointer', color: 'var(--text-primary)',
                                             fontSize: '13px', width: '100%', textAlign: 'left',
                                         }}
-                                        onMouseOver={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                                        onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                                        className="hover-bg-tertiary"
                                     >
                                         <Copy size={14} /> Copy Profile Link
                                     </button>
@@ -721,8 +720,7 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                                             color: isBlocked ? 'var(--success)' : 'var(--error)',
                                             fontSize: '13px', width: '100%', textAlign: 'left',
                                         }}
-                                        onMouseOver={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                                        onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                                        className="hover-bg-tertiary"
                                     >
                                         {isBlocked ? <ShieldCheck size={14} /> : <ShieldOff size={14} />}
                                         {isBlocked ? 'Unblock User' : 'Block User'}
@@ -738,8 +736,7 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                                                 background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)',
                                                 fontSize: '13px', width: '100%', textAlign: 'left',
                                             }}
-                                            onMouseOver={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                                            onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                                            className="hover-bg-tertiary"
                                         >
                                             <Flag size={14} /> Report User
                                         </button>

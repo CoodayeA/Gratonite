@@ -109,8 +109,7 @@ export const SplitViewContainer = ({
                     flexShrink: 0, zIndex: 10,
                     transition: isDraggingRef.current ? 'none' : 'background 0.15s',
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-primary)'}
-                onMouseLeave={e => { if (!isDraggingRef.current) e.currentTarget.style.background = 'var(--stroke)'; }}
+                className="hover-accent-divider"
             />
 
             {/* Right pane */}
@@ -126,8 +125,7 @@ export const SplitViewContainer = ({
                         cursor: 'pointer', color: 'var(--text-muted)',
                         transition: 'all 0.15s',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--error, #ef4444)'; e.currentTarget.style.color = 'white'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                    className="hover-close-error"
                     title="Close split view"
                 >
                     <X size={14} />

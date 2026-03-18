@@ -2216,9 +2216,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                 <div style={{ position: 'absolute', top: -4, left: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', zIndex: 10, minWidth: '130px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}>
                                                     {roles.map(role => (
                                                         <div key={role.id} onClick={() => assignRole(member.id, role.name)}
+                                                            className="hover-bg-overlay"
                                                             style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}
-                                                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-overlay)')}
-                                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                                         >
                                                             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: role.color, flexShrink: 0 }} />
                                                             {role.name}
