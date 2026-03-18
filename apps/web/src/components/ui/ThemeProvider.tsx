@@ -330,6 +330,33 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
     }, [activeThemeId, colorMode, fontFamily, fontSize, glassMode, reducedEffects, lowPower, accentColor, highContrast, compactMode, buttonShape, screenReaderMode, linkUnderlines, focusIndicatorSize, colorBlindMode, lowDataMode, previewThemeId]);
 
+    // --- B7: OS Accent Color Sync on desktop ---
+    useEffect(() => {
+        const desktop = (window as any).gratoniteDesktop;
+        if (desktop?.getSystemAccentColor && !localStorage.getItem('gratonite_accent_color')) {
+            desktop.getSystemAccentColor().then((color: string | null) => {
+                if (color) {
+                    setAccentColor(color);
+                }
+            }).catch(() => {});
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Sync Windows title bar overlay color with active theme
+    useEffect(() => {
+        if ((window as any).gratoniteDesktop?.setTitleBarOverlay) {
+            requestAnimationFrame(() => {
+                const style = getComputedStyle(document.documentElement);
+                const bgApp = style.getPropertyValue('--bg-app').trim();
+                const textPrimary = style.getPropertyValue('--text-primary').trim();
+                if (bgApp && textPrimary) {
+                    (window as any).gratoniteDesktop.setTitleBarOverlay({ color: bgApp, symbolColor: textPrimary });
+                }
+            });
+        }
+    }, [activeThemeId, colorMode]);
+
     // Scheduled theme auto-switch (Item 15)
     useEffect(() => {
         const checkSchedule = () => {

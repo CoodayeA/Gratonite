@@ -9,6 +9,14 @@ const PROD_URL = process.env.GRATONITE_DESKTOP_URL || 'https://gratonite.chat/ap
 
 const isDev = process.argv.includes('--dev') || process.env.NODE_ENV === 'development';
 
+// --- Extracted magic numbers ---
+const IDLE_CHECK_INTERVAL_MS = 30_000;
+const GAME_CHECK_INTERVAL_MS = 5_000;
+const GAME_STOP_VERIFY_DELAY_MS = 10_000;
+const PROCESS_EXEC_TIMEOUT_MS = 5_000;
+const WINDOW_STATE_SAVE_DEBOUNCE_MS = 500;
+const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
+
 let mainWindow = null;
 let miniWindow = null;
 let tray = null;
@@ -98,7 +106,7 @@ function saveWindowState() {
 let saveStateTimeout = null;
 function debouncedSaveWindowState() {
   if (saveStateTimeout) clearTimeout(saveStateTimeout);
-  saveStateTimeout = setTimeout(saveWindowState, 500);
+  saveStateTimeout = setTimeout(saveWindowState, WINDOW_STATE_SAVE_DEBOUNCE_MS);
 }
 
 // --- Feature #23: Desktop Global Hotkeys Configuration ---
@@ -222,7 +230,7 @@ function startIdleDetection() {
         mainWindow.webContents.send('system-idle-changed', { idle: false, idleSeconds });
       }
     }
-  }, 30000);
+  }, IDLE_CHECK_INTERVAL_MS);
 }
 
 function stopIdleDetection() {
@@ -244,7 +252,7 @@ function startGameDetection() {
     const cmd = isWin ? 'wmic' : 'ps';
     const args = isWin ? ['process', 'get', 'name', '/format:csv'] : ['-eo', 'comm'];
 
-    execFile(cmd, args, { timeout: 5000 }, (err, stdout) => {
+    execFile(cmd, args, { timeout: PROCESS_EXEC_TIMEOUT_MS }, (err, stdout) => {
       if (err) return;
 
       const processes = stdout.toLowerCase().split('\n').map(l => l.trim()).filter(Boolean);
@@ -271,7 +279,7 @@ function startGameDetection() {
       } else if (!detectedGame && currentGame) {
         const stoppedGame = currentGame;
         setTimeout(() => {
-          execFile(cmd, args, { timeout: 5000 }, (err2, stdout2) => {
+          execFile(cmd, args, { timeout: PROCESS_EXEC_TIMEOUT_MS }, (err2, stdout2) => {
             if (err2) return;
             const procs2 = stdout2.toLowerCase().split('\n').map(l => l.trim());
             const stillRunning = stoppedGame.processNames.some(pn =>
@@ -284,10 +292,10 @@ function startGameDetection() {
               }
             }
           });
-        }, 10000);
+        }, GAME_STOP_VERIFY_DELAY_MS);
       }
     });
-  }, 5000);
+  }, GAME_CHECK_INTERVAL_MS);
 }
 
 function stopGameDetection() {
@@ -312,14 +320,14 @@ function createWindow() {
       : 'default',
     ...(process.platform === 'win32' && {
       titleBarOverlay: {
-        color: '#1a1a2e',
+        color: '#111214',
         symbolColor: '#ffffff',
         height: 36,
       },
     }),
     trafficLightPosition: { x: 12, y: 12 },
     fullscreenable: true,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#111214',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -356,12 +364,20 @@ function createWindow() {
   mainWindow.on('maximize', debouncedSaveWindowState);
   mainWindow.on('unmaximize', debouncedSaveWindowState);
 
-  // Load the app
+  // --- B1: Splash Screen ---
+  // Load splash first, then navigate to the real app URL
+  let splashLoaded = false;
+  mainWindow.loadFile(path.join(__dirname, 'splash.html'));
+
   const url = isDev ? DEV_URL : PROD_URL;
-  mainWindow.loadURL(url);
 
   // Fix chat bar button clicks on Windows (overlay/compositing hint)
   mainWindow.webContents.on('did-finish-load', () => {
+    if (!splashLoaded) {
+      splashLoaded = true;
+      mainWindow.loadURL(url);
+      return;
+    }
     mainWindow.webContents.insertCSS(`
       .emoji-picker-container, .sticker-picker-container,
       .soundboard-container, .poll-modal-container,
@@ -375,6 +391,33 @@ function createWindow() {
         scroll-behavior: smooth;
       }
     `);
+  });
+
+  // --- B2: Crash / Load Failure Handler ---
+  mainWindow.webContents.on('did-fail-load', (_e, errorCode, errorDescription) => {
+    const safeDesc = (errorDescription || 'Could not reach Gratonite').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    const retryUrl = isDev ? DEV_URL : PROD_URL;
+    mainWindow.loadURL(`data:text/html,
+      <html>
+      <head><style>
+        body { background: #111214; color: #fff; font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        h1 { font-size: 24px; margin-bottom: 8px; }
+        p { color: #888; margin-bottom: 24px; }
+        button { background: #6c63ff; color: #fff; border: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+        button:hover { opacity: 0.9; }
+      </style></head>
+      <body>
+        <h1>Connection Failed</h1>
+        <p>${safeDesc}</p>
+        <button onclick="location.href='${encodeURI(retryUrl)}'">Retry</button>
+      </body>
+      </html>
+    `);
+  });
+
+  mainWindow.webContents.on('render-process-gone', (_e, details) => {
+    console.error('Render process gone:', details.reason);
+    mainWindow.reload();
   });
 
   // Task #45: Native Context Menus
@@ -461,6 +504,15 @@ function createWindow() {
       mainWindow.setFullScreen(!mainWindow.isFullScreen());
       event.preventDefault();
     }
+    // Prevent accidental reload in production
+    if (!isDev && input.type === 'keyDown') {
+      if ((input.control || input.meta) && input.key.toLowerCase() === 'r') {
+        event.preventDefault();
+      }
+      if (input.control && input.shift && input.key.toLowerCase() === 'i') {
+        event.preventDefault();
+      }
+    }
   });
 
   // Open external links in default browser
@@ -523,7 +575,7 @@ function createMiniWindow() {
     resizable: true,
     skipTaskbar: true,
     transparent: false,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#111214',
     title: 'Gratonite Mini',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -854,10 +906,12 @@ function createAppMenu() {
     {
       label: 'View',
       submenu: [
-        { role: 'reload' },
-        { role: 'forceReload' },
-        { role: 'toggleDevTools' },
-        { type: 'separator' },
+        ...(isDev ? [
+          { role: 'reload' },
+          { role: 'forceReload' },
+          { role: 'toggleDevTools' },
+          { type: 'separator' },
+        ] : []),
         { role: 'resetZoom' },
         { role: 'zoomIn' },
         { role: 'zoomOut' },
@@ -959,6 +1013,23 @@ app.on('will-quit', () => {
 // IPC handlers for the renderer
 ipcMain.handle('app:version', () => app.getVersion());
 ipcMain.handle('app:platform', () => process.platform);
+
+// --- B4: OS Accent Color Sync ---
+ipcMain.handle('get-system-accent-color', () => {
+  try { return '#' + systemPreferences.getAccentColor().slice(0, 6); } catch { return null; }
+});
+
+// --- B5: Taskbar Progress Bar ---
+ipcMain.on('set-progress-bar', (_event, progress) => {
+  if (mainWindow) mainWindow.setProgressBar(progress);
+});
+
+// Sync Windows title bar overlay color with theme
+ipcMain.on('set-title-bar-overlay', (_event, options) => {
+  if (mainWindow && process.platform === 'win32') {
+    try { mainWindow.setTitleBarOverlay(options); } catch {}
+  }
+});
 
 // Item 260: Renderer sends unread count updates
 ipcMain.on('set-badge-count', (_event, count) => {
@@ -1282,7 +1353,7 @@ if (!isDev) {
     // Check for updates every 4 hours
     setInterval(() => {
       autoUpdater.checkForUpdates();
-    }, 4 * 60 * 60 * 1000);
+    }, UPDATE_CHECK_INTERVAL_MS);
   } catch (e) {
     console.warn('Auto-updater not available:', e.message);
   }

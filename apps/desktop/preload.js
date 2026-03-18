@@ -9,6 +9,15 @@ contextBridge.exposeInMainWorld('gratoniteDesktop', {
   // Flag so the web app knows it's running in Electron
   isDesktop: true,
 
+  // --- B4: OS Accent Color Sync ---
+  getSystemAccentColor: () => ipcRenderer.invoke('get-system-accent-color'),
+
+  // --- B5: Taskbar Progress Bar ---
+  setProgressBar: (progress) => ipcRenderer.send('set-progress-bar', progress),
+
+  // Sync Windows title bar overlay color with theme
+  setTitleBarOverlay: (options) => ipcRenderer.send('set-title-bar-overlay', options),
+
   // Notification support (Electron handles system notifications)
   sendNotification: (title, body) => {
     new Notification(title, { body });

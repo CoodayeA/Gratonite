@@ -1,6 +1,6 @@
 {
   "name": "gratonite-desktop",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Gratonite Desktop — Electron wrapper for the Gratonite web app",
   "author": {
     "name": "Gratonite",
@@ -24,6 +24,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "splash.html",
       "assets/**/*",
       "data/**/*"
     ],
