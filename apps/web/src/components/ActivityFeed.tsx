@@ -15,19 +15,49 @@ interface ActivityEvent {
 
 const typeIcons: Record<string, typeof Activity> = {
   guild_join: Server,
+  joined_server: Server,
   friend_request: UserPlus,
   message: MessageSquare,
   status_change: Activity,
   fame_received: Star,
+  earned_achievement: Star,
   now_playing: Music,
+};
+
+// Fallback map for achievement IDs stored without a human-readable name
+const ACHIEVEMENT_NAMES: Record<string, string> = {
+  first_message: 'First Words',
+  social_butterfly: 'Social Butterfly',
+  bookmarker: 'Bookmarker',
+  gifter: 'Gifter',
+  streak_7: 'Weekly Warrior',
+  streak_30: 'Monthly Master',
+  chatterbox: 'Chatterbox',
+  veteran: 'Veteran',
+  first_friend: 'Social Butterfly',
+  popular: 'Popular',
+  fame_receiver: 'Famous',
+  guild_joiner: 'Server Explorer',
+  first_purchase: 'First Purchase',
+  big_spender: 'Big Spender',
+  collector: 'Collector',
+  gacha_lucky: 'Lucky Pull',
+  early_adopter: 'Early Adopter',
+  bug_hunter: 'Bug Hunter',
 };
 
 const typeLabels: Record<string, (event: ActivityEvent) => string> = {
   guild_join: (e) => `joined ${(e.payload.guildName as string) || 'a server'}`,
+  joined_server: (e) => `joined ${(e.payload.guildName as string) || 'a server'}`,
   friend_request: () => 'sent a friend request',
   message: (e) => `posted in #${(e.payload.channelName as string) || 'channel'}`,
   status_change: (e) => `is now ${(e.payload.status as string) || 'online'}`,
   fame_received: (e) => `received ${(e.payload.amount as number) || 1} FAME`,
+  earned_achievement: (e) => {
+    const rawName = (e.payload.achievementName as string) || (e.payload.achievementId as string) || '';
+    const name = ACHIEVEMENT_NAMES[rawName] || ACHIEVEMENT_NAMES[(e.payload.achievementId as string)] || rawName || 'an achievement';
+    return `earned ${name}`;
+  },
   now_playing: (e) => `is listening to ${(e.payload.track as string) || 'music'}`,
 };
 

@@ -4019,7 +4019,7 @@ export const AppLayout = () => {
                 {activeModal === 'memberOptions' && (() => {
                     const guildId = location.pathname.match(/\/guild\/([^/]+)/)?.[1] || '';
                     const guildName = guilds.find(g => g.id === guildId)?.name || '';
-                    return <MemberOptionsModal onClose={() => setActiveModal(null)} guildId={guildId} guildName={guildName} />;
+                    return <MemberOptionsModal onClose={() => setActiveModal(null)} guildId={guildId} guildName={guildName} userId={userProfile.id} />;
                 })()}
             </ModalWrapper>
             <ModalWrapper isOpen={activeModal === 'invite'}>

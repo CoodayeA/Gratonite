@@ -14,6 +14,35 @@ type FeedEvent = {
   avatarHash?: string | null;
 };
 
+// Fallback map for achievement IDs that were stored without a human-readable name
+const ACHIEVEMENT_NAMES: Record<string, string> = {
+  first_message: 'First Words',
+  social_butterfly: 'Social Butterfly',
+  bookmarker: 'Bookmarker',
+  gifter: 'Gifter',
+  streak_7: 'Weekly Warrior',
+  streak_30: 'Monthly Master',
+  chatterbox: 'Chatterbox',
+  veteran: 'Veteran',
+  first_friend: 'Social Butterfly',
+  popular: 'Popular',
+  fame_receiver: 'Famous',
+  guild_joiner: 'Server Explorer',
+  first_purchase: 'First Purchase',
+  big_spender: 'Big Spender',
+  collector: 'Collector',
+  gacha_lucky: 'Lucky Pull',
+  early_adopter: 'Early Adopter',
+  bug_hunter: 'Bug Hunter',
+};
+
+function getAchievementLabel(e: FeedEvent): string {
+  const p = e.payload as any;
+  const rawName = p.achievementName || p.achievementId || '';
+  const name = ACHIEVEMENT_NAMES[rawName] || ACHIEVEMENT_NAMES[p.achievementId] || rawName || 'an achievement';
+  return `earned ${name}`;
+}
+
 const EVENT_ICONS: Record<string, { icon: React.ReactNode; color: string; label: (e: FeedEvent) => string }> = {
   joined_server: {
     icon: <Users size={14} />,
@@ -23,7 +52,7 @@ const EVENT_ICONS: Record<string, { icon: React.ReactNode; color: string; label:
   earned_achievement: {
     icon: <Star size={14} />,
     color: '#faa61a',
-    label: (e) => `earned ${(e.payload as any).achievementId ?? 'an achievement'}`,
+    label: getAchievementLabel,
   },
   reached_level: {
     icon: <Zap size={14} />,
