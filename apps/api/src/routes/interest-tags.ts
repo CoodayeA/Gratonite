@@ -9,7 +9,7 @@ import { requireAuth } from '../middleware/auth';
 export const interestTagsRouter = Router({ mergeParams: true });
 
 /** GET /interest-tags — list all available tags grouped by category */
-interestTagsRouter.get('/', async (_req: Request, res: Response): Promise<void> => {
+interestTagsRouter.get('/interest-tags', async (_req: Request, res: Response): Promise<void> => {
   try {
     const tags = await db.select().from(interestTags);
     const grouped: Record<string, Array<{ tag: string; icon: string | null }>> = {};
