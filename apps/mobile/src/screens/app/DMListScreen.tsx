@@ -31,10 +31,9 @@ type Props = CompositeScreenProps<
 
 const NEO_PALETTE_KEYS = ['coral', 'mint', 'butter', 'lavender', 'sky', 'peach'] as const;
 
-function DMItem({ item, index, onPress, styles, colors, neo, glass }: { item: DMChannel; index: number; onPress: () => void; styles: any; colors: any; neo: any; glass: any }) {
+function DMItem({ item, index, onPress, styles, colors, neo, glass, isFocused }: { item: DMChannel; index: number; onPress: () => void; styles: any; colors: any; neo: any; glass: any; isFocused: boolean }) {
   const name = item.recipient?.displayName || item.recipient?.username || 'Unknown';
   const unread = useChannelUnread(item.id);
-  const isFocused = useIsFocused();
 
   const neoItemStyle = neo !== null
     ? { backgroundColor: neo.palette[NEO_PALETTE_KEYS[index % 6]] }
@@ -307,6 +306,7 @@ export default function DMListScreen({ navigation }: Props) {
             colors={colors}
             neo={neo}
             glass={glass}
+            isFocused={isFocused}
             onPress={() => navigation.navigate('DirectMessage', {
               channelId: item.id,
               recipientName: item.recipient?.displayName || item.recipient?.username || 'Unknown',
