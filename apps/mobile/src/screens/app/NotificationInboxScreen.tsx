@@ -57,6 +57,7 @@ export default function NotificationInboxScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const activeSwipeableRef = useRef<Swipeable | null>(null);
+  const swipeableRefs = useRef<Map<string, Swipeable>>(new Map());
   const readNotifications = useMemo(
     () => notifications.filter((n) => n.read),
     [notifications],
@@ -188,11 +189,12 @@ export default function NotificationInboxScreen({ navigation }: Props) {
     ]);
   };
 
-  const onSwipeableOpen = (ref: Swipeable) => {
-    if (activeSwipeableRef.current && activeSwipeableRef.current !== ref) {
+  const onSwipeableWillOpen = (notifId: string) => {
+    const opening = swipeableRefs.current.get(notifId);
+    if (activeSwipeableRef.current && activeSwipeableRef.current !== opening) {
       activeSwipeableRef.current.close();
     }
-    activeSwipeableRef.current = ref;
+    activeSwipeableRef.current = opening ?? null;
   };
 
   const actionBorderRadius = neo ? 0 : borderRadius.md;
@@ -271,19 +273,20 @@ export default function NotificationInboxScreen({ navigation }: Props) {
       fontSize: fontSize.md,
       fontWeight: '600',
       flex: 1,
+      ...(glassExtras ? { textShadowColor: 'rgba(0,0,0,0.15)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 } : {}),
     },
     notifTime: {
-      color: colors.textMuted,
+      color: glassExtras ? colors.textPrimary : colors.textMuted,
       fontSize: fontSize.xs,
       marginLeft: spacing.sm,
     },
     notifText: {
-      color: colors.textSecondary,
+      color: glassExtras ? colors.textPrimary : colors.textSecondary,
       fontSize: fontSize.sm,
       lineHeight: 18,
     },
     notifPreview: {
-      color: colors.textMuted,
+      color: glassExtras ? colors.textSecondary : colors.textMuted,
       fontSize: fontSize.xs,
       marginTop: 2,
       fontStyle: 'italic',
@@ -423,12 +426,17 @@ export default function NotificationInboxScreen({ navigation }: Props) {
 
     return (
       <Swipeable
-        ref={(ref) => { if (ref) (ref as any)._notifId = item.id; }}
+        ref={(ref) => {
+          if (ref) {
+            swipeableRefs.current.set(item.id, ref);
+          } else {
+            swipeableRefs.current.delete(item.id);
+          }
+        }}
         renderRightActions={renderRightActions(item.id)}
         renderLeftActions={!item.read ? renderLeftActions(item.id) : undefined}
-        onSwipeableWillOpen={() => {}}
-        onSwipeableOpen={(direction, swipeable) => {
-          onSwipeableOpen(swipeable);
+        onSwipeableWillOpen={() => onSwipeableWillOpen(item.id)}
+        onSwipeableOpen={(direction) => {
           if (direction === 'right') {
             handleDismiss(item.id);
           } else if (direction === 'left' && !item.read) {

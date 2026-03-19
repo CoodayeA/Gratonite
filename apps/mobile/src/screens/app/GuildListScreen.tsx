@@ -39,14 +39,21 @@ export default function GuildListScreen({ navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [statusPickerVisible, setStatusPickerVisible] = useState(false);
   const [onlineCounts, setOnlineCounts] = useState<Record<string, number>>({});
+  const [loadingCounts, setLoadingCounts] = useState(false);
   const { colors, spacing, fontSize, borderRadius } = useTheme();
   const neo = useNeo();
   const glass = useGlass();
 
-  // Fetch online member counts — only once on mount and on pull-to-refresh
+  // Fetch online member counts with 30s TTL cache
   const hasFetchedCounts = useRef(false);
-  const fetchOnlineCounts = useCallback(async (guildList: Guild[]) => {
+  const lastFetchTime = useRef(0);
+  const FETCH_COOLDOWN_MS = 30_000;
+  const fetchOnlineCounts = useCallback(async (guildList: Guild[], force = false) => {
     if (guildList.length === 0) return;
+    const now = Date.now();
+    if (!force && now - lastFetchTime.current < FETCH_COOLDOWN_MS) return;
+    lastFetchTime.current = now;
+    setLoadingCounts(true);
     try {
       // Fetch members for up to 10 guilds at a time to limit concurrent requests
       const BATCH_SIZE = 10;
@@ -97,6 +104,8 @@ export default function GuildListScreen({ navigation }: Props) {
       setOnlineCounts(counts);
     } catch {
       // ignore
+    } finally {
+      setLoadingCounts(false);
     }
   }, []);
 
@@ -106,13 +115,15 @@ export default function GuildListScreen({ navigation }: Props) {
     fetchOnlineCounts(guilds);
   }, [guilds, fetchOnlineCounts]);
 
-  // Reset hasFetchedCounts when screen regains focus so online counts refresh
+  // Re-fetch online counts on focus, respecting TTL
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      hasFetchedCounts.current = false;
+      if (guilds.length > 0) {
+        fetchOnlineCounts(guilds);
+      }
     });
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, guilds, fetchOnlineCounts]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -207,7 +218,7 @@ export default function GuildListScreen({ navigation }: Props) {
     },
     list: {
       paddingTop: spacing.sm,
-      paddingBottom: spacing.xxl,
+      paddingBottom: Math.max(insets.bottom, spacing.xxl),
     },
     guildItem: {
       flexDirection: 'row',
@@ -293,9 +304,9 @@ export default function GuildListScreen({ navigation }: Props) {
       marginLeft: 4,
     },
     chevron: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: colors.accentLight,
       justifyContent: 'center',
       alignItems: 'center',
@@ -319,16 +330,16 @@ export default function GuildListScreen({ navigation }: Props) {
       textAlign: 'center',
       paddingHorizontal: spacing.xxxl,
     },
-  }), [colors, neo, glass, spacing, fontSize, borderRadius]);
+  }), [colors, neo, glass, spacing, fontSize, borderRadius, insets.bottom]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await refreshGuilds();
     try {
       const freshGuilds = await guildsApi.getMine();
-      fetchOnlineCounts(freshGuilds);
+      fetchOnlineCounts(freshGuilds, true);
     } catch {
-      fetchOnlineCounts(guilds);
+      fetchOnlineCounts(guilds, true);
     }
     setRefreshing(false);
     notificationSuccess();
@@ -348,7 +359,6 @@ export default function GuildListScreen({ navigation }: Props) {
     const neoItemStyle = neo !== null
       ? {
           backgroundColor: neo.palette[NEO_PALETTE_KEYS[index % 6]],
-          transform: [{ rotate: index % 2 === 0 ? '0.5deg' : '-0.5deg' }] as const,
         }
       : undefined;
 
@@ -376,7 +386,7 @@ export default function GuildListScreen({ navigation }: Props) {
               <Text style={styles.guildMetaText}>
                 {item.memberCount ?? 0} member{(item.memberCount ?? 0) !== 1 ? 's' : ''}
               </Text>
-              {onlineCounts[item.id] != null && (
+              {onlineCounts[item.id] != null ? (
                 <>
                   <Text style={styles.guildMetaText}>{' \u00B7 '}</Text>
                   <View style={[styles.onlineDot, { backgroundColor: colors.online }]} />
@@ -384,7 +394,12 @@ export default function GuildListScreen({ navigation }: Props) {
                     {onlineCounts[item.id]} online
                   </Text>
                 </>
-              )}
+              ) : loadingCounts ? (
+                <>
+                  <Text style={styles.guildMetaText}>{' \u00B7 '}</Text>
+                  <Text style={styles.guildMetaText}>\u2026</Text>
+                </>
+              ) : null}
             </View>
           </View>
           <View style={styles.chevron}>

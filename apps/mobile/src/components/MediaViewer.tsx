@@ -1,12 +1,11 @@
 import React, { useMemo, useCallback } from 'react';
-import { View, TouchableOpacity, StyleSheet, Dimensions, Modal, Text, FlatList, Alert } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Modal, Text, FlatList, Alert, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../lib/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
-
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 interface MediaViewerProps {
   visible: boolean;
@@ -17,6 +16,8 @@ interface MediaViewerProps {
 
 export default function MediaViewer({ visible, urls, initialIndex = 0, onClose }: MediaViewerProps) {
   const { colors, spacing } = useTheme();
+  const { width: SCREEN_W, height: SCREEN_H } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = React.useState(initialIndex);
 
   React.useEffect(() => {
@@ -55,7 +56,7 @@ export default function MediaViewer({ visible, urls, initialIndex = 0, onClose }
       <View style={{ width: SCREEN_W, height: SCREEN_H, justifyContent: 'center', alignItems: 'center' }}>
         <Image
           source={{ uri: item }}
-          style={{ width: SCREEN_W, height: SCREEN_H * 0.75 }}
+          style={{ width: SCREEN_W, height: SCREEN_H * 0.8 }}
           contentFit="contain"
           cachePolicy="memory-disk"
         />
@@ -68,7 +69,7 @@ export default function MediaViewer({ visible, urls, initialIndex = 0, onClose }
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)' }}>
         {/* Header */}
         <View style={{
-          position: 'absolute', top: 50, left: 0, right: 0, zIndex: 10,
+          position: 'absolute', top: insets.top + 10, left: 0, right: 0, zIndex: 10,
           flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
           paddingHorizontal: spacing.lg,
         }}>

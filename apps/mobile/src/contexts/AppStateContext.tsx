@@ -25,6 +25,8 @@ const AppStateContext = createContext<AppStateContextType | null>(null);
 
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const userRef = React.useRef(user);
+  userRef.current = user;
   const [guilds, setGuilds] = useState<Guild[]>([]);
   const [dmChannels, setDmChannels] = useState<DMChannel[]>([]);
   const [notificationCount, setNotificationCount] = useState(0);
@@ -119,8 +121,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         setNotificationCount((c) => c + 1);
       }),
       onMessageCreate((data: any) => {
-        if (data.authorId !== user.id) {
-          const isMention = data.content?.includes(`@${user.username}`) || false;
+        const currentUser = userRef.current;
+        if (currentUser && data.authorId !== currentUser.id) {
+          const isMention = data.content?.includes(`@${currentUser.username}`) || false;
           unreadStore.incrementUnread(data.channelId, isMention);
         }
       }),

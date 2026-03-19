@@ -272,6 +272,8 @@ function scheduleProactiveRefresh(): void {
   // Refresh 60s before the 15-minute TTL expires
   const refreshInMs = (15 * 60 - 60) * 1000; // 14 minutes
   proactiveRefreshTimer = setTimeout(async () => {
+    proactiveRefreshTimer = null;
+    if (!accessToken) return;
     const newToken = await refreshAccessToken();
     if (newToken) {
       scheduleProactiveRefresh();
@@ -289,7 +291,7 @@ export function cancelProactiveRefresh(): void {
 export async function refreshAccessToken(): Promise<string | null> {
   if (refreshPromise) return refreshPromise;
 
-  refreshPromise = (async () => {
+  const promise = (async () => {
     try {
       if (!refreshToken) {
         return null;
@@ -315,22 +317,31 @@ export async function refreshAccessToken(): Promise<string | null> {
     } catch {
       accessToken = null;
       return null;
-    } finally {
-      refreshPromise = null;
     }
   })();
 
-  return refreshPromise;
+  refreshPromise = promise;
+
+  promise.finally(() => {
+    if (refreshPromise === promise) {
+      refreshPromise = null;
+    }
+  });
+
+  return promise;
 }
 
 // ---------------------------------------------------------------------------
 // Core fetch wrapper
 // ---------------------------------------------------------------------------
 
+const MAX_RATE_LIMIT_RETRIES = 3;
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
   retried = false,
+  _rateLimitRetry = 0,
 ): Promise<T> {
   // Auto-reload tokens from SecureStore if wiped (e.g. by hot module reload)
   if (!accessToken) {
@@ -355,6 +366,12 @@ export async function apiFetch<T>(
   });
 
   if (res.status === 429) {
+    if (_rateLimitRetry < MAX_RATE_LIMIT_RETRIES) {
+      const retryAfter = Number(res.headers.get('Retry-After') || 0);
+      const backoffMs = retryAfter > 0 ? retryAfter : 1000 * Math.pow(2, _rateLimitRetry);
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+      return apiFetch<T>(path, options, retried, _rateLimitRetry + 1);
+    }
     const retryAfter = Number(res.headers.get('Retry-After') ?? 5000);
     throw new RateLimitError(retryAfter);
   }
@@ -362,7 +379,7 @@ export async function apiFetch<T>(
   if (res.status === 401 && !retried) {
     const newToken = await refreshAccessToken();
     if (newToken) {
-      return apiFetch<T>(path, options, true);
+      return apiFetch<T>(path, options, true, _rateLimitRetry);
     }
     const body = await res.json().catch(() => ({ code: 'UNAUTHORIZED', message: 'Unauthorized' }));
     throw new ApiRequestError(401, body as ApiError);
@@ -656,15 +673,17 @@ export const channels = {
 // ---------------------------------------------------------------------------
 
 export const messages = {
-  list(channelId: string, params?: CursorPaginationParams) {
+  list(channelId: string, params?: CursorPaginationParams, signal?: AbortSignal) {
     const qs = buildQuery(params);
-    return apiFetch<Message[]>(`/channels/${channelId}/messages${qs}`);
+    return apiFetch<Message[]>(`/channels/${channelId}/messages${qs}`, { signal });
   },
 
-  send(channelId: string, content: string, opts?: { replyToId?: string; stickerId?: string; isEncrypted?: boolean; encryptedContent?: string }) {
+  send(channelId: string, content: string, opts?: { replyToId?: string; stickerId?: string; isEncrypted?: boolean; encryptedContent?: string; signal?: AbortSignal }) {
+    const { signal, ...body } = opts ?? {};
     return apiFetch<Message>(`/channels/${channelId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ content, ...opts }),
+      body: JSON.stringify({ content, ...body }),
+      signal,
     });
   },
 

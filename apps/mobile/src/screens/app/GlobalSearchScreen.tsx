@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -28,35 +28,70 @@ export default function GlobalSearchScreen({ navigation }: Props) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const PAGE_SIZE = 25;
 
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const performSearch = useCallback(async (q: string) => {
     if (!q.trim()) {
       setResults([]);
       setHasSearched(false);
+      setHasMore(false);
       return;
     }
 
     setLoading(true);
     setHasSearched(true);
     try {
-      const data = await searchApi.messages({ q: q.trim() });
+      const data = await searchApi.messages({ q: q.trim(), limit: PAGE_SIZE });
+      if (!mountedRef.current) return;
       setResults(data);
+      setHasMore(data.length >= PAGE_SIZE);
     } catch (err: any) {
       if (err.status !== 401) {
         toast.error('Search failed');
       }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, []);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || !query.trim()) return;
+    setLoadingMore(true);
+    try {
+      const data = await searchApi.messages({ q: query.trim(), limit: PAGE_SIZE });
+      if (!mountedRef.current) return;
+      setResults((prev) => {
+        const existingIds = new Set(prev.map((r) => r.id));
+        const newResults = data.filter((r) => !existingIds.has(r.id));
+        return [...prev, ...newResults];
+      });
+      setHasMore(data.length >= PAGE_SIZE);
+    } catch (err: any) {
+      if (err.status !== 401) {
+        toast.error('Failed to load more results');
+      }
+    } finally {
+      if (mountedRef.current) setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, query]);
 
   const handleQueryChange = (text: string) => {
     setQuery(text);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => performSearch(text), 500);
+    debounceRef.current = setTimeout(() => performSearch(text.trim()), 500);
   };
 
   const handleResultPress = (item: SearchResult) => {
@@ -210,6 +245,9 @@ export default function GlobalSearchScreen({ navigation }: Props) {
           keyExtractor={(item) => item.id}
           renderItem={renderResult}
           contentContainerStyle={styles.list}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={loadingMore ? <ActivityIndicator size="small" color={colors.accentPrimary} style={{ paddingVertical: 16 }} /> : null}
           ListEmptyComponent={
             hasSearched ? (
               <EmptyState

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, Modal, useWindowDimensions } from 'react-native';
 import SearchBar from './SearchBar';
 import { useTheme } from '../lib/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +25,8 @@ interface EmojiPickerProps {
 export default function EmojiPicker({ visible, onClose, onSelect }: EmojiPickerProps) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
+  const numColumns = Math.max(4, Math.floor(screenWidth / 48));
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState(CATEGORY_NAMES[0]);
 
@@ -44,7 +46,6 @@ export default function EmojiPicker({ visible, onClose, onSelect }: EmojiPickerP
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       maxHeight: '60%',
-      paddingBottom: 30,
     },
     handle: {
       width: 36,
@@ -84,12 +85,12 @@ export default function EmojiPicker({ visible, onClose, onSelect }: EmojiPickerP
       aspectRatio: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      maxWidth: '12.5%',
+      maxWidth: `${100 / numColumns}%` as any,
     },
     emojiText: {
       fontSize: 28,
     },
-  }), [colors, spacing, fontSize, borderRadius, neo]);
+  }), [colors, spacing, fontSize, borderRadius, neo, numColumns]);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -120,8 +121,9 @@ export default function EmojiPicker({ visible, onClose, onSelect }: EmojiPickerP
           )}
 
           <FlatList
+            key={`emoji-grid-${numColumns}`}
             data={displayEmojis}
-            numColumns={8}
+            numColumns={numColumns}
             keyExtractor={(item, index) => `${item}-${index}`}
             contentContainerStyle={styles.grid}
             renderItem={({ item }) => (

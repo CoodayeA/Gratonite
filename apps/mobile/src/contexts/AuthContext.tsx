@@ -6,7 +6,7 @@ import { connectSocket, disconnectSocket } from '../lib/socket';
 import { presenceStore } from '../lib/presenceStore';
 import { getOrCreateKeyPair, clearKeyPairFromSecureStore } from '../lib/crypto';
 import { publicKeyCache } from '../lib/publicKeyCache';
-import { clearCacheEncryptionKey } from '../lib/offlineDb';
+import { clearCacheEncryptionKey, closeDb } from '../lib/offlineDb';
 import { themeStore } from '../lib/themeStore';
 import type { ThemeName } from '../lib/themes';
 import type { User, PresenceStatus } from '../types';
@@ -92,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Clear E2E keys and encrypted cache key
     await clearKeyPairFromSecureStore().catch(() => {});
     await clearCacheEncryptionKey().catch(() => {});
+    await closeDb().catch(() => {});
     publicKeyCache.clearAll();
     setUser(null);
   };

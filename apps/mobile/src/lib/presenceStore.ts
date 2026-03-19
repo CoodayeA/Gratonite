@@ -6,6 +6,7 @@ interface PresenceState {
 }
 
 let state: PresenceState = {};
+let timestamps: Record<string, number> = {};
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -22,20 +23,27 @@ export const presenceStore = {
   },
   set(userId: string, status: PresenceStatus) {
     if (state[userId] === status) return;
+    const now = Date.now();
     state = { ...state, [userId]: status };
+    timestamps = { ...timestamps, [userId]: now };
     emit();
   },
-  setBulk(updates: Array<{ userId: string; status: PresenceStatus }>) {
+  setBulk(updates: Array<{ userId: string; status: PresenceStatus }>, ts?: number) {
+    const now = ts ?? Date.now();
     let changed = false;
     const next = { ...state };
+    const nextTs = { ...timestamps };
     for (const u of updates) {
-      if (next[u.userId] !== u.status) {
+      const existing = nextTs[u.userId] ?? 0;
+      if (now >= existing && next[u.userId] !== u.status) {
         next[u.userId] = u.status;
+        nextTs[u.userId] = now;
         changed = true;
       }
     }
     if (changed) {
       state = next;
+      timestamps = nextTs;
       emit();
     }
   },
@@ -44,6 +52,7 @@ export const presenceStore = {
   },
   reset() {
     state = {};
+    timestamps = {};
     emit();
   },
 };

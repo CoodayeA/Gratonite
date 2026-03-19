@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,10 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppState } from '../../contexts/AppStateContext';
-import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, cancelAnimation } from 'react-native-reanimated';
 import Avatar from '../../components/Avatar';
 import PressableScale from '../../components/PressableScale';
 import AnimatedListItem from '../../components/AnimatedListItem';
@@ -33,6 +34,7 @@ const NEO_PALETTE_KEYS = ['coral', 'mint', 'butter', 'lavender', 'sky', 'peach']
 function DMItem({ item, index, onPress, styles, colors, neo, glass }: { item: DMChannel; index: number; onPress: () => void; styles: any; colors: any; neo: any; glass: any }) {
   const name = item.recipient?.displayName || item.recipient?.username || 'Unknown';
   const unread = useChannelUnread(item.id);
+  const isFocused = useIsFocused();
 
   const neoItemStyle = neo !== null
     ? { backgroundColor: neo.palette[NEO_PALETTE_KEYS[index % 6]] }
@@ -40,10 +42,13 @@ function DMItem({ item, index, onPress, styles, colors, neo, glass }: { item: DM
 
   const badgeScale = useSharedValue(1);
   useEffect(() => {
-    if (unread.count > 0) {
+    if (unread.count > 0 && isFocused) {
       badgeScale.value = withRepeat(withTiming(1.15, { duration: 600 }), -1, true);
+    } else {
+      cancelAnimation(badgeScale);
+      badgeScale.value = 1;
     }
-  }, [unread.count]);
+  }, [unread.count, isFocused]);
   const badgeAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: badgeScale.value }],
   }));
@@ -91,6 +96,15 @@ export default function DMListScreen({ navigation }: Props) {
   const { colors, spacing, fontSize, borderRadius } = useTheme();
   const neo = useNeo();
   const glass = useGlass();
+
+  // Force re-render every 60s to update relative timestamps
+  const [, setTick] = useState(0);
+  const isFocused = useIsFocused();
+  useEffect(() => {
+    if (!isFocused) return;
+    const interval = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(interval);
+  }, [isFocused]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -147,6 +161,7 @@ export default function DMListScreen({ navigation }: Props) {
     },
     list: {
       paddingTop: spacing.sm,
+      paddingBottom: insets.bottom,
       ...(glass || neo !== null ? {} : { paddingHorizontal: spacing.sm }),
     },
     dmItem: {
@@ -206,10 +221,6 @@ export default function DMListScreen({ navigation }: Props) {
       color: colors.textMuted,
       fontSize: fontSize.xs,
       marginTop: 2,
-      textAlign: 'right',
-      position: 'absolute',
-      right: 0,
-      top: 0,
     },
     dmMetaWrap: {
       flex: 1,
@@ -250,7 +261,7 @@ export default function DMListScreen({ navigation }: Props) {
       color: colors.textMuted,
       fontSize: fontSize.sm,
     },
-  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass, insets.bottom]);
 
   const sortedChannels = useMemo(
     () => [...dmChannels].sort((a, b) => {

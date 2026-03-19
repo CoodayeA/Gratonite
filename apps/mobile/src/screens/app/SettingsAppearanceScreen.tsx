@@ -24,6 +24,7 @@ import type { UserSettings } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 import PatternBackground from '../../components/PatternBackground';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SettingsAppearance'>;
 
@@ -45,6 +46,7 @@ const THEME_OPTIONS: { name: ThemeName; label: string; icon: string }[] = [
 
 export default function SettingsAppearanceScreen({ navigation }: Props) {
   const { name: currentTheme, colors, spacing, fontSize, borderRadius, neo } = useTheme();
+  const insets = useSafeAreaInsets();
   const toast = useToast();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,15 +78,19 @@ export default function SettingsAppearanceScreen({ navigation }: Props) {
 
   const updateSetting = async (updates: Partial<UserSettings>) => {
     if (!settings) return;
+    const previousSettings = settings;
+    setSettings({ ...settings, ...updates });
+    if (updates.fontSize !== undefined) {
+      themeStore.setFontSize(updates.fontSize);
+    }
     setSaving(true);
     try {
-      const updated = await settingsApi.update(updates);
-      setSettings(updated);
-      // Apply font size change app-wide immediately
-      if (updates.fontSize !== undefined) {
-        themeStore.setFontSize(updates.fontSize);
-      }
+      await settingsApi.update(updates);
     } catch (err: any) {
+      setSettings(previousSettings);
+      if (updates.fontSize !== undefined && previousSettings.fontSize !== undefined) {
+        themeStore.setFontSize(previousSettings.fontSize);
+      }
       toast.error(err.message || 'Failed to save settings');
     } finally {
       setSaving(false);
@@ -132,7 +138,7 @@ export default function SettingsAppearanceScreen({ navigation }: Props) {
       elevation: 6,
     },
     themePreview: {
-      height: 70,
+      minHeight: 70,
       borderRadius: borderRadius.sm,
       marginBottom: spacing.sm,
       padding: spacing.sm,
@@ -224,9 +230,9 @@ export default function SettingsAppearanceScreen({ navigation }: Props) {
       fontSize: fontSize.sm,
     },
     bottomPad: {
-      height: 40,
+      height: Math.max(insets.bottom, 20),
     },
-  }), [colors, spacing, fontSize, borderRadius]);
+  }), [colors, spacing, fontSize, borderRadius, insets.bottom]);
 
   if (loading) {
     return <LoadingScreen />;
@@ -250,9 +256,11 @@ export default function SettingsAppearanceScreen({ navigation }: Props) {
           </View>
           <Switch
             value={autoMode}
+            disabled={saving}
             onValueChange={(value) => {
               setAutoMode(value);
               themeStore.setAutoMode(value);
+              settingsApi.update({ autoTheme: value } as any).catch(() => {});
               if (value) {
                 const colorScheme = Appearance.getColorScheme();
                 // Auto-switch within the same theme family

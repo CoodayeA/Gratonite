@@ -18,6 +18,16 @@ function getSocketUrl(): string {
 export function connectSocket(): Socket {
   if (socket?.connected) return socket;
 
+  if (socket) {
+    socket.removeAllListeners();
+    socket.disconnect();
+  }
+
+  if (heartbeatInterval) {
+    clearInterval(heartbeatInterval);
+    heartbeatInterval = null;
+  }
+
   const token = getAccessToken();
   socket = io(getSocketUrl(), {
     autoConnect: false,
@@ -37,14 +47,28 @@ export function connectSocket(): Socket {
   });
 
   socket.on('READY', () => {
-    // Start heartbeat
     if (heartbeatInterval) clearInterval(heartbeatInterval);
     heartbeatInterval = setInterval(() => {
       socket?.emit('HEARTBEAT', { timestamp: Date.now() });
     }, 20000);
   });
 
+  socket.on('IDENTIFY_FAILED', () => {
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
+    }
+    socket?.disconnect();
+  });
+
   socket.on('disconnect', () => {
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
+    }
+  });
+
+  socket.on('connect_error', () => {
     if (heartbeatInterval) {
       clearInterval(heartbeatInterval);
       heartbeatInterval = null;

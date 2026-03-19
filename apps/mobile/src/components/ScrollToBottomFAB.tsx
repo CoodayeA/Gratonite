@@ -3,6 +3,7 @@ import { TouchableOpacity, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useColors, spacing, borderRadius } from '../lib/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { lightImpact } from '../lib/haptics';
 
 interface ScrollToBottomFABProps {
@@ -13,11 +14,12 @@ interface ScrollToBottomFABProps {
 
 export default function ScrollToBottomFAB({ visible, onPress, unreadCount }: ScrollToBottomFABProps) {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
 
   if (!visible) return null;
 
   return (
-    <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={styles.container}>
+    <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={[styles.container, { bottom: 8 + insets.bottom }]}>
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}
         onPress={() => { lightImpact(); onPress(); }}
@@ -40,7 +42,6 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     right: 16,
-    bottom: 8,
   },
   fab: {
     width: 40,
