@@ -26,6 +26,9 @@ import AppLockScreen from './src/screens/app/AppLockScreen';
 import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
 import ThemePickerScreen from './src/screens/onboarding/ThemePickerScreen';
 import { initSounds } from './src/lib/soundEngine';
+import * as Updates from 'expo-updates';
+
+export const OTA_BUILD_STAMP = '2026-03-19-bugfix100';
 import { useSystemThemeListener } from './src/lib/useSystemTheme';
 import type { ThemeName } from './src/lib/themes';
 
@@ -108,6 +111,12 @@ function ThemedApp() {
 
   React.useEffect(() => {
     initSounds();
+    console.log(`[Gratonite] OTA_BUILD_STAMP: ${OTA_BUILD_STAMP}`);
+    if (!__DEV__) {
+      Updates.checkForUpdateAsync()
+        .then((update) => console.log(`[Gratonite] Update available: ${update.isAvailable}`))
+        .catch(() => {});
+    }
   }, []);
 
   // Screenshot protection

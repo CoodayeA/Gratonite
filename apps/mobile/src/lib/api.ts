@@ -360,10 +360,15 @@ export async function apiFetch<T>(
     headers['Content-Type'] = 'application/json';
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  const url = `${API_BASE}${path}`;
+  const res = await fetch(url, {
     ...options,
     headers,
   });
+
+  if (!res.ok && res.status !== 401) {
+    console.warn(`[apiFetch] ${options.method || 'GET'} ${url} → ${res.status}`);
+  }
 
   if (res.status === 429) {
     if (_rateLimitRetry < MAX_RATE_LIMIT_RETRIES) {
