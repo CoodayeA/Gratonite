@@ -71,7 +71,7 @@ export default function GlobalSearchScreen({ navigation }: Props) {
     if (loadingMore || !hasMore || !query.trim()) return;
     setLoadingMore(true);
     try {
-      const data = await searchApi.messages({ q: query.trim(), limit: PAGE_SIZE });
+      const data = await searchApi.messages({ q: query.trim(), limit: PAGE_SIZE, offset: results.length });
       if (!mountedRef.current) return;
       setResults((prev) => {
         const existingIds = new Set(prev.map((r) => r.id));
@@ -86,7 +86,7 @@ export default function GlobalSearchScreen({ navigation }: Props) {
     } finally {
       if (mountedRef.current) setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, query]);
+  }, [loadingMore, hasMore, query, results.length]);
 
   const handleQueryChange = (text: string) => {
     setQuery(text);

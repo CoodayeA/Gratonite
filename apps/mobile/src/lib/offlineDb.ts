@@ -221,5 +221,5 @@ export async function closeDb(): Promise<void> {
     await db.closeAsync();
     db = null;
   }
-  cacheKey = null;
+  cacheKeyManager.clear();
 }
