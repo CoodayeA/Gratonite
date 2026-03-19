@@ -38,9 +38,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const savedTheme = await SecureStore.getItemAsync('gratonite_theme');
         if (savedTheme) themeStore.setTheme(savedTheme as ThemeName);
 
-        let token = getAccessToken();
+        // Always try to refresh — access tokens expire after 15 min
+        let token = await auth.refresh().catch(() => null);
         if (!token) {
-          token = await auth.refresh();
+          token = getAccessToken();
         }
 
         if (token) {
