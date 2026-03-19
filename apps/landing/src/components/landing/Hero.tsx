@@ -5,7 +5,6 @@ export function Hero() {
   return (
     <section className="min-h-[86vh] flex items-center pt-24 pb-14 px-6 relative overflow-hidden">
       <div className="neo-burst neo-burst-purple top-24 left-[-90px] neo-float" />
-      <div className="neo-burst neo-burst-gold top-12 right-[8%] neo-wobble" />
       <div className="neo-burst neo-burst-blue bottom-10 right-[-85px] neo-float" />
 
       <div className="max-w-7xl mx-auto w-full relative z-10">
@@ -14,34 +13,31 @@ export function Hero() {
           <div>
             <div className="hero-enter" style={{ animationDelay: "0.02s" }}>
               <Badge color="gold" rotate className="mb-6">
-                Built by friends, for friends.
+                The friend-first platform.
               </Badge>
             </div>
 
             <h1
-              className="hero-enter font-display text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold leading-[0.95] tracking-tight mb-6"
+              className="hero-enter font-display text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-extrabold leading-[0.95] tracking-tight mb-6"
               style={{ animationDelay: "0.1s" }}
             >
-              BUILT BY FRIENDS.
+              BUILT BY
               <br />
-              <span className="text-purple">FOR FRIENDS.</span>
+              <span className="text-purple" style={{ textShadow: "0 0 40px rgba(124, 58, 237, 0.3)" }}>
+                FRIENDS,
+              </span>
+              <br />
+              FOR FRIENDS.
             </h1>
 
             <div
-              className="hero-enter mb-5 flex flex-wrap gap-2"
+              className="hero-enter mb-5"
               style={{ animationDelay: "0.2s" }}
             >
-              <span className="neo-sticker neo-sticker-purple tilt-1">Friend-first</span>
-              <span className="neo-sticker neo-sticker-gold tilt-2">Player-made style</span>
-              <span className="neo-sticker neo-sticker-blue tilt-3">Open source</span>
+              <p className="text-sm font-bold uppercase tracking-wider text-foreground/50">
+                Open source &middot; No tracking &middot; Player-made cosmetics
+              </p>
             </div>
-
-            <p
-              className="hero-enter inline-block mb-5 bg-yellow text-black neo-border-2 rounded-lg px-4 py-2 font-display font-bold text-sm tilt-1"
-              style={{ animationDelay: "0.24s" }}
-            >
-              {"No \"show your ID\" side quest just to talk to your friends."}
-            </p>
 
             <p
               className="hero-enter text-lg sm:text-xl text-foreground/60 max-w-lg mb-8 leading-relaxed"
@@ -80,9 +76,9 @@ export function Hero() {
               }}
             >
               {[
-                { label: "Price", value: "100% Free" },
-                { label: "Code", value: "Open Source" },
-                { label: "Promise", value: "No Tracking" },
+                { label: "Platforms", value: "4" },
+                { label: "Deploy", value: "5 min" },
+                { label: "License", value: "AGPL" },
               ].map((stat) => (
                 <div key={stat.label}>
                   <p className="text-xs font-bold uppercase tracking-wider text-foreground/40">
@@ -96,25 +92,15 @@ export function Hero() {
 
           {/* Right — Neobrutalist app preview */}
           <div className="hero-enter hero-enter-right relative" style={{ animationDelay: "0.22s" }}>
-            {/* Decorative sticker */}
-            <div className="absolute -top-4 -right-4 z-10">
-              <Badge color="yellow" rotate>
-                NEW
-              </Badge>
-            </div>
-            <div className="absolute -bottom-6 -left-2 z-10 neo-sticker neo-sticker-gold tilt-2">
-              FREE FOREVER
-            </div>
-
             {/* App window mock */}
-            <div className="neo-border rounded-xl overflow-hidden neo-shadow-lg bg-surface tilt-3">
+            <div className="neo-border rounded-xl overflow-hidden neo-shadow-lg bg-surface">
               {/* Title bar */}
               <div className="bg-charcoal px-4 py-3 flex items-center gap-2 border-b-3 border-black">
                 <div className="w-3 h-3 rounded-full bg-red-400 border border-black" />
                 <div className="w-3 h-3 rounded-full bg-yellow border border-black" />
                 <div className="w-3 h-3 rounded-full bg-green-400 border border-black" />
                 <span className="ml-3 text-white/60 text-sm font-medium">
-                  Gratonite — Arclight Guild
+                  Gratonite / Gratonite Lounge
                 </span>
               </div>
 
@@ -175,7 +161,7 @@ export function Hero() {
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                     <span className="text-sm font-bold">
-                      Voice — 3 connected
+                      Voice · 3 connected
                     </span>
                   </div>
                   <span className="text-xs font-bold text-purple">

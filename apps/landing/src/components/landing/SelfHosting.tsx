@@ -25,8 +25,7 @@ const benefits = [
 
 export function SelfHosting() {
   return (
-    <section className="py-24 px-6 relative overflow-hidden">
-      <div className="neo-burst neo-burst-purple bottom-12 left-[-60px] neo-wobble opacity-40" />
+    <section className="section-pad-lg px-6 relative overflow-hidden">
 
       <div className="max-w-7xl mx-auto relative z-10">
         <ScrollReveal>
@@ -67,7 +66,7 @@ export function SelfHosting() {
               <p className="font-display text-2xl font-bold mb-2">
                 5 commands. That's it.
               </p>
-              <div className="bg-background neo-border rounded-lg p-4 mb-6 text-left font-mono text-sm text-foreground/70 space-y-1">
+              <div className="bg-background neo-border rounded-lg p-4 mb-6 text-left font-mono text-sm text-foreground/70 space-y-1" style={{ boxShadow: "0 0 60px rgba(124, 58, 237, 0.1)" }}>
                 <p>
                   <span className="text-purple">$</span> git clone
                   github.com/CoodayeA/Gratonite
@@ -88,7 +87,7 @@ export function SelfHosting() {
               </div>
               <p className="text-foreground/50 text-sm mb-6">
                 Works on any Linux machine, VPS, or even your home PC. Behind
-                NAT? Use the built-in relay network — no port forwarding needed.
+                NAT? Use the built-in relay network. No port forwarding needed.
               </p>
               <Button variant="primary" size="lg" href="/docs/self-hosting">
                 Get Started

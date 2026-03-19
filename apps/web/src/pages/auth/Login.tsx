@@ -73,7 +73,7 @@ const Login = () => {
             {/* Mascot with glow */}
             <div className="auth-mascot auth-anim-1">
                 <div className="auth-mascot-glow" />
-                <img src="/splash-icon.png" alt="Gratonite" />
+                <img src={`${import.meta.env.BASE_URL}splash-icon.png`} alt="Gratonite" />
             </div>
 
             {/* Heading */}

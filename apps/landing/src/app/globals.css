@@ -13,13 +13,16 @@
 }
 
 .dark {
-  --bg-page: #1E2027;
-  --bg-surface: #292C34;
+  --bg-page: #191B22;
+  --bg-surface: #22252E;
+  --bg-surface-1: #22252E;
+  --bg-surface-2: #2A2D37;
+  --bg-surface-3: #32363F;
   --text-main: #F5F5F4;
-  --text-muted: rgba(245, 245, 244, 0.5);
+  --text-muted: rgba(245, 245, 244, 0.6);
   --neo-border-color: #F5F5F4;
   --neo-shadow-color: rgba(245, 245, 244, 0.2);
-  --nav-bg: rgba(30, 32, 39, 0.9);
+  --nav-bg: rgba(25, 27, 34, 0.9);
   --charcoal-base: #313540;
 }
 
@@ -37,19 +40,27 @@
   --color-off-white: var(--bg-page);
   --color-white: #FFFFFF;
   --color-black: #000000;
-  --font-display: var(--font-space-grotesk);
+  --font-display: var(--font-bricolage);
   --font-body: var(--font-manrope);
+
+  /* Spacing system */
+  --section-gap: clamp(5rem, 8vw, 8rem);
+  --section-gap-lg: clamp(6rem, 10vw, 10rem);
+
+  /* Gradient accent */
+  --gradient-accent: linear-gradient(135deg, #7C3AED 0%, #A78BFA 50%, #F59E0B 100%);
 }
 
 /* Base styles */
 body {
   background:
-    radial-gradient(circle at 82% 11%, rgba(124, 58, 237, 0.12) 0, rgba(124, 58, 237, 0) 34%),
-    radial-gradient(circle at 8% 86%, rgba(245, 158, 11, 0.11) 0, rgba(245, 158, 11, 0) 40%),
-    linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    radial-gradient(ellipse 60% 50% at 75% 8%, rgba(124, 58, 237, 0.14) 0, transparent 100%),
+    radial-gradient(ellipse 50% 40% at 12% 82%, rgba(245, 158, 11, 0.12) 0, transparent 100%),
+    radial-gradient(ellipse 40% 35% at 50% 50%, rgba(147, 197, 253, 0.06) 0, transparent 100%),
+    linear-gradient(to right, rgba(0, 0, 0, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.025) 1px, transparent 1px),
     var(--bg-page);
-  background-size: auto, auto, 24px 24px, 24px 24px, auto;
+  background-size: auto, auto, auto, 28px 28px, 28px 28px, auto;
   color: var(--text-main);
   font-family: var(--font-body), system-ui, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
@@ -103,17 +114,19 @@ body {
 }
 
 .dark .grain-overlay::before {
-  opacity: 0.028;
+  opacity: 0.018;
+  mix-blend-mode: overlay;
 }
 
 .dark body {
   background:
-    radial-gradient(circle at 82% 12%, rgba(124, 58, 237, 0.2) 0, rgba(124, 58, 237, 0) 37%),
-    radial-gradient(circle at 11% 84%, rgba(245, 158, 11, 0.14) 0, rgba(245, 158, 11, 0) 42%),
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    radial-gradient(ellipse 60% 50% at 75% 8%, rgba(124, 58, 237, 0.22) 0, transparent 100%),
+    radial-gradient(ellipse 50% 40% at 12% 82%, rgba(245, 158, 11, 0.15) 0, transparent 100%),
+    radial-gradient(ellipse 40% 35% at 50% 50%, rgba(147, 197, 253, 0.08) 0, transparent 100%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
     var(--bg-page);
-  background-size: auto, auto, 28px 28px, 28px 28px, auto;
+  background-size: auto, auto, auto, 28px 28px, 28px 28px, auto;
 }
 
 /* Neobrutalist selection */
@@ -140,37 +153,51 @@ html {
 /* Decorative neobrutalist bursts */
 .neo-burst {
   position: absolute;
-  width: 180px;
-  height: 180px;
-  border: 3px solid var(--neo-border-color);
+  width: 140px;
+  height: 140px;
+  border: none;
   clip-path: polygon(50% 0%, 62% 31%, 95% 20%, 79% 50%, 100% 75%, 66% 70%, 50% 100%, 34% 70%, 0% 75%, 21% 50%, 5% 20%, 38% 31%);
-  opacity: 0.9;
+  opacity: 0.6;
   pointer-events: none;
 }
 
-.neo-burst-purple { background: #7C3AED; }
-.neo-burst-gold { background: #F59E0B; }
-.neo-burst-blue { background: #93C5FD; }
+.neo-burst-purple {
+  background: #7C3AED;
+  box-shadow: 0 0 60px rgba(124, 58, 237, 0.3), 0 0 120px rgba(124, 58, 237, 0.1);
+}
+.neo-burst-gold {
+  background: #F59E0B;
+  box-shadow: 0 0 60px rgba(245, 158, 11, 0.3), 0 0 120px rgba(245, 158, 11, 0.1);
+}
+.neo-burst-blue {
+  background: #93C5FD;
+  box-shadow: 0 0 60px rgba(147, 197, 253, 0.3), 0 0 120px rgba(147, 197, 253, 0.1);
+}
 
 /* Maximalist section helpers */
 .neo-divider {
-  height: 16px;
-  border-top: 3px solid var(--neo-border-color);
-  border-bottom: 3px solid var(--neo-border-color);
-  background: repeating-linear-gradient(
-    -45deg,
-    #f59e0b 0 14px,
-    #7c3aed 14px 28px,
-    #93c5fd 28px 42px,
-    #fde68a 42px 56px
-  );
+  height: 2px;
+  border: none;
+  background: linear-gradient(90deg, transparent 0%, var(--color-purple) 20%, var(--color-gold) 50%, var(--color-purple) 80%, transparent 100%);
+  opacity: 0.6;
+}
+
+/* Spacing utilities */
+.section-pad {
+  padding-top: var(--section-gap);
+  padding-bottom: var(--section-gap);
+}
+
+.section-pad-lg {
+  padding-top: var(--section-gap-lg);
+  padding-bottom: var(--section-gap-lg);
 }
 
 .neo-sticker {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-family: var(--font-bricolage), system-ui, sans-serif;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -213,8 +240,8 @@ html {
 /* Lightweight reveal animations */
 .sr-reveal {
   opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.5s ease, transform 0.5s ease;
+  transform: translateY(12px);
+  transition: opacity 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   transition-delay: var(--sr-delay, 0s);
 }
 
@@ -268,14 +295,51 @@ html {
 /* Mobile tuning to reduce paint cost and crowding */
 @media (max-width: 768px) {
   .neo-burst {
-    width: 120px;
-    height: 120px;
-    opacity: 0.7;
+    width: 100px;
+    height: 100px;
+    opacity: 0.5;
   }
 
   .neo-shadow-lg {
     box-shadow: 4px 4px 0 var(--neo-shadow-color);
   }
+}
+
+/* Section depth glow — adds subtle ambient light behind sections */
+.section-glow {
+  position: relative;
+}
+
+.section-glow::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 70%;
+  height: 60%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(124, 58, 237, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Elevated card with layered shadow for depth */
+.neo-card-elevated {
+  background: var(--bg-surface);
+  border: 3px solid var(--neo-border-color);
+  border-radius: 1rem;
+  box-shadow:
+    4px 4px 0 var(--neo-shadow-color),
+    0 8px 32px rgba(0, 0, 0, 0.08);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.neo-card-elevated:hover {
+  transform: translate(-2px, -4px);
+  box-shadow:
+    6px 8px 0 var(--neo-shadow-color),
+    0 12px 40px rgba(0, 0, 0, 0.12);
 }
 
 /* Respect reduced-motion settings and keep low-power devices smooth */

@@ -22,7 +22,7 @@ export function Showcase() {
   }, []);
 
   return (
-    <section className="py-16 lg:py-20 px-6 bg-charcoal text-white relative overflow-hidden">
+    <section className="section-pad px-6 bg-charcoal text-white relative overflow-hidden">
       <div className="neo-burst neo-burst-purple top-8 left-[-70px] opacity-70" />
       <div className="neo-burst neo-burst-gold bottom-[-50px] right-[10%] opacity-70" />
       <div className="max-w-7xl mx-auto">
@@ -45,7 +45,7 @@ export function Showcase() {
         <div className="grid md:grid-cols-3 gap-6">
           {/* Panel 1 — Live platform stats */}
           <ScrollReveal delay={0.1}>
-            <div className="bg-white/5 border-3 border-white/20 rounded-xl p-6 hover:border-purple transition-colors rotate-[-1deg]">
+            <div className="bg-white/5 border-3 border-white/20 rounded-xl p-6 hover:border-purple transition-colors">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-display font-bold text-lg">
                   Platform Stats
@@ -91,12 +91,12 @@ export function Showcase() {
 
           {/* Panel 2 — Testimonial (kept) */}
           <ScrollReveal delay={0.2}>
-            <div className="bg-purple neo-border rounded-xl p-6 neo-shadow text-white md:translate-y-[-20px] rotate-[1.2deg]">
+            <div className="bg-purple neo-border rounded-xl p-6 neo-shadow text-white">
               <h3 className="font-display font-bold text-lg mb-2">
-                {'"This feels like hanging out again, not posting into a void."'}
+                {'"My friend group ditched Discord for this and nobody looked back."'}
               </h3>
               <p className="text-white/70 text-sm mt-4">
-                — early Gratonite community feedback
+                Early Gratonite community feedback
               </p>
               <div className="mt-6 flex gap-2">
                 {["Gaming", "Study", "Creators"].map((tag) => (
@@ -113,13 +113,13 @@ export function Showcase() {
 
           {/* Panel 3 — Built in the open */}
           <ScrollReveal delay={0.3}>
-            <div className="bg-white/5 border-3 border-white/20 rounded-xl p-6 hover:border-gold transition-colors rotate-[-0.8deg]">
+            <div className="bg-white/5 border-3 border-white/20 rounded-xl p-6 hover:border-gold transition-colors">
               <h3 className="font-display font-bold text-lg mb-4">
                 Built in the open
               </h3>
               <div className="space-y-4">
-                <OpenStatRow label="Database schemas" value="76" />
-                <OpenStatRow label="API routes" value="65+" />
+                <OpenStatRow label="License" value="AGPL" />
+                <OpenStatRow label="Self-hostable" value="Yes" />
                 <div className="flex items-center justify-between bg-white/5 rounded-lg px-4 py-3 border border-white/10">
                   <span className="font-medium">100% Open source</span>
                   <a
