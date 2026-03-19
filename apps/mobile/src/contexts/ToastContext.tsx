@@ -3,6 +3,7 @@ import { Text, StyleSheet, Pressable } from 'react-native';
 import Animated, { SlideInUp, SlideOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../lib/theme';
+import { lightImpact } from '../lib/haptics';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -34,6 +35,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const show = useCallback((message: string, type: ToastType) => {
     const id = ++idRef.current;
+    lightImpact();
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));

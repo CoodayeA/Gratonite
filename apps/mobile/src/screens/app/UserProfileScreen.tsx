@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+const MUTUAL_FRIENDS_LIMIT = 10;
 import {
   View,
   Text,
@@ -42,9 +43,15 @@ export default function UserProfileScreen({ route, navigation }: Props) {
   const [actionLoading, setActionLoading] = useState(false);
   const [showcaseItems, setShowcaseItems] = useState<ShowcaseItem[]>([]);
   const [mutualFriends, setMutualFriends] = useState<Array<{ id: string; username: string; displayName: string | null; avatarHash: string | null }>>([]);
+  const [showAllMutualFriends, setShowAllMutualFriends] = useState(false);
   const [mutualGuilds, setMutualGuilds] = useState<Array<{ id: string; name: string; iconHash: string | null }>>([]);
   const livePresence = useUserPresence(userId);
   const hasDataRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const STATUS_COLORS: Record<PresenceStatus, string> = useMemo(() => ({
     online: colors.online,
@@ -63,6 +70,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
         usersApi.getMutualFriends(userId).catch(() => []),
         usersApi.getMutualGuilds(userId).catch(() => []),
       ]);
+      if (!mountedRef.current) return;
       setProfile(data);
       setShowcaseItems(sc);
       setMutualFriends(friends);
@@ -89,7 +97,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
         setLoadError(message);
       }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [userId, toast]);
 
@@ -429,6 +437,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
     },
     mutualAvatarRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: spacing.sm,
       marginTop: spacing.sm,
     },
@@ -582,15 +591,20 @@ export default function UserProfileScreen({ route, navigation }: Props) {
         {mutualFriends.length > 0 && (
           <View style={styles.mutualSection}>
             <Text style={styles.sectionLabel}>{mutualFriends.length} MUTUAL FRIENDS</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.mutualAvatarRow}>
-                {mutualFriends.slice(0, 10).map(f => (
-                  <TouchableOpacity key={f.id} onPress={() => navigation.push('UserProfile', { userId: f.id })}>
-                    <Avatar userId={f.id} avatarHash={f.avatarHash} name={f.displayName || f.username} size={40} />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
+            <View style={styles.mutualAvatarRow}>
+              {(showAllMutualFriends ? mutualFriends : mutualFriends.slice(0, MUTUAL_FRIENDS_LIMIT)).map(f => (
+                <TouchableOpacity key={f.id} onPress={() => navigation.push('UserProfile', { userId: f.id })}>
+                  <Avatar userId={f.id} avatarHash={f.avatarHash} name={f.displayName || f.username} size={40} />
+                </TouchableOpacity>
+              ))}
+            </View>
+            {!showAllMutualFriends && mutualFriends.length > MUTUAL_FRIENDS_LIMIT && (
+              <TouchableOpacity onPress={() => setShowAllMutualFriends(true)} style={{ marginTop: spacing.sm }}>
+                <Text style={{ color: colors.accentPrimary, fontSize: fontSize.sm, fontWeight: '600' }}>
+                  Show all {mutualFriends.length} friends
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 

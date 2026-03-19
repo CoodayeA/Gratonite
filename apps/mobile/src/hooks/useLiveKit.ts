@@ -119,6 +119,10 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
         },
       });
 
+      if (roomRef.current) {
+        roomRef.current.removeAllListeners();
+        roomRef.current.disconnect();
+      }
       roomRef.current = room;
 
       room.on(RoomEvent.Connected, () => {
@@ -174,6 +178,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
       // Connection timeout
       const connectTimeout = setTimeout(() => {
         if (attemptId !== connectAttemptRef.current || roomRef.current !== room) return;
+        console.warn('[LiveKit] Voice connection timed out for channel', channelId);
         setIsConnecting(false);
         setConnectionError('Voice connection timed out.');
         room.disconnect();
@@ -191,6 +196,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to connect to voice channel';
+      console.warn('[LiveKit] Voice connection failed:', message, err);
       setConnectionError(message);
       setIsConnecting(false);
     }
@@ -212,6 +218,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
       // Ignore API errors during disconnect
     }
 
+    room.removeAllListeners();
     room.disconnect();
     roomRef.current = null;
     setIsConnected(false);
@@ -277,6 +284,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
       voiceApi.leave().catch(() => {});
       const room = roomRef.current;
       if (room) {
+        room.removeAllListeners();
         room.disconnect();
         roomRef.current = null;
       }

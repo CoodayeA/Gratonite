@@ -5,34 +5,43 @@ import { Buffer } from 'buffer';
 import type { Message } from '../types';
 
 // ---------------------------------------------------------------------------
-// Cache encryption key management
+// Cache encryption key management (encapsulated in closure)
 // ---------------------------------------------------------------------------
 
-const CACHE_KEY_STORE = 'gratonite_cache_encryption_key';
-let cacheKey: CryptoKey | null = null;
+const cacheKeyManager = (() => {
+  const CACHE_KEY_STORE = 'gratonite_cache_encryption_key';
+  let cacheKey: CryptoKey | null = null;
 
-async function getCacheKey(): Promise<CryptoKey | null> {
-  if (cacheKey) return cacheKey;
-  try {
-    const stored = await SecureStore.getItemAsync(CACHE_KEY_STORE);
-    if (stored) {
-      const raw = new Uint8Array(Buffer.from(stored, 'base64'));
-      cacheKey = await subtle.importKey('raw', raw, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  async function getKey(): Promise<CryptoKey | null> {
+    if (cacheKey) return cacheKey;
+    try {
+      const stored = await SecureStore.getItemAsync(CACHE_KEY_STORE);
+      if (stored) {
+        const raw = new Uint8Array(Buffer.from(stored, 'base64'));
+        cacheKey = await subtle.importKey('raw', raw, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+        return cacheKey;
+      }
+      const key = await subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+      const rawExported = await subtle.exportKey('raw', key);
+      await SecureStore.setItemAsync(CACHE_KEY_STORE, Buffer.from(new Uint8Array(rawExported)).toString('base64'));
+      cacheKey = key;
       return cacheKey;
+    } catch {
+      return null;
     }
-    // Generate new cache key
-    const key = await subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
-    const rawExported = await subtle.exportKey('raw', key);
-    await SecureStore.setItemAsync(CACHE_KEY_STORE, Buffer.from(new Uint8Array(rawExported)).toString('base64'));
-    cacheKey = key;
-    return cacheKey;
-  } catch {
-    return null;
   }
-}
+
+  return {
+    getKey,
+    async clear(): Promise<void> {
+      await SecureStore.deleteItemAsync(CACHE_KEY_STORE);
+      cacheKey = null;
+    },
+  };
+})();
 
 async function encryptForCache(plaintext: string): Promise<string> {
-  const key = await getCacheKey();
+  const key = await cacheKeyManager.getKey();
   if (!key) return plaintext;
   try {
     const iv = getRandomValues(new Uint8Array(12));
@@ -48,7 +57,7 @@ async function encryptForCache(plaintext: string): Promise<string> {
 }
 
 async function decryptFromCache(ciphertext: string): Promise<string> {
-  const key = await getCacheKey();
+  const key = await cacheKeyManager.getKey();
   if (!key) return ciphertext;
   try {
     const combined = new Uint8Array(Buffer.from(ciphertext, 'base64'));
@@ -62,11 +71,11 @@ async function decryptFromCache(ciphertext: string): Promise<string> {
 }
 
 export async function clearCacheEncryptionKey(): Promise<void> {
-  await SecureStore.deleteItemAsync(CACHE_KEY_STORE);
-  cacheKey = null;
+  await cacheKeyManager.clear();
 }
 
 let db: SQLite.SQLiteDatabase | null = null;
+const channelLocks = new Map<string, Promise<void>>();
 
 async function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (!db) {
@@ -106,28 +115,45 @@ async function getDb(): Promise<SQLite.SQLiteDatabase> {
   return db;
 }
 
-export async function cacheMessages(channelId: string, messages: Message[]): Promise<void> {
-  const database = await getDb();
-  // Keep last 50 per channel
-  await database.runAsync('DELETE FROM cached_messages WHERE channel_id = ?', [channelId]);
-  for (const msg of messages.slice(-50)) {
-    const encContent = await encryptForCache(msg.content);
-    const encAuthor = msg.author ? await encryptForCache(JSON.stringify(msg.author)) : null;
-    await database.runAsync(
-      'INSERT OR REPLACE INTO cached_messages (id, channel_id, author_id, content, type, created_at, edited_at, author_json, attachments_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [
-        msg.id,
-        msg.channelId,
-        msg.authorId,
-        encContent,
-        msg.type,
-        msg.createdAt,
-        msg.editedAt || null,
-        encAuthor,
-        msg.attachments ? JSON.stringify(msg.attachments) : null,
-      ]
-    );
+async function withChannelLock<T>(channelId: string, fn: () => Promise<T>): Promise<T> {
+  const existing = channelLocks.get(channelId) ?? Promise.resolve();
+  let resolve: () => void;
+  const next = new Promise<void>((r) => { resolve = r; });
+  channelLocks.set(channelId, next);
+  await existing;
+  try {
+    return await fn();
+  } finally {
+    resolve!();
+    if (channelLocks.get(channelId) === next) {
+      channelLocks.delete(channelId);
+    }
   }
+}
+
+export async function cacheMessages(channelId: string, messages: Message[]): Promise<void> {
+  return withChannelLock(channelId, async () => {
+    const database = await getDb();
+    await database.runAsync('DELETE FROM cached_messages WHERE channel_id = ?', [channelId]);
+    for (const msg of messages.slice(-50)) {
+      const encContent = await encryptForCache(msg.content);
+      const encAuthor = msg.author ? await encryptForCache(JSON.stringify(msg.author)) : null;
+      await database.runAsync(
+        'INSERT OR REPLACE INTO cached_messages (id, channel_id, author_id, content, type, created_at, edited_at, author_json, attachments_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          msg.id,
+          msg.channelId,
+          msg.authorId,
+          encContent,
+          msg.type,
+          msg.createdAt,
+          msg.editedAt || null,
+          encAuthor,
+          msg.attachments ? JSON.stringify(msg.attachments) : null,
+        ]
+      );
+    }
+  });
 }
 
 export async function getCachedMessages(channelId: string): Promise<Message[]> {
@@ -188,4 +214,12 @@ export async function getPendingQueue(): Promise<Array<{ id: number; channelId: 
 export async function removePending(id: number): Promise<void> {
   const database = await getDb();
   await database.runAsync('DELETE FROM pending_sends WHERE id = ?', [id]);
+}
+
+export async function closeDb(): Promise<void> {
+  if (db) {
+    await db.closeAsync();
+    db = null;
+  }
+  cacheKey = null;
 }

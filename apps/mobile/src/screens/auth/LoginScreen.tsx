@@ -51,6 +51,7 @@ export default function LoginScreen({ navigation }: Props) {
         setMfaRequired(true);
       } else {
         Alert.alert('Login Failed', err.message || 'Invalid credentials');
+        setMfaCode('');
       }
     } finally {
       setLoading(false);

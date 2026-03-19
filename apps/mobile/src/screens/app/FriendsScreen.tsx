@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -45,8 +45,15 @@ export default function FriendsScreen({ navigation }: Props) {
   const [tab, setTab] = useState<Tab>('all');
   const [refreshing, setRefreshing] = useState(false);
   const [streaks, setStreaks] = useState<Map<string, number>>(new Map());
+  const isFetchingRef = useRef(false);
+  const refreshingRef = useRef(false);
+  refreshingRef.current = refreshing;
+  const relsLenRef = useRef(0);
+  relsLenRef.current = rels.length;
 
   const fetchRelationships = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     try {
       setLoadError(null);
       const data = await relApi.getAll();
@@ -83,13 +90,14 @@ export default function FriendsScreen({ navigation }: Props) {
     } catch (err: any) {
       if (err.status !== 401) {
         const message = err?.message || 'Failed to load friends';
-        if (refreshing || rels.length > 0) { toast.error(message); } else { setLoadError(message); }
+        if (refreshingRef.current || relsLenRef.current > 0) { toast.error(message); } else { setLoadError(message); }
       }
     } finally {
       setLoading(false);
       setRefreshing(false);
+      isFetchingRef.current = false;
     }
-  }, [refreshing, rels.length]);
+  }, [toast]);
 
   useEffect(() => {
     fetchRelationships();
@@ -241,6 +249,7 @@ export default function FriendsScreen({ navigation }: Props) {
     },
     list: {
       paddingTop: spacing.sm,
+      paddingBottom: insets.bottom,
       ...(glass || neo ? {} : { paddingHorizontal: spacing.sm }),
     },
     friendItem: {
@@ -294,25 +303,25 @@ export default function FriendsScreen({ navigation }: Props) {
       gap: spacing.sm,
     },
     actionBtn: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: `${colors.error}18`,
       justifyContent: 'center',
       alignItems: 'center',
     },
     acceptBtn: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: `${colors.success}20`,
       justifyContent: 'center',
       alignItems: 'center',
     },
     chatBtn: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: `${colors.accentPrimary}18`,
       justifyContent: 'center',
       alignItems: 'center',
@@ -334,7 +343,7 @@ export default function FriendsScreen({ navigation }: Props) {
       color: colors.textMuted,
       fontSize: fontSize.sm,
     },
-  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass, insets.bottom]);
 
   const renderItem = ({ item, index }: { item: Relationship; index: number }) => {
     const user = item.user;
@@ -438,7 +447,7 @@ export default function FriendsScreen({ navigation }: Props) {
         ListEmptyComponent={
           <View style={styles.empty}>
             <View style={styles.emptyIcon}>
-              <Ionicons name="people-outline" size={72} color={colors.accentPrimary} />
+              <Ionicons name="people-outline" size={64} color={colors.accentPrimary} />
             </View>
             <Text style={styles.emptyTitle}>
               {tab === 'all' ? 'No friends yet' : tab === 'pending' ? 'No pending requests' : 'No blocked users'}

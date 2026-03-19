@@ -34,6 +34,7 @@ export default function RegisterScreen({ navigation }: Props) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleRegister = async () => {
     if (!username.trim() || !email.trim() || !password) {
@@ -322,9 +323,20 @@ export default function RegisterScreen({ navigation }: Props) {
                 onChangeText={setConfirmPassword}
                 placeholder="Confirm password"
                 placeholderTextColor={colors.textMuted}
-                secureTextEntry={!showPassword}
+                secureTextEntry={!showConfirmPassword}
                 accessibilityLabel="Confirm password"
               />
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                accessibilityLabel="Toggle confirm password visibility"
+              >
+                <Ionicons
+                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={colors.textMuted}
+                />
+              </TouchableOpacity>
             </View>
 
             <TouchableOpacity

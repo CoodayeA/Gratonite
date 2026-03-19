@@ -366,6 +366,14 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
   }, [navigation, route.params?.guildId, colors, spacing]);
 
   const fetchMessages = useCallback(async () => {
+    // Show cached data immediately while fetching from network
+    getCachedMessages(channelId).then(cached => {
+      if (cached.length > 0 && !initialLoadDone.current) {
+        setMessageList(cached);
+        setHasMoreHistory(cached.length >= 50);
+        setLoading(false);
+      }
+    }).catch(() => {});
     try {
       const data = await messagesApi.list(channelId, { limit: 50 });
       const reversed = data.reverse();
@@ -377,12 +385,6 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       if (err.status !== 401) {
         toast.error('Failed to load messages');
       }
-      getCachedMessages(channelId).then(cached => {
-        if (cached.length > 0) {
-          setMessageList(cached);
-          setHasMoreHistory(cached.length >= 50);
-        }
-      });
     } finally {
       setLoading(false);
     }
@@ -408,10 +410,14 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     }
   }, [guildId]);
 
-  // Load incognito keyboard pref
+  // Load incognito keyboard pref and re-read on screen focus
   useEffect(() => {
     securityStore.getIncognitoKeyboard().then(setIncognitoKeyboard).catch(() => {});
-  }, []);
+    const unsubscribe = navigation.addListener('focus', () => {
+      securityStore.getIncognitoKeyboard().then(setIncognitoKeyboard).catch(() => {});
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   // Fetch channel background
   useEffect(() => {
@@ -426,11 +432,12 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
   useEffect(() => {
     const unsub = onMessageCreate((data: any) => {
       if (data.channelId === channelId) {
+        if (!data.id || !data.authorId) return;
         const msg: Message = {
           id: data.id,
           channelId: data.channelId,
           authorId: data.authorId,
-          content: data.content,
+          content: data.content ?? '',
           type: data.type ?? 0,
           createdAt: data.createdAt,
           editedAt: null,
@@ -438,10 +445,14 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
           attachments: Array.isArray(data.attachments) ? data.attachments : undefined,
           replyToId: data.replyToId,
           replyTo: data.replyTo,
+          nonce: data.nonce,
         };
         setMessageList((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;
-          return [...prev, msg];
+          const withoutOptimistic = data.nonce
+            ? prev.filter((m) => !(m.id.startsWith('temp-') && (m as any).nonce === data.nonce))
+            : prev;
+          return [...withoutOptimistic, msg];
         });
         if (data.authorId !== user?.id) {
           playSound('messageReceive');
@@ -455,6 +466,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
   useEffect(() => {
     const unsub = onMessageUpdate((data: any) => {
       if (data.channelId === channelId) {
+        if (!data.id) return;
         setMessageList((prev) =>
           prev.map((m) =>
             m.id === data.id
@@ -471,6 +483,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
   useEffect(() => {
     const unsub = onMessageDelete((data) => {
       if (data.channelId === channelId) {
+        if (!data.id) return;
         setMessageList((prev) => prev.filter((m) => m.id !== data.id));
       }
     });
@@ -492,20 +505,26 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
             return n;
           });
         }, 5000);
-        next.set(data.userId, { username: data.username, timeout });
+        next.set(data.userId, { username: data.username || data.displayName || data.userId, timeout });
         return next;
       });
     });
     return unsub;
   }, [channelId, user?.id]);
 
-  // Cleanup timers on unmount
+  // Clear typing timeouts and draft timer on channel switch or unmount
   useEffect(() => {
     return () => {
-      if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
-      typingUsers.forEach((entry) => clearTimeout(entry.timeout));
+      if (draftSaveTimer.current) {
+        clearTimeout(draftSaveTimer.current);
+        draftSaveTimer.current = null;
+      }
+      setTypingUsers((prev) => {
+        prev.forEach((entry) => clearTimeout(entry.timeout));
+        return new Map();
+      });
     };
-  }, []);
+  }, [channelId]);
 
   // Socket: reactions
   useEffect(() => {
@@ -569,21 +588,20 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     }
   }, [channelId]);
 
-  // Flush pending offline queue when reconnecting
+  // Flush pending offline queue when reconnecting (all channels)
   useEffect(() => {
     if (!isOnline) return;
+    setTypingUsers(new Map());
     (async () => {
       const pending = await getPendingQueue();
       for (const item of pending) {
-        if (item.channelId === channelId) {
-          try {
-            await messagesApi.send(item.channelId, item.content);
-            await removePending(item.id);
-          } catch { break; }
-        }
+        try {
+          await messagesApi.send(item.channelId, item.content);
+          await removePending(item.id);
+        } catch { break; }
       }
     })();
-  }, [isOnline, channelId]);
+  }, [isOnline]);
 
   // --- Actions ---
 
@@ -608,7 +626,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
         setMessageList((prev) =>
           prev.map((m) =>
             m.id === editingMessage.id
-              ? { ...m, content: text, editedAt: new Date().toISOString() }
+              ? { ...m, content: text, editedAt: new Date().toISOString(), replyTo: m.replyTo, replyToId: m.replyToId, attachments: m.attachments }
               : m,
           ),
         );
@@ -631,7 +649,8 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
 
     setSending(true);
     setInputText('');
-    const optimisticId = `temp-${Date.now()}`;
+    const nonce = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const optimisticId = nonce;
     const optimisticMessage: Message = {
       id: optimisticId,
       channelId,
@@ -657,10 +676,11 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
           displayName: replyingTo.author.displayName,
         } : undefined,
       } : null,
-    };
+      nonce,
+    } as any;
     setMessageList((prev) => [...prev, optimisticMessage]);
     try {
-      const msg = await messagesApi.send(channelId, text, replyingTo ? { replyToId: replyingTo.id } : undefined);
+      const msg = await messagesApi.send(channelId, text, { ...(replyingTo ? { replyToId: replyingTo.id } : {}), nonce });
       setMessageList((prev) => {
         if (prev.some((m) => m.id === msg.id)) {
           return prev.filter((m) => m.id !== optimisticId);
@@ -713,11 +733,25 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const asset = result.assets[0];
+      const optimisticId = `temp-upload-${Date.now()}`;
+      const optimisticMessage: Message = {
+        id: optimisticId,
+        channelId,
+        authorId: user?.id || 'me',
+        content: 'Uploading file...',
+        type: 0,
+        createdAt: new Date().toISOString(),
+        editedAt: null,
+        author: user ? {
+          id: user.id,
+          username: user.username,
+          displayName: user.displayName,
+          avatarHash: user.avatarHash,
+        } : undefined,
+      };
+      setMessageList((prev) => [...prev, optimisticMessage]);
       setSending(true);
       try {
-        // MOBILE-POLISH: the message send API does not yet accept uploaded
-        // attachment IDs/metadata, so mobile can only send the uploaded URL
-        // as plain text until backend attachment support is added.
         const formData = new FormData();
         const filename = asset.uri.split('/').pop() || 'upload.jpg';
         formData.append('file', {
@@ -728,10 +762,12 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
         const uploadRes = await filesApi.upload(formData);
         const msg = await messagesApi.send(channelId, uploadRes.url);
         setMessageList((prev) => {
-          if (prev.some((m) => m.id === msg.id)) return prev;
-          return [...prev, msg];
+          const without = prev.filter((m) => m.id !== optimisticId);
+          if (without.some((m) => m.id === msg.id)) return without;
+          return [...without, msg];
         });
       } catch {
+        setMessageList((prev) => prev.filter((m) => m.id !== optimisticId));
         toast.error('There was an error uploading your file.');
       } finally {
         setSending(false);
@@ -757,7 +793,12 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     }, 500);
   };
 
+  const reactionCooldown = useRef<Set<string>>(new Set());
   const handleReactionToggle = useCallback(async (messageId: string, emoji: string) => {
+    const key = `${messageId}:${emoji}`;
+    if (reactionCooldown.current.has(key)) return;
+    reactionCooldown.current.add(key);
+    setTimeout(() => reactionCooldown.current.delete(key), 1000);
     lightImpact();
     const existing = messageReactions.get(messageId) ?? [];
     const reaction = existing.find((r) => r.emoji === emoji);
@@ -1032,9 +1073,16 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 24}
     >
       <View style={styles.chatWrapper}>
+        {!isOnline && (
+          <View style={{ backgroundColor: colors.warning, paddingVertical: 4, alignItems: 'center' }}>
+            <Text style={{ color: '#fff', fontSize: fontSize.xs, fontWeight: '600' }}>
+              You are offline — messages will be queued
+            </Text>
+          </View>
+        )}
         {bgMedia && <ChatBackground url={bgMedia.url} type={bgMedia.type} />}
         <StickyMessage channelId={channelId} />
         <FlatList

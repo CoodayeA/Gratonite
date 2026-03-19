@@ -305,6 +305,7 @@ export default function SettingsAccountScreen({ navigation }: Props) {
             style={[styles.saveButton, saving && styles.buttonDisabled]}
             onPress={handleSaveProfile}
             disabled={saving}
+            accessibilityState={{ disabled: saving }}
           >
             {saving ? (
               <ActivityIndicator color={colors.white} />
@@ -325,6 +326,7 @@ export default function SettingsAccountScreen({ navigation }: Props) {
             placeholder="Enter current password"
             placeholderTextColor={colors.textMuted}
             secureTextEntry
+            maxLength={128}
           />
 
           <Text style={styles.label}>New Password</Text>
@@ -335,6 +337,7 @@ export default function SettingsAccountScreen({ navigation }: Props) {
             placeholder="Enter new password"
             placeholderTextColor={colors.textMuted}
             secureTextEntry
+            maxLength={128}
           />
 
           <TouchableOpacity

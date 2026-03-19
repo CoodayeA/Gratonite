@@ -54,6 +54,12 @@ export function useE2E({
   const initRef = useRef(false);
 
   useEffect(() => {
+    initRef.current = false;
+    setE2eKey(null);
+    setIsE2EReady(false);
+  }, [channelId, recipientId]);
+
+  useEffect(() => {
     if (!userId || initRef.current) return;
     initRef.current = true;
 
@@ -142,13 +148,16 @@ export function useE2E({
         // Encrypt for each participant
         for (const pid of participantIds) {
           try {
-            const pubRes = await encryptionApi.getPublicKey(pid);
+            const pubRes = await Promise.race([
+              encryptionApi.getPublicKey(pid),
+              new Promise<null>((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000)),
+            ]);
             if (!pubRes?.publicKey) continue;
             const memberKey = await importPublicKey(pubRes.publicKey);
             const encryptedKey = await encryptGroupKey(groupKey, memberKey);
             await encryptionApi.setGroupKey(channelId, 1, encryptedKey);
           } catch {
-            // Skip members without keys
+            // Skip members without keys or timed out
           }
         }
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -38,6 +38,14 @@ export default function GroupDMCreateScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  const friendsLenRef = useRef(0);
+  friendsLenRef.current = friends.length;
 
   const fetchFriends = useCallback(async () => {
     try {
@@ -48,6 +56,7 @@ export default function GroupDMCreateScreen({ navigation }: Props) {
 
       if (targetIds.length > 0) {
         const users = await usersApi.getBatch(targetIds);
+        if (!mountedRef.current) return;
         setFriends(
           users.map((u) => ({
             id: u.id,
@@ -60,12 +69,12 @@ export default function GroupDMCreateScreen({ navigation }: Props) {
     } catch (err: any) {
       if (err.status !== 401) {
         const message = err?.message || 'Failed to load friends';
-        if (friends.length > 0) { toast.error(message); } else { setLoadError(message); }
+        if (friendsLenRef.current > 0) { toast.error(message); } else { setLoadError(message); }
       }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
-  }, [friends.length]);
+  }, [toast]);
 
   useEffect(() => {
     fetchFriends();
@@ -84,8 +93,8 @@ export default function GroupDMCreateScreen({ navigation }: Props) {
   };
 
   const handleCreate = async () => {
-    if (selected.size < 1) {
-      toast.error('Select at least one friend');
+    if (selected.size < 2) {
+      toast.error('Select at least 2 friends for a group DM');
       return;
     }
     setCreating(true);
@@ -104,8 +113,9 @@ export default function GroupDMCreateScreen({ navigation }: Props) {
   };
 
   const filtered = friends.filter((f) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return true;
+    const q = trimmed.toLowerCase();
     return (
       f.username.toLowerCase().includes(q) ||
       (f.displayName?.toLowerCase().includes(q) ?? false)
@@ -230,9 +240,9 @@ export default function GroupDMCreateScreen({ navigation }: Props) {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>New Group DM</Text>
         <TouchableOpacity
-          style={[styles.createBtn, selected.size < 1 && styles.createBtnDisabled]}
+          style={[styles.createBtn, selected.size < 2 && styles.createBtnDisabled]}
           onPress={handleCreate}
-          disabled={creating || selected.size < 1}
+          disabled={creating || selected.size < 2}
         >
           {creating ? (
             <ActivityIndicator size="small" color={colors.white} />

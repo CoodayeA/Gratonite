@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import Animated, { FadeIn, SlideInRight } from 'react-native-reanimated';
 import Avatar from './Avatar';
 import RichText from './RichText';
@@ -63,6 +63,7 @@ function MessageBubbleInner({
   const colors = useColors();
   const neo = useNeo();
   const glass = useGlass();
+  const { width: windowWidth } = useWindowDimensions();
   const authorName = message.author?.displayName || message.author?.username || message.authorId?.slice(0, 8) || 'Unknown';
 
   // Media viewer state
@@ -114,7 +115,7 @@ function MessageBubbleInner({
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
       borderRadius: neo ? 0 : glass ? borderRadius.xl : borderRadius.lg,
-      maxWidth: '85%',
+      maxWidth: windowWidth - 100,
       ...(neo ? {
         borderWidth: 2,
         borderColor: '#000',
@@ -239,7 +240,7 @@ function MessageBubbleInner({
     lockIcon: {
       marginLeft: 4,
     },
-  }), [colors, neo, glass]);
+  }), [colors, neo, glass, windowWidth]);
 
   const entering = isNewMessage
     ? isOwn

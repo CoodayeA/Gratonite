@@ -241,8 +241,8 @@ export default function ThreadViewScreen({ route }: Props) {
     <PatternBackground>
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 24}
     >
       <FlatList
         ref={flatListRef}

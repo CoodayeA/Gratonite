@@ -6,6 +6,7 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../lib/theme';
@@ -26,6 +27,19 @@ type Props = NativeStackScreenProps<AppStackParamList, 'VoiceChannel'>;
 export default function VoiceChannelScreen({ route, navigation }: Props) {
   const { channelId, channelName, guildId } = route.params;
   const { colors, spacing, fontSize, borderRadius } = useTheme();
+  const { width: screenWidth } = useWindowDimensions();
+
+  if (!channelId) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bgPrimary }}>
+        <Text style={{ color: colors.textMuted, fontSize: fontSize.md }}>Voice channel unavailable</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: 16 }}>
+          <Text style={{ color: colors.accentPrimary, fontSize: fontSize.md }}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  const controlSize = Math.max(56, Math.min(screenWidth * 0.15, 72));
   const voiceCtx = useVoice();
   const voiceCtxRef = useRef(voiceCtx);
   voiceCtxRef.current = voiceCtx;
@@ -61,7 +75,9 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
   useEffect(() => {
     if (!hasAutoConnected) {
       setHasAutoConnected(true);
-      connect().catch(() => {});
+      connect().catch((err: any) => {
+        toast.error(err?.message || 'Failed to connect to voice channel');
+      });
     }
   }, [hasAutoConnected, connect]);
 
@@ -198,16 +214,16 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
       gap: spacing.lg,
     },
     controlBtn: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
+      width: controlSize,
+      height: controlSize,
+      borderRadius: controlSize / 2,
       justifyContent: 'center',
       alignItems: 'center',
     },
     disconnectBtn: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
+      width: controlSize,
+      height: controlSize,
+      borderRadius: controlSize / 2,
       backgroundColor: colors.error,
       justifyContent: 'center',
       alignItems: 'center',
@@ -254,7 +270,7 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
       fontWeight: '600',
       color: colors.textSecondary,
     },
-  }), [colors, spacing, fontSize, borderRadius]);
+  }), [colors, spacing, fontSize, borderRadius, controlSize]);
 
   const renderParticipant = ({ item }: { item: LiveKitParticipant }) => (
     <View style={styles.participant}>
@@ -292,7 +308,9 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
         <Text style={styles.errorText}>{connectionError}</Text>
         <TouchableOpacity
           style={[styles.controlBtn, { backgroundColor: colors.accentPrimary, marginTop: spacing.lg }]}
-          onPress={() => connect().catch(() => {})}
+          onPress={() => connect().catch((err: any) => {
+            toast.error(err?.message || 'Failed to reconnect to voice channel');
+          })}
           accessibilityLabel="Refresh"
         >
           <Ionicons name="refresh" size={24} color={colors.white} />

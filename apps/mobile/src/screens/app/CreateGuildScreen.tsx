@@ -119,6 +119,7 @@ export default function CreateGuildScreen({ navigation }: Props) {
     },
     inputMultiline: {
       minHeight: 80,
+      maxHeight: 120,
       textAlignVertical: 'top',
     },
     button: {
@@ -158,7 +159,8 @@ export default function CreateGuildScreen({ navigation }: Props) {
     <PatternBackground>
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
     >
       <View style={styles.inner}>
         <Text style={styles.title}>Create a Portal</Text>

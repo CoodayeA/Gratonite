@@ -85,9 +85,13 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
     try {
       const invite = await invitesApi.create(guildId, { expiresIn: 86400 }); // 24h expiry
       const inviteUrl = `https://gratonite.chat/invite/${invite.code}`;
-      await Share.share({
-        message: `Join ${guildName} on Gratonite! ${inviteUrl}`,
-      });
+      try {
+        await Share.share({
+          message: `Join ${guildName} on Gratonite! ${inviteUrl}`,
+        });
+      } catch {
+        // User cancelled the share sheet — ignore
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to create invite');
     } finally {
@@ -294,7 +298,7 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
         <View style={styles.statsRow}>
           <View style={styles.stat}>
             <Ionicons name="people-outline" size={16} color={colors.textMuted} />
-            <Text style={styles.statText}>{guild?.memberCount ?? 0} members</Text>
+            <Text style={styles.statText}>{(guild?.memberCount ?? 0).toLocaleString()} members</Text>
           </View>
         </View>
       </View>

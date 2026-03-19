@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -294,7 +295,9 @@ function MainTabs() {
         }}
       />
     </Tab.Navigator>
-    <VoiceBar />
+    <View style={{ zIndex: 1 }}>
+      <VoiceBar />
+    </View>
     </View>
   );
 }
@@ -316,6 +319,7 @@ export default function AppNavigator() {
   }), [colors, neo, glass]);
 
   return (
+    <ErrorBoundary>
     <Stack.Navigator screenOptions={defaultStackOpts}>
       <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
       <Stack.Screen name="GuildDrawer" component={GuildDrawerNavigator} options={{ headerShown: false }} />
@@ -455,5 +459,6 @@ export default function AppNavigator() {
       {/* Deep-link: password reset (accessible even when logged in) */}
       <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
+    </ErrorBoundary>
   );
 }

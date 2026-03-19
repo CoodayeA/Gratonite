@@ -19,10 +19,16 @@ export const unreadStore = {
     listeners.add(listener);
     return () => listeners.delete(listener);
   },
-  setReadState(channelId: string, lastReadMessageId: string | null, mentionCount: number) {
+  setReadState(channelId: string, lastReadMessageId: string | null, mentionCount: number, latestMessageId?: string | null) {
+    const isUpToDate = !latestMessageId || lastReadMessageId === latestMessageId;
+    const prev = state[channelId];
     state = {
       ...state,
-      [channelId]: { count: 0, mentionCount, lastReadMessageId },
+      [channelId]: {
+        count: isUpToDate ? 0 : (prev?.count ?? 0),
+        mentionCount,
+        lastReadMessageId,
+      },
     };
     emit();
   },
