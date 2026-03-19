@@ -598,7 +598,13 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
         try {
           await messagesApi.send(item.channelId, item.content);
           await removePending(item.id);
-        } catch { break; }
+        } catch (err: any) {
+          if (err?.status === 404) {
+            await removePending(item.id);
+            continue;
+          }
+          break;
+        }
       }
     })();
   }, [isOnline]);
