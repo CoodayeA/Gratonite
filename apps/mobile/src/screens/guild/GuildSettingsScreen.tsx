@@ -243,6 +243,17 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
     },
   }), [colors, spacing, fontSize, borderRadius, neo, glass]);
 
+  const isOwner = guild?.ownerId === user?.id;
+  const canManageGuild = useMemo(() => {
+    if (isOwner) return true;
+    const ADMINISTRATOR = 1n << 0n;
+    const MANAGE_GUILD = 1n << 3n;
+    return memberRoles.some((r) => {
+      const perms = BigInt(r.permissions || '0');
+      return (perms & ADMINISTRATOR) !== 0n || (perms & MANAGE_GUILD) !== 0n;
+    });
+  }, [isOwner, memberRoles]);
+
   if (loading) {
     return <LoadingScreen />;
   }
@@ -268,18 +279,6 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
       </PatternBackground>
     );
   }
-
-  const isOwner = guild?.ownerId === user?.id;
-  const canManageGuild = useMemo(() => {
-    if (isOwner) return true;
-    // Check if any of the user's roles grant ADMINISTRATOR (bit 0) or MANAGE_GUILD (bit 3)
-    const ADMINISTRATOR = 1n << 0n;
-    const MANAGE_GUILD = 1n << 3n;
-    return memberRoles.some((r) => {
-      const perms = BigInt(r.permissions || '0');
-      return (perms & ADMINISTRATOR) !== 0n || (perms & MANAGE_GUILD) !== 0n;
-    });
-  }, [isOwner, memberRoles]);
 
   return (
     <PatternBackground>
