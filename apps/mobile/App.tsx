@@ -224,13 +224,17 @@ function ThemedApp() {
           <RootNavigator />
         </ErrorBoundary>
         <StatusBar style={isDark ? 'light' : 'dark'} />
-        {isLocked && lockCheckDone && <AppLockScreen onUnlock={() => {
-          setIsLocked(false);
-          if (onUnlockRef.current) {
-            onUnlockRef.current();
-            onUnlockRef.current = null;
-          }
-        }} />}
+        {isLocked && lockCheckDone && (
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}>
+            <AppLockScreen onUnlock={() => {
+              setIsLocked(false);
+              if (onUnlockRef.current) {
+                onUnlockRef.current();
+                onUnlockRef.current = null;
+              }
+            }} />
+          </View>
+        )}
       </AuthProvider>
     </NavigationContainer>
   );
