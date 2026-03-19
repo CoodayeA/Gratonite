@@ -317,25 +317,26 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
     }
   }, [channelId]);
 
-  // Flush pending offline queue when reconnecting (all channels) and clear stale typing
+  // Flush pending offline queue when reconnecting
   useEffect(() => {
     if (!isOnline) return;
-    setTypingUsers(new Map());
     (async () => {
       const pending = await getPendingQueue();
       for (const item of pending) {
-        try {
-          const sendOpts: any = {};
-          if (item.isEncrypted && item.encryptedContent) {
-            sendOpts.isEncrypted = true;
-            sendOpts.encryptedContent = item.encryptedContent;
-          }
-          await messagesApi.send(item.channelId, item.isEncrypted ? '' : item.content, sendOpts);
-          await removePending(item.id);
-        } catch { break; }
+        if (item.channelId === channelId) {
+          try {
+            const sendOpts: any = {};
+            if (item.isEncrypted && item.encryptedContent) {
+              sendOpts.isEncrypted = true;
+              sendOpts.encryptedContent = item.encryptedContent;
+            }
+            await messagesApi.send(item.channelId, item.isEncrypted ? '' : item.content, sendOpts);
+            await removePending(item.id);
+          } catch { break; }
+        }
       }
     })();
-  }, [isOnline]);
+  }, [isOnline, channelId]);
 
   // Decrypt encrypted messages when e2eKey becomes available
   useEffect(() => {
@@ -401,25 +402,13 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
     };
   }, [channelId, user?.id]);
 
-  const inputTextRef = useRef(inputText);
-  inputTextRef.current = inputText;
-
-  // Cleanup timers on unmount and flush draft
+  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      if (draftSaveTimer.current) {
-        clearTimeout(draftSaveTimer.current);
-        draftSaveTimer.current = null;
-      }
-      const text = inputTextRef.current;
-      if (text?.trim()) {
-        draftsApi.save(channelId, text).catch((err: any) => {
-          toast.error('Could not save draft: ' + (err?.message || 'storage full'));
-        });
-      }
+      if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
       typingUsers.forEach((entry) => clearTimeout(entry.timeout));
     };
-  }, [channelId]);
+  }, []);
 
   // Header: disappearing messages timer button
   useEffect(() => {
@@ -434,29 +423,14 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
 
   // --- Actions ---
 
-  const scrollToMessage = useCallback(async (messageId: string) => {
+  const scrollToMessage = useCallback((messageId: string) => {
     const targetIndex = invertedData.findIndex((m) => m.id === messageId);
     if (targetIndex >= 0) {
       flatListRef.current?.scrollToIndex({ index: targetIndex, animated: true, viewPosition: 0.5 });
     } else {
-      try {
-        const around = await messagesApi.list(channelId, { around: messageId, limit: 50 });
-        if (around.length > 0) {
-          const reversed = around.reverse();
-          setMessageList(reversed);
-          setHasMoreHistory(around.length >= 50);
-          setTimeout(() => {
-            const idx = reversed.slice().reverse().findIndex((m) => m.id === messageId);
-            if (idx >= 0) {
-              flatListRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.5 });
-            }
-          }, 100);
-        }
-      } catch {
-        toast.info('Could not load that message');
-      }
+      toast.info('Original message is not loaded yet');
     }
-  }, [invertedData, channelId, toast]);
+  }, [invertedData, toast]);
 
   const handleSend = async () => {
     const text = inputText.trim();
@@ -553,13 +527,10 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
     setLoadingMore(true);
     try {
       const oldest = messageList[0];
-      if (!oldest?.id) { setHasMoreHistory(false); return; }
       const more = await messagesApi.list(channelId, { before: oldest.id, limit: 50 });
-      if (!Array.isArray(more) || more.length === 0) {
-        setHasMoreHistory(false);
-        return;
+      if (more.length > 0) {
+        setMessageList((prev) => [...more.reverse(), ...prev]);
       }
-      setMessageList((prev) => [...more.reverse(), ...prev]);
       if (more.length < 50) {
         setHasMoreHistory(false);
       }
@@ -602,8 +573,8 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
           if (prev.some((m) => m.id === msg.id)) return prev;
           return [...prev, msg];
         });
-      } catch (err: any) {
-        toast.error(err?.message || 'There was an error uploading your file.');
+      } catch {
+        toast.error('There was an error uploading your file.');
       } finally {
         setSending(false);
       }
@@ -621,50 +592,25 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
     if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
     draftSaveTimer.current = setTimeout(() => {
       if (text.trim()) {
-        draftsApi.save(channelId, text).catch((err: any) => {
-          toast.error('Could not save draft: ' + (err?.message || 'storage full'));
-        });
+        draftsApi.save(channelId, text).catch(() => {});
       } else {
         draftsApi.delete(channelId).catch(() => {});
       }
     }, 500);
   };
 
-  const reactionCooldown = useRef<Set<string>>(new Set());
   const handleReactionToggle = async (messageId: string, emoji: string) => {
-    const key = `${messageId}:${emoji}`;
-    if (reactionCooldown.current.has(key)) return;
-    reactionCooldown.current.add(key);
-    setTimeout(() => reactionCooldown.current.delete(key), 1000);
     lightImpact();
     const existing = messageReactions.get(messageId) ?? [];
     const reaction = existing.find((r) => r.emoji === emoji);
-    const isRemoving = !!reaction?.me;
-    setMessageReactions((prev) => {
-      const next = new Map(prev);
-      const rxns = [...(next.get(messageId) ?? [])];
-      const idx = rxns.findIndex((r) => r.emoji === emoji);
-      if (isRemoving && idx >= 0) {
-        rxns[idx] = { ...rxns[idx], count: rxns[idx].count - 1, me: false, userIds: rxns[idx].userIds.filter((id) => id !== user?.id) };
-        if (rxns[idx].count <= 0) rxns.splice(idx, 1);
-      } else if (!isRemoving) {
-        if (idx >= 0) {
-          rxns[idx] = { ...rxns[idx], count: rxns[idx].count + 1, me: true, userIds: [...rxns[idx].userIds, user?.id || ''] };
-        } else {
-          rxns.push({ emoji, count: 1, me: true, userIds: [user?.id || ''] });
-        }
-      }
-      next.set(messageId, rxns);
-      return next;
-    });
     try {
-      if (isRemoving) {
+      if (reaction?.me) {
         await reactionsApi.remove(channelId, messageId, emoji);
       } else {
         await reactionsApi.add(channelId, messageId, emoji);
       }
     } catch {
-      // ignore - socket event will reconcile
+      // ignore
     }
     setReactionPickerMessageId(null);
   };
@@ -1001,7 +947,7 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 24}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}
     >
       <View style={styles.chatWrapper}>
         <FlatList
