@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Manrope } from "next/font/google";
+import { Bricolage_Grotesque, Manrope } from "next/font/google";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { StarField } from "@/components/ui/StarField";
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_OG_IMAGE,
@@ -11,10 +12,10 @@ import {
 } from "@/lib/seo";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "700", "800"],
 });
 
 const manrope = Manrope({
@@ -151,10 +152,11 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${spaceGrotesk.variable} ${manrope.variable} antialiased grain-overlay`}
+        className={`${bricolage.variable} ${manrope.variable} antialiased grain-overlay`}
       >
+        <StarField />
         <Navbar />
-        <main>{children}</main>
+        <main className="relative z-[1]">{children}</main>
         <Footer />
       </body>
     </html>

@@ -37,7 +37,7 @@ function FooterLink({ href, label }: { href: string; label: string }) {
     return (
       <a
         href={href}
-        className="text-white/70 hover:text-white transition-colors font-medium"
+        className="text-white/70 hover:text-white hover:translate-x-1 transition-all font-medium"
         target={isExternal ? "_blank" : undefined}
         rel={isExternal ? "noreferrer" : undefined}
       >
@@ -49,7 +49,7 @@ function FooterLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="text-white/70 hover:text-white transition-colors font-medium"
+      className="text-white/70 hover:text-white hover:translate-x-1 transition-all font-medium"
     >
       {label}
     </Link>
@@ -58,7 +58,8 @@ function FooterLink({ href, label }: { href: string; label: string }) {
 
 export function Footer() {
   return (
-    <footer className="bg-charcoal text-white mt-24">
+    <footer className="bg-charcoal text-white mt-24 relative">
+      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-purple to-transparent opacity-60" />
       <div className="max-w-7xl mx-auto px-6 py-16">
         {/* Big wordmark */}
         <div className="mb-16">
@@ -100,7 +101,7 @@ export function Footer() {
               href="https://github.com/Gratonite-Labs"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors font-medium"
+              className="inline-flex items-center gap-2 text-white/70 hover:text-white hover:translate-x-1 transition-all font-medium"
               aria-label="Gratonite Labs GitHub"
             >
               <svg

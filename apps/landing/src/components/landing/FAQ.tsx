@@ -28,16 +28,14 @@ export const faqs = [
   },
 ];
 
+const accentColors = ["border-l-purple", "border-l-gold"];
+
 export function FAQ() {
   return (
-    <section className="py-16 lg:py-20 px-6 relative overflow-hidden">
-      <div className="neo-burst neo-burst-purple bottom-8 left-[-90px] opacity-70" />
+    <section className="section-pad px-6 relative overflow-hidden">
       <div className="max-w-7xl mx-auto">
         <ScrollReveal>
           <div className="mb-12 relative">
-            <div className="absolute -top-8 right-0 hidden md:block neo-sticker neo-sticker-gold tilt-2">
-              Straight Answers
-            </div>
             <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-4">
               Questions, answered.
             </h2>
@@ -51,9 +49,7 @@ export function FAQ() {
           {faqs.map((faq, i) => (
             <ScrollReveal key={faq.question} delay={i * 0.06}>
               <article
-                className={`bg-surface neo-border rounded-xl p-6 h-full ${
-                  i % 2 === 0 ? "rotate-[-0.6deg]" : "rotate-[0.6deg]"
-                }`}
+                className={`bg-surface neo-border rounded-xl p-6 h-full border-l-4 ${accentColors[i % 2]}`}
               >
                 <h3 className="font-display text-2xl font-bold leading-tight mb-3">
                   {faq.question}

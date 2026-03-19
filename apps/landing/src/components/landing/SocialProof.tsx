@@ -17,8 +17,7 @@ const stats = [
 
 export function SocialProof() {
   return (
-    <section className="px-6 py-12 lg:py-14 relative overflow-hidden">
-      <div className="neo-burst neo-burst-blue top-8 right-[-70px] opacity-70" />
+    <section className="px-6 section-pad relative overflow-hidden">
       <div className="max-w-7xl mx-auto">
         <ScrollReveal>
           <div className="bg-surface neo-border rounded-2xl p-8 md:p-10">
@@ -31,7 +30,7 @@ export function SocialProof() {
                 {categories.map((name) => (
                   <div
                     key={name}
-                    className="neo-border-2 rounded-lg px-3 py-2 text-sm font-semibold bg-off-white/60 dark:bg-charcoal/40 odd:rotate-[-1deg] even:rotate-[1deg]"
+                    className="neo-border-2 rounded-lg px-3 py-2 text-sm font-semibold bg-off-white/60 dark:bg-charcoal/40"
                   >
                     {name}
                   </div>

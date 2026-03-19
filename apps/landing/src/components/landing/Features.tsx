@@ -46,20 +46,24 @@ const features = [
   },
 ];
 
+const accentBg: Record<string, string> = {
+  purple: "bg-purple/10 border-purple/30",
+  gold: "bg-gold/10 border-gold/30",
+  blue: "bg-blue-light/10 border-blue-light/30",
+  yellow: "bg-yellow/10 border-yellow/30",
+};
+
 export function Features() {
   return (
-    <section className="py-16 lg:py-20 px-6 relative overflow-hidden">
+    <section className="section-pad px-6 relative overflow-hidden">
       <div className="neo-divider mb-20" />
       <div className="max-w-7xl mx-auto">
         <ScrollReveal>
           <div className="mb-16 relative">
-            <div className="absolute -top-8 right-0 hidden md:block neo-sticker neo-sticker-yellow tilt-2">
-              Loud UI. Clear UX.
-            </div>
             <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-4">
               Make it
               <br />
-              <span className="bg-yellow px-2 -mx-2 inline-block tilt-3">
+              <span className="bg-yellow text-black px-2 -mx-2 inline-block">
                 yours.
               </span>
             </h2>
@@ -72,18 +76,18 @@ export function Features() {
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature, i) => (
-            <ScrollReveal key={feature.title} delay={i * 0.1}>
+            <ScrollReveal key={feature.title} delay={i * 0.08} className={i === 0 ? "sm:col-span-2 lg:col-span-2" : ""}>
               <Card
                 accent={feature.accent}
-                className={`h-full ${
-                  i % 3 === 1 ? "lg:translate-y-5" : i % 3 === 2 ? "lg:-translate-y-3" : ""
-                }`}
+                className="h-full"
               >
-                <div className="text-3xl mb-4">{feature.icon}</div>
-                <h3 className="font-display text-xl font-bold mb-2">
+                <div className={`w-12 h-12 rounded-xl border-2 ${accentBg[feature.accent]} flex items-center justify-center text-2xl mb-4`}>
+                  {feature.icon}
+                </div>
+                <h3 className={`font-display font-bold mb-2 ${i === 0 ? "text-2xl lg:text-3xl" : "text-xl"}`}>
                   {feature.title}
                 </h3>
-                <p className="text-foreground/60 leading-relaxed">
+                <p className={`text-foreground/60 leading-relaxed ${i === 0 ? "max-w-lg text-lg" : ""}`}>
                   {feature.description}
                 </p>
               </Card>

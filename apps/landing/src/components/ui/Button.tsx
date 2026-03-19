@@ -16,12 +16,12 @@ interface ButtonProps {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-purple text-white neo-border neo-shadow neo-shadow-hover hover:bg-purple-light hover:rotate-[-1deg]",
+    "bg-purple text-white neo-border neo-shadow neo-shadow-hover hover:bg-purple-light focus-visible:ring-2 focus-visible:ring-purple focus-visible:ring-offset-2",
   secondary:
-    "bg-yellow text-black neo-border neo-shadow neo-shadow-hover hover:bg-gold hover:rotate-[1deg]",
+    "bg-yellow text-black neo-border neo-shadow neo-shadow-hover hover:bg-gold focus-visible:ring-2 focus-visible:ring-purple focus-visible:ring-offset-2",
   outline:
-    "bg-surface text-foreground neo-border neo-shadow-sm neo-shadow-hover hover:bg-gray-warm/30 hover:rotate-[1deg]",
-  ghost: "bg-transparent text-foreground hover:bg-gray-warm/30",
+    "bg-surface text-foreground neo-border neo-shadow-sm neo-shadow-hover hover:bg-gray-warm/30 focus-visible:ring-2 focus-visible:ring-purple focus-visible:ring-offset-2",
+  ghost: "bg-transparent text-foreground hover:bg-gray-warm/30 focus-visible:ring-2 focus-visible:ring-purple focus-visible:ring-offset-2",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
