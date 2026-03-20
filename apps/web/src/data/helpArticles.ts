@@ -590,15 +590,16 @@ export const ARTICLES: Article[] = [
   },
   {
     id: 'federation',
-    title: 'Federation',
-    description: 'Connect with servers across federated Gratonite instances.',
+    title: 'Federation & Self-Hosting',
+    description: 'Understand how Gratonite instances connect and why people self-host.',
     category: 'Servers & Channels',
     body: [
-      'Federation allows separate Gratonite instances to share servers, enabling cross-instance communities.',
-      'Browse federated servers from Discover > Federated tab to see servers hosted on other Gratonite instances.',
-      'Join a federated server just like a local one — click "Join" and your account creates a federated membership automatically.',
-      'Messages in federated servers are relayed between instances in real-time, so the experience feels seamless.',
-      'Server admins can enable federation in Server Settings > Federation to make their server visible to other instances.',
+      'Gratonite is federated — like email. Anyone can run their own instance, and all instances can talk to each other. You can use gratonite.chat, a school can run chat.school.edu, and a gaming group can run their own — but everyone can join the same servers.',
+      'Why self-host? You own your data (messages and files stay on your server), you set your own moderation rules (no platform ToS overriding you), and your community survives even if gratonite.chat goes down.',
+      'Federation is seamless for users. Browse federated servers from Discover > Federated tab. Join one just like a local server — click "Join" and it works automatically.',
+      'Messages in federated servers are relayed between instances in real-time. To you, it looks like everyone is in the same room.',
+      'All instance-to-instance communication is encrypted and cryptographically signed. The relay network routes messages but never reads them.',
+      'Want to self-host? Visit gratonite.chat/deploy — one command sets everything up, including federation. No coding required.',
     ],
   },
   {

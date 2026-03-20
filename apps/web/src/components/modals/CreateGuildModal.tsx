@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, X, Compass, Users, BookOpen, Music, Briefcase, Gamepad2, Coffee, Server } from 'lucide-react';
+import { Camera, X, Compass, Users, BookOpen, Music, Briefcase, Gamepad2, Coffee, Server, ChevronDown, ChevronUp, Shield, Database, Globe } from 'lucide-react';
 import { useToast } from '../ui/ToastManager';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
@@ -53,6 +53,110 @@ const templates: Template[] = [
         channels: ['general', 'memes', 'music', 'venting'],
     },
 ];
+
+const SelfHostInfo = () => {
+    const [expanded, setExpanded] = useState(false);
+    return (
+        <div style={{
+            background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.08))',
+            border: '1px dashed rgba(99,102,241,0.35)',
+            borderRadius: '10px',
+            overflow: 'hidden',
+            transition: 'all 0.2s',
+        }}>
+            <div
+                onClick={() => setExpanded(!expanded)}
+                style={{
+                    padding: '14px 16px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                }}
+                className="hover-self-host"
+            >
+                <Server size={20} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>Run Your Own Gratonite Instance</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Own your data. Set your own rules. Stay connected to everyone.</div>
+                </div>
+                {expanded ? <ChevronUp size={16} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={16} style={{ color: 'var(--text-muted)' }} />}
+            </div>
+            {expanded && (
+                <div style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(99,102,241,0.15)' }}>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '14px 0 16px', lineHeight: 1.6 }}>
+                        Gratonite is <strong style={{ color: 'var(--text-primary)' }}>federated</strong> — like email. You can run your own
+                        instance and your users can still join servers on gratonite.chat (and vice versa). Think of it as
+                        running your own Gmail, except everyone can still email each other.
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '16px' }}>
+                        <div style={{ background: 'var(--bg-tertiary)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
+                            <Database size={18} style={{ color: 'var(--accent-primary)', margin: '0 auto 6px' }} />
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>Own Your Data</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.4 }}>Messages and files live on your server, not ours</div>
+                        </div>
+                        <div style={{ background: 'var(--bg-tertiary)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
+                            <Shield size={18} style={{ color: 'var(--accent-primary)', margin: '0 auto 6px' }} />
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>Your Rules</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.4 }}>No platform policies overriding your moderation</div>
+                        </div>
+                        <div style={{ background: 'var(--bg-tertiary)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
+                            <Globe size={18} style={{ color: 'var(--accent-primary)', margin: '0 auto 6px' }} />
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>Stay Connected</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.4 }}>Federation links all instances together</div>
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <a
+                            href="https://gratonite.chat/deploy"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                                flex: 1,
+                                height: '38px',
+                                borderRadius: 'var(--radius-sm)',
+                                background: 'var(--accent-primary)',
+                                color: '#000',
+                                border: 'none',
+                                fontSize: '13px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                textDecoration: 'none',
+                            }}
+                        >
+                            Self-Host Now
+                        </a>
+                        <a
+                            href="https://gratonite.chat/federation"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                                flex: 1,
+                                height: '38px',
+                                borderRadius: 'var(--radius-sm)',
+                                background: 'var(--bg-tertiary)',
+                                color: 'var(--text-secondary)',
+                                border: '1px solid var(--stroke)',
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                textDecoration: 'none',
+                            }}
+                        >
+                            Learn About Federation
+                        </a>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; onGuildCreated?: (guild: { id: string; name: string; iconHash: string | null }) => void }) => {
     const { addToast } = useToast();
@@ -284,33 +388,13 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                             </div>
                         </div>
 
-                        {/* ── Self-host separator + CTA ── */}
+                        {/* ── Self-host separator + expandable CTA ── */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '18px 0 14px' }}>
                             <div style={{ flex: 1, height: '1px', background: 'var(--stroke)' }} />
                             <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '1px' }}>or</span>
                             <div style={{ flex: 1, height: '1px', background: 'var(--stroke)' }} />
                         </div>
-                        <div
-                            onClick={() => window.open('https://gratonite.chat/docs/self-hosting', '_blank')}
-                            style={{
-                                background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.08))',
-                                border: '1px dashed rgba(99,102,241,0.35)',
-                                borderRadius: '10px',
-                                padding: '14px 16px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '12px',
-                                transition: 'all 0.15s',
-                            }}
-                            className="hover-self-host"
-                        >
-                            <Server size={20} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
-                            <div>
-                                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>Self-Host Your Own Server</div>
-                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Your server, your rules. Set up in 5 minutes. No coding required.</div>
-                            </div>
-                        </div>
+                        <SelfHostInfo />
                     </>
                 )}
 
