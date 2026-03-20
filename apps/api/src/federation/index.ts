@@ -110,9 +110,10 @@ async function pollRelayForInstances(): Promise<void> {
     for (const inst of data.instances) {
       if (!inst.discoveryEligible || inst.domain === getInstanceDomain()) continue;
 
-      const existing = await db.query.federatedInstances.findFirst({
-        where: eq(federatedInstances.baseUrl, `https://${inst.domain}`),
-      });
+      const [existing] = await db.select()
+        .from(federatedInstances)
+        .where(eq(federatedInstances.baseUrl, `https://${inst.domain}`))
+        .limit(1);
 
       if (!existing && inst.publicKeyPem) {
         await db.insert(federatedInstances).values({
@@ -145,10 +146,10 @@ async function pushGuildsToHub(): Promise<void> {
   if (domain === 'localhost') return; // Local instances skip push for now
 
   try {
-    const publicGuilds = await db.query.guilds.findMany({
-      where: eq(guilds.isPrivate, false),
-      limit: 50,
-    });
+    const publicGuilds = await db.select()
+      .from(guilds)
+      .where(eq(guilds.isDiscoverable, true))
+      .limit(50);
 
     if (publicGuilds.length === 0) return;
 
