@@ -53,3 +53,5 @@ archive/
 *.tsbuildinfo
 .worktrees/
 .superpowers/
+.claude/
+docs/superpowers/

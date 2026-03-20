@@ -1,14 +1,26 @@
+<div align="center">
+
 # Gratonite
 
-A privacy-first, open-source alternative to Discord. Real-time chat, voice, video, federation, and 140+ features across web, mobile, and desktop — all self-hostable in 5 minutes.
+**A privacy-first, open-source alternative to Discord.**
+
+Real-time chat, voice, video, federation, and 140+ features — fully self-hostable.
+
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/CoodayeA/Gratonite?style=social)](https://github.com/CoodayeA/Gratonite)
+[![Website](https://img.shields.io/website?url=https%3A%2F%2Fgratonite.chat&label=gratonite.chat)](https://gratonite.chat)
+
+**[Try It](https://gratonite.chat/app)** · **[Self-Host](https://gratonite.chat/deploy)** · **[Download](https://gratonite.chat/download)** · **[Federation Docs](https://gratonite.chat/federation)**
+
+</div>
+
+---
 
 > Your server, your rules. No ads, no tracking, no phone number required.
 
 ## What is Gratonite?
 
-Gratonite is a community platform built for people who want control over their online spaces. It's everything you'd expect from a modern chat app — text, voice, video, threads, bots, moderation — plus federation so independent instances can talk to each other, a relay network for NAT traversal, and end-to-end encryption for DMs.
-
-**[Try it](https://gratonite.chat/app)** | **[Self-Host](https://gratonite.chat/deploy)** | **[Download](https://gratonite.chat/download)** | **[How Federation Works](https://gratonite.chat/federation)**
+Gratonite is a community platform for people who want control over their online spaces. Text, voice, video, threads, bots, moderation — plus federation so independent instances can communicate, a relay network for NAT traversal, and end-to-end encryption for DMs.
 
 ### Self-Host in One Command
 
@@ -161,39 +173,9 @@ Or download the [Gratonite Server](https://github.com/CoodayeA/Gratonite/release
 - Message components (buttons, select menus)
 - Webhooks with delivery logs and auditing
 - OAuth2 authorization flow
-- Stripe payment integration
 - Referral system
 
-### Security
-- JWT authentication with refresh tokens
-- Argon2id password hashing
-- TOTP-based two-factor authentication
-- HTTP security headers (Helmet.js: HSTS, CSP, X-Frame-Options)
-- 6 configurable rate limiters (auth, API, global, etc.)
-- Zod request validation on all endpoints
-- File upload validation (MIME type + magic bytes)
-- CORS configuration
-- Federation HTTP signatures (Ed25519)
-- SSRF protection on federation handshake
-
 ---
-
-## Repository Layout
-
-```
-apps/
-  api/       Express + TypeScript backend (PostgreSQL, Redis, Socket.IO, LiveKit)
-  web/       React + Vite web client
-  mobile/    Expo / React Native (iOS + Android)
-  desktop/   Electron chat client
-  server/    Tauri self-hosting app (Gratonite Server — manages Docker containers)
-  landing/   Next.js marketing site
-  relay/     Standalone federation relay server
-deploy/      Docker Compose, Caddyfile, installer script, self-host configs
-docs/        Self-hosting, relay operator, and federation protocol guides
-packages/    Shared TypeScript types
-tools/       Release verification scripts
-```
 
 ## Tech Stack
 
@@ -218,6 +200,25 @@ tools/       Release verification scripts
 | Email | Nodemailer |
 | Landing | Next.js |
 | Deploy | Docker Compose, Caddy, GitHub Actions |
+
+---
+
+## Repository Layout
+
+```
+apps/
+  api/       Express + TypeScript backend (PostgreSQL, Redis, Socket.IO, LiveKit)
+  web/       React + Vite web client
+  mobile/    Expo / React Native (iOS + Android)
+  desktop/   Electron chat client
+  server/    Tauri self-hosting app (Gratonite Server — manages Docker containers)
+  landing/   Next.js marketing site
+  relay/     Standalone federation relay server
+deploy/      Docker Compose, Caddyfile, installer script, self-host configs
+docs/        Self-hosting, relay operator, and federation protocol guides
+packages/    Shared TypeScript types
+tools/       Release verification scripts
+```
 
 ---
 
@@ -256,7 +257,7 @@ npm run dev
 ```bash
 curl -fsSL https://gratonite.chat/install | bash
 ```
-The installer asks one question (local or server), then handles everything: Docker setup, secret generation, TLS certificates, federation. Works on Mac, Linux, Windows (WSL).
+The installer handles everything: Docker setup, secret generation, TLS certificates, federation. Works on Mac, Linux, Windows (WSL).
 
 **Option B: Desktop app** — [Download Gratonite Server](https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.0)
 Double-click to run. No terminal needed. Available for macOS (.dmg), Windows (.exe/.msi), and Linux (.deb/.rpm/.AppImage).
@@ -395,7 +396,7 @@ docker compose -f deploy/self-host/docker-compose.yml cp api:/app/uploads ./uplo
 
 ---
 
-## Why Gratonite
+## Why Gratonite?
 
 - No phone number required to join
 - No ad-driven engagement loops
@@ -404,6 +405,18 @@ docker compose -f deploy/self-host/docker-compose.yml cp api:/app/uploads ./uplo
 - Fully open source and self-hostable
 - Federation connects independent instances into one network
 - Relay network works behind NAT — no port forwarding needed
+
+---
+
+## Contributing
+
+Contributions are welcome! Please open an issue to discuss your idea before submitting a pull request. See the [development setup](#development) above to get started locally.
+
+## Security
+
+If you discover a security vulnerability, please report it responsibly. Email **security@gratonite.chat** with details — do not open a public issue. We aim to acknowledge reports within 48 hours.
+
+---
 
 ## Links
 
@@ -417,4 +430,4 @@ docker compose -f deploy/self-host/docker-compose.yml cp api:/app/uploads ./uplo
 
 ## License
 
-Open source. See [LICENSE](LICENSE) for details.
+[AGPL-3.0](LICENSE) — free to use, modify, and self-host. Network use counts as distribution.
