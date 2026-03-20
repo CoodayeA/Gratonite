@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../lib/jwt';
+import * as Sentry from '@sentry/node';
 
 // Augment Express Request to carry userId
 declare global {
@@ -23,6 +24,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   try {
     const { userId } = verifyAccessToken(token);
     req.userId = userId;
+    Sentry.setUser({ id: userId });
     next();
   } catch {
     res.status(401).json({ code: 'UNAUTHORIZED', message: 'Invalid or expired token' });

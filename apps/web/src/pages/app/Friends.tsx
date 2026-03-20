@@ -278,11 +278,15 @@ const Friends = () => {
             setAddFriendInput('');
             fetchRelationships();
         } catch (err) {
-            if (err instanceof ApiRequestError && err.code === 'CONFLICT') {
-                const msg = err.message.includes('already friends')
-                    ? 'You are already friends with this user.'
-                    : 'A friend request is already pending.';
-                addToast({ title: 'Already connected', description: msg, variant: 'info' });
+            if (err instanceof ApiRequestError) {
+                if (err.code === 'CONFLICT') {
+                    const msg = err.message.includes('already friends')
+                        ? 'You are already friends with this user.'
+                        : 'A friend request is already pending.';
+                    addToast({ title: 'Already connected', description: msg, variant: 'info' });
+                } else {
+                    addToast({ title: 'Failed', description: err.message || 'Could not send friend request.', variant: 'error' });
+                }
             } else {
                 addToast({ title: 'Failed', description: 'Could not send friend request.', variant: 'error' });
             }
