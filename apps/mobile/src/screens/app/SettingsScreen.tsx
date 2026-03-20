@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
+import * as Updates from 'expo-updates';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme, useGlass } from '../../lib/theme';
@@ -221,6 +222,10 @@ export default function SettingsScreen({ navigation }: Props) {
           <Text style={styles.logoutText}>Log Out</Text>
         </PressableScale>
       </SectionCard>
+
+      <Text style={{ textAlign: 'center', color: colors.textMuted, fontSize: fontSize.xs, marginBottom: spacing.xxxl }}>
+        Build {Updates.updateId?.slice(0, 8) || 'embedded'} • OTA v3
+      </Text>
     </ScrollView>
     </PatternBackground>
   );
