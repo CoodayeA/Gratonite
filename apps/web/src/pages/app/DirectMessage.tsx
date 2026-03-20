@@ -713,6 +713,7 @@ const DirectMessage = () => {
             isEncrypted: m.isEncrypted ?? false,
             encryptedContent: m.encryptedContent ?? null,
             threadReplyCount: m.threadReplyCount ?? 0,
+            attachments: m.attachments ?? undefined,
         };
     };
 
@@ -862,6 +863,7 @@ const DirectMessage = () => {
                 createdAt: data.createdAt ?? null,
                 isEncrypted: isEncryptedMsg,
                 encryptedContent: encryptedContent,
+                attachments: (data as any).attachments ?? undefined,
             }]);
             // Auto-mark read when message arrives and window is focused/visible
             if (!document.hidden && document.hasFocus()) {
