@@ -52,7 +52,7 @@ export default function DeployPage() {
       <div className="max-w-4xl mx-auto px-6 py-20">
         <ScrollReveal>
           <div className="text-center mb-16">
-            <Badge variant="purple" className="mb-4">
+            <Badge color="purple" className="mb-4">
               Self-Hosting
             </Badge>
             <h1 className="text-4xl font-bold tracking-tight mb-4">
