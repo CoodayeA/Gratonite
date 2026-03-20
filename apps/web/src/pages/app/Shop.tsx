@@ -8,6 +8,7 @@ import { api } from '../../lib/api';
 import { applyEquippedItem } from '../../lib/cosmetics';
 import { useUser } from '../../contexts/UserContext';
 import Avatar from '../../components/ui/Avatar';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 type ViewType = 'frames' | 'decorations' | 'effects' | 'nameplates';
 
@@ -72,6 +73,7 @@ const Shop = () => {
     const navigate = useNavigate();
     const { addToast } = useToast();
     const { user } = useUser();
+    const isMobile = useIsMobile();
     const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
     const [purchaseState, setPurchaseState] = useState<'idle' | 'confirming' | 'processing' | 'success' | 'insufficient'>('idle');
     const [isLoading, setIsLoading] = useState(true);
@@ -286,7 +288,7 @@ const Shop = () => {
     const bundleDiscounted = Math.floor(bundleTotal * (1 - bundleDiscount / 100));
 
     return (
-        <div style={{ flex: 1, padding: '32px 48px', overflowY: 'auto', background: 'var(--bg-primary)', position: 'relative' }}>
+        <div style={{ flex: 1, padding: isMobile ? '16px 12px' : '32px 48px', overflowY: 'auto', background: 'var(--bg-primary)', position: 'relative' }}>
             <style>{`
                 @keyframes shop-rainbow-spin { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
                 @keyframes shop-pulse-glow { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.04); } }
@@ -297,30 +299,30 @@ const Shop = () => {
                 @keyframes shop-aurora-shift { 0%, 100% { transform: translateY(0) scaleX(1); opacity: 0.5; } 50% { transform: translateY(-8px) scaleX(1.1); opacity: 0.8; } }
             `}</style>
             <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '48px' }}>
+                <header style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '16px' : undefined, marginBottom: isMobile ? '24px' : '48px' }}>
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-primary)', marginBottom: '8px' }}>
-                            <ShoppingBag size={24} />
-                            <h1 style={{ fontSize: '24px', fontWeight: 600, fontFamily: 'var(--font-display)' }}>Cosmetics Shop</h1>
+                            <ShoppingBag size={isMobile ? 20 : 24} />
+                            <h1 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 600, fontFamily: 'var(--font-display)' }}>Cosmetics Shop</h1>
                         </div>
-                        <p style={{ color: 'var(--text-secondary)' }}>Spend your Gratonite gems on exclusive profile customizations.</p>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: isMobile ? '13px' : undefined }}>Spend your Gratonite gems on exclusive profile customizations.</p>
                     </div>
 
-                    <div style={{ background: 'var(--bg-tertiary)', padding: '12px 24px', borderRadius: '12px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ background: 'var(--bg-tertiary)', padding: isMobile ? '10px 16px' : '12px 24px', borderRadius: '12px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <Gem size={20} color="#10b981" />
-                        <span style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{gratoniteBalance.toLocaleString()}</span>
-                        <MagneticButton onClick={() => navigate('/gratonite')} style={{ background: 'var(--accent-primary)', border: 'none', padding: '6px 12px', borderRadius: '6px', color: 'white', fontWeight: 600, marginLeft: '12px', cursor: 'pointer', zIndex: 10 }}>Get More</MagneticButton>
+                        <span style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{gratoniteBalance.toLocaleString()}</span>
+                        <MagneticButton onClick={() => navigate('/gratonite')} style={{ background: 'var(--accent-primary)', border: 'none', padding: '6px 12px', borderRadius: '6px', color: 'white', fontWeight: 600, marginLeft: 'auto', cursor: 'pointer', zIndex: 10, whiteSpace: 'nowrap' }}>Get More</MagneticButton>
                     </div>
                 </header>
 
                 {/* Featured Section */}
-                <div style={{ background: 'linear-gradient(135deg, rgba(82, 109, 245, 0.1), rgba(217, 70, 239, 0.1))', padding: '32px', borderRadius: '16px', border: '1px solid var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '48px' }}>
+                <div style={{ background: 'linear-gradient(135deg, rgba(82, 109, 245, 0.1), rgba(217, 70, 239, 0.1))', padding: isMobile ? '20px' : '32px', borderRadius: '16px', border: '1px solid var(--accent-primary)', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'space-between', marginBottom: isMobile ? '24px' : '48px', gap: isMobile ? '20px' : undefined }}>
                     <div>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'var(--accent-primary)', color: 'white', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', marginBottom: '12px' }}>
                             <Sparkles size={14} /> New Arrival
                         </div>
-                        <h2 style={{ fontSize: '32px', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: '8px' }}>Astral Projection Bundle</h2>
-                        <p style={{ color: 'var(--text-secondary)', maxWidth: '400px', marginBottom: '24px' }}>Includes Prismatic Arc frame, Aurora Borealis effect, Cherry Blossom decoration, and Liquid Chrome profile effect.</p>
+                        <h2 style={{ fontSize: isMobile ? '22px' : '32px', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: '8px' }}>Astral Projection Bundle</h2>
+                        <p style={{ color: 'var(--text-secondary)', maxWidth: '400px', marginBottom: isMobile ? '16px' : '24px', fontSize: isMobile ? '13px' : undefined }}>Includes Prismatic Arc frame, Aurora Borealis effect, Cherry Blossom decoration, and Liquid Chrome profile effect.</p>
                         <MagneticButton className="auth-button" onClick={() => {
                             setShowBundleItems(prev => !prev);
                             if (!showBundleItems) {
@@ -330,7 +332,7 @@ const Shop = () => {
                             {showBundleItems ? 'Hide Bundle' : 'View Bundle'} <ArrowRight size={18} style={{ transform: showBundleItems ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
                         </MagneticButton>
                     </div>
-                    <div style={{ width: '200px', height: '200px', borderRadius: '50%', background: 'linear-gradient(45deg, #6366f1, #d946ef)', border: '8px solid var(--bg-elevated)', boxShadow: '0 0 40px rgba(217, 70, 239, 0.4)' }}></div>
+                    {!isMobile && <div style={{ width: '200px', height: '200px', borderRadius: '50%', background: 'linear-gradient(45deg, #6366f1, #d946ef)', border: '8px solid var(--bg-elevated)', boxShadow: '0 0 40px rgba(217, 70, 239, 0.4)' }}></div>}
                 </div>
 
                 {/* Bundle Items Panel */}

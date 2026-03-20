@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { getSocket } from '../../lib/socket';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { Search, UserPlus, MoreVertical, MessageSquare, X, UserMinus, VolumeX, Flag, Phone, Video, User, Gamepad2, Headphones, Eye, ChevronDown, ChevronRight, FolderPlus, Pencil, Trash2, Palette } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { api, ApiRequestError } from '../../lib/api';
@@ -67,6 +68,7 @@ interface Friend {
 const Friends = () => {
     const navigate = useNavigate();
     const { addToast } = useToast();
+    const isMobile = useIsMobile();
     const [activeTab, setActiveTab] = useState<'online' | 'all' | 'pending' | 'activity' | 'add'>('online');
     const [searchQuery, setSearchQuery] = useState('');
     const [moreMenuId, setMoreMenuId] = useState<string | null>(null);
@@ -612,21 +614,21 @@ const Friends = () => {
                         background: selectedFriend?.id === friend.id ? 'var(--bg-tertiary)' : 'transparent',
                     }}
                 >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '16px', minWidth: 0, flex: 1 }}>
                         <Avatar
                             userId={friend.id}
                             displayName={friend.displayName}
-                            size={40}
+                            size={isMobile ? 36 : 40}
                             status={friend.status}
                             statusRingColor="var(--bg-primary)"
                             avatarHash={friend.avatarHash}
                         />
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                <span style={{ fontWeight: 600, fontSize: '15px' }}>{friend.displayName}</span>
-                                <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{friend.username}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', minWidth: 0 }}>
+                                <span style={{ fontWeight: 600, fontSize: isMobile ? '14px' : '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{friend.displayName}</span>
+                                <span style={{ color: 'var(--text-muted)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>{friend.username}</span>
                             </div>
-                            <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {friend.customStatus || (friend.status === 'dnd' ? 'Do Not Disturb' : friend.status.charAt(0).toUpperCase() + friend.status.slice(1))}
                             </span>
                             {friend.activity && (
@@ -635,40 +637,44 @@ const Friends = () => {
                         </div>
                     </div>
 
-                    <div className="friend-actions" style={{ display: 'flex', gap: '8px', position: 'relative' }}>
-                        <button onClick={() => handleOpenDm(friend.id, friend.displayName)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} title="Message">
-                            <MessageSquare size={18} />
+                    <div className="friend-actions" style={{ display: 'flex', gap: isMobile ? '4px' : '8px', position: 'relative', flexShrink: 0 }}>
+                        <button onClick={() => handleOpenDm(friend.id, friend.displayName)} style={{ width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} title="Message">
+                            <MessageSquare size={isMobile ? 16 : 18} />
                         </button>
-                        <button
-                            onClick={async () => {
-                                try {
-                                    const dm = await api.relationships.openDm(friend.id);
-                                    navigate(`/dm/${dm.id}?call=voice`);
-                                } catch {
-                                    addToast({ title: 'Failed to start call', variant: 'error' });
-                                }
-                            }}
-                            style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
-                            title="Voice Call"
-                        >
-                            <Phone size={18} />
-                        </button>
-                        <button
-                            onClick={async () => {
-                                try {
-                                    const dm = await api.relationships.openDm(friend.id);
-                                    navigate(`/dm/${dm.id}?call=video`);
-                                } catch {
-                                    addToast({ title: 'Failed to start call', variant: 'error' });
-                                }
-                            }}
-                            style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
-                            title="Video Call"
-                        >
-                            <Video size={18} />
-                        </button>
-                        <button onClick={() => setMoreMenuId(moreMenuId === friend.id ? null : friend.id)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: moreMenuId === friend.id ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: 'none', color: moreMenuId === friend.id ? '#000' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} title="More">
-                            <MoreVertical size={18} />
+                        {!isMobile && (
+                            <>
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const dm = await api.relationships.openDm(friend.id);
+                                            navigate(`/dm/${dm.id}?call=voice`);
+                                        } catch {
+                                            addToast({ title: 'Failed to start call', variant: 'error' });
+                                        }
+                                    }}
+                                    style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    title="Voice Call"
+                                >
+                                    <Phone size={18} />
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const dm = await api.relationships.openDm(friend.id);
+                                            navigate(`/dm/${dm.id}?call=video`);
+                                        } catch {
+                                            addToast({ title: 'Failed to start call', variant: 'error' });
+                                        }
+                                    }}
+                                    style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    title="Video Call"
+                                >
+                                    <Video size={18} />
+                                </button>
+                            </>
+                        )}
+                        <button onClick={() => setMoreMenuId(moreMenuId === friend.id ? null : friend.id)} style={{ width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', borderRadius: '50%', background: moreMenuId === friend.id ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: 'none', color: moreMenuId === friend.id ? '#000' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} title="More">
+                            <MoreVertical size={isMobile ? 16 : 18} />
                         </button>
                         {moreMenuId === friend.id && (
                             <div style={{ position: 'absolute', top: '42px', right: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '4px', minWidth: '160px', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
@@ -692,27 +698,30 @@ const Friends = () => {
     return (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', height: '100%' }}>
             {/* Header */}
-            <header style={{ height: '60px', borderBottom: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', padding: '0 24px', gap: '24px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontWeight: 600 }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                    <span>Friends</span>
-                </div>
+            <header style={{ height: '60px', borderBottom: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', padding: isMobile ? '0 12px' : '0 24px', gap: isMobile ? '12px' : '24px' }}>
+                {!isMobile && (
+                    <>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontWeight: 600 }}>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                            <span>Friends</span>
+                        </div>
+                        <div style={{ width: '1px', height: '24px', background: 'var(--stroke)' }}></div>
+                    </>
+                )}
 
-                <div style={{ width: '1px', height: '24px', background: 'var(--stroke)' }}></div>
-
-                <div style={{ display: 'flex', gap: '16px' }}>
-                    <button className={activeTab === 'online' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('online')} style={{ background: activeTab === 'online' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', padding: '6px 12px', borderRadius: '4px', color: activeTab === 'online' ? 'white' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500 }}>Online</button>
-                    <button className={activeTab === 'all' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('all')} style={{ background: activeTab === 'all' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', padding: '6px 12px', borderRadius: '4px', color: activeTab === 'all' ? 'white' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500 }}>All</button>
-                    <button className={activeTab === 'pending' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('pending')} style={{ background: activeTab === 'pending' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', padding: '6px 12px', borderRadius: '4px', color: activeTab === 'pending' ? 'white' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500 }}>Pending {requests.length > 0 && <span style={{ background: 'var(--error)', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '10px', marginLeft: '4px' }}>{requests.length}</span>}</button>
-                    <button className={activeTab === 'activity' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('activity')} style={{ background: activeTab === 'activity' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', padding: '6px 12px', borderRadius: '4px', color: activeTab === 'activity' ? 'white' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500 }}>Activity</button>
-                    <button className={activeTab === 'add' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('add')} style={{ background: activeTab === 'add' ? 'rgba(16, 185, 129, 0.2)' : 'var(--success)', border: 'none', padding: '6px 12px', borderRadius: '4px', color: activeTab === 'add' ? 'var(--success)' : 'white', cursor: 'pointer', fontWeight: 500 }}>Add Friend</button>
+                <div style={{ display: 'flex', gap: isMobile ? '6px' : '16px', overflowX: isMobile ? 'auto' : undefined, whiteSpace: isMobile ? 'nowrap' : undefined, scrollbarWidth: 'none', flex: isMobile ? 1 : undefined } as React.CSSProperties}>
+                    <button className={activeTab === 'online' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('online')} style={{ background: activeTab === 'online' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', padding: isMobile ? '6px 10px' : '6px 12px', borderRadius: '4px', color: activeTab === 'online' ? 'white' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500, fontSize: isMobile ? '13px' : undefined, flexShrink: 0 }}>Online</button>
+                    <button className={activeTab === 'all' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('all')} style={{ background: activeTab === 'all' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', padding: isMobile ? '6px 10px' : '6px 12px', borderRadius: '4px', color: activeTab === 'all' ? 'white' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500, fontSize: isMobile ? '13px' : undefined, flexShrink: 0 }}>All</button>
+                    <button className={activeTab === 'pending' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('pending')} style={{ background: activeTab === 'pending' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', padding: isMobile ? '6px 10px' : '6px 12px', borderRadius: '4px', color: activeTab === 'pending' ? 'white' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500, fontSize: isMobile ? '13px' : undefined, flexShrink: 0 }}>Pending {requests.length > 0 && <span style={{ background: 'var(--error)', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '10px', marginLeft: '4px' }}>{requests.length}</span>}</button>
+                    <button className={activeTab === 'activity' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('activity')} style={{ background: activeTab === 'activity' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', padding: isMobile ? '6px 10px' : '6px 12px', borderRadius: '4px', color: activeTab === 'activity' ? 'white' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500, fontSize: isMobile ? '13px' : undefined, flexShrink: 0 }}>Activity</button>
+                    <button className={activeTab === 'add' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('add')} style={{ background: activeTab === 'add' ? 'rgba(16, 185, 129, 0.2)' : 'var(--success)', border: 'none', padding: isMobile ? '6px 10px' : '6px 12px', borderRadius: '4px', color: activeTab === 'add' ? 'var(--success)' : 'white', cursor: 'pointer', fontWeight: 500, fontSize: isMobile ? '13px' : undefined, flexShrink: 0 }}>Add Friend</button>
                 </div>
             </header>
 
             {/* Main body: content + optional detail panel */}
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
                 {/* Content Area */}
-                <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto' }}>
+                <div style={{ flex: 1, padding: isMobile ? '16px 12px' : '24px 32px', overflowY: 'auto' }}>
                     {isLoading ? (
                         <SkeletonFriendList count={6} />
                     ) : fetchError ? (
@@ -782,25 +791,25 @@ const Friends = () => {
                                             opacity: draggedFriendId === friend.id ? 0.5 : 1,
                                         }}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                            <Avatar userId={friend.id} displayName={friend.displayName} size={40} status={friend.status} statusRingColor="var(--bg-primary)" avatarHash={friend.avatarHash} />
-                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                                    <span style={{ fontWeight: 600, fontSize: '15px' }}>{friend.displayName}</span>
-                                                    <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{friend.username}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '16px', minWidth: 0, flex: 1 }}>
+                                            <Avatar userId={friend.id} displayName={friend.displayName} size={isMobile ? 36 : 40} status={friend.status} statusRingColor="var(--bg-primary)" avatarHash={friend.avatarHash} />
+                                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', minWidth: 0 }}>
+                                                    <span style={{ fontWeight: 600, fontSize: isMobile ? '14px' : '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{friend.displayName}</span>
+                                                    <span style={{ color: 'var(--text-muted)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>{friend.username}</span>
                                                 </div>
-                                                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                                <span style={{ color: 'var(--text-secondary)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                     {friend.customStatus || (friend.status === 'dnd' ? 'Do Not Disturb' : friend.status.charAt(0).toUpperCase() + friend.status.slice(1))}
                                                 </span>
                                                 {friend.activity && <ActivityCard activity={friend.activity} compact />}
                                             </div>
                                         </div>
-                                        <div className="friend-actions" style={{ display: 'flex', gap: '8px', position: 'relative' }}>
-                                            <button onClick={() => handleOpenDm(friend.id, friend.displayName)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} title="Message">
-                                                <MessageSquare size={18} />
+                                        <div className="friend-actions" style={{ display: 'flex', gap: isMobile ? '4px' : '8px', position: 'relative', flexShrink: 0 }}>
+                                            <button onClick={() => handleOpenDm(friend.id, friend.displayName)} style={{ width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} title="Message">
+                                                <MessageSquare size={isMobile ? 16 : 18} />
                                             </button>
-                                            <button onClick={() => setMoreMenuId(moreMenuId === friend.id ? null : friend.id)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: moreMenuId === friend.id ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: 'none', color: moreMenuId === friend.id ? '#000' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} title="More">
-                                                <MoreVertical size={18} />
+                                            <button onClick={() => setMoreMenuId(moreMenuId === friend.id ? null : friend.id)} style={{ width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', borderRadius: '50%', background: moreMenuId === friend.id ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: 'none', color: moreMenuId === friend.id ? '#000' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} title="More">
+                                                <MoreVertical size={isMobile ? 16 : 18} />
                                             </button>
                                             {moreMenuId === friend.id && (
                                                 <div style={{ position: 'absolute', top: '42px', right: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '4px', minWidth: '180px', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
@@ -1074,25 +1083,25 @@ const Friends = () => {
                                         padding: '12px 16px', borderRadius: '8px', cursor: 'pointer',
                                         transition: 'background 0.2s'
                                     }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '16px', minWidth: 0, flex: 1 }}>
                                             <Avatar
                                                 userId={req.id}
                                                 displayName={req.displayName}
                                                 avatarHash={req.avatarHash}
-                                                size={40}
+                                                size={isMobile ? 36 : 40}
                                             />
-                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                                    <span className={req.nameplateStyle && req.nameplateStyle !== 'none' ? `nameplate-${req.nameplateStyle}` : undefined} style={{ fontWeight: 600, fontSize: '15px' }}>{req.displayName}</span>
-                                                    <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{req.username}</span>
+                                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', minWidth: 0 }}>
+                                                    <span className={req.nameplateStyle && req.nameplateStyle !== 'none' ? `nameplate-${req.nameplateStyle}` : undefined} style={{ fontWeight: 600, fontSize: isMobile ? '14px' : '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{req.displayName}</span>
+                                                    <span style={{ color: 'var(--text-muted)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>{req.username}</span>
                                                 </div>
-                                                <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                                <span style={{ color: 'var(--text-secondary)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                     {req.type === 'incoming' ? 'Incoming Friend Request' : 'Outgoing Friend Request'}
                                                 </span>
                                             </div>
                                         </div>
 
-                                        <div className="friend-actions" style={{ display: 'flex', gap: '8px' }}>
+                                        <div className="friend-actions" style={{ display: 'flex', gap: isMobile ? '4px' : '8px', flexShrink: 0 }}>
                                             {req.type === 'incoming' && (
                                                 <button onClick={() => handleAcceptRequest(req.id, req.displayName)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Accept">
                                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
