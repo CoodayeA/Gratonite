@@ -8,7 +8,15 @@ A privacy-first, open-source alternative to Discord. Real-time chat, voice, vide
 
 Gratonite is a community platform built for people who want control over their online spaces. It's everything you'd expect from a modern chat app — text, voice, video, threads, bots, moderation — plus federation so independent instances can talk to each other, a relay network for NAT traversal, and end-to-end encryption for DMs.
 
-**[Try it](https://gratonite.chat/app)** | **[Self-Host](https://gratonite.chat/docs/self-hosting)** | **[Download](https://gratonite.chat/download)**
+**[Try it](https://gratonite.chat/app)** | **[Self-Host](https://gratonite.chat/deploy)** | **[Download](https://gratonite.chat/download)** | **[How Federation Works](https://gratonite.chat/federation)**
+
+### Self-Host in One Command
+
+```bash
+curl -fsSL https://gratonite.chat/install | bash
+```
+
+Or download the [Gratonite Server](https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.0) desktop app — one click, no terminal needed. Available for macOS, Windows, and Linux.
 
 ## At a Glance
 
@@ -177,10 +185,11 @@ apps/
   api/       Express + TypeScript backend (PostgreSQL, Redis, Socket.IO, LiveKit)
   web/       React + Vite web client
   mobile/    Expo / React Native (iOS + Android)
-  desktop/   Electron wrapper
+  desktop/   Electron chat client
+  server/    Tauri self-hosting app (Gratonite Server — manages Docker containers)
   landing/   Next.js marketing site
   relay/     Standalone federation relay server
-deploy/      Docker Compose, Caddyfile, self-host configs
+deploy/      Docker Compose, Caddyfile, installer script, self-host configs
 docs/        Self-hosting, relay operator, and federation protocol guides
 packages/    Shared TypeScript types
 tools/       Release verification scripts
@@ -192,7 +201,8 @@ tools/       Release verification scripts
 |---|---|
 | Frontend | React 18, TypeScript, Vite, Framer Motion |
 | Mobile | Expo, React Native |
-| Desktop | Electron |
+| Desktop (Chat) | Electron |
+| Desktop (Server) | Tauri v2, Rust, bollard (Docker API) |
 | Backend | Node.js, Express 5, TypeScript |
 | Database | PostgreSQL, Drizzle ORM (140 tables) |
 | Cache | Redis (IoRedis) |
@@ -240,41 +250,32 @@ npm install
 npm run dev
 ```
 
-### Self-Hosting (5 Minutes)
+### Self-Hosting
 
+**Option A: One-click installer** (recommended)
 ```bash
-git clone https://github.com/CoodayeA/Gratonite.git
-cd Gratonite/deploy/self-host
-cp .env.example .env
-nano .env               # set INSTANCE_DOMAIN, DB_PASSWORD, ADMIN_EMAIL, ADMIN_PASSWORD
+curl -fsSL https://gratonite.chat/install | bash
+```
+The installer asks one question (local or server), then handles everything: Docker setup, secret generation, TLS certificates, federation. Works on Mac, Linux, Windows (WSL).
+
+**Option B: Desktop app** — [Download Gratonite Server](https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.0)
+Double-click to run. No terminal needed. Available for macOS (.dmg), Windows (.exe/.msi), and Linux (.deb/.rpm/.AppImage).
+
+**Option C: Manual setup**
+```bash
+cd deploy/self-host
+cp .env.example .env    # edit domain, password, etc.
 docker compose up -d
 ```
 
-Open `https://your-domain.com` and log in. That's it.
-
-**Behind NAT / no port forwarding?** Use Cloudflare Tunnel:
-```bash
-# Add to .env:
-CLOUDFLARE_TUNNEL_TOKEN=your-token
-# Start with tunnel profile:
-docker compose --profile tunnel up -d
-```
-
-**Enable federation** to connect with other instances:
-```bash
-# Add to .env:
-FEDERATION_ENABLED=true
-RELAY_ENABLED=true      # for relay network (NAT traversal)
-# Restart:
-docker compose restart api
-```
+**Federation is on by default** — your instance connects to the relay network automatically. No ports to open, works behind NAT. Your guilds appear in Discover after 48 hours.
 
 **Enable voice/video** with LiveKit:
 ```bash
 docker compose --profile voice up -d
 ```
 
-Full guide: [docs/self-hosting/README.md](docs/self-hosting/README.md)
+Full guide: [docs/self-hosting.md](docs/self-hosting.md) | Deploy page: [gratonite.chat/deploy](https://gratonite.chat/deploy)
 
 ### Running a Relay Node
 
@@ -407,9 +408,10 @@ docker compose -f deploy/self-host/docker-compose.yml cp api:/app/uploads ./uplo
 ## Links
 
 - Website: [gratonite.chat](https://gratonite.chat)
-- Self-Hosting Guide: [docs/self-hosting](docs/self-hosting/README.md)
+- Self-Host: [gratonite.chat/deploy](https://gratonite.chat/deploy) | [Installer](https://gratonite.chat/install) | [Desktop App](https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.0)
+- Federation: [gratonite.chat/federation](https://gratonite.chat/federation)
+- Self-Hosting Docs: [docs/self-hosting.md](docs/self-hosting.md)
 - Relay Operator Guide: [docs/relay](docs/relay/README.md)
-- Federation Protocol: [docs/federation](docs/federation/README.md)
 - Repository: [CoodayeA/Gratonite](https://github.com/CoodayeA/Gratonite)
 - Organization: [Gratonite-Labs](https://github.com/Gratonite-Labs)
 
