@@ -1825,6 +1825,7 @@ const SettingsModal = ({
 // Notifications Panel (push + email prefs) — Items 22 & 23
 // ---------------------------------------------------------------------------
 function SettingsNotificationsPanel() {
+    const { addToast } = useToast();
     const [pushEnabled, setPushEnabled] = useState(false);
     const [pushSupported] = useState(() => 'serviceWorker' in navigator && 'PushManager' in window);
     const [emailPrefs, setEmailPrefs] = useState<{ mentions: boolean; dms: boolean; frequency: 'instant' | 'daily' | 'never' }>({ mentions: true, dms: true, frequency: 'daily' });
