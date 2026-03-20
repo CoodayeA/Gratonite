@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Relay Operator Guide — Gratonite',
+  title: 'Relay Operator Guide | Gratonite',
   description: 'Run a Gratonite relay node to help the federation network. Lightweight, easy to deploy.',
 };
 
@@ -19,7 +19,7 @@ export default function RelayDocs() {
             <h2 className="text-2xl font-bold mb-4">What is a Relay?</h2>
             <p className="text-gray-300 leading-relaxed">
               A relay routes encrypted messages between Gratonite instances that can&apos;t reach each other directly
-              (e.g., servers behind NAT). The relay <strong>never reads message content</strong> — it only sees
+              (e.g., servers behind NAT). The relay <strong>never reads message content</strong>. It only sees
               encrypted envelopes and forwards them.
             </p>
           </div>

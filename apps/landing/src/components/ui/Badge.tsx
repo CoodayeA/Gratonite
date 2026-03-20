@@ -21,7 +21,7 @@ export function Badge({
 }: BadgeProps) {
   return (
     <span
-      className={`inline-block px-3 py-1 text-sm font-bold rounded-md neo-border-2 neo-shadow-sm ${
+      className={`inline-block px-4 py-1.5 text-base font-bold rounded-md neo-border-2 neo-shadow-sm ${
         colorStyles[color]
       } ${rotate ? "tilt-2" : ""} ${className}`}
     >

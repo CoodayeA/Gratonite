@@ -30,7 +30,7 @@ const platforms = [
   {
     icon: "⊞",
     name: "Windows (x64)",
-    description: "Windows installer — NSIS setup, installs like any app.",
+    description: "Windows installer. NSIS setup, installs like any app.",
     format: ".exe",
     accent: "blue" as const,
     href: "https://gratonite.chat/downloads/Gratonite%20Setup%201.0.4.exe",

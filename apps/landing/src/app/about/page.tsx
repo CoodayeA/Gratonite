@@ -77,7 +77,7 @@ export default function AboutPage() {
             <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6">
               Built by friends,
               <br />
-              <span className="bg-yellow px-3 -mx-1 inline-block tilt-2">
+              <span className="bg-yellow text-black px-3 -mx-1 inline-block tilt-2">
                 for friends.
               </span>
             </h1>
@@ -164,7 +164,7 @@ export default function AboutPage() {
             <blockquote className="font-display text-3xl sm:text-4xl font-bold leading-tight max-w-3xl mx-auto">
               {'"Software for friendship should feel like friendship."'}
             </blockquote>
-            <p className="mt-6 text-white/50">— Cody Alexander, building Gratonite</p>
+            <p className="mt-6 text-white/50">Cody Alexander, building Gratonite</p>
           </div>
         </ScrollReveal>
       </div>
