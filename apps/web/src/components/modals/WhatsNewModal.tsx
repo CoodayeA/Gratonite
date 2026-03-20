@@ -14,6 +14,17 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-03-20c',
+    date: 'March 20, 2026',
+    title: 'New Channel Types & Clips Gallery',
+    entries: [
+      { type: 'feature', text: 'Create Wiki, Q&A, Confession, Task Board (Kanban), Forum, and Announcement channels from server settings' },
+      { type: 'feature', text: 'Text reactions on messages — react with custom short text, not just emoji' },
+      { type: 'feature', text: 'Clips Gallery — browse and play all voice clips recorded in your server' },
+      { type: 'improvement', text: 'Channel creation dropdown now shows all 9 channel types instead of just Text and Voice' },
+    ],
+  },
+  {
     id: '2026-03-20b',
     date: 'March 20, 2026',
     title: 'Self-Host Your Own Gratonite',
