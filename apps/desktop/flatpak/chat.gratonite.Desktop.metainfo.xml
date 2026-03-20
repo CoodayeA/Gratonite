@@ -64,12 +64,12 @@
 
   <screenshots>
     <screenshot type="default">
-      <image>https://gratonite.chat/assets/screenshots/chat.png</image>
+      <image>https://gratonite.chat/app/assets/screenshots/chat.png</image>
       <caption>Chatting in a Gratonite server</caption>
     </screenshot>
     <screenshot>
-      <image>https://gratonite.chat/assets/screenshots/voice.png</image>
-      <caption>Voice channel with screen sharing</caption>
+      <image>https://gratonite.chat/app/assets/screenshots/voice.png</image>
+      <caption>Gratonite home dashboard</caption>
     </screenshot>
   </screenshots>
 </component>
