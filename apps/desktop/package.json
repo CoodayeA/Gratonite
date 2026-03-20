@@ -15,7 +15,6 @@
     "build:win": "electron-builder --win",
     "build:linux": "electron-builder --linux",
     "build:linux-tar": "electron-builder --linux tar.gz",
-    "build:flatpak": "cd flatpak && ./build-flatpak.sh",
     "build": "electron-builder --mac --win --linux",
     "test": "vitest run",
     "test:watch": "vitest"
