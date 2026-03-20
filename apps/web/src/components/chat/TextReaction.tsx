@@ -27,7 +27,10 @@ export default function TextReaction({ messageId, channelId, guildId, currentUse
   const [showInput, setShowInput] = useState(false);
   const [inputText, setInputText] = useState('');
   const [popular, setPopular] = useState<PopularReaction[]>([]);
+  const [hoveredReaction, setHoveredReaction] = useState<string | null>(null);
+  const [addBtnHovered, setAddBtnHovered] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadReactions();
@@ -39,6 +42,19 @@ export default function TextReaction({ messageId, channelId, guildId, currentUse
 
   useEffect(() => {
     if (showInput && inputRef.current) inputRef.current.focus();
+  }, [showInput]);
+
+  // Close input on outside click
+  useEffect(() => {
+    if (!showInput) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowInput(false);
+        setInputText('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, [showInput]);
 
   async function loadReactions() {
@@ -87,29 +103,47 @@ export default function TextReaction({ messageId, channelId, guildId, currentUse
     }
   }
 
+  // Don't render anything if no reactions and input not open — the + button shows via the message action bar
+  if (reactions.length === 0 && !showInput) return null;
+
   return (
-    <div className="flex flex-wrap items-center gap-1 mt-1">
+    <div ref={containerRef} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
       {reactions.map((group) => {
         const isMine = group.users.some(u => u.id === currentUserId);
+        const isHovered = hoveredReaction === group.text;
         return (
           <button
             key={group.text}
             onClick={() => handleReactionClick(group)}
-            title={group.users.map(u => u.displayName).join(', ')}
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition-colors ${
-              isMine
-                ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
-                : 'bg-zinc-700/50 text-zinc-300 hover:bg-zinc-600/50 border border-transparent'
-            }`}
+            onMouseEnter={() => setHoveredReaction(group.text)}
+            onMouseLeave={() => setHoveredReaction(null)}
+            title={group.users.map(u => u.displayName || u.username).join(', ')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '2px 8px',
+              borderRadius: '12px',
+              background: isMine
+                ? 'rgba(var(--accent-primary-rgb, 139,92,246), 0.15)'
+                : isHovered ? 'var(--bg-modifier-hover, rgba(255,255,255,0.06))' : 'var(--bg-tertiary)',
+              border: `1px solid ${isMine ? 'var(--accent-primary)' : 'var(--stroke)'}`,
+              cursor: 'pointer',
+              fontSize: '12px',
+              color: isMine ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              transition: 'all 0.15s',
+              fontWeight: 500,
+              lineHeight: '18px',
+            }}
           >
             <span>{group.text}</span>
-            <span className="text-zinc-400">{group.count}</span>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>{group.count}</span>
           </button>
         );
       })}
 
       {showInput ? (
-        <div className="relative">
+        <div style={{ position: 'relative' }}>
           <input
             ref={inputRef}
             value={inputText}
@@ -118,20 +152,54 @@ export default function TextReaction({ messageId, channelId, guildId, currentUse
               if (e.key === 'Enter') addReaction(inputText);
               if (e.key === 'Escape') { setShowInput(false); setInputText(''); }
             }}
-            placeholder="Type reaction..."
-            className="bg-zinc-800 text-zinc-100 text-xs rounded-full px-2 py-0.5 w-28 outline-none focus:ring-1 focus:ring-indigo-500"
+            placeholder="React..."
+            style={{
+              background: 'var(--bg-tertiary)',
+              color: 'var(--text-primary)',
+              fontSize: '12px',
+              borderRadius: '12px',
+              padding: '2px 10px',
+              width: '100px',
+              outline: 'none',
+              border: '1px solid var(--accent-primary)',
+              lineHeight: '18px',
+            }}
           />
           {popular.length > 0 && inputText === '' && (
-            <div className="absolute top-full mt-1 left-0 bg-zinc-800 rounded-lg border border-zinc-700 p-2 z-10 min-w-[140px]">
-              <div className="flex items-center gap-1 text-xs text-zinc-500 mb-1">
-                <TrendingUp className="w-3 h-3" />
+            <div style={{
+              position: 'absolute',
+              top: 'calc(100% + 4px)',
+              left: 0,
+              background: 'var(--bg-elevated, var(--bg-secondary))',
+              borderRadius: '8px',
+              border: '1px solid var(--stroke)',
+              padding: '6px',
+              zIndex: 50,
+              minWidth: '140px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', padding: '0 4px' }}>
+                <TrendingUp size={10} />
                 Popular
               </div>
               {popular.slice(0, 5).map((p) => (
                 <button
                   key={p.text}
                   onClick={() => addReaction(p.text)}
-                  className="block w-full text-left text-xs text-zinc-300 hover:bg-zinc-700 rounded px-2 py-1"
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    textAlign: 'left',
+                    fontSize: '12px',
+                    color: 'var(--text-secondary)',
+                    background: 'none',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '3px 6px',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-modifier-hover, rgba(255,255,255,0.06))')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
                 >
                   {p.text}
                 </button>
@@ -140,13 +208,30 @@ export default function TextReaction({ messageId, channelId, guildId, currentUse
           )}
         </div>
       ) : (
-        <button
-          onClick={() => setShowInput(true)}
-          className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-zinc-700/30 text-zinc-400 hover:bg-zinc-600/50 hover:text-zinc-200 transition-colors"
-          title="Add text reaction"
-        >
-          <Plus className="w-3 h-3" />
-        </button>
+        reactions.length > 0 && (
+          <button
+            onClick={() => setShowInput(true)}
+            onMouseEnter={() => setAddBtnHovered(true)}
+            onMouseLeave={() => setAddBtnHovered(false)}
+            title="Add text reaction"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '24px',
+              height: '22px',
+              borderRadius: '12px',
+              background: addBtnHovered ? 'var(--bg-modifier-hover, rgba(255,255,255,0.06))' : 'var(--bg-tertiary)',
+              border: '1px solid var(--stroke)',
+              cursor: 'pointer',
+              color: addBtnHovered ? 'var(--text-primary)' : 'var(--text-muted)',
+              transition: 'all 0.15s',
+              padding: 0,
+            }}
+          >
+            <Plus size={12} />
+          </button>
+        )
       )}
     </div>
   );
