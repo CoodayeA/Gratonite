@@ -551,6 +551,7 @@ export async function apiFetch<T = any>(
     clearTimeout(timeoutId);
     if (err instanceof Error && err.name === 'AbortError') {
       window.dispatchEvent(new CustomEvent('gratonite:request-timeout', { detail: { path } }));
+      window.Sentry?.addBreadcrumb?.({ category: 'api', message: `Timeout: ${options.method || 'GET'} ${path} (${timeoutMs / 1000}s)`, level: 'error' });
       throw new Error(`Request timed out after ${timeoutMs / 1000}s`);
     }
     throw err;
@@ -560,6 +561,7 @@ export async function apiFetch<T = any>(
   if (res.status === 429) {
     const retryAfter = Number(res.headers.get('Retry-After') ?? 5000);
     window.dispatchEvent(new CustomEvent('gratonite:rate-limited', { detail: { retryAfter } }));
+    window.Sentry?.addBreadcrumb?.({ category: 'api', message: `Rate limited: ${options.method || 'GET'} ${path}`, level: 'warning' });
     throw new RateLimitError(retryAfter);
   }
 
@@ -613,7 +615,9 @@ export async function apiFetch<T = any>(
   }
 
   if (!res.ok) {
-    throw new ApiRequestError(res.status, body as ApiError, requestId);
+    const apiErr = body as ApiError;
+    window.Sentry?.addBreadcrumb?.({ category: 'api', message: `${options.method || 'GET'} ${path} → ${res.status} ${apiErr.code}`, level: res.status >= 500 ? 'error' : 'warning', data: { status: res.status, code: apiErr.code, requestId } });
+    throw new ApiRequestError(res.status, apiErr, requestId);
   }
 
   return body as T;

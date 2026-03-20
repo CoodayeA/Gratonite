@@ -1,3 +1,4 @@
+import './instrument';               // Sentry must init before everything else
 import 'dotenv/config';
 import crypto from 'crypto';
 import express from 'express';
@@ -345,6 +346,12 @@ app.use('/admin/jobs', (req: express.Request, res: express.Response, next: expre
 // ---------------------------------------------------------------------------
 
 app.use('/api/v1', router);
+
+// ---------------------------------------------------------------------------
+// Sentry error handler (must be before custom error handler)
+// ---------------------------------------------------------------------------
+import * as Sentry from '@sentry/node';
+Sentry.setupExpressErrorHandler(app);
 
 // ---------------------------------------------------------------------------
 // Global error handler

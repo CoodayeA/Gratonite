@@ -14,6 +14,18 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-03-20a',
+    date: 'March 20, 2026',
+    title: 'Bug Reporting & Error Monitoring',
+    entries: [
+      { type: 'feature', text: 'Right-click anywhere to report a bug — no need to scroll to the bottom of the sidebar' },
+      { type: 'feature', text: 'Keyboard shortcut Ctrl+Shift+B (Cmd+Shift+B on Mac) opens the bug report instantly' },
+      { type: 'improvement', text: 'Redesigned bug report form — category pills, cleaner layout, drag-and-drop screenshots' },
+      { type: 'improvement', text: 'Bug reports now include session replay and error context so we can fix issues faster' },
+      { type: 'fix', text: 'Friend request errors now show the actual reason instead of a generic failure message' },
+    ],
+  },
+  {
     id: '2026-03-18e',
     date: 'March 18, 2026',
     title: 'Auth Redesign & Desktop Polish B',

@@ -1,5 +1,8 @@
+import "./instrument";               // Sentry must init before everything else
+
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import * as Sentry from '@sentry/react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import App from './App.tsx'
 import './index.css'
@@ -7,7 +10,6 @@ import './themes/overrides/theme-scrollbar.css'
 import './themes/overrides/theme-selection.css'
 import './themes/overrides/glass-optimization.css'
 import { ThemeProvider } from './components/ui/ThemeProvider'
-import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { queryClient } from './lib/queryClient'
 import { init as initErrorReporter } from './lib/errorReporter'
 
@@ -44,11 +46,11 @@ if (localStorage.getItem('gratonite:streamer-mode') === 'true') {
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-    <ErrorBoundary>
+    <Sentry.ErrorBoundary fallback={<p>Something went wrong</p>}>
         <QueryClientProvider client={queryClient}>
             <ThemeProvider>
                 <App />
             </ThemeProvider>
         </QueryClientProvider>
-    </ErrorBoundary>,
+    </Sentry.ErrorBoundary>,
 )
