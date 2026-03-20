@@ -53,6 +53,9 @@ const DailyChallenges = () => {
 
     useEffect(() => {
         fetchChallenges();
+        // Re-fetch every 30 seconds so progress updates are visible
+        const interval = setInterval(fetchChallenges, 30_000);
+        return () => clearInterval(interval);
     }, [fetchChallenges]);
 
     const handleClaim = async (challengeId: string) => {

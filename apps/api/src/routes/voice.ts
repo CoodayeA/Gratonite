@@ -29,6 +29,7 @@ import { redis } from '../lib/redis';
 import { desc } from 'drizzle-orm';
 import { safeJsonParse } from '../lib/safe-json.js';
 import { logger } from '../lib/logger';
+import { incrementChallengeProgress } from './daily-challenges';
 
 export const voiceRouter = Router();
 
@@ -287,6 +288,9 @@ voiceRouter.post(
     // Remove from any previous channel first
     await removeVoiceState(userId);
     await addVoiceState(voiceState);
+
+    // Daily challenge progress (fire-and-forget)
+    incrementChallengeProgress(userId, 'join_voice');
 
     // Broadcast VOICE_STATE_UPDATE so other clients can play join sounds / update UI
     try {
