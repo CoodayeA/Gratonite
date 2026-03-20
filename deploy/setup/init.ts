@@ -43,6 +43,12 @@ async function main() {
     envContent += `\nJWT_SECRET=${jwtSecret}\nJWT_REFRESH_SECRET=${jwtRefreshSecret}\n`;
   }
 
+  if (!process.env.MFA_ENCRYPTION_KEY) {
+    const mfaKey = crypto.randomBytes(32).toString('hex');
+    console.info('Generated MFA encryption key.');
+    envContent += `\nMFA_ENCRYPTION_KEY=${mfaKey}\n`;
+  }
+
   // 3. Generate instance keypair for federation
   const keysDir = '/app/keys';
   const pubKeyPath = path.join(keysDir, 'instance.pub');

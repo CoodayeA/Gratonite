@@ -1,1 +1,0 @@
-ALTER TABLE channels ADD COLUMN user_limit INTEGER DEFAULT 0;

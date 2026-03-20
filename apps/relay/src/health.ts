@@ -3,6 +3,7 @@
  */
 
 import http from 'node:http';
+import type Redis from 'ioredis';
 import type { ConnectionManager } from './connections';
 
 export interface RelayMetrics {
@@ -42,8 +43,9 @@ export function startHealthServer(
   port: number,
   relayDomain: string,
   connections: ConnectionManager,
+  redis?: Redis,
 ): http.Server {
-  const server = http.createServer((req, res) => {
+  const server = http.createServer(async (req, res) => {
     if (req.url === '/health' && req.method === 'GET') {
       const metrics = getMetrics(connections);
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -94,6 +96,39 @@ export function startHealthServer(
       ];
       res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
       res.end(lines.join('\n') + '\n');
+      return;
+    }
+
+    // Discovery eligibility — hub polls this to find trustworthy instances
+    if (req.url === '/instances' && req.method === 'GET' && redis) {
+      const hubSecret = process.env.RELAY_HUB_SECRET;
+      if (hubSecret && req.headers['x-hub-secret'] !== hubSecret) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Forbidden' }));
+        return;
+      }
+
+      const domains = connections.getLocalDomains();
+      const instances = [];
+
+      for (const domain of domains) {
+        const meta = await redis.hgetall(`instance:${domain}:meta`);
+        const firstSeen = parseInt(meta.firstSeen || '0', 10);
+        const connectedHours = (Date.now() - firstSeen) / 3600000;
+        const reports = parseInt(meta.reports || '0', 10);
+
+        instances.push({
+          domain,
+          connectedSince: meta.firstSeen,
+          connectedHours: Math.floor(connectedHours),
+          reports,
+          discoveryEligible: connectedHours >= 48 && reports === 0,
+          publicKeyPem: meta.publicKeyPem || null,
+        });
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ instances, relayDomain }));
       return;
     }
 

@@ -65,18 +65,10 @@ const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => P
 // LiveKit env var validation
 // ---------------------------------------------------------------------------
 const LIVEKIT_ENABLED = !!(process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET);
-if (process.env.NODE_ENV === 'production') {
-  const missingLiveKit: string[] = [];
-  if (!process.env.LIVEKIT_URL) missingLiveKit.push('LIVEKIT_URL');
-  if (!process.env.LIVEKIT_API_KEY) missingLiveKit.push('LIVEKIT_API_KEY');
-  if (!process.env.LIVEKIT_API_SECRET) missingLiveKit.push('LIVEKIT_API_SECRET');
-  if (missingLiveKit.length > 0) {
-    throw new Error(
-      `FATAL: Missing LiveKit environment variables in production: ${missingLiveKit.join(', ')}. ` +
-      'Voice features require all three LiveKit variables to be set.',
-    );
-  }
-} else {
+if (process.env.NODE_ENV === 'production' && !LIVEKIT_ENABLED) {
+  console.warn('[voice] LiveKit env vars not set — voice/video features disabled. Set LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET to enable.');
+}
+if (process.env.NODE_ENV !== 'production') {
   if (!LIVEKIT_ENABLED) {
     console.warn('[voice] WARNING: LIVEKIT_API_KEY and/or LIVEKIT_API_SECRET are not set. Voice features will be disabled.');
   }

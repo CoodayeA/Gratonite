@@ -1,45 +1,28 @@
 {$INSTANCE_DOMAIN:localhost} {
-    # API reverse proxy
     handle /api/* {
         reverse_proxy api:4000
     }
-
-    # WebSocket (Socket.IO) reverse proxy
     handle /socket.io/* {
         reverse_proxy api:4000
     }
-
-    # Health check
     handle /health {
         reverse_proxy api:4000
     }
-
-    # Well-known federation endpoint
     handle /.well-known/gratonite {
         reverse_proxy api:4000
     }
-
-    # File uploads
     handle /uploads/* {
         reverse_proxy api:4000
     }
-
-    # Web app (SPA)
     handle {
         reverse_proxy web:80
     }
-
-    # Automatic HTTPS via Let's Encrypt
-    tls {$ADMIN_EMAIL:admin@example.com}
-
-    # Security headers
+    tls {$TLS_MODE:internal}
     header {
         X-Content-Type-Options nosniff
         X-Frame-Options DENY
         Referrer-Policy strict-origin-when-cross-origin
         -Server
     }
-
-    # Gzip compression
     encode gzip
 }

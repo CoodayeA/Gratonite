@@ -1,13 +1,7 @@
-# Gratonite Self-Hosted Instance
-# Usage: cp .env.example .env && edit .env && docker compose up -d
-
 services:
-  # First-run setup: generates keys, runs migrations, creates admin account
+  # First-run setup: migrations, keypair, admin account
   setup:
     image: ghcr.io/coodayea/gratonite-setup:latest
-    build:
-      context: ../../
-      dockerfile: deploy/setup/Dockerfile
     env_file: .env
     environment:
       - DATABASE_URL=postgresql://${DB_USER:-gratonite}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-gratonite}
@@ -38,7 +32,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --maxmemory 256mb --maxmemory-policy noeviction
     volumes:
       - redis-data:/data
     healthcheck:
@@ -50,9 +44,6 @@ services:
 
   api:
     image: ghcr.io/coodayea/gratonite-api:latest
-    build:
-      context: ../../
-      dockerfile: apps/api/Dockerfile
     env_file: .env
     environment:
       - DATABASE_URL=postgresql://${DB_USER:-gratonite}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-gratonite}
@@ -69,9 +60,6 @@ services:
 
   web:
     image: ghcr.io/coodayea/gratonite-web:latest
-    build:
-      context: ../../
-      dockerfile: apps/web/Dockerfile
     depends_on:
       - api
     restart: unless-stopped
@@ -79,8 +67,8 @@ services:
   caddy:
     image: caddy:2-alpine
     ports:
-      - "80:80"
-      - "443:443"
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
@@ -90,25 +78,23 @@ services:
       - web
     restart: unless-stopped
 
-  # Optional: Cloudflare Tunnel for zero-port-forwarding hosting
-  cloudflare-tunnel:
-    image: cloudflare/cloudflared:latest
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
-    depends_on:
-      - caddy
-    profiles:
-      - tunnel
-    restart: unless-stopped
-
-  # Optional: LiveKit for voice/video
+  # Voice/video — optional, enable with: docker compose --profile voice up -d
   livekit:
     image: livekit/livekit-server:latest
-    command: --config /etc/livekit.yaml
-    volumes:
-      - ./livekit.yaml:/etc/livekit.yaml:ro
+    command:
+      - --config-body
+      - |
+        port: 7880
+        rtc:
+          tcp_port: 7881
+          udp_port: 7882
+          use_external_ip: true
+        keys:
+          ${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-secret}
     ports:
       - "7880:7880"
       - "7881:7881"
+      - "7882:7882/udp"
     profiles:
       - voice
     restart: unless-stopped

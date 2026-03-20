@@ -1,1 +1,0 @@
-ALTER TABLE "user_inventory" ADD COLUMN "equipped" boolean DEFAULT false NOT NULL;

@@ -1,17 +1,30 @@
-# Stage 1: Build
+# Stage 1: Build with pnpm workspace
 FROM node:22-alpine AS builder
 
-WORKDIR /build
-COPY apps/web/package.json apps/web/package-lock.json ./
-RUN npm ci
+RUN corepack enable && corepack prepare pnpm@10 --activate
 
-COPY apps/web/ ./
-RUN npm run build
+WORKDIR /build
+
+# Copy workspace config and package files
+COPY package.json pnpm-workspace.yaml ./
+COPY apps/web/package.json apps/web/
+COPY packages/types/package.json packages/types/
+
+# Install dependencies
+RUN pnpm install --no-frozen-lockfile
+
+# Copy source files
+COPY packages/types/ packages/types/
+COPY apps/web/ apps/web/
+
+# Build types first, then web (skip tsc — vite handles transpilation)
+RUN cd packages/types && pnpm run build
+RUN cd apps/web && npx vite build
 
 # Stage 2: Serve
 FROM nginx:1.27-alpine
 
-COPY --from=builder /build/dist /usr/share/nginx/html
+COPY --from=builder /build/apps/web/dist /usr/share/nginx/html
 
 # SPA fallback config
 RUN echo 'server { \
