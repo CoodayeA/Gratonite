@@ -1057,6 +1057,9 @@ export class MessageService {
       pinnedBy: userId,
     }).onConflictDoNothing();
 
+    // Daily challenge progress (fire-and-forget)
+    incrementChallengeProgress(userId, 'pin_messages');
+
     try {
       getIO().to(`channel:${channelId}`).emit('CHANNEL_PINS_UPDATE', { channelId, messageId, pinned: true });
     } catch { /* non-fatal */ }

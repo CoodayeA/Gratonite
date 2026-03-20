@@ -238,10 +238,22 @@ dailyChallengesRouter.post('/claim-streak', requireAuth, async (req: Request, re
   }
 });
 
-// POST /daily-challenges/progress — increment challenge progress (called by other routes)
+// Increment challenge progress (called by other routes, fire-and-forget)
+// Auto-generates today's challenges if they don't exist yet.
 export async function incrementChallengeProgress(userId: string, challengeType: string, amount: number = 1) {
   try {
     const date = todayStr();
+
+    // Check if today's challenges exist; if not, generate them
+    const existing = await db.select({ id: dailyChallenges.id })
+      .from(dailyChallenges)
+      .where(and(eq(dailyChallenges.userId, userId), eq(dailyChallenges.date, date)))
+      .limit(1);
+
+    if (existing.length === 0) {
+      await generateDailyChallenges(userId, date);
+    }
+
     const [challenge] = await db.select()
       .from(dailyChallenges)
       .where(and(

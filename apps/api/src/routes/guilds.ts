@@ -58,6 +58,7 @@ import { toRows } from '../lib/to-rows.js';
 import { cacheControl } from '../middleware/cache';
 import { recordActivity } from './activity';
 import { dispatchEvent } from '../lib/webhook-dispatch';
+import { incrementChallengeProgress } from './daily-challenges';
 
 export const guildsRouter = Router();
 
@@ -823,6 +824,18 @@ guildsRouter.get(
       const { guildId } = req.params as Record<string, string>;
       const userId = req.userId!;
       const guild = await guildService.getGuildById(guildId, userId);
+
+      // Daily challenge progress: track unique server visits (fire-and-forget)
+      // Use Redis set to deduplicate — only counts each guild once per day
+      const redisKey = `challenge:visit_servers:${userId}:${new Date().toISOString().slice(0, 10)}`;
+      redis.sadd(redisKey, guildId).then(async (added) => {
+        if (added === 1) {
+          // First visit to this guild today — count it
+          await redis.expire(redisKey, 86400 + 3600); // expires after ~25 hours
+          incrementChallengeProgress(userId, 'visit_servers');
+        }
+      }).catch(() => {});
+
       res.status(200).json(guild);
     } catch (err) {
       handleAppError(res, err);
