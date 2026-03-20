@@ -26,7 +26,7 @@ const releases = [
     accent: "purple" as const,
     changes: [
       "FAME dashboard with leaderboard, real stats, and give-fame flow",
-      "Server ratings — members can rate and review guilds",
+      "Server ratings: members can rate and review guilds",
       "Threads fix: auto-archive now uses correct duration units",
       "Profile popover shows FAME received count",
       "Batch 2 enterprise features: OAuth2, global search, word filters, raid protection",
@@ -38,7 +38,7 @@ const releases = [
   {
     version: "1.0.3",
     date: "March 7, 2026",
-    summary: "Enterprise wave — new backend systems for moderation and privacy.",
+    summary: "Enterprise wave. New backend systems for moderation and privacy.",
     accent: "gold" as const,
     changes: [
       "OAuth2 authorization flow for third-party apps",
@@ -55,7 +55,7 @@ const releases = [
   {
     version: "1.0.2",
     date: "March 6, 2026",
-    summary: "Discord parity and Wave 2 — stickers, push notifications, slow mode, and more.",
+    summary: "Discord parity and Wave 2. Stickers, push notifications, slow mode, and more.",
     accent: "blue" as const,
     changes: [
       "Sticker system with upload and management",

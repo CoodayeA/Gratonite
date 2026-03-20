@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
           url: DEFAULT_OG_IMAGE,
           width: 512,
           height: 512,
-          alt: `${post.title} — Gratonite`,
+          alt: `${post.title} | Gratonite`,
         },
       ],
     },

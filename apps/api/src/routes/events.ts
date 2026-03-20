@@ -15,7 +15,7 @@
 
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 
 import { db } from '../db/index';
 import { scheduledEvents, eventInterests } from '../db/schema/events';
@@ -87,7 +87,7 @@ eventsRouter.get('/', requireAuth, async (req: Request, res: Response): Promise<
         .where(
           and(
             eq(eventInterests.userId, req.userId),
-            sql`${eventInterests.eventId} = ANY(${eventIds})`,
+            inArray(eventInterests.eventId, eventIds),
           ),
         );
       userInterests = new Set(interests.map(i => i.eventId));
