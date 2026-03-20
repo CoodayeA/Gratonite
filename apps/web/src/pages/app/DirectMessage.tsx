@@ -13,6 +13,7 @@ import ForwardModal from '../../components/modals/ForwardModal';
 import ThreadPanel from '../../components/chat/ThreadPanel';
 import EditHistoryPopover from '../../components/chat/EditHistoryPopover';
 import { RichTextRenderer } from '../../components/chat/RichTextRenderer';
+import { LazyEmbed, type OgEmbed } from '../../components/chat/EmbedCard';
 import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
@@ -78,6 +79,7 @@ type Message = {
     isEncrypted?: boolean;
     encryptedContent?: string | null;
     threadReplyCount?: number;
+    embeds?: any[];
 };
 
 // Video element component for rendering participant video
@@ -714,6 +716,7 @@ const DirectMessage = () => {
             encryptedContent: m.encryptedContent ?? null,
             threadReplyCount: m.threadReplyCount ?? 0,
             attachments: m.attachments ?? undefined,
+            embeds: Array.isArray(m.embeds) && m.embeds.length > 0 ? m.embeds : undefined,
         };
     };
 
@@ -864,6 +867,7 @@ const DirectMessage = () => {
                 isEncrypted: isEncryptedMsg,
                 encryptedContent: encryptedContent,
                 attachments: (data as any).attachments ?? undefined,
+                embeds: Array.isArray((data as any).embeds) && (data as any).embeds.length > 0 ? (data as any).embeds : undefined,
             }]);
             // Auto-mark read when message arrives and window is focused/visible
             if (!document.hidden && document.hasFocus()) {
@@ -959,6 +963,18 @@ const DirectMessage = () => {
                 return msg;
             }));
         }));
+
+        // MESSAGE_EMBED_UPDATE — URL unfurling results
+        const socket = getSocket();
+        if (socket) {
+            const embedHandler = ({ messageId, embeds }: { messageId: string; embeds: any[] }) => {
+                setMessages(prev => prev.map(m =>
+                    m.apiId === messageId ? { ...m, embeds } : m
+                ));
+            };
+            socket.on('MESSAGE_EMBED_UPDATE', embedHandler);
+            unsubs.push(() => socket.off('MESSAGE_EMBED_UPDATE', embedHandler));
+        }
 
         return () => { unsubs.forEach(fn => fn()); };
     }, [dmChannelId, currentUserId]);
@@ -2680,6 +2696,14 @@ const DirectMessage = () => {
                                                             </a>
                                                         );
                                                     })}
+                                                </div>
+                                            )}
+                                            {/* URL Embeds (link previews) */}
+                                            {msg.embeds && msg.embeds.length > 0 && (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                                                    {msg.embeds.map((embed: any, i: number) => (
+                                                        <LazyEmbed key={i} embed={embed as OgEmbed} />
+                                                    ))}
                                                 </div>
                                             )}
                                         </div>
