@@ -70,7 +70,7 @@ async function main(): Promise<void> {
   console.log(`[relay] Domain: ${RELAY_DOMAIN}`);
 
   // Start health/metrics HTTP server
-  startHealthServer(HEALTH_PORT, RELAY_DOMAIN, connections);
+  startHealthServer(HEALTH_PORT, RELAY_DOMAIN, connections, redis);
 
   // Start mesh manager
   const mesh = new MeshManager(redis, connections, RELAY_DOMAIN);

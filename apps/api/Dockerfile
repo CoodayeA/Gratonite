@@ -5,7 +5,7 @@ RUN corepack enable && corepack prepare pnpm@10 --activate
 
 WORKDIR /build
 COPY apps/api/package.json apps/api/pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 COPY apps/api/ ./
 RUN pnpm run build
@@ -17,7 +17,7 @@ RUN corepack enable && corepack prepare pnpm@10 --activate
 
 WORKDIR /app
 COPY --from=builder /build/package.json /build/pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --prod
+RUN pnpm install --no-frozen-lockfile --prod
 
 COPY --from=builder /build/dist ./dist
 COPY --from=builder /build/drizzle ./drizzle

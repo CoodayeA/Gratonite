@@ -42,6 +42,13 @@ export class ConnectionManager {
       socketId,
       connectedAt: new Date().toISOString(),
     }));
+
+    // Track instance metadata for discovery eligibility
+    await this.redis.hsetnx(`instance:${domain}:meta`, 'firstSeen', Date.now().toString());
+    await this.redis.hset(`instance:${domain}:meta`, 'lastSeen', Date.now().toString());
+    if (publicKeyPem) {
+      await this.redis.hset(`instance:${domain}:meta`, 'publicKeyPem', publicKeyPem);
+    }
   }
 
   /** Remove a disconnected instance. */
