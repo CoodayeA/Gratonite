@@ -7,6 +7,7 @@ import { api, API_BASE } from '../../lib/api';
 import Avatar from '../ui/Avatar';
 import { OnboardingFlowEditor } from '../guild/OnboardingFlowEditor';
 import { NoCodeBotBuilder } from '../guild/NoCodeBotBuilder';
+import { copyToClipboard } from '../../utils/clipboard';
 
 interface Role {
     id: string;
@@ -3387,7 +3388,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{`${API_BASE}/webhooks/${wh.id}/${'•'.repeat(12)}`}</div>
                                         </div>
                                         <div style={{ display: 'flex', gap: '8px' }}>
-                                            <button onClick={() => { const apiHost = API_BASE; const url = `${apiHost}/webhooks/${wh.id}/${wh.token}`; navigator.clipboard.writeText(url).catch(() => {}); setCopiedWebhookId(wh.id); setTimeout(() => setCopiedWebhookId(null), 2000); }}
+                                            <button onClick={() => { const apiHost = API_BASE; const url = `${apiHost}/webhooks/${wh.id}/${wh.token}`; copyToClipboard(url); setCopiedWebhookId(wh.id); setTimeout(() => setCopiedWebhookId(null), 2000); }}
                                                 title="Copy Webhook URL"
                                                 aria-label="Copy webhook URL"
                                                 style={{ padding: '8px', borderRadius: '6px', background: copiedWebhookId === wh.id ? 'rgba(16,185,129,0.15)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: copiedWebhookId === wh.id ? 'var(--success)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
@@ -3688,7 +3689,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--bg-tertiary)', borderRadius: '6px', marginBottom: '12px' }}>
                                                 <code style={{ flex: 1, fontSize: '13px', fontFamily: 'monospace', color: 'var(--accent-primary)' }}>{tmpl.code}</code>
                                                 <button
-                                                    onClick={() => { navigator.clipboard.writeText(tmpl.code).catch(() => {}); addToast({ title: 'Template code copied', variant: 'info' }); }}
+                                                    onClick={() => { copyToClipboard(tmpl.code); addToast({ title: 'Template code copied', variant: 'info' }); }}
                                                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
                                                 >
                                                     <Copy size={14} />

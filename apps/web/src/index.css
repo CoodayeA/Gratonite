@@ -143,11 +143,26 @@ button, [role="button"] {
 
 /* Glass light mode contrast — now handled by global [data-color-mode="light"] override */
 
-/* Contrast fixes for all light themes — black font default for readability */
+/* Contrast fixes for all light themes — ensure readability on light backgrounds */
 [data-color-mode="light"] {
     --text-primary: #000000;
     --text-secondary: #292929;
     --text-muted: #525252;
+    --stroke: rgba(0, 0, 0, 0.15);
+    --stroke-light: rgba(0, 0, 0, 0.08);
+    --hover-overlay: rgba(0, 0, 0, 0.06);
+    --active-overlay: rgba(0, 0, 0, 0.1);
+    color-scheme: light;
+}
+[data-color-mode="light"] input::placeholder,
+[data-color-mode="light"] textarea::placeholder {
+    color: #757575;
+}
+[data-color-mode="light"] ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+}
+[data-color-mode="light"] ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.35);
 }
 
 /* ------------------------

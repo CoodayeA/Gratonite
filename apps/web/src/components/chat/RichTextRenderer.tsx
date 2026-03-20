@@ -4,6 +4,7 @@ import DOMPurify from 'dompurify';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { getCodeTheme, applyCodeTheme } from '../../utils/codeTheme';
+import { copyToClipboard } from '../../utils/clipboard';
 
 // Apply the saved code theme on first load
 applyCodeTheme(getCodeTheme());
@@ -18,7 +19,7 @@ const CodeBlock = ({ code, lang, idx }: { code: string; lang: string; idx: numbe
     const safeHtml = DOMPurify.sanitize(rawHtml);
 
     const handleCopy = useCallback(() => {
-        navigator.clipboard.writeText(code).catch(() => {});
+        copyToClipboard(code);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     }, [code]);

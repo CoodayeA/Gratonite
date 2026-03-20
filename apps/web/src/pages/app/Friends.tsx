@@ -11,6 +11,7 @@ import Avatar from '../../components/ui/Avatar';
 import { SkeletonFriendList } from '../../components/ui/SkeletonLoader';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { copyToClipboard } from '../../utils/clipboard';
 
 const UserProfileModal = lazy(() => import('../../components/modals/UserProfileModal'));
 
@@ -40,7 +41,7 @@ function ReferralCard() {
                     style={{ flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: 4, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 13 }}
                 />
                 <button
-                    onClick={() => { navigator.clipboard.writeText(refData.referralLink); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                    onClick={() => { copyToClipboard(refData.referralLink); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
                     style={{ background: 'var(--accent-primary)', color: '#000', border: 'none', borderRadius: 4, padding: '6px 14px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
                 >
                     {copied ? 'Copied!' : 'Copy'}
@@ -1235,7 +1236,7 @@ const Friends = () => {
 
                             <div style={{ marginTop: '48px', paddingTop: '32px', borderTop: '1px solid var(--stroke)' }}>
                                 <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Other ways to connect</h3>
-                                <button onClick={() => { navigator.clipboard.writeText('https://gratonite.chat/invite/xK9f2mP'); addToast({ title: 'Invite Link Copied!', description: 'Share this link to invite friends to Gratonite.', variant: 'success' }); }} className="auth-button" style={{ marginTop: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: 'auto' }}>
+                                <button onClick={() => { copyToClipboard('https://gratonite.chat/invite/xK9f2mP'); addToast({ title: 'Invite Link Copied!', description: 'Share this link to invite friends to Gratonite.', variant: 'success' }); }} className="auth-button" style={{ marginTop: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: 'auto' }}>
                                     <UserPlus size={18} />
                                     Invite via Link
                                 </button>

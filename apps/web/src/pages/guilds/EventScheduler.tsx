@@ -4,6 +4,7 @@ import { Calendar, Clock, MapPin, Users, Plus, MoreHorizontal, X, Link, Share2, 
 import { useToast } from '../../components/ui/ToastManager';
 import { api } from '../../lib/api';
 import { EventCalendarView } from '../../components/EventCalendarView';
+import { copyToClipboard } from '../../utils/clipboard';
 
 interface ScheduledEvent {
     id: string;
@@ -67,7 +68,7 @@ const EventOptionsMenu = ({ event, guildId, onClose, onDeleted }: { event: Sched
 
     const handleCopyLink = () => {
         const link = `${window.location.origin}/events/${event.id}`;
-        navigator.clipboard.writeText(link).catch(() => {});
+        copyToClipboard(link);
         addToast({ title: 'Link Copied', description: `Event link for "${event.name}" copied to clipboard.`, variant: 'success' });
         onClose();
     };
@@ -77,7 +78,7 @@ const EventOptionsMenu = ({ event, guildId, onClose, onDeleted }: { event: Sched
         if (navigator.share) {
             navigator.share({ title: event.name, url: link }).catch(() => {});
         } else {
-            navigator.clipboard.writeText(link).catch(() => {});
+            copyToClipboard(link);
             addToast({ title: 'Link Copied', description: `Event link for "${event.name}" copied to clipboard.`, variant: 'success' });
         }
         onClose();

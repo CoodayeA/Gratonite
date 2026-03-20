@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { api } from '../../lib/api';
+import { copyToClipboard as copyToClipboardUtil } from '../../utils/clipboard';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -51,12 +52,10 @@ const SecretRevealModal = ({ title, fields, onClose }: {
     const [copiedField, setCopiedField] = useState<string | null>(null);
 
     const copyToClipboard = (label: string, value: string) => {
-        navigator.clipboard.writeText(value).then(() => {
+        copyToClipboardUtil(value).then(() => {
             setCopiedField(label);
             addToast({ title: 'Copied!', description: `${label} copied to clipboard.`, variant: 'success' });
             setTimeout(() => setCopiedField(null), 2000);
-        }).catch(() => {
-            addToast({ title: 'Copy failed', description: 'Could not copy to clipboard.', variant: 'error' });
         });
     };
 

@@ -77,6 +77,15 @@ if (process.env.NODE_ENV !== 'production') {
   }
 }
 
+/** Resolve LiveKit WebSocket URL, enforcing wss:// in production to prevent SecurityError. */
+function getLiveKitEndpoint(): string {
+  const raw = process.env.LIVEKIT_URL || 'ws://localhost:7880';
+  if (process.env.NODE_ENV === 'production' && raw.startsWith('ws://')) {
+    return raw.replace(/^ws:\/\//, 'wss://');
+  }
+  return raw;
+}
+
 // ---------------------------------------------------------------------------
 // Redis helpers for voice-state tracking
 // ---------------------------------------------------------------------------
@@ -264,7 +273,7 @@ voiceRouter.post(
     const token = await at.toJwt();
 
     // The WebSocket URL for the frontend to connect
-    const endpoint = process.env.LIVEKIT_URL || 'ws://localhost:7880';
+    const endpoint = getLiveKitEndpoint();
 
     // Track voice state in Redis
     const voiceState: VoiceStateEntry = {
@@ -577,7 +586,7 @@ voiceRouter.post(
     });
     at.addGrant({ room: channelId, roomJoin: true, canPublish: true, canSubscribe: true, canPublishData: true });
     const token = await at.toJwt();
-    const endpoint = process.env.LIVEKIT_URL || 'ws://localhost:7880';
+    const endpoint = getLiveKitEndpoint();
 
     res.json({ token, endpoint });
   }),

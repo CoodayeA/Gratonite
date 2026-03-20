@@ -20,6 +20,7 @@ import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { useContextMenu } from '../../components/ui/ContextMenu';
 import { useToast } from '../../components/ui/ToastManager';
+import { copyToClipboard } from '../../utils/clipboard';
 import { TopBarActions } from '../../components/ui/TopBarActions';
 import { BackgroundMedia } from '../../components/ui/BackgroundMedia';
 import UserProfilePopover from '../../components/ui/UserProfilePopover';
@@ -771,7 +772,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             { id: 'thread', label: 'Create Thread', icon: MessageSquare, onClick: () => setActiveThreadMessage(msg) },
             {
                 id: 'copy', label: 'Copy Text', icon: Copy, onClick: () => {
-                    if (msg.content) navigator.clipboard.writeText(msg.content);
+                    if (msg.content) copyToClipboard(msg.content);
                     addToast({ title: 'Copied to clipboard', variant: 'info' });
                 }
             },
@@ -780,7 +781,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     const link = msg.apiId
                         ? `${window.location.origin}/guild/${guildId}/channel/${channelId}?msg=${msg.apiId}`
                         : window.location.href;
-                    navigator.clipboard.writeText(link).catch(() => {});
+                    copyToClipboard(link);
                     addToast({ title: 'Message link copied', variant: 'info' });
                 }
             },
@@ -868,7 +869,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 api.relationships.openDm(userId).then((dm: any) => navigate(`/dm/${dm.id}`)).catch(() => addToast({ title: 'Failed to open DM', variant: 'error' }));
             }}] : []),
             { divider: true, id: 'div-user-1', label: '', onClick: () => {} },
-            { id: 'copy-id', label: 'Copy User ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(userId).catch(() => {}); addToast({ title: 'User ID copied', variant: 'info' }); }},
+            { id: 'copy-id', label: 'Copy User ID', icon: Copy, onClick: () => { copyToClipboard(userId); addToast({ title: 'User ID copied', variant: 'info' }); }},
             ...(!isOwnUser && canManageChannel && guildId ? [
                 { divider: true, id: 'div-user-2', label: '', onClick: () => {} },
                 { id: 'kick', label: 'Kick Member', icon: ShieldAlert, color: 'var(--warning)', onClick: () => {
@@ -1963,8 +1964,9 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     );
                     attachmentIds = uploadResults.map(r => r.id);
                 }
-            } catch {
-                addToast({ title: 'Failed to upload attachments', variant: 'error' });
+            } catch (uploadErr: any) {
+                const detail = uploadErr?.body?.message || uploadErr?.message || '';
+                addToast({ title: 'Failed to upload attachments', description: detail, variant: 'error' });
                 return;
             }
         }
@@ -3210,7 +3212,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                                         key={member.id}
                                                         userId={member.id}
                                                         displayName={member.displayName || member.username}
-                                                        avatarHash={member.avatarHash}
+                                                        avatarHash={member.avatar}
                                                         size={14}
                                                     />
                                                 ))}

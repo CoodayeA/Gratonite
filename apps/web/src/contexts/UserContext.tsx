@@ -15,6 +15,7 @@ export interface UserProfile {
     customStatus: string | null;
     badges: string[];
     isAdmin: boolean;
+    emailVerified: boolean;
     onboardingCompleted: boolean;
     createdAt: string | null;
 }
@@ -40,6 +41,7 @@ const defaultUser: UserProfile = {
     customStatus: null,
     badges: [],
     isAdmin: false,
+    emailVerified: false,
     onboardingCompleted: true, // default true to avoid flash on load
     createdAt: null,
 };
@@ -93,6 +95,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
                     customStatus: null,
                     badges: [],
                     isAdmin: me.isAdmin,
+                    emailVerified: me.emailVerified ?? false,
                     onboardingCompleted: me.onboardingCompleted ?? false,
                     createdAt: me.createdAt ?? null,
                 });

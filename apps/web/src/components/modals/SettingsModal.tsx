@@ -12,6 +12,7 @@ import Avatar from '../ui/Avatar';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { SettingsAccountTab, SettingsFeedbackTab, SettingsAchievementsTab, SettingsStatsTab, SettingsConnectionsTab, SettingsPrivacyTab, SettingsThemeTab, SettingsAccessibilityTab, SettingsSoundTab } from './settings';
 import { SettingsFederationTab } from './settings/SettingsFederationTab';
+import { copyToClipboard } from '../../utils/clipboard';
 import type { UserProfileLike, UserThemeLike } from './settings/types';
 import { AVAILABLE_LOCALES, getLocale, setLocale } from '../../i18n';
 import { CODE_THEMES as codeThemeOptions, getCodeTheme as codeThemeGet, setCodeTheme as codeThemeSet, type CodeThemeId } from '../../utils/codeTheme';
@@ -552,10 +553,16 @@ const SettingsModal = ({
     const settingsSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const saveSettingsToApi = useCallback((data: Record<string, unknown>) => {
         if (settingsSaveTimerRef.current) clearTimeout(settingsSaveTimerRef.current);
-        settingsSaveTimerRef.current = setTimeout(() => {
-            api.users.updateSettings(data).catch(() => {
-                addToast({ title: 'Failed to sync settings', variant: 'error' });
-            });
+        settingsSaveTimerRef.current = setTimeout(async () => {
+            for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                    await api.users.updateSettings(data);
+                    return;
+                } catch {
+                    if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+                }
+            }
+            addToast({ title: 'Failed to sync settings', variant: 'error' });
         }, 500);
     }, [addToast]);
 
@@ -942,7 +949,7 @@ const SettingsModal = ({
                                                         <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Or enter this key manually:</div>
                                                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 12px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--stroke)' }}>
                                                             <code style={{ fontFamily: 'monospace', fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '1px' }}>{mfaSecret}</code>
-                                                            <button onClick={() => { navigator.clipboard.writeText(mfaSecret); addToast({ title: 'Copied', description: 'Secret key copied to clipboard.', variant: 'success' }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px' }}><Copy size={14} /></button>
+                                                            <button onClick={() => { copyToClipboard(mfaSecret); addToast({ title: 'Copied', description: 'Secret key copied to clipboard.', variant: 'success' }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px' }}><Copy size={14} /></button>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1106,7 +1113,7 @@ const SettingsModal = ({
                                                 </div>
                                                 <button
                                                     onClick={() => {
-                                                        navigator.clipboard.writeText(backupCodes.join('\n'));
+                                                        copyToClipboard(backupCodes.join('\n'));
                                                         addToast({ title: 'Codes Copied', description: 'Backup codes copied to clipboard.', variant: 'success' });
                                                     }}
                                                     style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}
@@ -1845,9 +1852,19 @@ function SettingsNotificationsPanel() {
                     await sub.unsubscribe();
                 }
                 setPushEnabled(false);
+                addToast({ title: 'Push notifications disabled', variant: 'info' });
             } else {
+                // Request notification permission first
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    addToast({ title: 'Notification permission denied', description: 'Allow notifications in your browser settings to enable push.', variant: 'error' });
+                    return;
+                }
                 const { key } = await api.push.getVapidPublicKey();
-                if (!key) return;
+                if (!key) {
+                    addToast({ title: 'Push not available', description: 'Server did not provide a push key.', variant: 'error' });
+                    return;
+                }
                 const reg = await navigator.serviceWorker.ready;
                 const sub = await reg.pushManager.subscribe({
                     userVisibleOnly: true,
@@ -1856,8 +1873,11 @@ function SettingsNotificationsPanel() {
                 const json = sub.toJSON();
                 await api.push.subscribe({ endpoint: json.endpoint, p256dh: json.keys?.p256dh, auth: json.keys?.auth });
                 setPushEnabled(true);
+                addToast({ title: 'Push notifications enabled', variant: 'success' });
             }
-        } catch { /* ignore */ }
+        } catch (err) {
+            addToast({ title: 'Failed to toggle push notifications', description: err instanceof Error ? err.message : 'Unknown error', variant: 'error' });
+        }
     };
 
     const updateEmailPref = (key: keyof typeof emailPrefs, value: any) => {
@@ -2072,7 +2092,7 @@ function SettingsReferralsPanel({ addToast }: { addToast: (t: any) => void }) {
 
     const copyLink = () => {
         if (data?.referralLink) {
-            navigator.clipboard.writeText(data.referralLink).catch(() => {});
+            copyToClipboard(data.referralLink);
             addToast({ title: 'Referral link copied!', variant: 'success' });
         }
     };
@@ -2167,7 +2187,7 @@ function SettingsDeveloperPanel({ addToast }: { addToast: (t: any) => void }) {
                     <div style={{ fontWeight: 600, fontSize: '14px', color: '#22c55e', marginBottom: '8px' }}>Client Secret (copy now — won't be shown again)</div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <code style={{ flex: 1, padding: '8px', background: 'var(--bg-primary)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-primary)', wordBreak: 'break-all' }}>{createdSecret}</code>
-                        <button onClick={() => { navigator.clipboard.writeText(createdSecret).catch(() => {}); addToast({ title: 'Secret copied', variant: 'success' }); }} style={{ padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px' }}>Copy</button>
+                        <button onClick={() => { copyToClipboard(createdSecret); addToast({ title: 'Secret copied', variant: 'success' }); }} style={{ padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px' }}>Copy</button>
                     </div>
                     <button onClick={() => setCreatedSecret(null)} style={{ marginTop: '8px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '12px' }}>Dismiss</button>
                 </div>

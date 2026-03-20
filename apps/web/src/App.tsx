@@ -6,6 +6,7 @@ import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight,
 import './components/chat.css';
 import CommandPalette from './components/ui/CommandPalette';
 import { playSound, setSoundVolume } from './utils/SoundManager';
+import { copyToClipboard } from './utils/clipboard';
 
 import AuthLayout from './layouts/AuthLayout';
 import Login from './pages/auth/Login';
@@ -94,6 +95,7 @@ const SettingsModal = lazy(() => import('./components/modals/SettingsModal'));
 const UserProfileModal = lazy(() => import('./components/modals/UserProfileModal'));
 const GuildSettingsModal = lazy(() => import('./components/modals/GuildSettingsModal'));
 const WhatsNewModal = lazy(() => import('./components/modals/WhatsNewModal'));
+import { CHANGELOG } from './data/changelog';
 const OnboardingModal = lazy(() => import('./components/modals/OnboardingModal'));
 import { OnboardingTour, useShouldShowTour } from './components/ui/OnboardingTour';
 const BugReportModal = lazy(() => import('./components/modals/BugReportModal'));
@@ -313,7 +315,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
             { id: 'invite', label: 'Invite People', icon: Link2, onClick: () => {
                 api.invites.create(guild.id, {}).then((invite) => {
                     const link = `${window.location.origin}/invite/${invite.code}`;
-                    navigator.clipboard.writeText(link).catch(() => {});
+                    copyToClipboard(link);
                     addToast({ title: 'Invite link copied to clipboard', variant: 'success' });
                 }).catch(() => onOpenInvite());
             }},
@@ -340,7 +342,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
             { id: 'privacy-settings', label: 'Privacy Settings', icon: ShieldIcon, onClick: () => onOpenSettings() },
             { id: 'guild-theme', label: 'Set Portal Theme', icon: Paintbrush, onClick: () => setThemePickerGuild({ id: guild.id, name: guild.name }) },
             { divider: true, id: 'div2', label: '' },
-            { id: 'copy-id', label: 'Copy Portal ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(guild.id).catch(() => {}); addToast({ title: 'Portal ID copied', variant: 'info' }); } },
+            { id: 'copy-id', label: 'Copy Portal ID', icon: Copy, onClick: () => { copyToClipboard(guild.id); addToast({ title: 'Portal ID copied', variant: 'info' }); } },
             { id: 'create-folder', label: 'Create Folder', icon: FolderIcon, onClick: () => {
                 const folderId = `folder-${Date.now()}`;
                 const newFolder = { id: folderId, name: 'New Folder', color: '#526df5', guildIds: [guild.id], collapsed: false };
@@ -1097,7 +1099,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     }
                 }},
             ] : []),
-            { id: 'copy-id', label: 'Copy Category ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(category.id).catch(() => {}); addToast({ title: 'Category ID copied', variant: 'info' }); } },
+            { id: 'copy-id', label: 'Copy Category ID', icon: Copy, onClick: () => { copyToClipboard(category.id); addToast({ title: 'Category ID copied', variant: 'info' }); } },
             ...(canManageChannels ? [
                 { divider: true, id: 'div2', label: '' },
                 { id: 'delete', label: 'Delete Category', icon: Trash2, color: 'var(--error)', onClick: () => {
@@ -1164,15 +1166,15 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
             { divider: true, id: 'div2', label: '' },
             { id: 'copy-link', label: 'Copy Channel Link', icon: Link2, onClick: () => {
                 const link = `${window.location.origin}/app/guild/${activeGuildId}/channel/${channel.id}`;
-                navigator.clipboard.writeText(link).catch(() => {});
+                copyToClipboard(link);
                 addToast({ title: 'Channel link copied', variant: 'info' });
             }},
-            { id: 'copy-id', label: 'Copy Channel ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(channel.id).catch(() => {}); addToast({ title: 'Channel ID copied', variant: 'info' }); } },
+            { id: 'copy-id', label: 'Copy Channel ID', icon: Copy, onClick: () => { copyToClipboard(channel.id); addToast({ title: 'Channel ID copied', variant: 'info' }); } },
             { id: 'invite', label: 'Create Invite Link', icon: Link2, onClick: () => {
                 if (!activeGuildId) return;
                 api.invites.create(activeGuildId, {}).then((invite) => {
                     const link = `${window.location.origin}/invite/${invite.code}`;
-                    navigator.clipboard.writeText(link).catch(() => {});
+                    copyToClipboard(link);
                     addToast({ title: 'Invite link copied to clipboard', variant: 'success' });
                 }).catch(() => addToast({ title: 'Failed to create invite', variant: 'error' }));
             }},
@@ -1780,7 +1782,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                                     { id: 'mark-read', label: 'Mark as Read', icon: Check, onClick: () => { api.messages.ack(dm.id).catch(() => {}); markReadStore(dm.id); addToast({ title: 'Marked as read', variant: 'info' }); }},
                                                     { id: 'mute', label: 'Mute Conversation', icon: Volume1, onClick: () => { api.channels.setNotificationPrefs(dm.id, { level: 'none' }).then(() => addToast({ title: 'Conversation muted', variant: 'info' })).catch(() => addToast({ title: 'Failed to mute', variant: 'error' })); }},
                                                     { divider: true, id: 'div1', label: '' },
-                                                    { id: 'copy-id', label: 'Copy Channel ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(dm.id).catch(() => {}); addToast({ title: 'Channel ID copied', variant: 'info' }); }},
+                                                    { id: 'copy-id', label: 'Copy Channel ID', icon: Copy, onClick: () => { copyToClipboard(dm.id); addToast({ title: 'Channel ID copied', variant: 'info' }); }},
                                                     { id: 'close', label: 'Close DM', icon: X, color: 'var(--error)', onClick: () => { setDmChannels(prev => prev.filter((d: any) => d.id !== dm.id)); addToast({ title: 'Conversation closed', variant: 'info' }); }},
                                                 ]);
                                             }}>
@@ -1836,7 +1838,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                                 { id: 'mark-read', label: 'Mark as Read', icon: Check, onClick: () => { api.messages.ack(dm.id).catch(() => {}); markReadStore(dm.id); addToast({ title: 'Marked as read', variant: 'info' }); }},
                                                 { id: 'mute', label: 'Mute Conversation', icon: Volume1, onClick: () => { api.channels.setNotificationPrefs(dm.id, { level: 'none' }).then(() => addToast({ title: 'Conversation muted', variant: 'info' })).catch(() => addToast({ title: 'Failed to mute', variant: 'error' })); }},
                                                 { divider: true, id: 'div1', label: '' },
-                                                { id: 'copy-id', label: 'Copy Channel ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(dm.id).catch(() => {}); addToast({ title: 'Channel ID copied', variant: 'info' }); }},
+                                                { id: 'copy-id', label: 'Copy Channel ID', icon: Copy, onClick: () => { copyToClipboard(dm.id); addToast({ title: 'Channel ID copied', variant: 'info' }); }},
                                                 { id: 'close', label: 'Close DM', icon: X, color: 'var(--error)', onClick: () => { setDmChannels(prev => prev.filter((d: any) => d.id !== dm.id)); addToast({ title: 'Conversation closed', variant: 'info' }); }},
                                             ]);
                                         }}>
@@ -2665,7 +2667,7 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile, isMobileOpen, onCloseMo
                     else addToast({ title: 'Already muted', variant: 'info' });
                 }).catch(() => addToast({ title: 'Failed to mute user', variant: 'error' }));
             }},
-            { id: 'copy-id', label: 'Copy User ID', icon: Copy, onClick: () => { navigator.clipboard.writeText(member.userId); addToast({ title: 'Copied to clipboard', variant: 'info' }); }},
+            { id: 'copy-id', label: 'Copy User ID', icon: Copy, onClick: () => { copyToClipboard(member.userId); addToast({ title: 'Copied to clipboard', variant: 'info' }); }},
             ...(guildId ? [
                 { divider: true, id: 'div-m2', label: '' },
                 { id: 'kick', label: 'Kick Member', icon: ShieldAlert, color: '#FFA500', onClick: () => {
@@ -3118,7 +3120,8 @@ export const AppLayout = () => {
     // Show "What's New" modal if user hasn't seen the latest changelog
     useEffect(() => {
         const lastSeen = localStorage.getItem('gratonite:last-seen-changelog');
-        if (lastSeen !== '2026-03-15b' && ctxUser.id) {
+        const latestId = CHANGELOG[0]?.id ?? '';
+        if (lastSeen !== latestId && ctxUser.id) {
             setTimeout(() => setShowWhatsNew(true), 2000);
         }
     }, [ctxUser.id]);
