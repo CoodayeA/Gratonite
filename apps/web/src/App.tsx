@@ -110,6 +110,7 @@ import IncomingCallModal from './components/modals/IncomingCallModal';
 import InviteModal from './components/modals/InviteModal';
 import DMSearchModal from './components/modals/DMSearchModal';
 import GroupDmCreateModal from './components/modals/GroupDmCreateModal';
+import ExternalLinkModal from './components/modals/ExternalLinkModal';
 import { NotificationPrefsModal } from './components/modals/NotificationPrefsModal';
 import { Tooltip } from './components/ui/Tooltip';
 import { ModalWrapper } from './components/ui/ModalWrapper';
@@ -3001,6 +3002,7 @@ export const AppLayout = () => {
         }
     }, [channelBgKey]);
     const [activeModal, setActiveModal] = useState<ModalType>(null);
+    const [pendingExternalLink, setPendingExternalLink] = useState<string | null>(null);
     const [showWhatsNew, setShowWhatsNew] = useState(false);
     const [incomingCall, setIncomingCall] = useState<CallInvitePayload | null>(null);
     const [isGuildRailOpen, setIsGuildRailOpen] = useState(false);
@@ -3068,6 +3070,15 @@ export const AppLayout = () => {
         window.addEventListener('gratonite:guild-theme-changed', handleGuildThemeChange);
         return () => window.removeEventListener('gratonite:guild-theme-changed', handleGuildThemeChange);
     }, [activeGuildId, setTheme]);
+
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const url = (e as CustomEvent<string>).detail;
+            if (url) setPendingExternalLink(url);
+        };
+        window.addEventListener('gratonite:external-link', handler);
+        return () => window.removeEventListener('gratonite:external-link', handler);
+    }, []);
 
     const guildFetchV2Enabled = useMemo(() => {
         return (import.meta.env.VITE_GUILD_FETCH_V2 ?? '1') !== '0';
@@ -4162,6 +4173,9 @@ export const AppLayout = () => {
                 <OnboardingModal onClose={() => setActiveModal(null)} />
             </ModalWrapper>
             {showWhatsNew && <WhatsNewModal onClose={() => setShowWhatsNew(false)} />}
+            {pendingExternalLink && (
+                <ExternalLinkModal url={pendingExternalLink} onClose={() => setPendingExternalLink(null)} />
+            )}
             </Suspense>
             {incomingCall && (
                 <IncomingCallModal

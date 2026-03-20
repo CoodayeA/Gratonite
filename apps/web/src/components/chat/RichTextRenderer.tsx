@@ -6,6 +6,23 @@ import 'katex/dist/katex.min.css';
 import { getCodeTheme, applyCodeTheme } from '../../utils/codeTheme';
 import { copyToClipboard } from '../../utils/clipboard';
 
+function isGratoniteDomain(url: string): boolean {
+    try {
+        const host = new URL(url).hostname;
+        return host === 'localhost' || host === '127.0.0.1' || host.endsWith('gratonite.chat');
+    } catch {
+        return false;
+    }
+}
+
+function handleExternalLinkClick(e: React.MouseEvent, url: string) {
+    if (isGratoniteDomain(url)) return; // let it open normally
+    const skip = localStorage.getItem('gratonite:skip-external-link-warning') === 'true';
+    if (skip) return; // let it open normally
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent('gratonite:external-link', { detail: url }));
+}
+
 // Apply the saved code theme on first load
 applyCodeTheme(getCodeTheme());
 
@@ -307,6 +324,7 @@ function renderInline(text: string, ctx: InlineCtx, depth = 0): React.ReactNode[
                     <a key={`${kp}-mlink-${match.index}`} href={match[2]} target="_blank" rel="noopener noreferrer"
                         style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}
                         className="hover-underline"
+                        onClick={(e) => handleExternalLinkClick(e, match![2])}
                     >{match[1]}</a>
                 );
                 lastIndex = match.index + match[0].length;
@@ -487,6 +505,7 @@ function renderLeaf(text: string, ctx: InlineCtx, depth: number): React.ReactNod
                     <a key={`${kp}-url-${i}`} href={part} target="_blank" rel="noopener noreferrer"
                         style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}
                         className="hover-underline"
+                        onClick={(e) => handleExternalLinkClick(e, part)}
                     >{part}</a>
                 );
             }
