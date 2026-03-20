@@ -27,10 +27,17 @@ import OnboardingScreen from './src/screens/onboarding/OnboardingScreen';
 import ThemePickerScreen from './src/screens/onboarding/ThemePickerScreen';
 import { initSounds } from './src/lib/soundEngine';
 import * as Updates from 'expo-updates';
-
-export const OTA_BUILD_STAMP = '2026-03-19-bugfix100';
+import * as Sentry from '@sentry/react-native';
 import { useSystemThemeListener } from './src/lib/useSystemTheme';
 import type { ThemeName } from './src/lib/themes';
+
+export const OTA_BUILD_STAMP = '2026-03-19-v3';
+
+Sentry.init({
+  dsn: 'https://ad17bb4f67fef179cb02bbf241babb25@o4511074273329152.ingest.us.sentry.io/4511074285649920',
+  tracesSampleRate: 0.2,
+  enabled: !__DEV__,
+});
 
 const navigationRef = createNavigationContainerRef();
 
@@ -240,7 +247,7 @@ function ThemedApp() {
   );
 }
 
-export default function App() {
+function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -254,3 +261,5 @@ export default function App() {
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(App);
