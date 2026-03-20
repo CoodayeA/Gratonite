@@ -32,7 +32,7 @@ export default function LinkPreview({ url }: LinkPreviewProps) {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/v1/unfurl?url=${encodeURIComponent(url)}`);
+        const res = await fetch(`${API_BASE}/unfurl?url=${encodeURIComponent(url)}`);
         if (!res.ok) throw new Error('unfurl failed');
         const og: OGData = await res.json();
         if (!cancelled) {
@@ -40,29 +40,7 @@ export default function LinkPreview({ url }: LinkPreviewProps) {
           setData(og);
         }
       } catch {
-        // Fallback: try client-side parsing
-        try {
-          const res = await fetch(url, { headers: { 'User-Agent': 'Gratonite/1.0' } });
-          const html = await res.text();
-          const og: OGData = {};
-          const titleMatch = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]*)"/) ||
-                             html.match(/<title>([^<]*)<\/title>/);
-          if (titleMatch) og.title = titleMatch[1];
-          const descMatch = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]*)"/) ||
-                            html.match(/<meta[^>]*name="description"[^>]*content="([^"]*)"/);
-          if (descMatch) og.description = descMatch[1];
-          const imgMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]*)"/);
-          if (imgMatch) og.image = imgMatch[1];
-          og.siteName = new URL(url).hostname;
-          if (!cancelled && og.title) {
-            cache.set(url, og);
-            setData(og);
-          } else if (!cancelled) {
-            setError(true);
-          }
-        } catch {
-          if (!cancelled) setError(true);
-        }
+        if (!cancelled) setError(true);
       }
     })();
 
