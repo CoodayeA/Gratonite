@@ -1,4 +1,11 @@
 {$INSTANCE_DOMAIN:localhost} {
+    # Auth endpoints — rate limited (10 req/min per IP)
+    @auth path /api/v1/auth/* /api/v1/login /api/v1/register
+    handle @auth {
+        rate_limit {remote.ip} 10r/m
+        reverse_proxy api:4000
+    }
+
     handle /api/* {
         reverse_proxy api:4000
     }
@@ -17,12 +24,17 @@
     handle {
         reverse_proxy web:80
     }
+
     tls {$TLS_MODE:internal}
+
     header {
         X-Content-Type-Options nosniff
         X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
         Referrer-Policy strict-origin-when-cross-origin
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
         -Server
     }
+
     encode gzip
 }
