@@ -16,6 +16,7 @@ export const DEFAULT_KEYBINDINGS: KeyBinding[] = [
     { id: 'showShortcuts', label: 'Keyboard Shortcuts', category: 'Navigation', defaultCombo: 'Meta+/' },
     { id: 'openSettings', label: 'Open Settings', category: 'Navigation', defaultCombo: 'Meta+,' },
     { id: 'focusSearch', label: 'Focus Search', category: 'Navigation', defaultCombo: 'Meta+F' },
+    { id: 'bugReport', label: 'Report a Bug', category: 'Navigation', defaultCombo: 'Ctrl+Shift+B' },
     // Messaging
     { id: 'sendMessage', label: 'Send Message', category: 'Messaging', defaultCombo: 'Enter' },
     { id: 'newLine', label: 'New Line', category: 'Messaging', defaultCombo: 'Shift+Enter' },

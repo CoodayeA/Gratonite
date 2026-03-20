@@ -1,6 +1,6 @@
 {
   "name": "gratonite-api",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "nodemon",
@@ -24,6 +24,7 @@
   "dependencies": {
     "@bull-board/api": "^6.20.5",
     "@bull-board/express": "^6.20.5",
+    "@sentry/node": "^10.45.0",
     "argon2": "^0.44.0",
     "bullmq": "^5.71.0",
     "cookie-parser": "^1.4.7",
