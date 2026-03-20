@@ -6,3 +6,7 @@ out/
 *.AppImage
 *.deb
 *.snap
+*.flatpak
+flatpak/build-dir/
+flatpak/repo/
+flatpak/.flatpak-builder/
