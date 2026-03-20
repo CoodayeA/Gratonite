@@ -12,7 +12,7 @@ const benefits = [
   {
     title: "Federation",
     description:
-      "Connect with the entire Gratonite network. Your users can join servers on other instances and vice versa.",
+      "Federation is live — your instance connects to the relay automatically. Users can join servers on other instances and vice versa.",
     accent: "gold" as const,
   },
   {
@@ -64,34 +64,25 @@ export function SelfHosting() {
           <div className="bg-surface neo-border rounded-xl p-8 sm:p-10 neo-shadow text-center">
             <div className="max-w-xl mx-auto">
               <p className="font-display text-2xl font-bold mb-2">
-                5 commands. That's it.
+                1 command. That's it.
               </p>
               <div className="bg-background neo-border rounded-lg p-4 mb-6 text-left font-mono text-sm text-foreground/70 space-y-1" style={{ boxShadow: "0 0 60px rgba(124, 58, 237, 0.1)" }}>
                 <p>
-                  <span className="text-purple">$</span> git clone
-                  github.com/CoodayeA/Gratonite
-                </p>
-                <p>
-                  <span className="text-purple">$</span> cd
-                  Gratonite/deploy/self-host
-                </p>
-                <p>
-                  <span className="text-purple">$</span> cp .env.example .env
-                </p>
-                <p>
-                  <span className="text-purple">$</span> nano .env
-                </p>
-                <p>
-                  <span className="text-purple">$</span> docker compose up -d
+                  <span className="text-purple">$</span> curl -fsSL https://gratonite.chat/install | bash
                 </p>
               </div>
               <p className="text-foreground/50 text-sm mb-6">
                 Works on any Linux machine, VPS, or even your home PC. Behind
                 NAT? Use the built-in relay network. No port forwarding needed.
               </p>
-              <Button variant="primary" size="lg" href="/docs/self-hosting">
-                Get Started
-              </Button>
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                <Button variant="primary" size="lg" href="/deploy">
+                  Get Started
+                </Button>
+                <Button variant="outline" size="lg" href="https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.0">
+                  Download Desktop App
+                </Button>
+              </div>
             </div>
           </div>
         </ScrollReveal>
