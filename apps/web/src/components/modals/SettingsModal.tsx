@@ -9,6 +9,7 @@ import { api, API_BASE } from '../../lib/api';
 import LoginHistoryPage from '../../pages/app/LoginHistory';
 import { ProfileThemeEditor } from '../guild/ProfileThemeEditor';
 import Avatar from '../ui/Avatar';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { SettingsAccountTab, SettingsFeedbackTab, SettingsAchievementsTab, SettingsStatsTab, SettingsConnectionsTab, SettingsPrivacyTab, SettingsThemeTab, SettingsAccessibilityTab, SettingsSoundTab } from './settings';
 import { SettingsFederationTab } from './settings/SettingsFederationTab';
 import type { UserProfileLike, UserThemeLike } from './settings/types';
@@ -224,6 +225,7 @@ const SettingsModal = ({
 }) => {
     const { theme, setTheme, colorMode, setColorMode, fontFamily, setFontFamily, fontSize, setFontSize, showChannelBackgrounds, setShowChannelBackgrounds, playMovingBackgrounds, setPlayMovingBackgrounds, glassMode, setGlassMode, reducedEffects, setReducedEffects, lowPower, setLowPower, accentColor, setAccentColor, highContrast, setHighContrast, compactMode, setCompactMode, buttonShape, setButtonShape, screenReaderMode, setScreenReaderMode, linkUnderlines, setLinkUnderlines, focusIndicatorSize, setFocusIndicatorSize, colorBlindMode, setColorBlindMode, lowDataMode, setLowDataMode, previewTheme } = useTheme();
     const { addToast } = useToast();
+    const isMobile = useIsMobile();
 
     const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections' | 'federation' | 'achievements' | 'stats' | 'wardrobe' | 'notifications' | 'muted-users' | 'referrals' | 'developer' | 'dnd-schedule' | 'snippets'>('account');
     const [settingsSearch, setSettingsSearch] = useState('');
@@ -801,7 +803,7 @@ const SettingsModal = ({
                     </div>
 
                     {/* Right Panel */}
-                    <div className="settings-content-panel" style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', position: 'relative' }}>
+                    <div className="settings-content-panel" style={{ flex: 1, padding: isMobile ? '16px 12px' : '24px 32px', overflowY: 'auto', position: 'relative' }}>
                         <button className="settings-close-btn" onClick={onClose} style={{ position: 'absolute', top: 24, right: 24, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                             <X size={24} />
                         </button>
@@ -1120,9 +1122,9 @@ const SettingsModal = ({
                             <>
                                 <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '24px' }}>User Profile</h2>
 
-                                <div style={{ display: 'flex', gap: '32px' }}>
+                                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '24px' : '32px' }}>
                                     {/* Editor Column */}
-                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0 }}>
                                         <div>
                                             <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '12px' }}>Avatar</h3>
                                             <div style={{ display: 'flex', gap: '12px' }}>
@@ -1137,7 +1139,7 @@ const SettingsModal = ({
 
                                         <div>
                                             <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '12px' }}>Avatar Frame</h3>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: isMobile ? '8px' : '12px' }}>
                                                 {[
                                                     { id: 'none', label: 'None' },
                                                     { id: 'neon', label: 'Neon Glow' },
@@ -1150,7 +1152,7 @@ const SettingsModal = ({
                                                         key={frame.id}
                                                         onClick={() => applyGlobalAvatarFrame(frame.id as 'none' | 'neon' | 'gold' | 'glass' | 'rainbow' | 'pulse')}
                                                         style={{
-                                                            padding: '12px',
+                                                            padding: isMobile ? '8px' : '12px',
                                                             borderRadius: '8px',
                                                             background: avatarFrame === frame.id ? 'rgba(82, 109, 245, 0.1)' : 'var(--bg-tertiary)',
                                                             border: `1px solid ${avatarFrame === frame.id ? 'var(--accent-primary)' : 'var(--stroke)'}`,
@@ -1159,7 +1161,7 @@ const SettingsModal = ({
                                                             display: 'flex', alignItems: 'center', justifyContent: 'space-between'
                                                         }}
                                                     >
-                                                        <span style={{ fontSize: '13px', fontWeight: 500 }}>{frame.label}</span>
+                                                        <span style={{ fontSize: isMobile ? '11px' : '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{frame.label}</span>
                                                         {avatarFrame === frame.id && <Check size={16} color="var(--accent-primary)" />}
                                                     </button>
                                                 ))}
@@ -1338,7 +1340,7 @@ const SettingsModal = ({
                                                 </button>
                                             </div>
                                             <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>Make your name stand out in chat. Rare & above required for animated styles.</p>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: isMobile ? '6px' : '8px' }}>
                                                 {([
                                                     { id: 'none',    label: userProfile?.name || 'User',  cls: '',                   desc: 'Default' },
                                                     { id: 'rainbow', label: userProfile?.name || 'User',  cls: 'nameplate-rainbow',  desc: 'Rainbow' },
@@ -1483,7 +1485,7 @@ const SettingsModal = ({
                                     </div>
 
                                     {/* Preview Column - Redesigned with bigger banner */}
-                                    <div style={{ width: '280px', flexShrink: 0 }}>
+                                    <div style={{ width: isMobile ? '100%' : '280px', flexShrink: 0 }}>
                                         <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '12px' }}>Preview</h3>
 
                                         <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>

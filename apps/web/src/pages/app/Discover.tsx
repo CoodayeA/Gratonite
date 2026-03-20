@@ -5,6 +5,7 @@ import { useToast } from '../../components/ui/ToastManager';
 import { useTheme, AppTheme } from '../../components/ui/ThemeProvider';
 import { api, API_BASE } from '../../lib/api';
 import { StarRating } from '../../components/ui/StarRating';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 type Tab = 'portals' | 'bots' | 'themes' | 'templates';
 
@@ -358,6 +359,7 @@ const FederatedJoinModal = ({ portal, onClose }: { portal: FederatedPortalInfo; 
 
 const Discover = () => {
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
     const [activeTab, setActiveTab] = useState<Tab>('portals');
     const [searchQuery, setSearchQuery] = useState('');
     const [joiningPortal, setJoiningPortal] = useState<PortalInfo | null>(null);
@@ -483,54 +485,54 @@ const Discover = () => {
     }, [activeTab, addToast, searchQuery, selectedCategory, tagFilters, sortOption]);
 
     const renderTabs = () => (
-        <div style={{ display: 'flex', gap: '24px', borderBottom: '1px solid var(--stroke)', marginBottom: '32px' }}>
+        <div style={{ display: 'flex', gap: isMobile ? '12px' : '24px', borderBottom: '1px solid var(--stroke)', marginBottom: isMobile ? '20px' : '32px', overflowX: isMobile ? 'auto' : undefined, scrollbarWidth: 'none' }}>
             <button
                 onClick={() => setActiveTab('portals')}
                 style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    padding: '0 0 12px 0', fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '0 0 12px 0', fontSize: isMobile ? '13px' : '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px',
                     color: activeTab === 'portals' ? 'var(--text-primary)' : 'var(--text-muted)',
                     borderBottom: activeTab === 'portals' ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                    transition: 'all 0.2s'
+                    transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0
                 }}
             >
-                <Compass size={18} /> Portals
+                <Compass size={isMobile ? 14 : 18} /> Portals
             </button>
             <button
                 onClick={() => setActiveTab('bots')}
                 style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    padding: '0 0 12px 0', fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '0 0 12px 0', fontSize: isMobile ? '13px' : '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px',
                     color: activeTab === 'bots' ? 'var(--text-primary)' : 'var(--text-muted)',
                     borderBottom: activeTab === 'bots' ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                    transition: 'all 0.2s'
+                    transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0
                 }}
             >
-                <Bot size={18} /> Bots & Integrations
+                <Bot size={isMobile ? 14 : 18} /> {isMobile ? 'Bots' : 'Bots & Integrations'}
             </button>
             <button
                 onClick={() => setActiveTab('themes')}
                 style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    padding: '0 0 12px 0', fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '0 0 12px 0', fontSize: isMobile ? '13px' : '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px',
                     color: activeTab === 'themes' ? 'var(--text-primary)' : 'var(--text-muted)',
                     borderBottom: activeTab === 'themes' ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                    transition: 'all 0.2s'
+                    transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0
                 }}
             >
-                <Palette size={18} /> Themes
+                <Palette size={isMobile ? 14 : 18} /> Themes
             </button>
             <button
                 onClick={() => setActiveTab('templates')}
                 style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    padding: '0 0 12px 0', fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '0 0 12px 0', fontSize: isMobile ? '13px' : '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px',
                     color: activeTab === 'templates' ? 'var(--text-primary)' : 'var(--text-muted)',
                     borderBottom: activeTab === 'templates' ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                    transition: 'all 0.2s'
+                    transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0
                 }}
             >
-                <Globe size={18} /> Templates
+                <Globe size={isMobile ? 14 : 18} /> Templates
             </button>
         </div>
     );
@@ -1045,9 +1047,9 @@ const Discover = () => {
     return (
         <>
             <div className="main-content-wrapper" style={{ flex: 1, overflowY: 'auto' }}>
-                <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '48px 24px', width: '100%' }}>
-                    <h1 style={{ fontSize: '32px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '8px' }}>Discover</h1>
-                    <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '32px' }}>Find communities, bots, and themes to enhance your experience.</p>
+                <div style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '16px 12px' : '48px 24px', width: '100%' }}>
+                    <h1 style={{ fontSize: isMobile ? '24px' : '32px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '8px' }}>Discover</h1>
+                    <p style={{ fontSize: isMobile ? '13px' : '15px', color: 'var(--text-secondary)', marginBottom: isMobile ? '20px' : '32px' }}>Find communities, bots, and themes to enhance your experience.</p>
 
                     <div style={{ position: 'relative', marginBottom: '32px' }}>
                         <Search size={20} style={{ position: 'absolute', left: 16, top: 14, color: 'var(--text-muted)' }} />
