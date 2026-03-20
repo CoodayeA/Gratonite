@@ -35,6 +35,7 @@
  */
 
 import { Server as SocketIOServer, Socket } from 'socket.io';
+import * as Sentry from '@sentry/node';
 import { verifyAccessToken } from '../lib/jwt';
 import { db } from '../db/index';
 import { guildMembers } from '../db/schema/guilds';
@@ -192,6 +193,7 @@ export function initSocket(io: SocketIOServer): void {
       }
     } catch (err) {
       logger.error(`[socket.io] failed to join guild rooms for user ${userId}:`, err);
+      Sentry.captureException(err, { user: { id: userId } });
     }
 
     // -------------------------------------------------------------------------
@@ -208,6 +210,7 @@ export function initSocket(io: SocketIOServer): void {
       }
     } catch (err) {
       logger.error(`[socket.io] failed to join DM channel rooms for user ${userId}:`, err);
+      Sentry.captureException(err, { user: { id: userId } });
     }
 
     // -------------------------------------------------------------------------
@@ -232,6 +235,7 @@ export function initSocket(io: SocketIOServer): void {
       }
     } catch (err) {
       logger.error(`[socket.io] failed to set presence for user ${userId}:`, err);
+      Sentry.captureException(err, { user: { id: userId } });
     }
 
     // Emit READY so the client knows the handshake is complete
@@ -303,6 +307,7 @@ export function initSocket(io: SocketIOServer): void {
         await socket.join(`channel:${data.channelId}`);
       } catch (err) {
         logger.error(`[socket.io] CHANNEL_JOIN error:`, err);
+        Sentry.captureException(err, { user: { id: userId } });
       }
     });
 
@@ -324,6 +329,7 @@ export function initSocket(io: SocketIOServer): void {
         userGuildIds.push(data.guildId);
       } catch (err) {
         logger.error(`[socket.io] JOIN_GUILD_ROOM error:`, err);
+        Sentry.captureException(err, { user: { id: userId } });
       }
     });
 
@@ -438,6 +444,7 @@ export function initSocket(io: SocketIOServer): void {
         });
       } catch (err) {
         logger.error('[socket.io] STAGE_START error:', err);
+        Sentry.captureException(err, { user: { id: userId } });
       }
     });
 
@@ -463,6 +470,7 @@ export function initSocket(io: SocketIOServer): void {
         });
       } catch (err) {
         logger.error('[socket.io] STAGE_END error:', err);
+        Sentry.captureException(err, { user: { id: userId } });
       }
     });
 
@@ -494,6 +502,7 @@ export function initSocket(io: SocketIOServer): void {
         });
       } catch (err) {
         logger.error('[socket.io] STAGE_SPEAKER_ADD error:', err);
+        Sentry.captureException(err, { user: { id: userId } });
       }
     });
 
@@ -524,6 +533,7 @@ export function initSocket(io: SocketIOServer): void {
         });
       } catch (err) {
         logger.error('[socket.io] STAGE_SPEAKER_REMOVE error:', err);
+        Sentry.captureException(err, { user: { id: userId } });
       }
     });
 
@@ -540,6 +550,7 @@ export function initSocket(io: SocketIOServer): void {
         });
       } catch (err) {
         logger.error('[socket.io] STAGE_HAND_RAISE error:', err);
+        Sentry.captureException(err, { user: { id: userId } });
       }
     });
 
@@ -711,6 +722,7 @@ export function initSocket(io: SocketIOServer): void {
         }
       } catch (err) {
         logger.error('[socket.io] CHANNEL_PRESENCE_JOIN error:', err);
+        Sentry.captureException(err, { user: { id: userId } });
       }
     });
 
@@ -729,6 +741,7 @@ export function initSocket(io: SocketIOServer): void {
         });
       } catch (err) {
         logger.error('[socket.io] CHANNEL_PRESENCE_LEAVE error:', err);
+        Sentry.captureException(err, { user: { id: userId } });
       }
     });
 
@@ -818,6 +831,7 @@ export function initSocket(io: SocketIOServer): void {
         }
       } catch (err) {
         logger.error('[socket.io] DOCUMENT_JOIN error:', err);
+        Sentry.captureException(err, { user: { id: userId } });
       }
     });
 
@@ -836,6 +850,7 @@ export function initSocket(io: SocketIOServer): void {
         });
       } catch (err) {
         logger.error('[socket.io] DOCUMENT_LEAVE error:', err);
+        Sentry.captureException(err, { user: { id: userId } });
       }
     });
 

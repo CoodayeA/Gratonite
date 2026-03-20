@@ -828,6 +828,11 @@ function startLivenessCheck() {
     const elapsed = Date.now() - lastEventReceivedAt;
     if (elapsed >= LIVENESS_STALE_MS) {
       console.warn(`[socket] No events received in ${Math.round(elapsed / 1000)}s — forcing reconnect`);
+      (window as any).Sentry?.addBreadcrumb({
+        category: 'socket',
+        message: `Liveness check forcing reconnect after ${Math.round(elapsed / 1000)}s stale`,
+        level: 'warning',
+      });
       socket!.disconnect();
       socket!.connect();
     }
@@ -1132,16 +1137,27 @@ export function connectSocket(): GratoniteSocket {
     documentTitleUpdateListeners.forEach(cb => cb(data));
   });
 
-  socket.on('disconnect', () => {
+  socket.on('disconnect', (reason) => {
     setConnectionState('disconnected');
     stopHeartbeat();
     stopIdleDetection();
     stopLivenessCheck();
+    (window as any).Sentry?.addBreadcrumb({
+      category: 'socket',
+      message: `Socket disconnected: ${reason}`,
+      level: 'warning',
+    });
     socketDisconnectListeners.forEach(cb => cb());
   });
 
-  socket.on('connect_error', () => {
+  socket.on('connect_error', (err) => {
     setConnectionState('reconnecting');
+    (window as any).Sentry?.addBreadcrumb({
+      category: 'socket',
+      message: `Socket connect_error: ${err?.message || 'unknown'}`,
+      level: 'error',
+      data: { type: err?.message },
+    });
   });
 
   socket.connect();

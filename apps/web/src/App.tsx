@@ -201,6 +201,25 @@ const getStoredAvatarFrame = (userId?: string): 'none' | 'neon' | 'gold' | 'glas
 const ActivityFeedPage = () => { const nav = useNavigate(); return <Suspense fallback={<LazyFallback />}><ActivityFeed onClose={() => nav('/')} /></Suspense>; };
 const LeaderboardPage = () => { const nav = useNavigate(); return <Suspense fallback={<LazyFallback />}><Leaderboard onClose={() => nav('/')} /></Suspense>; };
 
+/** Registers a global right-click handler that appends "Report a Bug" to empty-area context menus */
+const GlobalBugReportContextMenu = ({ onOpenBugReport }: { onOpenBugReport: () => void }) => {
+    const { openMenu } = useContextMenu();
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            // Skip if a component already handles its own context menu
+            if (target.closest('[data-context-menu]') || target.closest('.guild-icon') || target.closest('.channel-item') || target.closest('.member-item') || target.closest('.message-row') || target.closest('a') || target.closest('img') || target.closest('input') || target.closest('textarea')) return;
+            e.preventDefault();
+            openMenu(e as unknown as React.MouseEvent, [
+                { id: 'bug-report', label: 'Report a Bug', icon: Bug, onClick: onOpenBugReport },
+            ]);
+        };
+        window.addEventListener('contextmenu', handler);
+        return () => window.removeEventListener('contextmenu', handler);
+    }, [openMenu, onOpenBugReport]);
+    return null;
+};
+
 const LegacyGuildChannelRedirect = () => {
     const { guildId, channelId } = useParams();
     if (!guildId || !channelId) return <Navigate to="/" replace />;
@@ -700,6 +719,16 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
             registerChannelGuild(ch.id, activeGuildId);
         }
     }, [activeGuildId, guildChannels]);
+
+    // Set Sentry navigation context for error attribution
+    useEffect(() => {
+        const channelMatch = location.pathname.match(/\/(?:channel|voice)\/([^/]+)/);
+        const dmMatch = location.pathname.match(/\/dm\/([^/]+)/);
+        const activeChannelId = channelMatch?.[1] || dmMatch?.[1] || null;
+        import('@sentry/react').then(Sentry => {
+            Sentry.setContext('navigation', { guildId: activeGuildId, channelId: activeChannelId });
+        }).catch(() => {});
+    }, [activeGuildId, location.pathname]);
 
     const enableVoiceSidebarSync = true;
     const [voiceMembersByChannel, setVoiceMembersByChannel] = useState<Record<string, VoiceSidebarMember[]>>({});
@@ -3351,6 +3380,10 @@ export const AppLayout = () => {
     // Sync userProfile from UserContext
     useEffect(() => {
         if (ctxUser.id) {
+            // Set Sentry user context for error attribution
+            import('@sentry/react').then(Sentry => {
+                Sentry.setUser({ id: ctxUser.id, username: ctxUser.handle });
+            });
             const persistedNameplate = getStoredNameplateStyle(ctxUser.id);
             const persistedAvatarFrame = getStoredAvatarFrame(ctxUser.id);
             setUserProfile((prev) => {
@@ -3595,6 +3628,10 @@ export const AppLayout = () => {
             if ((e.metaKey || e.ctrlKey) && e.key === '/') {
                 e.preventDefault();
                 setActiveModal(prev => prev === 'shortcuts' ? null : 'shortcuts');
+            }
+            if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'b' || e.key === 'B')) {
+                e.preventDefault();
+                setActiveModal(prev => prev === 'bugReport' ? null : 'bugReport');
             }
             if (e.key === 'Escape' && activeModal) {
                 e.preventDefault();
@@ -3877,6 +3914,7 @@ export const AppLayout = () => {
 
     return (
         <ContextMenuProvider>
+            <GlobalBugReportContextMenu onOpenBugReport={() => setActiveModal('bugReport')} />
             <div className="app-container">
                 {/* Visually hidden route announcer for screen readers */}
                 <div ref={routeAnnouncerRef} className="sr-route-announcer" aria-live="assertive" aria-atomic="true" role="status" />

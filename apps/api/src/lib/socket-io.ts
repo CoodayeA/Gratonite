@@ -24,6 +24,7 @@
  */
 
 import { Server as SocketIOServer } from 'socket.io';
+import * as Sentry from '@sentry/node';
 import { logger } from './logger';
 
 /** The single Socket.io server instance, set once at startup. */
@@ -73,5 +74,11 @@ export function emitSafe(socket: { emit: (...a: any[]) => any }, event: string, 
     socket.emit(event, ...args);
   } catch (err) {
     logger.debug({ msg: 'socket emit failed', event, err });
+    Sentry.addBreadcrumb({
+      category: 'socket',
+      message: `emitSafe failed: ${event}`,
+      level: 'warning',
+      data: { event, error: String(err) },
+    });
   }
 }

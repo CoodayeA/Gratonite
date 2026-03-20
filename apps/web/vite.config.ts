@@ -1,13 +1,26 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { sentryVitePlugin } from '@sentry/vite-plugin'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [react()],
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(process.env.npm_package_version || '0.0.0'),
+  },
+  plugins: [
+    react(),
+    ...(process.env.SENTRY_AUTH_TOKEN
+      ? [sentryVitePlugin({
+          org: process.env.SENTRY_ORG,
+          project: process.env.SENTRY_PROJECT,
+          authToken: process.env.SENTRY_AUTH_TOKEN,
+          release: { name: `gratonite-web@${process.env.npm_package_version || '0.0.0'}` },
+        })]
+      : []),
+  ],
   base: '/app/',
   build: {
-    // Enable source maps in analyze mode for bundle visualizer
-    sourcemap: mode === 'analyze',
+    sourcemap: mode === 'analyze' ? true : 'hidden',
     rollupOptions: {
       output: {
         manualChunks: {
