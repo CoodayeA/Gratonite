@@ -3,6 +3,7 @@ import { X, Link2, Bell, BellOff, User, EyeOff, LogOut, Check, Copy, Clock, Aler
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
+import { copyToClipboard } from '../../utils/clipboard';
 
 const Toggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) => (
     <div
@@ -185,7 +186,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
         try {
             const invite = await api.invites.create(guildId, {});
             const link = `${window.location.origin}/invite/${invite.code}`;
-            await navigator.clipboard.writeText(link);
+            await copyToClipboard(link);
             setCopied(true);
             addToast({ title: 'Invite link copied to clipboard', variant: 'success' });
             setTimeout(() => setCopied(false), 2000);

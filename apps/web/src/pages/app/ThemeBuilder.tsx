@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { api } from '../../lib/api';
+import { copyToClipboard } from '../../utils/clipboard';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -169,7 +170,7 @@ const ThemeBuilder = () => {
             const prop = key.replace(/([A-Z])/g, '-$1').toLowerCase();
             return `  --${prop}: ${val};`;
         }).join('\n');
-        navigator.clipboard.writeText(`:root {\n${css}\n  --radius-md: ${borderRadius}px;\n  --font-primary: '${fontFamily}', sans-serif;\n}`);
+        copyToClipboard(`:root {\n${css}\n  --radius-md: ${borderRadius}px;\n  --font-primary: '${fontFamily}', sans-serif;\n}`);
         addToast({ title: 'CSS Copied!', description: 'Theme variables copied to clipboard.', variant: 'success' });
     };
 

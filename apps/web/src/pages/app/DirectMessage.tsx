@@ -21,6 +21,7 @@ import { markRead as markReadStore } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
 import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onMessageRead, onCallAnswer, onCallReject, onPresenceUpdate, onThreadCreate, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type MessageReadPayload, type PresenceUpdatePayload } from '../../lib/socket';
 import { getDeterministicGradient } from '../../utils/colors';
+import { copyToClipboard } from '../../utils/clipboard';
 import { useLiveKit, type LiveKitParticipant } from '../../lib/useLiveKit';
 import Avatar from '../../components/ui/Avatar';
 import UserProfilePopover from '../../components/ui/UserProfilePopover';
@@ -2037,7 +2038,7 @@ const DirectMessage = () => {
                             <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '16px', fontFamily: 'monospace', fontSize: '18px', letterSpacing: '2px', textAlign: 'center', lineHeight: 2, wordBreak: 'break-all', color: 'var(--text-primary)' }}>
                                 {safetyNumber.match(/.{1,5}/g)?.join(' ')}
                             </div>
-                            <button onClick={() => { navigator.clipboard.writeText(safetyNumber); addToast({ title: 'Safety number copied', variant: 'info' }); }} style={{ marginTop: '12px', width: '100%', padding: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '6px', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>
+                            <button onClick={() => { copyToClipboard(safetyNumber); addToast({ title: 'Safety number copied', variant: 'info' }); }} style={{ marginTop: '12px', width: '100%', padding: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '6px', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>
                                 Copy to clipboard
                             </button>
                             <a href="https://gratonite.chat/blog/how-to-use-encrypted-dms" target="_blank" rel="noreferrer" style={{ display: 'block', marginTop: '10px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', textDecoration: 'none' }}>
@@ -2496,7 +2497,7 @@ const DirectMessage = () => {
                                             { id: 'forward', label: 'Forward Message', icon: Share2, onClick: () => setForwardingMessage(msg) },
                                             {
                                                 id: 'copy', label: 'Copy Text', icon: Copy, onClick: () => {
-                                                    if (msg.content) navigator.clipboard.writeText(msg.content);
+                                                    if (msg.content) copyToClipboard(msg.content);
                                                     addToast({ title: 'Copied to clipboard', variant: 'info' });
                                                 }
                                             },
@@ -2741,7 +2742,7 @@ const DirectMessage = () => {
                                         <div style={{ position: 'absolute', top: '-12px', right: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', padding: '4px', display: 'flex', gap: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', zIndex: 10 }}>
                                             <button onClick={() => setReactionPickerMessageId(reactionPickerMessageId === msg.id ? null : msg.id)} className="hover-bg-tertiary" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} title="Add Reaction"><Smile size={16} /></button>
                                             <button onClick={() => setActiveThreadMessage(msg)} className="hover-bg-tertiary" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} title="Create Thread"><MessageSquare size={16} /></button>
-                                            <button onClick={() => { if (msg.content) navigator.clipboard.writeText(msg.content); addToast({ title: 'Copied', variant: 'info' }); }} className="hover-bg-tertiary" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} title="Copy Text"><Copy size={16} /></button>
+                                            <button onClick={() => { if (msg.content) copyToClipboard(msg.content); addToast({ title: 'Copied', variant: 'info' }); }} className="hover-bg-tertiary" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} title="Copy Text"><Copy size={16} /></button>
                                         </div>
                                     )}
                                 </div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, Copy, Check, Clock, Users, Link as LinkIcon, RefreshCw, Loader } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
+import { copyToClipboard } from '../../utils/clipboard';
 
 const EXPIRE_MAP: Record<string, number | null> = {
     '30 minutes': 1800,
@@ -62,7 +63,7 @@ const InviteModal = ({ onClose, guildId }: { onClose: () => void; guildId: strin
 
     const handleCopy = () => {
         if (!inviteLink) return;
-        navigator.clipboard.writeText(inviteLink);
+        copyToClipboard(inviteLink);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };

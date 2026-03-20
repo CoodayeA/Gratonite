@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Shield, Check, ChevronRight } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
 
 interface PrivacyScoreProps {
   userSettings: any;
@@ -16,6 +17,7 @@ interface Criterion {
 }
 
 export default function PrivacyScore({ userSettings, userProfile, onNavigate }: PrivacyScoreProps) {
+  const { user: ctxUser } = useUser();
   const [criteria, setCriteria] = useState<Criterion[]>([]);
   const [score, setScore] = useState(0);
 
@@ -26,7 +28,7 @@ export default function PrivacyScore({ userSettings, userProfile, onNavigate }: 
     const readReceiptsOff = userSettings?.readReceipts === false;
     const profileVisitorsOff = userSettings?.profileVisitors === false;
     const strongPassword = true; // We can't verify client-side, assume yes
-    const emailVerified = !!userProfile?.emailVerified;
+    const emailVerified = ctxUser.emailVerified || !!userProfile?.emailVerified;
 
     const list: Criterion[] = [
       { label: 'Two-Factor Authentication enabled', points: 25, met: twoFaEnabled, fixTab: 'security', fixLabel: 'Enable 2FA' },
@@ -40,7 +42,7 @@ export default function PrivacyScore({ userSettings, userProfile, onNavigate }: 
 
     setCriteria(list);
     setScore(list.reduce((sum, c) => sum + (c.met ? c.points : 0), 0));
-  }, [userSettings, userProfile]);
+  }, [userSettings, userProfile, ctxUser.emailVerified]);
 
   const color = score >= 75 ? '#22c55e' : score >= 40 ? '#f59e0b' : '#ef4444';
   const circumference = 2 * Math.PI * 42;

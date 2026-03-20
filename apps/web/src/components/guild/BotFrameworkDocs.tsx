@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Bot, Code, Zap, BookOpen, Copy, Check } from 'lucide-react';
 import { api } from '../../lib/api';
+import { copyToClipboard } from '../../utils/clipboard';
 
 export default function BotFrameworkDocs() {
   const [docs, setDocs] = useState<any>(null);
@@ -17,7 +18,7 @@ export default function BotFrameworkDocs() {
 
   const copyExample = () => {
     if (!docs?.sdkExample) return;
-    navigator.clipboard.writeText(docs.sdkExample);
+    copyToClipboard(docs.sdkExample);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

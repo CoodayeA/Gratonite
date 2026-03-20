@@ -4,6 +4,7 @@
  */
 import { useState, useCallback } from 'react';
 import { Play, RotateCcw, Copy, Check } from 'lucide-react';
+import { copyToClipboard } from '../../utils/clipboard';
 
 const LANGUAGES = [
   { id: 'html', label: 'HTML/CSS/JS', template: '<!DOCTYPE html>\n<html>\n<head><style>body{color:#fff;background:#1a1a2e;font-family:sans-serif;padding:20px}</style></head>\n<body>\n<h1>Hello Gratonite!</h1>\n<p id="output"></p>\n<script>\nconst el = document.getElementById("output");\nel.textContent = "Code running in sandbox!";\n</script>\n</body>\n</html>' },
@@ -37,7 +38,7 @@ export default function CodePlayground() {
   }, [code, language]);
 
   const copyCode = () => {
-    navigator.clipboard.writeText(code);
+    copyToClipboard(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

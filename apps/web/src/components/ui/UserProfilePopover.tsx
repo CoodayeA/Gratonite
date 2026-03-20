@@ -4,6 +4,7 @@ import { api, API_BASE } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
 import { useUser } from '../../contexts/UserContext';
 import { useToast } from './ToastManager';
+import { copyToClipboard } from '../../utils/clipboard';
 import Avatar from './Avatar';
 import { ReputationBadge } from './ReputationBadge';
 
@@ -624,7 +625,7 @@ const UserProfilePopover = ({
                                         {
                                             label: 'Copy User ID', icon: <Copy size={14} />, color: 'var(--text-secondary)',
                                             action: () => {
-                                                navigator.clipboard.writeText(user.id);
+                                                copyToClipboard(user.id);
                                                 addToast({ title: 'Copied!', description: 'User ID copied to clipboard', variant: 'info' });
                                                 setMoreDropdownOpen(false);
                                             },

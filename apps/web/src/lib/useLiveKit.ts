@@ -464,7 +464,10 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
       }
       
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to connect to voice channel';
+      let message = err instanceof Error ? err.message : 'Failed to connect to voice channel';
+      if (message.includes('signal connection') || message.includes('WebSocket')) {
+        message = 'Could not connect to voice server. Check your connection and try again.';
+      }
       setConnectionError(message);
       setIsConnecting(false);
       throw err;

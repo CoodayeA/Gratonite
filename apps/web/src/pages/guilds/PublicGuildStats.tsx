@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Users, MessageSquare, Hash, Zap, Calendar, ArrowLeft, Wifi, Code, Image, Copy, Check } from 'lucide-react';
 import { api, API_BASE } from '../../lib/api';
+import { copyToClipboard } from '../../utils/clipboard';
 
 interface GuildStats {
   guild: {
@@ -159,7 +160,7 @@ export default function PublicGuildStats() {
   const badgeUrl = `${API_BASE}/stats/guilds/${data.guild.id}/badge`;
 
   const handleCopy = (text: string, setter: (v: boolean) => void) => {
-    navigator.clipboard.writeText(text).then(() => {
+    copyToClipboard(text).then(() => {
       setter(true);
       setTimeout(() => setter(false), 2000);
     });

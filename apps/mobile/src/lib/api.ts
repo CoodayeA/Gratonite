@@ -361,10 +361,19 @@ export async function apiFetch<T>(
   }
 
   const url = `${API_BASE}${path}`;
-  const res = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...options,
+      headers,
+    });
+  } catch (err) {
+    // Network error (offline, CORS, DNS failure) — status 0 / TypeError
+    throw new ApiRequestError(0, {
+      code: 'NETWORK_ERROR',
+      message: 'Unable to reach the server. Check your internet connection.',
+    });
+  }
 
   if (!res.ok && res.status !== 401) {
     console.warn(`[apiFetch] ${options.method || 'GET'} ${url} → ${res.status}`);

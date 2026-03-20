@@ -13,6 +13,7 @@ import { useUser } from '../../contexts/UserContext';
 import { saveCustomTheme, getCustomThemes, deleteCustomTheme } from '../../themes/registry';
 import type { ThemeDefinition, ThemeCategory } from '../../themes/types';
 import { api } from '../../lib/api';
+import { copyToClipboard } from '../../utils/clipboard';
 
 interface ThemeStoreModalProps {
   onClose: () => void;
@@ -238,10 +239,8 @@ export default function ThemeStoreModal({ onClose, preSelectedThemeId }: ThemeSt
   // Share theme (Item 37)
   const shareTheme = useCallback((themeId: string) => {
     const url = `${window.location.origin}${window.location.pathname}?theme=${themeId}`;
-    navigator.clipboard.writeText(url).then(() => {
+    copyToClipboard(url).then(() => {
       toast.addToast({ title: 'Theme link copied to clipboard!', variant: 'success' });
-    }).catch(() => {
-      toast.addToast({ title: 'Failed to copy link', variant: 'error' });
     });
   }, [toast]);
 

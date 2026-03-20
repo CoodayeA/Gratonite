@@ -21,7 +21,7 @@ import { recordActivity } from './activity';
 export const invitesRouter = Router();
 
 function generateCode(): string {
-  return crypto.randomBytes(8).toString('base64url');
+  return crypto.randomBytes(6).toString('base64url'); // 6 bytes → 8 base64url chars
 }
 
 const createInviteSchema = z.object({
@@ -186,6 +186,11 @@ invitesRouter.post('/invites/:code', requireAuth, async (req: Request, res: Resp
     res.status(410).json({ code: 'EXHAUSTED', message: 'Invite has reached max uses' }); return;
   }
 
+  // Check ban BEFORE raid detection so banned users can't trigger lockdown
+  const [ban] = await db.select({ id: guildBans.id }).from(guildBans)
+    .where(and(eq(guildBans.guildId, invite.guildId), eq(guildBans.userId, req.userId!))).limit(1);
+  if (ban) { res.status(403).json({ code: 'BANNED', message: 'You are banned from this guild' }); return; }
+
   // Check if guild is locked (raid protection)
   const guildResult = await db.execute(sql`SELECT locked_at, raid_protection_enabled FROM guilds WHERE id = ${invite.guildId}`);
   const guildRow = toRows<{ locked_at: string | null; raid_protection_enabled: boolean }>(guildResult)[0];
@@ -204,11 +209,6 @@ invitesRouter.post('/invites/:code', requireAuth, async (req: Request, res: Resp
       res.status(403).json({ code: 'GUILD_LOCKED', message: 'Server locked due to raid detection' }); return;
     }
   }
-
-  // Check ban
-  const [ban] = await db.select({ id: guildBans.id }).from(guildBans)
-    .where(and(eq(guildBans.guildId, invite.guildId), eq(guildBans.userId, req.userId!))).limit(1);
-  if (ban) { res.status(403).json({ code: 'BANNED', message: 'You are banned from this guild' }); return; }
 
   // Check already a member
   const [existing] = await db.select({ id: guildMembers.id }).from(guildMembers)

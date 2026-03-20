@@ -7,6 +7,7 @@ import { useUser } from '../../contexts/UserContext';
 import Avatar from '../ui/Avatar';
 import { api, API_BASE } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
+import { copyToClipboard } from '../../utils/clipboard';
 
 const BADGE_META: Record<string, { label: string; emoji: string; color: string }> = {
     admin: { label: 'Admin', emoji: '\u{1F6E1}\uFE0F', color: '#ed4245' },
@@ -675,7 +676,7 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                                     {/* Copy Profile Link */}
                                     <button
                                         onClick={() => {
-                                            navigator.clipboard.writeText(`https://gratonite.app/user/${username}`);
+                                            copyToClipboard(`https://gratonite.app/user/${username}`);
                                             addToast({ title: 'Profile link copied to clipboard.', variant: 'success' });
                                             setShowUserOptions(false);
                                         }}
