@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and, gt, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import { reports } from '../db/schema/reports';
 import { requireAuth } from '../middleware/auth';
@@ -31,11 +31,47 @@ reportsRouter.post(
   validate(createReportSchema),
   async (req: Request, res: Response): Promise<void> => {
     const { targetType, targetId, reason } = req.body as z.infer<typeof createReportSchema>;
+    const userId = req.userId!;
+
+    // Check for duplicate: same user already reported this exact target
+    const [existing] = await db
+      .select({ id: reports.id })
+      .from(reports)
+      .where(
+        and(
+          eq(reports.reporterId, userId),
+          eq(reports.targetId, targetId),
+          eq(reports.targetType, targetType),
+        ),
+      )
+      .limit(1);
+
+    if (existing) {
+      res.status(409).json({ error: 'You have already reported this content.' });
+      return;
+    }
+
+    // Rate limit: max 5 reports per minute per user
+    const oneMinuteAgo = new Date(Date.now() - 60_000);
+    const [{ count: recentCount }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(reports)
+      .where(
+        and(
+          eq(reports.reporterId, userId),
+          gt(reports.createdAt, oneMinuteAgo),
+        ),
+      );
+
+    if (recentCount >= 5) {
+      res.status(429).json({ error: 'Too many reports. Please wait a minute before reporting again.' });
+      return;
+    }
 
     const [report] = await db
       .insert(reports)
       .values({
-        reporterId: req.userId!,
+        reporterId: userId,
         targetType,
         targetId,
         reason,

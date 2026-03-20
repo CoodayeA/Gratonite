@@ -1496,14 +1496,12 @@ const SettingsModal = ({
                                                 <div style={{
                                                     width: '84px', height: '84px',
                                                     borderRadius: '50%',
-                                                    background: avatarStyle,
-                                                    backgroundSize: 'cover',
-                                                    backgroundPosition: 'center',
                                                     border: '5px solid var(--bg-elevated)',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                     fontSize: '32px', fontWeight: 'bold',
                                                     marginTop: '-42px', marginBottom: '12px',
                                                     position: 'relative',
+                                                    overflow: 'hidden',
                                                     boxShadow: avatarFrame === 'neon' ? '0 0 20px 6px rgba(56, 189, 248, 0.6)' : avatarFrame === 'gold' ? '0 0 0 3px #f59e0b, 0 0 12px rgba(245, 158, 11, 0.4)' : 'none',
                                                     ...(avatarFrame === 'glass' ? {
                                                         backdropFilter: 'blur(2px)',
@@ -1511,7 +1509,13 @@ const SettingsModal = ({
                                                         boxShadow: 'inset 0 0 20px rgba(255,255,255,0.1)',
                                                     } : {})
                                                 }}>
-                                                    {avatarStyle.includes('gradient') ? (userProfile?.name?.[0]?.toUpperCase() || '?') : ''}
+                                                    {persistedAvatarUrl ? (
+                                                        <img src={persistedAvatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                                                    ) : (
+                                                        <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: userProfile?.avatarStyle || 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', color: 'white' }}>
+                                                            {userProfile?.name?.[0]?.toUpperCase() || '?'}
+                                                        </div>
+                                                    )}
                                                     <div style={{ position: 'absolute', bottom: 2, right: 2, width: '18px', height: '18px', background: 'var(--bg-elevated)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                         <div style={{ width: '12px', height: '12px', background: 'var(--success)', borderRadius: '50%' }}></div>
                                                     </div>

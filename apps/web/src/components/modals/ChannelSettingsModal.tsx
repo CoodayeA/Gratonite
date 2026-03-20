@@ -216,10 +216,10 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                     border: '1px solid var(--stroke)',
                     borderRadius: '16px',
                     display: 'flex',
-                    width: '740px',
+                    width: '860px',
                     maxWidth: '95vw',
-                    height: '560px',
-                    maxHeight: '85vh',
+                    height: '620px',
+                    maxHeight: '90vh',
                     overflow: 'hidden',
                 }}
             >

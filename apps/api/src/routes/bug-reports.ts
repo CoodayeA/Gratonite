@@ -18,6 +18,7 @@ const createBugReportSchema = z.object({
   viewport: z.string().max(50).optional(),
   userAgent: z.string().max(500).optional(),
   clientTimestamp: z.string().max(100).optional(),
+  attachments: z.array(z.string().max(500)).max(5).optional(),
 });
 
 const updateBugReportSchema = z.object({
@@ -31,13 +32,14 @@ bugReportsRouter.post(
   requireAuth,
   validate(createBugReportSchema),
   async (req: Request, res: Response): Promise<void> => {
-    const { summary, ...rest } = req.body as z.infer<typeof createBugReportSchema>;
+    const { summary, attachments, ...rest } = req.body as z.infer<typeof createBugReportSchema>;
 
     const [report] = await db
       .insert(bugReports)
       .values({
         userId: req.userId!,
         description: summary,
+        ...(attachments && attachments.length > 0 ? { attachments } : {}),
         ...rest,
       })
       .returning();
