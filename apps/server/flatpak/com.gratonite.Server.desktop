@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Gratonite Server
+Comment=Self-host your own Gratonite chat instance
+Exec=gratonite-server
+Icon=com.gratonite.Server
+Terminal=false
+Type=Application
+Categories=Network;Chat;InstantMessaging;
+Keywords=gratonite;chat;server;self-host;discord;
+StartupNotify=true
