@@ -98,12 +98,11 @@ Or download the [Gratonite Server](https://github.com/CoodayeA/Gratonite/release
 
 ### Encryption and Privacy
 - End-to-end encryption for all DMs and group DMs (AES-GCM-256 via ECDH P-256)
-- Automatic — no toggle needed
+- One-click enable per conversation — no setup or key management
 - Private keys stored in IndexedDB, never transmitted
 - Group key rotation on membership changes
 - Identity verification via safety numbers
-- Encryption failure warnings (never silently falls back to plaintext)
-- Key versioning for backward-compatible decryption
+- Encryption failure warnings when enabled
 
 ### Federation
 - **Protocol**: HTTP Signatures with Ed25519 keys
@@ -163,7 +162,7 @@ Or download the [Gratonite Server](https://github.com/CoodayeA/Gratonite/release
 - Todo lists
 - Standup (team check-ins)
 - Message reminders
-- Theme builder with custom CSS
+- Theme builder with visual customization
 - Theme store for community themes
 
 ### Bots and Integrations

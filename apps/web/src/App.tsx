@@ -53,6 +53,7 @@ const BadgesGallery = lazy(() => import('./pages/app/BadgesGallery'));
 const FriendActivity = lazy(() => import('./pages/app/FriendActivity'));
 const Trading = lazy(() => import('./pages/app/Trading'));
 const GuildInsights = lazy(() => import('./pages/guilds/GuildInsights'));
+const ClipsGallery = lazy(() => import('./pages/guilds/ClipsGallery'));
 const PublicGuildStats = lazy(() => import('./pages/guilds/PublicGuildStats'));
 const WikiChannel = lazy(() => import('./pages/guilds/WikiChannel'));
 const PhotoAlbums = lazy(() => import('./pages/guilds/PhotoAlbums'));
@@ -4262,6 +4263,7 @@ const appRouter = createBrowserRouter(
                 <Route path="guild/:guildId/moderation" element={<Suspense fallback={<LazyFallback />}><ModerationDashboard /></Suspense>} />
                 <Route path="guild/:guildId/members" element={<Suspense fallback={<LazyFallback />}><MemberDirectory /></Suspense>} />
                 <Route path="guild/:guildId/stats" element={<Suspense fallback={<LazyFallback />}><PublicGuildStats /></Suspense>} />
+                <Route path="guild/:guildId/clips" element={<Suspense fallback={<LazyFallback />}><ClipsGallery /></Suspense>} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

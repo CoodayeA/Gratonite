@@ -76,6 +76,10 @@ import { GifReactionPicker } from '../../components/chat/GifReactionPicker';
 import { Languages, Calendar, Timer } from 'lucide-react';
 import ForumView from '../../components/chat/ForumView';
 import DocumentChannel from '../../components/channel/DocumentChannel';
+import WikiChannel from './WikiChannel';
+import QAChannel from './QAChannel';
+import KanbanBoard from '../../components/guild/KanbanBoard';
+import ConfessionBoard from '../../components/chat/ConfessionBoard';
 
 
 // Components extracted to: ../../components/chat/MessageItem.tsx, ReactionBar.tsx, chatTypes.ts
@@ -3071,7 +3075,19 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 />
             ) : null}
 
-            <div ref={parentRef} className="message-area" role="log" aria-label={`Messages in #${channelName}`} aria-live="polite" style={{ overflowY: 'auto', zIndex: 2, position: 'relative', ...((channelTypeStr === 'GUILD_FORUM' && channelForumTags.length > 0) || channelTypeStr === 'GUILD_DOCUMENT' ? { display: 'none' } : {}) }}>
+            {/* Wiki Channel */}
+            {channelTypeStr === 'GUILD_WIKI' && <WikiChannel />}
+
+            {/* Q&A Channel */}
+            {channelTypeStr === 'GUILD_QA' && <QAChannel />}
+
+            {/* Task Board (Kanban) */}
+            {channelTypeStr === 'GUILD_TASK' && <KanbanBoard channelId={channelId!} />}
+
+            {/* Confession Board */}
+            {channelTypeStr === 'GUILD_CONFESSION' && guildId && <ConfessionBoard channelId={channelId!} guildId={guildId} />}
+
+            <div ref={parentRef} className="message-area" role="log" aria-label={`Messages in #${channelName}`} aria-live="polite" style={{ overflowY: 'auto', zIndex: 2, position: 'relative', ...((channelTypeStr === 'GUILD_FORUM' && channelForumTags.length > 0) || channelTypeStr === 'GUILD_DOCUMENT' || channelTypeStr === 'GUILD_WIKI' || channelTypeStr === 'GUILD_QA' || channelTypeStr === 'GUILD_TASK' || channelTypeStr === 'GUILD_CONFESSION' ? { display: 'none' } : {}) }}>
                 {/* Pull-to-refresh indicator (mobile) */}
                 {isMobile && pullDistance > 0 && (
                     <div className="pull-to-refresh-indicator" style={{ height: `${pullDistance}px` }}>

@@ -52,8 +52,8 @@
         {
           "type": "archive",
           "dest-filename": "gratonite.tar.gz",
-          "url": "https://gratonite.chat/downloads/Gratonite-1.0.7-linux-x64.tar.gz",
-          "sha256": "PLACEHOLDER_UPDATE_WITH_REAL_HASH_AFTER_BUILDING_TARBALL",
+          "url": "https://gratonite.chat/downloads/gratonite-desktop-1.0.7.tar.gz",
+          "sha256": "18f81f92fcbb5504d8d02a7d47d5564f6a77b734aaa524d8135ce5d5337c32ea",
           "strip-components": 1
         },
         {

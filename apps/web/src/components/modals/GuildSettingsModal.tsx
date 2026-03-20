@@ -345,7 +345,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [showCreateCategory, setShowCreateCategory] = useState(false);
     const [showCreateChannelInSettings, setShowCreateChannelInSettings] = useState<{ parentId?: string | null } | null>(null);
     const [newChannelNameInSettings, setNewChannelNameInSettings] = useState('');
-    const [newChannelTypeInSettings, setNewChannelTypeInSettings] = useState<'GUILD_TEXT' | 'GUILD_VOICE'>('GUILD_TEXT');
+    const [newChannelTypeInSettings, setNewChannelTypeInSettings] = useState<'GUILD_TEXT' | 'GUILD_VOICE' | 'GUILD_FORUM' | 'GUILD_ANNOUNCEMENT' | 'GUILD_WIKI' | 'GUILD_QA' | 'GUILD_CONFESSION' | 'GUILD_TASK'>('GUILD_TEXT');
     const [tempChannelEnabled, setTempChannelEnabled] = useState(false);
     const [tempChannelDuration, setTempChannelDuration] = useState('3600');
     const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
@@ -1933,11 +1933,17 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                     <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                                         <select
                                             value={newChannelTypeInSettings}
-                                            onChange={e => setNewChannelTypeInSettings(e.target.value as 'GUILD_TEXT' | 'GUILD_VOICE')}
+                                            onChange={e => setNewChannelTypeInSettings(e.target.value as any)}
                                             style={{ background: 'var(--bg-app)', border: '1px solid var(--stroke)', borderRadius: '6px', padding: '6px 10px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
                                         >
                                             <option value="GUILD_TEXT">Text Channel</option>
                                             <option value="GUILD_VOICE">Voice Channel</option>
+                                            <option value="GUILD_FORUM">Forum Channel</option>
+                                            <option value="GUILD_ANNOUNCEMENT">Announcement Channel</option>
+                                            <option value="GUILD_WIKI">Wiki Channel</option>
+                                            <option value="GUILD_QA">Q&A Channel</option>
+                                            <option value="GUILD_CONFESSION">Confession Channel</option>
+                                            <option value="GUILD_TASK">Task Board (Kanban)</option>
                                         </select>
                                         <select
                                             value={showCreateChannelInSettings.parentId ?? ''}

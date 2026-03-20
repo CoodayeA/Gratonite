@@ -22,6 +22,7 @@ import EditHistoryPopover from './EditHistoryPopover';
 import EmbeddedWidget from './EmbeddedWidget';
 import { SlowClapReaction } from './SlowClapReaction';
 import { ReactionBadge } from './ReactionBar';
+import TextReaction from './TextReaction';
 import { Languages, Timer } from 'lucide-react';
 import { Loader2 as Loader2Icon } from 'lucide-react';
 
@@ -737,6 +738,10 @@ export const MemoizedMessageItem = memo(({
                                     <ReactionBadge key={r.emoji} emoji={r.emoji} emojiUrl={r.emojiUrl} isCustom={r.isCustom} count={r.count} me={r.me} messageApiId={msg.apiId} channelId={msgChannelId} onReaction={onReaction} />
                                 ))}
                             </div>
+                        )}
+                        {/* Text Reactions */}
+                        {msg.apiId && msgChannelId && !msg.system && (
+                            <TextReaction messageId={msg.apiId} channelId={msgChannelId} guildId={guildId} currentUserId={currentUserId} />
                         )}
                         {/* Disappearing message countdown */}
                         {msg.expiresAt && (
