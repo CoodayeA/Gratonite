@@ -1,0 +1,58 @@
+app-id: com.gratonite.Server
+runtime: org.gnome.Platform
+runtime-version: '46'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.node22
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: gratonite-server
+
+finish-args:
+  # Network access (Docker API, image pulls, federation relay)
+  - --share=network
+  # Access Docker socket on host
+  - --filesystem=/var/run/docker.sock
+  # Alternatively, talk to Docker via Flatpak portal
+  - --talk-name=org.freedesktop.Flatpak
+  # System tray
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.freedesktop.portal.Desktop
+  # Store config in home directory
+  - --filesystem=~/.gratonite-server:create
+  # Display
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+
+build-options:
+  append-path: /usr/lib/sdk/node22/bin:/usr/lib/sdk/rust-stable/bin
+
+modules:
+  - name: gratonite-server
+    buildsystem: simple
+    build-commands:
+      # Build frontend
+      - cd apps/server && npm ci && npm run build
+      # Build Tauri/Rust backend
+      - cd apps/server/src-tauri && cargo build --release
+      # Install binary
+      - install -Dm755 apps/server/src-tauri/target/release/gratonite-server /app/bin/gratonite-server
+    sources:
+      - type: git
+        url: https://github.com/CoodayeA/Gratonite.git
+        branch: main
+
+  - name: metadata
+    buildsystem: simple
+    build-commands:
+      - install -Dm644 com.gratonite.Server.desktop /app/share/applications/com.gratonite.Server.desktop
+      - install -Dm644 com.gratonite.Server.metainfo.xml /app/share/metainfo/com.gratonite.Server.metainfo.xml
+      - install -Dm644 icon-128.png /app/share/icons/hicolor/128x128/apps/com.gratonite.Server.png
+    sources:
+      - type: file
+        path: com.gratonite.Server.desktop
+      - type: file
+        path: com.gratonite.Server.metainfo.xml
+      - type: file
+        url: https://raw.githubusercontent.com/CoodayeA/Gratonite/main/apps/server/src-tauri/icons/128x128.png
+        dest-filename: icon-128.png

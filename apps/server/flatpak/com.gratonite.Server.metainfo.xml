@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.gratonite.Server</id>
+  <name>Gratonite Server</name>
+  <summary>Self-host your own Gratonite chat instance</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <description>
+    <p>
+      Gratonite Server lets you run your own Gratonite chat instance with one click.
+      It manages Docker containers for you — no terminal or server knowledge required.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>One-click setup — just launch the app and your instance is running</li>
+      <li>Full Gratonite with chat, voice, video, threads, and more</li>
+      <li>Automatic federation — connect with other Gratonite instances</li>
+      <li>System tray integration for background operation</li>
+      <li>Auto-updates for both the app and server images</li>
+    </ul>
+  </description>
+
+  <url type="homepage">https://gratonite.chat</url>
+  <url type="bugtracker">https://github.com/CoodayeA/Gratonite/issues</url>
+
+  <developer id="com.gratonite">
+    <name>Gratonite</name>
+  </developer>
+
+  <launchable type="desktop-id">com.gratonite.Server.desktop</launchable>
+
+  <content_rating type="oars-1.1">
+    <content_attribute id="social-chat">intense</content_attribute>
+    <content_attribute id="social-audio">intense</content_attribute>
+  </content_rating>
+
+  <releases>
+    <release version="0.1.0" date="2026-03-20">
+      <description>
+        <p>Initial release of Gratonite Server.</p>
+      </description>
+    </release>
+  </releases>
+</component>
