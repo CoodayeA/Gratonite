@@ -65,6 +65,34 @@ export default function DeployPage() {
           </div>
         </ScrollReveal>
 
+        {/* Why self-host */}
+        <ScrollReveal delay={0.05}>
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
+            <Card className="p-6 bg-gray-900/50">
+              <h3 className="font-semibold mb-2">Own Your Data</h3>
+              <p className="text-sm text-gray-400">
+                Messages, files, and user data live on your server. Not ours, not anyone else&apos;s.
+                If gratonite.chat goes down, your community keeps running.
+              </p>
+            </Card>
+            <Card className="p-6 bg-gray-900/50">
+              <h3 className="font-semibold mb-2">Your Rules</h3>
+              <p className="text-sm text-gray-400">
+                No platform-wide content policies overriding your decisions.
+                Schools can enforce FERPA. Companies keep data in-house. You decide.
+              </p>
+            </Card>
+            <Card className="p-6 bg-gray-900/50">
+              <h3 className="font-semibold mb-2">Stay Connected</h3>
+              <p className="text-sm text-gray-400">
+                Federation means your self-hosted instance isn&apos;t isolated.
+                Your users can join servers on gratonite.chat and vice versa.{" "}
+                <a href="/federation" className="text-purple-400 hover:text-purple-300">Learn more</a>
+              </p>
+            </Card>
+          </div>
+        </ScrollReveal>
+
         {/* Quick start */}
         <ScrollReveal delay={0.1}>
           <Card className="mb-12 p-8 bg-gray-900/50 border-purple-500/20">

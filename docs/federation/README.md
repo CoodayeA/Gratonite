@@ -1,15 +1,37 @@
-# Gratonite Federation Protocol
+# Gratonite Federation
 
-Technical reference for the Gratonite federation protocol.
+## What is Federation?
 
-## Overview
+Federation means anyone can run their own Gratonite instance and still be part of the wider network. Think of it like email: you can use Gmail, your school can run Outlook, and your friend can host their own mail server — but you can all email each other. The servers are independent, but they speak the same language.
 
-Gratonite federation allows independent instances to communicate, enabling:
-- Cross-instance guild membership
-- Federated messaging
-- User profile portability
-- Federated voice/video calls
-- Relay-mediated NAT traversal
+Gratonite works the same way. Each instance is fully independent — you own your data, you set your rules, you control your community. But users on any instance can discover and join servers on any other instance, send messages across instances, and even join voice channels together.
+
+### Why would someone self-host?
+
+| If you... | Self-hosting gives you... |
+|---|---|
+| Run a school or university | Student data stays on your servers. Meet FERPA/institutional requirements. Use your own .edu domain. |
+| Lead a gaming community | Your content rules. No platform banning your community for content that's legal but against someone else's ToS. |
+| Run a company or team | Internal chat that stays internal. Full audit logs. Data never leaves your infrastructure. |
+| Care about privacy | You control who has access to your data. The answer is always "only you." |
+| Just want to try it | One command to install. Federation connects you to everyone else automatically. |
+
+**You don't have to choose one or the other.** Users on gratonite.chat and users on your self-hosted instance can be in the same servers together. Federation makes the network seamless.
+
+### How does it work?
+
+1. **You run an instance** — self-host on your computer, a VPS, or anywhere Docker runs
+2. **A relay connects you** — your instance connects outbound to a relay server over WebSocket. No ports to open, no firewall rules. Works behind your home router.
+3. **Discovery happens automatically** — after 48 hours with no abuse reports, your public servers appear in the Discover directory on gratonite.chat
+4. **Messages flow across instances** — when someone from gratonite.chat joins a server on your instance, messages are cryptographically signed and routed through the relay. To everyone, it looks like they're in the same room.
+
+For setup instructions, see the [Federation Guide](federation-guide.md). For self-hosting, see the [Self-Hosting Guide](self-hosting-guide.md).
+
+---
+
+# Protocol Reference
+
+Technical reference for developers and instance operators.
 
 ## Protocol Version
 

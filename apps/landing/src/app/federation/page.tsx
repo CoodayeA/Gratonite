@@ -83,6 +83,106 @@ export default function FederationPage() {
           </div>
         </ScrollReveal>
 
+        {/* Why Self-Host */}
+        <ScrollReveal delay={0.15}>
+          <div className="mb-20">
+            <h2 className="text-2xl font-bold mb-4">Why Self-Host Instead of Using gratonite.chat?</h2>
+            <p className="text-gray-400 mb-8">
+              Using gratonite.chat is like renting an apartment — it&apos;s easy and works great. Self-hosting is like
+              owning your house. Both are good choices, depending on what matters to you.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-800">
+                    <th className="text-left py-3 px-4 text-gray-400 font-medium"></th>
+                    <th className="text-left py-3 px-4 text-purple-400 font-medium">gratonite.chat</th>
+                    <th className="text-left py-3 px-4 text-green-400 font-medium">Self-Hosted</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-300">
+                  <tr className="border-b border-gray-800/50">
+                    <td className="py-3 px-4 font-medium">Setup</td>
+                    <td className="py-3 px-4">Sign up and go</td>
+                    <td className="py-3 px-4">One command, takes 5 minutes</td>
+                  </tr>
+                  <tr className="border-b border-gray-800/50">
+                    <td className="py-3 px-4 font-medium">Who owns the data</td>
+                    <td className="py-3 px-4">Stored on our servers</td>
+                    <td className="py-3 px-4">You own everything</td>
+                  </tr>
+                  <tr className="border-b border-gray-800/50">
+                    <td className="py-3 px-4 font-medium">Moderation rules</td>
+                    <td className="py-3 px-4">Platform-wide rules apply</td>
+                    <td className="py-3 px-4">You set all the rules</td>
+                  </tr>
+                  <tr className="border-b border-gray-800/50">
+                    <td className="py-3 px-4 font-medium">If gratonite.chat goes down</td>
+                    <td className="py-3 px-4">Your community is offline</td>
+                    <td className="py-3 px-4">Your community keeps running</td>
+                  </tr>
+                  <tr className="border-b border-gray-800/50">
+                    <td className="py-3 px-4 font-medium">Compliance (FERPA, GDPR, etc.)</td>
+                    <td className="py-3 px-4">Depends on our policies</td>
+                    <td className="py-3 px-4">Full control over data residency</td>
+                  </tr>
+                  <tr className="border-b border-gray-800/50">
+                    <td className="py-3 px-4 font-medium">Custom domain</td>
+                    <td className="py-3 px-4">gratonite.chat/app</td>
+                    <td className="py-3 px-4">chat.yourschool.edu, etc.</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 font-medium">Can talk to other instances</td>
+                    <td className="py-3 px-4">Yes, via federation</td>
+                    <td className="py-3 px-4">Yes, via federation</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-sm text-gray-500 mt-4">
+              The best part: it doesn&apos;t have to be one or the other. Federation means users on
+              gratonite.chat and users on your self-hosted instance can be in the same servers together.
+            </p>
+          </div>
+        </ScrollReveal>
+
+        {/* Who it's for */}
+        <ScrollReveal delay={0.17}>
+          <div className="mb-20">
+            <h2 className="text-2xl font-bold mb-6">Who Self-Hosts?</h2>
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card className="p-6 bg-gray-900/50">
+                <h3 className="font-semibold mb-2">Schools and Universities</h3>
+                <p className="text-sm text-gray-400">
+                  Keep student data on campus servers. Meet FERPA and institutional
+                  requirements. Brand it as your own with a .edu domain.
+                </p>
+              </Card>
+              <Card className="p-6 bg-gray-900/50">
+                <h3 className="font-semibold mb-2">Gaming Communities</h3>
+                <p className="text-sm text-gray-400">
+                  Your server, your content rules. No platform banning your community
+                  for content that&apos;s legal but against someone else&apos;s ToS.
+                </p>
+              </Card>
+              <Card className="p-6 bg-gray-900/50">
+                <h3 className="font-semibold mb-2">Companies and Teams</h3>
+                <p className="text-sm text-gray-400">
+                  Internal chat that stays internal. No data leaving your
+                  infrastructure. Full audit logs for compliance.
+                </p>
+              </Card>
+              <Card className="p-6 bg-gray-900/50">
+                <h3 className="font-semibold mb-2">Privacy-Conscious Communities</h3>
+                <p className="text-sm text-gray-400">
+                  If you care about who has access to your conversations, self-hosting
+                  means the answer is always &quot;only you.&quot;
+                </p>
+              </Card>
+            </div>
+          </div>
+        </ScrollReveal>
+
         {/* How it Works */}
         <ScrollReveal delay={0.2}>
           <div className="mb-20">
