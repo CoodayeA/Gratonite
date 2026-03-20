@@ -389,8 +389,8 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                         </div>
 
                         <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.5 }}>
-                            This creates a server hosted on gratonite.chat. You manage it, we store the data.
-                            Want full control over your data and rules?
+                            Servers created here are hosted on gratonite.chat.
+                            Want to host on your own infrastructure instead?
                         </p>
 
                         {/* ── Self-host option ── */}
