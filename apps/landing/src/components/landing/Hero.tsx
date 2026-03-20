@@ -60,7 +60,7 @@ export function Hero() {
                 Open in Browser
               </Button>
               <a
-                href="/docs/self-hosting"
+                href="/deploy"
                 className="inline-flex items-center gap-2 text-sm font-bold text-foreground/50 hover:text-purple transition-colors underline underline-offset-4 decoration-foreground/20 hover:decoration-purple self-center"
               >
                 Self-Host It

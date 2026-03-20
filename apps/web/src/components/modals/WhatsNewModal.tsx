@@ -14,6 +14,18 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-03-20b',
+    date: 'March 20, 2026',
+    title: 'Self-Host Your Own Gratonite',
+    entries: [
+      { type: 'feature', text: 'One-click self-hosting — run your own Gratonite instance on your computer or a VPS' },
+      { type: 'feature', text: 'Gratonite Server desktop app for Mac, Windows, and Linux — no terminal needed' },
+      { type: 'feature', text: 'Federation network live — self-hosted instances connect automatically via relay' },
+      { type: 'feature', text: 'Your guilds appear in Discover on gratonite.chat after 48 hours' },
+      { type: 'feature', text: 'CLI installer: curl -fsSL https://gratonite.chat/install | bash' },
+    ],
+  },
+  {
     id: '2026-03-20a',
     date: 'March 20, 2026',
     title: 'Bug Reporting & Error Monitoring',
