@@ -1701,7 +1701,7 @@ const DirectMessage = () => {
             }
         }
 
-        const content = resolveDmWireContent(inputValue).trim();
+        const content = resolveDmWireContent(inputValue).trim() || null;
         const attachmentIds = uploadedFiles.map(f => f.id);
 
         if (content || attachmentIds.length > 0) {
