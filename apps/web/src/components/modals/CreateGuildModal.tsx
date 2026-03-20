@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, X, Compass, Users, BookOpen, Music, Briefcase, Gamepad2, Coffee, Server, ChevronDown, ChevronUp, Shield, Database, Globe } from 'lucide-react';
+import { Camera, X, Compass, Users, BookOpen, Music, Briefcase, Gamepad2, Coffee, Server, ChevronDown, ChevronUp, Shield, Database, Globe, Plus, FileCode } from 'lucide-react';
 import { useToast } from '../ui/ToastManager';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
@@ -8,7 +8,6 @@ type Template = {
     id: string;
     name: string;
     icon: React.ReactNode;
-    emoji: string;
     defaultName: string;
     defaultDesc: string;
     channels: string[];
@@ -18,37 +17,37 @@ type Template = {
 
 const templates: Template[] = [
     {
-        id: 'gaming', name: 'Gaming Community', icon: <Gamepad2 size={14} />, emoji: '🎮',
+        id: 'gaming', name: 'Gaming', icon: <Gamepad2 size={20} />,
         defaultName: 'Gaming Portal', defaultDesc: 'A place for gamers to hang out, organize events, and share clips.',
         channels: ['general', 'lfg', 'clips', 'events'],
     },
     {
-        id: 'friends', name: 'Friends & Family', icon: <Users size={14} />, emoji: '👥',
+        id: 'friends', name: 'Friends & Family', icon: <Users size={20} />,
         defaultName: 'My Crew', defaultDesc: 'A private space for friends and family to stay connected.',
         channels: ['general', 'photos', 'plans'],
     },
     {
-        id: 'study', name: 'Study Group', icon: <BookOpen size={14} />, emoji: '📚',
+        id: 'study', name: 'Study Group', icon: <BookOpen size={20} />,
         defaultName: 'Study Portal', defaultDesc: 'Focus together, share resources, and ace your goals.',
         channels: ['general', 'resources', 'homework-help', 'accountability'],
     },
     {
-        id: 'creative', name: 'Creative Studio', icon: <Compass size={14} />, emoji: '🎨',
+        id: 'creative', name: 'Creative', icon: <Compass size={20} />,
         defaultName: 'Creative Hub', defaultDesc: 'Share art, music, writing, and collaborate on creative projects.',
         channels: ['gallery', 'feedback', 'wips', 'inspiration'],
     },
     {
-        id: 'music', name: 'Music Community', icon: <Music size={14} />, emoji: '🎵',
+        id: 'music', name: 'Music', icon: <Music size={20} />,
         defaultName: 'Music Portal', defaultDesc: 'Share tracks, discuss music theory, and find collaborators.',
         channels: ['general', 'share-your-music', 'production', 'gear'],
     },
     {
-        id: 'business', name: 'Business & Networking', icon: <Briefcase size={14} />, emoji: '💼',
+        id: 'business', name: 'Business', icon: <Briefcase size={20} />,
         defaultName: 'Network Portal', defaultDesc: 'Connect with professionals, share opportunities, and grow together.',
         channels: ['general', 'opportunities', 'showcase', 'feedback'],
     },
     {
-        id: 'chill', name: 'Chill Hangout', icon: <Coffee size={14} />, emoji: '☕',
+        id: 'chill', name: 'Hangout', icon: <Coffee size={20} />,
         defaultName: 'Hang Zone', defaultDesc: 'A laid-back space to just vibe, chat, and relax.',
         channels: ['general', 'memes', 'music', 'venting'],
     },
@@ -328,10 +327,12 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                 {/* ── Step 1: Template picker ── */}
                 {step === 'template' && (
                     <>
-                        <h2 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>Create Your Portal</h2>
-                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', textAlign: 'center' }}>Choose a template to get started, or start from scratch.</p>
+                        <h2 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>Create a Server</h2>
+                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', textAlign: 'center' }}>
+                            Pick a template or start blank. Your server lives on gratonite.chat — anyone can find and join it.
+                        </p>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '20px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '12px' }}>
                             {templates.map(t => (
                                 <div
                                     key={t.id}
@@ -351,8 +352,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                                     }}
                                     className="hover-template-card"
                                 >
-                                    <span style={{ fontSize: '22px' }}>{t.emoji}</span>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)', fontSize: '12px' }}>{t.icon}</div>
+                                    <div style={{ color: 'var(--text-secondary)' }}>{t.icon}</div>
                                     <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3 }}>{t.name}</span>
                                 </div>
                             ))}
@@ -368,8 +368,8 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                                 }}
                                 className="hover-border-accent-only"
                             >
-                                <span style={{ fontSize: '22px' }}>✨</span>
-                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Start from Scratch</span>
+                                <Plus size={20} style={{ color: 'var(--text-muted)' }} />
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Blank Server</span>
                             </div>
 
                             {/* Use a Template Code */}
@@ -383,17 +383,17 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                                 }}
                                 className="hover-border-accent-only"
                             >
-                                <span style={{ fontSize: '22px' }}>📋</span>
-                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Use a Template</span>
+                                <FileCode size={20} style={{ color: 'var(--text-muted)' }} />
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>From Template</span>
                             </div>
                         </div>
 
-                        {/* ── Self-host separator + expandable CTA ── */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '18px 0 14px' }}>
-                            <div style={{ flex: 1, height: '1px', background: 'var(--stroke)' }} />
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '1px' }}>or</span>
-                            <div style={{ flex: 1, height: '1px', background: 'var(--stroke)' }} />
-                        </div>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.5 }}>
+                            This creates a server hosted on gratonite.chat. You manage it, we store the data.
+                            Want full control over your data and rules?
+                        </p>
+
+                        {/* ── Self-host option ── */}
                         <SelfHostInfo />
                     </>
                 )}
@@ -500,7 +500,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                         )}
 
                         <h2 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>
-                            {selectedTemplate ? `${selectedTemplate.emoji} ${selectedTemplate.name}` : 'Create Your Portal'}
+                            {selectedTemplate ? selectedTemplate.name : 'Create Your Server'}
                         </h2>
                         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', textAlign: 'center' }}>Customize your portal before creating it.</p>
 
