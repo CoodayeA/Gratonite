@@ -1717,11 +1717,6 @@ const DirectMessage = () => {
                 size: f.size,
             }));
 
-            // If there are image attachments, show the first as inline media
-            const firstImage = e2eEnabled && e2eKey && encryptedFileMeta.length > 0
-                ? undefined  // Encrypted files can't show inline previews optimistically
-                : uploadedFiles.find(f => f.mimeType?.startsWith('image/'));
-
             // Encrypt only when user has explicitly enabled E2E for this conversation
             let sendPayload: { content?: string | null; encryptedContent?: string; isEncrypted?: boolean; attachmentIds?: string[]; keyVersion?: number };
             let optimisticContent = content;
@@ -1758,11 +1753,6 @@ const DirectMessage = () => {
                 isEncrypted: isOptimisticEncrypted,
                 encryptedContent: isOptimisticEncrypted ? sendPayload.encryptedContent ?? null : null,
                 attachments,
-                ...(firstImage ? {
-                    type: 'media' as const,
-                    mediaUrl: firstImage.url,
-                    mediaAspectRatio: 16 / 9
-                } : {})
             }]);
 
             api.messages.send(dmChannelId, sendPayload).then((res: any) => {
