@@ -2665,7 +2665,7 @@ const DirectMessage = () => {
                                                         const decFile = decryptedFileUrls.get(att.id);
                                                         const displayUrl = decFile?.url || att.url;
                                                         const displayName = decFile?.filename || att.filename;
-                                                        const displayType = decFile?.mimeType || att.contentType;
+                                                        const displayType = decFile?.mimeType || att.contentType || (att as any).mimeType;
                                                         // If encrypted but not yet decrypted, show loading state
                                                         if (msg.isEncrypted && !decFile && att.contentType === 'application/octet-stream') {
                                                             return (
