@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Bug, Upload, CheckCircle } from 'lucide-react';
-import { api } from '../../lib/api';
+import { api, API_BASE, getAccessToken } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
 
 const BugReportModal = ({ onClose }: { onClose: () => void }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
+    const [screenshots, setScreenshots] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const { addToast } = useToast();
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -16,10 +18,39 @@ const BugReportModal = ({ onClose }: { onClose: () => void }) => {
         return () => window.removeEventListener('keydown', handleKey);
     }, [onClose]);
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files) return;
+        const validFiles = Array.from(files).filter(f => f.type.startsWith('image/') && f.size <= 10 * 1024 * 1024);
+        setScreenshots(prev => [...prev, ...validFiles].slice(0, 5));
+        e.target.value = '';
+    };
+
+    const removeScreenshot = (idx: number) => {
+        setScreenshots(prev => prev.filter((_, i) => i !== idx));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
+            // Upload screenshots first if any
+            const attachmentUrls: string[] = [];
+            for (const file of screenshots) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const res = await fetch(`${API_BASE}/files/upload`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${getAccessToken() || ''}` },
+                        body: formData,
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.hash || data.url) attachmentUrls.push(data.hash || data.url);
+                    }
+                } catch { /* skip failed uploads */ }
+            }
             await api.bugReports.create({
                 title,
                 summary: description,
@@ -27,6 +58,7 @@ const BugReportModal = ({ onClose }: { onClose: () => void }) => {
                 viewport: `${window.innerWidth}x${window.innerHeight}`,
                 userAgent: navigator.userAgent,
                 clientTimestamp: new Date().toISOString(),
+                ...(attachmentUrls.length > 0 ? { attachments: attachmentUrls } : {}),
             });
             setIsSubmitting(false);
             setIsSubmitted(true);
@@ -109,10 +141,36 @@ const BugReportModal = ({ onClose }: { onClose: () => void }) => {
 
                             <div className="form-group">
                                 <label>Attachments</label>
-                                <div className="hover-border-muted" style={{ border: '1px dashed var(--stroke)', borderRadius: '8px', padding: '24px', textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', cursor: 'pointer', transition: 'border-color 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                <input type="file" ref={fileInputRef} hidden accept="image/*" multiple onChange={handleFileChange} />
+                                <div
+                                    className="hover-border-muted"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+                                    onDrop={e => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        const files = e.dataTransfer.files;
+                                        if (!files) return;
+                                        const validFiles = Array.from(files).filter(f => f.type.startsWith('image/') && f.size <= 10 * 1024 * 1024);
+                                        setScreenshots(prev => [...prev, ...validFiles].slice(0, 5));
+                                    }}
+                                    style={{ border: '1px dashed var(--stroke)', borderRadius: '8px', padding: '24px', textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', cursor: 'pointer', transition: 'border-color 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}
+                                >
                                     <Upload size={20} />
-                                    <div style={{ fontSize: '13px' }}>Click or drag a screenshot here</div>
+                                    <div style={{ fontSize: '13px' }}>{screenshots.length > 0 ? `${screenshots.length} file${screenshots.length > 1 ? 's' : ''} selected` : 'Click or drag a screenshot here'}</div>
                                 </div>
+                                {screenshots.length > 0 && (
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+                                        {screenshots.map((file, idx) => (
+                                            <div key={idx} style={{ position: 'relative', width: '64px', height: '64px', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--stroke)' }}>
+                                                <img src={URL.createObjectURL(file)} alt={file.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                <button onClick={() => removeScreenshot(idx)} style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(0,0,0,0.6)', border: 'none', color: 'white', width: '18px', height: '18px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, fontSize: '12px' }}>
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             <button

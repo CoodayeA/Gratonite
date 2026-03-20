@@ -294,6 +294,7 @@ export const bugReportsApi = {
     userAgent?: string;
     clientTimestamp?: string;
     metadata?: Record<string, unknown>;
+    attachments?: string[];
   }) =>
     apiFetch<BetaBugReport>('/bug-reports', {
       method: 'POST',
