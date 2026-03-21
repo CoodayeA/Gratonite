@@ -24,8 +24,9 @@ async function main() {
     const causeMsg = err?.cause?.message || '';
     if (errMsg.includes('already exists') || causeMsg.includes('already exists')) {
       console.warn('Tables already exist — seeding migration journal...');
+      await pool.query(`CREATE SCHEMA IF NOT EXISTS "drizzle"`);
       await pool.query(`
-        CREATE TABLE IF NOT EXISTS "__drizzle_migrations" (
+        CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
           id SERIAL PRIMARY KEY,
           hash TEXT NOT NULL,
           created_at BIGINT
@@ -39,12 +40,12 @@ async function main() {
         const contentHash = crypto.createHash('sha256').update(sqlContent).digest('hex');
 
         const { rows } = await pool.query(
-          `SELECT 1 FROM "__drizzle_migrations" WHERE hash = $1 LIMIT 1`,
+          `SELECT 1 FROM "drizzle"."__drizzle_migrations" WHERE hash = $1 LIMIT 1`,
           [contentHash],
         );
         if (rows.length === 0) {
           await pool.query(
-            `INSERT INTO "__drizzle_migrations" (hash, created_at) VALUES ($1, $2)`,
+            `INSERT INTO "drizzle"."__drizzle_migrations" (hash, created_at) VALUES ($1, $2)`,
             [contentHash, entry.when],
           );
           console.info(`Marked ${entry.tag} as applied (hash: ${contentHash.slice(0, 12)}...)`);
