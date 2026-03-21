@@ -20,7 +20,7 @@ import { redis } from './redis';
 
 import { db } from '../db/index';
 import { botApplications } from '../db/schema/bot-applications';
-import { botInstalls } from '../db/schema/bot-store';
+import { botListings, botInstalls } from '../db/schema/bot-store';
 import { messages } from '../db/schema/messages';
 import { channels } from '../db/schema/channels';
 import { memberRoles, roles } from '../db/schema/roles';
@@ -275,8 +275,9 @@ async function getInstalledBots(guildId: string): Promise<BotRow[]> {
       subscribedEvents: botApplications.subscribedEvents,
       botUserId: botApplications.botUserId,
     })
-    .from(botApplications)
-    .innerJoin(botInstalls, eq(botInstalls.botId, botApplications.listingId!))
+    .from(botInstalls)
+    .innerJoin(botListings, eq(botListings.id, botInstalls.botId))
+    .innerJoin(botApplications, eq(botApplications.id, botListings.applicationId!))
     .where(eq(botInstalls.guildId, guildId));
 
   const activeBots = bots.filter(b => b.isActive) as BotRow[];

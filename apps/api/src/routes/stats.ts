@@ -118,24 +118,34 @@ statsRouter.get('/guilds/:guildId', async (req: Request, res: Response): Promise
         SELECT count(*)::int AS count FROM channels
         WHERE guild_id = ${guildId} AND type != 'GUILD_CATEGORY'
       `),
-      // Online members (from Redis presence)
+      // Online members (from Redis presence via SCAN + mget)
       (async () => {
         try {
-          // TODO: Replace KEYS with SCAN or a dedicated online-users SET per guild for O(1) lookup
-          const keys = await redis.keys(`presence:*`);
-          if (keys.length === 0) return 0;
-          // Check which are guild members who are online
           const memberIds = await db.execute(sql`
             SELECT user_id FROM guild_members WHERE guild_id = ${guildId}
           `);
           const memberSet = new Set(toRows(memberIds).map((r: any) => r.user_id));
-          let online = 0;
-          for (const key of keys) {
-            const userId = key.replace('presence:', '');
-            if (memberSet.has(userId)) {
-              const status = await redis.get(key);
-              if (status && status !== 'offline') online++;
+          if (memberSet.size === 0) return 0;
+
+          // Collect matching presence keys via SCAN (non-blocking)
+          const matchingKeys: string[] = [];
+          let cursor = '0';
+          do {
+            const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', 'presence:*', 'COUNT', 100);
+            cursor = nextCursor;
+            for (const key of keys) {
+              const userId = key.replace('presence:', '');
+              if (memberSet.has(userId)) matchingKeys.push(key);
             }
+          } while (cursor !== '0');
+
+          if (matchingKeys.length === 0) return 0;
+
+          // Batch fetch all statuses in one round trip
+          const statuses = await redis.mget(...matchingKeys);
+          let online = 0;
+          for (const status of statuses) {
+            if (status && status !== 'offline') online++;
           }
           return online;
         } catch (err) {
