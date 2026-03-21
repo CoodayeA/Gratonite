@@ -20,7 +20,9 @@ async function main() {
   } catch (err: any) {
     // If the initial migration fails because tables already exist,
     // seed the drizzle journal so subsequent migrations can proceed.
-    if (err?.message?.includes('already exists')) {
+    const errMsg = err?.message || '';
+    const causeMsg = err?.cause?.message || '';
+    if (errMsg.includes('already exists') || causeMsg.includes('already exists')) {
       console.warn('Tables already exist — seeding migration journal...');
       await pool.query(`
         CREATE TABLE IF NOT EXISTS "__drizzle_migrations" (
