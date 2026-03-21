@@ -17,10 +17,31 @@ PURPLE='\033[0;35m'
 NC='\033[0m'
 BOLD='\033[1m'
 
-info()  { echo -e "${PURPLE}[gratonite]${NC} $*"; }
-ok()    { echo -e "${GREEN}[✓]${NC} $*"; }
-warn()  { echo -e "${YELLOW}[!]${NC} $*"; }
-fail()  { echo -e "${RED}[✗]${NC} $*"; exit 1; }
+STEP=0
+TOTAL_STEPS=7
+
+step()  { STEP=$((STEP + 1)); echo -e "${PURPLE}[${STEP}/${TOTAL_STEPS}]${NC} ${BOLD}$*${NC}"; }
+info()  { echo -e "${PURPLE}  ├─${NC} $*"; }
+ok()    { echo -e "${GREEN}  ✓${NC} $*"; }
+warn()  { echo -e "${YELLOW}  !${NC} $*"; }
+fail()  { echo -e "${RED}  ✗${NC} $*"; exit 1; }
+
+# Animated spinner for long-running commands
+spin() {
+  local pid=$1 msg="${2:-Working...}"
+  local frames='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+  local i=0
+  printf "  "
+  while kill -0 "$pid" 2>/dev/null; do
+    printf "\r  ${PURPLE}%s${NC} %s" "${frames:i%${#frames}:1}" "$msg"
+    i=$((i + 1))
+    sleep 0.1
+  done
+  wait "$pid"
+  local exit_code=$?
+  printf "\r\033[2K"
+  return $exit_code
+}
 
 # ─── Banner ───────────────────────────────────────────────────────────
 echo ""
@@ -49,6 +70,7 @@ NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
 
 # ─── OS Detection ─────────────────────────────────────────────────────
 detect_os() {
+  step "Detecting system"
   case "$(uname -s)" in
     Linux*)  OS="linux" ;;
     Darwin*) OS="macos" ;;
@@ -56,11 +78,12 @@ detect_os() {
     *) fail "Unsupported OS: $(uname -s)" ;;
   esac
   ARCH="$(uname -m)"
-  info "Detected: $OS ($ARCH)"
+  ok "$OS ($ARCH)"
 }
 
 # ─── Docker Check ─────────────────────────────────────────────────────
 check_docker() {
+  step "Checking Docker"
   if command -v docker &>/dev/null && docker info &>/dev/null; then
     ok "Docker is running"
     return 0
@@ -118,6 +141,7 @@ check_docker() {
 
 # ─── Docker Compose Check ────────────────────────────────────────────
 check_compose() {
+  step "Checking Docker Compose"
   if docker compose version &>/dev/null 2>&1; then
     ok "Docker Compose available"
     COMPOSE="docker compose"
@@ -131,8 +155,10 @@ check_compose() {
 
 # ─── Mode Selection ───────────────────────────────────────────────────
 select_mode() {
+  step "Setup mode"
   if [ "$NON_INTERACTIVE" = "true" ]; then
     MODE="local"
+    ok "Non-interactive — using local mode"
     return
   fi
 
@@ -154,6 +180,7 @@ select_mode() {
 
 # ─── Collect Config ──────────────────────────────────────────────────
 collect_config() {
+  step "Configuring instance"
   if [ "$MODE" = "server" ]; then
     read -rp "  Domain name (e.g. chat.example.com): " DOMAIN
     [ -z "${DOMAIN:-}" ] && fail "Domain is required for server mode."
@@ -184,6 +211,7 @@ collect_config() {
   MFA_ENCRYPTION_KEY="$(openssl rand -hex 32)"
   LIVEKIT_API_KEY="gratonite_$(openssl rand -hex 6)"
   LIVEKIT_API_SECRET="$(openssl rand -base64 32)"
+  ok "Secrets generated"
 }
 
 # ─── Create Files ────────────────────────────────────────────────────
@@ -257,28 +285,41 @@ ENVEOF
 start_services() {
   cd "$INSTALL_DIR"
 
-  info "Pulling Docker images (this may take a minute on first run)..."
-  $COMPOSE pull --quiet 2>/dev/null || $COMPOSE pull
+  step "Pulling Docker images"
+  info "This may take a few minutes on first run..."
+  $COMPOSE pull 2>&1 | while IFS= read -r line; do
+    # Show image name being pulled
+    if echo "$line" | grep -qE 'Pulling|Pull complete|Already exists|Downloading|Extracting'; then
+      printf "\r\033[2K  ${PURPLE}⠿${NC} %s" "$(echo "$line" | head -c 70)"
+    fi
+  done
+  printf "\r\033[2K"
+  ok "Images ready"
 
-  info "Starting Gratonite..."
-  $COMPOSE up -d
+  step "Starting services"
+  $COMPOSE up -d 2>&1 | while IFS= read -r line; do
+    printf "\r\033[2K  ${PURPLE}⠿${NC} %s" "$(echo "$line" | sed 's/\x1b\[[0-9;]*m//g' | head -c 70)"
+  done
+  printf "\r\033[2K"
+  ok "Containers started"
 
-  info "Waiting for services to be ready..."
+  info "Waiting for health check..."
   local retries=45
+  local elapsed=0
   while [ $retries -gt 0 ]; do
     if $COMPOSE exec -T api wget -qO- http://localhost:4000/health 2>/dev/null | grep -q '"status":"ok"'; then
       break
     fi
     retries=$((retries - 1))
+    elapsed=$(( (45 - retries) * 2 ))
+    printf "\r  ${PURPLE}⠿${NC} Waiting for API to be ready... (%ds)" "$elapsed"
     sleep 2
-    printf "."
   done
-  echo ""
+  printf "\r\033[2K"
 
   if [ $retries -eq 0 ]; then
-    warn "Services are starting but health check timed out."
-    echo "  This is normal on first run — migrations take a moment."
-    echo "  Check status with: cd $INSTALL_DIR && $COMPOSE logs -f"
+    warn "Health check timed out — this is normal on first run."
+    info "Migrations may still be running. Check: cd $INSTALL_DIR && $COMPOSE logs -f"
     return
   fi
 
