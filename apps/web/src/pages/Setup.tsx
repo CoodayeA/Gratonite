@@ -22,6 +22,7 @@ export default function Setup() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
+  const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
 
   const testDomain = async () => {
     if (!domain) return;
@@ -62,51 +63,113 @@ export default function Setup() {
     { key: 'done', label: 'Done', icon: Check },
   ];
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '12px',
+    borderRadius: '8px',
+    color: 'var(--text-primary)',
+    fontSize: '14px',
+    background: '#0f0f1a',
+    border: '1px solid #2e2e3e',
+    outline: 'none',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '14px',
+    fontWeight: 500,
+    marginBottom: '4px',
+    color: 'var(--text-primary)',
+  };
+
+  const primaryBtnBase: React.CSSProperties = {
+    flex: 1,
+    padding: '12px',
+    borderRadius: '8px',
+    fontWeight: 600,
+    color: 'var(--text-primary)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    background: '#6366f1',
+    border: 'none',
+    cursor: 'pointer',
+  };
+
+  const backBtnStyle: React.CSSProperties = {
+    padding: '12px 24px',
+    borderRadius: '8px',
+    fontWeight: 600,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: '#2e2e3e',
+    color: '#94a3b8',
+    border: 'none',
+    cursor: 'pointer',
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%)' }}>
-      <div className="w-full max-w-lg rounded-2xl overflow-hidden" style={{ background: '#1e1e2e', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%)' }}>
+      <div style={{ width: '100%', maxWidth: '512px', borderRadius: '16px', overflow: 'hidden', background: '#1e1e2e', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
         {/* Progress */}
-        <div className="flex border-b" style={{ borderColor: '#2e2e3e' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid #2e2e3e' }}>
           {steps.map((s, i) => (
-            <div key={s.key} className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-medium ${step === s.key ? 'border-b-2' : ''}`}
-              style={{ color: step === s.key ? '#818cf8' : '#64748b', borderColor: '#818cf8' }}>
+            <div key={s.key} style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '16px 0',
+              fontSize: '14px',
+              fontWeight: 500,
+              color: step === s.key ? '#818cf8' : '#64748b',
+              borderBottom: step === s.key ? '2px solid #818cf8' : '2px solid transparent',
+            }}>
               <s.icon size={16} />
-              <span className="hidden sm:inline">{s.label}</span>
+              <span>{s.label}</span>
             </div>
           ))}
         </div>
 
-        <div className="p-8">
+        <div style={{ padding: '32px' }}>
           {/* Step 1: Domain */}
           {step === 'domain' && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <Server size={48} className="mx-auto mb-4" style={{ color: '#818cf8' }} />
-                <h1 className="text-2xl font-bold text-white">Welcome to Gratonite</h1>
-                <p className="text-sm mt-2" style={{ color: '#94a3b8' }}>Let's set up your server. What's your domain?</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <Server size={48} style={{ color: '#818cf8', margin: '0 auto 16px' }} />
+                <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>Welcome to Gratonite</h1>
+                <p style={{ fontSize: '14px', marginTop: '8px', color: '#94a3b8' }}>Let's set up your server. What's your domain?</p>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-white">Server Domain</label>
+                <label style={{ ...labelStyle, marginBottom: '8px' }}>Server Domain</label>
                 <input
                   type="text"
                   value={domain}
                   onChange={e => { setDomain(e.target.value); setDomainValid(null); }}
                   placeholder="chat.example.com"
-                  className="w-full p-3 rounded-lg text-white text-sm"
-                  style={{ background: '#0f0f1a', border: '1px solid #2e2e3e' }}
+                  style={inputStyle}
                 />
-                <div className="flex items-center gap-2 mt-3">
-                  <button onClick={testDomain} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ background: '#818cf820', color: '#818cf8' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+                  <button onClick={testDomain} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 500, background: '#818cf820', color: '#818cf8', border: 'none', cursor: 'pointer' }}>
                     {domainTesting ? 'Testing...' : 'Test Domain'}
                   </button>
                   {domainValid !== null && (
-                    <span className={`text-sm ${domainValid ? 'text-green-400' : 'text-yellow-400'}`}>
+                    <span style={{ fontSize: '14px', color: domainValid ? 'var(--success)' : '#facc15' }}>
                       {domainValid ? 'Reachable!' : 'Not reachable yet (you can continue)'}
                     </span>
                   )}
                 </div>
               </div>
-              <button onClick={() => setStep('admin')} disabled={!domain} className="w-full py-3 rounded-lg font-semibold text-white flex items-center justify-center gap-2" style={{ background: '#6366f1', opacity: domain ? 1 : 0.5 }}>
+              <button
+                onClick={() => setStep('admin')}
+                disabled={!domain}
+                style={{ ...primaryBtnBase, width: '100%', opacity: domain ? 1 : 0.5 }}
+                onMouseEnter={() => setHoveredBtn('next1')}
+                onMouseLeave={() => setHoveredBtn(null)}
+              >
                 Next <ArrowRight size={16} />
               </button>
             </div>
@@ -114,31 +177,31 @@ export default function Setup() {
 
           {/* Step 2: Admin Account */}
           {step === 'admin' && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <Lock size={48} className="mx-auto mb-4" style={{ color: '#818cf8' }} />
-                <h1 className="text-2xl font-bold text-white">Create Admin Account</h1>
-                <p className="text-sm mt-2" style={{ color: '#94a3b8' }}>This will be the first user with full admin access.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <Lock size={48} style={{ color: '#818cf8', margin: '0 auto 16px' }} />
+                <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>Create Admin Account</h1>
+                <p style={{ fontSize: '14px', marginTop: '8px', color: '#94a3b8' }}>This will be the first user with full admin access.</p>
               </div>
-              <div className="space-y-4">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-white">Username</label>
-                  <input type="text" value={adminUsername} onChange={e => setAdminUsername(e.target.value)} placeholder="admin" className="w-full p-3 rounded-lg text-white text-sm" style={{ background: '#0f0f1a', border: '1px solid #2e2e3e' }} />
+                  <label style={labelStyle}>Username</label>
+                  <input type="text" value={adminUsername} onChange={e => setAdminUsername(e.target.value)} placeholder="admin" style={inputStyle} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-white">Email</label>
-                  <input type="email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} placeholder="admin@example.com" className="w-full p-3 rounded-lg text-white text-sm" style={{ background: '#0f0f1a', border: '1px solid #2e2e3e' }} />
+                  <label style={labelStyle}>Email</label>
+                  <input type="email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} placeholder="admin@example.com" style={inputStyle} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-white">Password</label>
-                  <input type="password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} placeholder="At least 8 characters" className="w-full p-3 rounded-lg text-white text-sm" style={{ background: '#0f0f1a', border: '1px solid #2e2e3e' }} />
+                  <label style={labelStyle}>Password</label>
+                  <input type="password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} placeholder="At least 8 characters" style={inputStyle} />
                 </div>
               </div>
-              <div className="flex gap-3">
-                <button onClick={() => setStep('domain')} className="px-6 py-3 rounded-lg font-semibold flex items-center gap-2" style={{ background: '#2e2e3e', color: '#94a3b8' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={() => setStep('domain')} style={backBtnStyle}>
                   <ArrowLeft size={16} /> Back
                 </button>
-                <button onClick={() => setStep('relay')} disabled={!adminEmail || adminPassword.length < 8} className="flex-1 py-3 rounded-lg font-semibold text-white flex items-center justify-center gap-2" style={{ background: '#6366f1', opacity: adminEmail && adminPassword.length >= 8 ? 1 : 0.5 }}>
+                <button onClick={() => setStep('relay')} disabled={!adminEmail || adminPassword.length < 8} style={{ ...primaryBtnBase, opacity: adminEmail && adminPassword.length >= 8 ? 1 : 0.5 }}>
                   Next <ArrowRight size={16} />
                 </button>
               </div>
@@ -147,34 +210,34 @@ export default function Setup() {
 
           {/* Step 3: Network */}
           {step === 'relay' && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <Wifi size={48} className="mx-auto mb-4" style={{ color: '#818cf8' }} />
-                <h1 className="text-2xl font-bold text-white">Connect to the Network</h1>
-                <p className="text-sm mt-2" style={{ color: '#94a3b8' }}>Choose how your server connects to other Gratonite servers.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <Wifi size={48} style={{ color: '#818cf8', margin: '0 auto 16px' }} />
+                <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>Connect to the Network</h1>
+                <p style={{ fontSize: '14px', marginTop: '8px', color: '#94a3b8' }}>Choose how your server connects to other Gratonite servers.</p>
               </div>
-              <div className="space-y-3">
-                <label className="flex items-center gap-3 p-4 rounded-lg cursor-pointer" style={{ background: enableFederation ? '#818cf815' : '#0f0f1a', border: `1px solid ${enableFederation ? '#818cf850' : '#2e2e3e'}` }}>
-                  <input type="checkbox" checked={enableFederation} onChange={e => setEnableFederation(e.target.checked)} className="w-4 h-4" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '8px', cursor: 'pointer', background: enableFederation ? '#818cf815' : '#0f0f1a', border: `1px solid ${enableFederation ? '#818cf850' : '#2e2e3e'}` }}>
+                  <input type="checkbox" checked={enableFederation} onChange={e => setEnableFederation(e.target.checked)} style={{ width: '16px', height: '16px' }} />
                   <div>
-                    <p className="text-sm font-medium text-white">Enable Federation</p>
-                    <p className="text-xs" style={{ color: '#94a3b8' }}>Let users from other servers join your communities</p>
+                    <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Enable Federation</p>
+                    <p style={{ fontSize: '12px', color: '#94a3b8' }}>Let users from other servers join your communities</p>
                   </div>
                 </label>
-                <label className="flex items-center gap-3 p-4 rounded-lg cursor-pointer" style={{ background: enableRelay ? '#818cf815' : '#0f0f1a', border: `1px solid ${enableRelay ? '#818cf850' : '#2e2e3e'}` }}>
-                  <input type="checkbox" checked={enableRelay} onChange={e => setEnableRelay(e.target.checked)} className="w-4 h-4" />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '8px', cursor: 'pointer', background: enableRelay ? '#818cf815' : '#0f0f1a', border: `1px solid ${enableRelay ? '#818cf850' : '#2e2e3e'}` }}>
+                  <input type="checkbox" checked={enableRelay} onChange={e => setEnableRelay(e.target.checked)} style={{ width: '16px', height: '16px' }} />
                   <div>
-                    <p className="text-sm font-medium text-white">Connect via Relay</p>
-                    <p className="text-xs" style={{ color: '#94a3b8' }}>Works even behind NAT — no port forwarding needed</p>
+                    <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Connect via Relay</p>
+                    <p style={{ fontSize: '12px', color: '#94a3b8' }}>Works even behind NAT — no port forwarding needed</p>
                   </div>
                 </label>
               </div>
-              {error && <p className="text-sm text-red-400">{error}</p>}
-              <div className="flex gap-3">
-                <button onClick={() => setStep('admin')} className="px-6 py-3 rounded-lg font-semibold flex items-center gap-2" style={{ background: '#2e2e3e', color: '#94a3b8' }}>
+              {error && <p style={{ fontSize: '14px', color: 'var(--danger)' }}>{error}</p>}
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={() => setStep('admin')} style={backBtnStyle}>
                   <ArrowLeft size={16} /> Back
                 </button>
-                <button onClick={handleSubmit} disabled={loading} className="flex-1 py-3 rounded-lg font-semibold text-white flex items-center justify-center gap-2" style={{ background: '#6366f1', opacity: loading ? 0.7 : 1 }}>
+                <button onClick={handleSubmit} disabled={loading} style={{ ...primaryBtnBase, opacity: loading ? 0.7 : 1 }}>
                   {loading ? 'Setting up...' : 'Finish Setup'}
                 </button>
               </div>
@@ -183,29 +246,29 @@ export default function Setup() {
 
           {/* Step 4: Done */}
           {step === 'done' && result && (
-            <div className="space-y-6 text-center">
-              <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto" style={{ background: '#22c55e20' }}>
-                <Check size={40} className="text-green-400" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', textAlign: 'center' }}>
+              <div style={{ width: '80px', height: '80px', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', background: '#22c55e20' }}>
+                <Check size={40} style={{ color: 'var(--success)' }} />
               </div>
-              <h1 className="text-2xl font-bold text-white">You're all set!</h1>
-              <p className="text-sm" style={{ color: '#94a3b8' }}>
-                Your Gratonite server is configured at <strong className="text-white">{domain}</strong>.
+              <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>You're all set!</h1>
+              <p style={{ fontSize: '14px', color: '#94a3b8' }}>
+                Your Gratonite server is configured at <strong style={{ color: 'var(--text-primary)' }}>{domain}</strong>.
               </p>
               {result.federationAddress && (
-                <p className="text-sm" style={{ color: '#94a3b8' }}>
-                  Federation address: <strong className="text-white">{result.federationAddress}</strong>
+                <p style={{ fontSize: '14px', color: '#94a3b8' }}>
+                  Federation address: <strong style={{ color: 'var(--text-primary)' }}>{result.federationAddress}</strong>
                 </p>
               )}
-              <div className="p-4 rounded-lg text-left text-sm" style={{ background: '#0f0f1a', color: '#94a3b8' }}>
-                <p className="font-medium text-white mb-2">Next steps:</p>
-                <ol className="list-decimal list-inside space-y-1">
-                  <li>Set <code className="text-xs px-1 py-0.5 rounded" style={{ background: '#2e2e3e' }}>INSTANCE_DOMAIN={domain}</code> in your environment</li>
-                  {result.federationEnabled && <li>Set <code className="text-xs px-1 py-0.5 rounded" style={{ background: '#2e2e3e' }}>FEDERATION_ENABLED=true</code></li>}
-                  {result.relayEnabled && <li>Set <code className="text-xs px-1 py-0.5 rounded" style={{ background: '#2e2e3e' }}>RELAY_ENABLED=true</code></li>}
+              <div style={{ padding: '16px', borderRadius: '8px', textAlign: 'left', fontSize: '14px', background: '#0f0f1a', color: '#94a3b8' }}>
+                <p style={{ fontWeight: 500, color: 'var(--text-primary)', marginBottom: '8px' }}>Next steps:</p>
+                <ol style={{ listStyleType: 'decimal', listStylePosition: 'inside', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <li>Set <code style={{ fontSize: '12px', padding: '2px 4px', borderRadius: '4px', background: '#2e2e3e' }}>INSTANCE_DOMAIN={domain}</code> in your environment</li>
+                  {result.federationEnabled && <li>Set <code style={{ fontSize: '12px', padding: '2px 4px', borderRadius: '4px', background: '#2e2e3e' }}>FEDERATION_ENABLED=true</code></li>}
+                  {result.relayEnabled && <li>Set <code style={{ fontSize: '12px', padding: '2px 4px', borderRadius: '4px', background: '#2e2e3e' }}>RELAY_ENABLED=true</code></li>}
                   <li>Restart the server</li>
                 </ol>
               </div>
-              <a href="/app" className="block w-full py-3 rounded-lg font-semibold text-white text-center" style={{ background: '#6366f1' }}>
+              <a href="/app" style={{ display: 'block', width: '100%', padding: '12px', borderRadius: '8px', fontWeight: 600, color: 'var(--text-primary)', textAlign: 'center', background: '#6366f1', textDecoration: 'none' }}>
                 Go to App
               </a>
             </div>

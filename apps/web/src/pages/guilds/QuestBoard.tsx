@@ -120,25 +120,58 @@ const QuestBoard = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean }
     return `${hours}h left`;
   };
 
+  const inputStyle: React.CSSProperties = {
+    background: 'var(--bg-tertiary)',
+    color: 'var(--text-primary)',
+    borderRadius: 4,
+    padding: '8px 12px',
+    fontSize: 14,
+    border: '1px solid var(--border)',
+    outline: 'none',
+    width: '100%',
+    boxSizing: 'border-box',
+  };
+
   return (
-    <div className="p-6 h-full overflow-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <Target size={20} className="text-purple-400" />
-          <h2 className="text-lg font-bold text-white">Community Quests</h2>
+    <div style={{ padding: 24, height: '100%', overflowY: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Target size={20} style={{ color: '#c084fc' }} />
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Community Quests</h2>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', background: 'var(--bg-secondary)', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)' }}>
             {(['active', 'completed', 'all'] as const).map(f => (
               <button key={f} onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 text-xs capitalize transition-colors ${filter === f ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}>
+                style={{
+                  padding: '6px 12px',
+                  fontSize: 12,
+                  textTransform: 'capitalize',
+                  transition: 'color 0.15s, background 0.15s',
+                  background: filter === f ? '#9333ea' : 'transparent',
+                  color: filter === f ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}>
                 {f}
               </button>
             ))}
           </div>
           {isAdmin && (
             <button onClick={() => setShowCreate(!showCreate)}
-              className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm transition-colors">
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                background: '#9333ea',
+                color: 'var(--text-primary)',
+                padding: '6px 12px',
+                borderRadius: 8,
+                fontSize: 14,
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'background 0.15s',
+              }}>
               {showCreate ? <X size={14} /> : <Plus size={14} />}
               {showCreate ? 'Cancel' : 'New Quest'}
             </button>
@@ -148,35 +181,44 @@ const QuestBoard = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean }
 
       {/* Create form */}
       {showCreate && (
-        <div className="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
-          <h3 className="text-sm font-semibold text-white mb-3">Create Quest</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
+        <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 16, marginBottom: 24, border: '1px solid var(--border)' }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginTop: 0, marginBottom: 12 }}>Create Quest</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ gridColumn: '1 / -1' }}>
               <input placeholder="Quest title" value={newTitle} onChange={e => setNewTitle(e.target.value)}
-                className="w-full bg-gray-700 text-white rounded px-3 py-2 text-sm border border-gray-600 placeholder-gray-500" />
+                style={inputStyle} />
             </div>
-            <div className="col-span-2">
+            <div style={{ gridColumn: '1 / -1' }}>
               <textarea placeholder="Description (optional)" value={newDesc} onChange={e => setNewDesc(e.target.value)} rows={2}
-                className="w-full bg-gray-700 text-white rounded px-3 py-2 text-sm border border-gray-600 placeholder-gray-500 resize-none" />
+                style={{ ...inputStyle, resize: 'none' }} />
             </div>
             <select value={newType} onChange={e => setNewType(e.target.value)}
-              className="bg-gray-700 text-gray-300 rounded px-3 py-2 text-sm border border-gray-600">
+              style={{ ...inputStyle, color: 'var(--text-secondary)' }}>
               {QUEST_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
             <input type="number" min={1} placeholder="Target" value={newTarget} onChange={e => setNewTarget(Number(e.target.value))}
-              className="bg-gray-700 text-white rounded px-3 py-2 text-sm border border-gray-600" />
+              style={inputStyle} />
             <input type="number" min={0} placeholder="Reward (coins)" value={newReward} onChange={e => setNewReward(Number(e.target.value))}
-              className="bg-gray-700 text-white rounded px-3 py-2 text-sm border border-gray-600" />
+              style={inputStyle} />
             <input type="datetime-local" value={newEndDate} onChange={e => setNewEndDate(e.target.value)}
-              className="bg-gray-700 text-white rounded px-3 py-2 text-sm border border-gray-600" />
-            <label className="flex items-center gap-2 text-sm text-gray-300 col-span-2">
-              <input type="checkbox" checked={newRecurring} onChange={e => setNewRecurring(e.target.checked)}
-                className="rounded bg-gray-700 border-gray-600" />
+              style={inputStyle} />
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-secondary)', gridColumn: '1 / -1' }}>
+              <input type="checkbox" checked={newRecurring} onChange={e => setNewRecurring(e.target.checked)} />
               Recurring quest
             </label>
           </div>
           <button onClick={createQuest}
-            className="mt-3 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+            style={{
+              marginTop: 12,
+              background: '#9333ea',
+              color: 'var(--text-primary)',
+              padding: '8px 16px',
+              borderRadius: 8,
+              fontSize: 14,
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'background 0.15s',
+            }}>
             Create Quest
           </button>
         </div>
@@ -184,35 +226,46 @@ const QuestBoard = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean }
 
       {/* Quest list */}
       {loading ? (
-        <div className="text-center text-gray-500 py-12">Loading quests...</div>
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)', paddingTop: 48, paddingBottom: 48 }}>Loading quests...</div>
       ) : quests.length === 0 ? (
-        <div className="text-center text-gray-500 py-12">No quests found</div>
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)', paddingTop: 48, paddingBottom: 48 }}>No quests found</div>
       ) : (
-        <div className="space-y-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {quests.map(quest => {
             const pct = Math.min((quest.currentValue / quest.targetValue) * 100, 100);
             const isComplete = !!quest.completedAt;
             return (
-              <div key={quest.id} className={`bg-gray-800 rounded-lg border ${isComplete ? 'border-green-700' : 'border-gray-700'}`}>
-                <div className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-white">{quest.title}</h3>
-                        {isComplete && <Trophy size={14} className="text-yellow-400" />}
-                        {quest.recurring && <span className="text-xs bg-blue-600/20 text-blue-400 px-1.5 py-0.5 rounded">Recurring</span>}
+              <div key={quest.id} style={{ background: 'var(--bg-secondary)', borderRadius: 8, border: `1px solid ${isComplete ? 'var(--success)' : 'var(--border)'}` }}>
+                <div style={{ padding: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{quest.title}</h3>
+                        {isComplete && <Trophy size={14} style={{ color: 'var(--warning)' }} />}
+                        {quest.recurring && (
+                          <span style={{
+                            fontSize: 12,
+                            background: 'rgba(59,130,246,0.2)',
+                            color: '#60a5fa',
+                            padding: '2px 6px',
+                            borderRadius: 4,
+                          }}>Recurring</span>
+                        )}
                       </div>
-                      {quest.description && <p className="text-xs text-gray-400 mt-1">{quest.description}</p>}
+                      {quest.description && <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, marginBottom: 0 }}>{quest.description}</p>}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       {!isComplete && (
-                        <div className="flex items-center gap-1 text-xs text-gray-400">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-secondary)' }}>
                           <Clock size={12} />
                           {timeRemaining(quest.endDate)}
                         </div>
                       )}
                       {isAdmin && (
-                        <button onClick={() => deleteQuest(quest.id)} className="p-1 text-gray-500 hover:text-red-400 transition-colors">
+                        <button onClick={() => deleteQuest(quest.id)}
+                          style={{ padding: 4, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', transition: 'color 0.15s' }}
+                          onMouseEnter={e => (e.currentTarget.style.color = 'var(--danger)')}
+                          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
                           <Trash2 size={14} />
                         </button>
                       )}
@@ -220,28 +273,52 @@ const QuestBoard = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean }
                   </div>
 
                   {/* Progress bar */}
-                  <div className="w-full bg-gray-700 rounded-full h-2.5 mb-2">
-                    <div className={`h-full rounded-full transition-all duration-500 ${isComplete ? 'bg-green-500' : 'bg-purple-500'}`}
-                      style={{ width: `${pct}%` }} />
+                  <div style={{ width: '100%', background: 'var(--bg-tertiary)', borderRadius: 9999, height: 10, marginBottom: 8 }}>
+                    <div style={{
+                      height: '100%',
+                      borderRadius: 9999,
+                      transition: 'width 0.5s',
+                      background: isComplete ? 'var(--success)' : '#a855f7',
+                      width: `${pct}%`,
+                    }} />
                   </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-400">{quest.currentValue} / {quest.targetValue} ({Math.round(pct)}%)</span>
-                    <div className="flex items-center gap-1 text-yellow-400">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12 }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>{quest.currentValue} / {quest.targetValue} ({Math.round(pct)}%)</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--warning)' }}>
                       <Trophy size={12} />
                       {(quest.reward as { coins?: number })?.coins ?? 0} coins
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 mt-3">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
                     {!isComplete && (
                       <button onClick={() => contribute(quest.id)}
-                        className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded transition-colors">
+                        style={{
+                          fontSize: 12,
+                          background: '#9333ea',
+                          color: 'var(--text-primary)',
+                          padding: '4px 12px',
+                          borderRadius: 4,
+                          border: 'none',
+                          cursor: 'pointer',
+                          transition: 'background 0.15s',
+                        }}>
                         Contribute
                       </button>
                     )}
                     <button onClick={() => toggleExpand(quest.id)}
-                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 transition-colors">
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontSize: 12,
+                        color: 'var(--text-secondary)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'color 0.15s',
+                      }}>
                       <Users size={12} />
                       Contributors
                       {expandedQuest === quest.id ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -251,17 +328,17 @@ const QuestBoard = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean }
 
                 {/* Expanded contributions */}
                 {expandedQuest === quest.id && (
-                  <div className="border-t border-gray-700 px-4 py-3">
+                  <div style={{ borderTop: '1px solid var(--border)', padding: '12px 16px' }}>
                     {!contributions[quest.id] ? (
-                      <p className="text-xs text-gray-500">Loading...</p>
+                      <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>Loading...</p>
                     ) : contributions[quest.id].length === 0 ? (
-                      <p className="text-xs text-gray-500">No contributions yet</p>
+                      <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>No contributions yet</p>
                     ) : (
-                      <div className="space-y-1">
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {contributions[quest.id].map(c => (
-                          <div key={c.userId} className="flex items-center justify-between text-xs">
-                            <span className="text-gray-300">{c.displayName || c.username}</span>
-                            <span className="text-gray-500">{c.total} contributions</span>
+                          <div key={c.userId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12 }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>{c.displayName || c.username}</span>
+                            <span style={{ color: 'var(--text-muted)' }}>{c.total} contributions</span>
                           </div>
                         ))}
                       </div>

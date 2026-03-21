@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 
 export const clientErrorsRouter = Router();
 
@@ -51,7 +52,7 @@ clientErrorsRouter.post('/', (req: Request, res: Response): void => {
     return v.slice(0, max);
   };
 
-  console.error(JSON.stringify({
+  logger.error(JSON.stringify({
     level: 'error',
     tag: '[CLIENT_ERROR]',
     message: safeStr(message, 1024),

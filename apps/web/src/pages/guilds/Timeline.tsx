@@ -28,13 +28,15 @@ const EVENT_ICONS: Record<string, typeof Clock> = {
   custom: Star,
 };
 
-const EVENT_COLORS: Record<string, string> = {
-  member_join: 'text-green-400 bg-green-400/10',
-  milestone: 'text-yellow-400 bg-yellow-400/10',
-  pin: 'text-blue-400 bg-blue-400/10',
-  event: 'text-purple-400 bg-purple-400/10',
-  custom: 'text-indigo-400 bg-indigo-400/10',
+const EVENT_COLOR_STYLES: Record<string, React.CSSProperties> = {
+  member_join: { color: '#4ade80', backgroundColor: 'rgba(74, 222, 128, 0.1)' },
+  milestone: { color: '#facc15', backgroundColor: 'rgba(250, 204, 21, 0.1)' },
+  pin: { color: '#60a5fa', backgroundColor: 'rgba(96, 165, 250, 0.1)' },
+  event: { color: '#c084fc', backgroundColor: 'rgba(192, 132, 252, 0.1)' },
+  custom: { color: 'var(--accent)', backgroundColor: 'rgba(129, 140, 248, 0.1)' },
 };
+
+const DEFAULT_EVENT_STYLE: React.CSSProperties = { color: 'var(--text-secondary)', backgroundColor: 'rgba(161, 161, 170, 0.1)' };
 
 export default function Timeline({ guildId, canManage }: TimelineProps) {
   const { addToast } = useToast();
@@ -106,44 +108,52 @@ export default function Timeline({ guildId, canManage }: TimelineProps) {
   });
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-zinc-400">Loading timeline...</div>;
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '16rem', color: 'var(--text-secondary)' }}>
+        Loading timeline...
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-4 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-zinc-100">
-          <Clock className="w-5 h-5" />
-          <h2 className="text-xl font-bold">Server Timeline</h2>
+    <div style={{ maxWidth: '42rem', margin: '0 auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+          <Clock style={{ width: '20px', height: '20px' }} />
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold' }}>Server Timeline</h2>
         </div>
         {canManage && (
           <button
             onClick={() => setShowAdd(!showAdd)}
-            className="flex items-center gap-1 bg-indigo-600 text-white rounded-lg px-3 py-1.5 text-sm hover:bg-indigo-500"
+            style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--accent)', color: '#fff', borderRadius: '8px', padding: '6px 12px', fontSize: '14px', border: 'none', cursor: 'pointer' }}
           >
-            <Plus className="w-4 h-4" />
+            <Plus style={{ width: '16px', height: '16px' }} />
             Add Event
           </button>
         )}
       </div>
 
       {showAdd && (
-        <div className="bg-zinc-800/60 rounded-lg p-4 space-y-3">
+        <div style={{ backgroundColor: 'rgba(63, 63, 70, 0.6)', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <input
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
             placeholder="Event title"
-            className="w-full bg-zinc-900 text-zinc-100 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500"
+            style={{ width: '100%', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', borderRadius: '8px', padding: '8px 12px', fontSize: '14px', outline: 'none', border: 'none', boxSizing: 'border-box' }}
           />
           <textarea
             value={newDescription}
             onChange={(e) => setNewDescription(e.target.value)}
             placeholder="Description (optional)"
-            className="w-full bg-zinc-900 text-zinc-100 rounded-lg px-3 py-2 text-sm resize-none h-16 outline-none focus:ring-1 focus:ring-indigo-500"
+            style={{ width: '100%', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', borderRadius: '8px', padding: '8px 12px', fontSize: '14px', resize: 'none', height: '64px', outline: 'none', border: 'none', boxSizing: 'border-box' }}
           />
-          <div className="flex gap-2 justify-end">
-            <button onClick={() => setShowAdd(false)} className="text-sm text-zinc-400 hover:text-zinc-200 px-3 py-1">Cancel</button>
-            <button onClick={handleAddEvent} disabled={!newTitle.trim()} className="bg-indigo-600 text-white rounded-lg px-4 py-1.5 text-sm hover:bg-indigo-500 disabled:opacity-40">
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            <button onClick={() => setShowAdd(false)} style={{ fontSize: '14px', color: 'var(--text-secondary)', padding: '4px 12px', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel</button>
+            <button
+              onClick={handleAddEvent}
+              disabled={!newTitle.trim()}
+              style={{ backgroundColor: 'var(--accent)', color: '#fff', borderRadius: '8px', padding: '6px 16px', fontSize: '14px', border: 'none', cursor: 'pointer', opacity: !newTitle.trim() ? 0.4 : 1 }}
+            >
               Add
             </button>
           </div>
@@ -151,49 +161,53 @@ export default function Timeline({ guildId, canManage }: TimelineProps) {
       )}
 
       {onThisDay.length > 0 && (
-        <div className="bg-yellow-400/5 border border-yellow-400/20 rounded-lg p-4 space-y-2">
-          <h3 className="text-sm font-semibold text-yellow-400 flex items-center gap-1">
-            <Calendar className="w-4 h-4" />
+        <div style={{ backgroundColor: 'rgba(250, 204, 21, 0.05)', border: '1px solid rgba(250, 204, 21, 0.2)', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Calendar style={{ width: '16px', height: '16px' }} />
             On This Day
           </h3>
           {onThisDay.map(e => (
-            <div key={e.id} className="text-sm text-zinc-300">
-              <span className="text-zinc-500">{new Date(e.createdAt).getFullYear()}</span> - {e.title}
+            <div key={e.id} style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+              <span style={{ color: 'var(--text-muted)' }}>{new Date(e.createdAt).getFullYear()}</span> - {e.title}
             </div>
           ))}
         </div>
       )}
 
       {/* Timeline */}
-      <div className="relative">
-        <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-zinc-700" />
+      <div style={{ position: 'relative' }}>
+        <div style={{ position: 'absolute', left: '20px', top: 0, bottom: 0, width: '2px', backgroundColor: 'var(--bg-tertiary)' }} />
 
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {events.map((event) => {
             const Icon = EVENT_ICONS[event.eventType] ?? Star;
-            const colorClasses = EVENT_COLORS[event.eventType] ?? 'text-zinc-400 bg-zinc-400/10';
+            const colorStyle = EVENT_COLOR_STYLES[event.eventType] ?? DEFAULT_EVENT_STYLE;
+
+            const cardStyle: React.CSSProperties = event.eventType === 'milestone'
+              ? { flex: 1, borderRadius: '8px', padding: '12px', backgroundColor: 'rgba(250, 204, 21, 0.05)', border: '1px solid rgba(250, 204, 21, 0.2)' }
+              : { flex: 1, borderRadius: '8px', padding: '12px', backgroundColor: 'rgba(63, 63, 70, 0.4)' };
 
             return (
-              <div key={event.id} className="relative flex items-start gap-4 pl-1">
-                <div className={`relative z-10 flex items-center justify-center w-10 h-10 rounded-full ${colorClasses}`}>
-                  <Icon className="w-4 h-4" />
+              <div key={event.id} style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', gap: '16px', paddingLeft: '4px' }}>
+                <div style={{ position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '9999px', flexShrink: 0, ...colorStyle }}>
+                  <Icon style={{ width: '16px', height: '16px' }} />
                 </div>
-                <div className={`flex-1 rounded-lg p-3 ${event.eventType === 'milestone' ? 'bg-yellow-400/5 border border-yellow-400/20' : 'bg-zinc-800/40'}`}>
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium text-zinc-100">{event.title}</h4>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-zinc-500">
+                <div style={cardStyle}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{event.title}</h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                         {new Date(event.createdAt).toLocaleDateString()}
                       </span>
                       {canManage && (
-                        <button onClick={() => handleDelete(event.id)} className="text-zinc-500 hover:text-red-400">
-                          <Trash2 className="w-3 h-3" />
+                        <button onClick={() => handleDelete(event.id)} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                          <Trash2 style={{ width: '12px', height: '12px' }} />
                         </button>
                       )}
                     </div>
                   </div>
                   {event.description && (
-                    <p className="text-xs text-zinc-400 mt-1">{event.description}</p>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{event.description}</p>
                   )}
                 </div>
               </div>
@@ -205,14 +219,14 @@ export default function Timeline({ guildId, canManage }: TimelineProps) {
       {hasMore && events.length > 0 && (
         <button
           onClick={loadMore}
-          className="w-full text-center text-sm text-zinc-400 hover:text-zinc-200 py-2"
+          style={{ width: '100%', textAlign: 'center', fontSize: '14px', color: 'var(--text-secondary)', padding: '8px 0', background: 'none', border: 'none', cursor: 'pointer' }}
         >
           Load more
         </button>
       )}
 
       {events.length === 0 && (
-        <div className="text-center text-zinc-500 py-12">
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '48px 0' }}>
           No timeline events yet.
           {canManage && ' Click "Add Event" to create the first one.'}
         </div>

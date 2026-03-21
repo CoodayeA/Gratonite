@@ -605,7 +605,7 @@ guildsRouter.get(
         return a.name.localeCompare(b.name);
       });
 
-      console.info(JSON.stringify({
+      logger.info(JSON.stringify({
         event: 'discover_query',
         route: '/guilds/discover',
         q: q || null,
@@ -633,7 +633,7 @@ guildsRouter.get('/tags', cacheControl(300), (_req: Request, res: Response) => {
   try {
     res.json(AVAILABLE_TAGS);
   } catch (err) {
-    console.error('[guilds] GET /tags error:', err);
+    logger.error('[guilds] GET /tags error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -1148,7 +1148,7 @@ guildsRouter.post(
         })
         .returning();
 
-      console.info(JSON.stringify({
+      logger.info(JSON.stringify({
         event: 'member_group_created',
         guildId,
         groupId: created.id,
@@ -1191,7 +1191,7 @@ guildsRouter.patch(
         return;
       }
 
-      console.info(JSON.stringify({
+      logger.info(JSON.stringify({
         event: 'member_group_updated',
         guildId,
         groupId,
@@ -1220,7 +1220,7 @@ guildsRouter.delete(
         .delete(guildMemberGroups)
         .where(and(eq(guildMemberGroups.id, groupId), eq(guildMemberGroups.guildId, guildId)));
 
-      console.info(JSON.stringify({
+      logger.info(JSON.stringify({
         event: 'member_group_deleted',
         guildId,
         groupId,
@@ -1262,7 +1262,7 @@ guildsRouter.put(
         .values({ guildId, groupId, userId })
         .onConflictDoNothing();
 
-      console.info(JSON.stringify({
+      logger.info(JSON.stringify({
         event: 'member_group_member_added',
         guildId,
         groupId,
@@ -1298,7 +1298,7 @@ guildsRouter.delete(
           ),
         );
 
-      console.info(JSON.stringify({
+      logger.info(JSON.stringify({
         event: 'member_group_member_removed',
         guildId,
         groupId,
@@ -2222,7 +2222,7 @@ guildsRouter.patch('/:guildId/tags', requireAuth, async (req: Request, res: Resp
     }
     res.json({ ok: true });
   } catch (err) {
-    console.error('[guilds] PATCH /:guildId/tags error:', err);
+    logger.error('[guilds] PATCH /:guildId/tags error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });

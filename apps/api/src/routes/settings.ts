@@ -104,7 +104,7 @@ settingsRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
     const { id, userId, createdAt, updatedAt, ...rest } = settings;
     res.json(rest);
   } catch (err) {
-    console.error('[settings] GET / error:', err);
+    logger.error('[settings] GET / error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -142,7 +142,7 @@ settingsRouter.patch(
         res.json(rest);
       }
     } catch (err) {
-      console.error('[settings] PATCH / error:', err);
+      logger.error('[settings] PATCH / error:', err);
       res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   },
@@ -170,7 +170,7 @@ settingsRouter.get('/notif', requireAuth, async (req: Request, res: Response): P
     const parsed = safeJsonParse(raw, null);
     res.json({ key, value: parsed });
   } catch (err) {
-    console.error('[settings] GET /notif error:', err);
+    logger.error('[settings] GET /notif error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });

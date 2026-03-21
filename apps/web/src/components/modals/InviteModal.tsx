@@ -47,7 +47,7 @@ const InviteModal = ({ onClose, guildId }: { onClose: () => void; guildId: strin
                 maxUses: USES_MAP[maxUses],
                 expiresIn: EXPIRE_MAP[expireAfter] ?? undefined,
             });
-            setInviteLink(`${window.location.origin}/invite/${result.code}`);
+            setInviteLink(`${window.location.origin}/app/invite/${result.code}`);
             setCopied(false);
         } catch {
             addToast({ title: 'Failed to create invite', variant: 'error' });
