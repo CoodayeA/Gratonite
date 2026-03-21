@@ -1877,7 +1877,13 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     };
 
     const processEmojis = (text: string) => {
-        let result = text;
+        // Protect URLs from emoticon replacement (e.g. :/ in https://)
+        const urlPlaceholders: string[] = [];
+        let result = text.replace(/https?:\/\/[^\s]+/g, (url) => {
+            urlPlaceholders.push(url);
+            return `\x00URL${urlPlaceholders.length - 1}\x00`;
+        });
+
         for (const [emoticon, emoji] of Object.entries(emoticonMap)) {
             const escapedEmoticon = emoticon.replace(/([.?*+^$[\]\\(){}|-])/g, "\\$1");
             const regex = new RegExp(`(?<!\\\\)${escapedEmoticon}`, 'g');
@@ -1888,6 +1894,9 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             const regex = new RegExp(`\\\\${escapedEmoticon}`, 'g');
             result = result.replace(regex, emoticon);
         }
+
+        // Restore URLs
+        result = result.replace(/\x00URL(\d+)\x00/g, (_, idx) => urlPlaceholders[Number(idx)]);
 
         result = result.replace(/(?<!\\):([a-zA-Z0-9_]+):/g, (match, name) => {
             const found = allEmojis.find(e => e.name === name);
