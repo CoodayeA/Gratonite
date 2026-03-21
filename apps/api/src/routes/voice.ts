@@ -66,14 +66,14 @@ const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => P
 // ---------------------------------------------------------------------------
 const LIVEKIT_ENABLED = !!(process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET);
 if (process.env.NODE_ENV === 'production' && !LIVEKIT_ENABLED) {
-  console.warn('[voice] LiveKit env vars not set — voice/video features disabled. Set LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET to enable.');
+  logger.warn('[voice] LiveKit env vars not set — voice/video features disabled. Set LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET to enable.');
 }
 if (process.env.NODE_ENV !== 'production') {
   if (!LIVEKIT_ENABLED) {
-    console.warn('[voice] WARNING: LIVEKIT_API_KEY and/or LIVEKIT_API_SECRET are not set. Voice features will be disabled.');
+    logger.warn('[voice] WARNING: LIVEKIT_API_KEY and/or LIVEKIT_API_SECRET are not set. Voice features will be disabled.');
   }
   if (!process.env.LIVEKIT_URL) {
-    console.warn('[voice] WARNING: LIVEKIT_URL is not set, falling back to ws://localhost:7880. Set LIVEKIT_URL in production.');
+    logger.warn('[voice] WARNING: LIVEKIT_URL is not set, falling back to ws://localhost:7880. Set LIVEKIT_URL in production.');
   }
 }
 

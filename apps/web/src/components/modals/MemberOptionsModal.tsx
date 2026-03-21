@@ -185,7 +185,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
         if (!guildId) return;
         try {
             const invite = await api.invites.create(guildId, {});
-            const link = `${window.location.origin}/invite/${invite.code}`;
+            const link = `${window.location.origin}/app/invite/${invite.code}`;
             await copyToClipboard(link);
             setCopied(true);
             addToast({ title: 'Invite link copied to clipboard', variant: 'success' });

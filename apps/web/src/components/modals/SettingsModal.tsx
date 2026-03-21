@@ -1565,8 +1565,8 @@ const SettingsModal = ({
                             <LoginHistoryPage />
                         )}
 
-                        {/* Connections tab hidden — OAuth integration not yet available */}
-                        {/* Activity Privacy tab hidden — game activity detection not yet available */}
+                        {/* Connections tab hidden — OAuth is implemented but Connections UI not yet built */}
+                        {/* Activity Privacy tab hidden — game activity detection not yet implemented */}
 
                         {activeTab === 'theme' && <SettingsThemeTab addToast={addToast} />}
 

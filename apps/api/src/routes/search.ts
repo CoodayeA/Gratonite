@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { logger } from '../lib/logger';
 import { eq, and, or, sql, desc, lt, gt, inArray } from 'drizzle-orm';
 import { db } from '../db/index';
 import { messages } from '../db/schema/messages';
@@ -145,7 +146,7 @@ searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request,
   }));
   res.json({ results: mapped, total: mapped.length, limit, offset: 0 });
   } catch (err) {
-    console.error('[search] GET /messages error:', err);
+    logger.error('[search] GET /messages error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });

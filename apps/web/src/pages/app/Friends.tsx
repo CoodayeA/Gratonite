@@ -1236,7 +1236,7 @@ const Friends = () => {
 
                             <div style={{ marginTop: '48px', paddingTop: '32px', borderTop: '1px solid var(--stroke)' }}>
                                 <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Other ways to connect</h3>
-                                <button onClick={() => { copyToClipboard('https://gratonite.chat/invite/xK9f2mP'); addToast({ title: 'Invite Link Copied!', description: 'Share this link to invite friends to Gratonite.', variant: 'success' }); }} className="auth-button" style={{ marginTop: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: 'auto' }}>
+                                <button onClick={() => { copyToClipboard(window.location.origin); addToast({ title: 'Invite Link Copied!', description: 'Share this link to invite friends to Gratonite.', variant: 'success' }); }} className="auth-button" style={{ marginTop: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: 'auto' }}>
                                     <UserPlus size={18} />
                                     Invite via Link
                                 </button>

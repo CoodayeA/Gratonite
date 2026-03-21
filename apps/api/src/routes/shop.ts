@@ -284,7 +284,7 @@ shopRouter.post(
         });
       }
 
-      console.info(JSON.stringify({
+      logger.info(JSON.stringify({
         event: 'purchase_success',
         route: '/shop/purchase',
         userId,
@@ -363,7 +363,7 @@ shopRouter.patch(
         .where(and(eq(userInventory.userId, req.userId!), eq(userInventory.itemId, itemId)))
         .returning();
 
-      console.info(JSON.stringify({
+      logger.info(JSON.stringify({
         event: 'equip_success',
         route: '/shop/items/:id/equip',
         userId: req.userId!,

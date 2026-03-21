@@ -1731,7 +1731,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Vanity URL</h3>
                             <div style={{ marginBottom: '24px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0', marginBottom: '8px' }}>
-                                    <span style={{ padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRight: 'none', borderRadius: '8px 0 0 8px', fontSize: '14px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>gratonite.chat/invite/</span>
+                                    <span style={{ padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRight: 'none', borderRadius: '8px 0 0 8px', fontSize: '14px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>gratonite.chat/app/invite/</span>
                                     <input
                                         type="text"
                                         value={vanityCode}

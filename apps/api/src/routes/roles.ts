@@ -162,7 +162,7 @@ rolesRouter.get('/', requireAuth, async (req: Request, res: Response): Promise<v
       permissions: r.permissions.toString(),
     })));
   } catch (err) {
-    console.error('[roles] GET / error:', err);
+    logger.error('[roles] GET / error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -253,7 +253,7 @@ rolesRouter.patch('/positions', requireAuth, async (req: Request, res: Response)
 
     res.status(200).json({ code: 'OK', message: 'Positions updated' });
   } catch (err) {
-    console.error('[roles] PATCH /positions error:', err);
+    logger.error('[roles] PATCH /positions error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });

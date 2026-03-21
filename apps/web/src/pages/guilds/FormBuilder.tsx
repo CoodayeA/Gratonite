@@ -150,32 +150,30 @@ const FormBuilder = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean 
     switch (field.type) {
       case 'short_text':
         return <input type="text" value={(value as string) || ''} onChange={e => onChange(e.target.value)}
-          className="w-full bg-gray-700 text-white rounded px-3 py-2 text-sm border border-gray-600" />;
+          style={{ width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', borderRadius: 4, padding: '8px 12px', fontSize: 14, border: '1px solid var(--border)', outline: 'none', boxSizing: 'border-box' }} />;
       case 'long_text':
         return <textarea value={(value as string) || ''} onChange={e => onChange(e.target.value)} rows={3}
-          className="w-full bg-gray-700 text-white rounded px-3 py-2 text-sm border border-gray-600 resize-none" />;
+          style={{ width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', borderRadius: 4, padding: '8px 12px', fontSize: 14, border: '1px solid var(--border)', resize: 'none', outline: 'none', boxSizing: 'border-box' }} />;
       case 'multiple_choice':
         return (
-          <div className="space-y-1">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {(field.options || []).map(opt => (
-              <label key={opt} className="flex items-center gap-2 text-sm text-gray-300">
-                <input type="radio" name={field.id} checked={value === opt} onChange={() => onChange(opt)}
-                  className="bg-gray-700 border-gray-600" /> {opt}
+              <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-secondary)' }}>
+                <input type="radio" name={field.id} checked={value === opt} onChange={() => onChange(opt)} /> {opt}
               </label>
             ))}
           </div>
         );
       case 'checkbox':
         return (
-          <div className="space-y-1">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {(field.options || []).map(opt => (
-              <label key={opt} className="flex items-center gap-2 text-sm text-gray-300">
+              <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-secondary)' }}>
                 <input type="checkbox" checked={((value as string[]) || []).includes(opt)}
                   onChange={e => {
                     const arr = ((value as string[]) || []);
                     onChange(e.target.checked ? [...arr, opt] : arr.filter(v => v !== opt));
-                  }}
-                  className="rounded bg-gray-700 border-gray-600" /> {opt}
+                  }} /> {opt}
               </label>
             ))}
           </div>
@@ -183,7 +181,7 @@ const FormBuilder = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean 
       case 'dropdown':
         return (
           <select value={(value as string) || ''} onChange={e => onChange(e.target.value)}
-            className="w-full bg-gray-700 text-gray-300 rounded px-3 py-2 text-sm border border-gray-600">
+            style={{ width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', borderRadius: 4, padding: '8px 12px', fontSize: 14, border: '1px solid var(--border)', outline: 'none', boxSizing: 'border-box' }}>
             <option value="">Select...</option>
             {(field.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
           </select>
@@ -193,52 +191,56 @@ const FormBuilder = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean 
 
   // --- LIST VIEW ---
   if (view === 'list') return (
-    <div className="p-6 h-full overflow-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <FileText size={20} className="text-indigo-400" />
-          <h2 className="text-lg font-bold text-white">Forms & Applications</h2>
+    <div style={{ padding: 24, height: '100%', overflowY: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <FileText size={20} style={{ color: 'var(--accent)' }} />
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Forms & Applications</h2>
         </div>
         {isAdmin && (
           <button onClick={() => setView('create')}
-            className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm transition-colors">
+            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--accent)', color: 'var(--text-primary)', padding: '6px 12px', borderRadius: 8, fontSize: 14, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}>
             <Plus size={14} /> New Form
           </button>
         )}
       </div>
       {loading ? (
-        <div className="text-center text-gray-500 py-12">Loading forms...</div>
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '48px 0' }}>Loading forms...</div>
       ) : forms.length === 0 ? (
-        <div className="text-center text-gray-500 py-12">No forms created yet</div>
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '48px 0' }}>No forms created yet</div>
       ) : (
-        <div className="space-y-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {forms.map(form => (
-            <div key={form.id} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-              <div className="flex items-center justify-between">
+            <div key={form.id} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 16, border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-white">{form.title}</h3>
-                    <span className={`text-xs px-1.5 py-0.5 rounded ${form.status === 'open' ? 'bg-green-600/20 text-green-400' : 'bg-red-600/20 text-red-400'}`}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{form.title}</h3>
+                    <span style={{
+                      fontSize: 12, padding: '2px 6px', borderRadius: 4,
+                      background: form.status === 'open' ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)',
+                      color: form.status === 'open' ? 'var(--success)' : 'var(--danger)'
+                    }}>
                       {form.status}
                     </span>
                   </div>
-                  {form.description && <p className="text-xs text-gray-400 mt-1">{form.description}</p>}
-                  <p className="text-xs text-gray-500 mt-1">{(form.fields as FormField[]).length} fields</p>
+                  {form.description && <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, margin: '4px 0 0 0' }}>{form.description}</p>}
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, margin: '4px 0 0 0' }}>{(form.fields as FormField[]).length} fields</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {form.status === 'open' && (
                     <button onClick={() => openFill(form)}
-                      className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded transition-colors">
+                      style={{ fontSize: 12, background: 'var(--accent)', color: 'var(--text-primary)', padding: '4px 12px', borderRadius: 4, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}>
                       Fill Out
                     </button>
                   )}
                   {isAdmin && (
                     <>
                       <button onClick={() => openResponses(form)}
-                        className="text-xs bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded transition-colors">
+                        style={{ fontSize: 12, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', padding: '4px 12px', borderRadius: 4, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}>
                         Responses
                       </button>
-                      <button onClick={() => deleteForm(form.id)} className="p-1 text-gray-500 hover:text-red-400 transition-colors">
+                      <button onClick={() => deleteForm(form.id)} style={{ padding: 4, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', transition: 'color 0.15s' }}>
                         <Trash2 size={14} />
                       </button>
                     </>
@@ -254,28 +256,28 @@ const FormBuilder = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean 
 
   // --- CREATE VIEW ---
   if (view === 'create') return (
-    <div className="p-6 h-full overflow-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-bold text-white">Create Form</h2>
-        <div className="flex items-center gap-2">
+    <div style={{ padding: 24, height: '100%', overflowY: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Create Form</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button onClick={() => setPreview(!preview)}
-            className="flex items-center gap-1 text-xs bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded transition-colors">
+            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', padding: '6px 12px', borderRadius: 4, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}>
             <Eye size={14} /> {preview ? 'Edit' : 'Preview'}
           </button>
-          <button onClick={() => setView('list')} className="text-xs text-gray-400 hover:text-gray-200">Cancel</button>
+          <button onClick={() => setView('list')} style={{ fontSize: 12, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel</button>
         </div>
       </div>
 
       {preview ? (
         /* Preview mode */
-        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 max-w-lg mx-auto">
-          <h3 className="text-lg font-bold text-white mb-1">{formTitle || 'Untitled Form'}</h3>
-          {formDesc && <p className="text-sm text-gray-400 mb-4">{formDesc}</p>}
-          <div className="space-y-4">
+        <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 24, border: '1px solid var(--border)', maxWidth: 512, margin: '0 auto' }}>
+          <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4, marginTop: 0 }}>{formTitle || 'Untitled Form'}</h3>
+          {formDesc && <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16, marginTop: 0 }}>{formDesc}</p>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {fields.map(field => (
               <div key={field.id}>
-                <label className="block text-sm text-gray-300 mb-1">
-                  {field.label || 'Untitled field'} {field.required && <span className="text-red-400">*</span>}
+                <label style={{ display: 'block', fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                  {field.label || 'Untitled field'} {field.required && <span style={{ color: 'var(--danger)' }}>*</span>}
                 </label>
                 {renderFieldInput(field, null, () => {})}
               </div>
@@ -284,41 +286,40 @@ const FormBuilder = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean 
         </div>
       ) : (
         /* Edit mode */
-        <div className="space-y-4 max-w-lg mx-auto">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 512, margin: '0 auto' }}>
           <input placeholder="Form title" value={formTitle} onChange={e => setFormTitle(e.target.value)}
-            className="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm border border-gray-700 placeholder-gray-500" />
+            style={{ width: '100%', background: 'var(--bg-secondary)', color: 'var(--text-primary)', borderRadius: 4, padding: '8px 12px', fontSize: 14, border: '1px solid var(--border)', outline: 'none', boxSizing: 'border-box' }} />
           <textarea placeholder="Description (optional)" value={formDesc} onChange={e => setFormDesc(e.target.value)} rows={2}
-            className="w-full bg-gray-800 text-white rounded px-3 py-2 text-sm border border-gray-700 placeholder-gray-500 resize-none" />
+            style={{ width: '100%', background: 'var(--bg-secondary)', color: 'var(--text-primary)', borderRadius: 4, padding: '8px 12px', fontSize: 14, border: '1px solid var(--border)', resize: 'none', outline: 'none', boxSizing: 'border-box' }} />
 
-          <div className="space-y-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {fields.map((field, idx) => (
-              <div key={field.id} className="bg-gray-800 rounded-lg p-3 border border-gray-700">
-                <div className="flex items-center gap-2 mb-2">
-                  <GripVertical size={14} className="text-gray-500" />
-                  <span className="text-xs text-gray-500">#{idx + 1}</span>
+              <div key={field.id} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 12, border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <GripVertical size={14} style={{ color: 'var(--text-muted)' }} />
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>#{idx + 1}</span>
                   <select value={field.type} onChange={e => updateField(field.id, { type: e.target.value as FieldType })}
-                    className="bg-gray-700 text-gray-300 rounded px-2 py-1 text-xs border border-gray-600">
+                    style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', borderRadius: 4, padding: '4px 8px', fontSize: 12, border: '1px solid var(--border)', outline: 'none' }}>
                     {FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
-                  <div className="flex-1" />
-                  <label className="flex items-center gap-1 text-xs text-gray-400">
-                    <input type="checkbox" checked={field.required} onChange={e => updateField(field.id, { required: e.target.checked })}
-                      className="rounded bg-gray-700 border-gray-600" /> Required
+                  <div style={{ flex: 1 }} />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-secondary)' }}>
+                    <input type="checkbox" checked={field.required} onChange={e => updateField(field.id, { required: e.target.checked })} /> Required
                   </label>
-                  <button onClick={() => removeField(field.id)} className="p-1 text-gray-500 hover:text-red-400">
+                  <button onClick={() => removeField(field.id)} style={{ padding: 4, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
                     <Trash2 size={12} />
                   </button>
                 </div>
                 <input placeholder="Field label" value={field.label} onChange={e => updateField(field.id, { label: e.target.value })}
-                  className="w-full bg-gray-700 text-white rounded px-3 py-1.5 text-sm border border-gray-600 placeholder-gray-500" />
+                  style={{ width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', borderRadius: 4, padding: '6px 12px', fontSize: 14, border: '1px solid var(--border)', outline: 'none', boxSizing: 'border-box' }} />
                 {['multiple_choice', 'checkbox', 'dropdown'].includes(field.type) && (
-                  <div className="mt-2">
-                    <label className="text-xs text-gray-400 mb-1 block">Options (one per line)</label>
+                  <div style={{ marginTop: 8 }}>
+                    <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Options (one per line)</label>
                     <textarea
                       value={(field.options || []).join('\n')}
                       onChange={e => updateField(field.id, { options: e.target.value.split('\n').filter(Boolean) })}
                       rows={3}
-                      className="w-full bg-gray-700 text-white rounded px-3 py-1.5 text-xs border border-gray-600 resize-none placeholder-gray-500"
+                      style={{ width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', borderRadius: 4, padding: '6px 12px', fontSize: 12, border: '1px solid var(--border)', resize: 'none', outline: 'none', boxSizing: 'border-box' }}
                       placeholder="Option 1&#10;Option 2&#10;Option 3"
                     />
                   </div>
@@ -328,12 +329,12 @@ const FormBuilder = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean 
           </div>
 
           <button onClick={addField}
-            className="flex items-center gap-1 text-sm text-indigo-400 hover:text-indigo-300 transition-colors">
+            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 14, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, transition: 'opacity 0.15s' }}>
             <Plus size={14} /> Add Field
           </button>
 
           <button onClick={createForm}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm transition-colors">
+            style={{ width: '100%', background: 'var(--accent)', color: 'var(--text-primary)', padding: '8px 0', borderRadius: 8, fontSize: 14, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}>
             Create Form
           </button>
         </div>
@@ -343,23 +344,23 @@ const FormBuilder = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean 
 
   // --- FILL VIEW ---
   if (view === 'fill' && selectedForm) return (
-    <div className="p-6 h-full overflow-auto">
-      <button onClick={() => setView('list')} className="text-xs text-gray-400 hover:text-gray-200 mb-4">&larr; Back to forms</button>
-      <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 max-w-lg mx-auto">
-        <h3 className="text-lg font-bold text-white mb-1">{selectedForm.title}</h3>
-        {selectedForm.description && <p className="text-sm text-gray-400 mb-4">{selectedForm.description}</p>}
-        <div className="space-y-4">
+    <div style={{ padding: 24, height: '100%', overflowY: 'auto' }}>
+      <button onClick={() => setView('list')} style={{ fontSize: 12, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 16, padding: 0 }}>&larr; Back to forms</button>
+      <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 24, border: '1px solid var(--border)', maxWidth: 512, margin: '0 auto' }}>
+        <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4, marginTop: 0 }}>{selectedForm.title}</h3>
+        {selectedForm.description && <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16, marginTop: 0 }}>{selectedForm.description}</p>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {(selectedForm.fields as FormField[]).map(field => (
             <div key={field.id}>
-              <label className="block text-sm text-gray-300 mb-1">
-                {field.label} {field.required && <span className="text-red-400">*</span>}
+              <label style={{ display: 'block', fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                {field.label} {field.required && <span style={{ color: 'var(--danger)' }}>*</span>}
               </label>
               {renderFieldInput(field, answers[field.id], v => setAnswers(prev => ({ ...prev, [field.id]: v })))}
             </div>
           ))}
         </div>
         <button onClick={submitResponse}
-          className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm transition-colors">
+          style={{ width: '100%', marginTop: 16, background: 'var(--accent)', color: 'var(--text-primary)', padding: '8px 0', borderRadius: 8, fontSize: 14, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}>
           Submit
         </button>
       </div>
@@ -368,43 +369,47 @@ const FormBuilder = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean 
 
   // --- RESPONSES VIEW ---
   if (view === 'responses' && selectedForm) return (
-    <div className="p-6 h-full overflow-auto">
-      <button onClick={() => setView('list')} className="text-xs text-gray-400 hover:text-gray-200 mb-4">&larr; Back to forms</button>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-white">{selectedForm.title} - Responses ({responsesTotal})</h2>
+    <div style={{ padding: 24, height: '100%', overflowY: 'auto' }}>
+      <button onClick={() => setView('list')} style={{ fontSize: 12, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 16, padding: 0 }}>&larr; Back to forms</button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{selectedForm.title} - Responses ({responsesTotal})</h2>
       </div>
       {responses.length === 0 ? (
-        <div className="text-center text-gray-500 py-12">No responses yet</div>
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '48px 0' }}>No responses yet</div>
       ) : (
-        <div className="space-y-2">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {responses.map(r => (
-            <div key={r.id} className="bg-gray-800 rounded-lg border border-gray-700">
-              <div className="p-3 flex items-center justify-between cursor-pointer" onClick={() => setExpandedResponse(expandedResponse === r.id ? null : r.id)}>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-white">{r.displayName || r.username}</span>
-                  <span className={`text-xs px-1.5 py-0.5 rounded ${r.status === 'approved' ? 'bg-green-600/20 text-green-400' : r.status === 'rejected' ? 'bg-red-600/20 text-red-400' : 'bg-yellow-600/20 text-yellow-400'}`}>
+            <div key={r.id} style={{ background: 'var(--bg-secondary)', borderRadius: 8, border: '1px solid var(--border)' }}>
+              <div style={{ padding: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setExpandedResponse(expandedResponse === r.id ? null : r.id)}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 14, color: 'var(--text-primary)' }}>{r.displayName || r.username}</span>
+                  <span style={{
+                    fontSize: 12, padding: '2px 6px', borderRadius: 4,
+                    background: r.status === 'approved' ? 'rgba(34,197,94,0.2)' : r.status === 'rejected' ? 'rgba(239,68,68,0.2)' : 'rgba(234,179,8,0.2)',
+                    color: r.status === 'approved' ? 'var(--success)' : r.status === 'rejected' ? 'var(--danger)' : 'var(--warning)'
+                  }}>
                     {r.status}
                   </span>
-                  <span className="text-xs text-gray-500">{new Date(r.createdAt).toLocaleDateString()}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(r.createdAt).toLocaleDateString()}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {r.status === 'pending' && (
                     <>
                       <button onClick={e => { e.stopPropagation(); reviewResponse(r.id, 'approved'); }}
-                        className="p-1 text-green-400 hover:text-green-300"><Check size={16} /></button>
+                        style={{ padding: 4, color: 'var(--success)', background: 'none', border: 'none', cursor: 'pointer' }}><Check size={16} /></button>
                       <button onClick={e => { e.stopPropagation(); reviewResponse(r.id, 'rejected'); }}
-                        className="p-1 text-red-400 hover:text-red-300"><X size={16} /></button>
+                        style={{ padding: 4, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={16} /></button>
                     </>
                   )}
-                  {expandedResponse === r.id ? <ChevronUp size={14} className="text-gray-500" /> : <ChevronDown size={14} className="text-gray-500" />}
+                  {expandedResponse === r.id ? <ChevronUp size={14} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />}
                 </div>
               </div>
               {expandedResponse === r.id && (
-                <div className="border-t border-gray-700 p-3 space-y-2">
+                <div style={{ borderTop: '1px solid var(--border)', padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {(selectedForm.fields as FormField[]).map(field => (
                     <div key={field.id}>
-                      <div className="text-xs text-gray-400">{field.label}</div>
-                      <div className="text-sm text-gray-200">
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{field.label}</div>
+                      <div style={{ fontSize: 14, color: 'var(--text-primary)' }}>
                         {Array.isArray((r.answers as Record<string, unknown>)[field.id])
                           ? ((r.answers as Record<string, unknown>)[field.id] as string[]).join(', ')
                           : String((r.answers as Record<string, unknown>)[field.id] ?? '-')}

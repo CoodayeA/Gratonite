@@ -51,7 +51,7 @@ telemetryRouter.post(
     const userId = resolveUserId(req);
     const payload = parsed.data;
 
-    console.info(JSON.stringify({
+    logger.info(JSON.stringify({
       event: payload.event,
       guildId: payload.guildId ?? null,
       userId,

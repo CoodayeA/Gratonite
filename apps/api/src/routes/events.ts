@@ -18,6 +18,7 @@ import { z } from 'zod';
 import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 
 import { db } from '../db/index';
+import { logger } from '../lib/logger';
 import { scheduledEvents, eventInterests } from '../db/schema/events';
 import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
@@ -112,7 +113,7 @@ eventsRouter.get('/', requireAuth, async (req: Request, res: Response): Promise<
       })),
     );
   } catch (err) {
-    console.error('[events] GET / error:', err);
+    logger.error('[events] GET / error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -142,7 +143,7 @@ eventsRouter.post('/', requireAuth, validate(createEventSchema), async (req: Req
 
     res.status(201).json(event);
   } catch (err) {
-    console.error('[events] POST / error:', err);
+    logger.error('[events] POST / error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -199,7 +200,7 @@ eventsRouter.get('/:eventId', requireAuth, async (req: Request, res: Response): 
       isInterested,
     });
   } catch (err) {
-    console.error('[events] GET /:eventId error:', err);
+    logger.error('[events] GET /:eventId error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -249,7 +250,7 @@ eventsRouter.patch('/:eventId', requireAuth, validate(updateEventSchema), async 
 
     res.json(updated);
   } catch (err) {
-    console.error('[events] PATCH /:eventId error:', err);
+    logger.error('[events] PATCH /:eventId error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -281,7 +282,7 @@ eventsRouter.delete('/:eventId', requireAuth, async (req: Request, res: Response
 
     res.json({ code: 'OK' });
   } catch (err) {
-    console.error('[events] DELETE /:eventId error:', err);
+    logger.error('[events] DELETE /:eventId error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -322,7 +323,7 @@ eventsRouter.put('/:eventId/interested', requireAuth, async (req: Request, res: 
 
     res.json({ code: 'OK', interested: true });
   } catch (err) {
-    console.error('[events] PUT /:eventId/interested error:', err);
+    logger.error('[events] PUT /:eventId/interested error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
@@ -349,7 +350,7 @@ eventsRouter.delete('/:eventId/interested', requireAuth, async (req: Request, re
 
     res.json({ code: 'OK', interested: false });
   } catch (err) {
-    console.error('[events] DELETE /:eventId/interested error:', err);
+    logger.error('[events] DELETE /:eventId/interested error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });

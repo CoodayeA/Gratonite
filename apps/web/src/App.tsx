@@ -315,7 +315,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
             ...(isOwner ? [{ id: 'server-settings', label: 'Portal Settings', icon: Settings, onClick: () => { navigate(`/guild/${guild.id}`); onOpenGuildSettings(); } }] : []),
             { id: 'invite', label: 'Invite People', icon: Link2, onClick: () => {
                 api.invites.create(guild.id, {}).then((invite) => {
-                    const link = `${window.location.origin}/invite/${invite.code}`;
+                    const link = `${window.location.origin}/app/invite/${invite.code}`;
                     copyToClipboard(link);
                     addToast({ title: 'Invite link copied to clipboard', variant: 'success' });
                 }).catch(() => onOpenInvite());
@@ -1174,7 +1174,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
             { id: 'invite', label: 'Create Invite Link', icon: Link2, onClick: () => {
                 if (!activeGuildId) return;
                 api.invites.create(activeGuildId, {}).then((invite) => {
-                    const link = `${window.location.origin}/invite/${invite.code}`;
+                    const link = `${window.location.origin}/app/invite/${invite.code}`;
                     copyToClipboard(link);
                     addToast({ title: 'Invite link copied to clipboard', variant: 'success' });
                 }).catch(() => addToast({ title: 'Failed to create invite', variant: 'error' }));

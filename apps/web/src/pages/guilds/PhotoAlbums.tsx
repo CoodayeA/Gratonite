@@ -126,46 +126,46 @@ export default function PhotoAlbums({ guildId }: PhotoAlbumsProps) {
   // Album detail view
   if (activeAlbum) {
     return (
-      <div className="p-4">
-        <div className="flex items-center gap-3 mb-4">
-          <button onClick={() => setActiveAlbum(null)} className="p-1.5 hover:bg-gray-700 rounded text-gray-400 hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
+      <div style={{ padding: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <button onClick={() => setActiveAlbum(null)} style={{ padding: 6, borderRadius: 4, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
+            <ArrowLeft style={{ width: 20, height: 20 }} />
           </button>
-          <div className="flex-1">
-            <h2 className="text-lg font-semibold text-white">{activeAlbum.name}</h2>
-            {activeAlbum.description && <p className="text-sm text-gray-400">{activeAlbum.description}</p>}
+          <div style={{ flex: 1 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)' }}>{activeAlbum.name}</h2>
+            {activeAlbum.description && <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>{activeAlbum.description}</p>}
           </div>
-          <button onClick={() => setShowAddPhoto(true)} className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-sm">
-            <ImagePlus className="w-4 h-4" /> Add Photo
+          <button onClick={() => setShowAddPhoto(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', background: 'var(--accent)', color: 'white', borderRadius: 4, fontSize: 14, border: 'none', cursor: 'pointer' }}>
+            <ImagePlus style={{ width: 16, height: 16 }} /> Add Photo
           </button>
-          <button onClick={() => deleteAlbum(activeAlbum.id)} className="p-1.5 hover:bg-red-600/20 rounded text-red-400 hover:text-red-300">
-            <Trash2 className="w-4 h-4" />
+          <button onClick={() => deleteAlbum(activeAlbum.id)} style={{ padding: 6, borderRadius: 4, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }}>
+            <Trash2 style={{ width: 16, height: 16 }} />
           </button>
         </div>
 
         {/* Add Photo Modal */}
         {showAddPhoto && (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowAddPhoto(false)}>
-            <div className="bg-gray-800 rounded-lg p-4 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-white font-medium">Add Photo</h3>
-                <button onClick={() => setShowAddPhoto(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }} onClick={() => setShowAddPhoto(false)}>
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 16, width: '100%', maxWidth: 448, margin: '0 16px' }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <h3 style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Add Photo</h3>
+                <button onClick={() => setShowAddPhoto(false)} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}><X style={{ width: 20, height: 20 }} /></button>
               </div>
               <input
                 type="url"
                 placeholder="Image URL"
                 value={photoUrl}
                 onChange={e => setPhotoUrl(e.target.value)}
-                className="w-full mb-2 px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                style={{ width: '100%', marginBottom: 8, padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 4, fontSize: 14, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
               />
               <input
                 type="text"
                 placeholder="Caption (optional)"
                 value={photoCaption}
                 onChange={e => setPhotoCaption(e.target.value)}
-                className="w-full mb-3 px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                style={{ width: '100%', marginBottom: 12, padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 4, fontSize: 14, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
               />
-              <button onClick={addPhoto} disabled={!photoUrl.trim()} className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded text-sm font-medium">
+              <button onClick={addPhoto} disabled={!photoUrl.trim()} style={{ width: '100%', padding: '8px 0', background: !photoUrl.trim() ? 'var(--bg-tertiary)' : 'var(--accent)', color: !photoUrl.trim() ? 'var(--text-muted)' : 'white', borderRadius: 4, fontSize: 14, fontWeight: 500, border: 'none', cursor: !photoUrl.trim() ? 'default' : 'pointer' }}>
                 Add Photo
               </button>
             </div>
@@ -174,26 +174,27 @@ export default function PhotoAlbums({ guildId }: PhotoAlbumsProps) {
 
         {/* Photo Grid */}
         {activeAlbum.photos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-gray-500">
-            <ImagePlus className="w-12 h-12 mb-2" />
-            <p className="text-sm">No photos yet</p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', color: 'var(--text-muted)' }}>
+            <ImagePlus style={{ width: 48, height: 48, marginBottom: 8 }} />
+            <p style={{ fontSize: 14 }}>No photos yet</p>
           </div>
         ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
             {activeAlbum.photos.map((photo, i) => (
-              <div key={photo.id} className="relative aspect-square group cursor-pointer" onClick={() => setLightboxIndex(i)}>
-                <img src={photo.fileUrl} alt={photo.caption || ''} className="w-full h-full object-cover rounded-lg" />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors rounded-lg" />
+              <div key={photo.id} className="photo-grid-item" style={{ position: 'relative', aspectRatio: '1', cursor: 'pointer' }} onClick={() => setLightboxIndex(i)}>
+                <img src={photo.fileUrl} alt={photo.caption || ''} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />
+                <div className="photo-overlay" style={{ position: 'absolute', inset: 0, background: 'transparent', borderRadius: 8, transition: 'background 0.2s' }} />
                 {photo.caption && (
-                  <div className="absolute bottom-0 left-0 right-0 p-1.5 text-xs text-white bg-gradient-to-t from-black/60 to-transparent rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity truncate">
+                  <div className="photo-caption" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 6, fontSize: 12, color: 'white', background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)', borderRadius: '0 0 8px 8px', opacity: 0, transition: 'opacity 0.2s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {photo.caption}
                   </div>
                 )}
                 <button
                   onClick={e => { e.stopPropagation(); deletePhoto(photo.id); }}
-                  className="absolute top-1 right-1 p-1 bg-black/50 rounded text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="photo-delete-btn"
+                  style={{ position: 'absolute', top: 4, right: 4, padding: 4, background: 'rgba(0,0,0,0.5)', borderRadius: 4, color: 'var(--danger)', border: 'none', cursor: 'pointer', opacity: 0, transition: 'opacity 0.2s' }}
                 >
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 style={{ width: 12, height: 12 }} />
                 </button>
               </div>
             ))}
@@ -202,66 +203,72 @@ export default function PhotoAlbums({ guildId }: PhotoAlbumsProps) {
 
         {/* Lightbox */}
         {lightboxIndex !== null && activeAlbum.photos[lightboxIndex] && (
-          <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50" onClick={() => setLightboxIndex(null)}>
-            <button onClick={() => setLightboxIndex(null)} className="absolute top-4 right-4 text-white/70 hover:text-white">
-              <X className="w-8 h-8" />
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }} onClick={() => setLightboxIndex(null)}>
+            <button onClick={() => setLightboxIndex(null)} style={{ position: 'absolute', top: 16, right: 16, color: 'rgba(255,255,255,0.7)', background: 'none', border: 'none', cursor: 'pointer' }}>
+              <X style={{ width: 32, height: 32 }} />
             </button>
             {lightboxIndex > 0 && (
-              <button onClick={e => { e.stopPropagation(); setLightboxIndex(lightboxIndex - 1); }} className="absolute left-4 p-2 text-white/70 hover:text-white">
-                <ChevronLeft className="w-8 h-8" />
+              <button onClick={e => { e.stopPropagation(); setLightboxIndex(lightboxIndex - 1); }} style={{ position: 'absolute', left: 16, padding: 8, color: 'rgba(255,255,255,0.7)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                <ChevronLeft style={{ width: 32, height: 32 }} />
               </button>
             )}
             {lightboxIndex < activeAlbum.photos.length - 1 && (
-              <button onClick={e => { e.stopPropagation(); setLightboxIndex(lightboxIndex + 1); }} className="absolute right-4 p-2 text-white/70 hover:text-white">
-                <ChevronRight className="w-8 h-8" />
+              <button onClick={e => { e.stopPropagation(); setLightboxIndex(lightboxIndex + 1); }} style={{ position: 'absolute', right: 16, padding: 8, color: 'rgba(255,255,255,0.7)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                <ChevronRight style={{ width: 32, height: 32 }} />
               </button>
             )}
-            <div className="max-w-4xl max-h-[85vh] flex flex-col items-center" onClick={e => e.stopPropagation()}>
-              <img src={activeAlbum.photos[lightboxIndex].fileUrl} alt="" className="max-w-full max-h-[80vh] object-contain rounded" />
+            <div style={{ maxWidth: 896, maxHeight: '85vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+              <img src={activeAlbum.photos[lightboxIndex].fileUrl} alt="" style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain', borderRadius: 4 }} />
               {activeAlbum.photos[lightboxIndex].caption && (
-                <p className="mt-2 text-sm text-gray-300">{activeAlbum.photos[lightboxIndex].caption}</p>
+                <p style={{ marginTop: 8, fontSize: 14, color: 'var(--text-secondary)' }}>{activeAlbum.photos[lightboxIndex].caption}</p>
               )}
-              <p className="text-xs text-gray-500 mt-1">{lightboxIndex + 1} / {activeAlbum.photos.length}</p>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{lightboxIndex + 1} / {activeAlbum.photos.length}</p>
             </div>
           </div>
         )}
+
+        <style>{`
+          .photo-grid-item:hover .photo-overlay { background: rgba(0,0,0,0.3) !important; }
+          .photo-grid-item:hover .photo-caption { opacity: 1 !important; }
+          .photo-grid-item:hover .photo-delete-btn { opacity: 1 !important; }
+        `}</style>
       </div>
     );
   }
 
   // Albums gallery view
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-white">Photo Albums</h2>
-        <button onClick={() => setShowCreate(true)} className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-sm">
-          <Plus className="w-4 h-4" /> Create Album
+    <div style={{ padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)' }}>Photo Albums</h2>
+        <button onClick={() => setShowCreate(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', background: 'var(--accent)', color: 'white', borderRadius: 4, fontSize: 14, border: 'none', cursor: 'pointer' }}>
+          <Plus style={{ width: 16, height: 16 }} /> Create Album
         </button>
       </div>
 
       {/* Create Album Modal */}
       {showCreate && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowCreate(false)}>
-          <div className="bg-gray-800 rounded-lg p-4 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-white font-medium">Create Album</h3>
-              <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }} onClick={() => setShowCreate(false)}>
+          <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 16, width: '100%', maxWidth: 448, margin: '0 16px' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <h3 style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Create Album</h3>
+              <button onClick={() => setShowCreate(false)} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}><X style={{ width: 20, height: 20 }} /></button>
             </div>
             <input
               type="text"
               placeholder="Album name"
               value={newName}
               onChange={e => setNewName(e.target.value)}
-              className="w-full mb-2 px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              style={{ width: '100%', marginBottom: 8, padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 4, fontSize: 14, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
             />
             <input
               type="text"
               placeholder="Description (optional)"
               value={newDesc}
               onChange={e => setNewDesc(e.target.value)}
-              className="w-full mb-3 px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              style={{ width: '100%', marginBottom: 12, padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 4, fontSize: 14, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
             />
-            <button onClick={createAlbum} disabled={!newName.trim()} className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded text-sm font-medium">
+            <button onClick={createAlbum} disabled={!newName.trim()} style={{ width: '100%', padding: '8px 0', background: !newName.trim() ? 'var(--bg-tertiary)' : 'var(--accent)', color: !newName.trim() ? 'var(--text-muted)' : 'white', borderRadius: 4, fontSize: 14, fontWeight: 500, border: 'none', cursor: !newName.trim() ? 'default' : 'pointer' }}>
               Create Album
             </button>
           </div>
@@ -269,30 +276,32 @@ export default function PhotoAlbums({ guildId }: PhotoAlbumsProps) {
       )}
 
       {albums.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-gray-500">
-          <ImagePlus className="w-12 h-12 mb-2" />
-          <p className="text-sm">No albums yet. Create one to get started.</p>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', color: 'var(--text-muted)' }}>
+          <ImagePlus style={{ width: 48, height: 48, marginBottom: 8 }} />
+          <p style={{ fontSize: 14 }}>No albums yet. Create one to get started.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
           {albums.map(album => (
             <button
               key={album.id}
               onClick={() => openAlbum(album.id)}
-              className="bg-gray-800 hover:bg-gray-700 rounded-lg overflow-hidden text-left transition-colors group"
+              style={{ background: 'var(--bg-secondary)', borderRadius: 8, overflow: 'hidden', textAlign: 'left', transition: 'background 0.2s', border: 'none', cursor: 'pointer', padding: 0 }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
             >
-              <div className="aspect-video bg-gray-700 relative">
+              <div style={{ aspectRatio: '16/9', background: 'var(--bg-tertiary)', position: 'relative' }}>
                 {album.coverUrl ? (
-                  <img src={album.coverUrl} alt="" className="w-full h-full object-cover" />
+                  <img src={album.coverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ImagePlus className="w-8 h-8 text-gray-600" />
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ImagePlus style={{ width: 32, height: 32, color: 'var(--text-muted)' }} />
                   </div>
                 )}
               </div>
-              <div className="p-2">
-                <p className="text-sm font-medium text-white truncate">{album.name}</p>
-                <p className="text-xs text-gray-500">{album.itemCount} photo{album.itemCount !== 1 ? 's' : ''}</p>
+              <div style={{ padding: 8 }}>
+                <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{album.name}</p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{album.itemCount} photo{album.itemCount !== 1 ? 's' : ''}</p>
               </div>
             </button>
           ))}
