@@ -1742,10 +1742,10 @@ const DirectMessage = () => {
                     const plainPayload = encryptedFileMeta.length > 0
                         ? JSON.stringify({ _e2e: 2, text: content, files: encryptedFileMeta })
                         : content;
-                    const encryptedContent = await encrypt(e2eKey, plainPayload);
+                    const encryptedContent = await encrypt(e2eKey!, plainPayload);
                     sendPayload = { content: null, encryptedContent, isEncrypted: true, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined, ...(groupKeyVersion != null ? { keyVersion: groupKeyVersion } : {}) };
                     // Store decrypted version optimistically so sender sees plaintext immediately
-                    setDecryptedContents(prev => { const next = new Map(prev); next.set(optimisticId, content); return next; });
+                    setDecryptedContents(prev => { const next = new Map(prev); next.set(optimisticId, content ?? ''); return next; });
                 } catch {
                     // Encryption failed — send plaintext as fallback
                     sendPayload = { content, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined };
@@ -1764,7 +1764,7 @@ const DirectMessage = () => {
                 system: false,
                 avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                content: isOptimisticEncrypted ? '' : optimisticContent,
+                content: isOptimisticEncrypted ? '' : (optimisticContent ?? ''),
                 createdAt: new Date().toISOString(),
                 isEncrypted: isOptimisticEncrypted,
                 encryptedContent: isOptimisticEncrypted ? sendPayload.encryptedContent ?? null : null,
