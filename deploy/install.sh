@@ -57,16 +57,25 @@ echo -e "  ${BOLD}Self-Host Installer${NC}"
 echo ""
 
 # ─── Stdin detection (for curl | bash compatibility) ─────────────────
-# When piped via curl | bash, stdin is the script itself, not the terminal.
-# Reopen stdin from /dev/tty so interactive prompts work.
+# When piped via curl | bash, stdin IS the script — we must NOT replace it
+# with exec </dev/tty or bash loses the rest of the script.
+# Instead, open /dev/tty on fd 3 for interactive prompts.
+NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
 if [ ! -t 0 ]; then
-  exec </dev/tty || {
-    # If /dev/tty isn't available (e.g., non-interactive CI), use defaults
+  if exec 3</dev/tty 2>/dev/null; then
+    HAS_TTY=true
+  else
     warn "Non-interactive mode detected — using defaults (local mode)"
     NON_INTERACTIVE=true
-  }
+    HAS_TTY=false
+  fi
+else
+  exec 3<&0  # stdin is already a terminal, dup it to fd 3
+  HAS_TTY=true
 fi
-NON_INTERACTIVE="${NON_INTERACTIVE:-false}"
+
+# Helper: read from terminal (fd 3) instead of stdin
+prompt() { read "$@" <&3; }
 
 # ─── OS Detection ─────────────────────────────────────────────────────
 detect_os() {
@@ -109,7 +118,7 @@ check_docker() {
       curl -fsSL https://get.docker.com | sh
     else
       echo ""
-      read -rp "  Install Docker now? [Y/n] " DOCKER_INSTALL
+      prompt -rp "  Install Docker now? [Y/n] " DOCKER_INSTALL
       if [[ "${DOCKER_INSTALL:-Y}" =~ ^[Yy]$ ]]; then
         info "Installing Docker..."
         curl -fsSL https://get.docker.com | sh
@@ -168,7 +177,7 @@ select_mode() {
   echo "    1) On this computer (local — no domain needed)"
   echo "    2) On a server with a domain (VPS / homelab)"
   echo ""
-  read -rp "  Choose [1/2]: " MODE_CHOICE
+  prompt -rp "  Choose [1/2]: " MODE_CHOICE
   echo ""
 
   case "${MODE_CHOICE:-1}" in
@@ -182,13 +191,13 @@ select_mode() {
 collect_config() {
   step "Configuring instance"
   if [ "$MODE" = "server" ]; then
-    read -rp "  Domain name (e.g. chat.example.com): " DOMAIN
+    prompt -rp "  Domain name (e.g. chat.example.com): " DOMAIN
     [ -z "${DOMAIN:-}" ] && fail "Domain is required for server mode."
 
-    read -rp "  Admin email: " ADMIN_EMAIL
+    prompt -rp "  Admin email: " ADMIN_EMAIL
     [ -z "${ADMIN_EMAIL:-}" ] && fail "Admin email is required."
 
-    read -rsp "  Admin password: " ADMIN_PASSWORD; echo
+    prompt -rsp "  Admin password: " ADMIN_PASSWORD; echo
     [ -z "${ADMIN_PASSWORD:-}" ] && fail "Admin password is required."
 
     TLS_MODE="$ADMIN_EMAIL"
@@ -222,7 +231,7 @@ create_files() {
       info "Keeping existing config."
       return
     fi
-    read -rp "  Overwrite config? Your data (DB, uploads) will be kept. [y/N] " OVERWRITE
+    prompt -rp "  Overwrite config? Your data (DB, uploads) will be kept. [y/N] " OVERWRITE
     if [[ ! "${OVERWRITE:-N}" =~ ^[Yy]$ ]]; then
       info "Keeping existing config. Starting services..."
       return
