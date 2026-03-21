@@ -61,7 +61,9 @@ export async function scrapeUrl(url: string): Promise<OgEmbed | null> {
       url,
       title: result.ogTitle,
       description: result.ogDescription ? result.ogDescription.slice(0, 300) : undefined,
-      image: Array.isArray(result.ogImage) && result.ogImage.length > 0 ? result.ogImage[0].url : undefined,
+      image: Array.isArray(result.ogImage) && result.ogImage.length > 0
+        ? (typeof result.ogImage[0] === 'string' ? result.ogImage[0] : result.ogImage[0]?.url)
+        : undefined,
       siteName: result.ogSiteName,
     };
   } catch {
