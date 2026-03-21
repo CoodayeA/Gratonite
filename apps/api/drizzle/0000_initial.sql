@@ -2186,6 +2186,316 @@ CREATE TABLE "guild_member_profiles" (
 	CONSTRAINT "guild_member_profiles_user_guild_key" UNIQUE("user_id","guild_id")
 );
 --> statement-breakpoint
+CREATE TABLE "ambient_room_participants" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"room_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"joined_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"status" varchar(20) DEFAULT 'working' NOT NULL,
+	CONSTRAINT "ambient_room_participants_room_id_user_id_unique" UNIQUE("room_id","user_id")
+);
+--> statement-breakpoint
+CREATE TABLE "ambient_rooms" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"channel_id" uuid NOT NULL,
+	"theme" varchar(30) DEFAULT 'coffee_shop' NOT NULL,
+	"music_enabled" boolean DEFAULT false NOT NULL,
+	"music_volume" real DEFAULT 0.3 NOT NULL,
+	"max_participants" integer DEFAULT 50 NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "ambient_rooms_channel_id_unique" UNIQUE("channel_id")
+);
+--> statement-breakpoint
+CREATE TABLE "bot_guild_permissions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"bot_application_id" uuid NOT NULL,
+	"guild_id" uuid NOT NULL,
+	"permissions" bigint DEFAULT 384 NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "bot_guild_permissions_bot_guild_key" UNIQUE("bot_application_id","guild_id")
+);
+--> statement-breakpoint
+CREATE TABLE "calendar_integrations" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"guild_id" uuid,
+	"provider" varchar(20) DEFAULT 'google' NOT NULL,
+	"access_token" text NOT NULL,
+	"refresh_token" text NOT NULL,
+	"token_expires_at" timestamp with time zone NOT NULL,
+	"calendar_id" varchar(200) DEFAULT 'primary' NOT NULL,
+	"sync_enabled" boolean DEFAULT true NOT NULL,
+	"last_sync_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "calendar_integrations_user_id_guild_id_provider_unique" UNIQUE("user_id","guild_id","provider")
+);
+--> statement-breakpoint
+CREATE TABLE "channel_bookmarks" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"channel_id" uuid NOT NULL,
+	"added_by" uuid NOT NULL,
+	"title" varchar(200) NOT NULL,
+	"url" text,
+	"file_id" uuid,
+	"message_id" uuid,
+	"type" varchar(20) DEFAULT 'link' NOT NULL,
+	"position" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "clips" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"guild_id" uuid NOT NULL,
+	"channel_id" uuid,
+	"title" varchar(200) NOT NULL,
+	"file_id" uuid,
+	"duration" integer,
+	"created_at" timestamp with time zone DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "component_interactions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"message_id" uuid NOT NULL,
+	"custom_id" text NOT NULL,
+	"user_id" uuid NOT NULL,
+	"bot_application_id" uuid NOT NULL,
+	"interaction_type" text DEFAULT 'button' NOT NULL,
+	"values" jsonb DEFAULT '[]'::jsonb,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "dm_read_state" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"channel_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"last_read_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"last_read_message_id" uuid,
+	CONSTRAINT "dm_read_state_channel_user_key" UNIQUE("channel_id","user_id")
+);
+--> statement-breakpoint
+CREATE TABLE "focus_session_participants" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"session_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"joined_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"total_focus_time" integer DEFAULT 0 NOT NULL,
+	"completed_rounds" integer DEFAULT 0 NOT NULL,
+	CONSTRAINT "focus_session_participants_session_user_key" UNIQUE("session_id","user_id")
+);
+--> statement-breakpoint
+CREATE TABLE "focus_sessions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"channel_id" uuid NOT NULL,
+	"creator_id" uuid NOT NULL,
+	"name" varchar(100) DEFAULT 'Focus Session' NOT NULL,
+	"work_duration" integer DEFAULT 1500 NOT NULL,
+	"break_duration" integer DEFAULT 300 NOT NULL,
+	"current_phase" varchar(10) DEFAULT 'work' NOT NULL,
+	"phase_started_at" timestamp with time zone,
+	"round_number" integer DEFAULT 1 NOT NULL,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"ended_at" timestamp with time zone
+);
+--> statement-breakpoint
+CREATE TABLE "guild_backups" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"guild_id" uuid NOT NULL,
+	"created_by" uuid NOT NULL,
+	"name" varchar(200) NOT NULL,
+	"data" jsonb NOT NULL,
+	"size_bytes" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "guild_highlights" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"guild_id" uuid NOT NULL,
+	"week_start" date NOT NULL,
+	"top_messages" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"active_members" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"message_count" integer DEFAULT 0 NOT NULL,
+	"member_count" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "guild_highlights_guild_week" UNIQUE("guild_id","week_start")
+);
+--> statement-breakpoint
+CREATE TABLE "guild_soundboard" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"guild_id" uuid NOT NULL,
+	"name" varchar(100) NOT NULL,
+	"file_hash" varchar(255) NOT NULL,
+	"uploaded_by" uuid NOT NULL,
+	"emoji" varchar(10),
+	"volume" real DEFAULT 1 NOT NULL,
+	"uses" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "guild_spam_config" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"guild_id" uuid NOT NULL,
+	"enabled" boolean DEFAULT false NOT NULL,
+	"max_duplicate_messages" integer DEFAULT 5 NOT NULL,
+	"duplicate_window_seconds" integer DEFAULT 10 NOT NULL,
+	"max_mentions_per_message" integer DEFAULT 10 NOT NULL,
+	"max_links_per_message" integer DEFAULT 5 NOT NULL,
+	"rapid_join_threshold" integer DEFAULT 10 NOT NULL,
+	"rapid_join_window_seconds" integer DEFAULT 30 NOT NULL,
+	"action" text DEFAULT 'flag' NOT NULL,
+	"exempt_roles" uuid[] DEFAULT '{}'::uuid[] NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "guild_spam_config_guild_id_unique" UNIQUE("guild_id")
+);
+--> statement-breakpoint
+CREATE TABLE "message_translations" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"message_id" uuid NOT NULL,
+	"target_lang" varchar(5) NOT NULL,
+	"translated_content" text NOT NULL,
+	"source_lang" varchar(5),
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "message_translations_message_id_target_lang_unique" UNIQUE("message_id","target_lang")
+);
+--> statement-breakpoint
+CREATE TABLE "message_edit_history" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"message_id" uuid NOT NULL,
+	"content" text NOT NULL,
+	"edited_at" timestamp with time zone DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "mod_queue" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"guild_id" uuid NOT NULL,
+	"type" varchar(30) NOT NULL,
+	"target_id" uuid,
+	"content" text,
+	"reporter_id" uuid,
+	"status" varchar(20) DEFAULT 'pending' NOT NULL,
+	"resolved_by" uuid,
+	"resolved_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "notification_sound_prefs" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"guild_id" uuid,
+	"event_type" varchar(30) NOT NULL,
+	"sound_id" uuid,
+	CONSTRAINT "notification_sound_prefs_user_id_guild_id_event_type_unique" UNIQUE("user_id","guild_id","event_type")
+);
+--> statement-breakpoint
+CREATE TABLE "notification_sounds" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"name" varchar(100) NOT NULL,
+	"file_hash" varchar(255) NOT NULL,
+	"duration" real,
+	"is_built_in" boolean DEFAULT false NOT NULL,
+	"uploaded_by" uuid,
+	"guild_id" uuid,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "push_subscriptions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" text NOT NULL,
+	"endpoint" text NOT NULL,
+	"p256dh" text NOT NULL,
+	"auth" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "push_subscriptions_user_id_endpoint_unique" UNIQUE("user_id","endpoint")
+);
+--> statement-breakpoint
+CREATE TABLE "reading_list_items" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"channel_id" uuid NOT NULL,
+	"guild_id" uuid NOT NULL,
+	"added_by" uuid NOT NULL,
+	"url" text NOT NULL,
+	"title" varchar(300) NOT NULL,
+	"description" text,
+	"image_url" text,
+	"tags" text[] DEFAULT '{}' NOT NULL,
+	"upvotes" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "reading_list_read_status" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"item_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"read_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "reading_list_read_status_item_id_user_id_unique" UNIQUE("item_id","user_id")
+);
+--> statement-breakpoint
+CREATE TABLE "reading_list_votes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"item_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	CONSTRAINT "reading_list_votes_item_id_user_id_unique" UNIQUE("item_id","user_id")
+);
+--> statement-breakpoint
+CREATE TABLE "referrals" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"referrer_id" text NOT NULL,
+	"referred_id" text,
+	"code" text NOT NULL,
+	"redeemed_at" timestamp with time zone,
+	"reward_granted" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "referrals_referred_id_unique" UNIQUE("referred_id"),
+	CONSTRAINT "referrals_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
+CREATE TABLE "bot_heartbeats" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"guild_id" uuid NOT NULL,
+	"bot_id" uuid NOT NULL,
+	"last_ping_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"status" varchar(20) DEFAULT 'online' NOT NULL,
+	"metadata" jsonb,
+	CONSTRAINT "bot_heartbeats_guild_id_bot_id_unique" UNIQUE("guild_id","bot_id")
+);
+--> statement-breakpoint
+CREATE TABLE "webhook_status_history" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"guild_id" uuid NOT NULL,
+	"webhook_id" uuid NOT NULL,
+	"status" varchar(20) NOT NULL,
+	"status_code" integer,
+	"response_time" integer,
+	"checked_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "spatial_rooms" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"channel_id" uuid NOT NULL,
+	"name" varchar(100) NOT NULL,
+	"width" integer DEFAULT 800 NOT NULL,
+	"height" integer DEFAULT 600 NOT NULL,
+	"background_url" text,
+	"grid_enabled" boolean DEFAULT true NOT NULL,
+	"max_participants" integer DEFAULT 25 NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "spatial_rooms_channel_id_unique" UNIQUE("channel_id")
+);
+--> statement-breakpoint
+CREATE TABLE "stickers" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"guild_id" text,
+	"name" text NOT NULL,
+	"description" text,
+	"asset_url" text NOT NULL,
+	"tags" text[] DEFAULT '{}' NOT NULL,
+	"creator_id" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 ALTER TABLE "email_verification_tokens" ADD CONSTRAINT "email_verification_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "password_reset_tokens" ADD CONSTRAINT "password_reset_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -2528,6 +2838,60 @@ ALTER TABLE "collaborative_documents" ADD CONSTRAINT "collaborative_documents_ch
 ALTER TABLE "collaborative_documents" ADD CONSTRAINT "collaborative_documents_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "guild_member_profiles" ADD CONSTRAINT "guild_member_profiles_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "guild_member_profiles" ADD CONSTRAINT "guild_member_profiles_guild_id_guilds_id_fk" FOREIGN KEY ("guild_id") REFERENCES "public"."guilds"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ambient_room_participants" ADD CONSTRAINT "ambient_room_participants_room_id_ambient_rooms_id_fk" FOREIGN KEY ("room_id") REFERENCES "public"."ambient_rooms"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ambient_room_participants" ADD CONSTRAINT "ambient_room_participants_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ambient_rooms" ADD CONSTRAINT "ambient_rooms_channel_id_channels_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."channels"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "bot_guild_permissions" ADD CONSTRAINT "bot_guild_permissions_bot_application_id_bot_applications_id_fk" FOREIGN KEY ("bot_application_id") REFERENCES "public"."bot_applications"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "bot_guild_permissions" ADD CONSTRAINT "bot_guild_permissions_guild_id_guilds_id_fk" FOREIGN KEY ("guild_id") REFERENCES "public"."guilds"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "calendar_integrations" ADD CONSTRAINT "calendar_integrations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "calendar_integrations" ADD CONSTRAINT "calendar_integrations_guild_id_guilds_id_fk" FOREIGN KEY ("guild_id") REFERENCES "public"."guilds"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "channel_bookmarks" ADD CONSTRAINT "channel_bookmarks_channel_id_channels_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."channels"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "channel_bookmarks" ADD CONSTRAINT "channel_bookmarks_added_by_users_id_fk" FOREIGN KEY ("added_by") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "clips" ADD CONSTRAINT "clips_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "clips" ADD CONSTRAINT "clips_guild_id_guilds_id_fk" FOREIGN KEY ("guild_id") REFERENCES "public"."guilds"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "clips" ADD CONSTRAINT "clips_channel_id_channels_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."channels"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "clips" ADD CONSTRAINT "clips_file_id_files_id_fk" FOREIGN KEY ("file_id") REFERENCES "public"."files"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "component_interactions" ADD CONSTRAINT "component_interactions_message_id_messages_id_fk" FOREIGN KEY ("message_id") REFERENCES "public"."messages"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "component_interactions" ADD CONSTRAINT "component_interactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "component_interactions" ADD CONSTRAINT "component_interactions_bot_application_id_bot_applications_id_fk" FOREIGN KEY ("bot_application_id") REFERENCES "public"."bot_applications"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "dm_read_state" ADD CONSTRAINT "dm_read_state_channel_id_channels_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."channels"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "dm_read_state" ADD CONSTRAINT "dm_read_state_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "focus_session_participants" ADD CONSTRAINT "focus_session_participants_session_id_focus_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."focus_sessions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "focus_session_participants" ADD CONSTRAINT "focus_session_participants_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "focus_sessions" ADD CONSTRAINT "focus_sessions_channel_id_channels_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."channels"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "focus_sessions" ADD CONSTRAINT "focus_sessions_creator_id_users_id_fk" FOREIGN KEY ("creator_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "guild_backups" ADD CONSTRAINT "guild_backups_guild_id_guilds_id_fk" FOREIGN KEY ("guild_id") REFERENCES "public"."guilds"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "guild_backups" ADD CONSTRAINT "guild_backups_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "guild_highlights" ADD CONSTRAINT "guild_highlights_guild_id_guilds_id_fk" FOREIGN KEY ("guild_id") REFERENCES "public"."guilds"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "guild_soundboard" ADD CONSTRAINT "guild_soundboard_guild_id_guilds_id_fk" FOREIGN KEY ("guild_id") REFERENCES "public"."guilds"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "guild_soundboard" ADD CONSTRAINT "guild_soundboard_uploaded_by_users_id_fk" FOREIGN KEY ("uploaded_by") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "guild_spam_config" ADD CONSTRAINT "guild_spam_config_guild_id_guilds_id_fk" FOREIGN KEY ("guild_id") REFERENCES "public"."guilds"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "message_translations" ADD CONSTRAINT "message_translations_message_id_messages_id_fk" FOREIGN KEY ("message_id") REFERENCES "public"."messages"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "message_edit_history" ADD CONSTRAINT "message_edit_history_message_id_messages_id_fk" FOREIGN KEY ("message_id") REFERENCES "public"."messages"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "mod_queue" ADD CONSTRAINT "mod_queue_guild_id_guilds_id_fk" FOREIGN KEY ("guild_id") REFERENCES "public"."guilds"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "mod_queue" ADD CONSTRAINT "mod_queue_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "mod_queue" ADD CONSTRAINT "mod_queue_resolved_by_users_id_fk" FOREIGN KEY ("resolved_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "notification_sound_prefs" ADD CONSTRAINT "notification_sound_prefs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "notification_sound_prefs" ADD CONSTRAINT "notification_sound_prefs_guild_id_guilds_id_fk" FOREIGN KEY ("guild_id") REFERENCES "public"."guilds"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "notification_sound_prefs" ADD CONSTRAINT "notification_sound_prefs_sound_id_notification_sounds_id_fk" FOREIGN KEY ("sound_id") REFERENCES "public"."notification_sounds"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "notification_sounds" ADD CONSTRAINT "notification_sounds_uploaded_by_users_id_fk" FOREIGN KEY ("uploaded_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "notification_sounds" ADD CONSTRAINT "notification_sounds_guild_id_guilds_id_fk" FOREIGN KEY ("guild_id") REFERENCES "public"."guilds"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "push_subscriptions" ADD CONSTRAINT "push_subscriptions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "reading_list_items" ADD CONSTRAINT "reading_list_items_channel_id_channels_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."channels"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "reading_list_items" ADD CONSTRAINT "reading_list_items_guild_id_guilds_id_fk" FOREIGN KEY ("guild_id") REFERENCES "public"."guilds"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "reading_list_items" ADD CONSTRAINT "reading_list_items_added_by_users_id_fk" FOREIGN KEY ("added_by") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "reading_list_read_status" ADD CONSTRAINT "reading_list_read_status_item_id_reading_list_items_id_fk" FOREIGN KEY ("item_id") REFERENCES "public"."reading_list_items"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "reading_list_read_status" ADD CONSTRAINT "reading_list_read_status_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "reading_list_votes" ADD CONSTRAINT "reading_list_votes_item_id_reading_list_items_id_fk" FOREIGN KEY ("item_id") REFERENCES "public"."reading_list_items"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "reading_list_votes" ADD CONSTRAINT "reading_list_votes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "referrals" ADD CONSTRAINT "referrals_referrer_id_users_id_fk" FOREIGN KEY ("referrer_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "referrals" ADD CONSTRAINT "referrals_referred_id_users_id_fk" FOREIGN KEY ("referred_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "bot_heartbeats" ADD CONSTRAINT "bot_heartbeats_guild_id_guilds_id_fk" FOREIGN KEY ("guild_id") REFERENCES "public"."guilds"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "bot_heartbeats" ADD CONSTRAINT "bot_heartbeats_bot_id_users_id_fk" FOREIGN KEY ("bot_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "webhook_status_history" ADD CONSTRAINT "webhook_status_history_guild_id_guilds_id_fk" FOREIGN KEY ("guild_id") REFERENCES "public"."guilds"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "spatial_rooms" ADD CONSTRAINT "spatial_rooms_channel_id_channels_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."channels"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "stickers" ADD CONSTRAINT "stickers_guild_id_guilds_id_fk" FOREIGN KEY ("guild_id") REFERENCES "public"."guilds"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "stickers" ADD CONSTRAINT "stickers_creator_id_users_id_fk" FOREIGN KEY ("creator_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "messages_channel_id_created_at_idx" ON "messages" USING btree ("channel_id","created_at");--> statement-breakpoint
 CREATE INDEX "bot_installs_guild_id_idx" ON "bot_installs" USING btree ("guild_id");--> statement-breakpoint
 CREATE INDEX "auction_bids_auction_amount_idx" ON "auction_bids" USING btree ("auction_id","amount");--> statement-breakpoint
@@ -2567,4 +2931,11 @@ CREATE INDEX "user_cards_card_id_idx" ON "user_cards" USING btree ("card_id");--
 CREATE INDEX "message_snippets_user_id_index" ON "message_snippets" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "rss_feeds_channel_id_idx" ON "rss_feeds" USING btree ("channel_id");--> statement-breakpoint
 CREATE INDEX "rss_feeds_guild_id_idx" ON "rss_feeds" USING btree ("guild_id");--> statement-breakpoint
-CREATE INDEX "collaborative_documents_channel_id_idx" ON "collaborative_documents" USING btree ("channel_id");
+CREATE INDEX "collaborative_documents_channel_id_idx" ON "collaborative_documents" USING btree ("channel_id");--> statement-breakpoint
+CREATE INDEX "bot_guild_permissions_app_guild_idx" ON "bot_guild_permissions" USING btree ("bot_application_id","guild_id");--> statement-breakpoint
+CREATE INDEX "idx_clips_guild" ON "clips" USING btree ("guild_id");--> statement-breakpoint
+CREATE INDEX "idx_clips_user" ON "clips" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "guild_backups_guild_idx" ON "guild_backups" USING btree ("guild_id");--> statement-breakpoint
+CREATE INDEX "guild_soundboard_guild_idx" ON "guild_soundboard" USING btree ("guild_id");--> statement-breakpoint
+CREATE INDEX "idx_edit_history_message" ON "message_edit_history" USING btree ("message_id");--> statement-breakpoint
+CREATE INDEX "mod_queue_guild_status_idx" ON "mod_queue" USING btree ("guild_id","status");

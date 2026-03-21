@@ -163,3 +163,27 @@ export * from './collaborative-documents';
 
 // Per-server member profiles
 export * from './guild-member-profiles';
+
+// Previously missing schemas
+export * from './ambient-rooms';
+export * from './bot-guild-permissions';
+export * from './calendar-integrations';
+export * from './channel-bookmarks';
+export * from './clips';
+export * from './component-interactions';
+export * from './dm-read-state';
+export * from './focus-sessions';
+export * from './guild-backups';
+export * from './guild-highlights';
+export * from './guild-soundboard';
+export * from './guild-spam-config';
+export * from './message-translations';
+export * from './messageEditHistory';
+export * from './mod-queue';
+export * from './notification-sounds';
+export * from './push-subscriptions';
+export * from './reading-lists';
+export * from './referrals';
+export * from './server-status';
+export * from './spatial-rooms';
+export * from './stickers';
