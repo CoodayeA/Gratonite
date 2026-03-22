@@ -86,7 +86,7 @@ export default function DeployPage() {
               <h3 className="font-semibold mb-2">Stay Connected</h3>
               <p className="text-sm text-gray-400">
                 Federation means your self-hosted instance isn&apos;t isolated.
-                Your users can join servers on gratonite.chat and vice versa.{" "}
+                Your users can join portals on gratonite.chat and vice versa.{" "}
                 <a href="/federation" className="text-purple-400 hover:text-purple-300">Learn more</a>
               </p>
             </Card>
