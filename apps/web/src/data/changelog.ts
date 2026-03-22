@@ -10,6 +10,23 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-03-22a',
+    date: 'March 22, 2026',
+    title: 'Notion-Style Document Editor',
+    entries: [
+      { type: 'feature', text: 'Document channels now have a full block editor — 19 block types including text, headings, lists, checklists, images, video, audio, code, tables, quotes, callouts, toggles, embeds, columns, and more' },
+      { type: 'feature', text: 'Slash commands — type "/" in any empty block to open a searchable command palette and insert any block type' },
+      { type: 'feature', text: 'Drag and drop blocks to reorder, plus block action menus for duplicate, delete, move, and "turn into" type conversion' },
+      { type: 'feature', text: '10 built-in templates: Resources, Wiki, Rules & Info, Roster, Event Guide, Changelog, FAQ, Lore, Raid Guide, and Blank — pick one when creating a new document' },
+      { type: 'feature', text: 'Save any document as a custom template for your server — reuse it across all document channels' },
+      { type: 'feature', text: 'Inline formatting toolbar — select text to bold, italic, underline, strikethrough, code, or add links' },
+      { type: 'feature', text: 'Real-time collaboration — see who else is editing with live presence avatars and cursor positions' },
+      { type: 'improvement', text: 'Document channels now have a purple accent border in the sidebar for easy identification' },
+      { type: 'improvement', text: 'Full undo/redo support with Ctrl+Z / Ctrl+Shift+Z and auto-save every 5 seconds' },
+      { type: 'security', text: 'Document editing now enforces permissions — only members with Manage Channels, Manage Messages, or Administrator can edit; everyone else gets read-only view' },
+    ],
+  },
+  {
     id: '2026-03-21a',
     date: 'March 21, 2026',
     title: 'Notifications & Group Mentions',
