@@ -2500,6 +2500,33 @@ CREATE TABLE "stickers" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "verification_requests" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"instance_id" uuid NOT NULL,
+	"contact_email" varchar(255) NOT NULL,
+	"description" text NOT NULL,
+	"status" varchar(20) DEFAULT 'pending' NOT NULL,
+	"reviewed_by" uuid,
+	"reviewed_at" timestamp with time zone,
+	"review_notes" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "instance_reports" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"instance_id" uuid NOT NULL,
+	"reporter_id" uuid NOT NULL,
+	"reason" varchar(30) NOT NULL,
+	"details" text,
+	"status" varchar(20) DEFAULT 'pending' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "instance_reports_instance_id_reporter_id_unique" UNIQUE("instance_id","reporter_id")
+);
+--> statement-breakpoint
+ALTER TABLE "verification_requests" ADD CONSTRAINT "verification_requests_instance_id_federated_instances_id_fk" FOREIGN KEY ("instance_id") REFERENCES "public"."federated_instances"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "verification_requests" ADD CONSTRAINT "verification_requests_reviewed_by_users_id_fk" FOREIGN KEY ("reviewed_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "instance_reports" ADD CONSTRAINT "instance_reports_instance_id_federated_instances_id_fk" FOREIGN KEY ("instance_id") REFERENCES "public"."federated_instances"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "instance_reports" ADD CONSTRAINT "instance_reports_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "email_verification_tokens" ADD CONSTRAINT "email_verification_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "password_reset_tokens" ADD CONSTRAINT "password_reset_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

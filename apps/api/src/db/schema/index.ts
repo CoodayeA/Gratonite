@@ -111,6 +111,8 @@ export * from './remote-guilds';
 export * from './guild-replicas';
 export * from './federation-activities';
 export * from './instance-blocks';
+export * from './verification-requests';
+export * from './instance-reports';
 export * from './account-imports';
 
 // Relay network
