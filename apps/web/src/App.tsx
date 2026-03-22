@@ -40,6 +40,7 @@ const GuildWorkflows = lazy(() => import('./pages/guilds/GuildWorkflows'));
 const EventScheduler = lazy(() => import('./pages/guilds/EventScheduler'));
 const ModerationDashboard = lazy(() => import('./pages/guilds/ModerationDashboard'));
 const MessageRequests = lazy(() => import('./pages/app/MessageRequests'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminTeam = lazy(() => import('./pages/admin/AdminTeam'));
 const AdminAuditLog = lazy(() => import('./pages/admin/AdminAuditLog'));
 const AdminBotModeration = lazy(() => import('./pages/admin/AdminBotModeration'));
@@ -4313,6 +4314,7 @@ const appRouter = createBrowserRouter(
                 <Route path="schedule-calendar" element={<Suspense fallback={<LazyFallback />}><ScheduleCalendar /></Suspense>} />
                 <Route path="gacha" element={<Suspense fallback={<LazyFallback />}><Gacha /></Suspense>} />
                 <Route path="saved" element={<Navigate to="/read-later" replace />} />
+                <Route path="admin" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminDashboard /></Suspense></RequireAdmin>} />
                 <Route path="admin/team" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminTeam /></Suspense></RequireAdmin>} />
                 <Route path="admin/audit" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminAuditLog /></Suspense></RequireAdmin>} />
                 <Route path="admin/bot-moderation" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminBotModeration /></Suspense></RequireAdmin>} />
