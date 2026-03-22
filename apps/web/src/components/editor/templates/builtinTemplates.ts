@@ -1,5 +1,6 @@
 /**
  * builtinTemplates.ts — 10 built-in document templates (gaming/social focused).
+ * Icons use Lucide icon names — rendered by TemplatePicker via the TEMPLATE_ICONS map.
  */
 import type { Block } from '@gratonite/types/api';
 import { createBlock, generateBlockId, plainText } from '../utils/blockHelpers';
@@ -9,6 +10,7 @@ export interface BuiltinTemplate {
   key: string;
   name: string;
   description: string;
+  /** Lucide icon name (lowercase, hyphenated). */
   icon: string;
   blocks: Block[];
 }
@@ -28,7 +30,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
     key: 'resources',
     name: 'Resources',
     description: 'Links, guides, and helpful resources',
-    icon: '\u{1F4DA}',
+    icon: 'library',
     blocks: makeBlocks([
       { type: 'heading', content: { richText: plainText('Resources'), level: 1 } },
       { type: 'text', content: { richText: plainText('A curated collection of useful links and guides for this server.') } },
@@ -46,7 +48,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
     key: 'wiki',
     name: 'Wiki',
     description: 'Knowledge base with table of contents',
-    icon: '\u{1F4D6}',
+    icon: 'book-open',
     blocks: makeBlocks([
       { type: 'heading', content: { richText: plainText('Wiki'), level: 1 } },
       { type: 'table_of_contents', content: { maxDepth: 3 } },
@@ -64,10 +66,10 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
     key: 'rules-info',
     name: 'Rules & Info',
     description: 'Server rules and important info',
-    icon: '\u{1F4DC}',
+    icon: 'shield-check',
     blocks: makeBlocks([
       { type: 'heading', content: { richText: plainText('Server Rules'), level: 1 } },
-      { type: 'callout', content: { richText: plainText('Please read and follow these rules to keep our community safe and fun!'), emoji: '\u{26A0}\u{FE0F}' } },
+      { type: 'callout', content: { richText: plainText('Please read and follow these rules to keep our community safe and fun!'), emoji: '!' } },
       { type: 'divider', content: {} },
       { type: 'numbered_list', content: { richText: plainText('Be respectful to all members') } },
       { type: 'numbered_list', content: { richText: plainText('No spam or self-promotion') } },
@@ -75,14 +77,14 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       { type: 'numbered_list', content: { richText: plainText('No harassment or hate speech') } },
       { type: 'numbered_list', content: { richText: plainText('Follow Discord TOS') } },
       { type: 'divider', content: {} },
-      { type: 'callout', content: { richText: plainText('Breaking rules may result in warnings, mutes, or bans.'), emoji: '\u{1F6A8}' } },
+      { type: 'callout', content: { richText: plainText('Breaking rules may result in warnings, mutes, or bans.'), emoji: '!' } },
     ]),
   },
   {
     key: 'roster',
     name: 'Roster / Team Sheet',
     description: 'Team members, roles, availability',
-    icon: '\u{1F3AE}',
+    icon: 'users',
     blocks: makeBlocks([
       { type: 'heading', content: { richText: plainText('Team Roster'), level: 1 } },
       { type: 'text', content: { richText: plainText('Current team composition and availability.') } },
@@ -97,10 +99,10 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
     key: 'event-guide',
     name: 'Event Guide',
     description: 'Plan and document events',
-    icon: '\u{1F389}',
+    icon: 'calendar-days',
     blocks: makeBlocks([
       { type: 'heading', content: { richText: plainText('Event Name'), level: 1 } },
-      { type: 'callout', content: { richText: plainText('Date: TBD | Time: TBD | Location: TBD'), emoji: '\u{1F4C5}' } },
+      { type: 'callout', content: { richText: plainText('Date: TBD | Time: TBD | Location: TBD'), emoji: '>' } },
       { type: 'divider', content: {} },
       { type: 'heading', content: { richText: plainText('Description'), level: 2 } },
       { type: 'text', content: { richText: plainText('What is this event about?') } },
@@ -117,7 +119,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
     key: 'changelog',
     name: 'Changelog / Updates',
     description: 'Track server changes',
-    icon: '\u{1F4DD}',
+    icon: 'scroll-text',
     blocks: makeBlocks([
       { type: 'heading', content: { richText: plainText('Changelog'), level: 1 } },
       { type: 'text', content: { richText: plainText('Track all server changes and updates here.') } },
@@ -135,7 +137,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
     key: 'faq',
     name: 'FAQ',
     description: 'Toggle-based Q&A',
-    icon: '\u{2753}',
+    icon: 'help-circle',
     blocks: makeBlocks([
       { type: 'heading', content: { richText: plainText('Frequently Asked Questions'), level: 1 } },
       { type: 'text', content: { richText: plainText('Find answers to common questions below.') } },
@@ -151,7 +153,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
     key: 'lore',
     name: 'Lore / World Building',
     description: 'RP world-building',
-    icon: '\u{1F5FA}\u{FE0F}',
+    icon: 'map',
     blocks: makeBlocks([
       { type: 'heading', content: { richText: plainText('World Lore'), level: 1 } },
       { type: 'table_of_contents', content: { maxDepth: 3 } },
@@ -170,10 +172,10 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
     key: 'raid-guide',
     name: 'Raid / Strategy Guide',
     description: 'Boss strategies, team comp, loot tables',
-    icon: '\u{2694}\u{FE0F}',
+    icon: 'swords',
     blocks: makeBlocks([
       { type: 'heading', content: { richText: plainText('Raid Guide: Boss Name'), level: 1 } },
-      { type: 'callout', content: { richText: plainText('Difficulty: Hard | Min Level: 60 | Group Size: 8'), emoji: '\u{2694}\u{FE0F}' } },
+      { type: 'callout', content: { richText: plainText('Difficulty: Hard | Min Level: 60 | Group Size: 8'), emoji: '!' } },
       { type: 'divider', content: {} },
       { type: 'heading', content: { richText: plainText('Team Composition'), level: 2 } },
       { type: 'table', content: { headers: ['Role', 'Class', 'Notes'], rows: [['Tank', '', ''], ['Healer', '', ''], ['DPS', '', '']] } },
@@ -189,7 +191,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
     key: 'blank',
     name: 'Blank Document',
     description: 'Start from scratch',
-    icon: '\u{1F4C4}',
+    icon: 'file-text',
     blocks: makeBlocks([
       { type: 'text', content: { richText: [{ text: '' }] } },
     ]),

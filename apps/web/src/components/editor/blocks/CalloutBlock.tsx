@@ -1,6 +1,7 @@
 /**
- * CalloutBlock.tsx — Highlighted callout with emoji and text.
+ * CalloutBlock.tsx — Highlighted callout with icon and text.
  */
+import { Info, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import type { Block, CalloutBlockContent } from '@gratonite/types/api';
 import InlineEditor from '../inline/InlineEditor';
 import { useEditorContext } from '../BlockEditorContext';
@@ -13,9 +14,27 @@ interface Props {
   onArrowDown?: () => void;
 }
 
+/** Map callout emoji/icon hint to a Lucide icon + color. */
+function getCalloutIcon(hint?: string): { Icon: React.ComponentType<any>; color: string } {
+  switch (hint) {
+    case '!':
+    case 'warning':
+      return { Icon: AlertTriangle, color: '#f59e0b' };
+    case 'error':
+    case 'x':
+      return { Icon: XCircle, color: '#ef4444' };
+    case 'success':
+    case 'check':
+      return { Icon: CheckCircle, color: '#22c55e' };
+    default:
+      return { Icon: Info, color: 'var(--accent-primary)' };
+  }
+}
+
 export default function CalloutBlock({ block, onEnter, onBackspaceAtStart, onArrowUp, onArrowDown }: Props) {
   const { updateBlockContent } = useEditorContext();
   const content = block.content as CalloutBlockContent;
+  const { Icon, color } = getCalloutIcon(content.emoji);
 
   return (
     <div style={{
@@ -24,9 +43,9 @@ export default function CalloutBlock({ block, onEnter, onBackspaceAtStart, onArr
       borderRadius: 8, border: '1px solid var(--border)',
       margin: '4px 0',
     }}>
-      <span style={{ fontSize: 20, flexShrink: 0, userSelect: 'none' }}>
-        {content.emoji || '💡'}
-      </span>
+      <div style={{ flexShrink: 0, marginTop: 2 }}>
+        <Icon size={18} style={{ color }} />
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <InlineEditor
           blockId={block.id}

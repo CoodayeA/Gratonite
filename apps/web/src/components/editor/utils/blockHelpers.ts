@@ -48,7 +48,7 @@ export function createBlock<T extends BlockType>(type: T, position?: string): Bl
     file: { url: '', filename: '' },
     table: { headers: ['Column 1', 'Column 2', 'Column 3'], rows: [['', '', ''], ['', '', '']] },
     divider: {},
-    callout: { richText: [{ text: '' }], emoji: '💡' },
+    callout: { richText: [{ text: '' }], emoji: 'info' },
     code: { code: '', language: 'javascript' },
     quote: { richText: [{ text: '' }] },
     embed: { url: '', caption: '' },

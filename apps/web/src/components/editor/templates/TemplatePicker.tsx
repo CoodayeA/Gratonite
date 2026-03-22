@@ -1,11 +1,34 @@
 /**
  * TemplatePicker.tsx — Shown for empty documents. Displays templates in a grid.
+ * Uses Lucide icons instead of emoji for a polished look.
  */
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, FileText } from 'lucide-react';
+import {
+  ChevronDown, ChevronUp, FileText, Library, BookOpen, ShieldCheck,
+  Users, CalendarDays, ScrollText, HelpCircle, Map, Swords, File,
+} from 'lucide-react';
 import type { Block, DocumentTemplate } from '@gratonite/types/api';
 import { BUILTIN_TEMPLATES } from './builtinTemplates';
 import { apiFetch } from '../../../lib/api/_core';
+
+/** Map template icon key → Lucide component. */
+const TEMPLATE_ICONS: Record<string, React.ComponentType<{ size?: number; style?: React.CSSProperties }>> = {
+  'library': Library,
+  'book-open': BookOpen,
+  'shield-check': ShieldCheck,
+  'users': Users,
+  'calendar-days': CalendarDays,
+  'scroll-text': ScrollText,
+  'help-circle': HelpCircle,
+  'map': Map,
+  'swords': Swords,
+  'file-text': FileText,
+};
+
+function TemplateIcon({ name, size = 22 }: { name: string; size?: number }) {
+  const Icon = TEMPLATE_ICONS[name] || File;
+  return <Icon size={size} />;
+}
 
 interface TemplatePickerProps {
   guildId?: string;
@@ -69,7 +92,14 @@ export default function TemplatePicker({ guildId, onSelect }: TemplatePickerProp
               (e.currentTarget as HTMLElement).style.background = 'var(--bg-tertiary)';
             }}
           >
-            <span style={{ fontSize: 28, flexShrink: 0 }}>{t.icon}</span>
+            <div style={{
+              width: 40, height: 40, borderRadius: 8,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(124, 92, 252, 0.1)', color: 'var(--accent-primary)',
+              flexShrink: 0,
+            }}>
+              <TemplateIcon name={t.icon} size={20} />
+            </div>
             <div>
               <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
                 {t.name}
@@ -119,7 +149,14 @@ export default function TemplatePicker({ guildId, onSelect }: TemplatePickerProp
                   cursor: 'pointer', textAlign: 'left',
                 }}
               >
-                <span style={{ fontSize: 28, flexShrink: 0 }}>{t.icon || '\u{1F4C4}'}</span>
+                <div style={{
+                  width: 40, height: 40, borderRadius: 8,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(124, 92, 252, 0.1)', color: 'var(--accent-primary)',
+                  flexShrink: 0,
+                }}>
+                  <TemplateIcon name={t.icon || 'file-text'} size={20} />
+                </div>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>{t.name}</div>
                   {t.description && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 2 }}>{t.description}</div>}
