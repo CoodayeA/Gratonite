@@ -1,10 +1,7 @@
 /**
- * builtinTemplates.ts — 10 built-in document templates (gaming/social focused).
- * Icons use Lucide icon names — rendered by TemplatePicker via the TEMPLATE_ICONS map.
+ * builtinTemplates.ts — 10 built-in document templates in BlockNote native format.
  */
-import type { Block } from '@gratonite/types';
-import { createBlock, generateBlockId, plainText } from '../utils/blockHelpers';
-import { generatePositions } from '../utils/fractionalIndex';
+import type { Block } from '@blocknote/core';
 
 export interface BuiltinTemplate {
   key: string;
@@ -15,15 +12,65 @@ export interface BuiltinTemplate {
   blocks: Block[];
 }
 
-function makeBlocks(specs: Array<{ type: any; content: any }>): Block[] {
-  const positions = generatePositions(specs.length);
-  return specs.map((s, i) => ({
-    id: generateBlockId(),
-    type: s.type,
-    content: s.content,
-    position: positions[i],
-  }));
-}
+// Helper: paragraph
+const p = (text: string): Block => ({
+  id: crypto.randomUUID(),
+  type: 'paragraph' as const,
+  content: text ? [{ type: 'text' as const, text, styles: {} }] : [],
+  props: {},
+  children: [],
+} as any);
+
+// Helper: heading
+const h = (text: string, level: 1 | 2 | 3): Block => ({
+  id: crypto.randomUUID(),
+  type: 'heading' as const,
+  content: [{ type: 'text' as const, text, styles: {} }],
+  props: { level },
+  children: [],
+} as any);
+
+// Helper: bullet list item
+const bullet = (text: string): Block => ({
+  id: crypto.randomUUID(),
+  type: 'bulletListItem' as const,
+  content: [{ type: 'text' as const, text, styles: {} }],
+  props: {},
+  children: [],
+} as any);
+
+// Helper: numbered list item
+const num = (text: string): Block => ({
+  id: crypto.randomUUID(),
+  type: 'numberedListItem' as const,
+  content: [{ type: 'text' as const, text, styles: {} }],
+  props: {},
+  children: [],
+} as any);
+
+// Helper: checklist item
+const check = (text: string, checked = false): Block => ({
+  id: crypto.randomUUID(),
+  type: 'checkListItem' as const,
+  content: [{ type: 'text' as const, text, styles: {} }],
+  props: { checked },
+  children: [],
+} as any);
+
+// Helper: table
+const table = (headers: string[], rows: string[][]): Block => ({
+  id: crypto.randomUUID(),
+  type: 'table' as const,
+  content: {
+    type: 'tableContent',
+    rows: [
+      { cells: headers.map(h => [{ type: 'text' as const, text: h, styles: {} }]) },
+      ...rows.map(row => ({ cells: row.map(cell => [{ type: 'text' as const, text: cell, styles: {} }]) })),
+    ],
+  },
+  props: {},
+  children: [],
+} as any);
 
 export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
   {
@@ -31,169 +78,155 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
     name: 'Resources',
     description: 'Links, guides, and helpful resources',
     icon: 'library',
-    blocks: makeBlocks([
-      { type: 'heading', content: { richText: plainText('Resources'), level: 1 } },
-      { type: 'text', content: { richText: plainText('A curated collection of useful links and guides for this server.') } },
-      { type: 'divider', content: {} },
-      { type: 'heading', content: { richText: plainText('Getting Started'), level: 2 } },
-      { type: 'bulleted_list', content: { richText: plainText('Link or resource here') } },
-      { type: 'bulleted_list', content: { richText: plainText('Another resource') } },
-      { type: 'heading', content: { richText: plainText('Guides & Tutorials'), level: 2 } },
-      { type: 'bulleted_list', content: { richText: plainText('Guide link here') } },
-      { type: 'heading', content: { richText: plainText('Tools & Downloads'), level: 2 } },
-      { type: 'bulleted_list', content: { richText: plainText('Tool link here') } },
-    ]),
+    blocks: [
+      h('Resources', 1),
+      p('A curated collection of useful links and guides for this server.'),
+      h('Getting Started', 2),
+      bullet('Link or resource here'),
+      bullet('Another resource'),
+      h('Guides & Tutorials', 2),
+      bullet('Guide link here'),
+      h('Tools & Downloads', 2),
+      bullet('Tool link here'),
+    ],
   },
   {
     key: 'wiki',
     name: 'Wiki',
     description: 'Knowledge base with table of contents',
     icon: 'book-open',
-    blocks: makeBlocks([
-      { type: 'heading', content: { richText: plainText('Wiki'), level: 1 } },
-      { type: 'table_of_contents', content: { maxDepth: 3 } },
-      { type: 'divider', content: {} },
-      { type: 'heading', content: { richText: plainText('Overview'), level: 2 } },
-      { type: 'text', content: { richText: plainText('Describe the topic here...') } },
-      { type: 'heading', content: { richText: plainText('Details'), level: 2 } },
-      { type: 'text', content: { richText: plainText('More detailed information...') } },
-      { type: 'heading', content: { richText: plainText('FAQ'), level: 2 } },
-      { type: 'toggle', content: { richText: plainText('Question 1?'), children: [] } },
-      { type: 'toggle', content: { richText: plainText('Question 2?'), children: [] } },
-    ]),
+    blocks: [
+      h('Wiki', 1),
+      h('Overview', 2),
+      p('Describe the topic here...'),
+      h('Details', 2),
+      p('More detailed information...'),
+      h('FAQ', 2),
+      p('Common questions and answers...'),
+    ],
   },
   {
     key: 'rules-info',
     name: 'Rules & Info',
     description: 'Server rules and important info',
     icon: 'shield-check',
-    blocks: makeBlocks([
-      { type: 'heading', content: { richText: plainText('Server Rules'), level: 1 } },
-      { type: 'callout', content: { richText: plainText('Please read and follow these rules to keep our community safe and fun!'), emoji: '!' } },
-      { type: 'divider', content: {} },
-      { type: 'numbered_list', content: { richText: plainText('Be respectful to all members') } },
-      { type: 'numbered_list', content: { richText: plainText('No spam or self-promotion') } },
-      { type: 'numbered_list', content: { richText: plainText('No NSFW content') } },
-      { type: 'numbered_list', content: { richText: plainText('No harassment or hate speech') } },
-      { type: 'numbered_list', content: { richText: plainText('Follow Discord TOS') } },
-      { type: 'divider', content: {} },
-      { type: 'callout', content: { richText: plainText('Breaking rules may result in warnings, mutes, or bans.'), emoji: '!' } },
-    ]),
+    blocks: [
+      h('Server Rules', 1),
+      p('Please read and follow these rules to keep our community safe and fun!'),
+      num('Be respectful to all members'),
+      num('No spam or self-promotion'),
+      num('No NSFW content'),
+      num('No harassment or hate speech'),
+      num('Follow Discord TOS'),
+      p('Breaking rules may result in warnings, mutes, or bans.'),
+    ],
   },
   {
     key: 'roster',
     name: 'Roster / Team Sheet',
     description: 'Team members, roles, availability',
     icon: 'users',
-    blocks: makeBlocks([
-      { type: 'heading', content: { richText: plainText('Team Roster'), level: 1 } },
-      { type: 'text', content: { richText: plainText('Current team composition and availability.') } },
-      { type: 'divider', content: {} },
-      { type: 'table', content: { headers: ['Player', 'Role', 'Main', 'Available'], rows: [['', '', '', ''], ['', '', '', ''], ['', '', '', '']] } },
-      { type: 'divider', content: {} },
-      { type: 'heading', content: { richText: plainText('Substitutes'), level: 2 } },
-      { type: 'table', content: { headers: ['Player', 'Role', 'Notes'], rows: [['', '', ''], ['', '', '']] } },
-    ]),
+    blocks: [
+      h('Team Roster', 1),
+      p('Current team composition and availability.'),
+      table(['Player', 'Role', 'Main', 'Available'], [['', '', '', ''], ['', '', '', ''], ['', '', '', '']]),
+      h('Substitutes', 2),
+      table(['Player', 'Role', 'Notes'], [['', '', ''], ['', '', '']]),
+    ],
   },
   {
     key: 'event-guide',
     name: 'Event Guide',
     description: 'Plan and document events',
     icon: 'calendar-days',
-    blocks: makeBlocks([
-      { type: 'heading', content: { richText: plainText('Event Name'), level: 1 } },
-      { type: 'callout', content: { richText: plainText('Date: TBD | Time: TBD | Location: TBD'), emoji: '>' } },
-      { type: 'divider', content: {} },
-      { type: 'heading', content: { richText: plainText('Description'), level: 2 } },
-      { type: 'text', content: { richText: plainText('What is this event about?') } },
-      { type: 'heading', content: { richText: plainText('Schedule'), level: 2 } },
-      { type: 'numbered_list', content: { richText: plainText('Phase 1: ...') } },
-      { type: 'numbered_list', content: { richText: plainText('Phase 2: ...') } },
-      { type: 'heading', content: { richText: plainText('Rules'), level: 2 } },
-      { type: 'bulleted_list', content: { richText: plainText('Rule here') } },
-      { type: 'heading', content: { richText: plainText('Prizes'), level: 2 } },
-      { type: 'text', content: { richText: plainText('What do winners get?') } },
-    ]),
+    blocks: [
+      h('Event Name', 1),
+      p('Date: TBD | Time: TBD | Location: TBD'),
+      h('Description', 2),
+      p('What is this event about?'),
+      h('Schedule', 2),
+      num('Phase 1: ...'),
+      num('Phase 2: ...'),
+      h('Rules', 2),
+      bullet('Rule here'),
+      h('Prizes', 2),
+      p('What do winners get?'),
+    ],
   },
   {
     key: 'changelog',
     name: 'Changelog / Updates',
     description: 'Track server changes',
     icon: 'scroll-text',
-    blocks: makeBlocks([
-      { type: 'heading', content: { richText: plainText('Changelog'), level: 1 } },
-      { type: 'text', content: { richText: plainText('Track all server changes and updates here.') } },
-      { type: 'divider', content: {} },
-      { type: 'heading', content: { richText: plainText('Latest Update'), level: 2 } },
-      { type: 'text', content: { richText: plainText('Date: ') } },
-      { type: 'checklist', content: { richText: plainText('Change 1'), checked: true } },
-      { type: 'checklist', content: { richText: plainText('Change 2'), checked: false } },
-      { type: 'divider', content: {} },
-      { type: 'heading', content: { richText: plainText('Previous Updates'), level: 2 } },
-      { type: 'toggle', content: { richText: plainText('Update v1.0'), children: [] } },
-    ]),
+    blocks: [
+      h('Changelog', 1),
+      p('Track all server changes and updates here.'),
+      h('Latest Update', 2),
+      p('Date: '),
+      check('Change 1', true),
+      check('Change 2', false),
+      h('Previous Updates', 2),
+      p('Older updates here...'),
+    ],
   },
   {
     key: 'faq',
     name: 'FAQ',
-    description: 'Toggle-based Q&A',
+    description: 'Frequently asked questions',
     icon: 'help-circle',
-    blocks: makeBlocks([
-      { type: 'heading', content: { richText: plainText('Frequently Asked Questions'), level: 1 } },
-      { type: 'text', content: { richText: plainText('Find answers to common questions below.') } },
-      { type: 'divider', content: {} },
-      { type: 'toggle', content: { richText: plainText('How do I get started?'), children: [] } },
-      { type: 'toggle', content: { richText: plainText('What are the rules?'), children: [] } },
-      { type: 'toggle', content: { richText: plainText('How do I get a role?'), children: [] } },
-      { type: 'toggle', content: { richText: plainText('Who are the moderators?'), children: [] } },
-      { type: 'toggle', content: { richText: plainText('How do I report an issue?'), children: [] } },
-    ]),
+    blocks: [
+      h('Frequently Asked Questions', 1),
+      p('Find answers to common questions below.'),
+      h('How do I get started?', 3),
+      p('Answer here...'),
+      h('What are the rules?', 3),
+      p('Answer here...'),
+      h('How do I get a role?', 3),
+      p('Answer here...'),
+      h('Who are the moderators?', 3),
+      p('Answer here...'),
+    ],
   },
   {
     key: 'lore',
     name: 'Lore / World Building',
     description: 'RP world-building',
     icon: 'map',
-    blocks: makeBlocks([
-      { type: 'heading', content: { richText: plainText('World Lore'), level: 1 } },
-      { type: 'table_of_contents', content: { maxDepth: 3 } },
-      { type: 'divider', content: {} },
-      { type: 'heading', content: { richText: plainText('History'), level: 2 } },
-      { type: 'text', content: { richText: plainText('The ancient history of this world...') } },
-      { type: 'heading', content: { richText: plainText('Factions'), level: 2 } },
-      { type: 'text', content: { richText: plainText('The major powers and groups...') } },
-      { type: 'heading', content: { richText: plainText('Locations'), level: 2 } },
-      { type: 'text', content: { richText: plainText('Key places in the world...') } },
-      { type: 'heading', content: { richText: plainText('Characters'), level: 2 } },
-      { type: 'text', content: { richText: plainText('Important NPCs and figures...') } },
-    ]),
+    blocks: [
+      h('World Lore', 1),
+      h('History', 2),
+      p('The ancient history of this world...'),
+      h('Factions', 2),
+      p('The major powers and groups...'),
+      h('Locations', 2),
+      p('Key places in the world...'),
+      h('Characters', 2),
+      p('Important NPCs and figures...'),
+    ],
   },
   {
     key: 'raid-guide',
     name: 'Raid / Strategy Guide',
     description: 'Boss strategies, team comp, loot tables',
     icon: 'swords',
-    blocks: makeBlocks([
-      { type: 'heading', content: { richText: plainText('Raid Guide: Boss Name'), level: 1 } },
-      { type: 'callout', content: { richText: plainText('Difficulty: Hard | Min Level: 60 | Group Size: 8'), emoji: '!' } },
-      { type: 'divider', content: {} },
-      { type: 'heading', content: { richText: plainText('Team Composition'), level: 2 } },
-      { type: 'table', content: { headers: ['Role', 'Class', 'Notes'], rows: [['Tank', '', ''], ['Healer', '', ''], ['DPS', '', '']] } },
-      { type: 'heading', content: { richText: plainText('Phase 1'), level: 2 } },
-      { type: 'text', content: { richText: plainText('Strategy for phase 1...') } },
-      { type: 'heading', content: { richText: plainText('Phase 2'), level: 2 } },
-      { type: 'text', content: { richText: plainText('Strategy for phase 2...') } },
-      { type: 'heading', content: { richText: plainText('Loot Table'), level: 2 } },
-      { type: 'table', content: { headers: ['Item', 'Drop Rate', 'Notes'], rows: [['', '', ''], ['', '', '']] } },
-    ]),
+    blocks: [
+      h('Raid Guide: Boss Name', 1),
+      p('Difficulty: Hard | Min Level: 60 | Group Size: 8'),
+      h('Team Composition', 2),
+      table(['Role', 'Class', 'Notes'], [['Tank', '', ''], ['Healer', '', ''], ['DPS', '', '']]),
+      h('Phase 1', 2),
+      p('Strategy for phase 1...'),
+      h('Phase 2', 2),
+      p('Strategy for phase 2...'),
+      h('Loot Table', 2),
+      table(['Item', 'Drop Rate', 'Notes'], [['', '', ''], ['', '', '']]),
+    ],
   },
   {
     key: 'blank',
     name: 'Blank Document',
     description: 'Start from scratch',
     icon: 'file-text',
-    blocks: makeBlocks([
-      { type: 'text', content: { richText: [{ text: '' }] } },
-    ]),
+    blocks: [],
   },
 ];

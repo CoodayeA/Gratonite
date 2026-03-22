@@ -6,7 +6,7 @@ import { useParams } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
 
-const BlockEditor = lazy(() => import('../components/editor/BlockEditor'));
+const BlockEditor = lazy(() => import('../components/editor/BlockNoteEditor'));
 
 export default function EmbedDocument() {
   const { channelId } = useParams<{ channelId: string }>();

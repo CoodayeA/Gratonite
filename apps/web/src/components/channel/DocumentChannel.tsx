@@ -6,7 +6,7 @@
 import { lazy, Suspense } from 'react';
 import { FileText, Loader2 } from 'lucide-react';
 
-const BlockEditor = lazy(() => import('../editor/BlockEditor'));
+const BlockEditor = lazy(() => import('../editor/BlockNoteEditor'));
 
 interface DocumentChannelProps {
   channelId: string;
