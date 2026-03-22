@@ -2330,99 +2330,6 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
             </div>
 
             {/* Create Channel Inline Modal */}
-            {showCreateChannel && (
-                <div className="modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => { setShowCreateChannel(null); setNewChannelName(''); setSelectedTemplate(null); }}>
-                <div onClick={e => e.stopPropagation()} style={{ width: 420, maxWidth: '95vw', padding: '24px', background: 'var(--bg-elevated)', borderRadius: 16, border: '1px solid var(--stroke)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
-                    <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>
-                        Create {showCreateChannel.type === 'voice' ? 'Voice' : showCreateChannel.type === 'document' ? 'Document' : 'Text'} Channel
-                    </div>
-
-                    {/* Channel Templates */}
-                    {!newChannelName && (
-                        <div style={{ marginBottom: '10px' }}>
-                            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
-                                Templates
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
-                                {(showCreateChannel.type === 'text' ? [
-                                    { name: 'rules', icon: '\u{1F4DC}', desc: 'Server rules & guidelines', topic: 'Read and follow the server rules', rateLimitPerUser: 0, isAnnouncement: true },
-                                    { name: 'introductions', icon: '\u{1F44B}', desc: 'Introduce yourself, slow mode', topic: 'Tell us about yourself!', rateLimitPerUser: 60 },
-                                    { name: 'media-share', icon: '\u{1F3A8}', desc: 'Share art, screenshots & media', topic: 'Share your favorite media' },
-                                    { name: 'general', icon: '#', desc: 'General purpose chat', topic: '' },
-                                    { name: 'support', icon: '\u{2753}', desc: 'Help & ticket-like support', topic: 'Ask for help here', rateLimitPerUser: 10 },
-                                    { name: 'announcements', icon: '\u{1F4E2}', desc: 'Read-only news & updates', topic: 'Important announcements', isAnnouncement: true },
-                                ] : showCreateChannel.type === 'document' ? [
-                                    { name: 'meeting-notes', icon: '\u{1F4DD}', desc: 'Collaborative meeting notes', topic: 'Shared meeting notes' },
-                                    { name: 'wiki', icon: '\u{1F4DA}', desc: 'Server knowledge base', topic: 'Server wiki & documentation' },
-                                    { name: 'project-plan', icon: '\u{1F4CB}', desc: 'Project planning & tracking', topic: 'Project plans and tasks' },
-                                    { name: 'resources', icon: '\u{1F517}', desc: 'Useful links & references', topic: 'Shared resources and links' },
-                                ] : [
-                                    { name: 'voice-lounge', icon: '\u{1F3A7}', desc: 'Casual hangout voice channel', topic: 'Hang out and chat' },
-                                    { name: 'gaming', icon: '\u{1F3AE}', desc: 'Voice chat for gaming', topic: 'Game together' },
-                                    { name: 'music', icon: '\u{1F3B5}', desc: 'Listen to music together', topic: 'Music listening party' },
-                                    { name: 'meeting', icon: '\u{1F4CB}', desc: 'Team meetings & discussions', topic: 'Meetings' },
-                                ]).map(tmpl => (
-                                    <button
-                                        key={tmpl.name}
-                                        onClick={() => {
-                                            setNewChannelName(tmpl.name);
-                                            setSelectedTemplate({ name: tmpl.name, topic: tmpl.topic, rateLimitPerUser: (tmpl as any).rateLimitPerUser, isAnnouncement: (tmpl as any).isAnnouncement });
-                                        }}
-                                        style={{
-                                            padding: '8px 10px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
-                                            borderRadius: '8px', cursor: 'pointer', textAlign: 'left',
-                                            display: 'flex', alignItems: 'center', gap: '8px',
-                                            color: 'var(--text-secondary)', fontSize: '12px',
-                                            transition: 'border-color 0.15s, background 0.15s',
-                                        }}
-                                        className="hover-border-accent-bg"
-                                    >
-                                        <span style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', flexShrink: 0 }}>
-                                            {tmpl.icon}
-                                        </span>
-                                        <div style={{ minWidth: 0 }}>
-                                            <div style={{ fontWeight: 600, fontSize: '12px', color: 'var(--text-primary)' }}>{tmpl.name}</div>
-                                            <div style={{ fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tmpl.desc}</div>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                            <div style={{ height: '1px', background: 'var(--stroke)', margin: '8px 0' }} />
-                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Or enter a custom name:</div>
-                        </div>
-                    )}
-                    {selectedTemplate && newChannelName && (
-                        <div style={{ marginBottom: '8px', padding: '6px 10px', background: 'rgba(88, 101, 242, 0.08)', borderRadius: '6px', border: '1px solid rgba(88, 101, 242, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 600 }}>
-                                Template: {selectedTemplate.name}
-                                {selectedTemplate.topic ? ` \u2022 Topic: "${selectedTemplate.topic}"` : ''}
-                                {selectedTemplate.rateLimitPerUser ? ` \u2022 Slow mode: ${selectedTemplate.rateLimitPerUser}s` : ''}
-                                {selectedTemplate.isAnnouncement ? ' \u2022 Announcement' : ''}
-                            </span>
-                            <button onClick={() => setSelectedTemplate(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex' }}><X size={12} /></button>
-                        </div>
-                    )}
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                        {showCreateChannel.type === 'voice' ? <Mic size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : showCreateChannel.type === 'document' ? <FileText size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : <HashIcon size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
-                        <input
-                            type="text"
-                            placeholder={showCreateChannel.type === 'voice' ? 'new-voice' : showCreateChannel.type === 'document' ? 'new-document' : 'new-channel'}
-                            value={newChannelName}
-                            onChange={(e) => setNewChannelName(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') handleCreateChannel(); if (e.key === 'Escape') { setShowCreateChannel(null); setNewChannelName(''); setSelectedTemplate(null); } }}
-                            autoFocus
-                            style={{ flex: 1, background: 'var(--bg-app)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
-                        />
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <button onClick={() => { setShowCreateChannel(null); setNewChannelName(''); setSelectedTemplate(null); }} style={{ padding: '6px 16px', background: 'none', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}>Cancel</button>
-                        <button onClick={handleCreateChannel} disabled={!newChannelName.trim()} style={{ padding: '6px 16px', background: newChannelName.trim() ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: newChannelName.trim() ? '#000' : 'var(--text-muted)', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: newChannelName.trim() ? 'pointer' : 'default', fontWeight: 600 }}>Create Channel</button>
-                    </div>
-                </div>
-                </div>
-            )}
-
             <UserPanel />
 
             {/* Channel Settings Modal */}
@@ -4224,6 +4131,99 @@ export const AppLayout = () => {
                 <OnboardingModal onClose={() => setActiveModal(null)} />
             </ModalWrapper>
             {showWhatsNew && <WhatsNewModal onClose={() => { localStorage.setItem('gratonite:last-seen-changelog', CHANGELOG[0]?.id ?? ''); setShowWhatsNew(false); }} />}
+            {showCreateChannel && (
+                <div className="modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => { setShowCreateChannel(null); setNewChannelName(''); setSelectedTemplate(null); }}>
+                <div role="dialog" aria-modal="true" onClick={e => e.stopPropagation()} style={{ width: 440, maxWidth: '95vw', padding: '24px', background: 'var(--bg-elevated)', borderRadius: 16, border: '1px solid var(--stroke)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                        Create {showCreateChannel.type === 'voice' ? 'Voice' : showCreateChannel.type === 'document' ? 'Document' : 'Text'} Channel
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
+                        {showCreateChannel.type === 'document' ? 'Collaborative documents your team can edit together.' : showCreateChannel.type === 'voice' ? 'A voice channel for hanging out and talking.' : 'A text channel for messaging and sharing.'}
+                    </div>
+
+                    {!newChannelName && (
+                        <div style={{ marginBottom: '16px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>
+                                Start from a template
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                                {(showCreateChannel.type === 'text' ? [
+                                    { name: 'rules', icon: '\u{1F4DC}', desc: 'Server rules & guidelines', topic: 'Read and follow the server rules', rateLimitPerUser: 0, isAnnouncement: true },
+                                    { name: 'introductions', icon: '\u{1F44B}', desc: 'Introduce yourself', topic: 'Tell us about yourself!', rateLimitPerUser: 60 },
+                                    { name: 'media-share', icon: '\u{1F3A8}', desc: 'Share art & media', topic: 'Share your favorite media' },
+                                    { name: 'general', icon: '#', desc: 'General chat', topic: '' },
+                                    { name: 'support', icon: '\u{2753}', desc: 'Help & support', topic: 'Ask for help here', rateLimitPerUser: 10 },
+                                    { name: 'announcements', icon: '\u{1F4E2}', desc: 'News & updates', topic: 'Important announcements', isAnnouncement: true },
+                                ] : showCreateChannel.type === 'document' ? [
+                                    { name: 'meeting-notes', icon: '\u{1F4DD}', desc: 'Collaborative notes', topic: 'Shared meeting notes' },
+                                    { name: 'wiki', icon: '\u{1F4DA}', desc: 'Knowledge base', topic: 'Server wiki & documentation' },
+                                    { name: 'project-plan', icon: '\u{1F4CB}', desc: 'Planning & tasks', topic: 'Project plans and tasks' },
+                                    { name: 'resources', icon: '\u{1F517}', desc: 'Links & references', topic: 'Shared resources and links' },
+                                ] : [
+                                    { name: 'voice-lounge', icon: '\u{1F3A7}', desc: 'Casual hangout', topic: 'Hang out and chat' },
+                                    { name: 'gaming', icon: '\u{1F3AE}', desc: 'Gaming voice chat', topic: 'Game together' },
+                                    { name: 'music', icon: '\u{1F3B5}', desc: 'Listen together', topic: 'Music listening party' },
+                                    { name: 'meeting', icon: '\u{1F4CB}', desc: 'Team meetings', topic: 'Meetings' },
+                                ]).map(tmpl => (
+                                    <button
+                                        key={tmpl.name}
+                                        onClick={() => {
+                                            setNewChannelName(tmpl.name);
+                                            setSelectedTemplate({ name: tmpl.name, topic: tmpl.topic, rateLimitPerUser: (tmpl as any).rateLimitPerUser, isAnnouncement: (tmpl as any).isAnnouncement });
+                                        }}
+                                        style={{
+                                            padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
+                                            borderRadius: '10px', cursor: 'pointer', textAlign: 'left',
+                                            display: 'flex', alignItems: 'center', gap: '10px',
+                                            color: 'var(--text-secondary)', fontSize: '13px',
+                                            transition: 'border-color 0.15s, background 0.15s',
+                                        }}
+                                        className="hover-border-accent-bg"
+                                    >
+                                        <span style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>
+                                            {tmpl.icon}
+                                        </span>
+                                        <div style={{ minWidth: 0 }}>
+                                            <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>{tmpl.name}</div>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tmpl.desc}</div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                            <div style={{ height: '1px', background: 'var(--stroke)', margin: '16px 0 12px' }} />
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Or enter a custom name</div>
+                        </div>
+                    )}
+                    {selectedTemplate && newChannelName && (
+                        <div style={{ marginBottom: '12px', padding: '8px 12px', background: 'rgba(88, 101, 242, 0.08)', borderRadius: '8px', border: '1px solid rgba(88, 101, 242, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                                Template: {selectedTemplate.name}
+                                {selectedTemplate.topic ? ` \u2022 "${selectedTemplate.topic}"` : ''}
+                            </span>
+                            <button onClick={() => setSelectedTemplate(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex' }}><X size={14} /></button>
+                        </div>
+                    )}
+
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>Channel Name</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                        {showCreateChannel.type === 'voice' ? <Mic size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : showCreateChannel.type === 'document' ? <FileText size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : <HashIcon size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
+                        <input
+                            type="text"
+                            placeholder={showCreateChannel.type === 'voice' ? 'new-voice' : showCreateChannel.type === 'document' ? 'new-document' : 'new-channel'}
+                            value={newChannelName}
+                            onChange={(e) => setNewChannelName(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleCreateChannel(); if (e.key === 'Escape') { setShowCreateChannel(null); setNewChannelName(''); setSelectedTemplate(null); } }}
+                            autoFocus
+                            style={{ flex: 1, background: 'var(--bg-app)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                        <button onClick={() => { setShowCreateChannel(null); setNewChannelName(''); setSelectedTemplate(null); }} style={{ padding: '8px 20px', background: 'none', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}>Cancel</button>
+                        <button onClick={handleCreateChannel} disabled={!newChannelName.trim()} style={{ padding: '8px 20px', background: newChannelName.trim() ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: newChannelName.trim() ? '#000' : 'var(--text-muted)', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: newChannelName.trim() ? 'pointer' : 'default', fontWeight: 600 }}>Create Channel</button>
+                    </div>
+                </div>
+                </div>
+            )}
             {pendingExternalLink && (
                 <ExternalLinkModal url={pendingExternalLink} onClose={() => setPendingExternalLink(null)} />
             )}
