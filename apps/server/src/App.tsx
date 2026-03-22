@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { open } from "@tauri-apps/plugin-opener";
 import "./App.css";
 
 type Status = {
@@ -169,7 +170,7 @@ function App() {
             web server, and HTTPS proxy. Everything stays on your computer.
           </p>
           <div className="actions">
-            <a href="https://localhost:8443" target="_blank" className="btn">Open Gratonite</a>
+            <button onClick={() => open("https://localhost:8443")} className="btn">Open Gratonite</button>
             <button onClick={handleStop} className="btn secondary">Stop</button>
           </div>
           <p className="federation">Connected to the Gratonite network — other instances can discover yours</p>

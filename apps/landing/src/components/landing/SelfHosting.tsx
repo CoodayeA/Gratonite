@@ -79,7 +79,7 @@ export function SelfHosting() {
                 <Button variant="primary" size="lg" href="/deploy">
                   Get Started
                 </Button>
-                <Button variant="outline" size="lg" href="https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.0">
+                <Button variant="outline" size="lg" href="https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.1">
                   Download Desktop App
                 </Button>
               </div>

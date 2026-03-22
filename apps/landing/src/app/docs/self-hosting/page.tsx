@@ -59,7 +59,7 @@ export default function SelfHostingDocs() {
               Available for macOS (.dmg), Windows (.exe/.msi), and Linux (.deb/.rpm/.AppImage).
             </p>
             <a
-              href="https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.0"
+              href="https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.1"
               className="inline-block px-4 py-2 rounded-lg bg-purple text-white font-semibold neo-border-2 neo-shadow-sm hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all"
             >
               Download Gratonite Server &rarr;
