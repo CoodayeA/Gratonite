@@ -149,6 +149,25 @@ router.get('/', (_req, res) => {
   res.status(200).json({ message: 'gratonite-api v1' });
 });
 
+// Instance info — public endpoint for federated platforms, monitoring, and third-party clients
+router.get('/instance', (_req, res) => {
+  const domain = process.env.INSTANCE_DOMAIN || 'localhost';
+  const version = process.env.npm_package_version || '1.0.0';
+  const federationEnabled = process.env.FEDERATION_ENABLED === 'true';
+  const registrationOpen = process.env.REGISTRATION_OPEN !== 'false'; // default open
+
+  res.status(200).json({
+    domain,
+    version,
+    software: { name: 'gratonite', version },
+    federation: { enabled: federationEnabled },
+    registrations: { open: registrationOpen },
+    urls: {
+      wellKnown: '/.well-known/gratonite',
+    },
+  });
+});
+
 // Prometheus metrics (internal only)
 router.get('/metrics', async (req, res) => {
   const allowedIPs = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
