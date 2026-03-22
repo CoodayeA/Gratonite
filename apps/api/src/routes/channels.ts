@@ -106,7 +106,7 @@ const createChannelSchema = z.object({
     .min(1)
     .max(100)
     .regex(/^[a-z0-9-]+$/, 'Channel name may only contain lowercase letters, digits, and hyphens'),
-  type: z.enum(['GUILD_TEXT', 'GUILD_VOICE', 'GUILD_CATEGORY', 'GUILD_STAGE', 'GUILD_FORUM', 'GUILD_ANNOUNCEMENT', 'GUILD_WIKI', 'GUILD_QA', 'GUILD_CONFESSION', 'GUILD_TASK']),
+  type: z.enum(['GUILD_TEXT', 'GUILD_VOICE', 'GUILD_CATEGORY', 'GUILD_STAGE', 'GUILD_FORUM', 'GUILD_ANNOUNCEMENT', 'GUILD_WIKI', 'GUILD_QA', 'GUILD_CONFESSION', 'GUILD_TASK', 'GUILD_DOCUMENT']),
   parentId: z.string().uuid().optional(),
   createLinkedText: z.boolean().optional(),
 });
