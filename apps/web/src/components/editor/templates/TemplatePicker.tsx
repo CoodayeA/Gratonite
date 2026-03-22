@@ -7,7 +7,8 @@ import {
   ChevronDown, ChevronUp, FileText, Library, BookOpen, ShieldCheck,
   Users, CalendarDays, ScrollText, HelpCircle, Map, Swords, File,
 } from 'lucide-react';
-import type { Block, DocumentTemplate } from '@gratonite/types';
+import type { Block } from '@blocknote/core';
+import type { DocumentTemplate } from '@gratonite/types';
 import { BUILTIN_TEMPLATES } from './builtinTemplates';
 import { apiFetch } from '../../../lib/api/_core';
 
