@@ -147,7 +147,7 @@ button, [role="button"] {
 [data-color-mode="light"] {
     --text-primary: #000000;
     --text-secondary: #292929;
-    --text-muted: #525252;
+    --text-muted: #444444;
     --stroke: rgba(0, 0, 0, 0.15);
     --stroke-light: rgba(0, 0, 0, 0.08);
     --hover-overlay: rgba(0, 0, 0, 0.06);
@@ -202,13 +202,13 @@ button, [role="button"] {
    4px outline instead of 2px for better visibility
    ------------------------ */
 .focus-large *:focus-visible {
-    outline: 4px solid var(--accent-primary) !important;
-    outline-offset: 2px !important;
+    outline: 6px solid var(--accent-primary) !important;
+    outline-offset: 3px !important;
 }
 
 .focus-large .action-card:focus-visible {
-    outline: 4px solid var(--accent-primary) !important;
-    outline-offset: 2px !important;
+    outline: 6px solid var(--accent-primary) !important;
+    outline-offset: 3px !important;
     box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.25) !important;
 }
 

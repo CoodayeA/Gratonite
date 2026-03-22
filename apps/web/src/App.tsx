@@ -3154,7 +3154,8 @@ export const AppLayout = () => {
         const lastSeen = localStorage.getItem('gratonite:last-seen-changelog');
         const latestId = CHANGELOG[0]?.id ?? '';
         if (lastSeen !== latestId && ctxUser.id) {
-            setTimeout(() => setShowWhatsNew(true), 2000);
+            const timer = setTimeout(() => setShowWhatsNew(true), 2000);
+            return () => clearTimeout(timer);
         }
     }, [ctxUser.id]);
 
@@ -4215,7 +4216,7 @@ export const AppLayout = () => {
             <ModalWrapper isOpen={activeModal === 'onboarding'}>
                 <OnboardingModal onClose={() => setActiveModal(null)} />
             </ModalWrapper>
-            {showWhatsNew && <WhatsNewModal onClose={() => setShowWhatsNew(false)} />}
+            {showWhatsNew && <WhatsNewModal onClose={() => { localStorage.setItem('gratonite:last-seen-changelog', CHANGELOG[0]?.id ?? ''); setShowWhatsNew(false); }} />}
             {pendingExternalLink && (
                 <ExternalLinkModal url={pendingExternalLink} onClose={() => setPendingExternalLink(null)} />
             )}

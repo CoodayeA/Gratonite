@@ -97,6 +97,7 @@ interface VoiceStateEntry {
   userId: string;
   username: string;
   displayName: string;
+  avatarHash?: string | null;
   channelId: string;
   selfMute: boolean;
   selfDeaf: boolean;
@@ -237,7 +238,7 @@ voiceRouter.post(
 
     // Get user info for participant name
     const [user] = await db
-      .select({ username: users.username, displayName: users.displayName })
+      .select({ username: users.username, displayName: users.displayName, avatarHash: users.avatarHash })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
@@ -280,6 +281,7 @@ voiceRouter.post(
       userId,
       username: user?.username || 'unknown',
       displayName: participantName,
+      avatarHash: user?.avatarHash ?? null,
       channelId,
       selfMute: selfMute ?? false,
       selfDeaf: selfDeaf ?? false,
@@ -302,6 +304,7 @@ voiceRouter.post(
         userId,
         username: user?.username || 'unknown',
         displayName: participantName,
+        avatarHash: user?.avatarHash ?? null,
         channelId,
         selfMute: selfMute ?? false,
         selfDeaf: selfDeaf ?? false,
@@ -399,7 +402,7 @@ voiceStatesRouter.get(
 
     if (staleIds.length > 0) {
       const dbUsers = await db
-        .select({ id: users.id, username: users.username, displayName: users.displayName })
+        .select({ id: users.id, username: users.username, displayName: users.displayName, avatarHash: users.avatarHash })
         .from(users)
         .where(inArray(users.id, staleIds));
       const userMap = new Map(dbUsers.map(u => [u.id, u]));
@@ -409,6 +412,7 @@ voiceStatesRouter.get(
           if (u) {
             state.displayName = u.displayName || u.username || 'Unknown';
             state.username = u.username || 'unknown';
+            state.avatarHash = u.avatarHash ?? null;
           }
         }
       }

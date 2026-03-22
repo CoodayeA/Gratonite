@@ -6,7 +6,7 @@ import { users } from './users';
  * guild_invites — Invite codes for joining guilds.
  */
 export const guildInvites = pgTable('guild_invites', {
-  code: varchar('code', { length: 8 }).primaryKey(),
+  code: varchar('code', { length: 32 }).primaryKey(),
   guildId: uuid('guild_id').notNull().references(() => guilds.id, { onDelete: 'cascade' }),
   createdBy: uuid('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
   maxUses: integer('max_uses'),

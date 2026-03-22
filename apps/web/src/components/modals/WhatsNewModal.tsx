@@ -17,9 +17,12 @@ const TYPE_COLORS = {
 };
 
 export default function WhatsNewModal({ onClose }: { onClose: () => void }) {
+  // Mark as seen immediately when modal opens — written here so the App.tsx
+  // useEffect won't re-trigger on the next render/refresh.
+  const latestId = CHANGELOG[0]?.id ?? '';
   useEffect(() => {
-    localStorage.setItem('gratonite:last-seen-changelog', CHANGELOG[0]?.id ?? '');
-  }, []);
+    localStorage.setItem('gratonite:last-seen-changelog', latestId);
+  }, [latestId]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };

@@ -231,6 +231,8 @@ const SettingsModal = ({
     const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections' | 'federation' | 'achievements' | 'stats' | 'wardrobe' | 'notifications' | 'muted-users' | 'referrals' | 'developer' | 'dnd-schedule' | 'snippets'>('account');
     const [settingsSearch, setSettingsSearch] = useState('');
     const settingsSearchRef = useRef<HTMLInputElement>(null);
+    const [birthdayMonth, setBirthdayMonth] = useState(() => localStorage.getItem('gratonite_birthday_month') ?? '');
+    const [birthdayDay, setBirthdayDay] = useState(() => localStorage.getItem('gratonite_birthday_day') ?? '');
 
     // Settings search index — maps keywords to tabs
     const settingsIndex = useMemo(() => [
@@ -554,15 +556,23 @@ const SettingsModal = ({
     const saveSettingsToApi = useCallback((data: Record<string, unknown>) => {
         if (settingsSaveTimerRef.current) clearTimeout(settingsSaveTimerRef.current);
         settingsSaveTimerRef.current = setTimeout(async () => {
+            let lastErr: unknown;
             for (let attempt = 0; attempt < 3; attempt++) {
                 try {
                     await api.users.updateSettings(data);
                     return;
-                } catch {
+                } catch (err) {
+                    lastErr = err;
+                    console.error(`[Settings] sync attempt ${attempt + 1} failed:`, err);
                     if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
                 }
             }
-            addToast({ title: 'Failed to sync settings', variant: 'error' });
+            const status = (lastErr as any)?.status ?? (lastErr as any)?.response?.status;
+            if (status === 401) {
+                addToast({ title: 'Session expired', description: 'Please log in again to save settings.', variant: 'error' });
+            } else {
+                addToast({ title: 'Failed to sync settings', description: 'Your changes may not have been saved. Try again later.', variant: 'error' });
+            }
         }, 500);
     }, [addToast]);
 
@@ -1245,8 +1255,8 @@ const SettingsModal = ({
                                                 <select
                                                     className="auth-input"
                                                     style={{ flex: 1, height: '38px' }}
-                                                    value={localStorage.getItem('gratonite_birthday_month') ?? ''}
-                                                    onChange={(e) => localStorage.setItem('gratonite_birthday_month', e.target.value)}
+                                                    value={birthdayMonth}
+                                                    onChange={(e) => { setBirthdayMonth(e.target.value); localStorage.setItem('gratonite_birthday_month', e.target.value); }}
                                                 >
                                                     <option value="">Month</option>
                                                     {['January','February','March','April','May','June','July','August','September','October','November','December'].map((m, i) => (
@@ -1256,8 +1266,8 @@ const SettingsModal = ({
                                                 <select
                                                     className="auth-input"
                                                     style={{ flex: 1, height: '38px' }}
-                                                    value={localStorage.getItem('gratonite_birthday_day') ?? ''}
-                                                    onChange={(e) => localStorage.setItem('gratonite_birthday_day', e.target.value)}
+                                                    value={birthdayDay}
+                                                    onChange={(e) => { setBirthdayDay(e.target.value); localStorage.setItem('gratonite_birthday_day', e.target.value); }}
                                                 >
                                                     <option value="">Day</option>
                                                     {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
@@ -1268,8 +1278,8 @@ const SettingsModal = ({
                                             <button
                                                 className="auth-button"
                                                 onClick={async () => {
-                                                    const month = parseInt(localStorage.getItem('gratonite_birthday_month') ?? '0');
-                                                    const day = parseInt(localStorage.getItem('gratonite_birthday_day') ?? '0');
+                                                    const month = parseInt(birthdayMonth || '0');
+                                                    const day = parseInt(birthdayDay || '0');
                                                     if (!month || !day) { addToast({ title: 'Select month and day', variant: 'error' }); return; }
                                                     try {
                                                         await api.users.updateSettings({ birthday: { month, day } });
@@ -1872,7 +1882,13 @@ function SettingsNotificationsPanel() {
                     applicationServerKey: Uint8Array.from(atob(key.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)),
                 });
                 const json = sub.toJSON();
-                await api.push.subscribe({ endpoint: json.endpoint, p256dh: json.keys?.p256dh, auth: json.keys?.auth });
+                try {
+                    await api.push.subscribe({ endpoint: json.endpoint, p256dh: json.keys?.p256dh, auth: json.keys?.auth });
+                } catch (apiErr) {
+                    // API registration failed — clean up the browser subscription to stay in sync
+                    await sub.unsubscribe().catch(() => {});
+                    throw apiErr;
+                }
                 setPushEnabled(true);
                 addToast({ title: 'Push notifications enabled', variant: 'success' });
             }

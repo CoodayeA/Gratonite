@@ -1656,6 +1656,7 @@ const DirectMessage = () => {
             handleSendMessage();
         }
         if (e.key === 'Escape' && editingMessage) { setEditingMessage(null); setInputValue(''); return; }
+        if (e.key === 'Escape' && replyingTo) { setReplyingTo(null); return; }
     };
 
     // Safety number computation
@@ -1766,8 +1767,13 @@ const DirectMessage = () => {
                 size: f.size,
             }));
 
+            // Build the reply reference
+            const replyToApiId = replyingTo?.apiId || undefined;
+            const replyToAuthor = replyingTo?.author || undefined;
+            const replyToContent = replyingTo?.content || undefined;
+
             // Encrypt only when user has explicitly enabled E2E for this conversation
-            let sendPayload: { content?: string | null; encryptedContent?: string; isEncrypted?: boolean; attachmentIds?: string[]; keyVersion?: number };
+            let sendPayload: { content?: string | null; encryptedContent?: string; isEncrypted?: boolean; attachmentIds?: string[]; keyVersion?: number; replyToId?: string };
             let optimisticContent = content;
             if (e2eEnabled && e2eKey && (content || encryptedFileMeta.length > 0)) {
                 try {
@@ -1776,15 +1782,15 @@ const DirectMessage = () => {
                         ? JSON.stringify({ _e2e: 2, text: content, files: encryptedFileMeta })
                         : content;
                     const encryptedContent = await encrypt(e2eKey!, plainPayload ?? '');
-                    sendPayload = { content: null, encryptedContent, isEncrypted: true, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined, ...(groupKeyVersion != null ? { keyVersion: groupKeyVersion } : {}) };
+                    sendPayload = { content: null, encryptedContent, isEncrypted: true, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined, ...(groupKeyVersion != null ? { keyVersion: groupKeyVersion } : {}), ...(replyToApiId ? { replyToId: replyToApiId } : {}) };
                     // Store decrypted version optimistically so sender sees plaintext immediately
                     setDecryptedContents(prev => { const next = new Map(prev); next.set(optimisticId, content ?? ''); return next; });
                 } catch {
                     // Encryption failed — send plaintext as fallback
-                    sendPayload = { content, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined };
+                    sendPayload = { content, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined, ...(replyToApiId ? { replyToId: replyToApiId } : {}) };
                 }
             } else {
-                sendPayload = { content, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined };
+                sendPayload = { content, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined, ...(replyToApiId ? { replyToId: replyToApiId } : {}) };
             }
 
             const isOptimisticEncrypted = e2eEnabled && e2eKey != null && content != null && content.length > 0 && 'encryptedContent' in sendPayload;
@@ -1802,6 +1808,7 @@ const DirectMessage = () => {
                 isEncrypted: isOptimisticEncrypted,
                 encryptedContent: isOptimisticEncrypted ? sendPayload.encryptedContent ?? null : null,
                 attachments,
+                ...(replyToApiId ? { replyToId: replyToApiId, replyToAuthor, replyToContent } : {}),
             }]);
 
             api.messages.send(dmChannelId, sendPayload).then((res: any) => {
@@ -1830,6 +1837,7 @@ const DirectMessage = () => {
         setInputValue('');
         dmMentionsMapRef.current.clear();
         setDmAttachedFiles([]);
+        setReplyingTo(null);
     };
 
     const handleSendGif = (url: string, _previewUrl: string) => {
@@ -2855,6 +2863,37 @@ const DirectMessage = () => {
                                     }}
                                     onSendGif={handleSendGif}
                                 />
+                            )}
+                            {/* Reply Preview Bar */}
+                            {replyingTo && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'var(--bg-tertiary)', borderLeft: '3px solid var(--accent-primary)', margin: '0 16px 4px', borderRadius: '0 8px 8px 0' }}>
+                                    <Reply size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                                    <span style={{ fontSize: '13px', color: 'var(--text-muted)', flexShrink: 0 }}>Replying to</span>
+                                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', flexShrink: 0 }}>{replyingTo.author}</span>
+                                    <span
+                                        onClick={() => {
+                                            const apiId = replyingTo.apiId;
+                                            if (apiId) {
+                                                const el = document.querySelector(`[data-message-id="${apiId}"]`);
+                                                if (el) {
+                                                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                    const localMsg = messages.find(m => m.apiId === apiId);
+                                                    if (localMsg) {
+                                                        setHighlightedMsgId(localMsg.id);
+                                                        setTimeout(() => setHighlightedMsgId(null), 2500);
+                                                    }
+                                                }
+                                            }
+                                        }}
+                                        style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, cursor: 'pointer' }}
+                                        title="Click to scroll to original message"
+                                    >
+                                        {replyingTo.content || '(click to view)'}
+                                    </span>
+                                    <button onClick={() => setReplyingTo(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex', flexShrink: 0 }} title="Cancel reply">
+                                        <X size={14} />
+                                    </button>
+                                </div>
                             )}
                             {/* Attached file chips */}
                             {dmAttachedFiles.length > 0 && (
