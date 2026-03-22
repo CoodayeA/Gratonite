@@ -71,7 +71,7 @@ const Leaderboard = lazy(() => import('./pages/app/Leaderboard'));
 const ScheduleCalendar = lazy(() => import('./pages/app/ScheduleCalendar'));
 
 import InviteAccept from './pages/InviteAccept';
-import { NotFound } from './pages/ErrorStates';
+import { NotFound, ErrorBoundary as RouteErrorBoundary } from './pages/ErrorStates';
 import { getDeterministicGradient } from './utils/colors';
 import { api, API_BASE, getAccessToken, setAccessToken, ApiRequestError } from './lib/api';
 import { connectSocket, disconnectSocket, getSocket, onPresenceUpdate, onVoiceStateUpdate, onSocketReconnect, onCallInvite, onCallCancel, setPresence as setSocketPresence, onGuildJoined, onGuildLeft, onGuildUpdate, onGuildDelete, onChannelUpdate, onChannelDelete, onGuildMemberAdd, onGuildMemberRemove, onDmChannelCreate, joinGuildRoom, onTypingStart, onNotificationCreate, type CallInvitePayload } from './lib/socket';
@@ -4254,7 +4254,7 @@ const LazyFallback = () => (
 
 const appRouter = createBrowserRouter(
     createRoutesFromElements(
-        <>
+        <Route element={<Outlet />} errorElement={<RouteErrorBoundary />}>
             {/* Public Auth Routes */}
             <Route element={<AuthLayout />}>
                 <Route path="login" element={<Login />} />
@@ -4331,7 +4331,7 @@ const appRouter = createBrowserRouter(
             </Route>
 
             <Route path="*" element={<NotFound />} />
-        </>
+        </Route>
     ),
     { basename: '/app' }
 );
