@@ -8,7 +8,7 @@
  * only extracts text nodes and known formatting tags — no raw HTML is preserved.
  * DOMPurify is used as a safety net on the parsed HTML.
  */
-import { useRef, useEffect, useCallback, KeyboardEvent } from 'react';
+import { useRef, useEffect, useCallback, useMemo, KeyboardEvent } from 'react';
 import DOMPurify from 'dompurify';
 import type { InlineText } from '@gratonite/types';
 import { useEditorContext } from '../BlockEditorContext';
@@ -133,41 +133,42 @@ export default function InlineEditor({
   const { readOnly, setSelectedBlockId } = useEditorContext();
   const isComposing = useRef(false);
   const lastTextContent = useRef('');
+  const isProgrammaticUpdate = useRef(false);
+
+  // Stable serialized key for richText to avoid re-running effects on same content
+  const richTextKey = useMemo(() => JSON.stringify(richText), [richText]);
+
+  /** Safely set DOM content from sanitized HTML without triggering onInput loop. */
+  function setDomContent(el: HTMLElement, html: string) {
+    isProgrammaticUpdate.current = true;
+    el.textContent = '';
+    const parser = new DOMParser();
+    const parsed = parser.parseFromString(`<body>${html}</body>`, 'text/html');
+    while (parsed.body.firstChild) {
+      el.appendChild(document.importNode(parsed.body.firstChild, true));
+    }
+    lastTextContent.current = el.textContent || '';
+    // Reset flag after microtask so any synchronous onInput is suppressed
+    Promise.resolve().then(() => { isProgrammaticUpdate.current = false; });
+  }
 
   // Sync content when richText changes externally (not focused)
   useEffect(() => {
     if (!ref.current) return;
+    if (ref.current.matches(':focus')) return;
     const html = richTextToHtml(richText);
-    if (!ref.current.matches(':focus')) {
-      ref.current.textContent = '';
-      // Use DOMPurify-sanitized HTML via a temporary element
-      const temp = document.createElement('div');
-      temp.textContent = '';
-      // Set sanitized content using the DOM parser (not innerHTML directly)
-      const parser = new DOMParser();
-      const parsed = parser.parseFromString(`<body>${html}</body>`, 'text/html');
-      while (parsed.body.firstChild) {
-        ref.current.appendChild(document.importNode(parsed.body.firstChild, true));
-      }
-      lastTextContent.current = ref.current.textContent || '';
-    }
-  }, [richText]);
+    setDomContent(ref.current, html);
+  }, [richTextKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial render
   useEffect(() => {
     if (!ref.current) return;
-    ref.current.textContent = '';
     const html = richTextToHtml(richText);
-    const parser = new DOMParser();
-    const parsed = parser.parseFromString(`<body>${html}</body>`, 'text/html');
-    while (parsed.body.firstChild) {
-      ref.current.appendChild(document.importNode(parsed.body.firstChild, true));
-    }
-    lastTextContent.current = ref.current.textContent || '';
+    setDomContent(ref.current, html);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleInput = useCallback(() => {
-    if (isComposing.current || !ref.current) return;
+    if (isProgrammaticUpdate.current || isComposing.current || !ref.current) return;
     const textContent = ref.current.textContent || '';
     if (textContent === lastTextContent.current && textContent !== '') return;
     lastTextContent.current = textContent;
