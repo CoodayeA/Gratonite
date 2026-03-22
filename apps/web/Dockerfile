@@ -17,6 +17,9 @@ RUN pnpm install --no-frozen-lockfile
 COPY packages/types/ packages/types/
 COPY apps/web/ apps/web/
 
+# Remove .env so VITE_API_URL defaults to relative /api/v1 (works for self-hosted)
+RUN rm -f apps/web/.env apps/web/.env.production apps/web/.env.local
+
 # Build types first, then web (skip tsc — vite handles transpilation)
 RUN cd packages/types && pnpm run build
 RUN cd apps/web && npx vite build
