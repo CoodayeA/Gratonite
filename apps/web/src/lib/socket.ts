@@ -554,15 +554,59 @@ export interface DocumentTitleUpdatePayload {
   userId: string;
 }
 
+export interface DocumentBlockInsertPayload {
+  channelId: string;
+  block: any;
+  afterBlockId?: string;
+  userId: string;
+}
+
+export interface DocumentBlockUpdatePayload {
+  channelId: string;
+  blockId: string;
+  changes: any;
+  userId: string;
+}
+
+export interface DocumentBlockDeletePayload {
+  channelId: string;
+  blockId: string;
+  userId: string;
+}
+
+export interface DocumentBlockMovePayload {
+  channelId: string;
+  blockId: string;
+  afterBlockId?: string;
+  userId: string;
+}
+
+export interface DocumentCursorUpdatePayload {
+  channelId: string;
+  blockId: string;
+  offset: number;
+  userId: string;
+}
+
 type DocumentUpdateCallback = (payload: DocumentUpdatePayload) => void;
 type DocumentAwarenessCallback = (payload: DocumentAwarenessPayload) => void;
 type DocumentPresenceUpdateCallback = (payload: DocumentPresenceUpdatePayload) => void;
 type DocumentTitleUpdateCallback = (payload: DocumentTitleUpdatePayload) => void;
+type DocumentBlockInsertCallback = (payload: DocumentBlockInsertPayload) => void;
+type DocumentBlockUpdateCallback = (payload: DocumentBlockUpdatePayload) => void;
+type DocumentBlockDeleteCallback = (payload: DocumentBlockDeletePayload) => void;
+type DocumentBlockMoveCallback = (payload: DocumentBlockMovePayload) => void;
+type DocumentCursorUpdateCallback = (payload: DocumentCursorUpdatePayload) => void;
 
 const documentUpdateListeners = new Set<DocumentUpdateCallback>();
 const documentAwarenessListeners = new Set<DocumentAwarenessCallback>();
 const documentPresenceUpdateListeners = new Set<DocumentPresenceUpdateCallback>();
 const documentTitleUpdateListeners = new Set<DocumentTitleUpdateCallback>();
+const documentBlockInsertListeners = new Set<DocumentBlockInsertCallback>();
+const documentBlockUpdateListeners = new Set<DocumentBlockUpdateCallback>();
+const documentBlockDeleteListeners = new Set<DocumentBlockDeleteCallback>();
+const documentBlockMoveListeners = new Set<DocumentBlockMoveCallback>();
+const documentCursorUpdateListeners = new Set<DocumentCursorUpdateCallback>();
 
 export function onDocumentUpdate(cb: DocumentUpdateCallback): () => void {
   documentUpdateListeners.add(cb);
@@ -582,6 +626,31 @@ export function onDocumentPresenceUpdate(cb: DocumentPresenceUpdateCallback): ()
 export function onDocumentTitleUpdate(cb: DocumentTitleUpdateCallback): () => void {
   documentTitleUpdateListeners.add(cb);
   return () => { documentTitleUpdateListeners.delete(cb); };
+}
+
+export function onDocumentBlockInsert(cb: DocumentBlockInsertCallback): () => void {
+  documentBlockInsertListeners.add(cb);
+  return () => { documentBlockInsertListeners.delete(cb); };
+}
+
+export function onDocumentBlockUpdate(cb: DocumentBlockUpdateCallback): () => void {
+  documentBlockUpdateListeners.add(cb);
+  return () => { documentBlockUpdateListeners.delete(cb); };
+}
+
+export function onDocumentBlockDelete(cb: DocumentBlockDeleteCallback): () => void {
+  documentBlockDeleteListeners.add(cb);
+  return () => { documentBlockDeleteListeners.delete(cb); };
+}
+
+export function onDocumentBlockMove(cb: DocumentBlockMoveCallback): () => void {
+  documentBlockMoveListeners.add(cb);
+  return () => { documentBlockMoveListeners.delete(cb); };
+}
+
+export function onDocumentCursorUpdate(cb: DocumentCursorUpdateCallback): () => void {
+  documentCursorUpdateListeners.add(cb);
+  return () => { documentCursorUpdateListeners.delete(cb); };
 }
 
 /* ── Screen Annotation events ──────────────────────────────── */
@@ -1135,6 +1204,26 @@ export function connectSocket(): GratoniteSocket {
 
   socket.on('DOCUMENT_TITLE_UPDATE', (data: DocumentTitleUpdatePayload) => {
     documentTitleUpdateListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('DOCUMENT_BLOCK_INSERT', (data: DocumentBlockInsertPayload) => {
+    documentBlockInsertListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('DOCUMENT_BLOCK_UPDATE', (data: DocumentBlockUpdatePayload) => {
+    documentBlockUpdateListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('DOCUMENT_BLOCK_DELETE', (data: DocumentBlockDeletePayload) => {
+    documentBlockDeleteListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('DOCUMENT_BLOCK_MOVE', (data: DocumentBlockMovePayload) => {
+    documentBlockMoveListeners.forEach(cb => cb(data));
+  });
+
+  socket.on('DOCUMENT_CURSOR_UPDATE', (data: DocumentCursorUpdatePayload) => {
+    documentCursorUpdateListeners.forEach(cb => cb(data));
   });
 
   socket.on('disconnect', (reason) => {
