@@ -70,7 +70,7 @@ export async function createChannel(
   userId: string,
   data: {
     name: string;
-    type: 'GUILD_TEXT' | 'GUILD_VOICE' | 'GUILD_CATEGORY' | 'GUILD_STAGE' | 'GUILD_FORUM' | 'GUILD_ANNOUNCEMENT' | 'GUILD_WIKI' | 'GUILD_QA' | 'GUILD_CONFESSION' | 'GUILD_TASK';
+    type: 'GUILD_TEXT' | 'GUILD_VOICE' | 'GUILD_CATEGORY' | 'GUILD_STAGE' | 'GUILD_FORUM' | 'GUILD_ANNOUNCEMENT' | 'GUILD_WIKI' | 'GUILD_QA' | 'GUILD_CONFESSION' | 'GUILD_TASK' | 'GUILD_DOCUMENT';
     parentId?: string;
     createLinkedText?: boolean;
   },
