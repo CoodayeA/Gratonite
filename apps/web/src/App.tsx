@@ -3273,7 +3273,7 @@ export const AppLayout = () => {
             onChannelDelete((data) => {
                 window.dispatchEvent(new CustomEvent('gratonite:guild-updated'));
                 // Remove deleted channel from sidebar immediately
-                setGuildChannels((prev: any[]) => prev.filter((ch: any) => ch.id !== data.channelId));
+                setLegacyGuildChannels((prev) => prev.filter((ch) => ch.id !== data.channelId));
                 const currentChannelMatch = location.pathname.match(/\/channel\/([^/]+)/);
                 if (currentChannelMatch?.[1] === data.channelId) {
                     navigate(activeGuildId ? `/guild/${activeGuildId}` : '/app');

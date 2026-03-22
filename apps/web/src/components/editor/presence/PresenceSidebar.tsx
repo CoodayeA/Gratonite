@@ -79,7 +79,7 @@ export default function PresenceSidebar({ channelId }: PresenceSidebarProps) {
           <Avatar
             userId={editor.id}
             avatarHash={editor.avatarHash}
-            username={editor.username}
+            displayName={editor.username}
             size={22}
           />
         </div>

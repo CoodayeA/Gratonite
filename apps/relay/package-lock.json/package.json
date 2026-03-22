@@ -1,0 +1,23 @@
+{
+  "name": "@gratonite/relay",
+  "version": "1.0.0",
+  "description": "Gratonite federation relay server — routes encrypted envelopes between instances",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "ws": "^8.16.0",
+    "ioredis": "^5.3.2",
+    "dotenv": "^16.4.1",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10",
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

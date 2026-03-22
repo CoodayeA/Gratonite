@@ -51,8 +51,8 @@ export default function TableOfContentsBlock() {
             document.querySelector(`[data-block-id="${h.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }}
           style={{
-            paddingLeft: (h.level - 1) * 16,
-            padding: '3px 0',
+            paddingTop: 3,
+            paddingBottom: 3,
             paddingLeft: (h.level - 1) * 16,
             cursor: 'pointer',
             color: 'var(--accent-primary)',
