@@ -164,7 +164,7 @@ export function ServerSection() {
               <Button
                 variant="secondary"
                 size="sm"
-                href="https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.1"
+                href="https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.2"
                 className="w-full"
               >
                 Download Server App

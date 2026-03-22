@@ -1,6 +1,6 @@
 [package]
 name = "gratonite-server"
-version = "0.1.1"
+version = "0.1.2"
 description = "Gratonite Server — One-click self-hosting for Gratonite"
 authors = ["Gratonite"]
 edition = "2021"
