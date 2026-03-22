@@ -447,12 +447,14 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         }).catch(() => { setLastReadMessageId(null); setOtherReadStates([]); });
     }, [channelId, currentUserId]);
 
-    // Mark channel as read in client store on mount (server ack deferred until messages load)
+    // Mark channel as read on mount — optimistic update with rollback on failure
     useEffect(() => {
         if (!channelId) return;
         markRead(channelId);
-        // Fire-and-forget server-side read receipt tracking
-        api.messages.markRead(channelId).catch(() => {});
+        api.messages.markRead(channelId).catch(() => {
+            // Server failed to persist — restore unread indicator so it's not silently lost
+            setChannelHasUnread(channelId);
+        });
     }, [channelId]);
 
     // Listen for remote typing events

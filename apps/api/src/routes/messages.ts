@@ -1017,7 +1017,7 @@ messagesRouter.post('/read', requireAuth, validate(readSchema), async (req: Requ
         })
         .onConflictDoUpdate({
           target: [channelReadState.channelId, channelReadState.userId],
-          set: { lastReadAt: now, lastReadMessageId: resolvedId ?? null },
+          set: { lastReadAt: now, lastReadMessageId: resolvedId ?? null, mentionCount: 0 },
         });
 
       try {
