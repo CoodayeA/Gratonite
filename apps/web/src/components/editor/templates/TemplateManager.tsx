@@ -2,7 +2,7 @@
  * TemplateManager.tsx — Admin CRUD for custom document templates in guild settings.
  */
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, FileText } from 'lucide-react';
+import { Trash2, FileText, File } from 'lucide-react';
 import type { DocumentTemplate } from '@gratonite/types/api';
 import { apiFetch } from '../../../lib/api/_core';
 
@@ -72,7 +72,14 @@ export default function TemplateManager({ guildId }: TemplateManagerProps) {
               padding: '10px 14px', background: 'var(--bg-tertiary)',
               borderRadius: 8, border: '1px solid var(--border)',
             }}>
-              <span style={{ fontSize: 24 }}>{t.icon || '\u{1F4C4}'}</span>
+              <div style={{
+                width: 36, height: 36, borderRadius: 6,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(124, 92, 252, 0.1)', color: 'var(--accent-primary)',
+                flexShrink: 0,
+              }}>
+                <File size={18} />
+              </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{t.name}</div>
                 {t.description && (
