@@ -3189,7 +3189,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             )}
             {/* Document Channel — renders collaborative editor instead of message list */}
             {channelTypeStr === 'GUILD_DOCUMENT' ? (
-                <DocumentChannel channelId={channelId!} channelName={channelName} />
+                <DocumentChannel channelId={channelId!} channelName={channelName} guildId={guildId} readOnly={!canManageChannel} />
             ) : null}
 
             {/* Forum View — renders instead of message list for GUILD_FORUM channels */}

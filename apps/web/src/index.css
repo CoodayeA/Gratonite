@@ -4936,3 +4936,33 @@ textarea:focus-visible,
     background: var(--bg-hover, rgba(255,255,255,0.06));
 }
 
+/* ── Document channel sidebar styling ── */
+.channel-item[data-channel-type="document"] {
+    border-left: 3px solid var(--accent-secondary, #7c5cfc);
+    background: rgba(124, 92, 252, 0.06);
+}
+.channel-item[data-channel-type="document"]:hover {
+    background: rgba(124, 92, 252, 0.12);
+}
+.channel-item[data-channel-type="document"].active {
+    background: rgba(124, 92, 252, 0.18);
+}
+
+/* ── Block editor inline editor placeholder ── */
+.inline-editor[data-empty="true"]::before {
+    content: attr(data-placeholder);
+    color: var(--text-muted);
+    opacity: 0.5;
+    pointer-events: none;
+    position: absolute;
+}
+.inline-editor[data-empty="true"] {
+    position: relative;
+}
+
+/* ── Block editor spin animation ── */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
