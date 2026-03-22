@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { AppleIcon, WindowsIcon, TuxIcon } from "./icons";
@@ -42,11 +42,10 @@ const otherPlatforms: Record<Platform, Platform[]> = {
 };
 
 export function PlatformHero() {
-  const [os, setOs] = useState<Platform | null>(null);
-
-  useEffect(() => {
-    setOs(detectOS());
-  }, []);
+  const [os] = useState<Platform | null>(() => {
+    if (typeof navigator === "undefined") return null;
+    return detectOS();
+  });
 
   // SSR / undetected fallback
   if (os === null) {
