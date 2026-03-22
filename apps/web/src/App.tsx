@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense, type Dispatch, type SetStateAction } from 'react';
+import { createPortal } from 'react-dom';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, Navigate, Outlet, Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -2329,8 +2330,8 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 })()}
             </div>
 
-            {/* Create Channel Modal */}
-            {showCreateChannel && (
+            {/* Create Channel Modal — portal to body to escape contain:paint */}
+            {showCreateChannel && createPortal(
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }} onClick={() => { setShowCreateChannel(null); setNewChannelName(''); setSelectedTemplate(null); }}>
                 <div role="dialog" aria-modal="true" onClick={e => e.stopPropagation()} style={{ width: 440, maxWidth: '95vw', padding: '24px', background: 'var(--bg-elevated)', borderRadius: 16, border: '1px solid var(--stroke)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
                     <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
@@ -2392,7 +2393,8 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         <button onClick={handleCreateChannel} disabled={!newChannelName.trim()} style={{ padding: '8px 20px', background: newChannelName.trim() ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: newChannelName.trim() ? '#000' : 'var(--text-muted)', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: newChannelName.trim() ? 'pointer' : 'default', fontWeight: 600 }}>Create Channel</button>
                     </div>
                 </div>
-                </div>
+                </div>,
+                document.body
             )}
             <UserPanel />
 
