@@ -17,24 +17,24 @@ const ADMIN_SECTIONS = [
   {
     title: 'Trust & Safety',
     items: [
-      { label: 'Federation', description: 'Manage federated instances, verification requests, and abuse reports', icon: Globe, path: '/app/admin/federation', color: '#6366f1' },
-      { label: 'User Reports', description: 'Review reports submitted by users', icon: AlertTriangle, path: '/app/admin/reports', color: '#ef4444' },
-      { label: 'Bot Moderation', description: 'Review and manage bot listings', icon: Bot, path: '/app/admin/bot-moderation', color: '#f59e0b' },
+      { label: 'Federation', description: 'Manage federated instances, verification requests, and abuse reports', icon: Globe, path: '/admin/federation', color: '#6366f1' },
+      { label: 'User Reports', description: 'Review reports submitted by users', icon: AlertTriangle, path: '/admin/reports', color: '#ef4444' },
+      { label: 'Bot Moderation', description: 'Review and manage bot listings', icon: Bot, path: '/admin/bot-moderation', color: '#f59e0b' },
     ],
   },
   {
     title: 'Content & Marketplace',
     items: [
-      { label: 'Portals', description: 'Manage Discover listings, featured portals, and rankings', icon: Server, path: '/app/admin/portals', color: '#10b981' },
-      { label: 'Cosmetics', description: 'Review and approve user-submitted marketplace items', icon: Palette, path: '/app/admin/cosmetics', color: '#f59e0b' },
-      { label: 'Feedback', description: 'Read user feedback and feature requests', icon: MessageSquare, path: '/app/admin/feedback', color: '#3b82f6' },
+      { label: 'Portals', description: 'Manage Discover listings, featured portals, and rankings', icon: Server, path: '/admin/portals', color: '#10b981' },
+      { label: 'Cosmetics', description: 'Review and approve user-submitted marketplace items', icon: Palette, path: '/admin/cosmetics', color: '#f59e0b' },
+      { label: 'Feedback', description: 'Read user feedback and feature requests', icon: MessageSquare, path: '/admin/feedback', color: '#3b82f6' },
     ],
   },
   {
     title: 'Operations',
     items: [
-      { label: 'Team', description: 'Manage admin team members and roles', icon: Users, path: '/app/admin/team', color: '#8b5cf6' },
-      { label: 'Audit Log', description: 'View all admin actions and changes', icon: FileText, path: '/app/admin/audit', color: '#6b7280' },
+      { label: 'Team', description: 'Manage admin team members and roles', icon: Users, path: '/admin/team', color: '#8b5cf6' },
+      { label: 'Audit Log', description: 'View all admin actions and changes', icon: FileText, path: '/admin/audit', color: '#6b7280' },
     ],
   },
 ];
