@@ -8,6 +8,7 @@
 
 import WebSocket from 'ws';
 import crypto from 'node:crypto';
+import https from 'node:https';
 import { getActiveKeyPair, signData } from '../federation/crypto';
 import { logger } from '../lib/logger';
 import type { RelayEnvelope } from './envelope';
@@ -94,7 +95,15 @@ export class RelayClient {
 
   private connectToRelay(url: string, label: 'primary' | 'fallback'): void {
     try {
-      const ws = new WebSocket(url);
+      const agent = new https.Agent({
+        minVersion: 'TLSv1.2',
+        rejectUnauthorized: true,
+      });
+      const ws = new WebSocket(url, {
+        agent: url.startsWith('wss:') ? agent : undefined,
+        handshakeTimeout: 10_000,
+        headers: { 'User-Agent': 'Gratonite-Relay-Client/1.0' },
+      });
 
       ws.on('open', () => {
         logger.info(`[relay:client] Connected to ${label} relay: ${url}`);
