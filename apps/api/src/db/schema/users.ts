@@ -200,6 +200,12 @@ export const users = pgTable('users', {
 
   /** Whether this user is a bot account (virtual user for a bot application). */
   isBot: boolean('is_bot').notNull().default(false),
+
+  /** When the user requested account deletion (GDPR). Null = no request. */
+  deletionRequestedAt: timestamp('deletion_requested_at', { withTimezone: true }),
+
+  /** When the account was actually deleted (30 days after request). */
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 /**

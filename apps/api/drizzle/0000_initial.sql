@@ -37,6 +37,8 @@ CREATE TABLE "users" (
 	"is_federated" boolean DEFAULT false NOT NULL,
 	"federation_public_key_pem" text,
 	"is_bot" boolean DEFAULT false NOT NULL,
+	"deletion_requested_at" timestamp with time zone,
+	"deleted_at" timestamp with time zone,
 	CONSTRAINT "users_username_unique" UNIQUE("username"),
 	CONSTRAINT "users_email_unique" UNIQUE("email"),
 	CONSTRAINT "users_federation_address_unique" UNIQUE("federation_address")
@@ -118,6 +120,8 @@ CREATE TABLE "guilds" (
 	"home_instance_id" uuid,
 	"federation_settings" jsonb DEFAULT '{}'::jsonb,
 	"public_stats_enabled" boolean DEFAULT false NOT NULL,
+	"raid_protection_enabled" boolean DEFAULT false NOT NULL,
+	"locked_at" timestamp with time zone,
 	CONSTRAINT "guilds_vanity_code_unique" UNIQUE("vanity_code"),
 	CONSTRAINT "guilds_federation_address_unique" UNIQUE("federation_address")
 );
