@@ -776,7 +776,10 @@ const Discover = () => {
                 <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>
                     <Compass size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
                     <p style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>No communities to discover yet</p>
-                    <p style={{ fontSize: '13px' }}>Public portals will appear here as the community grows.</p>
+                    <p style={{ fontSize: '13px', maxWidth: '400px', margin: '0 auto', lineHeight: 1.5 }}>
+                        Create a guild and make it public to see it here. If federation is enabled, guilds from other
+                        Gratonite instances will appear once they sync — this can take up to 48 hours for new instances.
+                    </p>
                 </div>
             )}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', marginBottom: '40px' }}>
