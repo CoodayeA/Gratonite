@@ -850,6 +850,18 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         checkPerms();
     }, [activeGuildId, userProfile?.id, guildInfo]);
 
+    // Listen for channel deletions (from socket events or modals) and remove from sidebar
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+            if (detail?.channelId) {
+                setGuildChannels((prev: any[]) => prev.filter((ch: any) => ch.id !== detail.channelId));
+            }
+        };
+        window.addEventListener('gratonite:channel-deleted', handler);
+        return () => window.removeEventListener('gratonite:channel-deleted', handler);
+    }, [setGuildChannels]);
+
     // Fetch muted channels for sidebar indicators
     useEffect(() => {
         if (!activeGuildId || guildChannels.length === 0) { setMutedChannelIds(new Set()); return; }
@@ -3272,8 +3284,8 @@ export const AppLayout = () => {
             }),
             onChannelDelete((data) => {
                 window.dispatchEvent(new CustomEvent('gratonite:guild-updated'));
-                // Remove deleted channel from sidebar immediately
-                setLegacyGuildChannels((prev) => prev.filter((ch) => ch.id !== data.channelId));
+                // Notify sidebar to remove the deleted channel
+                window.dispatchEvent(new CustomEvent('gratonite:channel-deleted', { detail: { channelId: data.channelId, guildId: data.guildId } }));
                 const currentChannelMatch = location.pathname.match(/\/channel\/([^/]+)/);
                 if (currentChannelMatch?.[1] === data.channelId) {
                     navigate(activeGuildId ? `/guild/${activeGuildId}` : '/app');
@@ -3389,18 +3401,8 @@ export const AppLayout = () => {
         };
         window.addEventListener('gratonite:guild-updated', handler);
 
-        // Listen for channel-deleted events from modals (immediate sidebar sync)
-        const channelDeletedHandler = (e: Event) => {
-            const detail = (e as CustomEvent).detail;
-            if (detail?.channelId) {
-                setGuildChannels((prev: any[]) => prev.filter((ch: any) => ch.id !== detail.channelId));
-            }
-        };
-        window.addEventListener('gratonite:channel-deleted', channelDeletedHandler);
-
         return () => {
             window.removeEventListener('gratonite:guild-updated', handler);
-            window.removeEventListener('gratonite:channel-deleted', channelDeletedHandler);
         };
     }, []);
 
