@@ -140,6 +140,7 @@ import { channelFollowingRouter, guildFollowingRouter } from './channel-followin
 import { dndScheduleRouter } from './dnd-schedule';
 import { snippetsRouter } from './snippets';
 import { documentsRouter } from './documents';
+import { documentTemplatesRouter } from './document-templates';
 import { rssFeedsRouter } from './rss-feeds';
 
 export const router = Router();
@@ -495,6 +496,9 @@ router.use('/guilds/:guildId/rss-feeds', rssFeedsRouter);
 
 // Collaborative documents (CRDT)
 router.use('/', documentsRouter);
+
+// Document templates (per-guild + apply to channel)
+router.use('/', documentTemplatesRouter);
 
 // Google Calendar sync (user-scoped integrations)
 import { calendarSyncRouter } from './calendar-sync';
