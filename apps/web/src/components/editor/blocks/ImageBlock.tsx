@@ -3,7 +3,7 @@
  */
 import { useState } from 'react';
 import { ImagePlus } from 'lucide-react';
-import type { Block, ImageBlockContent } from '@gratonite/types/api';
+import type { Block, ImageBlockContent } from '@gratonite/types';
 import { useEditorContext } from '../BlockEditorContext';
 
 interface Props { block: Block<'image'>; }

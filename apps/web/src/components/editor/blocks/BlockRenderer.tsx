@@ -1,7 +1,7 @@
 /**
  * BlockRenderer.tsx — Maps block.type to the correct component.
  */
-import type { Block } from '@gratonite/types/api';
+import type { Block } from '@gratonite/types';
 import TextBlock from './TextBlock';
 import HeadingBlock from './HeadingBlock';
 import ListBlock from './ListBlock';

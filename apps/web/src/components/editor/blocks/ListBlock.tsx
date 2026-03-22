@@ -1,7 +1,7 @@
 /**
  * ListBlock.tsx — Bulleted list and numbered list items.
  */
-import type { Block, ListBlockContent } from '@gratonite/types/api';
+import type { Block, ListBlockContent } from '@gratonite/types';
 import InlineEditor from '../inline/InlineEditor';
 import { useEditorContext } from '../BlockEditorContext';
 

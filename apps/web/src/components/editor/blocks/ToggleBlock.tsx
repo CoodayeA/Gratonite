@@ -3,7 +3,7 @@
  */
 import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
-import type { Block, ToggleBlockContent } from '@gratonite/types/api';
+import type { Block, ToggleBlockContent } from '@gratonite/types';
 import InlineEditor from '../inline/InlineEditor';
 import { useEditorContext } from '../BlockEditorContext';
 

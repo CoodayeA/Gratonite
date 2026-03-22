@@ -7,12 +7,12 @@ import {
   ChevronDown, ChevronUp, FileText, Library, BookOpen, ShieldCheck,
   Users, CalendarDays, ScrollText, HelpCircle, Map, Swords, File,
 } from 'lucide-react';
-import type { Block, DocumentTemplate } from '@gratonite/types/api';
+import type { Block, DocumentTemplate } from '@gratonite/types';
 import { BUILTIN_TEMPLATES } from './builtinTemplates';
 import { apiFetch } from '../../../lib/api/_core';
 
 /** Map template icon key → Lucide component. */
-const TEMPLATE_ICONS: Record<string, React.ComponentType<{ size?: number; style?: React.CSSProperties }>> = {
+const TEMPLATE_ICONS: Record<string, typeof FileText> = {
   'library': Library,
   'book-open': BookOpen,
   'shield-check': ShieldCheck,
@@ -26,8 +26,8 @@ const TEMPLATE_ICONS: Record<string, React.ComponentType<{ size?: number; style?
 };
 
 function TemplateIcon({ name, size = 22 }: { name: string; size?: number }) {
-  const Icon = TEMPLATE_ICONS[name] || File;
-  return <Icon size={size} />;
+  const IconComponent = TEMPLATE_ICONS[name] || File;
+  return <IconComponent size={size} />;
 }
 
 interface TemplatePickerProps {

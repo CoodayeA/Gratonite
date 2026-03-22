@@ -2,7 +2,7 @@
  * TableOfContentsBlock.tsx — Auto-generated table of contents from heading blocks.
  */
 import { List } from 'lucide-react';
-import type { Block, HeadingBlockContent } from '@gratonite/types/api';
+import type { Block, HeadingBlockContent } from '@gratonite/types';
 import { useEditorContext } from '../BlockEditorContext';
 import { toPlainText } from '../utils/blockHelpers';
 

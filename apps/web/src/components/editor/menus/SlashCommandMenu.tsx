@@ -7,7 +7,7 @@ import {
   Image as ImageIcon, Video, Music, File, Table, Minus, AlertCircle,
   Code, Quote, Globe, ChevronRight, Columns, FileText, ListTree,
 } from 'lucide-react';
-import type { BlockType } from '@gratonite/types/api';
+import type { BlockType } from '@gratonite/types';
 
 interface SlashCommandMenuProps {
   position: { top: number; left: number };

@@ -1,7 +1,7 @@
 /**
  * ChecklistBlock.tsx — Checkbox + text block (todo item).
  */
-import type { Block, ChecklistBlockContent } from '@gratonite/types/api';
+import type { Block, ChecklistBlockContent } from '@gratonite/types';
 import InlineEditor from '../inline/InlineEditor';
 import { useEditorContext } from '../BlockEditorContext';
 

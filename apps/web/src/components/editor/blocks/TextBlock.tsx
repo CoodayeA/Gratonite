@@ -1,7 +1,7 @@
 /**
  * TextBlock.tsx — Basic paragraph text block.
  */
-import type { Block, TextBlockContent } from '@gratonite/types/api';
+import type { Block, TextBlockContent } from '@gratonite/types';
 import InlineEditor from '../inline/InlineEditor';
 import { useEditorContext } from '../BlockEditorContext';
 

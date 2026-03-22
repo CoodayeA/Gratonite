@@ -1,7 +1,7 @@
 /**
  * HeadingBlock.tsx — H1/H2/H3 heading block.
  */
-import type { Block, HeadingBlockContent } from '@gratonite/types/api';
+import type { Block, HeadingBlockContent } from '@gratonite/types';
 import InlineEditor from '../inline/InlineEditor';
 import { useEditorContext } from '../BlockEditorContext';
 

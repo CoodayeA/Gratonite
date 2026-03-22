@@ -2,7 +2,7 @@
  * blockHelpers.ts — Utility functions for creating, manipulating, and
  * converting blocks in the editor.
  */
-import type { Block, BlockType, InlineText } from '@gratonite/types/api';
+import type { Block, BlockType, InlineText } from '@gratonite/types';
 import { generatePosition, getNextPosition } from './fractionalIndex';
 
 let idCounter = 0;

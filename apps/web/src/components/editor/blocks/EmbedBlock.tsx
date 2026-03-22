@@ -3,7 +3,7 @@
  */
 import { useState } from 'react';
 import { Globe } from 'lucide-react';
-import type { Block, EmbedBlockContent } from '@gratonite/types/api';
+import type { Block, EmbedBlockContent } from '@gratonite/types';
 import { useEditorContext } from '../BlockEditorContext';
 
 interface Props { block: Block<'embed'>; }

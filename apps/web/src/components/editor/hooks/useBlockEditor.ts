@@ -3,7 +3,7 @@
  * dirty tracking, and auto-save timer.
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { Block, BlockType, CollaborativeDocumentData } from '@gratonite/types/api';
+import type { Block, BlockType, CollaborativeDocumentData } from '@gratonite/types';
 import { apiFetch } from '../../../lib/api/_core';
 import { createBlock, createEmptyBlock, turnBlockInto, generateBlockId } from '../utils/blockHelpers';
 import { generatePosition, getNextPosition } from '../utils/fractionalIndex';

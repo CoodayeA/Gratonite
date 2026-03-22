@@ -3,7 +3,7 @@
  * Used for on-demand client-side migration when BlockEditor loads an old document.
  */
 import DOMPurify from 'dompurify';
-import type { Block, InlineText } from '@gratonite/types/api';
+import type { Block, InlineText } from '@gratonite/types';
 import { generateBlockId, plainText } from './blockHelpers';
 import { generatePositions } from './fractionalIndex';
 
