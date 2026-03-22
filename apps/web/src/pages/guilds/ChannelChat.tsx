@@ -2585,6 +2585,11 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
 
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
+            // If the group mention confirmation is visible, don't call handleSendMessage
+            // from the keyboard — the user must click "Send Anyway" or "Cancel".
+            // Without this guard, both Enter and the button click can fire in the same
+            // React batch, causing the message to be sent twice.
+            if (groupMentionConfirm) return;
             handleSendMessage();
         }
     };
