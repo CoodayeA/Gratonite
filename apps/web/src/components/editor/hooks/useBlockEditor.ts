@@ -2,7 +2,7 @@
  * useBlockEditor.ts — Core hook managing block array state, undo/redo stacks,
  * dirty tracking, and auto-save timer.
  */
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import type { Block, BlockType, CollaborativeDocumentData } from '@gratonite/types';
 import { apiFetch } from '../../../lib/api/_core';
 import { createBlock, createEmptyBlock, turnBlockInto, generateBlockId } from '../utils/blockHelpers';
@@ -277,8 +277,11 @@ export function useBlockEditor({ channelId, readOnly = false }: UseBlockEditorOp
     setIsDirty(true);
   }, [sortedBlocks]);
 
+  // Memoize sorted blocks to prevent new array reference every render
+  const memoizedBlocks = useMemo(() => sortedBlocks(blocks), [blocks, sortedBlocks]);
+
   return {
-    blocks: sortedBlocks(blocks),
+    blocks: memoizedBlocks,
     selectedBlockId,
     setSelectedBlockId,
     multiSelected,
