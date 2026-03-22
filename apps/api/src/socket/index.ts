@@ -895,6 +895,75 @@ export function initSocket(io: SocketIOServer): void {
     });
 
     // -------------------------------------------------------------------------
+    // DOCUMENT_BLOCK_INSERT — relay block insertion to peers
+    // -------------------------------------------------------------------------
+    socket.on('DOCUMENT_BLOCK_INSERT', (data: { channelId: string; block: any; afterBlockId?: string }) => {
+      if (!data?.channelId || !data?.block) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      socket.to(`channel:${data.channelId}`).emit('DOCUMENT_BLOCK_INSERT', {
+        channelId: data.channelId,
+        block: data.block,
+        afterBlockId: data.afterBlockId,
+        userId,
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // DOCUMENT_BLOCK_UPDATE — relay block content update to peers
+    // -------------------------------------------------------------------------
+    socket.on('DOCUMENT_BLOCK_UPDATE', (data: { channelId: string; blockId: string; changes: any }) => {
+      if (!data?.channelId || !data?.blockId) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      socket.to(`channel:${data.channelId}`).emit('DOCUMENT_BLOCK_UPDATE', {
+        channelId: data.channelId,
+        blockId: data.blockId,
+        changes: data.changes,
+        userId,
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // DOCUMENT_BLOCK_DELETE — relay block deletion to peers
+    // -------------------------------------------------------------------------
+    socket.on('DOCUMENT_BLOCK_DELETE', (data: { channelId: string; blockId: string }) => {
+      if (!data?.channelId || !data?.blockId) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      socket.to(`channel:${data.channelId}`).emit('DOCUMENT_BLOCK_DELETE', {
+        channelId: data.channelId,
+        blockId: data.blockId,
+        userId,
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // DOCUMENT_BLOCK_MOVE — relay block reorder to peers
+    // -------------------------------------------------------------------------
+    socket.on('DOCUMENT_BLOCK_MOVE', (data: { channelId: string; blockId: string; afterBlockId?: string }) => {
+      if (!data?.channelId || !data?.blockId) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      socket.to(`channel:${data.channelId}`).emit('DOCUMENT_BLOCK_MOVE', {
+        channelId: data.channelId,
+        blockId: data.blockId,
+        afterBlockId: data.afterBlockId,
+        userId,
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // DOCUMENT_CURSOR_UPDATE — relay cursor position to peers
+    // -------------------------------------------------------------------------
+    socket.on('DOCUMENT_CURSOR_UPDATE', (data: { channelId: string; blockId: string; offset: number }) => {
+      if (!data?.channelId || !data?.blockId) return;
+      if (!socket.rooms.has(`channel:${data.channelId}`)) return;
+      socket.to(`channel:${data.channelId}`).emit('DOCUMENT_CURSOR_UPDATE', {
+        channelId: data.channelId,
+        blockId: data.blockId,
+        offset: data.offset,
+        userId,
+      });
+    });
+
+    // -------------------------------------------------------------------------
     // Disconnect handler
     // -------------------------------------------------------------------------
     socket.on('disconnect', async () => {
