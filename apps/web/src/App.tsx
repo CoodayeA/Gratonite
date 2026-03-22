@@ -41,6 +41,7 @@ const EventScheduler = lazy(() => import('./pages/guilds/EventScheduler'));
 const ModerationDashboard = lazy(() => import('./pages/guilds/ModerationDashboard'));
 const MessageRequests = lazy(() => import('./pages/app/MessageRequests'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminCosmetics = lazy(() => import('./pages/admin/AdminCosmetics'));
 const AdminTeam = lazy(() => import('./pages/admin/AdminTeam'));
 const AdminAuditLog = lazy(() => import('./pages/admin/AdminAuditLog'));
 const AdminBotModeration = lazy(() => import('./pages/admin/AdminBotModeration'));
@@ -4322,6 +4323,7 @@ const appRouter = createBrowserRouter(
                 <Route path="admin/reports" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminReports /></Suspense></RequireAdmin>} />
                 <Route path="admin/portals" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminPortals /></Suspense></RequireAdmin>} />
                 <Route path="admin/federation" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><FederationAdmin /></Suspense></RequireAdmin>} />
+                <Route path="admin/cosmetics" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminCosmetics /></Suspense></RequireAdmin>} />
                 <Route path="dm/:id" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><DirectMessage /></Suspense></ErrorBoundary>} />
                 {/* Parameterized guild routes */}
                 <Route path="guild/:guildId" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><GuildOverview /></Suspense></ErrorBoundary>} />

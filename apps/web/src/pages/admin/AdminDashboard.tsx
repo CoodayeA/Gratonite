@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Shield, Users, FileText, MessageSquare, Globe, Bot, Server,
-  Search, UserPlus, Check, X, AlertTriangle,
+  Search, UserPlus, Check, X, AlertTriangle, Palette,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../components/ui/ToastManager';
@@ -23,9 +23,10 @@ const ADMIN_SECTIONS = [
     ],
   },
   {
-    title: 'Content',
+    title: 'Content & Marketplace',
     items: [
       { label: 'Portals', description: 'Manage Discover listings, featured portals, and rankings', icon: Server, path: '/app/admin/portals', color: '#10b981' },
+      { label: 'Cosmetics', description: 'Review and approve user-submitted marketplace items', icon: Palette, path: '/app/admin/cosmetics', color: '#f59e0b' },
       { label: 'Feedback', description: 'Read user feedback and feature requests', icon: MessageSquare, path: '/app/admin/feedback', color: '#3b82f6' },
     ],
   },
