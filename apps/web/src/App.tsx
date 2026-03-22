@@ -3272,6 +3272,8 @@ export const AppLayout = () => {
             }),
             onChannelDelete((data) => {
                 window.dispatchEvent(new CustomEvent('gratonite:guild-updated'));
+                // Remove deleted channel from sidebar immediately
+                setGuildChannels((prev: any[]) => prev.filter((ch: any) => ch.id !== data.channelId));
                 const currentChannelMatch = location.pathname.match(/\/channel\/([^/]+)/);
                 if (currentChannelMatch?.[1] === data.channelId) {
                     navigate(activeGuildId ? `/guild/${activeGuildId}` : '/app');
@@ -3386,7 +3388,20 @@ export const AppLayout = () => {
             invalidateGuilds();
         };
         window.addEventListener('gratonite:guild-updated', handler);
-        return () => window.removeEventListener('gratonite:guild-updated', handler);
+
+        // Listen for channel-deleted events from modals (immediate sidebar sync)
+        const channelDeletedHandler = (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+            if (detail?.channelId) {
+                setGuildChannels((prev: any[]) => prev.filter((ch: any) => ch.id !== detail.channelId));
+            }
+        };
+        window.addEventListener('gratonite:channel-deleted', channelDeletedHandler);
+
+        return () => {
+            window.removeEventListener('gratonite:guild-updated', handler);
+            window.removeEventListener('gratonite:channel-deleted', channelDeletedHandler);
+        };
     }, []);
 
     const [userProfile, setUserProfile] = useState<{

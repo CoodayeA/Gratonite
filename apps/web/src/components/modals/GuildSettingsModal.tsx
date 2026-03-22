@@ -594,6 +594,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         try {
             await api.channels.delete(channelId);
             fetchChannels();
+            // Also trigger sidebar refresh in case socket event is delayed
+            window.dispatchEvent(new CustomEvent('gratonite:channel-deleted', { detail: { channelId, guildId } }));
             addToast({ title: 'Channel Deleted', variant: 'success' });
         } catch (err: any) {
             addToast({ title: 'Failed to delete channel', description: err?.message, variant: 'error' });
