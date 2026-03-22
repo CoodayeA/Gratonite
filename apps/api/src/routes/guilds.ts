@@ -59,6 +59,8 @@ import { cacheControl } from '../middleware/cache';
 import { recordActivity } from './activity';
 import { dispatchEvent } from '../lib/webhook-dispatch';
 import { incrementChallengeProgress } from './daily-challenges';
+import { getDiscoverBadge } from '../federation/trust';
+import { getInstanceDomain, getFederationHubUrl } from '../federation/index';
 
 export const guildsRouter = Router();
 
@@ -566,6 +568,7 @@ guildsRouter.get(
           verified: row.memberCount >= 100,
           isPublic: row.isDiscoverable,
           isPinned: row.isPinned,
+          badge: getDiscoverBadge(true, new URL(getFederationHubUrl()).hostname, getInstanceDomain()),
           createdAt: row.createdAt,
           averageRating: ratingsByGuildId[row.id]?.avg ?? 0,
           totalRatings: ratingsByGuildId[row.id]?.count ?? 0,

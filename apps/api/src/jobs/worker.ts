@@ -38,6 +38,7 @@ import { processAuctionCron } from '../lib/auction-cron';
 import { processRelayDirectorySync } from './relayDirectorySync';
 import { processRelayHealthCheck } from './relayHealthCheck';
 import { processRelayReputationCalc } from './relayReputationCalc';
+import { processTrustScoring } from './trustScoring';
 import { processDisappearingMessages } from './disappearingMessages';
 import { processDndSchedule } from './dndSchedule';
 import { processRssFeedPoller } from './rssFeedPoller';
@@ -74,6 +75,7 @@ export const disappearingMessagesQueue = createQueue('disappearing-messages');
 export const dndScheduleQueue = createQueue('dnd-schedule');
 export const rssFeedPollerQueue = createQueue('rss-feed-poller');
 export const calendarSyncQueue = createQueue('calendar-sync');
+export const trustScoringQueue = createQueue('trust-scoring');
 
 // ---------------------------------------------------------------------------
 // Start workers and add repeatable schedules
@@ -348,6 +350,16 @@ export async function startBullWorkers(): Promise<void> {
     'calendar-sync-repeat',
     { every: 5 * 60_000 },
     { name: 'calendar-sync-tick' },
+  );
+
+  // --- Trust Scoring (every 6h) ---
+  createWorker('trust-scoring', async () => {
+    await processTrustScoring();
+  });
+  await trustScoringQueue.upsertJobScheduler(
+    'trust-scoring-repeat',
+    { every: 6 * 60 * 60_000 },
+    { name: 'trust-scoring-tick' },
   );
 
   logger.info('[bullmq] All workers started and repeatable jobs registered');

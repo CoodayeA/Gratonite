@@ -23,6 +23,7 @@ type PortalInfo = {
     featured: boolean;
     isPinned: boolean;
     isPublic: boolean;
+    badge: 'official' | 'verified' | 'community' | null;
     mutualFriends: { name: string; avatar: string }[];
     averageRating: number;
     totalRatings: number;
@@ -149,7 +150,18 @@ const PortalCheckinModal = ({ portal, onClose }: { portal: PortalInfo; onClose: 
                 {/* Content */}
                 <div style={{ padding: '40px 28px 28px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                        <h2 style={{ fontSize: '22px', fontWeight: 700, fontFamily: 'var(--font-display)' }}>{portal.name}</h2>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                            <h2 style={{ fontSize: '22px', fontWeight: 700, fontFamily: 'var(--font-display)' }}>{portal.name}</h2>
+                            {portal.badge === 'official' && (
+                                <span title="Official — hosted on gratonite.chat" style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: 'rgba(139, 92, 246, 0.15)', color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Official</span>
+                            )}
+                            {portal.badge === 'verified' && (
+                                <span title="Verified — reviewed by the Gratonite team" style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Verified</span>
+                            )}
+                            {portal.badge === 'community' && (
+                                <span title="Community — from an external instance" style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: 'rgba(148, 163, 184, 0.15)', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Community</span>
+                            )}
+                        </div>
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                             {portal.tags.map(tag => (
                                 <span key={tag} style={{ fontSize: '11px', padding: '3px 8px', background: 'var(--bg-tertiary)', borderRadius: '6px', color: 'var(--text-secondary)' }}>{tag}</span>
@@ -244,10 +256,10 @@ type FederatedPortalInfo = {
 // Sanitize a URL for safe use in CSS url() — strips parens and quotes
 const safeCssUrl = (url: string): string => url.replace(/[()'"\\]/g, '');
 
-const TRUST_BADGE: Record<string, { color: string; label: string }> = {
-    verified: { color: '#10b981', label: 'Verified' },
-    manually_trusted: { color: '#3b82f6', label: 'Trusted' },
-    auto_discovered: { color: '#6b7280', label: 'Community' },
+const TRUST_BADGE: Record<string, { color: string; label: string; description: string }> = {
+    verified: { color: '#10b981', label: 'Verified', description: 'Reviewed and approved by the Gratonite team' },
+    manually_trusted: { color: '#3b82f6', label: 'Community', description: 'From an approved external instance' },
+    auto_discovered: { color: '#6b7280', label: 'New', description: 'Recently connected instance' },
 };
 
 // Federated Join Modal

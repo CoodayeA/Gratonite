@@ -5,11 +5,11 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Globe, Server, Activity, Shield, Ban, Wifi, RefreshCw, Trash2, Check, X, Clock, Users, AlertTriangle } from 'lucide-react';
+import { Globe, Server, Activity, Shield, Ban, Wifi, RefreshCw, Trash2, Check, X, Clock, Users, AlertTriangle, BadgeCheck, Flag } from 'lucide-react';
 import { api } from '../../lib/api';
 import FederationBadge from '../../components/federation/FederationBadge';
 
-type Tab = 'instances' | 'queue' | 'relays' | 'discover' | 'blocks' | 'health';
+type Tab = 'instances' | 'queue' | 'relays' | 'discover' | 'verification' | 'reports' | 'blocks' | 'health';
 
 export default function FederationAdmin() {
   const [tab, setTab] = useState<Tab>('instances');
@@ -18,6 +18,8 @@ export default function FederationAdmin() {
   const [queue, setQueue] = useState<any[]>([]);
   const [relays, setRelays] = useState<any[]>([]);
   const [remoteGuilds, setRemoteGuilds] = useState<any[]>([]);
+  const [verificationRequests, setVerificationRequests] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
   const [blocks, setBlocks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -40,6 +42,8 @@ export default function FederationAdmin() {
         case 'queue': setQueue(await api.get('/federation/admin/queue') as any[]); break;
         case 'relays': setRelays(await api.get('/relays') as any[]); break;
         case 'discover': setRemoteGuilds(await api.get('/federation/admin/discover') as any[]); break;
+        case 'verification': setVerificationRequests(await api.get('/federation/admin/verification-requests') as any[]); break;
+        case 'reports': setReports(await api.get('/federation/admin/reports') as any[]); break;
         case 'blocks': setBlocks(await api.get('/federation/admin/blocks') as any[]); break;
       }
     } catch { /* ignore */ }
@@ -51,6 +55,8 @@ export default function FederationAdmin() {
     { key: 'queue', label: 'Activity Queue', icon: Activity },
     { key: 'relays', label: 'Relays', icon: Wifi },
     { key: 'discover', label: 'Remote Guilds', icon: Globe },
+    { key: 'verification', label: 'Verification', icon: BadgeCheck },
+    { key: 'reports', label: 'Reports', icon: Flag },
     { key: 'blocks', label: 'Blocks', icon: Ban },
     { key: 'health', label: 'Health', icon: Shield },
   ];
@@ -224,6 +230,97 @@ export default function FederationAdmin() {
               </div>
             ))}
             {remoteGuilds.length === 0 && <p className="text-center py-8" style={{ color: 'var(--color-text-secondary, #94a3b8)' }}>No remote guilds</p>}
+          </div>
+        )}
+
+        {/* Verification Requests */}
+        {tab === 'verification' && !loading && (
+          <div className="space-y-2">
+            {verificationRequests.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                <BadgeCheck size={32} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
+                <p>No verification requests</p>
+              </div>
+            )}
+            {verificationRequests.map((r: any) => (
+              <div key={r.id} className="p-4 rounded-lg" style={{ background: 'var(--color-card, #1e1e2e)', borderLeft: `3px solid ${r.status === 'pending' ? '#f59e0b' : r.status === 'approved' ? '#10b981' : '#ef4444'}` }}>
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <span className="font-medium" style={{ fontSize: '14px' }}>{r.instanceBaseUrl}</span>
+                    <span style={{ fontSize: '11px', marginLeft: '8px', padding: '2px 6px', borderRadius: '4px', background: r.instanceTrustLevel === 'verified' ? 'rgba(16,185,129,0.15)' : 'rgba(59,130,246,0.15)', color: r.instanceTrustLevel === 'verified' ? '#10b981' : '#3b82f6' }}>
+                      {r.instanceTrustLevel}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, background: r.status === 'pending' ? 'rgba(245,158,11,0.15)' : r.status === 'approved' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', color: r.status === 'pending' ? '#f59e0b' : r.status === 'approved' ? '#10b981' : '#ef4444' }}>
+                    {r.status.toUpperCase()}
+                  </span>
+                </div>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{r.description}</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Contact: {r.contactEmail} — Score: {r.instanceTrustScore}/100</p>
+                {r.status === 'pending' && (
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={async () => { await api.patch(`/federation/admin/verification-requests/${r.id}`, { status: 'approved' }); loadTab('verification'); }}
+                      style={{ padding: '6px 16px', borderRadius: '6px', background: '#10b981', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}
+                    >
+                      <Check size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> Approve
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const notes = prompt('Rejection reason (visible to instance owner):');
+                        if (notes !== null) { await api.patch(`/federation/admin/verification-requests/${r.id}`, { status: 'rejected', reviewNotes: notes }); loadTab('verification'); }
+                      }}
+                      style={{ padding: '6px 16px', borderRadius: '6px', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--stroke)', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}
+                    >
+                      <X size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> Reject
+                    </button>
+                  </div>
+                )}
+                {r.reviewNotes && <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px', fontStyle: 'italic' }}>Notes: {r.reviewNotes}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Abuse Reports */}
+        {tab === 'reports' && !loading && (
+          <div className="space-y-2">
+            {reports.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                <Flag size={32} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
+                <p>No abuse reports</p>
+              </div>
+            )}
+            {reports.map((r: any) => (
+              <div key={r.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--color-card, #1e1e2e)', borderLeft: `3px solid ${r.status === 'pending' ? '#ef4444' : '#6b7280'}` }}>
+                <div style={{ flex: 1 }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-medium" style={{ fontSize: '13px' }}>{r.instanceBaseUrl}</span>
+                    <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(239,68,68,0.15)', color: '#ef4444', fontWeight: 600 }}>{r.reason}</span>
+                  </div>
+                  {r.details && <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>{r.details}</p>}
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Reported by @{r.reporterUsername} — {new Date(r.createdAt).toLocaleDateString()}</p>
+                </div>
+                {r.status === 'pending' && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => { await api.patch(`/federation/admin/reports/${r.id}`, { status: 'reviewed' }); loadTab('reports'); }}
+                      title="Mark as reviewed"
+                      style={{ padding: '4px 8px', borderRadius: '4px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                    >
+                      <Check size={14} />
+                    </button>
+                    <button
+                      onClick={async () => { await api.patch(`/federation/admin/reports/${r.id}`, { status: 'dismissed' }); loadTab('reports'); }}
+                      title="Dismiss"
+                      style={{ padding: '4px 8px', borderRadius: '4px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: 'var(--text-muted)' }}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
 

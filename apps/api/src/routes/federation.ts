@@ -10,6 +10,9 @@ import { federationActivities } from '../db/schema/federation-activities';
 import { remoteUsers } from '../db/schema/remote-users';
 import { remoteGuilds } from '../db/schema/remote-guilds';
 import { instanceBlocks } from '../db/schema/instance-blocks';
+import { verificationRequests } from '../db/schema/verification-requests';
+import { instanceReports } from '../db/schema/instance-reports';
+import { computeTrustTier, computeTrustScore } from '../federation/trust';
 import { users } from '../db/schema/users';
 import { guilds, guildMembers } from '../db/schema/guilds';
 import { messages } from '../db/schema/messages';
@@ -1048,6 +1051,39 @@ federationRouter.patch('/admin/discover/:remoteGuildId', requireAuth, async (req
     return;
   }
 
+  // Enforce trust tier: only approve guilds from trusted (tier 1+) instances
+  if (isApproved) {
+    const [guild] = await db
+      .select({ instanceId: remoteGuilds.instanceId })
+      .from(remoteGuilds)
+      .where(eq(remoteGuilds.id, remoteGuildId))
+      .limit(1);
+
+    if (!guild) {
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Remote guild not found' });
+      return;
+    }
+
+    const [instance] = await db
+      .select({ trustLevel: federatedInstances.trustLevel, status: federatedInstances.status })
+      .from(federatedInstances)
+      .where(eq(federatedInstances.id, guild.instanceId))
+      .limit(1);
+
+    if (!instance || instance.status !== 'active') {
+      res.status(400).json({ code: 'INSTANCE_NOT_ACTIVE', message: 'Cannot approve guilds from inactive instances' });
+      return;
+    }
+
+    if (instance.trustLevel === 'auto_discovered') {
+      res.status(400).json({
+        code: 'INSTANCE_NOT_TRUSTED',
+        message: 'Cannot approve guilds from tier 0 (New) instances. The instance must reach Trusted status first (72h+ uptime, 10+ members, 0 abuse reports).',
+      });
+      return;
+    }
+  }
+
   await db.update(remoteGuilds)
     .set({ isApproved, updatedAt: new Date() })
     .where(eq(remoteGuilds.id, remoteGuildId));
@@ -1069,6 +1105,217 @@ federationRouter.delete('/admin/discover/:remoteGuildId', requireAuth, async (re
 
   await db.delete(remoteGuilds).where(eq(remoteGuilds.id, remoteGuildId));
   res.json({ status: 'deleted' });
+});
+
+// ---------------------------------------------------------------------------
+// Admin: Verification Requests
+// ---------------------------------------------------------------------------
+
+/**
+ * Admin: list verification requests.
+ */
+federationRouter.get('/admin/verification-requests', requireAuth, async (req: Request, res: Response) => {
+  const [user] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, req.userId!)).limit(1);
+  if (!user?.isAdmin) { res.status(403).json({ code: 'FORBIDDEN', message: 'Admin access required' }); return; }
+
+  const results = await db
+    .select({
+      id: verificationRequests.id,
+      instanceId: verificationRequests.instanceId,
+      contactEmail: verificationRequests.contactEmail,
+      description: verificationRequests.description,
+      status: verificationRequests.status,
+      reviewNotes: verificationRequests.reviewNotes,
+      createdAt: verificationRequests.createdAt,
+      reviewedAt: verificationRequests.reviewedAt,
+      instanceBaseUrl: federatedInstances.baseUrl,
+      instanceTrustLevel: federatedInstances.trustLevel,
+      instanceStatus: federatedInstances.status,
+      instanceTrustScore: federatedInstances.trustScore,
+      instanceCreatedAt: federatedInstances.createdAt,
+    })
+    .from(verificationRequests)
+    .innerJoin(federatedInstances, eq(verificationRequests.instanceId, federatedInstances.id))
+    .orderBy(desc(verificationRequests.createdAt))
+    .limit(100);
+
+  res.json(results);
+});
+
+/**
+ * Admin: approve or reject a verification request.
+ */
+federationRouter.patch('/admin/verification-requests/:requestId', requireAuth, async (req: Request, res: Response) => {
+  const requestId = req.params.requestId as string;
+
+  const [user] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, req.userId!)).limit(1);
+  if (!user?.isAdmin) { res.status(403).json({ code: 'FORBIDDEN', message: 'Admin access required' }); return; }
+
+  const { status, reviewNotes } = req.body as { status?: string; reviewNotes?: string };
+  if (status !== 'approved' && status !== 'rejected') {
+    res.status(400).json({ code: 'INVALID_PAYLOAD', message: 'status must be "approved" or "rejected"' });
+    return;
+  }
+
+  // Get the request to find the instance
+  const [request] = await db
+    .select({ instanceId: verificationRequests.instanceId, currentStatus: verificationRequests.status })
+    .from(verificationRequests)
+    .where(eq(verificationRequests.id, requestId))
+    .limit(1);
+
+  if (!request) { res.status(404).json({ code: 'NOT_FOUND', message: 'Verification request not found' }); return; }
+  if (request.currentStatus !== 'pending') {
+    res.status(400).json({ code: 'ALREADY_REVIEWED', message: 'This request has already been reviewed' });
+    return;
+  }
+
+  // Update the request
+  await db.update(verificationRequests)
+    .set({ status, reviewNotes: reviewNotes ?? null, reviewedBy: req.userId!, reviewedAt: new Date() })
+    .where(eq(verificationRequests.id, requestId));
+
+  // If approved, promote instance to verified
+  if (status === 'approved') {
+    await db.update(federatedInstances)
+      .set({ trustLevel: 'verified', updatedAt: new Date() })
+      .where(eq(federatedInstances.id, request.instanceId));
+  }
+
+  res.json({ status: 'updated' });
+});
+
+// ---------------------------------------------------------------------------
+// Admin: Instance Reports
+// ---------------------------------------------------------------------------
+
+/**
+ * Admin: list abuse reports.
+ */
+federationRouter.get('/admin/reports', requireAuth, async (req: Request, res: Response) => {
+  const [user] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, req.userId!)).limit(1);
+  if (!user?.isAdmin) { res.status(403).json({ code: 'FORBIDDEN', message: 'Admin access required' }); return; }
+
+  const results = await db
+    .select({
+      id: instanceReports.id,
+      instanceId: instanceReports.instanceId,
+      reporterId: instanceReports.reporterId,
+      reason: instanceReports.reason,
+      details: instanceReports.details,
+      status: instanceReports.status,
+      createdAt: instanceReports.createdAt,
+      instanceBaseUrl: federatedInstances.baseUrl,
+      instanceTrustLevel: federatedInstances.trustLevel,
+      reporterUsername: users.username,
+    })
+    .from(instanceReports)
+    .innerJoin(federatedInstances, eq(instanceReports.instanceId, federatedInstances.id))
+    .innerJoin(users, eq(instanceReports.reporterId, users.id))
+    .orderBy(desc(instanceReports.createdAt))
+    .limit(200);
+
+  res.json(results);
+});
+
+/**
+ * Admin: dismiss a report.
+ */
+federationRouter.patch('/admin/reports/:reportId', requireAuth, async (req: Request, res: Response) => {
+  const reportId = req.params.reportId as string;
+
+  const [user] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, req.userId!)).limit(1);
+  if (!user?.isAdmin) { res.status(403).json({ code: 'FORBIDDEN', message: 'Admin access required' }); return; }
+
+  const { status } = req.body as { status?: string };
+  if (status !== 'reviewed' && status !== 'dismissed') {
+    res.status(400).json({ code: 'INVALID_PAYLOAD', message: 'status must be "reviewed" or "dismissed"' });
+    return;
+  }
+
+  await db.update(instanceReports)
+    .set({ status })
+    .where(eq(instanceReports.id, reportId));
+
+  res.json({ status: 'updated' });
+});
+
+// ---------------------------------------------------------------------------
+// User-facing: report a federated instance
+// ---------------------------------------------------------------------------
+
+/**
+ * POST /federation/report — Report a federated instance for abuse.
+ *
+ * Rate limited: one report per user per instance (DB unique constraint).
+ * Auto-suspends instance after 3+ unique reporter reports.
+ */
+federationRouter.post('/report', requireAuth, async (req: Request, res: Response) => {
+  const { instanceId, reason, details } = req.body as {
+    instanceId?: string;
+    reason?: string;
+    details?: string;
+  };
+
+  if (!instanceId || !reason) {
+    res.status(400).json({ code: 'INVALID_PAYLOAD', message: 'instanceId and reason are required' });
+    return;
+  }
+
+  const validReasons = ['spam', 'harassment', 'illegal', 'impersonation', 'other'];
+  if (!validReasons.includes(reason)) {
+    res.status(400).json({ code: 'INVALID_REASON', message: `reason must be one of: ${validReasons.join(', ')}` });
+    return;
+  }
+
+  // Verify instance exists
+  const [instance] = await db
+    .select({ id: federatedInstances.id, status: federatedInstances.status })
+    .from(federatedInstances)
+    .where(eq(federatedInstances.id, instanceId))
+    .limit(1);
+
+  if (!instance) {
+    res.status(404).json({ code: 'NOT_FOUND', message: 'Instance not found' });
+    return;
+  }
+
+  // Insert report (unique constraint prevents duplicate user+instance reports)
+  try {
+    await db.insert(instanceReports).values({
+      instanceId,
+      reporterId: req.userId!,
+      reason,
+      details: details?.slice(0, 2000) ?? null, // cap at 2000 chars
+    });
+  } catch (err: any) {
+    if (err?.code === '23505') { // unique_violation
+      res.status(409).json({ code: 'ALREADY_REPORTED', message: 'You have already reported this instance' });
+      return;
+    }
+    throw err;
+  }
+
+  // Check for auto-suspend: 3+ unique reporters → suspend pending review
+  const [reportCount] = await db
+    .select({ count: sql<number>`count(distinct ${instanceReports.reporterId})` })
+    .from(instanceReports)
+    .where(and(eq(instanceReports.instanceId, instanceId), eq(instanceReports.status, 'pending')));
+
+  if (Number(reportCount.count) >= 3 && instance.status === 'active') {
+    await db.update(federatedInstances)
+      .set({ status: 'suspended', updatedAt: new Date() })
+      .where(eq(federatedInstances.id, instanceId));
+
+    // Also un-approve all guilds from this instance
+    await db.update(remoteGuilds)
+      .set({ isApproved: false, updatedAt: new Date() })
+      .where(eq(remoteGuilds.instanceId, instanceId));
+
+    logger.warn(`[federation] Auto-suspended instance ${instanceId} after 3+ abuse reports`);
+  }
+
+  res.status(201).json({ status: 'reported' });
 });
 
 // ---------------------------------------------------------------------------
