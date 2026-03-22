@@ -1,10 +1,22 @@
-# Main landing page (keep existing)
+# Main landing page
 gratonite.chat {
+    handle /api/* {
+        reverse_proxy gratonite-api:4000
+    }
+    handle /socket.io/* {
+        reverse_proxy gratonite-api:4000
+    }
     handle /downloads/* {
         root * /srv/releases
         uri strip_prefix /downloads
         file_server
         header Access-Control-Allow-Origin *
+    }
+    handle /install {
+        root * /srv
+        rewrite * /install.sh
+        file_server
+        header Content-Type "text/plain; charset=utf-8"
     }
     handle {
         reverse_proxy gratonite-web-1:80
@@ -26,4 +38,9 @@ releases.gratonite.chat {
     root * /srv/releases
     file_server
     header Access-Control-Allow-Origin *
+}
+
+# Relay — WebSocket federation relay
+relay.gratonite.chat {
+    reverse_proxy gratonite-relay:4100
 }
