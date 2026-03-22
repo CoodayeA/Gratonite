@@ -470,6 +470,7 @@ async fn start_caddy(d: &Docker, _cfg: &InstanceConfig) -> Result<(), Box<dyn st
     handle /uploads/* {{
         reverse_proxy gratonite-api:4000
     }}
+    redir / /app/ permanent
     handle {{
         reverse_proxy gratonite-web:80
     }}

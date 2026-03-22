@@ -35,9 +35,6 @@ RUN echo 'server { \
     location /app/ { \
         try_files $uri $uri/ /app/index.html; \
     } \
-    location = / { \
-        return 301 /app/; \
-    } \
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ { \
         expires 30d; \
         add_header Cache-Control "public, immutable"; \
@@ -47,4 +44,4 @@ RUN echo 'server { \
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:80/app/ || exit 1
