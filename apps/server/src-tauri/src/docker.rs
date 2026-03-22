@@ -454,7 +454,7 @@ async fn start_web(d: &Docker) -> Result<(), Box<dyn std::error::Error>> {
 async fn start_caddy(d: &Docker, _cfg: &InstanceConfig) -> Result<(), Box<dyn std::error::Error>> {
     // Write Caddyfile content as a config label (Caddy can read from env)
     let caddyfile = format!(
-        r#"localhost:8443 {{
+        r#"localhost {{
     handle /api/* {{
         reverse_proxy gratonite-api:4000
     }}
