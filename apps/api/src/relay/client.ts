@@ -220,9 +220,25 @@ export class RelayClient {
     }
   }
 
-  /** Jittered exponential backoff reconnection. */
+  /** Jittered exponential backoff reconnection with circuit breaker. */
   private scheduleReconnect(url: string, label: 'primary' | 'fallback'): void {
     this.reconnectAttempt++;
+
+    // Circuit breaker: after 10 attempts, reduce log noise and slow way down
+    const MAX_NOISY_ATTEMPTS = 10;
+    const CIRCUIT_BREAK_DELAY = 5 * 60_000; // 5 minutes between retries after circuit break
+
+    if (this.reconnectAttempt > MAX_NOISY_ATTEMPTS) {
+      // Log only every 10th attempt to avoid spam
+      if (this.reconnectAttempt % 10 === 0) {
+        logger.warn(`[relay:client] ${label} relay unreachable after ${this.reconnectAttempt} attempts — retrying every 5m`);
+      }
+      this.reconnectTimer = setTimeout(() => {
+        this.connectToRelay(url, label);
+      }, CIRCUIT_BREAK_DELAY);
+      return;
+    }
+
     // Backoff: 1s, 2s, 4s, 8s, 16s, 32s, 60s max
     const baseDelay = Math.min(1000 * Math.pow(2, this.reconnectAttempt - 1), 60_000);
     // Add jitter: ±25%
