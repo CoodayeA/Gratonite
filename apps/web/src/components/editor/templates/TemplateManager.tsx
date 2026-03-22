@@ -3,7 +3,7 @@
  */
 import { useState, useEffect } from 'react';
 import { Trash2, FileText, File } from 'lucide-react';
-import type { DocumentTemplate } from '@gratonite/types/api';
+import type { DocumentTemplate } from '@gratonite/types';
 import { apiFetch } from '../../../lib/api/_core';
 
 interface TemplateManagerProps {

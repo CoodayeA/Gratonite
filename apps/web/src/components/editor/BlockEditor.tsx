@@ -4,7 +4,7 @@
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Save, Undo2, Redo2, Loader2 } from 'lucide-react';
-import type { Block, BlockType } from '@gratonite/types/api';
+import type { Block, BlockType } from '@gratonite/types';
 import { BlockEditorCtx, type EditorContextValue } from './BlockEditorContext';
 import { useBlockEditor } from './hooks/useBlockEditor';
 import BlockRenderer from './blocks/BlockRenderer';

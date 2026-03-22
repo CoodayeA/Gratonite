@@ -1,7 +1,7 @@
 /**
  * QuoteBlock.tsx — Block quote with left border accent.
  */
-import type { Block, QuoteBlockContent } from '@gratonite/types/api';
+import type { Block, QuoteBlockContent } from '@gratonite/types';
 import InlineEditor from '../inline/InlineEditor';
 import { useEditorContext } from '../BlockEditorContext';
 

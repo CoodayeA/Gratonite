@@ -4,7 +4,7 @@
  */
 import { useCallback } from 'react';
 import { emitOrQueue } from '../../../lib/socket';
-import type { Block } from '@gratonite/types/api';
+import type { Block } from '@gratonite/types';
 
 export function useBlockSync(channelId: string) {
   const emitBlockInsert = useCallback((block: Block, afterBlockId?: string) => {

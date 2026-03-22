@@ -10,7 +10,7 @@
  */
 import { useRef, useEffect, useCallback, KeyboardEvent } from 'react';
 import DOMPurify from 'dompurify';
-import type { InlineText } from '@gratonite/types/api';
+import type { InlineText } from '@gratonite/types';
 import { useEditorContext } from '../BlockEditorContext';
 import { toPlainText } from '../utils/blockHelpers';
 

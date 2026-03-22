@@ -2,7 +2,7 @@
  * builtinTemplates.ts — 10 built-in document templates (gaming/social focused).
  * Icons use Lucide icon names — rendered by TemplatePicker via the TEMPLATE_ICONS map.
  */
-import type { Block } from '@gratonite/types/api';
+import type { Block } from '@gratonite/types';
 import { createBlock, generateBlockId, plainText } from '../utils/blockHelpers';
 import { generatePositions } from '../utils/fractionalIndex';
 

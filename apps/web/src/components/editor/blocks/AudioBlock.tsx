@@ -3,7 +3,7 @@
  */
 import { useState } from 'react';
 import { Music } from 'lucide-react';
-import type { Block, AudioBlockContent } from '@gratonite/types/api';
+import type { Block, AudioBlockContent } from '@gratonite/types';
 import { useEditorContext } from '../BlockEditorContext';
 
 interface Props { block: Block<'audio'>; }

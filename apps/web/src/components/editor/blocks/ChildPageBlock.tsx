@@ -2,7 +2,7 @@
  * ChildPageBlock.tsx — Link to a nested document (child page).
  */
 import { FileText } from 'lucide-react';
-import type { Block, ChildPageBlockContent } from '@gratonite/types/api';
+import type { Block, ChildPageBlockContent } from '@gratonite/types';
 
 interface Props { block: Block<'child_page'>; }
 

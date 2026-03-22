@@ -3,7 +3,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { Copy, Trash2, ArrowUp, ArrowDown, Palette, RefreshCw } from 'lucide-react';
-import type { BlockType } from '@gratonite/types/api';
+import type { BlockType } from '@gratonite/types';
 import { useEditorContext } from '../BlockEditorContext';
 
 interface BlockActionMenuProps {

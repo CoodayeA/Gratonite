@@ -4,7 +4,7 @@
  */
 import { useCallback, useState, useRef } from 'react';
 import { GripVertical, MoreHorizontal } from 'lucide-react';
-import type { Block } from '@gratonite/types/api';
+import type { Block } from '@gratonite/types';
 import { useEditorContext } from '../BlockEditorContext';
 
 interface BlockWrapperProps {

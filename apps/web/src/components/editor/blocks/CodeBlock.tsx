@@ -1,7 +1,7 @@
 /**
  * CodeBlock.tsx — Code block with language selector.
  */
-import type { Block, CodeBlockContent } from '@gratonite/types/api';
+import type { Block, CodeBlockContent } from '@gratonite/types';
 import { useEditorContext } from '../BlockEditorContext';
 
 interface Props { block: Block<'code'>; }

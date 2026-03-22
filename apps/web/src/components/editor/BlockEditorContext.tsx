@@ -3,7 +3,7 @@
  * child components: blocks array, selection, undo/redo, permissions.
  */
 import { createContext, useContext } from 'react';
-import type { Block, BlockType } from '@gratonite/types/api';
+import type { Block, BlockType } from '@gratonite/types';
 
 export interface EditorContextValue {
   /** The channel this document belongs to. */

@@ -6,7 +6,7 @@ import {
   Type, Heading1, Heading2, Heading3, List, ListOrdered, CheckSquare,
   Quote, AlertCircle, Code, ChevronRight,
 } from 'lucide-react';
-import type { BlockType } from '@gratonite/types/api';
+import type { BlockType } from '@gratonite/types';
 import { useEditorContext } from '../BlockEditorContext';
 
 interface TurnIntoMenuProps {

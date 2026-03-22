@@ -3,7 +3,7 @@
  */
 import { useState } from 'react';
 import { FileIcon, Download } from 'lucide-react';
-import type { Block, FileBlockContent } from '@gratonite/types/api';
+import type { Block, FileBlockContent } from '@gratonite/types';
 import { useEditorContext } from '../BlockEditorContext';
 
 interface Props { block: Block<'file'>; }

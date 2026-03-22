@@ -2,7 +2,7 @@
  * CalloutBlock.tsx — Highlighted callout with icon and text.
  */
 import { Info, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
-import type { Block, CalloutBlockContent } from '@gratonite/types/api';
+import type { Block, CalloutBlockContent } from '@gratonite/types';
 import InlineEditor from '../inline/InlineEditor';
 import { useEditorContext } from '../BlockEditorContext';
 

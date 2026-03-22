@@ -3,7 +3,7 @@
  */
 import { useState } from 'react';
 import { Video } from 'lucide-react';
-import type { Block, VideoBlockContent } from '@gratonite/types/api';
+import type { Block, VideoBlockContent } from '@gratonite/types';
 import { useEditorContext } from '../BlockEditorContext';
 
 interface Props { block: Block<'video'>; }

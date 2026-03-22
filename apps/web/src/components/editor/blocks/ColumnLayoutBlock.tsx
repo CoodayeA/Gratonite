@@ -1,7 +1,7 @@
 /**
  * ColumnLayoutBlock.tsx — Multi-column layout block.
  */
-import type { Block, ColumnLayoutBlockContent } from '@gratonite/types/api';
+import type { Block, ColumnLayoutBlockContent } from '@gratonite/types';
 
 interface Props {
   block: Block<'column_layout'>;
