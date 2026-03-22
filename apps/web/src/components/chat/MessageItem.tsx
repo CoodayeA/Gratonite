@@ -288,7 +288,7 @@ export const MemoizedMessageItem = memo(({
         msg.createdAt && prevMsg.createdAt &&
         new Date(msg.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() < 5 * 60 * 1000);
 
-    // Feature 3 + Item 87: Mention highlight detection (personal + @everyone/@here)
+    // Feature 3 + Item 87: Mention highlight detection (personal + @everyone/@here/@channel/@online)
     const isMentioned = Boolean(
         msg.content && (
             (currentUserId && currentUsername && (
@@ -296,10 +296,12 @@ export const MemoizedMessageItem = memo(({
                 msg.content.includes(`<@${currentUserId}>`)
             )) ||
             msg.content.includes('@everyone') ||
-            msg.content.includes('@here')
+            msg.content.includes('@here') ||
+            msg.content.includes('@channel') ||
+            msg.content.includes('@online')
         )
     );
-    const isEveryoneMention = Boolean(msg.content && (msg.content.includes('@everyone') || msg.content.includes('@here')));
+    const isEveryoneMention = Boolean(msg.content && (msg.content.includes('@everyone') || msg.content.includes('@here') || msg.content.includes('@channel') || msg.content.includes('@online')));
     const isPersonalMention = Boolean(
         currentUserId && currentUsername && msg.content && (
             msg.content.includes(`@${currentUsername}`) ||

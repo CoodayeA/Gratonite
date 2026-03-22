@@ -79,3 +79,13 @@ export function hasGuildUnread(guildId: string): boolean {
   }
   return false;
 }
+
+export function getGuildMentionCount(guildId: string): number {
+  let total = 0;
+  for (const [channelId, entry] of state) {
+    if (channelGuildMap.get(channelId) === guildId) {
+      total += entry.mentionCount;
+    }
+  }
+  return total;
+}

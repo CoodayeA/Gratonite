@@ -406,13 +406,13 @@ function applyRemainingRules(text: string, ctx: InlineCtx, _startRule: number, d
 function renderLeaf(text: string, ctx: InlineCtx, depth: number): React.ReactNode[] {
     const kp = `${ctx.keyPrefix}-leaf${depth}`;
 
-    // Item 87: @everyone / @here highlight
-    const everyoneRe = /(@everyone|@here)/g;
+    // Item 87: @everyone / @here / @channel / @online highlight
+    const everyoneRe = /(@everyone|@here|@channel|@online)/g;
     if (everyoneRe.test(text)) {
-        const parts = text.split(/(@everyone|@here)/g);
+        const parts = text.split(/(@everyone|@here|@channel|@online)/g);
         const result: React.ReactNode[] = [];
         parts.forEach((part, i) => {
-            if (part === '@everyone' || part === '@here') {
+            if (part === '@everyone' || part === '@here' || part === '@channel' || part === '@online') {
                 result.push(
                     <span key={`${kp}-everyone-${i}`} className="mention" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', fontWeight: 600 }}>
                         {part}

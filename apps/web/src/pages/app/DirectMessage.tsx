@@ -765,6 +765,39 @@ const DirectMessage = () => {
 
     useEffect(() => { fetchDmMessages(); }, [fetchDmMessages]);
 
+    // Handle ?messageId= search param for notification click-through
+    useEffect(() => {
+        const messageId = searchParams.get('messageId');
+        if (messageId && dmChannelId) {
+            (async () => {
+                try {
+                    const result = await api.messages.jumpToMessage(dmChannelId, messageId);
+                    const authorIds = [...new Set(result.messages.map((m: any) => m.authorId))];
+                    await resolveAuthors(authorIds);
+                    const converted = result.messages.map(convertApiMessage);
+                    setMessages(converted);
+                    if (result.messages.length > 0) {
+                        oldestMessageIdRef.current = result.messages[0].id;
+                    }
+                    // Scroll to the target message after render
+                    requestAnimationFrame(() => {
+                        const el = document.querySelector(`[data-message-id="${result.targetMessageId}"]`);
+                        if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            // Brief highlight effect
+                            el.classList.add('mentioned-message');
+                            setTimeout(() => el.classList.remove('mentioned-message'), 3000);
+                        }
+                    });
+                } catch {
+                    // Message may be deleted — fall through to normal channel view
+                }
+            })();
+            // Clear the param so refresh doesn't re-jump
+            setSearchParams({}, { replace: true });
+        }
+    }, [dmChannelId, searchParams, setSearchParams]);
+
     // Load call history for this DM
     useEffect(() => {
         if (!dmChannelId) { setCallHistory([]); return; }

@@ -78,6 +78,9 @@ export const messagesApi = {
 
   jumpToDate: (channelId: string, date: string) =>
     apiFetch<{ targetMessageId: string; messages: Message[] }>(`/channels/${channelId}/messages/jump-to-date?date=${encodeURIComponent(date)}`),
+
+  jumpToMessage: (channelId: string, messageId: string) =>
+    apiFetch<{ targetMessageId: string; messages: Message[] }>(`/channels/${channelId}/messages/jump-to-message?messageId=${encodeURIComponent(messageId)}`),
 };
 
 export const searchApi = {

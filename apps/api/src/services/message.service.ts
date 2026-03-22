@@ -751,7 +751,7 @@ export class MessageService {
             type: 'dm',
             title: `New message from ${senderName}`,
             body: preview || '(attachment)',
-            data: { senderId: authorId, senderName, channelId },
+            data: { senderId: authorId, senderName, channelId, messageId: newMessage.id },
           }).catch(err => logger.error('[messages] notification failed:', err));
         }
       }
@@ -782,11 +782,105 @@ export class MessageService {
                 type: 'mention',
                 title: `${senderName} mentioned you`,
                 body: preview,
-                data: { senderId: authorId, senderName, channelId, guildId: chan?.guildId ?? null },
+                data: { senderId: authorId, senderName, channelId, guildId: chan?.guildId ?? null, messageId: newMessage.id },
               }).catch(err => logger.error('[messages] mention notification failed:', err));
             }
           } catch { /* skip failed lookups */ }
         }
+      }
+    }
+
+    // Group mention notifications (@everyone, @here, @channel, @online)
+    if (content && chan?.guildId) {
+      const groupMentionPattern = /@(everyone|here|channel|online)\b/;
+      const groupMatch = groupMentionPattern.exec(content);
+      if (groupMatch) {
+        const mentionType = groupMatch[1]; // 'everyone', 'here', 'channel', 'online'
+        (async () => {
+          try {
+            // Get all guild members
+            const allMembers = await db
+              .select({ userId: guildMembers.userId })
+              .from(guildMembers)
+              .where(eq(guildMembers.guildId, chan.guildId!));
+
+            // Collect already-mentioned user IDs from individual mentions to deduplicate
+            const alreadyMentionedIds = new Set<string>();
+            if (content) {
+              const individualMentionRegex = /<@([a-f0-9-]{36})>/g;
+              let im: RegExpExecArray | null;
+              while ((im = individualMentionRegex.exec(content)) !== null) {
+                alreadyMentionedIds.add(im[1]);
+              }
+            }
+
+            let targetUserIds: string[];
+            if (mentionType === 'everyone') {
+              targetUserIds = allMembers.map(m => m.userId).filter(uid => uid !== authorId && !alreadyMentionedIds.has(uid));
+            } else if (mentionType === 'here' || mentionType === 'online') {
+              // Filter by online presence via Redis
+              const onlineIds: string[] = [];
+              for (const member of allMembers) {
+                if (member.userId === authorId || alreadyMentionedIds.has(member.userId)) continue;
+                try {
+                  const status = await redis.get(`presence:${member.userId}`);
+                  if (status && status !== 'offline' && status !== 'invisible') {
+                    onlineIds.push(member.userId);
+                  }
+                } catch { /* skip */ }
+              }
+              targetUserIds = onlineIds;
+            } else {
+              // @channel — all members (same as @everyone for now)
+              targetUserIds = allMembers.map(m => m.userId).filter(uid => uid !== authorId && !alreadyMentionedIds.has(uid));
+            }
+
+            // Resolve channel name for notification title
+            let channelName = 'a channel';
+            try {
+              const [chanRow] = await db.select({ name: channels.name }).from(channels).where(eq(channels.id, channelId)).limit(1);
+              if (chanRow?.name) channelName = chanRow.name;
+            } catch { /* skip */ }
+
+            // Process in batches of 100
+            const BATCH_SIZE = 100;
+            for (let i = 0; i < targetUserIds.length; i += BATCH_SIZE) {
+              const batch = targetUserIds.slice(i, i + BATCH_SIZE);
+              await Promise.allSettled(batch.map(async (userId) => {
+                // Increment mention count in channel read state
+                try {
+                  const [row] = await db
+                    .insert(channelReadState)
+                    .values({ channelId, userId, lastReadAt: new Date(0), mentionCount: 1 })
+                    .onConflictDoUpdate({
+                      target: [channelReadState.channelId, channelReadState.userId],
+                      set: { mentionCount: sql`${channelReadState.mentionCount} + 1` },
+                    })
+                    .returning({ mentionCount: channelReadState.mentionCount });
+
+                  try {
+                    getIO().to(`user:${userId}`).emit('MENTION_CREATED', {
+                      channelId,
+                      guildId: chan.guildId,
+                      mentionCount: row?.mentionCount ?? 1,
+                    });
+                  } catch { /* non-fatal */ }
+                } catch { /* skip */ }
+
+                // Create notification
+                createNotification({
+                  userId,
+                  type: 'mention',
+                  title: `${senderName} mentioned @${mentionType} in #${channelName}`,
+                  body: preview,
+                  data: { senderId: authorId, senderName, channelId, guildId: chan.guildId ?? null, messageId: newMessage.id },
+                }).catch(err => logger.error('[messages] group mention notification failed:', err));
+              }));
+            }
+          } catch (err) {
+            logger.error('[messages] group mention processing failed:', err);
+          }
+        })();
       }
     }
 

@@ -44,6 +44,7 @@ notificationsRouter.get('/', requireAuth, async (req: Request, res: Response): P
       channelId: (d.channelId as string) ?? null,
       guildId,
       guildName: guildId ? (guildNameMap[guildId] ?? null) : null,
+      messageId: (d.messageId as string) ?? null,
       content: n.title,
       preview: n.body ?? null,
       read: n.read,

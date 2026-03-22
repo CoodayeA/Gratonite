@@ -10,6 +10,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-03-21a',
+    date: 'March 21, 2026',
+    title: 'Notifications & Group Mentions',
+    entries: [
+      { type: 'feature', text: 'Click notifications in the bell to jump directly to the message — works for mentions, DMs, and search results' },
+      { type: 'feature', text: 'Group mentions: @everyone, @here, @channel, and @online now ping all relevant members with a confirmation prompt' },
+      { type: 'feature', text: 'Red mention count badges on server icons — see at a glance which servers have unread mentions' },
+      { type: 'improvement', text: 'Unread dot indicator on channels with missed messages (not just bold text)' },
+      { type: 'improvement', text: 'Mention autocomplete now shows @everyone, @here, @channel, @online at the top of the dropdown' },
+    ],
+  },
+  {
     id: '2026-03-20c',
     date: 'March 20, 2026',
     title: 'New Channel Types & Clips Gallery',
