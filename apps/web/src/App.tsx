@@ -2331,8 +2331,9 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
 
             {/* Create Channel Inline Modal */}
             {showCreateChannel && (
-                <div style={{ padding: '12px 16px', background: 'var(--bg-elevated)', borderTop: '1px solid var(--stroke)', borderBottom: '1px solid var(--stroke)', maxHeight: '400px', overflowY: 'auto' }}>
-                    <div style={{ fontSize: '12px', textTransform: 'uppercase', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
+                <div className="modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => { setShowCreateChannel(null); setNewChannelName(''); setSelectedTemplate(null); }}>
+                <div onClick={e => e.stopPropagation()} style={{ width: 420, maxWidth: '95vw', padding: '24px', background: 'var(--bg-elevated)', borderRadius: 16, border: '1px solid var(--stroke)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
+                    <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>
                         Create {showCreateChannel.type === 'voice' ? 'Voice' : showCreateChannel.type === 'document' ? 'Document' : 'Text'} Channel
                     </div>
 
@@ -2350,6 +2351,11 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                     { name: 'general', icon: '#', desc: 'General purpose chat', topic: '' },
                                     { name: 'support', icon: '\u{2753}', desc: 'Help & ticket-like support', topic: 'Ask for help here', rateLimitPerUser: 10 },
                                     { name: 'announcements', icon: '\u{1F4E2}', desc: 'Read-only news & updates', topic: 'Important announcements', isAnnouncement: true },
+                                ] : showCreateChannel.type === 'document' ? [
+                                    { name: 'meeting-notes', icon: '\u{1F4DD}', desc: 'Collaborative meeting notes', topic: 'Shared meeting notes' },
+                                    { name: 'wiki', icon: '\u{1F4DA}', desc: 'Server knowledge base', topic: 'Server wiki & documentation' },
+                                    { name: 'project-plan', icon: '\u{1F4CB}', desc: 'Project planning & tracking', topic: 'Project plans and tasks' },
+                                    { name: 'resources', icon: '\u{1F517}', desc: 'Useful links & references', topic: 'Shared resources and links' },
                                 ] : [
                                     { name: 'voice-lounge', icon: '\u{1F3A7}', desc: 'Casual hangout voice channel', topic: 'Hang out and chat' },
                                     { name: 'gaming', icon: '\u{1F3AE}', desc: 'Voice chat for gaming', topic: 'Game together' },
@@ -2406,13 +2412,14 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                             onChange={(e) => setNewChannelName(e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') handleCreateChannel(); if (e.key === 'Escape') { setShowCreateChannel(null); setNewChannelName(''); setSelectedTemplate(null); } }}
                             autoFocus
-                            style={{ flex: 1, background: 'var(--bg-app)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', padding: '6px 10px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
+                            style={{ flex: 1, background: 'var(--bg-app)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
                         />
                     </div>
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <button onClick={() => { setShowCreateChannel(null); setNewChannelName(''); setSelectedTemplate(null); }} style={{ padding: '4px 12px', background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '12px', cursor: 'pointer', fontWeight: 500 }}>Cancel</button>
-                        <button onClick={handleCreateChannel} disabled={!newChannelName.trim()} style={{ padding: '4px 12px', background: newChannelName.trim() ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: newChannelName.trim() ? '#000' : 'var(--text-muted)', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '12px', cursor: newChannelName.trim() ? 'pointer' : 'default', fontWeight: 600 }}>Create</button>
+                        <button onClick={() => { setShowCreateChannel(null); setNewChannelName(''); setSelectedTemplate(null); }} style={{ padding: '6px 16px', background: 'none', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}>Cancel</button>
+                        <button onClick={handleCreateChannel} disabled={!newChannelName.trim()} style={{ padding: '6px 16px', background: newChannelName.trim() ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: newChannelName.trim() ? '#000' : 'var(--text-muted)', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', cursor: newChannelName.trim() ? 'pointer' : 'default', fontWeight: 600 }}>Create Channel</button>
                     </div>
+                </div>
                 </div>
             )}
 
