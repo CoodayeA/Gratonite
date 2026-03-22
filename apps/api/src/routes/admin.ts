@@ -346,6 +346,45 @@ adminRouter.delete('/team/:userId', requireAuth, async (req: Request, res: Respo
   res.status(200).json({ ok: true });
 });
 
+/**
+ * PATCH /admin/users/:userId/promote — Promote a user to admin.
+ * Only existing admins can promote others.
+ */
+adminRouter.patch('/users/:userId/promote', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  // Verify caller is admin
+  const [caller] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, req.userId!)).limit(1);
+  if (!caller?.isAdmin) {
+    res.status(403).json({ code: 'FORBIDDEN', message: 'Admin access required' });
+    return;
+  }
+
+  const { userId } = req.params as Record<string, string>;
+
+  // Check target user exists
+  const [target] = await db.select({ id: users.id, username: users.username, isAdmin: users.isAdmin }).from(users).where(eq(users.id, userId)).limit(1);
+  if (!target) {
+    res.status(404).json({ code: 'NOT_FOUND', message: 'User not found' });
+    return;
+  }
+  if (target.isAdmin) {
+    res.status(400).json({ code: 'ALREADY_ADMIN', message: 'User is already an admin' });
+    return;
+  }
+
+  await db.update(users).set({ isAdmin: true, updatedAt: new Date() }).where(eq(users.id, userId));
+  await grantAdminScopes(userId, FULL_ADMIN_SCOPES, req.userId!);
+
+  await logAdminAudit({
+    actorId: req.userId!,
+    action: 'USER_PROMOTED_TO_ADMIN',
+    targetType: 'user',
+    targetId: userId,
+    description: `Promoted @${target.username} to admin`,
+  });
+
+  res.status(200).json({ ok: true, username: target.username });
+});
+
 adminRouter.get('/audit-log', requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!(await assertScope(req, res, ADMIN_SCOPES.AUDIT_READ))) return;
 
