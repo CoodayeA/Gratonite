@@ -14,17 +14,19 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 BOLD='\033[1m'
+DIM='\033[2m'
 
 STEP=0
 TOTAL_STEPS=7
 
-step()  { STEP=$((STEP + 1)); echo -e "${PURPLE}[${STEP}/${TOTAL_STEPS}]${NC} ${BOLD}$*${NC}"; }
-info()  { echo -e "${PURPLE}  ├─${NC} $*"; }
-ok()    { echo -e "${GREEN}  ✓${NC} $*"; }
-warn()  { echo -e "${YELLOW}  !${NC} $*"; }
-fail()  { echo -e "${RED}  ✗${NC} $*"; exit 1; }
+step()  { STEP=$((STEP + 1)); echo ""; echo -e "${PURPLE}  ┌─────────────────────────────────────────────${NC}"; echo -e "${PURPLE}  │ ${BOLD}[${STEP}/${TOTAL_STEPS}] $*${NC}"; echo -e "${PURPLE}  └─────────────────────────────────────────────${NC}"; }
+info()  { echo -e "${CYAN}    ℹ${NC}  $*"; }
+ok()    { echo -e "${GREEN}    ✓${NC}  $*"; }
+warn()  { echo -e "${YELLOW}    ⚠${NC}  $*"; }
+fail()  { echo -e "${RED}    ✗${NC}  $*"; exit 1; }
 
 # Animated spinner for long-running commands
 spin() {
@@ -53,7 +55,19 @@ echo "  ██║   ██║██╔══██╗██╔══██║   
 echo "  ╚██████╔╝██║  ██║██║  ██║   ██║   ╚██████╔╝██║ ╚████║██║   ██║   ███████╗"
 echo "   ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚═╝  ╚═══╝╚═╝   ╚═╝   ╚══════╝"
 echo -e "${NC}"
-echo -e "  ${BOLD}Self-Host Installer${NC}"
+echo -e "  ${BOLD}Self-Host Installer${NC}  ${DIM}— Your chat, your rules${NC}"
+echo ""
+echo -e "  ${DIM}╭──────────────────────────────────────────────╮${NC}"
+echo -e "  ${DIM}│${NC}  ${BOLD}What is self-hosting?${NC}                        ${DIM}│${NC}"
+echo -e "  ${DIM}│${NC}                                               ${DIM}│${NC}"
+echo -e "  ${DIM}│${NC}  It means running Gratonite on your own        ${DIM}│${NC}"
+echo -e "  ${DIM}│${NC}  computer instead of someone else's server.    ${DIM}│${NC}"
+echo -e "  ${DIM}│${NC}  Your messages, files, and data stay entirely  ${DIM}│${NC}"
+echo -e "  ${DIM}│${NC}  under your control.                           ${DIM}│${NC}"
+echo -e "  ${DIM}│${NC}                                               ${DIM}│${NC}"
+echo -e "  ${DIM}│${NC}  This installer sets everything up for you.    ${DIM}│${NC}"
+echo -e "  ${DIM}│${NC}  It usually takes about ${BOLD}3-5 minutes${NC}.          ${DIM}│${NC}"
+echo -e "  ${DIM}╰──────────────────────────────────────────────╯${NC}"
 echo ""
 
 # ─── Stdin detection (for curl | bash compatibility) ─────────────────
@@ -66,6 +80,7 @@ if [ ! -t 0 ]; then
     HAS_TTY=true
   else
     warn "Non-interactive mode detected — using defaults (local mode)"
+    info "Want more options? Run: bash <(curl -fsSL https://gratonite.chat/install)"
     NON_INTERACTIVE=true
     HAS_TTY=false
   fi
@@ -79,7 +94,7 @@ prompt() { read "$@" <&3; }
 
 # ─── OS Detection ─────────────────────────────────────────────────────
 detect_os() {
-  step "Detecting system"
+  step "Checking your computer"
   case "$(uname -s)" in
     Linux*)  OS="linux" ;;
     Darwin*) OS="macos" ;;
@@ -92,7 +107,7 @@ detect_os() {
 
 # ─── Docker Check ─────────────────────────────────────────────────────
 check_docker() {
-  step "Checking Docker"
+  step "Looking for Docker"
   if command -v docker &>/dev/null && docker info &>/dev/null; then
     ok "Docker is running"
     return 0
@@ -102,23 +117,41 @@ check_docker() {
     warn "Docker is installed but not running."
     if [ "$OS" = "macos" ]; then
       echo ""
-      echo "  Please start Docker Desktop and re-run this script."
-      echo "  Download: https://docker.com/products/docker-desktop"
+      echo "    Please start Docker Desktop and re-run this script."
+      echo "    Download: https://docker.com/products/docker-desktop"
+      echo ""
+      echo "    Once Docker is running, just run this again:"
+      echo "      curl -fsSL https://gratonite.chat/install | bash"
     elif [ "$OS" = "linux" ]; then
       echo ""
-      echo "  Try: sudo systemctl start docker"
+      echo "    Try: sudo systemctl start docker"
+      echo ""
+      echo "    Then re-run:"
+      echo "      curl -fsSL https://gratonite.chat/install | bash"
     fi
     exit 1
   fi
 
-  warn "Docker is not installed."
+  echo ""
+  echo -e "  ${DIM}╭──────────────────────────────────────────────╮${NC}"
+  echo -e "  ${DIM}│${NC}  ${BOLD}What is Docker?${NC}                              ${DIM}│${NC}"
+  echo -e "  ${DIM}│${NC}                                               ${DIM}│${NC}"
+  echo -e "  ${DIM}│${NC}  Docker is a free tool that packages software  ${DIM}│${NC}"
+  echo -e "  ${DIM}│${NC}  into neat containers — like a lunchbox that   ${DIM}│${NC}"
+  echo -e "  ${DIM}│${NC}  holds everything Gratonite needs (database,   ${DIM}│${NC}"
+  echo -e "  ${DIM}│${NC}  web server, etc.) so it runs the same way     ${DIM}│${NC}"
+  echo -e "  ${DIM}│${NC}  on any computer.                              ${DIM}│${NC}"
+  echo -e "  ${DIM}│${NC}                                               ${DIM}│${NC}"
+  echo -e "  ${DIM}│${NC}  It's safe and used by millions of developers. ${DIM}│${NC}"
+  echo -e "  ${DIM}╰──────────────────────────────────────────────╯${NC}"
+  echo ""
+
   if [ "$OS" = "linux" ]; then
     if [ "$NON_INTERACTIVE" = "true" ]; then
       info "Installing Docker automatically..."
       curl -fsSL https://get.docker.com | sh
     else
-      echo ""
-      prompt -rp "  Install Docker now? [Y/n] " DOCKER_INSTALL
+      prompt -rp "    Install Docker now? [Y/n] " DOCKER_INSTALL
       if [[ "${DOCKER_INSTALL:-Y}" =~ ^[Yy]$ ]]; then
         info "Installing Docker..."
         curl -fsSL https://get.docker.com | sh
@@ -133,24 +166,30 @@ check_docker() {
     fi
     if ! docker info &>/dev/null; then
       warn "Docker installed but may need a re-login for group permissions."
-      echo "  Run: newgrp docker && bash <(curl -fsSL https://gratonite.chat/install)"
+      echo "    Run: newgrp docker && bash <(curl -fsSL https://gratonite.chat/install)"
       exit 0
     fi
     ok "Docker installed"
   elif [ "$OS" = "macos" ]; then
     echo ""
-    echo "  Install Docker Desktop: https://docker.com/products/docker-desktop"
-    echo "  Or with Homebrew:       brew install --cask docker"
-    echo "  Or use Colima:          brew install colima docker docker-compose && colima start"
+    echo "    Install Docker Desktop: https://docker.com/products/docker-desktop"
+    echo "    Or with Homebrew:       brew install --cask docker"
+    echo "    Or use Colima:          brew install colima docker docker-compose && colima start"
+    echo ""
+    echo "    Once installed, run this again:"
+    echo "      curl -fsSL https://gratonite.chat/install | bash"
     fail "Docker is required."
   else
+    echo ""
+    echo "    Once installed, run this again:"
+    echo "      curl -fsSL https://gratonite.chat/install | bash"
     fail "Install Docker Desktop for Windows: https://docker.com/products/docker-desktop"
   fi
 }
 
 # ─── Docker Compose Check ────────────────────────────────────────────
 check_compose() {
-  step "Checking Docker Compose"
+  step "Checking Docker tools"
   if docker compose version &>/dev/null 2>&1; then
     ok "Docker Compose available"
     COMPOSE="docker compose"
@@ -164,7 +203,7 @@ check_compose() {
 
 # ─── Mode Selection ───────────────────────────────────────────────────
 select_mode() {
-  step "Setup mode"
+  step "Choosing setup mode"
   if [ "$NON_INTERACTIVE" = "true" ]; then
     MODE="local"
     ok "Non-interactive — using local mode"
@@ -172,12 +211,15 @@ select_mode() {
   fi
 
   echo ""
-  echo -e "  ${BOLD}How are you hosting?${NC}"
+  echo -e "    ${BOLD}Where will Gratonite live?${NC}"
   echo ""
-  echo "    1) On this computer (local — no domain needed)"
-  echo "    2) On a server with a domain (VPS / homelab)"
+  echo -e "      ${BOLD}1)${NC} ${GREEN}Right here on this computer${NC}"
+  echo -e "         Best for trying it out — no extra setup needed"
   echo ""
-  prompt -rp "  Choose [1/2]: " MODE_CHOICE
+  echo -e "      ${BOLD}2)${NC} ${CYAN}On a server with a domain name${NC}"
+  echo -e "         Best for sharing with friends or a community"
+  echo ""
+  prompt -rp "    Pick one [1/2]: " MODE_CHOICE
   echo ""
 
   case "${MODE_CHOICE:-1}" in
@@ -189,15 +231,15 @@ select_mode() {
 
 # ─── Collect Config ──────────────────────────────────────────────────
 collect_config() {
-  step "Configuring instance"
+  step "Setting up your instance"
   if [ "$MODE" = "server" ]; then
-    prompt -rp "  Domain name (e.g. chat.example.com): " DOMAIN
+    prompt -rp "    Domain name (e.g. chat.example.com): " DOMAIN
     [ -z "${DOMAIN:-}" ] && fail "Domain is required for server mode."
 
-    prompt -rp "  Admin email: " ADMIN_EMAIL
+    prompt -rp "    Admin email: " ADMIN_EMAIL
     [ -z "${ADMIN_EMAIL:-}" ] && fail "Admin email is required."
 
-    prompt -rsp "  Admin password: " ADMIN_PASSWORD; echo
+    prompt -rsp "    Admin password: " ADMIN_PASSWORD; echo
     [ -z "${ADMIN_PASSWORD:-}" ] && fail "Admin password is required."
 
     TLS_MODE="$ADMIN_EMAIL"
@@ -220,7 +262,7 @@ collect_config() {
   MFA_ENCRYPTION_KEY="$(openssl rand -hex 32)"
   LIVEKIT_API_KEY="gratonite_$(openssl rand -hex 6)"
   LIVEKIT_API_SECRET="$(openssl rand -base64 32)"
-  ok "Secrets generated"
+  ok "Secure secrets generated"
 }
 
 # ─── Create Files ────────────────────────────────────────────────────
@@ -231,7 +273,7 @@ create_files() {
       info "Keeping existing config."
       return
     fi
-    prompt -rp "  Overwrite config? Your data (DB, uploads) will be kept. [y/N] " OVERWRITE
+    prompt -rp "    Overwrite config? Your data (DB, uploads) will be kept. [y/N] " OVERWRITE
     if [[ ! "${OVERWRITE:-N}" =~ ^[Yy]$ ]]; then
       info "Keeping existing config. Starting services..."
       return
@@ -294,41 +336,93 @@ ENVEOF
 start_services() {
   cd "$INSTALL_DIR"
 
-  step "Pulling Docker images"
-  info "This may take a few minutes on first run..."
+  step "Downloading Gratonite"
+  info "Pulling Docker images — this may take a few minutes on first run..."
   $COMPOSE pull 2>&1 | while IFS= read -r line; do
     # Show image name being pulled
     if echo "$line" | grep -qE 'Pulling|Pull complete|Already exists|Downloading|Extracting'; then
-      printf "\r\033[2K  ${PURPLE}⠿${NC} %s" "$(echo "$line" | head -c 70)"
+      printf "\r\033[2K  ${PURPLE}    ⠿${NC} %s" "$(echo "$line" | head -c 70)"
     fi
   done
   printf "\r\033[2K"
-  ok "Images ready"
+  ok "All images downloaded"
 
-  step "Starting services"
+  step "Starting your server"
+  echo ""
+  echo -e "  ${DIM}    ╭─────────────────────────────────────────╮${NC}"
+  echo -e "  ${DIM}    │${NC}  ${BOLD}Starting 5 services:${NC}                    ${DIM}│${NC}"
+  echo -e "  ${DIM}    │${NC}                                         ${DIM}│${NC}"
+  echo -e "  ${DIM}    │${NC}  ${GREEN}◉${NC} PostgreSQL  — stores your data        ${DIM}│${NC}"
+  echo -e "  ${DIM}    │${NC}  ${GREEN}◉${NC} Redis       — keeps things fast       ${DIM}│${NC}"
+  echo -e "  ${DIM}    │${NC}  ${GREEN}◉${NC} API server  — handles the logic       ${DIM}│${NC}"
+  echo -e "  ${DIM}    │${NC}  ${GREEN}◉${NC} Web server  — serves the interface    ${DIM}│${NC}"
+  echo -e "  ${DIM}    │${NC}  ${GREEN}◉${NC} Caddy       — handles HTTPS security  ${DIM}│${NC}"
+  echo -e "  ${DIM}    ╰─────────────────────────────────────────╯${NC}"
+  echo ""
+
   $COMPOSE up -d 2>&1 | while IFS= read -r line; do
-    printf "\r\033[2K  ${PURPLE}⠿${NC} %s" "$(echo "$line" | sed 's/\x1b\[[0-9;]*m//g' | head -c 70)"
+    printf "\r\033[2K  ${PURPLE}    ⠿${NC} %s" "$(echo "$line" | sed 's/\x1b\[[0-9;]*m//g' | head -c 70)"
   done
   printf "\r\033[2K"
   ok "Containers started"
 
-  info "Waiting for health check..."
+  info "Waiting for everything to be ready..."
   local retries=45
   local elapsed=0
   while [ $retries -gt 0 ]; do
     if $COMPOSE exec -T api wget -qO- http://localhost:4000/health 2>/dev/null | grep -q '"status":"ok"'; then
       break
     fi
+
+    # Check if setup container failed before continuing to wait
+    local setup_state
+    setup_state=$($COMPOSE ps setup --format '{{.State}}' 2>/dev/null || echo "")
+    if echo "$setup_state" | grep -qi "exited"; then
+      local setup_exit
+      setup_exit=$($COMPOSE ps setup --format '{{.ExitCode}}' 2>/dev/null || echo "0")
+      if [ "$setup_exit" != "0" ]; then
+        echo ""
+        echo -e "  ${RED}${BOLD}    ✗ Setup failed!${NC}"
+        echo ""
+        echo "      Something went wrong during database setup."
+        echo ""
+        echo "      To see what happened:"
+        echo "        cd $INSTALL_DIR && $COMPOSE logs setup"
+        echo ""
+        echo "      Need help? Open an issue and we'll sort it out:"
+        echo "        https://github.com/CoodayeA/Gratonite/issues"
+        echo ""
+        exit 1
+      fi
+    fi
+
     retries=$((retries - 1))
     elapsed=$(( (45 - retries) * 2 ))
-    printf "\r  ${PURPLE}⠿${NC} Waiting for API to be ready... (%ds)" "$elapsed"
+    printf "\r      ${PURPLE}⠿${NC} Waiting for API to be ready... (%ds)" "$elapsed"
     sleep 2
   done
   printf "\r\033[2K"
 
   if [ $retries -eq 0 ]; then
-    warn "Health check timed out — this is normal on first run."
-    info "Migrations may still be running. Check: cd $INSTALL_DIR && $COMPOSE logs -f"
+    # Final check if setup failed
+    local setup_state2
+    setup_state2=$($COMPOSE ps setup --format '{{.State}}' 2>/dev/null || echo "")
+    if echo "$setup_state2" | grep -qi "exited"; then
+      local setup_exit2
+      setup_exit2=$($COMPOSE ps setup --format '{{.ExitCode}}' 2>/dev/null || echo "0")
+      if [ "$setup_exit2" != "0" ]; then
+        echo ""
+        echo -e "  ${RED}${BOLD}    ✗ Setup failed!${NC}"
+        echo ""
+        echo "      Something went wrong during database setup."
+        echo "      To see the error: cd $INSTALL_DIR && $COMPOSE logs setup"
+        echo "      Report this bug:  https://github.com/CoodayeA/Gratonite/issues"
+        echo ""
+        exit 1
+      fi
+    fi
+    warn "Health check timed out after 90 seconds."
+    info "Services may still be starting. Check: cd $INSTALL_DIR && $COMPOSE logs -f"
     return
   fi
 
@@ -338,46 +432,68 @@ start_services() {
 # ─── Success Message ─────────────────────────────────────────────────
 print_success() {
   echo ""
-  echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-  echo ""
+  echo -e "${GREEN}${BOLD}"
+  echo "  ╔══════════════════════════════════════════════════╗"
+  echo "  ║                                                  ║"
+  echo "  ║    🎉  Your Gratonite instance is running!  🎉   ║"
+  echo "  ║                                                  ║"
+  echo "  ╚══════════════════════════════════════════════════╝"
+  echo -e "${NC}"
 
   if [ "$MODE" = "local" ]; then
-    echo -e "  ${BOLD}Your Gratonite instance is running!${NC}"
+    echo -e "    ${BOLD}URL:${NC}       https://localhost:$HTTPS_PORT"
+    echo -e "    ${BOLD}Email:${NC}     $ADMIN_EMAIL"
+    echo -e "    ${BOLD}Password:${NC}  $ADMIN_PASSWORD"
     echo ""
-    echo -e "  ${BOLD}URL:${NC}      https://localhost:$HTTPS_PORT"
-    echo -e "  ${BOLD}Email:${NC}    $ADMIN_EMAIL"
-    echo -e "  ${BOLD}Password:${NC} $ADMIN_PASSWORD"
-    echo ""
-    echo -e "  ${YELLOW}Note:${NC} Your browser will show a security warning"
-    echo "  because the TLS certificate is self-signed."
-    echo "  Click 'Advanced' then 'Proceed' — this is safe for localhost."
+    echo -e "    ${YELLOW}Note:${NC} Your browser will show a security warning"
+    echo "    because the TLS certificate is self-signed."
+    echo "    Click ${BOLD}'Advanced'${NC} then ${BOLD}'Proceed'${NC} — this is safe for localhost."
   else
-    echo -e "  ${BOLD}Your Gratonite instance is running!${NC}"
+    echo -e "    ${BOLD}URL:${NC}       https://$DOMAIN"
+    echo -e "    ${BOLD}Email:${NC}     $ADMIN_EMAIL"
     echo ""
-    echo -e "  ${BOLD}URL:${NC}      https://$DOMAIN"
-    echo -e "  ${BOLD}Email:${NC}    $ADMIN_EMAIL"
-    echo ""
-    echo "  TLS certificate was automatically obtained from Let's Encrypt."
+    echo "    TLS certificate was automatically obtained from Let's Encrypt."
   fi
 
   echo ""
-  echo -e "  ${BOLD}Federation:${NC} Connected to relay.gratonite.chat"
-  echo "  Your guilds will appear in Discover after 48h."
+  echo -e "  ${DIM}  ──────────────────────────────────────────────${NC}"
   echo ""
-  echo -e "  ${BOLD}Voice/Video:${NC} Enable with:"
-  echo "    cd $INSTALL_DIR && $COMPOSE --profile voice up -d"
+  echo -e "    ${BOLD}What just happened?${NC}"
+  echo "    We set up 5 services on your computer, all running"
+  echo "    inside Docker containers — isolated from your system,"
+  echo "    easy to stop, and easy to update:"
   echo ""
-  echo -e "  ${BOLD}Manage:${NC}"
-  echo "    cd $INSTALL_DIR"
-  echo "    cat .env                                 # View credentials"
-  echo "    $COMPOSE logs -f                         # View logs"
-  echo "    $COMPOSE restart                         # Restart"
-  echo "    $COMPOSE down                            # Stop"
-  echo "    $COMPOSE pull && $COMPOSE up -d          # Update"
+  echo -e "      ${GREEN}◉${NC} ${BOLD}PostgreSQL${NC}  — stores your messages and accounts"
+  echo -e "      ${GREEN}◉${NC} ${BOLD}Redis${NC}       — keeps things fast with caching"
+  echo -e "      ${GREEN}◉${NC} ${BOLD}API server${NC}  — handles all the app logic"
+  echo -e "      ${GREEN}◉${NC} ${BOLD}Web server${NC}  — serves the chat interface"
+  echo -e "      ${GREEN}◉${NC} ${BOLD}Caddy${NC}       — handles HTTPS security"
+
   echo ""
-  echo -e "  ${BOLD}Disable federation:${NC} Edit .env, set FEDERATION_ENABLED=false"
+  echo -e "  ${DIM}  ──────────────────────────────────────────────${NC}"
   echo ""
-  echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo -e "    ${BOLD}Federation:${NC} Enabled — connecting to the Gratonite network"
+  echo "    Other Gratonite instances can discover and chat with yours."
+  echo "    Your guilds will appear in Discover after 48h."
+  echo ""
+  echo -e "    ${BOLD}Voice/Video:${NC} Enable with:"
+  echo "      cd $INSTALL_DIR && $COMPOSE --profile voice up -d"
+
+  echo ""
+  echo -e "  ${DIM}  ──────────────────────────────────────────────${NC}"
+  echo ""
+  echo -e "    ${BOLD}Handy commands:${NC}"
+  echo ""
+  echo "      cd $INSTALL_DIR"
+  echo "      cat .env                                  # See your login details"
+  echo "      $COMPOSE logs -f                          # Watch the logs (Ctrl+C to stop)"
+  echo "      $COMPOSE restart                          # Restart everything"
+  echo "      $COMPOSE down                             # Shut it down"
+  echo "      $COMPOSE pull && $COMPOSE up -d           # Update to latest version"
+  echo ""
+  echo -e "    ${BOLD}Disable federation:${NC} Edit .env, set FEDERATION_ENABLED=false"
+  echo ""
+  echo -e "${GREEN}${BOLD}  ═══════════════════════════════════════════════════${NC}"
   echo ""
 }
 

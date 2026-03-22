@@ -3,7 +3,7 @@ import { users } from './users';
 
 export const pushSubscriptions = pgTable('push_subscriptions', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   endpoint: text('endpoint').notNull(),
   p256dh: text('p256dh').notNull(),
   auth: text('auth').notNull(),
