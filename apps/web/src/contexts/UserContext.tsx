@@ -129,6 +129,19 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         fetchUser();
     }, [fetchUser, authRuntimeState]);
 
+    // Refetch user when tab regains focus (e.g. after email verification in another tab)
+    const lastFetchRef = useRef(0);
+    useEffect(() => {
+        const onVisible = () => {
+            if (document.visibilityState === 'visible' && user.id && Date.now() - lastFetchRef.current > 30_000) {
+                lastFetchRef.current = Date.now();
+                fetchUser();
+            }
+        };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => document.removeEventListener('visibilitychange', onVisible);
+    }, [fetchUser, user.id]);
+
     const updateUser = useCallback((updates: Partial<UserProfile>) => {
         setUser(prev => ({ ...prev, ...updates }));
     }, []);
