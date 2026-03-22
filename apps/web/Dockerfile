@@ -24,15 +24,19 @@ RUN cd apps/web && npx vite build
 # Stage 2: Serve
 FROM nginx:1.27-alpine
 
-COPY --from=builder /build/apps/web/dist /usr/share/nginx/html
+COPY --from=builder /build/apps/web/dist /usr/share/nginx/html/app
 
-# SPA fallback config
+# SPA fallback config — app is built with base: /app/
+# Files are placed at /usr/share/nginx/html/app/ so /app/assets/* resolves correctly
 RUN echo 'server { \
     listen 80; \
     root /usr/share/nginx/html; \
     index index.html; \
-    location / { \
-        try_files $uri $uri/ /index.html; \
+    location /app/ { \
+        try_files $uri $uri/ /app/index.html; \
+    } \
+    location = / { \
+        return 301 /app/; \
     } \
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ { \
         expires 30d; \

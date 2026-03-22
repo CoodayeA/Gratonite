@@ -14,7 +14,6 @@
     handle /uploads/* {
         reverse_proxy api:4000
     }
-    redir / /app/ permanent
     handle {
         reverse_proxy web:80
     }
