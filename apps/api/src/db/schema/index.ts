@@ -160,6 +160,7 @@ export * from './rss-feeds';
 
 // Collaborative documents (CRDT)
 export * from './collaborative-documents';
+export * from './document-templates';
 
 // Per-server member profiles
 export * from './guild-member-profiles';

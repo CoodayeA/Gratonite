@@ -142,6 +142,10 @@ export type ChannelType =
   | 'GUILD_TEXT'
   | 'GUILD_VOICE'
   | 'GUILD_CATEGORY'
+  | 'GUILD_DOCUMENT'
+  | 'GUILD_FORUM'
+  | 'GUILD_ANNOUNCEMENT'
+  | 'GUILD_STAGE'
   | 'DM'
   | 'GROUP_DM';
 
@@ -418,4 +422,199 @@ export interface Notification {
   link?: string;
   read: boolean;
   createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Block Editor (Notion-style document blocks)
+// ---------------------------------------------------------------------------
+
+/** Inline rich text segment — replaces raw HTML for portable cross-platform rendering. */
+export interface InlineText {
+  text: string;
+  annotations?: {
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
+    strikethrough?: boolean;
+    code?: boolean;
+    color?: string;
+    bgColor?: string;
+  };
+  link?: { url: string } | null;
+  mention?: { type: 'user' | 'channel' | 'role'; id: string } | null;
+}
+
+/** All supported block types. */
+export type BlockType =
+  | 'text'
+  | 'heading'
+  | 'bulleted_list'
+  | 'numbered_list'
+  | 'checklist'
+  | 'image'
+  | 'video'
+  | 'audio'
+  | 'file'
+  | 'table'
+  | 'divider'
+  | 'callout'
+  | 'code'
+  | 'quote'
+  | 'embed'
+  | 'toggle'
+  | 'column_layout'
+  | 'child_page'
+  | 'table_of_contents';
+
+/** Content shapes per block type. */
+export interface TextBlockContent {
+  richText: InlineText[];
+}
+
+export interface HeadingBlockContent {
+  richText: InlineText[];
+  level: 1 | 2 | 3;
+}
+
+export interface ListBlockContent {
+  richText: InlineText[];
+}
+
+export interface ChecklistBlockContent {
+  richText: InlineText[];
+  checked: boolean;
+}
+
+export interface ImageBlockContent {
+  url: string;
+  caption?: string;
+  width?: number;
+  height?: number;
+}
+
+export interface VideoBlockContent {
+  url: string;
+  caption?: string;
+}
+
+export interface AudioBlockContent {
+  url: string;
+  caption?: string;
+}
+
+export interface FileBlockContent {
+  url: string;
+  filename: string;
+  size?: number;
+}
+
+export interface TableBlockContent {
+  headers: string[];
+  rows: string[][];
+}
+
+export interface DividerBlockContent {}
+
+export interface CalloutBlockContent {
+  richText: InlineText[];
+  emoji?: string;
+  color?: string;
+}
+
+export interface CodeBlockContent {
+  code: string;
+  language?: string;
+}
+
+export interface QuoteBlockContent {
+  richText: InlineText[];
+}
+
+export interface EmbedBlockContent {
+  url: string;
+  caption?: string;
+}
+
+export interface ToggleBlockContent {
+  richText: InlineText[];
+  children: Block[];
+}
+
+export interface ColumnLayoutBlockContent {
+  columns: { width?: number; children: Block[] }[];
+}
+
+export interface ChildPageBlockContent {
+  pageChannelId: string;
+  title: string;
+}
+
+export interface TableOfContentsBlockContent {
+  maxDepth?: number;
+}
+
+/** Map from block type to its content shape. */
+export interface BlockContentMap {
+  text: TextBlockContent;
+  heading: HeadingBlockContent;
+  bulleted_list: ListBlockContent;
+  numbered_list: ListBlockContent;
+  checklist: ChecklistBlockContent;
+  image: ImageBlockContent;
+  video: VideoBlockContent;
+  audio: AudioBlockContent;
+  file: FileBlockContent;
+  table: TableBlockContent;
+  divider: DividerBlockContent;
+  callout: CalloutBlockContent;
+  code: CodeBlockContent;
+  quote: QuoteBlockContent;
+  embed: EmbedBlockContent;
+  toggle: ToggleBlockContent;
+  column_layout: ColumnLayoutBlockContent;
+  child_page: ChildPageBlockContent;
+  table_of_contents: TableOfContentsBlockContent;
+}
+
+/** A single block in a document. */
+export interface Block<T extends BlockType = BlockType> {
+  id: string;
+  type: T;
+  content: BlockContentMap[T];
+  /** Fractional index string for ordering (lexicographic sort). */
+  position: string;
+  /** Indent level (0 = top-level). */
+  indent?: number;
+}
+
+/** Collaborative document with block data. */
+export interface CollaborativeDocumentData {
+  id: string;
+  channelId: string;
+  title: string;
+  content: string;
+  blocks: Block[];
+  blocksSchemaVersion: number;
+  coverImage: string | null;
+  icon: string | null;
+  contentMigrated: boolean;
+  version: number;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Document template. */
+export interface DocumentTemplate {
+  id: string;
+  guildId: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  blocks: Block[];
+  isBuiltin: boolean;
+  createdBy: string | null;
+  usageCount: number;
+  createdAt: string;
+  updatedAt: string;
 }

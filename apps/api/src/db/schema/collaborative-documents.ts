@@ -6,7 +6,7 @@
  * serialized Yjs document state as a base64-encoded string for offline sync
  * and persistence.
  */
-import { pgTable, uuid, varchar, text, integer, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, integer, boolean, timestamp, index, jsonb } from 'drizzle-orm/pg-core';
 import { channels } from './channels';
 import { users } from './users';
 
@@ -31,6 +31,21 @@ export const collaborativeDocuments = pgTable('collaborative_documents', {
 
   /** Timestamp of document creation. */
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+
+  /** Block-based content as JSON array. */
+  blocks: jsonb('blocks').notNull().default([]),
+
+  /** Schema version for the blocks format. */
+  blocksSchemaVersion: integer('blocks_schema_version').notNull().default(1),
+
+  /** Optional cover image URL. */
+  coverImage: text('cover_image'),
+
+  /** Optional document icon (emoji or identifier). */
+  icon: varchar('icon', { length: 50 }),
+
+  /** Whether legacy content has been migrated to blocks. */
+  contentMigrated: boolean('content_migrated').notNull().default(false),
 
   /** Timestamp of the last content update. */
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
