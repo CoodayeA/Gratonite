@@ -472,6 +472,21 @@ authRouter.get('/username-available', usernameCheckRateLimit, asyncHandler(async
     return;
   }
 
+  // Check reserved usernames first
+  const RESERVED_USERNAMES = new Set([
+    'admin', 'administrator', 'mod', 'moderator', 'system', 'support',
+    'staff', 'owner', 'root', 'operator', 'sysadmin', 'helpdesk',
+    'security', 'official', 'gratonite', 'server', 'bot', 'webhook',
+    'automod', 'everyone', 'here', 'channel', 'online', 'undefined',
+    'null', 'api', 'www', 'mail', 'email', 'noreply', 'postmaster',
+    'abuse', 'webmaster', 'info', 'contact', 'help', 'billing',
+  ]);
+  const lower = username.trim().toLowerCase();
+  if (RESERVED_USERNAMES.has(lower) || lower.startsWith('admin') || lower.startsWith('gratonite') || lower.endsWith('official')) {
+    res.status(200).json({ available: false });
+    return;
+  }
+
   const existing = await db
     .select({ id: users.id })
     .from(users)

@@ -251,6 +251,23 @@ export { safeUserResponse };
 export async function register(data: RegisterData): Promise<RegisterResult> {
   const { username, email, password, displayName, referralCode } = data;
 
+  // Block reserved usernames (case-insensitive)
+  const RESERVED_USERNAMES = new Set([
+    'admin', 'administrator', 'mod', 'moderator', 'system', 'support',
+    'staff', 'owner', 'root', 'operator', 'sysadmin', 'helpdesk',
+    'security', 'official', 'gratonite', 'server', 'bot', 'webhook',
+    'automod', 'everyone', 'here', 'channel', 'online', 'undefined',
+    'null', 'api', 'www', 'mail', 'email', 'noreply', 'postmaster',
+    'abuse', 'webmaster', 'info', 'contact', 'help', 'billing',
+  ]);
+  const lowerUsername = username.toLowerCase();
+  if (RESERVED_USERNAMES.has(lowerUsername) ||
+      lowerUsername.startsWith('admin') ||
+      lowerUsername.startsWith('gratonite') ||
+      lowerUsername.endsWith('official')) {
+    throw new ServiceError('VALIDATION_ERROR', 'This username is reserved');
+  }
+
   // Block internal email domains
   const emailDomain = email.split('@')[1]?.toLowerCase();
   if (emailDomain === 'gratonite.internal') {
