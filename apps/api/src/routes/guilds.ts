@@ -1741,22 +1741,29 @@ guildsRouter.get(
       const { guildId } = req.params as Record<string, string>;
       await requireMember(guildId, req.userId!);
 
-      const rows = await db
-        .select({
-          channelId: channelReadState.channelId,
-          mentionCount: channelReadState.mentionCount,
-          lastReadAt: channelReadState.lastReadAt,
-        })
-        .from(channelReadState)
-        .innerJoin(channels, eq(channels.id, channelReadState.channelId))
-        .where(
-          and(
-            eq(channels.guildId, guildId),
-            eq(channelReadState.userId, req.userId!),
-          ),
-        );
+      // Return only channels that have messages newer than the user's last read timestamp.
+      // Channels with no read state row are not returned (they have no baseline).
+      const rows = await db.execute(sql`
+        SELECT
+          crs.channel_id AS "channelId",
+          crs.mention_count AS "mentionCount",
+          crs.last_read_at AS "lastReadAt"
+        FROM channel_read_state crs
+        INNER JOIN channels c ON c.id = crs.channel_id
+        WHERE c.guild_id = ${guildId}
+          AND crs.user_id = ${req.userId!}
+          AND (
+            crs.mention_count > 0
+            OR EXISTS (
+              SELECT 1 FROM messages m
+              WHERE m.channel_id = crs.channel_id
+                AND m.created_at > crs.last_read_at
+              LIMIT 1
+            )
+          )
+      `);
 
-      res.status(200).json(rows);
+      res.status(200).json(toRows(rows));
     } catch (err) {
       handleAppError(res, err);
     }
