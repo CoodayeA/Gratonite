@@ -2354,10 +2354,10 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                     { name: 'support', icon: '\u{2753}', desc: 'Help & support', topic: 'Ask for help here', rateLimitPerUser: 10 },
                                     { name: 'announcements', icon: '\u{1F4E2}', desc: 'News & updates', topic: 'Important announcements', isAnnouncement: true },
                                 ] : showCreateChannel.type === 'document' ? [
-                                    { name: 'meeting-notes', icon: '\u{1F4DD}', desc: 'Collaborative notes', topic: 'Shared meeting notes' },
+                                    { name: 'rules-info', icon: '\u{1F4DC}', desc: 'Server rules & info', topic: 'Rules and important information' },
                                     { name: 'wiki', icon: '\u{1F4DA}', desc: 'Knowledge base', topic: 'Server wiki & documentation' },
-                                    { name: 'project-plan', icon: '\u{1F4CB}', desc: 'Planning & tasks', topic: 'Project plans and tasks' },
-                                    { name: 'resources', icon: '\u{1F517}', desc: 'Links & references', topic: 'Shared resources and links' },
+                                    { name: 'resources', icon: '\u{1F517}', desc: 'Links & guides', topic: 'Shared resources, guides, and links' },
+                                    { name: 'raid-guide', icon: '\u{2694}\u{FE0F}', desc: 'Strategy & guides', topic: 'Boss strategies, team comp, loot tables' },
                                 ] : [
                                     { name: 'voice-lounge', icon: '\u{1F3A7}', desc: 'Casual hangout', topic: 'Hang out and chat' },
                                     { name: 'gaming', icon: '\u{1F3AE}', desc: 'Gaming voice chat', topic: 'Game together' },
