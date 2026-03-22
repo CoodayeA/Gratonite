@@ -72,6 +72,7 @@ function App() {
   async function handleStart() {
     setPhase("setup");
     setStep("Starting containers...");
+    setError(null);
     try {
       const cfg = await invoke<Config>("start_instance");
       setConfig(cfg);
@@ -91,11 +92,21 @@ function App() {
       <main className="container">
         <h1>Gratonite Server</h1>
         <div className="card">
-          <h2>Docker Required</h2>
-          <p>Gratonite Server needs Docker to run your instance.</p>
+          <h2>One More Thing Needed</h2>
+          <p>
+            Gratonite runs inside <strong>Docker</strong> — a free tool that
+            packages everything your server needs into neat containers. Think of
+            it like a lunchbox that holds the database, web server, and
+            everything else so it all runs smoothly.
+          </p>
+          <p>It takes about 2 minutes to install:</p>
           <a href="https://docker.com/products/docker-desktop" target="_blank" className="btn">
-            Download Docker Desktop
+            Download Docker Desktop (Free)
           </a>
+          <p className="hint">
+            After installing, open Docker Desktop and wait for it to finish starting up.
+            Then click "Check Again" below.
+          </p>
           <button onClick={checkState} className="btn secondary">Check Again</button>
         </div>
       </main>
@@ -108,14 +119,31 @@ function App() {
         <h1>Gratonite Server</h1>
         <div className="card">
           <div className="spinner" />
-          <h2>{phase === "checking" ? "Checking..." : "Setting Up"}</h2>
+          <h2>{phase === "checking" ? "Checking..." : "Setting Up Your Server"}</h2>
           <p className="step">{step || "Preparing..."}</p>
+          <p className="hint">This usually takes 2-3 minutes on first run.</p>
           {phase === "setup" && (
             <div className="progress-bar">
               <div className="progress-fill" style={{ width: `${(pullProgress.index / pullProgress.total) * 100}%` }} />
             </div>
           )}
-          {error && <p className="error">{error}</p>}
+          {error && (
+            <div className="error-box">
+              <p className="error">{error}</p>
+              <p className="hint">
+                This usually means the database setup ran into a problem.
+                Try stopping all containers in Docker Desktop and clicking "Start" again.
+              </p>
+              <p className="hint">
+                Still stuck?{" "}
+                <a href="https://github.com/CoodayeA/Gratonite/issues" target="_blank">
+                  Report this issue
+                </a>{" "}
+                and we'll help you out.
+              </p>
+              <button onClick={handleStart} className="btn secondary">Try Again</button>
+            </div>
+          )}
         </div>
       </main>
     );
@@ -136,11 +164,15 @@ function App() {
             <div className="row"><span className="label">Password</span><code>{config.admin_password}</code></div>
           </div>
           <p className="hint">Browser may show a security warning for the self-signed cert — click "Advanced" then "Proceed".</p>
+          <p className="hint server-info">
+            Your server is running 5 services in Docker: a database, cache, API server,
+            web server, and HTTPS proxy. Everything stays on your computer.
+          </p>
           <div className="actions">
             <a href="https://localhost:8443" target="_blank" className="btn">Open Gratonite</a>
             <button onClick={handleStop} className="btn secondary">Stop</button>
           </div>
-          <p className="federation">Federation active via relay.gratonite.chat</p>
+          <p className="federation">Connected to the Gratonite network — other instances can discover yours</p>
         </div>
       </main>
     );
@@ -154,6 +186,7 @@ function App() {
           <span className="dot red" />
           <h2>Stopped</h2>
         </div>
+        <p className="hint">Your Gratonite server is not running. Click Start to bring it back up.</p>
         <button onClick={handleStart} className="btn">Start</button>
       </div>
     </main>

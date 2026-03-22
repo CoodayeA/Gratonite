@@ -25,4 +25,6 @@ COPY --from=builder /build/drizzle ./drizzle
 COPY --from=builder /build/drizzle.config.ts ./
 COPY deploy/setup/init.ts ./init.ts
 
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false
+
 CMD ["npx", "tsx", "init.ts"]

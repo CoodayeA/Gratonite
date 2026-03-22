@@ -173,3 +173,26 @@ h2 {
   font-size: 0.85em;
   margin-top: 12px;
 }
+
+.error-box {
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: 8px;
+}
+
+.error-box .hint {
+  margin-top: 8px;
+}
+
+.error-box a {
+  color: #a78bfa;
+  text-decoration: underline;
+}
+
+.server-info {
+  margin-top: 12px;
+  font-size: 0.8em;
+  opacity: 0.7;
+}

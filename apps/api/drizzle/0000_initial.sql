@@ -2403,7 +2403,7 @@ CREATE TABLE "notification_sounds" (
 --> statement-breakpoint
 CREATE TABLE "push_subscriptions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" text NOT NULL,
+	"user_id" uuid NOT NULL,
 	"endpoint" text NOT NULL,
 	"p256dh" text NOT NULL,
 	"auth" text NOT NULL,
@@ -2487,12 +2487,12 @@ CREATE TABLE "spatial_rooms" (
 --> statement-breakpoint
 CREATE TABLE "stickers" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"guild_id" text,
+	"guild_id" uuid,
 	"name" text NOT NULL,
 	"description" text,
 	"asset_url" text NOT NULL,
 	"tags" text[] DEFAULT '{}' NOT NULL,
-	"creator_id" text,
+	"creator_id" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
