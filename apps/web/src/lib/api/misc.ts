@@ -689,7 +689,7 @@ export const telemetryApi = {
 
 export const notificationsApi = {
   list: (limit = 50) =>
-    apiFetch<{ id: string; type: string; senderId: string | null; senderName: string | null; channelId: string | null; guildId: string | null; guildName: string | null; content: string; preview: string | null; read: boolean; createdAt: string }[]>(`/notifications?limit=${limit}`),
+    apiFetch<{ id: string; type: string; senderId: string | null; senderName: string | null; channelId: string | null; guildId: string | null; guildName: string | null; messageId: string | null; content: string; preview: string | null; read: boolean; createdAt: string }[]>(`/notifications?limit=${limit}`),
   markRead: (notificationId: string) =>
     apiFetch<void>(`/notifications/${notificationId}/read`, { method: 'POST' }),
   markAllRead: () =>

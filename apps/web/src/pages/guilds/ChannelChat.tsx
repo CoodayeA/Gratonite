@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useOutletContext, useParams, useNavigate } from 'react-router-dom';
+import { useOutletContext, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion } from 'framer-motion';
 import {
@@ -192,6 +192,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     const channelId = channelIdProp || params.channelId;
     const guildId = guildIdProp || params.guildId;
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [showScrollButton, setShowScrollButton] = useState(false);
     const [newMsgCount, setNewMsgCount] = useState(0);
@@ -290,6 +291,9 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     // Mentions State
     const [mentionSearch, setMentionSearch] = useState<string | null>(null);
     const [mentionIndex, setMentionIndex] = useState(0);
+
+    // Group mention confirmation state
+    const [groupMentionConfirm, setGroupMentionConfirm] = useState<{ type: string; memberCount: number } | null>(null);
 
     // Channel autocomplete state
     const [channelSearch, setChannelSearch] = useState<string | null>(null);
@@ -1127,6 +1131,56 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         }
     }, [channelId, addToast]);
 
+    // Jump to a specific message by ID — used for notification click-through
+    const handleJumpToMessage = useCallback(async (targetMessageId: string) => {
+        if (!channelId) return;
+        try {
+            const result = await api.messages.jumpToMessage(channelId, targetMessageId);
+            const authorIds = [...new Set(result.messages.map((m: any) => m.authorId))];
+            await resolveAuthors(authorIds);
+            const converted = result.messages.map(convertApiMessage);
+            // Resolve reply references
+            const apiMap = new Map(result.messages.map((m: any) => [m.id, m]));
+            for (const msg of converted) {
+                if (msg.replyToId && apiMap.has(msg.replyToId)) {
+                    const ref = apiMap.get(msg.replyToId);
+                    msg.replyToAuthor = ref.author?.displayName || ref.author?.username || 'Unknown';
+                    msg.replyToContent = (ref.content || '').slice(0, 100);
+                }
+            }
+            setMessages(converted);
+            setHasMoreMessages(true);
+            if (result.messages.length > 0) {
+                oldestMessageIdRef.current = result.messages[0].id;
+            }
+            // Highlight and scroll to the target message
+            const targetConverted = converted.find(m => m.apiId === result.targetMessageId);
+            if (targetConverted) {
+                setHighlightedMessageId(targetConverted.id);
+                setTimeout(() => setHighlightedMessageId(null), 3000);
+                requestAnimationFrame(() => {
+                    const el = document.querySelector(`[data-message-id="${result.targetMessageId}"]`);
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                });
+            }
+            setIsViewingHistory(true);
+        } catch {
+            // Message may be deleted — just navigate to the channel normally
+        }
+    }, [channelId]);
+
+    // Handle ?messageId= search param for notification click-through
+    useEffect(() => {
+        const messageId = searchParams.get('messageId');
+        if (messageId && channelId) {
+            handleJumpToMessage(messageId);
+            // Clear the param so refresh doesn't re-jump
+            setSearchParams({}, { replace: true });
+        }
+    }, [searchParams, channelId, handleJumpToMessage, setSearchParams]);
+
     // Load draft and scheduled messages when channel changes
     useEffect(() => {
         if (!channelId) return;
@@ -1335,9 +1389,23 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
 
     const [messages, setMessages] = useState<Message[]>([]);
 
+    // Group mention entries shown at top of mention autocomplete
+    const GROUP_MENTION_ENTRIES = [
+        { id: '__everyone__', username: 'everyone', displayName: '@everyone — Notify all members', avatarHash: null },
+        { id: '__here__', username: 'here', displayName: '@here — Notify online members', avatarHash: null },
+        { id: '__channel__', username: 'channel', displayName: '@channel — Notify all members', avatarHash: null },
+        { id: '__online__', username: 'online', displayName: '@online — Notify online members (same as @here)', avatarHash: null },
+    ];
+
     const filteredUsers = React.useMemo(() => {
         if (mentionSearch === null) return [];
         const search = mentionSearch.toLowerCase();
+
+        // Filter group mention entries
+        const matchingGroups = GROUP_MENTION_ENTRIES.filter(g =>
+            g.username.toLowerCase().includes(search)
+        );
+
         const matching = guildMembers.filter(u =>
             u.username.toLowerCase().includes(search) || u.displayName.toLowerCase().includes(search)
         );
@@ -1347,12 +1415,13 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         for (let i = messages.length - 1; i >= Math.max(0, messages.length - 50); i--) {
             if (messages[i].authorId) recentAuthorIds.add(messages[i].authorId!);
         }
-        return matching.sort((a, b) => {
+        const sortedUsers = matching.sort((a, b) => {
             const aRecent = recentAuthorIds.has(a.id) ? 0 : 1;
             const bRecent = recentAuthorIds.has(b.id) ? 0 : 1;
             if (aRecent !== bRecent) return aRecent - bRecent;
             return a.displayName.localeCompare(b.displayName);
         });
+        return [...matchingGroups, ...sortedUsers] as typeof guildMembers;
     }, [guildMembers, mentionSearch, messages]);
 
     const filteredChannels = guildChannelsList.filter(c =>
@@ -1910,6 +1979,20 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     const handleSendMessage = async () => {
         if (inputValue.trim() === '' && chatAttachedFiles.length === 0) return;
         if (!channelId) return;
+
+        // Check for group mentions and show confirmation if not already confirmed
+        if (!groupMentionConfirm) {
+            const groupMentionRe = /@(everyone|here|channel|online)\b/;
+            const gm = groupMentionRe.exec(inputValue);
+            if (gm) {
+                const memberCount = guildMembers.length;
+                setGroupMentionConfirm({ type: gm[1], memberCount });
+                return; // Wait for confirmation
+            }
+        }
+        // Clear confirmation state (user confirmed or no group mention)
+        setGroupMentionConfirm(null);
+
         const wireContent = resolveWireContent(inputValue);
         if (wireContent.length > 2000) {
             addToast({ title: `Message too long (${wireContent.length}/2000)`, variant: 'error' });
@@ -2310,6 +2393,32 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
 
     const insertMention = (userId: string) => {
         if (mentionSearch === null) return;
+
+        // Handle group mention entries
+        const groupMentionMap: Record<string, string> = {
+            '__everyone__': '@everyone',
+            '__here__': '@here',
+            '__channel__': '@channel',
+            '__online__': '@online',
+        };
+        if (groupMentionMap[userId]) {
+            const token = groupMentionMap[userId];
+            const cursor = cursorPosRef.current;
+            const beforeCursor = inputValue.slice(0, cursor);
+            const afterCursor = inputValue.slice(cursor);
+            const replaced = beforeCursor.replace(/@([a-zA-Z0-9_]*)$/, `${token} `);
+            const newVal = replaced + afterCursor;
+            setInputValue(newVal);
+            const newCursor = replaced.length;
+            cursorPosRef.current = newCursor;
+            setTimeout(() => {
+                const ta = document.querySelector('.chat-input') as HTMLTextAreaElement | null;
+                if (ta) { ta.selectionStart = ta.selectionEnd = newCursor; }
+            }, 0);
+            setMentionSearch(null);
+            return;
+        }
+
         const member = guildMembers.find(m => m.id === userId);
         const username = member?.username || userId;
         // Handle duplicate usernames by appending a suffix
@@ -3572,6 +3681,41 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                 </button>
                             </div>
                         ))}
+                    </div>
+                )}
+
+                {/* Group mention confirmation bar */}
+                {groupMentionConfirm && (
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px',
+                        background: 'rgba(245, 158, 11, 0.1)', borderLeft: '3px solid #f59e0b',
+                        margin: '0 16px 4px', borderRadius: '0 8px 8px 0',
+                    }}>
+                        <Megaphone size={16} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                        <span style={{ fontSize: '13px', color: 'var(--text-primary)', flex: 1 }}>
+                            {groupMentionConfirm.type === 'everyone' || groupMentionConfirm.type === 'channel'
+                                ? <>This will notify <strong>all {groupMentionConfirm.memberCount} members</strong>. Consider @-mentioning specific people instead.</>
+                                : <>This will notify <strong>all online members</strong> of this server.</>
+                            }
+                        </span>
+                        <button
+                            onClick={() => { setGroupMentionConfirm(null); }}
+                            style={{
+                                background: 'none', border: '1px solid var(--stroke)', color: 'var(--text-secondary)',
+                                cursor: 'pointer', padding: '4px 12px', borderRadius: '4px', fontSize: '12px', fontWeight: 600,
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={() => { handleSendMessage(); }}
+                            style={{
+                                background: '#f59e0b', border: 'none', color: '#000',
+                                cursor: 'pointer', padding: '4px 12px', borderRadius: '4px', fontSize: '12px', fontWeight: 600,
+                            }}
+                        >
+                            Send Anyway
+                        </button>
                     </div>
                 )}
 

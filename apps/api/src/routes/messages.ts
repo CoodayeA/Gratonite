@@ -454,6 +454,187 @@ messagesRouter.get('/jump-to-date', requireAuth, async (req: Request, res: Respo
 });
 
 // ---------------------------------------------------------------------------
+// GET /jump-to-message
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/v1/channels/:channelId/messages/jump-to-message
+ *
+ * Given a specific message ID, return a window of messages around it
+ * (25 before + target + 25 after = ~51 messages).
+ * Used for notification click-through and search result navigation.
+ *
+ * @auth    requireAuth, canAccessChannel
+ * @param   channelId {string}    — Channel UUID (from parent router path)
+ * @query   messageId {string}    — Target message UUID
+ * @returns 200 { targetMessageId, messages: [...] }
+ * @returns 400 Missing messageId
+ * @returns 404 Message not found in this channel
+ */
+messagesRouter.get('/jump-to-message', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { channelId } = req.params as Record<string, string>;
+    await resolveChannel(channelId, req.userId!);
+
+    const messageId = typeof req.query.messageId === 'string' ? req.query.messageId : undefined;
+    if (!messageId) {
+      res.status(400).json({ error: 'Missing required query parameter: messageId' });
+      return;
+    }
+
+    // Find the target message and verify it belongs to this channel
+    const [targetMsg] = await db
+      .select({ id: messages.id, createdAt: messages.createdAt })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.id, messageId),
+          eq(messages.channelId, channelId),
+          or(isNull(messages.expiresAt), gt(messages.expiresAt, new Date())),
+        ),
+      )
+      .limit(1);
+
+    if (!targetMsg) {
+      res.status(404).json({ error: 'Message not found in this channel' });
+      return;
+    }
+
+    // Fetch 25 messages before and 25 after the target (inclusive)
+    const [beforeRows, afterRows] = await Promise.all([
+      db
+        .select({
+          id: messages.id, channelId: messages.channelId, content: messages.content,
+          attachments: messages.attachments, edited: messages.edited, editedAt: messages.editedAt,
+          createdAt: messages.createdAt, expiresAt: messages.expiresAt, replyToId: messages.replyToId,
+          embeds: messages.embeds, isEncrypted: messages.isEncrypted, encryptedContent: messages.encryptedContent,
+          keyVersion: messages.keyVersion, authorId: messages.authorId,
+          authorUsername: users.username, authorDisplayName: users.displayName,
+          authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle, authorIsBot: users.isBot,
+        })
+        .from(messages)
+        .leftJoin(users, eq(users.id, messages.authorId))
+        .where(
+          and(
+            eq(messages.channelId, channelId),
+            lt(messages.createdAt, targetMsg.createdAt),
+            or(isNull(messages.threadId), sql`${messages.id} IN (SELECT origin_message_id FROM threads WHERE origin_message_id IS NOT NULL)`),
+            or(isNull(messages.expiresAt), gt(messages.expiresAt, new Date())),
+          ),
+        )
+        .orderBy(desc(messages.createdAt))
+        .limit(25),
+      db
+        .select({
+          id: messages.id, channelId: messages.channelId, content: messages.content,
+          attachments: messages.attachments, edited: messages.edited, editedAt: messages.editedAt,
+          createdAt: messages.createdAt, expiresAt: messages.expiresAt, replyToId: messages.replyToId,
+          embeds: messages.embeds, isEncrypted: messages.isEncrypted, encryptedContent: messages.encryptedContent,
+          keyVersion: messages.keyVersion, authorId: messages.authorId,
+          authorUsername: users.username, authorDisplayName: users.displayName,
+          authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle, authorIsBot: users.isBot,
+        })
+        .from(messages)
+        .leftJoin(users, eq(users.id, messages.authorId))
+        .where(
+          and(
+            eq(messages.channelId, channelId),
+            gt(messages.createdAt, targetMsg.createdAt),
+            or(isNull(messages.threadId), sql`${messages.id} IN (SELECT origin_message_id FROM threads WHERE origin_message_id IS NOT NULL)`),
+            or(isNull(messages.expiresAt), gt(messages.expiresAt, new Date())),
+          ),
+        )
+        .orderBy(messages.createdAt)
+        .limit(25),
+    ]);
+
+    // Also fetch the target message itself
+    const [targetRow] = await db
+      .select({
+        id: messages.id, channelId: messages.channelId, content: messages.content,
+        attachments: messages.attachments, edited: messages.edited, editedAt: messages.editedAt,
+        createdAt: messages.createdAt, expiresAt: messages.expiresAt, replyToId: messages.replyToId,
+        embeds: messages.embeds, isEncrypted: messages.isEncrypted, encryptedContent: messages.encryptedContent,
+        keyVersion: messages.keyVersion, authorId: messages.authorId,
+        authorUsername: users.username, authorDisplayName: users.displayName,
+        authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle, authorIsBot: users.isBot,
+      })
+      .from(messages)
+      .leftJoin(users, eq(users.id, messages.authorId))
+      .where(eq(messages.id, targetMsg.id))
+      .limit(1);
+
+    // Combine: before (reversed to chronological) + target + after
+    const allRows = [...beforeRows.reverse(), ...(targetRow ? [targetRow] : []), ...afterRows];
+
+    // Fetch reactions for all returned messages
+    const messageIds = allRows.map((r) => r.id);
+    let reactionRows: { messageId: string; userId: string; emoji: string }[] = [];
+    if (messageIds.length > 0) {
+      reactionRows = await db
+        .select({ messageId: messageReactions.messageId, userId: messageReactions.userId, emoji: messageReactions.emoji })
+        .from(messageReactions)
+        .where(inArray(messageReactions.messageId, messageIds));
+    }
+    const reactionsByMessage = new Map<string, Map<string, { emoji: string; count: number; userIds: string[] }>>();
+    for (const r of reactionRows) {
+      if (!reactionsByMessage.has(r.messageId)) reactionsByMessage.set(r.messageId, new Map());
+      const emojiMap = reactionsByMessage.get(r.messageId)!;
+      if (!emojiMap.has(r.emoji)) emojiMap.set(r.emoji, { emoji: r.emoji, count: 0, userIds: [] });
+      const entry = emojiMap.get(r.emoji)!;
+      entry.count++;
+      entry.userIds.push(r.userId);
+    }
+
+    const formatted = allRows.map((row) => {
+      const emojiMap = reactionsByMessage.get(row.id);
+      const reactions = emojiMap
+        ? Array.from(emojiMap.values()).map((e) => ({
+            emoji: e.emoji,
+            count: e.count,
+            me: e.userIds.includes(req.userId!),
+          }))
+        : [];
+
+      return {
+        id: row.id,
+        channelId: row.channelId,
+        authorId: row.authorId,
+        content: row.content,
+        attachments: row.attachments,
+        edited: row.edited,
+        editedAt: row.editedAt,
+        createdAt: row.createdAt,
+        embeds: row.embeds ?? [],
+        expiresAt: row.expiresAt ?? null,
+        replyToId: row.replyToId ?? null,
+        isEncrypted: row.isEncrypted ?? false,
+        encryptedContent: row.encryptedContent ?? null,
+        keyVersion: row.keyVersion ?? null,
+        reactions,
+        author: row.authorId
+          ? {
+              id: row.authorId,
+              username: row.authorUsername,
+              displayName: row.authorDisplayName,
+              avatarHash: row.authorAvatarHash,
+              nameplateStyle: row.authorNameplateStyle ?? 'none',
+              isBot: row.authorIsBot ?? false,
+            }
+          : null,
+      };
+    });
+
+    res.status(200).json({
+      targetMessageId: targetMsg.id,
+      messages: formatted,
+    });
+  } catch (err) {
+    handleAppError(res, err, 'messages');
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /
 // ---------------------------------------------------------------------------
 

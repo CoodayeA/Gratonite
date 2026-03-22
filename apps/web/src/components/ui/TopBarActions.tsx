@@ -88,14 +88,15 @@ export const TopBarActions = () => {
                 }
 
                 for (const m of messages.results.slice(0, 10)) {
+                    const msgParam = `?messageId=${m.id}`;
                     results.push({
                         id: `msg-${m.id}`,
                         type: 'message',
                         title: m.highlight || m.content.slice(0, 80),
                         subtitle: m.guildId ? `#channel` : 'DM',
                         route: m.guildId
-                            ? buildGuildChannelRoute(m.guildId, m.channelId)
-                            : buildDmRoute(m.channelId),
+                            ? buildGuildChannelRoute(m.guildId, m.channelId) + msgParam
+                            : buildDmRoute(m.channelId) + msgParam,
                     });
                 }
             } catch {
@@ -129,7 +130,7 @@ export const TopBarActions = () => {
     }, []);
 
     // Notifications from API (panel list)
-    const [notifications, setNotifications] = useState<{ id: string; text: string; time: string; unread: boolean }[]>([]);
+    const [notifications, setNotifications] = useState<{ id: string; text: string; time: string; unread: boolean; type: string; channelId: string | null; guildId: string | null; messageId: string | null }[]>([]);
     useEffect(() => {
         if (!isOpen) return;
         api.notifications.list(10)
@@ -139,6 +140,10 @@ export const TopBarActions = () => {
                     text: `${n.senderName || 'System'}: ${n.content}`,
                     time: formatRelative(n.createdAt),
                     unread: !n.read,
+                    type: n.type,
+                    channelId: n.channelId,
+                    guildId: n.guildId,
+                    messageId: n.messageId,
                 }));
                 setNotifications(mapped);
                 // Sync badge count with actual server data
@@ -312,6 +317,22 @@ export const TopBarActions = () => {
                                 key={n.id}
                                 onMouseEnter={() => setHoveredNotifId(Number(n.id) || 0)}
                                 onMouseLeave={() => setHoveredNotifId(null)}
+                                onClick={() => {
+                                    // Mark as read
+                                    api.notifications.markRead(n.id).catch(() => {});
+                                    setNotifications(prev => prev.map(notif => notif.id === n.id ? { ...notif, unread: false } : notif));
+                                    setUnreadCount(prev => Math.max(0, prev - (n.unread ? 1 : 0)));
+                                    // Navigate to the message
+                                    const msgParam = n.messageId ? `?messageId=${n.messageId}` : '';
+                                    if (n.type === 'friend_request') {
+                                        navigate('/friends');
+                                    } else if (n.guildId && n.channelId) {
+                                        navigate(buildGuildChannelRoute(n.guildId, n.channelId) + msgParam);
+                                    } else if (n.channelId) {
+                                        navigate(buildDmRoute(n.channelId) + msgParam);
+                                    }
+                                    setIsOpen(false);
+                                }}
                                 style={{
                                     padding: '12px',
                                     borderRadius: 'var(--radius-sm)',
