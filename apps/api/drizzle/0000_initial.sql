@@ -2442,8 +2442,8 @@ CREATE TABLE "reading_list_votes" (
 --> statement-breakpoint
 CREATE TABLE "referrals" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"referrer_id" text NOT NULL,
-	"referred_id" text,
+	"referrer_id" uuid NOT NULL,
+	"referred_id" uuid,
 	"code" text NOT NULL,
 	"redeemed_at" timestamp with time zone,
 	"reward_granted" boolean DEFAULT false NOT NULL,
