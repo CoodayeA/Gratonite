@@ -237,7 +237,8 @@ async fn ensure_network(d: &Docker) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn ensure_volumes(d: &Docker) -> Result<(), Box<dyn std::error::Error>> {
-    for vol in &["gratonite-postgres", "gratonite-redis", "gratonite-keys", "gratonite-uploads", "gratonite-caddy-data", "gratonite-caddy-config"] {
+    // Match docker-compose volume names (project name "gratonite" + underscore prefix)
+    for vol in &["gratonite_postgres-data", "gratonite_redis-data", "gratonite_instance-keys", "gratonite_uploads", "gratonite_caddy-data", "gratonite_caddy-config"] {
         let _ = d.create_volume(CreateVolumeOptions {
             name: *vol,
             ..Default::default()
@@ -293,7 +294,7 @@ async fn start_postgres(d: &Docker, cfg: &InstanceConfig) -> Result<(), Box<dyn 
         host_config: Some(HostConfig {
             mounts: Some(vec![Mount {
                 target: Some("/var/lib/postgresql/data".into()),
-                source: Some("gratonite-postgres".into()),
+                source: Some("gratonite_postgres-data".into()),
                 typ: Some(MountTypeEnum::VOLUME),
                 ..Default::default()
             }]),
@@ -312,7 +313,7 @@ async fn start_redis(d: &Docker) -> Result<(), Box<dyn std::error::Error>> {
         host_config: Some(HostConfig {
             mounts: Some(vec![Mount {
                 target: Some("/data".into()),
-                source: Some("gratonite-redis".into()),
+                source: Some("gratonite_redis-data".into()),
                 typ: Some(MountTypeEnum::VOLUME),
                 ..Default::default()
             }]),
@@ -351,7 +352,7 @@ async fn run_setup(d: &Docker, cfg: &InstanceConfig) -> Result<(), Box<dyn std::
             host_config: Some(HostConfig {
                 mounts: Some(vec![Mount {
                     target: Some("/app/keys".into()),
-                    source: Some("gratonite-keys".into()),
+                    source: Some("gratonite_instance-keys".into()),
                     typ: Some(MountTypeEnum::VOLUME),
                     ..Default::default()
                 }]),
@@ -412,13 +413,13 @@ async fn start_api(d: &Docker, cfg: &InstanceConfig) -> Result<(), Box<dyn std::
             mounts: Some(vec![
                 Mount {
                     target: Some("/app/keys".into()),
-                    source: Some("gratonite-keys".into()),
+                    source: Some("gratonite_instance-keys".into()),
                     typ: Some(MountTypeEnum::VOLUME),
                     ..Default::default()
                 },
                 Mount {
                     target: Some("/app/uploads".into()),
-                    source: Some("gratonite-uploads".into()),
+                    source: Some("gratonite_uploads".into()),
                     typ: Some(MountTypeEnum::VOLUME),
                     ..Default::default()
                 },
@@ -508,13 +509,13 @@ async fn start_caddy(d: &Docker, _cfg: &InstanceConfig) -> Result<(), Box<dyn st
             mounts: Some(vec![
                 Mount {
                     target: Some("/data".into()),
-                    source: Some("gratonite-caddy-data".into()),
+                    source: Some("gratonite_caddy-data".into()),
                     typ: Some(MountTypeEnum::VOLUME),
                     ..Default::default()
                 },
                 Mount {
                     target: Some("/config".into()),
-                    source: Some("gratonite-caddy-config".into()),
+                    source: Some("gratonite_caddy-config".into()),
                     typ: Some(MountTypeEnum::VOLUME),
                     ..Default::default()
                 },

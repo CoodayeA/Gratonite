@@ -14,16 +14,16 @@ jobs:
         include:
           - platform: macos-latest
             target: aarch64-apple-darwin
-            label: macOS-arm64
+            label: macOS_Apple_Silicon
           - platform: macos-latest
             target: x86_64-apple-darwin
-            label: macOS-x64
+            label: macOS_Intel
           - platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-            label: Linux-x64
+            label: Linux_x64
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
-            label: Windows-x64
+            label: Windows_x64
 
     runs-on: ${{ matrix.platform }}
     permissions:
@@ -73,7 +73,7 @@ jobs:
           projectPath: apps/server
           tagName: server-v__VERSION__
           releaseName: "Gratonite Server v__VERSION__"
-          releaseBody: "Download Gratonite Server for your platform below."
+          releaseBody: "Download Gratonite Server for your platform below.\n\n**macOS:** Apple Silicon (.dmg) for M1/M2/M3/M4 Macs, Intel (.dmg) for older Macs\n**Windows:** x64 Setup (.exe)\n**Linux:** x64 AppImage or .deb\n\nRequires [Docker Desktop](https://docker.com/products/docker-desktop) (free)."
           releaseDraft: true
           prerelease: false
           args: --target ${{ matrix.target }}
