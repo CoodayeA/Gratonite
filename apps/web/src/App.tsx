@@ -65,6 +65,7 @@ const Gacha = lazy(() => import('./pages/app/Gacha'));
 const StoreModal = lazy(() => import('./pages/app/StoreModal'));
 const DailyChallenges = lazy(() => import('./pages/app/DailyChallenges'));
 const MiniMode = lazy(() => import('./components/desktop/MiniMode'));
+const EmbedDocumentPage = lazy(() => import('./pages/EmbedDocument'));
 const VanityProfile = lazy(() => import('./pages/app/VanityProfile'));
 const UnifiedInbox = lazy(() => import('./pages/app/UnifiedInbox'));
 const ActivityFeed = lazy(() => import('./pages/app/ActivityFeed'));
@@ -2126,7 +2127,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                         const timer = prefetchTimers.current.get(ch.id);
                                         if (timer) { clearTimeout(timer); prefetchTimers.current.delete(ch.id); }
                                     }}>
-                                    <div className={`channel-item ${isActive ? 'active' : ''}`} tabIndex={0} role="option" aria-selected={isActive} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: isMuted ? 0.5 : undefined, cursor: canManageChannels ? 'grab' : undefined, position: 'relative' }}>
+                                    <div className={`channel-item ${isActive ? 'active' : ''}`} tabIndex={0} role="option" aria-selected={isActive} data-channel-type={ch.type === 'GUILD_DOCUMENT' ? 'document' : undefined} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: isMuted ? 0.5 : undefined, cursor: canManageChannels ? 'grab' : undefined, position: 'relative' }}>
                                         {hasUnread && mentions === 0 && (
                                             <span style={{
                                                 position: 'absolute', left: '-4px', top: '50%', transform: 'translateY(-50%)',
@@ -4243,6 +4244,15 @@ const appRouter = createBrowserRouter(
                 <Route path="verify" element={<Verify />} />
                 <Route path="reset-password" element={<ResetPassword />} />
             </Route>
+
+            {/* Embeddable document editor (for mobile WebView) */}
+            <Route path="embed/document/:channelId" element={
+                <RequireAuth>
+                    <Suspense fallback={<LazyFallback />}>
+                        <EmbedDocumentPage />
+                    </Suspense>
+                </RequireAuth>
+            } />
 
             {/* Public Invite Route */}
             <Route path="invite/:code" element={<InviteAccept />} />
