@@ -49,9 +49,7 @@ export function MobileSection() {
             </div>
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-display text-xl font-bold">Android</h3>
-              <span className="text-xs font-bold text-foreground/40 uppercase tracking-wider">
-                Coming Soon
-              </span>
+              <Badge color="charcoal" className="text-[10px] px-2 py-0">COMING SOON</Badge>
             </div>
             <p className="text-foreground/50 text-sm mb-5 flex-1">
               In the meantime, use the web app at{" "}
@@ -63,14 +61,20 @@ export function MobileSection() {
               </a>{" "}
               on any browser.
             </p>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled
-              className="w-full"
-            >
-              Notify Me
-            </Button>
+            <div className="relative group w-full">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                aria-disabled="true"
+                className="w-full"
+              >
+                Notify Me
+              </Button>
+              <span className="absolute -top-9 left-1/2 -translate-x-1/2 bg-charcoal text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                Android is not available yet
+              </span>
+            </div>
             <p className="text-foreground/40 text-xs mt-3 leading-snug">
               Android is in active development. We will announce availability on
               our blog and Discord.

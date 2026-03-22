@@ -34,7 +34,7 @@ export function ServerSection() {
           Create your portal
         </h2>
         <p className="text-foreground/60 text-base mb-10 max-w-lg">
-          A portal is your own community space &mdash; like a Discord server,
+          A portal is your own community space, like a Discord server,
           but entirely yours. Use ours for free, or host it yourself.
         </p>
       </ScrollReveal>
@@ -59,7 +59,7 @@ export function ServerSection() {
           </p>
           <p className="text-foreground/70 text-sm leading-relaxed mb-6 max-w-xl">
             Create a portal and invite your friends in under a minute. We handle
-            the servers, updates, and backups &mdash; you just chat.
+            the servers, updates, and backups. You just chat.
           </p>
 
           {/* App pills */}
@@ -97,8 +97,8 @@ export function ServerSection() {
       {/* ── Bridging text ───────────────────────────────────────── */}
       <ScrollReveal>
         <p className="text-center text-foreground/50 text-sm mb-10 max-w-md mx-auto">
-          Using Gratonite is the easiest way to get started. Your data is stored
-          securely on our servers. If you want full control, self-host instead.
+          When you use Gratonite above, your portals live on our servers. Below,
+          you can run your own copy of Gratonite so your portals live on hardware you control.
         </p>
       </ScrollReveal>
 
@@ -183,7 +183,7 @@ export function ServerSection() {
               <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-500/10 flex items-center justify-center">
                 <ServerIcon size={24} className="text-green-500" />
               </div>
-              <Badge color="purple" className="text-xs !px-2 !py-0.5">
+              <Badge color="gold" className="text-xs !px-2 !py-0.5">
                 Best for Communities
               </Badge>
             </div>
@@ -209,7 +209,7 @@ export function ServerSection() {
               <div className="flex items-start gap-2.5 text-sm text-foreground/60">
                 <CheckIcon size={16} className="text-green-500 shrink-0 mt-0.5" />
                 <span>
-                  Scales to hundreds of users with a modest VPS.
+                  Handles any community size, from 5 to 5,000 members.
                 </span>
               </div>
             </div>
