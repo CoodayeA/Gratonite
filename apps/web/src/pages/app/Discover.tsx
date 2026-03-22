@@ -474,6 +474,7 @@ const Discover = () => {
                     featured: Boolean(g.featured),
                     isPinned: Boolean(g.isPinned),
                     isPublic: g.isPublic !== false,
+                    badge: (g as any).badge ?? null,
                     mutualFriends: [],
                     averageRating: g.averageRating ?? 0,
                     totalRatings: g.totalRatings ?? 0,
