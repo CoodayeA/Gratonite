@@ -1,4 +1,4 @@
-export const VERSION = "1.0.4";
+export const VERSION = "1.0.7";
 export const BASE_URL = "https://gratonite.chat/downloads";
 
 export type Platform = "macos" | "windows" | "linux";
