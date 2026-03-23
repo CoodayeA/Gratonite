@@ -8,16 +8,16 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import App from './App.tsx'
 import './index.css'
-
-// GSAP global setup
-gsap.registerPlugin(ScrollTrigger);
-gsap.defaults({ ease: 'power3.out', duration: 0.6 });
 import './themes/overrides/theme-scrollbar.css'
 import './themes/overrides/theme-selection.css'
 import './themes/overrides/glass-optimization.css'
 import { ThemeProvider } from './components/ui/ThemeProvider'
 import { queryClient } from './lib/queryClient'
 import { init as initErrorReporter } from './lib/errorReporter'
+
+// GSAP global setup
+gsap.registerPlugin(ScrollTrigger);
+gsap.defaults({ ease: 'power3.out', duration: 0.6 });
 
 // Initialize global error reporting (window.onerror + unhandledrejection)
 initErrorReporter();

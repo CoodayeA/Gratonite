@@ -329,12 +329,12 @@ export const MemoizedMessageItem = memo(({
         el.style.position = 'relative';
         el.appendChild(bar);
 
-        gsap.to(bar, { scaleY: 1, duration: 0.3, ease: 'power2.out' });
-        gsap.to(el, { backgroundColor: 'var(--accent-primary-alpha)', duration: 0.3, ease: 'power2.out' });
+        const t1 = gsap.to(bar, { scaleY: 1, duration: 0.3, ease: 'power2.out' });
+        const t2 = gsap.to(el, { backgroundColor: 'var(--accent-primary-alpha)', duration: 0.3, ease: 'power2.out' });
+        const t3 = gsap.to(bar, { scaleY: 0, duration: 0.4, ease: 'power2.in', delay: 1.5 });
+        const t4 = gsap.to(el, { backgroundColor: 'transparent', duration: 0.4, ease: 'power2.in', delay: 1.5, onComplete: () => { bar.remove(); } });
 
-        // Fade out after 1.5s
-        gsap.to(bar, { scaleY: 0, duration: 0.4, ease: 'power2.in', delay: 1.5 });
-        gsap.to(el, { backgroundColor: 'transparent', duration: 0.4, ease: 'power2.in', delay: 1.5, onComplete: () => { bar.remove(); } });
+        return () => { t1.kill(); t2.kill(); t3.kill(); t4.kill(); bar.remove(); };
     }, [isHighlighted]);
 
     return (

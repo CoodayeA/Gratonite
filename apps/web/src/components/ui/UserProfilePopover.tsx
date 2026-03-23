@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { MessageSquare, UserPlus, MoreHorizontal, Gamepad2, Headphones, Eye, Star, Clock, Music, Cake, Link2, Shield, Code, Tv, Play, VolumeX, ShieldOff, Flag, Copy } from 'lucide-react';
 import { api, API_BASE } from '../../lib/api';

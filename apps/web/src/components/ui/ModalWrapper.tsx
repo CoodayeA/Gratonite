@@ -304,8 +304,8 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
                     pointerEvents: 'auto',
                 }}
             />
-            <div style={{ pointerEvents: 'auto', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                <div ref={contentRef} style={{ maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', width: '100%', height: '100%' }}>
+            <div onClick={onClose} style={{ pointerEvents: 'auto', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                <div ref={contentRef} onClick={e => e.stopPropagation()} style={{ maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', width: '100%', height: '100%' }}>
                     {children}
                 </div>
             </div>
