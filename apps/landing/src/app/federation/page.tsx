@@ -108,7 +108,7 @@ export default function FederationPage() {
                   </tr>
                   <tr className="border-b border-gray-800/50">
                     <td className="py-3 px-4 font-medium">Who owns the data</td>
-                    <td className="py-3 px-4">Stored on our servers</td>
+                    <td className="py-3 px-4">Stored on your device, not our servers</td>
                     <td className="py-3 px-4">You own everything</td>
                   </tr>
                   <tr className="border-b border-gray-800/50">
