@@ -40,6 +40,7 @@ export function safeProfile(user: typeof users.$inferSelect) {
     onboardingCompleted: user.onboardingCompleted,
     interests: parsedInterests,
     status: user.status,
+    federationAddress: user.federationAddress ?? null,
     profile: {
       displayName: user.displayName,
       avatarHash: user.avatarHash ?? null,
@@ -77,6 +78,7 @@ export function publicProfile(user: typeof users.$inferSelect) {
     customStatus: user.customStatus,
     badges: user.badges ?? [],
     createdAt: user.createdAt,
+    federationAddress: user.federationAddress ?? null,
   };
 }
 

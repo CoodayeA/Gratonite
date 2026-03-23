@@ -5,8 +5,7 @@ import { initRelay, isRelayEnabled } from '../relay/index';
 import { db } from '../db';
 import { guilds } from '../db/schema/guilds';
 import { federatedInstances } from '../db/schema/federation-instances';
-import { users } from '../db/schema/users';
-import { eq, isNull, and, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 /** Whether federation is enabled on this instance. */
 export function isFederationEnabled(): boolean {
