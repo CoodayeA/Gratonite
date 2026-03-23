@@ -294,7 +294,18 @@ export function setWalletRequestPromise(p: typeof walletRequestPromise) {
 }
 
 if (typeof window !== 'undefined') {
-  accessToken = window.localStorage.getItem('gratonite_access_token');
+  // Pick up federated login token from URL (from OAuth callback redirect)
+  const urlParams = new URLSearchParams(window.location.search);
+  const federatedToken = urlParams.get('federated_token');
+  if (federatedToken) {
+    window.localStorage.setItem('gratonite_access_token', federatedToken);
+    // Clean the URL to remove the token
+    const cleanUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, '', cleanUrl);
+    accessToken = federatedToken;
+  } else {
+    accessToken = window.localStorage.getItem('gratonite_access_token');
+  }
   if (isAuthGuardEnabled()) {
     setAuthRuntimeState(accessToken ? 'active' : 'expired');
   }

@@ -1,9 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Eye, EyeOff, Mail, Lock, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { api, setAccessToken } from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
+import gsap from 'gsap';
 
 const Login = () => {
     const [showPw, setShowPw] = useState(false);
@@ -17,6 +18,15 @@ const Login = () => {
     const { addToast } = useToast();
     const navigate = useNavigate();
     const { refetchUser } = useUser();
+    const cardRef = useRef<HTMLDivElement>(null);
+
+    // GSAP entrance animation
+    useEffect(() => {
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReduced || !cardRef.current) return;
+        const els = cardRef.current.querySelectorAll('[data-auth-anim]');
+        gsap.from(els, { y: -16, opacity: 0, stagger: 0.08, duration: 0.5, ease: 'power3.out' });
+    }, []);
 
     const handleLogin = async (overrideMfaCode?: string) => {
         if (!login.trim() || !password) {
@@ -42,11 +52,14 @@ const Login = () => {
                 setMfaCode('');
             } else if (errCode === 'INVALID_CREDENTIALS') {
                 addToast({ title: 'Invalid email/username or password.', variant: 'error' });
+                if (cardRef.current) gsap.to(cardRef.current, { x: [-8, 8, -6, 6, -3, 3, 0], duration: 0.5, ease: 'power2.out' });
             } else if (errCode === 'INVALID_MFA_CODE') {
                 addToast({ title: 'Invalid authenticator code. Please try again.', variant: 'error' });
                 setMfaCode('');
+                if (cardRef.current) gsap.to(cardRef.current, { x: [-8, 8, -6, 6, -3, 3, 0], duration: 0.5, ease: 'power2.out' });
             } else {
                 addToast({ title: 'Login failed. Please try again.', variant: 'error' });
+                if (cardRef.current) gsap.to(cardRef.current, { x: [-8, 8, -6, 6, -3, 3, 0], duration: 0.5, ease: 'power2.out' });
             }
         } finally {
             setLoading(false);
@@ -69,29 +82,29 @@ const Login = () => {
     };
 
     return (
-        <div className="auth-card">
+        <div className="auth-card" ref={cardRef}>
             {/* Mascot with glow */}
-            <div className="auth-mascot auth-anim-1">
+            <div className="auth-mascot" data-auth-anim>
                 <div className="auth-mascot-glow" />
                 <img src={`${import.meta.env.BASE_URL}splash-icon.png`} alt="Gratonite" />
             </div>
 
             {/* Heading */}
-            <h1 className="auth-heading auth-anim-2">
+            <h1 className="auth-heading" data-auth-anim>
                 {'WELCOME\n'}
                 <span className="auth-heading-accent">BACK.</span>
             </h1>
-            <p className="auth-subtext auth-anim-2">Sign in to continue to Gratonite</p>
+            <p className="auth-subtext" data-auth-anim>Sign in to continue to Gratonite</p>
 
             {/* Pills */}
-            <div className="auth-pill-row auth-anim-3">
+            <div className="auth-pill-row" data-auth-anim>
                 <span className="auth-pill">Friend-First</span>
                 <span className="auth-pill auth-pill--highlight">Player-Made</span>
                 <span className="auth-pill">Open Source</span>
             </div>
 
             {/* Form */}
-            <form onSubmit={e => { e.preventDefault(); handleLogin(); }} className="auth-form auth-anim-4">
+            <form onSubmit={e => { e.preventDefault(); handleLogin(); }} className="auth-form" data-auth-anim>
                 <div className="auth-input-group">
                     <Mail size={18} className="auth-input-icon" />
                     <input
@@ -214,8 +227,11 @@ const Login = () => {
                 </button>
             </form>
 
+            {/* Federated Login — "Login with Gratonite" */}
+            <FederatedLoginButton />
+
             {/* Rainbow strip */}
-            <div className="auth-rainbow-strip auth-anim-5">
+            <div className="auth-rainbow-strip" data-auth-anim>
                 <span style={{ background: '#6c63ff' }} />
                 <span style={{ background: '#f59e0b' }} />
                 <span style={{ background: '#ef4444' }} />
@@ -225,7 +241,7 @@ const Login = () => {
             </div>
 
             {/* Stats row */}
-            <div className="auth-stats-row auth-anim-6">
+            <div className="auth-stats-row" data-auth-anim>
                 <div>
                     <div className="auth-stat-value">Zero Cost</div>
                     <div className="auth-stat-label">Always</div>
@@ -241,12 +257,54 @@ const Login = () => {
             </div>
 
             {/* Sign up link */}
-            <p className="auth-anim-7" style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+            <p data-auth-anim style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
                 Don't have an account?{' '}
                 <Link to="/register" style={{ color: 'var(--accent-primary)' }}>Sign up</Link>
             </p>
         </div>
     );
 };
+
+/**
+ * FederatedLoginButton — shows "Login with Gratonite" if federation SSO is configured.
+ * Only renders on self-hosted instances, not on gratonite.chat itself.
+ */
+function FederatedLoginButton() {
+    const [config, setConfig] = useState<{ enabled: boolean; hubName: string } | null>(null);
+
+    useEffect(() => {
+        fetch(`${(import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/api\/v1$/, '')}/api/v1/auth/federated/config`)
+            .then(r => r.json())
+            .then(data => setConfig(data))
+            .catch(() => setConfig(null));
+    }, []);
+
+    if (!config?.enabled) return null;
+
+    const API_BASE = (import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/api\/v1$/, '');
+
+    return (
+        <div data-auth-anim style={{ width: '100%', marginTop: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '8px 0 12px' }}>
+                <div style={{ flex: 1, height: '1px', background: 'var(--stroke)' }} />
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>or</span>
+                <div style={{ flex: 1, height: '1px', background: 'var(--stroke)' }} />
+            </div>
+            <a
+                href={`${API_BASE}/api/v1/auth/federated/login`}
+                style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                    width: '100%', padding: '12px', borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    color: '#fff', fontWeight: 600, fontSize: '14px',
+                    textDecoration: 'none', border: 'none', cursor: 'pointer',
+                    transition: 'opacity 0.15s',
+                }}
+            >
+                Login with {config.hubName}
+            </a>
+        </div>
+    );
+}
 
 export default Login;
