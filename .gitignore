@@ -55,3 +55,13 @@ archive/
 .superpowers/
 .claude/
 docs/superpowers/
+
+# AI coding agent skill files
+.agent/
+.agents/
+.factory/
+.kiro/
+.qoder/
+.windsurf/
+skills/
+skills-lock.json
