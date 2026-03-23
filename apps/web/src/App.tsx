@@ -4407,7 +4407,7 @@ function App() {
             {(window as any).gratoniteDesktop?.isDesktop && <UpdateBanner />}
             <SeasonalOverlay />
             <LiveAnnouncer />
-            {/* SVG filters for color blind simulation modes */}
+            {/* SVG filters for color-blind accessibility preview modes */}
             <svg style={{ position: 'absolute', width: 0, height: 0 }} aria-hidden="true">
                 <defs>
                     <filter id="deuteranopia-filter">
