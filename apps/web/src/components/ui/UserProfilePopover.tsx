@@ -55,6 +55,7 @@ type ProfileData = {
     profileSong?: { url: string; title: string; artist: string; platform: string } | null;
     birthday?: { month: number; day: number } | null;
     messageCount?: number;
+    federationAddress?: string | null;
 };
 
 type ConnectionData = {
@@ -340,7 +341,16 @@ const UserProfilePopover = ({
                             size="sm"
                         />
                     </div>
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{handle}</p>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '2px' }}>{handle}</p>
+                    {profile?.federationAddress && (
+                        <p
+                            style={{ fontSize: '11px', color: 'var(--text-muted)', opacity: 0.6, marginBottom: '4px', cursor: 'pointer' }}
+                            title="Click to copy federation address"
+                            onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(profile.federationAddress!); }}
+                        >
+                            {profile.federationAddress}
+                        </p>
+                    )}
 
                     {badges.length > 0 && (
                         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '4px' }}>
