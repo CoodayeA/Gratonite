@@ -15,6 +15,7 @@ const ImageEditor = lazy(() => import('./ImageEditor'));
 const VideoTrimmer = lazy(() => import('./VideoTrimmer'));
 
 import type { Message } from './chatTypes';
+import { getAccessToken } from '../../lib/api';
 
 // Stable waveform bar heights — deterministic so they don't jump on re-render
 const WAVEFORM_HEIGHTS = [6, 14, 10, 18, 8, 16, 12, 20, 7, 15, 11, 17, 9, 13, 6];
@@ -352,7 +353,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                                 if (!channelId) return;
                                 fetch(`${apiBase}/channels/${channelId}/messages/scheduled/${sm.id}`, {
                                     method: 'DELETE',
-                                    headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
+                                    headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
                                 }).then(r => {
                                     if (r.ok) {
                                         setScheduledMessages(prev => prev.filter(s => s.id !== sm.id));

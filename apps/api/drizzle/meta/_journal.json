@@ -8,6 +8,13 @@
       "when": 1774119617017,
       "tag": "0000_initial",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1742851200000,
+      "tag": "0001_drop_stripe_tables",
+      "breakpoints": true
     }
   ]
 }

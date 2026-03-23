@@ -199,7 +199,7 @@ Or download the [Gratonite Server](https://github.com/CoodayeA/Gratonite/release
 | Encryption | AES-GCM-256, ECDH P-256, Ed25519, X25519 |
 | Federation | HTTP Signatures, E2E relay envelopes |
 | Search | PostgreSQL full-text |
-| Payments | Stripe |
+| Real-money payments | Not enabled (in-game currency only) |
 | Metrics | Prometheus |
 | Email | Nodemailer |
 | Landing | Next.js |

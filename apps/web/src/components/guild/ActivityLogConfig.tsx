@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ScrollText, Save } from 'lucide-react';
-import { API_BASE } from '../../lib/api';
+import { API_BASE, getAccessToken } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
 
 interface Channel {
@@ -20,7 +20,7 @@ const ALL_EVENTS = [
 ];
 
 const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}`,
+  Authorization: `Bearer ${getAccessToken() ?? ''}`,
   'Content-Type': 'application/json',
 });
 

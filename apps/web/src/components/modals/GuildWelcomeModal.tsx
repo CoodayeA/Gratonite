@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, BookOpen, Rocket, Hash, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE, api } from '../../lib/api';
+import { API_BASE, api, getAccessToken } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
 import { useToast } from '../ui/ToastManager';
 
@@ -93,7 +93,7 @@ const GuildWelcomeModal = ({
                 method: 'POST',
                 credentials: 'include',
                 headers: {
-                    Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}`,
+                    Authorization: `Bearer ${getAccessToken() ?? ''}`,
                 },
             });
         } catch {

@@ -13,9 +13,14 @@
 <!-- How did you verify this works? -->
 
 - [ ] Tested locally
-- [ ] No TypeScript errors (`npx tsc --noEmit`)
-- [ ] No regressions in existing features
+- [ ] `release-gates` CI is green (or N/A with reason)
+- [ ] No obvious regressions in touched areas
 
 ## Screenshots
 
 <!-- If this changes UI, add before/after screenshots. -->
+
+## Production / deploy (if this ships to prod)
+
+- [ ] **Reviewed** the diff for correctness, security, and migrations (if any)
+- [ ] After deploy: follow **server + public URL** verification (not just SSH health)

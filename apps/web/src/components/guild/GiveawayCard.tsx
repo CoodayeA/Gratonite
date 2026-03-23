@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Gift, Users, Clock, Trophy, Plus, Trash2 } from 'lucide-react';
-import { API_BASE } from '../../lib/api';
+import { API_BASE, getAccessToken } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
 
 interface GiveawayData {
@@ -26,7 +26,7 @@ interface Channel {
 }
 
 const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}`,
+  Authorization: `Bearer ${getAccessToken() ?? ''}`,
   'Content-Type': 'application/json',
 });
 

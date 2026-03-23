@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { API_BASE } from '../../lib/api';
+import { API_BASE, getAccessToken } from '../../lib/api';
 
 type EditHistoryEntry = {
   id: string;
@@ -64,7 +64,7 @@ export default function EditHistoryPopover({
         `${API_BASE}/channels/${channelId}/messages/${messageApiId}/history`,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}`,
+            Authorization: `Bearer ${getAccessToken() ?? ''}`,
           },
         },
       );

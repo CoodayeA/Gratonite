@@ -26,7 +26,7 @@ import { TopBarActions } from '../../components/ui/TopBarActions';
 import { BackgroundMedia } from '../../components/ui/BackgroundMedia';
 import UserProfilePopover from '../../components/ui/UserProfilePopover';
 import { playSound } from '../../utils/SoundManager';
-import { api, API_BASE } from '../../lib/api';
+import { api, API_BASE, getAccessToken } from '../../lib/api';
 import { markRead, setChannelHasUnread } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
 import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onMessageDeleteBulk, onReactionAdd, onReactionRemove, onChannelPinsUpdate, onSocketReconnect, onChannelBackgroundUpdated, onGroupKeyRotationNeeded, onThreadCreate, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type MessageDeleteBulkPayload, type ReactionPayload, type ChannelPinsUpdatePayload, type GroupKeyRotationNeededPayload } from '../../lib/socket';
@@ -813,7 +813,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 id: 'bookmark', label: 'Bookmark Message', icon: Star, onClick: () => {
                     fetch(`${API_BASE}/users/@me/bookmarks`, {
                         method: 'POST',
-                        headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}`, 'Content-Type': 'application/json' },
+                        headers: { Authorization: `Bearer ${getAccessToken() ?? ''}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ messageId: msg.apiId }),
                     }).then(r => {
                         if (r.ok) addToast({ title: 'Message bookmarked', variant: 'success' });
@@ -1206,7 +1206,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         mentionsMapRef.current.clear();
         // Load draft
         fetch(`${API_BASE}/channels/${channelId}/draft`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
+            headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
         }).then(r => r.ok ? r.json() : null).then(draft => {
             if (draft?.content) {
                 // Convert wire-format mentions (<@userId>) back to display tokens (@username)
@@ -1238,7 +1238,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         }).catch(() => {});
         // Load scheduled messages
         fetch(`${API_BASE}/channels/${channelId}/messages/scheduled`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
+            headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
         }).then(r => r.ok ? r.json() : []).then(data => {
             setScheduledMessages(Array.isArray(data) ? data : []);
         }).catch(() => {});
@@ -1360,7 +1360,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     useEffect(() => {
         if (!guildId) { setGuildStickers([]); return; }
         fetch(`${API_BASE}/guilds/${guildId}/stickers`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
+            headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
         }).then(r => r.ok ? r.json() : []).then(data => {
             if (Array.isArray(data)) {
                 setGuildStickers(data.map((s: any) => ({
@@ -2352,7 +2352,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 draftSaveTimerRef.current = setTimeout(() => {
                     fetch(`${API_BASE}/channels/${channelId}/draft`, {
                         method: 'PUT',
-                        headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}`, 'Content-Type': 'application/json' },
+                        headers: { Authorization: `Bearer ${getAccessToken() ?? ''}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ content: resolveWireContent(val) }),
                     }).catch(() => {});
                 }, 2000);
@@ -2360,7 +2360,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 setHasDraft(false);
                 fetch(`${API_BASE}/channels/${channelId}/draft`, {
                     method: 'DELETE',
-                    headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
+                    headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
                 }).catch(() => {});
             }
         }
@@ -3410,7 +3410,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     <button
                         onClick={() => {
                             const ids = [...selectedMessages];
-                            const token = localStorage.getItem('gratonite_access_token');
+                            const token = getAccessToken() ?? '';
                             Promise.all(ids.map(id =>
                                 fetch(`${API_BASE}/users/@me/bookmarks`, {
                                     method: 'POST',
@@ -3693,7 +3693,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                     if (!channelId) return;
                                     fetch(`${API_BASE}/channels/${channelId}/messages/scheduled/${sm.id}`, {
                                         method: 'DELETE',
-                                        headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
+                                        headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
                                     }).then(r => {
                                         if (r.ok) {
                                             setScheduledMessages(prev => prev.filter(s => s.id !== sm.id));
@@ -4241,7 +4241,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                 const processedContent = processEmojis(resolveWireContent(inputValue));
                                 fetch(`${API_BASE}/channels/${channelId}/messages`, {
                                     method: 'POST',
-                                    headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}`, 'Content-Type': 'application/json' },
+                                    headers: { Authorization: `Bearer ${getAccessToken() ?? ''}`, 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ content: processedContent || ' ', scheduledAt }),
                                 }).then(r => {
                                     if (r.ok) {

@@ -5,7 +5,7 @@ import { Tooltip } from '../ui/Tooltip';
 import { useToast } from '../ui/ToastManager';
 import { useUser } from '../../contexts/UserContext';
 import Avatar from '../ui/Avatar';
-import { api, API_BASE } from '../../lib/api';
+import { api, API_BASE, getAccessToken } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
 import { copyToClipboard } from '../../utils/clipboard';
 
@@ -830,7 +830,7 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                                         credentials: 'include',
                                         headers: {
                                             'Content-Type': 'application/json',
-                                            Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}`,
+                                            Authorization: `Bearer ${getAccessToken() ?? ''}`,
                                         },
                                         body: JSON.stringify({ toUserId: profile?.id, amount: giftAmount, message: giftMessage }),
                                     });

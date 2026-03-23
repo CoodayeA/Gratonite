@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { API_BASE } from '../../lib/api';
+import { API_BASE, getAccessToken } from '../../lib/api';
 import Avatar from '../ui/Avatar';
 import { ReactionSummaryPopover } from './ReactionSummaryPopover';
 
@@ -11,7 +11,7 @@ export const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApi
         if (!messageApiId || !channelId) return;
         timerRef.current = setTimeout(() => {
             fetch(`${API_BASE}/channels/${channelId}/messages/${messageApiId}/reactions/${encodeURIComponent(emoji)}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
+                headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
             }).then(r => r.ok ? r.json() : []).then(data => {
                 if (Array.isArray(data) && data.length > 0) {
                     setTooltip({ users: data.slice(0, 5), total: count });

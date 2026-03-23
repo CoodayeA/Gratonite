@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api, API_BASE } from '../../lib/api';
+import { api, API_BASE, getAccessToken } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
 
 type NotifLevel = 'all' | 'mentions' | 'nothing';
@@ -33,7 +33,7 @@ export function NotificationPrefsModal({ type, id, name, onClose }: Props) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('gratonite_access_token');
+    const token = getAccessToken();
     if (!token) return;
     fetch(`${API_BASE}/users/@me/settings/notif?key=${encodeURIComponent(settingKey)}`, {
       headers: { Authorization: `Bearer ${token}` }
@@ -49,7 +49,7 @@ export function NotificationPrefsModal({ type, id, name, onClose }: Props) {
 
   async function save() {
     setSaving(true);
-    const token = localStorage.getItem('gratonite_access_token');
+    const token = getAccessToken();
     const mutedUntil = muted
       ? (muteDuration ? new Date(Date.now() + muteDuration * 60000).toISOString() : '9999-12-31T00:00:00Z')
       : null;
