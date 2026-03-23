@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link2 } from 'lucide-react';
-import { API_BASE } from '../../../lib/api';
+import { API_BASE, getAccessToken } from '../../../lib/api';
 import type { SettingsTabProps } from './types';
 
 const PROVIDERS = ['github', 'twitch', 'steam', 'twitter', 'youtube', 'spotify'] as const;
@@ -28,7 +28,7 @@ const SettingsConnectionsTab = ({ addToast }: SettingsTabProps) => {
     const controller = new AbortController();
     fetch(`${API_BASE}/users/@me/connections`, {
       credentials: 'include',
-      headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}` },
+      headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
       signal: controller.signal,
     })
       .then(r => r.ok ? r.json() : [])
@@ -57,7 +57,7 @@ const SettingsConnectionsTab = ({ addToast }: SettingsTabProps) => {
       const profileUrl = explicitUrl || autoUrl;
       await fetch(`${API_BASE}/users/@me/connections`, {
         method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getAccessToken() ?? ''}` },
         body: JSON.stringify({ provider, providerUsername: username.trim(), profileUrl }),
       });
       if (profileUrl && !explicitUrl) {
@@ -76,7 +76,7 @@ const SettingsConnectionsTab = ({ addToast }: SettingsTabProps) => {
     try {
       await fetch(`${API_BASE}/users/@me/connections/${provider}`, {
         method: 'DELETE', credentials: 'include',
-        headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}` },
+        headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
       });
       setConnectionUsernames(prev => ({ ...prev, [provider]: '' }));
       setConnectionProfileUrls(prev => ({ ...prev, [provider]: '' }));

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Clock, Smile, Image as ImageIcon, Heart, ThumbsUp, Coffee, Flag, Lightbulb, Cat, Car, Settings, Loader, Star } from 'lucide-react';
 import { useToast } from '../ui/ToastManager';
 import { api, API_BASE } from '../../lib/api';
+import { getTenorApiKey } from '../../lib/tenor';
 import { useDebounce } from '../../hooks/useDebounce';
 
 // ─── Built-in Unicode Emoji Data ──────────────────────────────────────────────
@@ -163,9 +164,7 @@ function getFrequentEmojis(): string[] {
         .map(([emoji]) => emoji);
 }
 
-// ─── GIF Support (Tenor API v2) ──────────────────────────────────────────────
-
-const TENOR_API_KEY = import.meta.env.VITE_TENOR_API_KEY || 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ';
+// ─── GIF Support (Tenor API v2) — requires VITE_TENOR_API_KEY ───────────────
 
 interface TenorGif {
     id: string;
@@ -182,10 +181,16 @@ function useTenorGifs(searchQuery: string) {
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const fetchGifs = useCallback((query: string) => {
+        const key = getTenorApiKey();
+        if (!key) {
+            setGifs([]);
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         const endpoint = query.trim()
-            ? `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${TENOR_API_KEY}&client_key=gratonite&limit=20`
-            : `https://tenor.googleapis.com/v2/featured?key=${TENOR_API_KEY}&client_key=gratonite&limit=20`;
+            ? `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${encodeURIComponent(key)}&client_key=gratonite&limit=20`
+            : `https://tenor.googleapis.com/v2/featured?key=${encodeURIComponent(key)}&client_key=gratonite&limit=20`;
         fetch(endpoint)
             .then(r => r.json())
             .then(data => {
@@ -247,7 +252,8 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
     const [serverEmojis, setServerEmojis] = useState<ServerEmoji[]>([]);
     const [emojiCats, setEmojiCats] = useState<EmojiCategoryInfo[]>([]);
     const [gifSearch, setGifSearch] = useState('');
-    const { gifs, loading: gifsLoading } = useTenorGifs(activeTab === 'gif' ? gifSearch : '');
+    const tenorEnabled = !!getTenorApiKey();
+    const { gifs, loading: gifsLoading } = useTenorGifs(activeTab === 'gif' && tenorEnabled ? gifSearch : '');
     const contentRef = useRef<HTMLDivElement>(null);
     const searchRef = useRef<HTMLInputElement>(null);
     const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -387,9 +393,11 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                 <button onClick={() => setActiveTab('emoji')} style={{ background: activeTab === 'emoji' ? 'var(--bg-elevated)' : 'transparent', border: 'none', color: activeTab === 'emoji' ? 'var(--text-primary)' : 'var(--text-muted)', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s' }}>
                     <Smile size={15} /> Emoji
                 </button>
+                {tenorEnabled && (
                 <button onClick={() => setActiveTab('gif')} style={{ background: activeTab === 'gif' ? 'var(--bg-elevated)' : 'transparent', border: 'none', color: activeTab === 'gif' ? 'var(--text-primary)' : 'var(--text-muted)', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s' }}>
                     <ImageIcon size={15} /> GIFs
                 </button>
+                )}
                 {onStickerSelect && (
                     <button onClick={() => setActiveTab('sticker')} style={{ background: activeTab === 'sticker' ? 'var(--bg-elevated)' : 'transparent', border: 'none', color: activeTab === 'sticker' ? 'var(--text-primary)' : 'var(--text-muted)', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s' }}>
                         <span style={{ fontSize: '15px' }}>&#127915;</span> Stickers

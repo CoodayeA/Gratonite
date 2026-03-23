@@ -1,122 +1,41 @@
 # Enterprise Batch 6 Integration Notes
 
-## 1. Lines to add to `routes/index.ts`
+**Stripe:** Real-money Stripe integration was **removed**. Gratonite uses in-game currency and shop flows only; there is no `/payments` API or `stripe_*` tables (see migration `0001_drop_stripe_tables.sql`).
 
-```typescript
-import { paymentsRouter } from './payments';
-import { registry } from '../lib/metrics';
+The sections below are **historical** notes for metrics, sockets, and other batch-6 items. Ignore any references to `paymentsRouter`, `stripe` schema, or Stripe npm packages.
 
-// Mount payments router
-router.use('/payments', paymentsRouter);
+---
 
-// Metrics endpoint (protect with IP check)
-router.get('/metrics', async (req, res) => {
-  const allowedIPs = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
-  const clientIP = req.ip || req.socket.remoteAddress || '';
-  if (!allowedIPs.includes(clientIP)) {
-    res.status(403).json({ error: 'Forbidden' });
-    return;
-  }
-  res.set('Content-Type', registry.contentType);
-  res.send(await registry.metrics());
-});
-```
+## 1. `routes/index.ts` (historical)
 
-## 2. Lines to add to `schema/index.ts`
+Payments router is not mounted. Metrics and other endpoints may still apply as documented elsewhere in the codebase.
 
-```typescript
-export * from './stripe';
-```
+---
 
-## 3. Lines to add to `index.ts` (request duration middleware)
+## 2. `schema/index.ts` (historical)
 
-Add BEFORE router mount, after `app.use(express.json())`:
+`export * from './stripe'` has been removed.
 
-```typescript
-import { httpRequestDuration } from './lib/metrics';
-import { logger } from './lib/logger';
+---
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    httpRequestDuration.observe(
-      { method: req.method, route: req.path, status: String(res.statusCode) },
-      duration,
-    );
-  });
-  next();
-});
-```
+## 3. Request duration middleware
 
-## 4. Lines to add to `messages.ts` POST handler (metrics increment)
+See current [`index.ts`](../index.ts) for `httpRequestDuration` wiring.
 
-```typescript
-import { messagesSentTotal } from '../lib/metrics';
+---
 
-// At the end of successful message send:
-messagesSentTotal.inc();
-```
+## 4–8. Metrics, messages, socket, npm
 
-## 5. Lines to add to `socket/index.ts` (WebSocket connection tracking)
+Refer to the live codebase; prom-client and metrics are integrated in the API. Do not add `stripe` or `@stripe/*` packages.
 
-```typescript
-import { activeWebSocketConnections } from '../lib/metrics';
+---
 
-// In the connection handler, after `io.on('connection', async (socket) => {`:
-activeWebSocketConnections.inc();
+## 9. Env vars (Stripe — obsolete)
 
-// In the disconnect handler:
-activeWebSocketConnections.dec();
-```
+Do not set `STRIPE_*` or `VITE_STRIPE_*` for Gratonite core.
 
-## 6. DM_READ socket event
+---
 
-Add to the DM read state handler (wherever `dm_read_state` or `channel_read_state` is updated for DM channels):
+## 10. Migrations
 
-```typescript
-// After updating dm_read_state for userId in channelId:
-// Get the other participant and emit DM_READ to them
-const otherMember = await db.select().from(dmChannelMembers)
-  .where(and(eq(dmChannelMembers.channelId, channelId), not(eq(dmChannelMembers.userId, userId))))
-  .limit(1);
-if (otherMember.length > 0) {
-  getIO().to(`user:${otherMember[0].userId}`).emit('DM_READ', {
-    channelId,
-    userId,
-    lastReadMessageId, // the last message ID the user read
-  });
-}
-```
-
-## 7. npm install commands needed
-
-```bash
-# In apps/api:
-npm install stripe pino pino-pretty prom-client
-
-# In apps/web:
-npm install @stripe/stripe-js @stripe/react-stripe-js
-```
-
-## 8. api.ts methods to add
-
-```typescript
-payments: {
-  createIntent: (product: string) => fetchJSON('/payments/create-intent', { method: 'POST', body: JSON.stringify({ product }) }),
-  getHistory: () => fetchJSON('/payments/history'),
-},
-```
-
-## 9. Env vars needed
-
-- `STRIPE_SECRET_KEY` - Stripe secret API key
-- `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing secret
-- `VITE_STRIPE_PUBLISHABLE_KEY` - Stripe publishable key (for frontend)
-
-## 10. Migration to run on production
-
-```bash
-# Run migration 0062_stripe.sql on production server
-ssh ferdinand@<server> "cd gratonite-app && node dist/db/migrate.js"
-```
+Run `node dist/db/migrate.js` after deploy as usual; journal includes `0001_drop_stripe_tables` for existing databases that still had Stripe tables.

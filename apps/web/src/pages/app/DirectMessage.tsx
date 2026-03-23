@@ -17,7 +17,7 @@ import { LazyEmbed, type OgEmbed } from '../../components/chat/EmbedCard';
 import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
-import { api, ApiRequestError, API_BASE } from '../../lib/api';
+import { api, ApiRequestError, API_BASE, getAccessToken } from '../../lib/api';
 import { markRead as markReadStore } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
 import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onMessageRead, onCallAnswer, onCallReject, onPresenceUpdate, onThreadCreate, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type MessageReadPayload, type PresenceUpdatePayload } from '../../lib/socket';
@@ -123,7 +123,7 @@ const ReactionBadge = ({ emoji, count, me, messageApiId, channelId, onReaction }
         if (!messageApiId || !channelId) return;
         timerRef.current = setTimeout(() => {
             fetch(`${API_BASE}/channels/${channelId}/messages/${messageApiId}/reactions/${encodeURIComponent(emoji)}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
+                headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
             }).then(r => r.ok ? r.json() : []).then(data => {
                 if (Array.isArray(data) && data.length > 0) {
                     setTooltip({ users: data.slice(0, 5), total: count });
@@ -2554,7 +2554,7 @@ const DirectMessage = () => {
                                                 id: 'bookmark', label: 'Bookmark Message', icon: Star, onClick: () => {
                                                     fetch(`${API_BASE}/users/@me/bookmarks`, {
                                                         method: 'POST',
-                                                        headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}`, 'Content-Type': 'application/json' },
+                                                        headers: { Authorization: `Bearer ${getAccessToken() ?? ''}`, 'Content-Type': 'application/json' },
                                                         body: JSON.stringify({ messageId: msg.apiId }),
                                                     }).then(r => {
                                                         if (r.ok) addToast({ title: 'Message bookmarked', variant: 'success' });

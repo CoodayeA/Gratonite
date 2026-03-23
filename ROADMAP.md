@@ -108,7 +108,7 @@ Everything below is live in production.
 - [x] Slash commands and message components
 - [x] Webhooks with delivery logs
 - [x] OAuth2 authorization flow
-- [x] Stripe payment integration
+- [ ] Real-money payments (Stripe removed; virtual economy / shop remains)
 - [x] Referral system
 
 ### Security

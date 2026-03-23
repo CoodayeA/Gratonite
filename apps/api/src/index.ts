@@ -199,8 +199,6 @@ app.use((req, res, next) => {
   return globalIpRateLimit(req, res, next);
 });
 
-// Stripe webhook needs the raw body for signature verification — mount BEFORE express.json()
-app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(autoCacheHeaders);

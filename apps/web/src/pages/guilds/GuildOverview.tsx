@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Hash as HashIcon, Mic, Users, Zap, Calendar, ArrowLeft } from 'lucide-react';
 import { useOutletContext, Link, useParams, useNavigate } from 'react-router-dom';
-import { api, API_BASE } from '../../lib/api';
+import { api, API_BASE, getAccessToken } from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
 import { getDeterministicGradient } from '../../utils/colors';
 import { onVoiceStateUpdate, type VoiceStateUpdatePayload } from '../../lib/socket';
@@ -80,7 +80,7 @@ const GuildOverview = () => {
         void fetch(`${API_BASE}/guilds/${guildId}/onboarding`, {
             credentials: 'include',
             headers: {
-                Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}`,
+                Authorization: `Bearer ${getAccessToken() ?? ''}`,
             },
         })
             .then(r => r.ok ? r.json() : null)

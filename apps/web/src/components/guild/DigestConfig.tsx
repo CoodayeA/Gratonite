@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Newspaper, Save, Eye, Calendar, ChevronDown } from 'lucide-react';
-import { API_BASE } from '../../lib/api';
+import { API_BASE, getAccessToken } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
 
 interface Channel {
@@ -34,7 +34,7 @@ const ALL_SECTIONS = [
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem('gratonite_access_token') ?? ''}`,
+  Authorization: `Bearer ${getAccessToken() ?? ''}`,
   'Content-Type': 'application/json',
 });
 

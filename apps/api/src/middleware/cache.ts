@@ -52,11 +52,10 @@ export function withETag() {
  * endpoints so browsers can serve stale content while revalidating in background.
  */
 const CACHE_RULES: Array<{ pattern: RegExp; maxAge: number; scope: 'public' | 'private'; swr?: number }> = [
-  // Never cache: auth, messages, presence, notifications, payments, webhooks
+  // Never cache: auth, messages, presence, notifications, webhooks
   { pattern: /\/auth\//, maxAge: 0, scope: 'private' },
   { pattern: /\/messages/, maxAge: 0, scope: 'private' },
   { pattern: /\/notifications/, maxAge: 0, scope: 'private' },
-  { pattern: /\/payments/, maxAge: 0, scope: 'private' },
   { pattern: /\/webhooks/, maxAge: 0, scope: 'private' },
   { pattern: /\/drafts/, maxAge: 0, scope: 'private' },
 

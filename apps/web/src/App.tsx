@@ -66,7 +66,6 @@ const PhotoAlbums = lazy(() => import('./pages/guilds/PhotoAlbums'));
 const FormBuilder = lazy(() => import('./pages/guilds/FormBuilder'));
 const MemberDirectory = lazy(() => import('./pages/guilds/MemberDirectory'));
 const Gacha = lazy(() => import('./pages/app/Gacha'));
-const StoreModal = lazy(() => import('./pages/app/StoreModal'));
 const DailyChallenges = lazy(() => import('./pages/app/DailyChallenges'));
 const MiniMode = lazy(() => import('./components/desktop/MiniMode'));
 const EmbedDocumentPage = lazy(() => import('./pages/EmbedDocument'));
@@ -2721,7 +2720,7 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile, isMobileOpen, onCloseMo
             { id: 'mute', label: 'Mute User', icon: BellOff, onClick: () => {
                 fetch(`${API_BASE}/users/@me/mutes`, {
                     method: 'POST',
-                    headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}`, 'Content-Type': 'application/json' },
+                    headers: { Authorization: `Bearer ${getAccessToken() ?? ''}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ targetUserId: member.userId }),
                 }).then(r => {
                     if (r.ok) addToast({ title: `${name} muted`, description: 'You won\'t receive notifications from this user.', variant: 'success' });
@@ -3373,7 +3372,7 @@ export const AppLayout = () => {
         if ('serviceWorker' in navigator && 'PushManager' in window) {
             navigator.serviceWorker.register('/app/sw.js').then(reg => {
                 // Send auth token to service worker for notification quick reply
-                const token = localStorage.getItem('gratonite_access_token');
+                const token = getAccessToken() ?? '';
                 if (token && reg.active) {
                     reg.active.postMessage({ type: 'STORE_AUTH_TOKEN', token });
                 }

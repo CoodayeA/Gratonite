@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { API_BASE } from '../../../lib/api';
+import { API_BASE, getAccessToken } from '../../../lib/api';
 
 const SettingsAchievementsTab = () => {
   const [achievements, setAchievements] = useState<Array<{ id: string; name: string; description: string; earned: boolean; points: number }>>([]);
 
   useEffect(() => {
     const controller = new AbortController();
-    const token = localStorage.getItem('gratonite_access_token') ?? '';
+    const token = getAccessToken() ?? '';
     fetch(`${API_BASE}/users/@me/achievements`, {
       credentials: 'include',
       headers: { Authorization: `Bearer ${token}` },

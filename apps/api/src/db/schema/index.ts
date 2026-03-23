@@ -66,7 +66,6 @@ export * from './oauth';
 export * from './webhook-delivery-logs';
 export * from './guild-word-filters';
 export * from './channel-notification-prefs';
-export * from './stripe';
 export * from './achievements';
 export * from './activity-feed';
 export * from './seasonal-events';

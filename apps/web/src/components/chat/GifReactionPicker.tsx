@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Search, X, Loader } from 'lucide-react';
+import { getTenorApiKey } from '../../lib/tenor';
 
 interface GifReactionPickerProps {
   onSelect: (gifUrl: string) => void;
@@ -13,11 +14,10 @@ interface GifResult {
   title: string;
 }
 
-// Tenor API v2 (free tier)
-const TENOR_API_KEY = 'AIzaSyDZdyMgGMo9y7PY6Hj3DPlz_TgH0E-I3iQ'; // public demo key
 const TENOR_BASE = 'https://tenor.googleapis.com/v2';
 
 export function GifReactionPicker({ onSelect, onClose }: GifReactionPickerProps) {
+  const tenorKey = getTenorApiKey();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GifResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -26,10 +26,11 @@ export function GifReactionPicker({ onSelect, onClose }: GifReactionPickerProps)
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (!tenorKey) return;
     inputRef.current?.focus();
     // Load trending on mount
     setIsLoading(true);
-    fetch(`${TENOR_BASE}/featured?key=${TENOR_API_KEY}&limit=20&media_filter=gif,tinygif`)
+    fetch(`${TENOR_BASE}/featured?key=${encodeURIComponent(tenorKey)}&limit=20&media_filter=gif,tinygif`)
       .then(r => r.json())
       .then(data => {
         if (data.results) {
@@ -43,15 +44,16 @@ export function GifReactionPicker({ onSelect, onClose }: GifReactionPickerProps)
       })
       .catch(() => {})
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [tenorKey]);
 
   const searchGifs = useCallback((searchQuery: string) => {
+    if (!tenorKey) return;
     if (!searchQuery.trim()) {
       setResults([]);
       return;
     }
     setIsLoading(true);
-    fetch(`${TENOR_BASE}/search?key=${TENOR_API_KEY}&q=${encodeURIComponent(searchQuery)}&limit=20&media_filter=gif,tinygif`)
+    fetch(`${TENOR_BASE}/search?key=${encodeURIComponent(tenorKey)}&q=${encodeURIComponent(searchQuery)}&limit=20&media_filter=gif,tinygif`)
       .then(r => r.json())
       .then(data => {
         if (data.results) {
@@ -65,7 +67,7 @@ export function GifReactionPicker({ onSelect, onClose }: GifReactionPickerProps)
       })
       .catch(() => {})
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [tenorKey]);
 
   const handleInputChange = (value: string) => {
     setQuery(value);
@@ -74,6 +76,26 @@ export function GifReactionPicker({ onSelect, onClose }: GifReactionPickerProps)
   };
 
   const displayGifs = query.trim() ? results : trending;
+
+  if (!tenorKey) {
+    return (
+      <div style={{
+        width: '340px', padding: '20px',
+        background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+        borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+      }}>
+        <p style={{ margin: '0 0 12px', fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+          GIF search is not configured. Set <code style={{ fontSize: '12px' }}>VITE_TENOR_API_KEY</code> for the web app build.
+        </p>
+        <button type="button" onClick={onClose} style={{
+          background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px',
+          color: 'var(--text-primary)', padding: '8px 14px', fontSize: '13px', cursor: 'pointer',
+        }}>
+          Close
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{

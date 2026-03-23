@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { API_BASE } from '../../lib/api';
+import { API_BASE, getAccessToken } from '../../lib/api';
 import Avatar from '../ui/Avatar';
 
 interface ReactorUser {
@@ -33,7 +33,7 @@ export function ReactionSummaryPopover({ emoji, emojiUrl, isCustom, count, messa
         }
         timerRef.current = setTimeout(() => {
             fetch(`${API_BASE}/channels/${channelId}/messages/${messageApiId}/reactions/${encodeURIComponent(emoji)}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('gratonite_access_token')}` },
+                headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
             })
                 .then(r => r.ok ? r.json() : [])
                 .then(data => {
