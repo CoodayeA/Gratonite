@@ -4,8 +4,14 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import * as Sentry from '@sentry/react'
 import { QueryClientProvider } from '@tanstack/react-query'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import App from './App.tsx'
 import './index.css'
+
+// GSAP global setup
+gsap.registerPlugin(ScrollTrigger);
+gsap.defaults({ ease: 'power3.out', duration: 0.6 });
 import './themes/overrides/theme-scrollbar.css'
 import './themes/overrides/theme-selection.css'
 import './themes/overrides/glass-optimization.css'

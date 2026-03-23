@@ -1411,21 +1411,7 @@ html .main-view.has-custom-bg .input-area {
     }
 }
 
-.modal-opening {
-    animation: fadeInModal 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.modal-closing {
-    animation: fadeOutModal 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.modal-content-opening {
-    animation: scaleUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.modal-content-closing {
-    animation: scaleDownModal 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
+/* Modal open/close animations now handled by GSAP in ModalWrapper.tsx */
 
 /* ─── Avatar Frame Styles ─────────────────────────────────────────────────── */
 @keyframes avatarRainbowGlow {
@@ -1473,46 +1459,7 @@ html .main-view.has-custom-bg .input-area {
     border: 2px solid #00ffff;
 }
 
-@keyframes fadeInModal {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes fadeOutModal {
-    from {
-        opacity: 1;
-    }
-
-    to {
-        opacity: 0;
-    }
-}
-
-@keyframes highlightMessage {
-    0% {
-        background-color: transparent;
-        border-right: 4px solid transparent;
-    }
-
-    10% {
-        background-color: var(--accent-primary-alpha);
-        border-right: 4px solid var(--accent-primary);
-    }
-
-    100% {
-        background-color: transparent;
-        border-right: 4px solid transparent;
-    }
-}
-
-.highlighted-message {
-    animation: highlightMessage 2s ease-out;
-}
+/* fadeInModal, fadeOutModal, highlightMessage keyframes removed — now GSAP */
 
 @keyframes bounceDot {
 
@@ -1575,17 +1522,6 @@ html .main-view.has-custom-bg .input-area {
 }
 
 /* ── KEYFRAMES ── */
-@keyframes fadeInScale {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
 
 @keyframes float {
 
@@ -1671,29 +1607,7 @@ html .main-view.has-custom-bg .input-area {
     animation: screenShake 0.4s cubic-bezier(.36, .07, .19, .97) both;
 }
 
-@keyframes scaleUpModal {
-    from {
-        opacity: 0;
-        transform: scale(0.95) translateY(10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-@keyframes scaleDownModal {
-    from {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-
-    to {
-        opacity: 0;
-        transform: scale(0.95) translateY(10px);
-    }
-}
+/* scaleUpModal, scaleDownModal keyframes removed — now GSAP */
 
 .flex-row {
     display: flex;
@@ -1943,24 +1857,7 @@ html .main-view.has-custom-bg .input-area {
   color: var(--text-muted);
 }
 
-@keyframes authFadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.auth-anim-1 { animation: authFadeInDown 600ms ease both; animation-delay: 0ms; }
-.auth-anim-2 { animation: authFadeInDown 600ms ease both; animation-delay: 100ms; }
-.auth-anim-3 { animation: authFadeInDown 600ms ease both; animation-delay: 200ms; }
-.auth-anim-4 { animation: authFadeInDown 600ms ease both; animation-delay: 300ms; }
-.auth-anim-5 { animation: authFadeInDown 600ms ease both; animation-delay: 400ms; }
-.auth-anim-6 { animation: authFadeInDown 600ms ease both; animation-delay: 500ms; }
-.auth-anim-7 { animation: authFadeInDown 600ms ease both; animation-delay: 600ms; }
+/* Auth stagger animations (authFadeInDown, auth-anim-1..7) removed — now GSAP */
 
 @media (max-width: 520px) {
   .auth-heading {
@@ -2874,17 +2771,7 @@ a {
     text-transform: uppercase;
 }
 
-/* User Profile Popover Animation */
-@keyframes fadeInScale {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
+/* User profile popover animation now handled by GSAP */
 
 /* ── MICRO-INTERACTION ANIMATIONS ── */
 

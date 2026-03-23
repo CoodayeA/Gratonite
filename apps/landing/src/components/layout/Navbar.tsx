@@ -2,9 +2,13 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
 
 const navLinks = [
   { href: "/download", label: "Download" },
@@ -18,10 +22,33 @@ const navLinks = [
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!navRef.current || !innerRef.current) return;
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) return;
+
+    const trigger = ScrollTrigger.create({
+      start: 'top -100',
+      end: '+=99999',
+      onUpdate: (self) => {
+        const scrolled = self.progress > 0;
+        gsap.to(innerRef.current, {
+          paddingTop: scrolled ? '0.5rem' : '1rem',
+          paddingBottom: scrolled ? '0.5rem' : '1rem',
+          duration: 0.3,
+          ease: 'power2.out',
+        });
+      },
+    });
+    return () => trigger.kill();
+  }, []);
 
   return (
-    <nav className="fixed top-0 w-full z-50 backdrop-blur-sm" style={{ background: "var(--nav-bg)", borderBottom: "3px solid var(--neo-border-color)" }}>
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <nav ref={navRef} className="fixed top-0 w-full z-50 backdrop-blur-sm" style={{ background: "var(--nav-bg)", borderBottom: "3px solid var(--neo-border-color)" }}>
+      <div ref={innerRef} className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group">
           <div className="w-10 h-10 neo-border rounded-lg overflow-hidden neo-shadow-sm">

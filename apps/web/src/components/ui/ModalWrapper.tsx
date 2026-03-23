@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import gsap from 'gsap';
 
 /**
  * Custom hook to delay unmounting of a component to allow for exit animations
@@ -151,9 +152,11 @@ interface ModalWrapperProps {
 }
 
 export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, onClose }) => {
-    const shouldRender = useDelayUnmount(isOpen, 200);
-    const { containerRef, handleKeyDown } = useFocusTrap(isOpen && shouldRender);
+    const [shouldRender, setShouldRender] = useState(false);
+    const { containerRef, handleKeyDown } = useFocusTrap(isOpen);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const backdropRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -162,6 +165,49 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
     }, []);
 
     const { dragOffset, handleTouchStart, handleTouchMove, handleTouchEnd } = useBottomSheetDrag(isMobile, onClose);
+
+    const prefersReduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // GSAP enter/exit
+    useEffect(() => {
+        if (isOpen) {
+            setShouldRender(true);
+        } else if (shouldRender) {
+            // Exit animation
+            if (prefersReduced) {
+                setShouldRender(false);
+                return;
+            }
+            const tl = gsap.timeline({
+                onComplete: () => setShouldRender(false),
+            });
+            if (backdropRef.current) tl.to(backdropRef.current, { opacity: 0, duration: 0.2 }, 0);
+            if (contentRef.current) tl.to(contentRef.current, { scale: 0.95, opacity: 0, y: 10, duration: 0.2 }, 0);
+        }
+    }, [isOpen]);
+
+    // Enter animation when shouldRender becomes true
+    useEffect(() => {
+        if (!shouldRender || !isOpen) return;
+        if (prefersReduced) return;
+        // Wait for DOM to be ready
+        const raf = requestAnimationFrame(() => {
+            if (backdropRef.current) {
+                gsap.fromTo(backdropRef.current, { opacity: 0 }, { opacity: 1, duration: 0.2 });
+            }
+            if (contentRef.current) {
+                if (isMobile) {
+                    gsap.fromTo(contentRef.current, { y: '100%' }, { y: 0, duration: 0.3, ease: 'power3.out' });
+                } else {
+                    gsap.fromTo(contentRef.current,
+                        { scale: 0.95, opacity: 0, y: 10 },
+                        { scale: 1, opacity: 1, y: 0, duration: 0.3, ease: 'back.out(1.4)' }
+                    );
+                }
+            }
+        });
+        return () => cancelAnimationFrame(raf);
+    }, [shouldRender, isMobile]);
 
     // Prevent background scrolling while modal is open
     useEffect(() => {
@@ -181,7 +227,6 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
         return (
             <div
                 ref={containerRef}
-                className={`modal-animation-controller ${!isOpen ? 'modal-closing' : 'modal-opening'}`}
                 role="dialog"
                 aria-modal="true"
                 tabIndex={-1}
@@ -194,17 +239,18 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
             >
                 {/* Backdrop */}
                 <div
+                    ref={backdropRef}
                     onClick={onClose}
                     style={{
                         position: 'absolute', inset: 0,
                         background: 'rgba(0,0,0,0.5)',
-                        opacity: isOpen ? 1 - (dragOffset / 300) : 0,
-                        transition: dragOffset ? 'none' : 'opacity 0.2s',
+                        opacity: dragOffset ? 1 - (dragOffset / 300) : undefined,
                     }}
                 />
 
                 {/* Bottom Sheet */}
                 <div
+                    ref={contentRef}
                     data-bottom-sheet
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
@@ -215,9 +261,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
                         borderRadius: '16px 16px 0 0',
                         maxHeight: '90vh',
                         overflowY: 'auto',
-                        transform: `translateY(${dragOffset}px)`,
-                        transition: dragOffset ? 'none' : 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                        animation: isOpen ? 'bottomSheetSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)' : undefined,
+                        transform: dragOffset ? `translateY(${dragOffset}px)` : undefined,
                     }}
                 >
                     {/* Drag Handle */}
@@ -235,13 +279,6 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
                     </div>
                     {children}
                 </div>
-
-                <style>{`
-                    @keyframes bottomSheetSlideUp {
-                        from { transform: translateY(100%); }
-                        to { transform: translateY(0); }
-                    }
-                `}</style>
             </div>
         );
     }
@@ -249,7 +286,6 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
     return (
         <div
             ref={containerRef}
-            className={`modal-animation-controller ${!isOpen ? 'modal-closing' : 'modal-opening'}`}
             role="dialog"
             aria-modal="true"
             tabIndex={-1}
@@ -259,8 +295,17 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
                 outline: 'none',
             }}
         >
-            <div style={{ pointerEvents: 'auto', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', width: '100%', height: '100%' }}>
+            <div
+                ref={backdropRef}
+                onClick={onClose}
+                style={{
+                    position: 'absolute', inset: 0,
+                    background: 'rgba(0,0,0,0.5)',
+                    pointerEvents: 'auto',
+                }}
+            />
+            <div style={{ pointerEvents: 'auto', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                <div ref={contentRef} style={{ maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', width: '100%', height: '100%' }}>
                     {children}
                 </div>
             </div>

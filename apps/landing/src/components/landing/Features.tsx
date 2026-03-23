@@ -1,5 +1,9 @@
+"use client";
+
+import { useRef, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
+import { useGsap, gsap, ScrollTrigger, prefersReducedMotion } from "@/hooks/useGsap";
 
 const features = [
   {
@@ -54,6 +58,47 @@ const accentBg: Record<string, string> = {
 };
 
 export function Features() {
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  // Stagger-reveal cards as a group when grid enters viewport
+  useEffect(() => {
+    if (prefersReducedMotion || !gridRef.current) return;
+    const cards = gridRef.current.querySelectorAll('[data-feature-card]');
+    gsap.from(cards, {
+      y: 24,
+      opacity: 0,
+      duration: 0.5,
+      stagger: 0.08,
+      ease: 'power2.out',
+      scrollTrigger: { trigger: gridRef.current, start: 'top 85%', once: true },
+    });
+    return () => { ScrollTrigger.getAll().forEach(t => { if (t.trigger === gridRef.current) t.kill(); }); };
+  }, []);
+
+  // 3D tilt on hover
+  useEffect(() => {
+    if (prefersReducedMotion || !gridRef.current) return;
+    const cards = gridRef.current.querySelectorAll('[data-feature-card]');
+    const enterHandlers: Array<() => void> = [];
+    const leaveHandlers: Array<() => void> = [];
+
+    cards.forEach((card) => {
+      const enter = () => gsap.to(card, { rotateX: -2, rotateY: 3, scale: 1.02, duration: 0.3, ease: 'power2.out' });
+      const leave = () => gsap.to(card, { rotateX: 0, rotateY: 0, scale: 1, duration: 0.3, ease: 'power2.out' });
+      card.addEventListener('mouseenter', enter);
+      card.addEventListener('mouseleave', leave);
+      enterHandlers.push(enter);
+      leaveHandlers.push(leave);
+    });
+
+    return () => {
+      cards.forEach((card, i) => {
+        card.removeEventListener('mouseenter', enterHandlers[i]);
+        card.removeEventListener('mouseleave', leaveHandlers[i]);
+      });
+    };
+  }, []);
+
   return (
     <section className="section-pad px-6 relative overflow-hidden">
       <div className="neo-divider mb-20" />
@@ -74,13 +119,15 @@ export function Features() {
           </div>
         </ScrollReveal>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div ref={gridRef} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6" style={{ perspective: '800px' }}>
           {features.map((feature, i) => (
-            <ScrollReveal key={feature.title} delay={i * 0.08} className={i === 0 ? "sm:col-span-2 lg:col-span-2" : ""}>
-              <Card
-                accent={feature.accent}
-                className="h-full"
-              >
+            <div
+              key={feature.title}
+              data-feature-card
+              className={i === 0 ? "sm:col-span-2 lg:col-span-2" : ""}
+              style={{ opacity: 0, transformStyle: 'preserve-3d' }}
+            >
+              <Card accent={feature.accent} className="h-full">
                 <div className={`w-12 h-12 rounded-xl border-2 ${accentBg[feature.accent]} flex items-center justify-center text-2xl mb-4`}>
                   {feature.icon}
                 </div>
@@ -91,7 +138,7 @@ export function Features() {
                   {feature.description}
                 </p>
               </Card>
-            </ScrollReveal>
+            </div>
           ))}
         </div>
       </div>

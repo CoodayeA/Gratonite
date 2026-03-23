@@ -5,7 +5,8 @@ import { initRelay, isRelayEnabled } from '../relay/index';
 import { db } from '../db';
 import { guilds } from '../db/schema/guilds';
 import { federatedInstances } from '../db/schema/federation-instances';
-import { eq } from 'drizzle-orm';
+import { users } from '../db/schema/users';
+import { eq, isNull, and, sql } from 'drizzle-orm';
 
 /** Whether federation is enabled on this instance. */
 export function isFederationEnabled(): boolean {
@@ -49,7 +50,22 @@ export async function initFederation(): Promise<void> {
 
   await generateKeyPairIfNeeded();
 
-  console.info(`[federation] Federation enabled for domain: ${getInstanceDomain()}`);
+  const domain = getInstanceDomain();
+  console.info(`[federation] Federation enabled for domain: ${domain}`);
+
+  // Backfill federation addresses for existing local users who don't have one
+  try {
+    const result = await db.execute(
+      sql`UPDATE users SET federation_address = username || '@' || ${domain}
+          WHERE federation_address IS NULL AND is_federated = false`
+    );
+    const count = (result as any).rowCount ?? 0;
+    if (count > 0) {
+      console.info(`[federation] Backfilled federation addresses for ${count} users`);
+    }
+  } catch (err) {
+    console.error('[federation] Federation address backfill failed:', err);
+  }
 
   // Initialize relay client if enabled
   try {

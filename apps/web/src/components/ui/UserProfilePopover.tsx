@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import gsap from 'gsap';
 import { MessageSquare, UserPlus, MoreHorizontal, Gamepad2, Headphones, Eye, Star, Clock, Music, Cake, Link2, Shield, Code, Tv, Play, VolumeX, ShieldOff, Flag, Copy } from 'lucide-react';
 import { api, API_BASE } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
@@ -251,9 +252,28 @@ const UserProfilePopover = ({
     const x = Math.max(16, Math.min(position.x, window.innerWidth - popW - 16));
     const y = Math.max(16, Math.min(position.y, window.innerHeight - popH - 16));
 
+    const popoverRef = useRef<HTMLDivElement>(null);
+
+    // GSAP entrance: scale + fade, then stagger badges
+    useEffect(() => {
+        const el = popoverRef.current;
+        if (!el) return;
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReduced) return;
+
+        gsap.fromTo(el, { scale: 0.95, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.25, ease: 'back.out(2)' });
+
+        // Stagger badge pills after card appears
+        const badges = el.querySelectorAll('[data-badge-pill]');
+        if (badges.length) {
+            gsap.from(badges, { scale: 0, opacity: 0, stagger: 0.05, duration: 0.25, ease: 'back.out(2)', delay: 0.15 });
+        }
+    }, []);
+
     return (
         <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
             <div
+                ref={popoverRef}
                 onClick={e => e.stopPropagation()}
                 style={{
                     position: 'absolute',
@@ -265,7 +285,7 @@ const UserProfilePopover = ({
                     borderRadius: 'var(--radius-lg)',
                     boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
                     overflow: 'hidden',
-                    animation: 'fadeInScale 0.15s ease-out',
+                    transformOrigin: 'top left',
                 }}
             >
                 {/* Mini Banner */}
@@ -328,7 +348,7 @@ const UserProfilePopover = ({
                                 const meta = BADGE_META[badge];
                                 if (!meta) return null;
                                 return (
-                                    <span key={badge} title={meta.label} style={{ fontSize: '14px', cursor: 'default', color: meta.color }}>{meta.emoji}</span>
+                                    <span key={badge} data-badge-pill title={meta.label} style={{ fontSize: '14px', cursor: 'default', color: meta.color }}>{meta.emoji}</span>
                                 );
                             })}
                         </div>

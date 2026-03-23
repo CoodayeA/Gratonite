@@ -1,9 +1,37 @@
+"use client";
+
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { useGsap, gsap } from "@/hooks/useGsap";
 
 export function Hero() {
+  const containerRef = useGsap(() => {
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+    // Stagger left-side elements: badge → title → subtitle → description → buttons → stats
+    tl.from('[data-hero="badge"]',    { y: 18, opacity: 0, duration: 0.55 })
+      .from('[data-hero="title"]',    { y: 18, opacity: 0, duration: 0.55 }, 0.08)
+      .from('[data-hero="subtitle"]', { y: 18, opacity: 0, duration: 0.55 }, 0.18)
+      .from('[data-hero="desc"]',     { y: 18, opacity: 0, duration: 0.55 }, 0.26)
+      .from('[data-hero="buttons"]',  { y: 18, opacity: 0, duration: 0.55 }, 0.34)
+      .from('[data-hero="stats"]',    { y: 18, opacity: 0, duration: 0.55 }, 0.43);
+
+    // Preview card enters from right with slight rotation
+    tl.from('[data-hero="preview"]', {
+      x: 20, opacity: 0, rotate: 2, duration: 0.6, ease: 'power3.out',
+    }, 0.2);
+
+    // Subtle scroll parallax on burst elements
+    gsap.utils.toArray<HTMLElement>('.neo-burst').forEach((el) => {
+      gsap.to(el, {
+        y: -40,
+        scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: 1 },
+      });
+    });
+  }, []);
+
   return (
-    <section className="min-h-[86vh] flex items-center pt-24 pb-14 px-6 relative overflow-hidden">
+    <section ref={containerRef} className="min-h-[86vh] flex items-center pt-24 pb-14 px-6 relative overflow-hidden">
       <div className="neo-burst neo-burst-purple top-24 left-[-90px] neo-float" />
       <div className="neo-burst neo-burst-blue bottom-10 right-[-85px] neo-float" />
 
@@ -11,15 +39,16 @@ export function Hero() {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left — Copy */}
           <div>
-            <div className="hero-enter" style={{ animationDelay: "0.02s" }}>
+            <div data-hero="badge" style={{ opacity: 0 }}>
               <Badge color="gold" rotate className="mb-6">
                 The friend-first platform.
               </Badge>
             </div>
 
             <h1
-              className="hero-enter font-display text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-extrabold leading-[0.95] tracking-tight mb-6"
-              style={{ animationDelay: "0.1s" }}
+              data-hero="title"
+              className="font-display text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-extrabold leading-[0.95] tracking-tight mb-6"
+              style={{ opacity: 0 }}
             >
               BUILT BY
               <br />
@@ -30,18 +59,16 @@ export function Hero() {
               FOR FRIENDS.
             </h1>
 
-            <div
-              className="hero-enter mb-5"
-              style={{ animationDelay: "0.2s" }}
-            >
+            <div data-hero="subtitle" className="mb-5" style={{ opacity: 0 }}>
               <p className="text-sm font-bold uppercase tracking-wider text-foreground/50">
                 Open source &middot; No tracking &middot; Player-made cosmetics
               </p>
             </div>
 
             <p
-              className="hero-enter text-lg sm:text-xl text-foreground/60 max-w-lg mb-8 leading-relaxed"
-              style={{ animationDelay: "0.28s" }}
+              data-hero="desc"
+              className="text-lg sm:text-xl text-foreground/60 max-w-lg mb-8 leading-relaxed"
+              style={{ opacity: 0 }}
             >
               Gratonite was built for a better place to hang out with friends.
               Chat, hop in voice, play games, study together, collect cool
@@ -49,10 +76,7 @@ export function Hero() {
               engagement.
             </p>
 
-            <div
-              className="hero-enter flex flex-wrap gap-4 mb-12"
-              style={{ animationDelay: "0.36s" }}
-            >
+            <div data-hero="buttons" className="flex flex-wrap gap-4 mb-12" style={{ opacity: 0 }}>
               <Button variant="primary" size="lg" href="/download">
                 Get Gratonite
               </Button>
@@ -69,9 +93,10 @@ export function Hero() {
 
             {/* Stats strip */}
             <div
-              className="hero-enter flex flex-wrap gap-8 pt-8"
+              data-hero="stats"
+              className="flex flex-wrap gap-8 pt-8"
               style={{
-                animationDelay: "0.45s",
+                opacity: 0,
                 borderTop: "3px solid var(--neo-border-color)",
               }}
             >
@@ -91,7 +116,7 @@ export function Hero() {
           </div>
 
           {/* Right — Neobrutalist app preview */}
-          <div className="hero-enter hero-enter-right relative" style={{ animationDelay: "0.22s" }}>
+          <div data-hero="preview" className="relative" style={{ opacity: 0 }}>
             {/* App window mock */}
             <div className="neo-border rounded-xl overflow-hidden neo-shadow-lg bg-surface">
               {/* Title bar */}

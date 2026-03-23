@@ -308,6 +308,7 @@ export async function register(data: RegisterData): Promise<RegisterResult> {
       passwordHash,
       displayName: displayName ?? username,
       emailVerified: false,
+      federationAddress: `${username}@${process.env.INSTANCE_DOMAIN || 'localhost'}`,
     })
     .returning();
 

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { CheckCircle, AlertCircle, Info, Trophy, X, Undo2 } from 'lucide-react';
 import { playSound } from '../../utils/SoundManager';
+import gsap from 'gsap';
 
 export type ToastVariant = 'success' | 'error' | 'info' | 'achievement' | 'undo';
 
@@ -105,6 +106,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
 const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => void, style: React.CSSProperties }) => {
     const [mounted, setMounted] = useState(false);
     const [exiting, setExiting] = useState(false);
+    const toastRef = useRef<HTMLDivElement>(null);
     const [progress, setProgress] = useState(100);
     const [isHovered, setIsHovered] = useState(false);
     const undoneRef = useRef(false);
@@ -118,9 +120,15 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
     const handleRemove = useCallback(() => {
         if (exiting) return;
         setExiting(true);
-        setTimeout(() => {
-            onRemove();
-        }, 300);
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (toastRef.current && !prefersReduced) {
+            gsap.to(toastRef.current, {
+                x: 120, opacity: 0, duration: 0.3, ease: 'power2.in',
+                onComplete: onRemove,
+            });
+        } else {
+            setTimeout(onRemove, 300);
+        }
     }, [exiting, onRemove]);
 
     const handleUndo = useCallback((e: React.MouseEvent) => {
@@ -173,6 +181,13 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
     }, [startTimer, toastDuration]);
 
     useEffect(() => {
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (toastRef.current && !prefersReduced) {
+            gsap.fromTo(toastRef.current,
+                { x: 120, opacity: 0 },
+                { x: 0, opacity: 1, duration: 0.4, ease: 'back.out(1.4)' }
+            );
+        }
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 setMounted(true);
@@ -233,6 +248,7 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
 
     return (
         <div
+            ref={toastRef}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             style={{

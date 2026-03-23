@@ -1,6 +1,13 @@
+"use client";
+
+import { useRef, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
 
 const benefits = [
   {
@@ -23,7 +30,37 @@ const benefits = [
   },
 ];
 
+const CURL_CMD = "curl -fsSL https://gratonite.chat/install | bash";
+
 export function SelfHosting() {
+  const cmdRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const el = cmdRef.current;
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      if (el) el.textContent = CURL_CMD;
+      return;
+    }
+    el.textContent = "";
+    const trigger = ScrollTrigger.create({
+      trigger: el,
+      start: "top 90%",
+      once: true,
+      onEnter: () => {
+        const chars = CURL_CMD.split("");
+        const obj = { i: 0 };
+        gsap.to(obj, {
+          i: chars.length,
+          duration: 1.2,
+          ease: "none",
+          snap: { i: 1 },
+          onUpdate: () => { el.textContent = chars.slice(0, obj.i).join(""); },
+        });
+      },
+    });
+    return () => trigger.kill();
+  }, []);
+
   return (
     <section className="section-pad-lg px-6 relative overflow-hidden">
 
@@ -68,7 +105,8 @@ export function SelfHosting() {
               </p>
               <div className="bg-background neo-border rounded-lg p-4 mb-6 text-left font-mono text-sm text-foreground/70 space-y-1" style={{ boxShadow: "0 0 60px rgba(124, 58, 237, 0.1)" }}>
                 <p>
-                  <span className="text-purple">$</span> curl -fsSL https://gratonite.chat/install | bash
+                  <span className="text-purple">$</span>{" "}
+                  <span ref={cmdRef}>{CURL_CMD}</span>
                 </p>
               </div>
               <p className="text-foreground/50 text-sm mb-6">
