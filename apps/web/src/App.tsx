@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, Navigate, Outlet, Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import gsap from 'gsap';
 import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar, Compass, User, Columns, Paintbrush, PenLine, FileText } from 'lucide-react';
 import './components/chat.css';
 import CommandPalette from './components/ui/CommandPalette';
@@ -41,6 +42,7 @@ const EventScheduler = lazy(() => import('./pages/guilds/EventScheduler'));
 const ModerationDashboard = lazy(() => import('./pages/guilds/ModerationDashboard'));
 const MessageRequests = lazy(() => import('./pages/app/MessageRequests'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const OAuthAuthorize = lazy(() => import('./pages/app/OAuthAuthorize'));
 const AdminCosmetics = lazy(() => import('./pages/admin/AdminCosmetics'));
 const AdminTeam = lazy(() => import('./pages/admin/AdminTeam'));
 const AdminAuditLog = lazy(() => import('./pages/admin/AdminAuditLog'));
@@ -371,8 +373,32 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
         ]);
     };
 
+    // GSAP guild icon hover: scale + borderRadius morph
+    const railRef = useRef<HTMLElement>(null);
+    useEffect(() => {
+        const rail = railRef.current;
+        if (!rail || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const icons = rail.querySelectorAll('.guild-icon');
+        const enters: Array<(e: Event) => void> = [];
+        const leaves: Array<(e: Event) => void> = [];
+        icons.forEach((icon) => {
+            const enter = () => gsap.to(icon, { scale: 1.08, borderRadius: '16px', duration: 0.25, ease: 'back.out(2)' });
+            const leave = () => gsap.to(icon, { scale: 1, borderRadius: '24px', duration: 0.25, ease: 'power2.out' });
+            icon.addEventListener('mouseenter', enter);
+            icon.addEventListener('mouseleave', leave);
+            enters.push(enter);
+            leaves.push(leave);
+        });
+        return () => {
+            icons.forEach((icon, i) => {
+                icon.removeEventListener('mouseenter', enters[i]);
+                icon.removeEventListener('mouseleave', leaves[i]);
+            });
+        };
+    }, [guilds]);
+
     return (
-        <nav className={`guild-rail glass-panel ${isOpen ? 'open' : ''}`} aria-label="Server navigation" onKeyDown={(e) => {
+        <nav ref={railRef} className={`guild-rail glass-panel ${isOpen ? 'open' : ''}`} aria-label="Server navigation" onKeyDown={(e) => {
             if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
             e.preventDefault();
             const nav = e.currentTarget;
@@ -1286,7 +1312,23 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     }, [collapsed, activeGuildId]);
 
     const toggleCategory = (cat: string) => {
+        const isCollapsing = !collapsed[cat];
         setCollapsed(prev => ({ ...prev, [cat]: !prev[cat] }));
+
+        // Animate children container
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReduced) return;
+        requestAnimationFrame(() => {
+            const container = document.querySelector(`[data-category-children="${cat}"]`);
+            if (!container) return;
+            if (!isCollapsing) {
+                // Expanding: animate children in with stagger
+                const items = container.children;
+                if (items.length) {
+                    gsap.from(items, { y: -8, opacity: 0, stagger: 0.03, duration: 0.25, ease: 'power2.out' });
+                }
+            }
+        });
     };
 
     // ── Sidebar customization ──
@@ -2242,7 +2284,9 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                         onClick={(e) => { e.stopPropagation(); setShowCreateChannel({ type: defaultType, parentId: cat.id }); setNewChannelName(''); }}
                                     />}
                                 </div>
-                                {visibleChildren.map(renderChannel)}
+                                <div data-category-children={cat.id}>
+                                    {visibleChildren.map(renderChannel)}
+                                </div>
                             </div>
                         );
                     };
@@ -4263,6 +4307,9 @@ const appRouter = createBrowserRouter(
                 <Route path="verify" element={<Verify />} />
                 <Route path="reset-password" element={<ResetPassword />} />
             </Route>
+
+            {/* OAuth consent screen (must be logged in) */}
+            <Route path="oauth/authorize" element={<RequireAuth><Suspense fallback={<LazyFallback />}><OAuthAuthorize /></Suspense></RequireAuth>} />
 
             {/* Embeddable document editor (for mobile WebView) */}
             <Route path="embed/document/:channelId" element={

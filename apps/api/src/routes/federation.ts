@@ -10,6 +10,8 @@ import { federationActivities } from '../db/schema/federation-activities';
 import { remoteUsers } from '../db/schema/remote-users';
 import { remoteGuilds } from '../db/schema/remote-guilds';
 import { instanceBlocks } from '../db/schema/instance-blocks';
+import { oauthApps } from '../db/schema/oauth';
+import crypto from 'node:crypto';
 import { verificationRequests } from '../db/schema/verification-requests';
 import { instanceReports } from '../db/schema/instance-reports';
 import { computeTrustTier, computeTrustScore } from '../federation/trust';
@@ -195,13 +197,58 @@ federationRouter.post('/handshake', async (req: Request, res: Response) => {
     });
   }
 
-  // Return our own identity
+  // Auto-provision OAuth app for "Login with Gratonite" SSO
+  let oauthClientId: string | null = null;
+  let oauthClientSecret: string | null = null;
+
+  try {
+    // Check if an OAuth app already exists for this instance's callback URL
+    const callbackUrl = `${baseUrl}/api/v1/auth/federated/callback`;
+    const allApps = await db.select().from(oauthApps).limit(500);
+    const existingApp = allApps.find(a => a.redirectUris.includes(callbackUrl));
+
+    if (existingApp) {
+      // Already provisioned — return the client_id (secret can't be recovered, but it was sent on first handshake)
+      oauthClientId = existingApp.clientId;
+    } else {
+      // Find an admin user to own the OAuth app
+      const [adminUser] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.isAdmin, true))
+        .limit(1);
+
+      if (adminUser) {
+        const clientSecret = crypto.randomBytes(32).toString('hex');
+        const clientSecretHash = crypto.createHash('sha256').update(clientSecret).digest('hex');
+
+        const [newApp] = await db.insert(oauthApps).values({
+          ownerId: adminUser.id,
+          name: `Federation SSO: ${new URL(baseUrl).hostname}`,
+          description: `Auto-provisioned for federated login from ${new URL(baseUrl).hostname}`,
+          clientSecretHash,
+          redirectUris: [callbackUrl],
+          scopes: ['identify'],
+        }).returning({ clientId: oauthApps.clientId });
+
+        oauthClientId = newApp.clientId;
+        oauthClientSecret = clientSecret; // Only sent once, on first handshake
+        logger.info(`[federation] Auto-provisioned OAuth app for ${baseUrl} (client_id: ${oauthClientId})`);
+      }
+    }
+  } catch (oauthErr) {
+    logger.error('[federation] Failed to auto-provision OAuth app:', oauthErr);
+    // Non-fatal — federation still works, just no SSO
+  }
+
+  // Return our own identity + OAuth credentials
   const domain = getInstanceDomain();
   res.json({
     type: 'InstanceHelloAck',
     instanceUrl: `https://${domain}`,
     publicKeyPem: getPublicKeyPem(),
     softwareVersion: process.env.npm_package_version || '1.0.0',
+    ...(oauthClientId ? { oauth: { clientId: oauthClientId, clientSecret: oauthClientSecret } } : {}),
   });
 });
 

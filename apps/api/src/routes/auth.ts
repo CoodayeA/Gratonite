@@ -1146,11 +1146,16 @@ authRouter.delete('/devices', requireAuth, asyncHandler(async (req: Request, res
  */
 authRouter.get('/federated/config', async (_req: Request, res: Response): Promise<void> => {
   const hubUrl = process.env.FEDERATION_HUB_URL || 'https://gratonite.chat';
-  const clientId = process.env.FEDERATION_HUB_CLIENT_ID || '';
+  // Check env var first, then Redis (set by auto-handshake)
+  let clientId = process.env.FEDERATION_HUB_CLIENT_ID || '';
+  if (!clientId) {
+    clientId = await redis.get('federation:hub:oauth_client_id') || '';
+  }
   const enabled = process.env.FEDERATION_ENABLED === 'true' && !!clientId;
   const instanceDomain = process.env.INSTANCE_DOMAIN || 'localhost';
   // Don't show "Login with Gratonite" on gratonite.chat itself
-  const isHub = instanceDomain === new URL(hubUrl).hostname;
+  let isHub = false;
+  try { isHub = instanceDomain === new URL(hubUrl).hostname; } catch {}
 
   res.json({
     enabled: enabled && !isHub,
@@ -1164,7 +1169,7 @@ authRouter.get('/federated/config', async (_req: Request, res: Response): Promis
  */
 authRouter.get('/federated/login', async (req: Request, res: Response): Promise<void> => {
   const hubUrl = process.env.FEDERATION_HUB_URL || 'https://gratonite.chat';
-  const clientId = process.env.FEDERATION_HUB_CLIENT_ID || '';
+  const clientId = process.env.FEDERATION_HUB_CLIENT_ID || await redis.get('federation:hub:oauth_client_id') || '';
   const instanceDomain = process.env.INSTANCE_DOMAIN || 'localhost';
   const port = process.env.HTTPS_PORT || '8443';
   const scheme = instanceDomain === 'localhost' ? 'https' : 'https';
@@ -1180,7 +1185,7 @@ authRouter.get('/federated/login', async (req: Request, res: Response): Promise<
   const state = crypto.randomBytes(32).toString('hex');
   await redis.set(`federated:state:${state}`, '1', 'EX', 600); // 10 min TTL
 
-  const authorizeUrl = new URL(`${hubUrl}/api/v1/oauth/authorize`);
+  const authorizeUrl = new URL(`${hubUrl}/app/oauth/authorize`);
   authorizeUrl.searchParams.set('client_id', clientId);
   authorizeUrl.searchParams.set('redirect_uri', redirectUri);
   authorizeUrl.searchParams.set('response_type', 'code');
@@ -1222,8 +1227,8 @@ authRouter.get('/federated/callback', asyncHandler(async (req: Request, res: Res
   await redis.del(`federated:state:${state}`);
 
   const hubUrl = process.env.FEDERATION_HUB_URL || 'https://gratonite.chat';
-  const clientId = process.env.FEDERATION_HUB_CLIENT_ID || '';
-  const clientSecret = process.env.FEDERATION_HUB_CLIENT_SECRET || '';
+  const clientId = process.env.FEDERATION_HUB_CLIENT_ID || await redis.get('federation:hub:oauth_client_id') || '';
+  const clientSecret = process.env.FEDERATION_HUB_CLIENT_SECRET || await redis.get('federation:hub:oauth_client_secret') || '';
   const instanceDomain = process.env.INSTANCE_DOMAIN || 'localhost';
   const port = process.env.HTTPS_PORT || '8443';
   const scheme = 'https';
