@@ -1135,3 +1135,213 @@ authRouter.delete('/devices', requireAuth, asyncHandler(async (req: Request, res
   await db.delete(userDevices).where(eq(userDevices.userId, req.userId!));
   res.json({ message: 'All known devices cleared' });
 }));
+
+// ---------------------------------------------------------------------------
+// Federated Login — "Login with Gratonite" SSO
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /auth/federated/config — returns federation login config for the frontend.
+ * The frontend uses this to decide whether to show the "Login with Gratonite" button.
+ */
+authRouter.get('/federated/config', async (_req: Request, res: Response): Promise<void> => {
+  const hubUrl = process.env.FEDERATION_HUB_URL || 'https://gratonite.chat';
+  const clientId = process.env.FEDERATION_HUB_CLIENT_ID || '';
+  const enabled = process.env.FEDERATION_ENABLED === 'true' && !!clientId;
+  const instanceDomain = process.env.INSTANCE_DOMAIN || 'localhost';
+  // Don't show "Login with Gratonite" on gratonite.chat itself
+  const isHub = instanceDomain === new URL(hubUrl).hostname;
+
+  res.json({
+    enabled: enabled && !isHub,
+    hubUrl,
+    hubName: 'Gratonite',
+  });
+});
+
+/**
+ * GET /auth/federated/login — redirects to gratonite.chat's OAuth consent screen.
+ */
+authRouter.get('/federated/login', async (req: Request, res: Response): Promise<void> => {
+  const hubUrl = process.env.FEDERATION_HUB_URL || 'https://gratonite.chat';
+  const clientId = process.env.FEDERATION_HUB_CLIENT_ID || '';
+  const instanceDomain = process.env.INSTANCE_DOMAIN || 'localhost';
+  const port = process.env.HTTPS_PORT || '8443';
+  const scheme = instanceDomain === 'localhost' ? 'https' : 'https';
+  const portSuffix = (port === '443' || port === '80') ? '' : `:${port}`;
+  const redirectUri = `${scheme}://${instanceDomain}${portSuffix}/api/v1/auth/federated/callback`;
+
+  if (!clientId) {
+    res.status(503).json({ code: 'NOT_CONFIGURED', message: 'Federation SSO is not configured. Complete federation handshake first.' });
+    return;
+  }
+
+  // Generate CSRF state token
+  const state = crypto.randomBytes(32).toString('hex');
+  await redis.set(`federated:state:${state}`, '1', 'EX', 600); // 10 min TTL
+
+  const authorizeUrl = new URL(`${hubUrl}/api/v1/oauth/authorize`);
+  authorizeUrl.searchParams.set('client_id', clientId);
+  authorizeUrl.searchParams.set('redirect_uri', redirectUri);
+  authorizeUrl.searchParams.set('response_type', 'code');
+  authorizeUrl.searchParams.set('scope', 'identify');
+  authorizeUrl.searchParams.set('state', state);
+
+  // Redirect to the hub's consent page (the frontend handles the OAuth UI)
+  // For now, redirect to a page that will render the consent screen
+  res.redirect(authorizeUrl.toString());
+});
+
+/**
+ * GET /auth/federated/callback — handles the OAuth callback from gratonite.chat.
+ * Exchanges the auth code for user info, creates/links a local account, and logs in.
+ */
+authRouter.get('/federated/callback', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const code = typeof req.query.code === 'string' ? req.query.code : '';
+  const state = typeof req.query.state === 'string' ? req.query.state : '';
+  const error = typeof req.query.error === 'string' ? req.query.error : '';
+
+  const appBase = process.env.APP_BASE_URL || '/app';
+
+  if (error) {
+    res.redirect(`${appBase}/login?error=federation_denied`);
+    return;
+  }
+
+  if (!code || !state) {
+    res.redirect(`${appBase}/login?error=federation_invalid`);
+    return;
+  }
+
+  // Verify CSRF state
+  const storedState = await redis.get(`federated:state:${state}`);
+  if (!storedState) {
+    res.redirect(`${appBase}/login?error=federation_expired`);
+    return;
+  }
+  await redis.del(`federated:state:${state}`);
+
+  const hubUrl = process.env.FEDERATION_HUB_URL || 'https://gratonite.chat';
+  const clientId = process.env.FEDERATION_HUB_CLIENT_ID || '';
+  const clientSecret = process.env.FEDERATION_HUB_CLIENT_SECRET || '';
+  const instanceDomain = process.env.INSTANCE_DOMAIN || 'localhost';
+  const port = process.env.HTTPS_PORT || '8443';
+  const scheme = 'https';
+  const portSuffix = (port === '443' || port === '80') ? '' : `:${port}`;
+  const redirectUri = `${scheme}://${instanceDomain}${portSuffix}/api/v1/auth/federated/callback`;
+
+  try {
+    // Exchange code for access token
+    const tokenRes = await fetch(`${hubUrl}/api/v1/oauth/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'authorization_code',
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+      }),
+    });
+
+    if (!tokenRes.ok) {
+      logger.error(`[federated-login] Token exchange failed: ${tokenRes.status}`);
+      res.redirect(`${appBase}/login?error=federation_token_failed`);
+      return;
+    }
+
+    const tokenData = await tokenRes.json() as { access_token: string };
+
+    // Fetch user profile from hub
+    const userRes = await fetch(`${hubUrl}/api/v1/oauth/userinfo`, {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+
+    if (!userRes.ok) {
+      logger.error(`[federated-login] Userinfo fetch failed: ${userRes.status}`);
+      res.redirect(`${appBase}/login?error=federation_userinfo_failed`);
+      return;
+    }
+
+    const remoteUser = await userRes.json() as {
+      id: string;
+      username: string;
+      displayName: string;
+      avatarHash: string | null;
+      email: string;
+      federationAddress: string;
+    };
+
+    // Find or create local account linked to this federation address
+    const fedAddress = remoteUser.federationAddress;
+
+    // Check if a local user already has this federation address
+    const [existingUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.federationAddress, fedAddress))
+      .limit(1);
+
+    let localUserId: string;
+
+    if (existingUser) {
+      localUserId = existingUser.id;
+    } else {
+      // Create a new linked local account
+      // Find a unique username
+      let localUsername = remoteUser.username;
+      const [taken] = await db.select({ id: users.id }).from(users)
+        .where(sql`lower(${users.username}) = lower(${localUsername})`)
+        .limit(1);
+      if (taken) {
+        const hubDomain = new URL(hubUrl).hostname.replace(/\./g, '_');
+        localUsername = `${remoteUser.username}_${hubDomain}`;
+      }
+
+      const federatedPasswordHash = `$federated$${crypto.randomBytes(32).toString('hex')}`;
+
+      const [newUser] = await db.insert(users).values({
+        username: localUsername,
+        email: `federation+${crypto.randomUUID()}@${instanceDomain}`,
+        passwordHash: federatedPasswordHash,
+        displayName: remoteUser.displayName || remoteUser.username,
+        avatarHash: remoteUser.avatarHash,
+        isFederated: true,
+        federationAddress: fedAddress,
+        emailVerified: true, // trust the hub's verification
+      }).returning({ id: users.id });
+
+      localUserId = newUser.id;
+      logger.info(`[federated-login] Created linked account for ${fedAddress} → ${localUsername}`);
+    }
+
+    // Issue local JWT tokens
+    const accessToken = signAccessToken(localUserId);
+    const refreshToken = signRefreshToken(localUserId);
+
+    // Store refresh token hash
+    const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    await db.insert(refreshTokens).values({
+      userId: localUserId,
+      tokenHash: refreshTokenHash,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      device: 'Federated Login',
+      ip: req.ip || '',
+    });
+
+    // Set refresh token cookie
+    res.cookie('gratonite_refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+
+    // Redirect to app with access token in URL fragment (not query — safer)
+    res.redirect(`${appBase}/?federated_token=${accessToken}`);
+  } catch (err) {
+    logger.error('[federated-login] Callback error:', err);
+    res.redirect(`${appBase}/login?error=federation_error`);
+  }
+}));

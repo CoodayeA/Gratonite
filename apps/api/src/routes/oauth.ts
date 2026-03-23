@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../db/index';
 import { oauthApps, oauthTokens } from '../db/schema/oauth';
+import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
 import { redis } from '../lib/redis';
 import { safeJsonParse } from '../lib/safe-json.js';
@@ -218,6 +219,72 @@ oauthRouter.post('/token', async (req: Request, res: Response): Promise<void> =>
   } else {
     res.status(400).json({ code: 'UNSUPPORTED_GRANT_TYPE', message: 'Unsupported grant_type' });
   }
+});
+
+/**
+ * GET /oauth/userinfo — returns user profile for a valid OAuth access token.
+ * Used by federated instances for "Login with Gratonite" SSO.
+ */
+oauthRouter.get('/userinfo', async (req: Request, res: Response): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    res.status(401).json({ code: 'UNAUTHORIZED', message: 'Bearer token required' });
+    return;
+  }
+
+  const accessToken = authHeader.slice(7);
+  const tokenHash = sha256(accessToken);
+
+  const [token] = await db
+    .select({
+      userId: oauthTokens.userId,
+      scopes: oauthTokens.scopes,
+      expiresAt: oauthTokens.expiresAt,
+    })
+    .from(oauthTokens)
+    .where(eq(oauthTokens.accessTokenHash, tokenHash))
+    .limit(1);
+
+  if (!token || new Date() > token.expiresAt) {
+    res.status(401).json({ code: 'TOKEN_EXPIRED', message: 'Token is invalid or expired' });
+    return;
+  }
+
+  if (!token.scopes.includes('identify')) {
+    res.status(403).json({ code: 'INSUFFICIENT_SCOPE', message: 'Token does not have the identify scope' });
+    return;
+  }
+
+  const [user] = await db
+    .select({
+      id: users.id,
+      username: users.username,
+      displayName: users.displayName,
+      avatarHash: users.avatarHash,
+      bannerHash: users.bannerHash,
+      bio: users.bio,
+      email: users.email,
+    })
+    .from(users)
+    .where(eq(users.id, token.userId))
+    .limit(1);
+
+  if (!user) {
+    res.status(404).json({ code: 'USER_NOT_FOUND', message: 'User not found' });
+    return;
+  }
+
+  const domain = process.env.INSTANCE_DOMAIN || 'gratonite.chat';
+  res.json({
+    id: user.id,
+    username: user.username,
+    displayName: user.displayName,
+    avatarHash: user.avatarHash,
+    bannerHash: user.bannerHash,
+    bio: user.bio,
+    email: user.email,
+    federationAddress: `${user.username}@${domain}`,
+  });
 });
 
 /** GET /oauth/applications — list user's apps */
