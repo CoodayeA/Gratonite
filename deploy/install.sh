@@ -201,6 +201,73 @@ check_compose() {
   fi
 }
 
+# ─── Sharing Guide (no domain) ────────────────────────────────────────
+show_sharing_guide() {
+  echo ""
+  echo -e "  ${DIM}  ╭────────────────────────────────────────────────────╮${NC}"
+  echo -e "  ${DIM}  │${NC}  ${BOLD}How to share Gratonite without buying a domain${NC}    ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}                                                    ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  You have 3 free options. Pick what fits best:     ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}                                                    ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  ${GREEN}Option A: Free subdomain${NC} (easiest, 2 min)        ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  Get a free address like ${CYAN}mychat.duckdns.org${NC}       ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  1. Go to ${BOLD}duckdns.org${NC}                              ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  2. Sign in with GitHub, Google, or Reddit         ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  3. Pick a name (e.g. \"mychat\")                    ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  4. It auto-detects your IP — click \"add domain\"   ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  5. Come back here and enter: mychat.duckdns.org   ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  Free forever. No credit card. Works immediately.  ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}                                                    ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  ${CYAN}Option B: Cloudflare Tunnel${NC} (no port forwarding) ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  Creates a secure tunnel from your computer to     ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  the internet. No domain, no IP config needed.     ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  1. Install cloudflared:                           ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}     ${BOLD}brew install cloudflared${NC}  (Mac)                ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}     ${BOLD}sudo apt install cloudflared${NC}  (Linux)          ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  2. After Gratonite is installed, run:             ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}     ${BOLD}cloudflared tunnel --url https://localhost:8443${NC} ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  3. Share the URL it gives you with friends        ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  Free. Works behind NAT/firewalls.                 ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}                                                    ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  ${PURPLE}Option C: Tailscale${NC} (private friend group)       ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  Creates a private network only your friends       ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  can access. No public URL needed.                 ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  1. You + friends install Tailscale (tailscale.com)${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  2. Share your Tailscale IP with them              ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  3. They access Gratonite at that IP               ${DIM}│${NC}"
+  echo -e "  ${DIM}  │${NC}  Free for up to 100 devices. Ultra-private.        ${DIM}│${NC}"
+  echo -e "  ${DIM}  ╰────────────────────────────────────────────────────╯${NC}"
+  echo ""
+  echo -e "    ${BOLD}What would you like to do?${NC}"
+  echo ""
+  echo -e "      ${BOLD}a)${NC} I'll get a DuckDNS subdomain (takes 2 min)"
+  echo -e "      ${BOLD}b)${NC} I'll use Cloudflare Tunnel — install locally for now"
+  echo -e "      ${BOLD}c)${NC} I'll use Tailscale — install locally for now"
+  echo ""
+  prompt -rp "    Pick one [a/b/c]: " SHARING_CHOICE
+
+  case "${SHARING_CHOICE:-b}" in
+    a|A)
+      echo ""
+      echo -e "    ${GREEN}Great choice!${NC} Go set up DuckDNS now:"
+      echo ""
+      echo -e "      1. Open ${BOLD}https://duckdns.org${NC} in your browser"
+      echo -e "      2. Sign in, pick a name, click \"add domain\""
+      echo -e "      3. Come back here and enter your domain below"
+      echo ""
+      MODE="server"
+      ;;
+    b|B|c|C)
+      echo ""
+      info "Installing in local mode. Follow the Cloudflare/Tailscale guide after setup."
+      MODE="local"
+      ;;
+    *)
+      MODE="local"
+      ;;
+  esac
+}
+
 # ─── Mode Selection ───────────────────────────────────────────────────
 select_mode() {
   step "Choosing setup mode"
@@ -211,20 +278,24 @@ select_mode() {
   fi
 
   echo ""
-  echo -e "    ${BOLD}Where will Gratonite live?${NC}"
+  echo -e "    ${BOLD}How do you want to connect?${NC}"
   echo ""
-  echo -e "      ${BOLD}1)${NC} ${GREEN}Right here on this computer${NC}  (local mode)"
-  echo -e "         Quick setup, no domain needed, great for trying it out"
+  echo -e "      ${BOLD}1)${NC} ${GREEN}Just me / trying it out${NC}"
+  echo -e "         Runs on localhost — open it in your browser right away"
   echo ""
-  echo -e "      ${BOLD}2)${NC} ${CYAN}On a server with a domain name${NC}  (server mode)"
-  echo -e "         Share with friends, automatic HTTPS, \"Login with Gratonite\" SSO"
+  echo -e "      ${BOLD}2)${NC} ${CYAN}I have a domain name${NC}  (e.g. chat.example.com)"
+  echo -e "         Auto-HTTPS, share a link, \"Login with Gratonite\" SSO"
   echo ""
-  prompt -rp "    Pick one [1/2]: " MODE_CHOICE
+  echo -e "      ${BOLD}3)${NC} ${PURPLE}I don't have a domain — help me share it${NC}"
+  echo -e "         We'll walk you through free options to get a link"
+  echo ""
+  prompt -rp "    Pick one [1/2/3]: " MODE_CHOICE
   echo ""
 
   case "${MODE_CHOICE:-1}" in
     1) MODE="local" ;;
     2) MODE="server" ;;
+    3) show_sharing_guide ;;
     *) fail "Invalid choice. Run the script again." ;;
   esac
 }
@@ -252,9 +323,9 @@ collect_config() {
     echo -e "  ${DIM}  │${NC}    Free subdomain from 100k+ domains         ${DIM}│${NC}"
     echo -e "  ${DIM}  │${NC}                                               ${DIM}│${NC}"
     echo -e "  ${DIM}  │${NC}  ${BOLD}Cheap options (\$5-10/year):${NC}                 ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}  ${GREEN}•${NC} ${BOLD}Porkbun${NC} — what Gratonite uses! \$9/yr     ${DIM}│${NC}"
     echo -e "  ${DIM}  │${NC}  ${GREEN}•${NC} ${BOLD}Namecheap${NC} — .xyz from \$1/yr               ${DIM}│${NC}"
     echo -e "  ${DIM}  │${NC}  ${GREEN}•${NC} ${BOLD}Cloudflare${NC} — at-cost, no markup            ${DIM}│${NC}"
-    echo -e "  ${DIM}  │${NC}  ${GREEN}•${NC} ${BOLD}Porkbun${NC} — .com from \$9/yr                 ${DIM}│${NC}"
     echo -e "  ${DIM}  │${NC}                                               ${DIM}│${NC}"
     echo -e "  ${DIM}  │${NC}  After getting a domain, point it to this     ${DIM}│${NC}"
     echo -e "  ${DIM}  │${NC}  server's IP address (an \"A record\").         ${DIM}│${NC}"
