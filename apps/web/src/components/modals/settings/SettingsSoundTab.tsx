@@ -4,7 +4,7 @@ import { isSoundMuted, setSoundMuted, getSoundVolume, setSoundVolume, getSoundPa
 import { api } from '../../../lib/api';
 import type { SettingsTabProps } from './types';
 
-interface Props extends SettingsTabProps {}
+type Props = SettingsTabProps;
 
 const SettingsSoundTab = ({ addToast }: Props) => {
   const [soundMutedState, setSoundMutedState] = useState(isSoundMuted());

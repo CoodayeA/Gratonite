@@ -15,7 +15,7 @@ import ThemeStoreModal from '../ThemeStoreModal';
 import { CODE_THEMES, getCodeTheme, setCodeTheme as setCodeThemePersist, type CodeThemeId } from '../../../utils/codeTheme';
 import type { SettingsTabProps } from './types';
 
-interface Props extends SettingsTabProps {}
+type Props = SettingsTabProps;
 
 const SettingsThemeTab = ({ addToast }: Props) => {
   const {
